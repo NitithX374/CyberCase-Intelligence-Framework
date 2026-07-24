@@ -124,6 +124,113 @@ def _tactic_order(tactic: str) -> int:
         return len(KILL_CHAIN_ORDER)
 
 
+def _stix_bundle_path() -> Path:
+    """Newest local enterprise STIX bundle (source of truth Neo4j is built from)."""
+    from ..config import ENTERPRISE_ATTACK_DIR
+
+    bundles = sorted(
+        Path(ENTERPRISE_ATTACK_DIR).glob("enterprise-attack-*.json"),
+        key=lambda p: [int(x) for x in re.findall(r"\d+", p.stem)[-2:]],
+    )
+    if not bundles:
+        raise FileNotFoundError(f"no STIX bundle in {ENTERPRISE_ATTACK_DIR}")
+    return bundles[-1]
+
+
+def load_sources_offline(source: str, min_tactics: int) -> list[dict]:
+    """Build the same rows as the Neo4j queries, straight from local STIX.
+
+    Neo4j is a convenience index over these bundles, so sampling offline gives
+    the same ground truth without a live DB — and covers campaigns/techniques
+    that ingestion may have dropped. Returns rows shaped like the Cypher ones:
+    {source_name, source_id, by_tactic: [{tactic, techniques:[{stix_id, name,
+    attack_id}]}]}.
+    """
+    path = _stix_bundle_path()
+    with open(path, "r", encoding="utf-8") as f:
+        objs = json.load(f)["objects"]
+    print(f"[CHAIN] Offline STIX: {path.name}")
+
+    def attack_id(o: dict) -> str:
+        for ref in o.get("external_references", []):
+            if ref.get("source_name") == "mitre-attack" and ref.get("external_id"):
+                return ref["external_id"]
+        return ""
+
+    src_type = "campaign" if source == "campaign" else "intrusion-set"
+    sources = {
+        o["id"]: o for o in objs
+        if o.get("type") == src_type and not o.get("revoked")
+        and not o.get("x_mitre_deprecated")
+    }
+    techniques = {
+        o["id"]: o for o in objs
+        if o.get("type") == "attack-pattern" and not o.get("revoked")
+        and not o.get("x_mitre_deprecated")
+        and not o.get("x_mitre_is_subtechnique")
+    }
+
+    by_source: dict[str, dict[str, list[dict]]] = {}
+    for rel in objs:
+        if (rel.get("type") != "relationship"
+                or rel.get("relationship_type") != "uses"
+                or rel.get("revoked")):
+            continue
+        s, t = rel.get("source_ref", ""), rel.get("target_ref", "")
+        if s not in sources or t not in techniques:
+            continue
+        tech = techniques[t]
+        aid = attack_id(tech)
+        if not aid:
+            continue
+        for phase in tech.get("kill_chain_phases", []):
+            if phase.get("kill_chain_name") != "mitre-attack":
+                continue
+            tactic = phase.get("phase_name", "")
+            if tactic not in KILL_CHAIN_ORDER:
+                continue
+            entry = {"stix_id": t, "name": tech.get("name", ""), "attack_id": aid}
+            bucket = by_source.setdefault(s, {}).setdefault(tactic, [])
+            if all(e["attack_id"] != aid for e in bucket):
+                bucket.append(entry)
+
+    rows = []
+    for sid, by_tactic in by_source.items():
+        if len(by_tactic) < min_tactics:
+            continue
+        rows.append({
+            "source_name": sources[sid].get("name", ""),
+            "source_id": attack_id(sources[sid]),
+            "by_tactic": [
+                {"tactic": tac, "techniques": techs}
+                for tac, techs in by_tactic.items()
+            ],
+        })
+    rows.sort(key=lambda r: len(r["by_tactic"]), reverse=True)
+    return rows
+
+
+def load_existing_technique_sets(filenames: list[str]) -> set[tuple]:
+    """Gold-ID tuples already present in other draft files.
+
+    Used to skip chains that would duplicate an existing sample's technique
+    set (a duplicate set yields a near-duplicate narrative), so extending a
+    dataset never re-drafts — and never re-pays for — what it already has.
+    """
+    keys: set[tuple] = set()
+    for name in filenames:
+        path = OUT_DIR / name
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for s in json.load(f):
+                    ids = s.get("gold_attack_ids") or []
+                    if ids:
+                        keys.add(tuple(ids))
+        except FileNotFoundError:
+            print(f"[CHAIN] WARNING: --exclude file not found: {path}")
+    return keys
+
+
 def sample_kill_chains(
     neo4j: Neo4jGroundTruthBuilder,
     num_chains: int,
@@ -132,15 +239,28 @@ def sample_kill_chains(
     max_steps: int = 6,
     blocked_ids: set[str] | None = None,
     source: str = "group",
+    exclude_keys: set[tuple] | None = None,
+    offline: bool = False,
 ) -> list[dict]:
-    """Sample up to num_chains kill-chains from a Group or a real Campaign."""
+    """Sample up to num_chains kill-chains from a Group or a real Campaign.
+
+    ``offline=True`` reads the local STIX bundle instead of Neo4j (same ground
+    truth, no live DB needed) — pass ``neo4j=None`` in that case.
+    """
     blocked_ids = blocked_ids or set()
-    cypher = _SOURCE_CYPHER[source]
-    rows = neo4j.run_query(cypher, {"min_tactics": min_steps, "limit_sources": 80})
+    if offline:
+        rows = load_sources_offline(source, min_steps)
+    else:
+        cypher = _SOURCE_CYPHER[source]
+        rows = neo4j.run_query(
+            cypher, {"min_tactics": min_steps, "limit_sources": 80}
+        )
     print(f"[CHAIN] {len(rows)} {source}s with >= {min_steps} observable tactics")
 
     chains: list[dict] = []
     seen: set[tuple] = set()
+    # Technique sets already covered by other datasets — treated as seen.
+    exclude_sets: set[tuple] = exclude_keys or set()
     round_no = 0
 
     while len(chains) < num_chains and round_no < 5:
@@ -188,8 +308,9 @@ def sample_kill_chains(
             if len(steps) < min_steps:
                 continue
 
-            key = (row["source_id"], tuple(s["attack_id"] for s in steps))
-            if key in seen:
+            tech_tuple = tuple(s["attack_id"] for s in steps)
+            key = (row["source_id"], tech_tuple)
+            if key in seen or tech_tuple in exclude_sets:
                 continue
             seen.add(key)
 
@@ -454,20 +575,36 @@ def main() -> None:
     parser.add_argument("--id-prefix", type=str, default="inc_auto",
                         help="Sample id prefix (use a distinct one per source "
                              "to avoid id collisions when merging datasets)")
+    parser.add_argument("--exclude", type=str, default="",
+                        help="Comma-separated draft filenames under data/ whose "
+                             "technique sets should NOT be re-drafted (extend a "
+                             "dataset without duplicating existing samples)")
+    parser.add_argument("--offline", action="store_true",
+                        help="Sample chains from the local STIX bundle instead "
+                             "of Neo4j (same ground truth, no live DB needed)")
     args = parser.parse_args()
 
     rng = random.Random(args.seed)
     blocked = load_deprecated_blocklist()
     print(f"[CHAIN] Blocklist: {len(blocked)} deprecated/revoked IDs excluded")
-    print(f"[CHAIN] Source: {args.source}")
-    neo4j = Neo4jGroundTruthBuilder()
+    print(f"[CHAIN] Source: {args.source}"
+          + (" (offline STIX)" if args.offline else ""))
+    neo4j = None if args.offline else Neo4jGroundTruthBuilder()
+
+    exclude_files = [f.strip() for f in args.exclude.split(",") if f.strip()]
+    exclude_keys = load_existing_technique_sets(exclude_files)
+    if exclude_files:
+        print(f"[CHAIN] Excluding {len(exclude_keys)} technique sets already "
+              f"drafted in: {', '.join(exclude_files)}")
 
     try:
         chains = sample_kill_chains(
-            neo4j, args.num, rng, blocked_ids=blocked, source=args.source
+            neo4j, args.num, rng, blocked_ids=blocked, source=args.source,
+            exclude_keys=exclude_keys, offline=args.offline,
         )
     finally:
-        neo4j.close()
+        if neo4j is not None:
+            neo4j.close()
     print(f"[CHAIN] Sampled {len(chains)} chains")
 
     if args.dry_run:
