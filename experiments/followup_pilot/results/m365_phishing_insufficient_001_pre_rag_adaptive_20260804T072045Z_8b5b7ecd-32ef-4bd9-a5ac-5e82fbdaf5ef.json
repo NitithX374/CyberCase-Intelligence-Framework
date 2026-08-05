@@ -1,0 +1,29 @@
+{
+  "experiment_id": "8b5b7ecd-32ef-4bd9-a5ac-5e82fbdaf5ef",
+  "case_id": "m365_phishing_insufficient_001",
+  "method": "pre_rag_adaptive",
+  "original_request": "Analyze this incident, identify the likely MITRE ATT&CK technique chain, and summarize the confirmed impact without inferring facts that are not in the case file.",
+  "initial_context": "Security monitoring detected an unauthorized sign-in to a Microsoft 365 tenant from 203.0.113.77 at 09:32 UTC. The case file does not identify the affected account or explain how the attacker obtained access. No mailbox-rule activity, data access, or confirmed impact has been established. Containment is pending.",
+  "questions": [],
+  "followup_rounds": 0,
+  "final_rag_query": "Analyze this incident, identify the likely MITRE ATT&CK technique chain, and summarize the confirmed impact without inferring facts that are not in the case file.\n\nข้อมูลเหตุการณ์ที่มีในสำนวน:\nSecurity monitoring detected an unauthorized sign-in to a Microsoft 365 tenant from 203.0.113.77 at 09:32 UTC. The case file does not identify the affected account or explain how the attacker obtained access. No mailbox-rule activity, data access, or confirmed impact has been established. Containment is pending.",
+  "final_analysis": "# ข้อความตอบกลับ\n\nขอบคุณที่ให้ข้อมูลนี้ ฉันเข้าใจว่าคุณกำลังแจ้งให้ทราบถึงข้อจำกัดในการวิเคราะห์เหตุการณ์ความปลอดภัยไซเบอร์ด้วย MITRE ATT&CK\n\n**สรุปข้อมูลที่ขาดหายไป:**\n\n1. **เวกเตอร์การโจมตี (Attack Vector)** — ไม่ทราบวิธีการเข้าถึงเบื้องต้น เช่น:\n   - Phishing (T1566)\n   - Credential Stuffing\n   - MFA Bypass\n   - การใช้ประโยชน์จากช่องโหว่\n\n2. **บัญชีที่ได้รับผลกระทบ** — ไม่ระบุว่าบัญชีใดถูกโจมตี\n\n3. **การกระทำหลังจากเข้าสู่ระบบ (Post-Compromise Actions)** — ไม่มีข้อมูลเกี่ยวกับ:\n   - การเข้าถึงข้อมูล\n   - การสร้างกฎเบ็ดเตล็ด\n   - การส่งต่อเมล\n   - กิจกรรมอื่นๆ ของผู้โจมตี\n\n---\n\n**เพื่อให้สามารถวิเคราะห์ได้ จำเป็นต้องมี:**\n- วิธีการที่ผู้โจมตีได้รับข้อมูลประจำตัว\n- บัญชีที่ถูกโจมตี\n- การกระทำที่ผู้โจมตีทำหลังจากเข้าสู่ระบบ\n\nหากคุณมีข้อมูลเพิ่มเติม โปรดให้ข้อมูลดังกล่าว เพื่อให้ฉันสามารถทำการวิเคราะห์ MITRE ATT&CK ได้อย่างครบถ้วน",
+  "stopped_by": "policy_answer",
+  "failure_reason": null,
+  "rag_model": "existing-rag-service",
+  "followup_model": "claude-haiku-4-5",
+  "started_at": "2026-08-04T07:20:45.883588Z",
+  "finished_at": "2026-08-04T07:22:00.885347Z",
+  "latency_ms": 75002,
+  "rag_calls": [
+    {
+      "round": 0,
+      "query": "Analyze this incident, identify the likely MITRE ATT&CK technique chain, and summarize the confirmed impact without inferring facts that are not in the case file.\n\nข้อมูลเหตุการณ์ที่มีในสำนวน:\nSecurity monitoring detected an unauthorized sign-in to a Microsoft 365 tenant from 203.0.113.77 at 09:32 UTC. The case file does not identify the affected account or explain how the attacker obtained access. No mailbox-rule activity, data access, or confirmed impact has been established. Containment is pending.",
+      "retrieval_context_id": "4795c269-83fc-4083-b23b-ca6db156ad20",
+      "latency_ms": 73138
+    }
+  ],
+  "policy_position": "pre_rag",
+  "policy_calls": 1,
+  "rag_call_count": 1
+}
