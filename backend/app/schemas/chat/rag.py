@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class RagQueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     query: str
     use_agent: bool = True
 

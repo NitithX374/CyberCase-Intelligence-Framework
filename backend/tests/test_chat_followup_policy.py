@@ -8,6 +8,7 @@ import httpx
 
 from app.config import settings
 from app.schemas.chat.rag import QueryResponse
+from app.services.chat.analysis_prompt import CHAT_ANALYSIS_PREPROMPT
 from app.services.chat.followup_policy import (
     AnthropicFollowUpPolicy,
     ClarificationExchange,
@@ -105,6 +106,22 @@ class _QuestionPolicy:
             action="ask_followup",
             question=self.question,
         )
+
+
+class _CapturePolicy:
+    def __init__(self, decision: FollowUpDecision):
+        self.decision = decision
+        self.calls: list[tuple[str, tuple[ClarificationExchange, ...]]] = []
+
+    async def decide(
+        self,
+        *,
+        original_user_content: str,
+        clarification_exchanges: tuple[ClarificationExchange, ...],
+    ) -> FollowUpDecision:
+        self.calls.append((original_user_content, tuple(clarification_exchanges)))
+        return self.decision
+
 
 class FollowUpPolicyHttpTests(unittest.IsolatedAsyncioTestCase):
     async def test_structured_policy_uses_only_bounded_case_context(self) -> None:
@@ -564,6 +581,35 @@ class ChatWorkerFollowUpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events, ["policy", "rag", "complete:idle"])
         self.assertEqual(len(rag_queries), 1)
         self.assertEqual(completed[0].content, "final RAG answer")
+
+    async def test_initial_policy_and_rag_receive_the_internal_task_prompt(self) -> None:
+        policy = _CapturePolicy(FollowUpDecision(action="answer", question=""))
+        _events, _completed, rag_queries = await self._run(policy=policy)
+
+        self.assertEqual(len(policy.calls), 1)
+        self.assertIn(CHAT_ANALYSIS_PREPROMPT, policy.calls[0][0])
+        self.assertIn(CHAT_ANALYSIS_PREPROMPT, rag_queries[0])
+        self.assertIn("Original incident request", policy.calls[0][0])
+        self.assertIn("Original incident request", rag_queries[0])
+
+    async def test_followup_policy_and_rag_retain_the_prompt_and_answers(self) -> None:
+        policy = _CapturePolicy(FollowUpDecision(action="answer", question=""))
+        exchanges = (
+            ClarificationExchange(
+                question="Which host was affected?",
+                answer="host-7",
+            ),
+        )
+
+        _events, _completed, rag_queries = await self._run(
+            policy=policy,
+            exchanges=exchanges,
+        )
+
+        self.assertEqual(len(policy.calls), 1)
+        self.assertIn(CHAT_ANALYSIS_PREPROMPT, policy.calls[0][0])
+        self.assertIn(CHAT_ANALYSIS_PREPROMPT, rag_queries[0])
+        self.assertIn("User answer:\nhost-7", rag_queries[0])
 
     async def test_policy_failure_fails_open_to_one_rag_call(self) -> None:
         events, completed, rag_queries = await self._run(

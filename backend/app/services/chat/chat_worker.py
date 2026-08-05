@@ -20,6 +20,7 @@ from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.schemas.chat.rag import QueryResponse
 from app.services.chat.chat_message import reconstruct_clarification_chain
 from app.services.chat.demo_extraction import add_demo_chat_extraction
+from app.services.chat.analysis_prompt import build_chat_analysis_prompt
 from app.services.chat.followup_policy import (
     AnthropicFollowUpPolicy,
     ClarificationExchange,
@@ -479,8 +480,11 @@ async def process_chat_run(
         if claimed_run.operation != 'query':
             raise ValueError('Chat run operation is invalid')
 
+        prompted_original_user_content = build_chat_analysis_prompt(
+            claimed_run.original_user_content
+        )
         clarification_outcome = await resolve_followup_outcome(
-            original_user_content=claimed_run.original_user_content,
+            original_user_content=prompted_original_user_content,
             clarification_exchanges=claimed_run.clarification_exchanges,
             followup_root_ordinal=claimed_run.followup_root_ordinal,
             source_run_id=claimed_run.id,
@@ -498,9 +502,11 @@ async def process_chat_run(
         rag_query = claimed_run.rag_query
         if claimed_run.clarification_exchanges:
             rag_query = build_clarified_query(
-                original_user_content=claimed_run.original_user_content,
+                original_user_content=prompted_original_user_content,
                 clarification_exchanges=claimed_run.clarification_exchanges,
             )
+        else:
+            rag_query = build_chat_analysis_prompt(rag_query)
         response = await (rag_call or request_rag)(rag_query)
         outcome = map_rag_response(response)
         outcome = attach_demo_extraction(outcome, claimed_run)
