@@ -188,20 +188,25 @@ def collapse_repeats(steps: list[dict]) -> list[dict]:
     sub-techniques, so the retriever cannot tell those apart and two
     separately-scored steps would just be the same question asked twice.
     """
+    # Shared with cisa_loader, whose steps carry a different field set, so
+    # merge by field kind rather than by a fixed list of names.
+    joined_text = ("red_team_description", "cue_en")
+    joined_ids = ("procedure_step",)
+    unioned = ("cti_source", "attack_ids_raw")
+
     merged: list[dict] = []
     for step in steps:
         if merged and merged[-1]["attack_id"] == step["attack_id"]:
             prev = merged[-1]
-            prev["red_team_description"] = (
-                prev["red_team_description"] + "\n" + step["red_team_description"]
-            ).strip()
-            prev["procedure_step"] = f'{prev["procedure_step"]}, {step["procedure_step"]}'
-            prev["cti_source"] = list(dict.fromkeys(
-                prev["cti_source"] + step["cti_source"]
-            ))
-            prev["attack_ids_raw"] = list(dict.fromkeys(
-                prev["attack_ids_raw"] + step["attack_ids_raw"]
-            ))
+            for key in joined_text:
+                if key in prev and prev[key] != step.get(key):
+                    prev[key] = f"{prev[key]}\n{step.get(key, '')}".strip()
+            for key in joined_ids:
+                if key in prev:
+                    prev[key] = f"{prev[key]}, {step.get(key, '')}"
+            for key in unioned:
+                if key in prev:
+                    prev[key] = list(dict.fromkeys(prev[key] + step.get(key, [])))
             continue
         merged.append(dict(step))
     for i, step in enumerate(merged, start=1):
