@@ -179,8 +179,17 @@ def _make_hybrid_quota_retriever_fn(embed_model=None, use_local: bool = False):
 
     def fn(query: str) -> list[str]:
         sub_queries = decomposer.decompose(incident=query, verbose=False)
+        # The full incident goes in FIRST, exactly as _node_retrieve does it:
+        # production keeps it as a holistic channel because the atomic
+        # sub-queries lose the surrounding context, and its own comment records
+        # that this improves technique coverage. Omitting it here made the arm
+        # score below the system it is supposed to represent.
+        all_queries: list[str] = []
+        for q in [query, *sub_queries]:
+            if q and q.strip() and q not in all_queries:
+                all_queries.append(q)
         result = retriever.retrieve_multi_quota(
-            sub_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
+            all_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
         )
         return _collect_hybrid_ids(result)
 
@@ -317,19 +326,24 @@ class EvalRunner:
 
         results = []
         embed_model = self._get_embed_model()
+        print(f"[EVAL] Arms: {', '.join(self.arms)}")
 
         # 1. Vector Retriever
         print("\n" + "═" * 60)
         print("  Evaluating: Vector Retriever (ChromaDB)")
         print("═" * 60)
-        fn, cleanup = _make_vector_retriever_fn(embed_model)
-        if cleanup:
-            self._cleanups.append(cleanup)
-        vr_result = evaluate_retriever(
-            fn, eval_samples, k_values=self.k_values, retriever_name="Vector (ChromaDB)"
-        )
-        results.append(vr_result)
-        print(vr_result.to_table())
+        if "vector" not in self.arms:
+            print("  [SKIP] not selected in --arms")
+        else:
+            fn, cleanup = _make_vector_retriever_fn(embed_model)
+            if cleanup:
+                self._cleanups.append(cleanup)
+            vr_result = evaluate_retriever(
+                fn, eval_samples, k_values=self.k_values,
+                retriever_name="Vector (ChromaDB)"
+            )
+            results.append(vr_result)
+            print(vr_result.to_table())
 
         # 2. Graph Retriever
         print("\n" + "═" * 60)
