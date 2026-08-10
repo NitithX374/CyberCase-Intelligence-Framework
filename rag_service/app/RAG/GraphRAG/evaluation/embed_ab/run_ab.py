@@ -24,6 +24,7 @@ import json
 import random
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from ..ground_truth import EvalSample, load_ground_truth
@@ -41,7 +42,16 @@ _HERE = Path(__file__).resolve().parent
 DEFAULT_DATASET = _HERE / "dataset_parallel.json"
 DEFAULT_OUTPUT = _HERE / "results"
 
-K_VALUES = [1, 3, 5, 10]
+# Pinned to the production constants each cutoff corresponds to, so a reported
+# number always maps to something the deployed system actually does:
+#   5  = FINAL_TOP_K   (seeds handed to graph expansion)
+#   10 = VECTOR_TOP_K  (pulled from Qdrant before reranking)
+#   15 = max_vector    (ceiling on vector hits entering the LLM context)
+# 20 and 50 are diagnostic: they separate "the gold was never retrieved" from
+# "it was retrieved but ranked too low to be used". Never report them as the
+# system's score. Fixed rather than a CLI flag so every run's report has the
+# same columns and stays comparable.
+K_VALUES = [1, 3, 5, 10, 15, 20, 50]
 
 
 def _pair_key(s: EvalSample) -> tuple:
@@ -57,6 +67,14 @@ def build_pairs(samples: list[EvalSample], max_pairs: int, seed: int = 42):
     for s in samples:
         if s.language == "en" and s.relevant_stix_ids:
             en_by_key.setdefault(_pair_key(s), s)
+
+    # Datasets built as one record per incident (real_cti) carry the English
+    # parallel inline instead of as a separate "en" sample. Synthesise the twin
+    # so those datasets are comparable here rather than silently unusable.
+    for s in th:
+        key = _pair_key(s)
+        if key not in en_by_key and s.query_en:
+            en_by_key[key] = replace(s, query=s.query_en, language="en")
 
     pairs = [(t, en_by_key[_pair_key(t)]) for t in th if _pair_key(t) in en_by_key]
     print(f"[AB] {len(th)} Thai samples, {len(pairs)} with an English twin")

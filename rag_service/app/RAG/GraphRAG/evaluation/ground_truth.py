@@ -34,6 +34,10 @@ class EvalSample:
     category: str = "general"
     attack_steps: list[dict] = field(default_factory=list)
     gold_attack_ids: list[str] = field(default_factory=list)
+    # English parallel of `query`. The cross-lingual A/B harness needs a
+    # TH/EN pair per item; datasets that carry the pair inline (real_cti)
+    # would otherwise look monolingual and be skipped entirely.
+    query_en: str = ""
 
     def has_reference_answer(self) -> bool:
         return bool(self.reference_answer.strip())
@@ -81,6 +85,7 @@ def load_ground_truth(path: str | Path) -> list[EvalSample]:
                 category=item.get("category", "general"),
                 attack_steps=item.get("attack_steps", []),
                 gold_attack_ids=item.get("gold_attack_ids", []),
+                query_en=item.get("query_en", ""),
             )
         )
 
