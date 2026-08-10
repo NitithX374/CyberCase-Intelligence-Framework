@@ -57,6 +57,24 @@
       "steps": [
         {
           "attack_ids": [
+            "T1190"
+          ],
+          "attack_ids_raw": [
+            "T1190"
+          ],
+          "tactic": "initial-access",
+          "cue_en": "In May 2023, the CL0P ransomware group exploited a SQL injection zero-day vulnerability CVE-2023-34362 to install a web shell named LEMURLOOT on MOVEit Transfer web applications",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "order": 1,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--3f886f2a-874f-4333-b794-aa6075009b1c"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1546"
           ],
           "attack_ids_raw": [
@@ -67,28 +85,10 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--b6301b64-ef57-4cce-bb0b-77026f14a8db"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1113"
-          ],
-          "attack_ids_raw": [
-            "T1113"
-          ],
-          "tactic": "collection",
-          "cue_en": "Truebot is a first-stage downloader module that can collect system information and take screenshots , developed and attributed to the Silence hacking group",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-          ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--0259baeb-9f63-4c69-bf10-eb038c390688"
           ]
         },
         {
@@ -111,20 +111,20 @@
         },
         {
           "attack_ids": [
-            "T1190"
+            "T1113"
           ],
           "attack_ids_raw": [
-            "T1190"
+            "T1113"
           ],
-          "tactic": "initial-access",
-          "cue_en": "In May 2023, the CL0P ransomware group exploited a SQL injection zero-day vulnerability CVE-2023-34362 to install a web shell named LEMURLOOT on MOVEit Transfer web applications",
+          "tactic": "collection",
+          "cue_en": "Truebot is a first-stage downloader module that can collect system information and take screenshots , developed and attributed to the Silence hacking group",
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
           ],
           "order": 4,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--3f886f2a-874f-4333-b794-aa6075009b1c"
+            "attack-pattern--0259baeb-9f63-4c69-bf10-eb038c390688"
           ]
         }
       ]
@@ -179,24 +179,6 @@
         },
         {
           "attack_ids": [
-            "T1486"
-          ],
-          "attack_ids_raw": [
-            "T1486"
-          ],
-          "tactic": "impact",
-          "cue_en": "The actors have then used SSH to connect to accessible ESXi servers and deploy ransomware on those servers",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-294a"
-          ],
-          "order": 3,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--b80d107d-fa0d-4b60-9684-b0433e8bdba0"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1567"
           ],
           "attack_ids_raw": [
@@ -207,10 +189,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-294a"
           ],
-          "order": 4,
+          "order": 3,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--40597f16-0963-4249-bf4c-ac93b7fb9807"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1486"
+          ],
+          "attack_ids_raw": [
+            "T1486"
+          ],
+          "tactic": "impact",
+          "cue_en": "The actors have then used SSH to connect to accessible ESXi servers and deploy ransomware on those servers",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-294a"
+          ],
+          "order": 4,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--b80d107d-fa0d-4b60-9684-b0433e8bdba0"
           ]
         }
       ]
@@ -292,6 +292,25 @@
       "steps": [
         {
           "attack_ids": [
+            "T1566"
+          ],
+          "attack_ids_raw": [
+            "T1566.002",
+            "T1566.001"
+          ],
+          "tactic": "initial-access",
+          "cue_en": "Open-source reporting indicates BabyShark is delivered via an email message containing a link or an attachment (see Initial Access section for more information) (Phishing: Spearphising Link , Phishing: Spearphishing Attachment )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
+          ],
+          "order": 1,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--a62a8db3-f23a-4d8f-afd6-9dbc77e7813b"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1547"
           ],
           "attack_ids_raw": [
@@ -302,7 +321,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--1ecb2399-e8ba-4f6b-8ba7-5c27d49405cf"
@@ -320,29 +339,10 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
           ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--354a7f88-63fb-41b5-a801-ce3b377b36f1"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1566"
-          ],
-          "attack_ids_raw": [
-            "T1566.002",
-            "T1566.001"
-          ],
-          "tactic": "initial-access",
-          "cue_en": "Open-source reporting indicates BabyShark is delivered via an email message containing a link or an attachment (see Initial Access section for more information) (Phishing: Spearphising Link , Phishing: Spearphishing Attachment )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
-          ],
           "order": 3,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--a62a8db3-f23a-4d8f-afd6-9dbc77e7813b"
+            "attack-pattern--354a7f88-63fb-41b5-a801-ce3b377b36f1"
           ]
         }
       ]
@@ -603,7 +603,7 @@
           "technique_name": "Boot or Logon Autostart Execution: Shortcut Modification",
           "tactic": "persistence",
           "red_team_name": "Persistent Service 1",
-          "red_team_description": "Leverage modified Sysinternals\nLeverage modified Sysinternals",
+          "red_team_description": "Leverage modified Sysinternals",
           "procedure_group": "procedure_persistence",
           "procedure_step": "5.A.2, 5.B.1",
           "cti_source": [
@@ -743,27 +743,6 @@
         },
         {
           "attack_ids": [
-            "T1110",
-            "T1190"
-          ],
-          "attack_ids_raw": [
-            "T1110",
-            "T1190"
-          ],
-          "tactic": "credential-access",
-          "cue_en": "The actor is using 213.74.101[.]65 and 213.74.139[.]196 to attempt brute force logins and, in several instances, attempted Structured Query Language (SQL) injections on victim websites (Brute Force ; Exploit Public Facing Application )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-296a"
-          ],
-          "order": 2,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--a93494bb-4b80-4ea1-8695-3236a49916fd",
-            "attack-pattern--3f886f2a-874f-4333-b794-aa6075009b1c"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1189"
           ],
           "attack_ids_raw": [
@@ -774,7 +753,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-296a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--d742a578-d70e-4d0e-96a6-02a9c30204e6"
@@ -792,7 +771,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-296a"
           ],
-          "order": 4,
+          "order": 3,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--10d51417-ee35-4589-b1ff-b6df1c334e8d"
@@ -810,10 +789,31 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-296a"
           ],
-          "order": 5,
+          "order": 4,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--b17a1a56-e99c-403c-8948-561df0cffe81"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1110",
+            "T1190"
+          ],
+          "attack_ids_raw": [
+            "T1110",
+            "T1190"
+          ],
+          "tactic": "credential-access",
+          "cue_en": "The actor is using 213.74.101[.]65 and 213.74.139[.]196 to attempt brute force logins and, in several instances, attempted Structured Query Language (SQL) injections on victim websites (Brute Force ; Exploit Public Facing Application )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-296a"
+          ],
+          "order": 5,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--a93494bb-4b80-4ea1-8695-3236a49916fd",
+            "attack-pattern--3f886f2a-874f-4333-b794-aa6075009b1c"
           ]
         }
       ]
@@ -948,9 +948,9 @@
           "stix_id": "attack-pattern--01a5a209-b94c-450b-b7f9-946497d91055"
         },
         {
-          "attack_id": "T1553",
+          "attack_id": "T1053",
           "attack_ids_raw": [
-            "T1553.005"
+            "T1053.005"
           ],
           "technique_name": "Scheduled Task/Job: Scheduled Task",
           "tactic": "persistence",
@@ -962,7 +962,7 @@
             "https://pwc.co.uk/cyber-security/pdf/cloud-hopper-annex-b-final.pdf"
           ],
           "order": 3,
-          "stix_id": "attack-pattern--b83e166d-13d7-4b52-8677-dff90c548fd7"
+          "stix_id": "attack-pattern--35dd844a-b219-4e2b-a6bb-efa9a75995a9"
         }
       ]
     },
@@ -1361,20 +1361,20 @@
       "steps": [
         {
           "attack_ids": [
-            "T1560"
+            "T1505"
           ],
           "attack_ids_raw": [
-            "T1560"
+            "T1505.003"
           ],
-          "tactic": "collection",
-          "cue_en": "The malicious script collected [TA0009] sensitive files–including user names, passwords, master keys, and firewall rules–and stored them in a “tar ball” (a “tar ball” is a compressed and zipped file used by threat actors for collection and exfiltration)",
+          "tactic": "persistence",
+          "cue_en": "On April 13 and 14, TA2 sent many GET requests to the server exploiting—or attempting to exploit—CVE 2022-22954 to obtain RCE, upload binaries, and upload webshells for persistence [TA0003]",
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
           ],
           "order": 1,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--53ac20cd-aca3-406e-9aa0-9fc7fdc60a5a"
+            "attack-pattern--d456de47-a16f-4e46-8980-e67478a12dcb"
           ]
         },
         {
@@ -1397,20 +1397,20 @@
         },
         {
           "attack_ids": [
-            "T1505"
+            "T1560"
           ],
           "attack_ids_raw": [
-            "T1505.003"
+            "T1560"
           ],
-          "tactic": "persistence",
-          "cue_en": "On April 13 and 14, TA2 sent many GET requests to the server exploiting—or attempting to exploit—CVE 2022-22954 to obtain RCE, upload binaries, and upload webshells for persistence [TA0003]",
+          "tactic": "collection",
+          "cue_en": "The malicious script collected [TA0009] sensitive files–including user names, passwords, master keys, and firewall rules–and stored them in a “tar ball” (a “tar ball” is a compressed and zipped file used by threat actors for collection and exfiltration)",
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
           ],
           "order": 3,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--d456de47-a16f-4e46-8980-e67478a12dcb"
+            "attack-pattern--53ac20cd-aca3-406e-9aa0-9fc7fdc60a5a"
           ]
         }
       ]
@@ -1507,27 +1507,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1033",
-            "T1041"
-          ],
-          "attack_ids_raw": [
-            "T1033",
-            "T1041"
-          ],
-          "tactic": "discovery",
-          "cue_en": "When run, it checks for the CheckUpdate parameter, collects the victim’s host information (System Owner/User Discovery ), encrypts the collected information with a hardcoded XOR encryption, and sends information to a C2 website (Exfiltration Over C2 Channel ) Updater checks for the CheckUpdate parameter and, when found, it collects the victim’s host information (System Owner/User Discovery ), encrypts the collected information with a hardcoded XOR key before exfiltration, and sends the encrypted information to a C2 website (Exfiltration Over C2 Channel )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
-          ],
-          "order": 1,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--03d7999c-1f4c-42cc-8373-e7690d318104",
-            "attack-pattern--92d7da27-2d91-488e-a00c-059dc162766d"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1059"
           ],
           "attack_ids_raw": [
@@ -1538,7 +1517,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
@@ -1556,10 +1535,31 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--35dd844a-b219-4e2b-a6bb-efa9a75995a9"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1033",
+            "T1041"
+          ],
+          "attack_ids_raw": [
+            "T1033",
+            "T1041"
+          ],
+          "tactic": "discovery",
+          "cue_en": "When run, it checks for the CheckUpdate parameter, collects the victim’s host information (System Owner/User Discovery ), encrypts the collected information with a hardcoded XOR encryption, and sends information to a C2 website (Exfiltration Over C2 Channel ) Updater checks for the CheckUpdate parameter and, when found, it collects the victim’s host information (System Owner/User Discovery ), encrypts the collected information with a hardcoded XOR key before exfiltration, and sends the encrypted information to a C2 website (Exfiltration Over C2 Channel )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
+          ],
+          "order": 3,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--03d7999c-1f4c-42cc-8373-e7690d318104",
+            "attack-pattern--92d7da27-2d91-488e-a00c-059dc162766d"
           ]
         }
       ]
@@ -1816,6 +1816,25 @@
       "steps": [
         {
           "attack_ids": [
+            "T1059"
+          ],
+          "attack_ids_raw": [
+            "T1059.001",
+            "T1059.006"
+          ],
+          "tactic": "execution",
+          "cue_en": "A PowerShell script, obfuscated as a .dat file, goopdate.dat, used to decrypt and run a second obfuscated PowerShell script, config.txt According to a sample analyzed by NCSC-UK, Small Sieve is a simple Python backdoor distributed using a Nullsoft Scriptable Install System (NSIS) installer, gram_app.exe",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-055a"
+          ],
+          "order": 1,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1574",
             "T1059",
             "T1027"
@@ -1830,7 +1849,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-055a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--aedfca76-3b30-4866-b2aa-0f1d7fd1e4b6",
@@ -1850,29 +1869,10 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-055a"
           ],
-          "order": 2,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--aedfca76-3b30-4866-b2aa-0f1d7fd1e4b6"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1059"
-          ],
-          "attack_ids_raw": [
-            "T1059.001",
-            "T1059.006"
-          ],
-          "tactic": "execution",
-          "cue_en": "A PowerShell script, obfuscated as a .dat file, goopdate.dat, used to decrypt and run a second obfuscated PowerShell script, config.txt According to a sample analyzed by NCSC-UK, Small Sieve is a simple Python backdoor distributed using a Nullsoft Scriptable Install System (NSIS) installer, gram_app.exe",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-055a"
-          ],
           "order": 3,
           "cue_type": "named",
           "stix_ids": [
-            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
+            "attack-pattern--aedfca76-3b30-4866-b2aa-0f1d7fd1e4b6"
           ]
         }
       ]
@@ -2045,6 +2045,24 @@
         },
         {
           "attack_ids": [
+            "T1222"
+          ],
+          "attack_ids_raw": [
+            "T1222.002"
+          ],
+          "tactic": "defense-evasion",
+          "cue_en": "TA2 first sent a GET request with the CHMOD command to change the permissions of .tmp12865xax, a hidden file in the /tmp directory",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
+          ],
+          "order": 2,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--65917ae0-b854-4139-83fe-bf2441cf0196"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1573"
           ],
           "attack_ids_raw": [
@@ -2055,7 +2073,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
           ],
-          "order": 2,
+          "order": 3,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--b8902400-e6c5-4ba2-95aa-2d35b442b118"
@@ -2073,28 +2091,10 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
           ],
-          "order": 3,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--731f4f55-b6d0-41d1-a7a9-072a66389aea"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1222"
-          ],
-          "attack_ids_raw": [
-            "T1222.002"
-          ],
-          "tactic": "defense-evasion",
-          "cue_en": "TA2 first sent a GET request with the CHMOD command to change the permissions of .tmp12865xax, a hidden file in the /tmp directory",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
-          ],
           "order": 4,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--65917ae0-b854-4139-83fe-bf2441cf0196"
+            "attack-pattern--731f4f55-b6d0-41d1-a7a9-072a66389aea"
           ]
         }
       ]
@@ -2453,7 +2453,7 @@
           "technique_name": "System Network Configuration Discovery",
           "tactic": "discovery",
           "red_team_name": "System Network Configuration Discovery",
-          "red_team_description": "Scan for nameservers and enumerate NetBIOS sessions\nScan for nameservers and enumerate NetBIOS sessions",
+          "red_team_description": "Scan for nameservers and enumerate NetBIOS sessions",
           "procedure_group": "procedure_discovery",
           "procedure_step": "3.E, 3.F",
           "cti_source": [
@@ -2708,24 +2708,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1564"
-          ],
-          "attack_ids_raw": [
-            "T1564.001"
-          ],
-          "tactic": "defense-evasion",
-          "cue_en": "The leading “.” makes it unlisted in the Finder app or default Terminal directory listing (Hide Artifacts: Hidden Files and Directories )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
-          ],
-          "order": 1,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--22905430-4901-4c2a-84f6-98243cb173f8"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1543"
           ],
           "attack_ids_raw": [
@@ -2736,10 +2718,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--106c0cf6-bf73-4601-9aa8-0945c2715ec5"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1564"
+          ],
+          "attack_ids_raw": [
+            "T1564.001"
+          ],
+          "tactic": "defense-evasion",
+          "cue_en": "The leading “.” makes it unlisted in the Finder app or default Terminal directory listing (Hide Artifacts: Hidden Files and Directories )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
+          ],
+          "order": 2,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--22905430-4901-4c2a-84f6-98243cb173f8"
           ]
         },
         {
@@ -2832,6 +2832,24 @@
       "steps": [
         {
           "attack_ids": [
+            "T1053"
+          ],
+          "attack_ids_raw": [
+            "T1053.005"
+          ],
+          "tactic": "execution",
+          "cue_en": "The program also creates a scheduled SYSTEM task, named JMTCrashReporter, which runs CrashReporter.exe with the Maintain parameter at any user’s login (Scheduled Task/Job: Scheduled Task )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
+          ],
+          "order": 1,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--35dd844a-b219-4e2b-a6bb-efa9a75995a9"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1033",
             "T1041"
           ],
@@ -2844,29 +2862,11 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--03d7999c-1f4c-42cc-8373-e7690d318104",
             "attack-pattern--92d7da27-2d91-488e-a00c-059dc162766d"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1053"
-          ],
-          "attack_ids_raw": [
-            "T1053.005"
-          ],
-          "tactic": "execution",
-          "cue_en": "The program also creates a scheduled SYSTEM task, named JMTCrashReporter, which runs CrashReporter.exe with the Maintain parameter at any user’s login (Scheduled Task/Job: Scheduled Task )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
-          ],
-          "order": 2,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--35dd844a-b219-4e2b-a6bb-efa9a75995a9"
           ]
         },
         {
@@ -3015,24 +3015,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1078"
-          ],
-          "attack_ids_raw": [
-            "T1078"
-          ],
-          "tactic": "defense-evasion",
-          "cue_en": "Rhysida actors have commonly been observed authenticating to internal VPN access points with compromised valid credentials , notably due to organizations lacking MFA enabled by default",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
-          ],
-          "order": 1,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--b17a1a56-e99c-403c-8948-561df0cffe81"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1190",
             "T1566"
           ],
@@ -3045,11 +3027,29 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--3f886f2a-874f-4333-b794-aa6075009b1c",
             "attack-pattern--a62a8db3-f23a-4d8f-afd6-9dbc77e7813b"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1078"
+          ],
+          "attack_ids_raw": [
+            "T1078"
+          ],
+          "tactic": "defense-evasion",
+          "cue_en": "Rhysida actors have commonly been observed authenticating to internal VPN access points with compromised valid credentials , notably due to organizations lacking MFA enabled by default",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
+          ],
+          "order": 2,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--b17a1a56-e99c-403c-8948-561df0cffe81"
           ]
         },
         {
@@ -3086,6 +3086,24 @@
       "steps": [
         {
           "attack_ids": [
+            "T1048"
+          ],
+          "attack_ids_raw": [
+            "T1048"
+          ],
+          "tactic": "exfiltration",
+          "cue_en": "Play ransomware actors have used it to transfer data from a compromised network to actor-controlled accounts",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
+          ],
+          "order": 1,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--a19e86f8-1c0a-4fea-8407-23b73d615776"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1486"
           ],
           "attack_ids_raw": [
@@ -3096,7 +3114,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--b80d107d-fa0d-4b60-9684-b0433e8bdba0"
@@ -3114,28 +3132,10 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
           ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--851e071f-208d-4c79-adc6-5974c85c78f3"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1048"
-          ],
-          "attack_ids_raw": [
-            "T1048"
-          ],
-          "tactic": "exfiltration",
-          "cue_en": "Play ransomware actors have used it to transfer data from a compromised network to actor-controlled accounts",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
-          ],
           "order": 3,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--a19e86f8-1c0a-4fea-8407-23b73d615776"
+            "attack-pattern--851e071f-208d-4c79-adc6-5974c85c78f3"
           ]
         }
       ]
@@ -3216,24 +3216,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1090"
-          ],
-          "attack_ids_raw": [
-            "T1090"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "The malware can function as a C2 tunneling proxy , allowing a remote operator to pivot to other systems and move further into a network",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
-          ],
-          "order": 1,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--731f4f55-b6d0-41d1-a7a9-072a66389aea"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1053"
           ],
           "attack_ids_raw": [
@@ -3244,10 +3226,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--35dd844a-b219-4e2b-a6bb-efa9a75995a9"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1090"
+          ],
+          "attack_ids_raw": [
+            "T1090"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "The malware can function as a C2 tunneling proxy , allowing a remote operator to pivot to other systems and move further into a network",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
+          ],
+          "order": 2,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--731f4f55-b6d0-41d1-a7a9-072a66389aea"
           ]
         },
         {
@@ -3370,9 +3370,9 @@
           "stix_id": "attack-pattern--15dbf668-795c-41e6-8219-f0447c0e64ce"
         },
         {
-          "attack_id": "T1021",
+          "attack_id": "T1201",
           "attack_ids_raw": [
-            "T1021"
+            "T1201"
           ],
           "technique_name": "Password Policy Discovery",
           "tactic": "Discovery",
@@ -3382,7 +3382,7 @@
           "procedure_step": "2.A.9",
           "cti_source": [],
           "order": 7,
-          "stix_id": "attack-pattern--54a649ff-439a-41a4-9856-8d144a2551ba"
+          "stix_id": "attack-pattern--b6075259-dba3-44e9-87c7-e954f37ec0d5"
         }
       ]
     },
@@ -3546,6 +3546,24 @@
       "steps": [
         {
           "attack_ids": [
+            "T1059"
+          ],
+          "attack_ids_raw": [
+            "T1059.001"
+          ],
+          "tactic": "execution",
+          "cue_en": "SDBot is used as a backdoor to enable other commands and functions to be executed in the compromised computer",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "order": 1,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1071",
             "T1105"
           ],
@@ -3558,7 +3576,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--355be19c-ffc9-46d5-8d50-d6a036c675b6",
@@ -3577,28 +3595,10 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
           ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--e6919abc-99f9-4c6c-95a5-14761e7b2add"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1059"
-          ],
-          "attack_ids_raw": [
-            "T1059.001"
-          ],
-          "tactic": "execution",
-          "cue_en": "SDBot is used as a backdoor to enable other commands and functions to be executed in the compromised computer",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-          ],
           "order": 3,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
+            "attack-pattern--e6919abc-99f9-4c6c-95a5-14761e7b2add"
           ]
         }
       ]
@@ -3777,24 +3777,6 @@
         },
         {
           "attack_ids": [
-            "T1071"
-          ],
-          "attack_ids_raw": [
-            "T1071.001"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "TA1 first targeted Freemarker—a legitimate application that allows for customized notifications by creating templates—to send the following customized GET request URI to the compromised server",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
-          ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--355be19c-ffc9-46d5-8d50-d6a036c675b6"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1068"
           ],
           "attack_ids_raw": [
@@ -3805,10 +3787,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--b21c3b2d-02e6-45b1-980b-e69051040839"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1071"
+          ],
+          "attack_ids_raw": [
+            "T1071.001"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "TA1 first targeted Freemarker—a legitimate application that allows for customized notifications by creating templates—to send the following customized GET request URI to the compromised server",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-138b"
+          ],
+          "order": 3,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--355be19c-ffc9-46d5-8d50-d6a036c675b6"
           ]
         }
       ]
@@ -3925,24 +3925,6 @@
         },
         {
           "attack_ids": [
-            "T1205"
-          ],
-          "attack_ids_raw": [
-            "T1205"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "The backdoor functionality is enabled and disabled through specially crafted TCP or UDP packets",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-270a"
-          ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--451a9977-d255-43c9-b431-66de80130c8c"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1556",
             "T1562"
           ],
@@ -3955,10 +3937,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-270a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--f4c1826f-a322-41cd-9557-562100848c84"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1205"
+          ],
+          "attack_ids_raw": [
+            "T1205"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "The backdoor functionality is enabled and disabled through specially crafted TCP or UDP packets",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-270a"
+          ],
+          "order": 3,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--451a9977-d255-43c9-b431-66de80130c8c"
           ]
         }
       ]
@@ -4063,24 +4063,6 @@
         },
         {
           "attack_ids": [
-            "T1486"
-          ],
-          "attack_ids_raw": [
-            "T1486"
-          ],
-          "tactic": "impact",
-          "cue_en": "After mapping the network, the ransomware encrypts data using a 4096-bit RSA encryption key with a ChaCha20 algorithm",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
-          ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--b80d107d-fa0d-4b60-9684-b0433e8bdba0"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1112"
           ],
           "attack_ids_raw": [
@@ -4091,7 +4073,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--57340c81-c025-4189-8fa0-fc7ede51bae4"
@@ -4111,11 +4093,29 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
           ],
-          "order": 4,
+          "order": 3,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--799ace7f-e227-4411-baa0-8868704f2a69",
             "attack-pattern--22905430-4901-4c2a-84f6-98243cb173f8"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1486"
+          ],
+          "attack_ids_raw": [
+            "T1486"
+          ],
+          "tactic": "impact",
+          "cue_en": "After mapping the network, the ransomware encrypts data using a 4096-bit RSA encryption key with a ChaCha20 algorithm",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
+          ],
+          "order": 4,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--b80d107d-fa0d-4b60-9684-b0433e8bdba0"
           ]
         },
         {
@@ -4149,24 +4149,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1105"
-          ],
-          "attack_ids_raw": [
-            "T1105"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "Serve as an Emotet downloader (Ingress Tool Transfer )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-076a"
-          ],
-          "order": 1,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--e6919abc-99f9-4c6c-95a5-14761e7b2add"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1185"
           ],
           "attack_ids_raw": [
@@ -4177,10 +4159,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-076a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--544b0346-29ad-41e1-a808-501bb4193f47"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1105"
+          ],
+          "attack_ids_raw": [
+            "T1105"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "Serve as an Emotet downloader (Ingress Tool Transfer )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-076a"
+          ],
+          "order": 2,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--e6919abc-99f9-4c6c-95a5-14761e7b2add"
           ]
         },
         {
@@ -4235,24 +4235,6 @@
         },
         {
           "attack_ids": [
-            "T1078"
-          ],
-          "attack_ids_raw": [
-            "T1078"
-          ],
-          "tactic": "defense-evasion",
-          "cue_en": "Stolen virtual private network (VPN) or Remote Desktop Protocol (RDP) credentials",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-152a"
-          ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--b17a1a56-e99c-403c-8948-561df0cffe81"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1133",
             "T1190"
           ],
@@ -4265,11 +4247,29 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-152a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--10d51417-ee35-4589-b1ff-b6df1c334e8d",
             "attack-pattern--3f886f2a-874f-4333-b794-aa6075009b1c"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1078"
+          ],
+          "attack_ids_raw": [
+            "T1078"
+          ],
+          "tactic": "defense-evasion",
+          "cue_en": "Stolen virtual private network (VPN) or Remote Desktop Protocol (RDP) credentials",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-152a"
+          ],
+          "order": 3,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--b17a1a56-e99c-403c-8948-561df0cffe81"
           ]
         }
       ]
@@ -4574,24 +4574,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1021"
-          ],
-          "attack_ids_raw": [
-            "T1021.001"
-          ],
-          "tactic": "lateral-movement",
-          "cue_en": "GREASE is a tool capable of adding a Windows administrator account and enabling RDP while avoiding firewall rules (Remote Services: Remote Desktop Protocol )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
-          ],
-          "order": 1,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--54a649ff-439a-41a4-9856-8d144a2551ba"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1546"
           ],
           "attack_ids_raw": [
@@ -4602,7 +4584,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--b6301b64-ef57-4cce-bb0b-77026f14a8db"
@@ -4620,10 +4602,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--d456de47-a16f-4e46-8980-e67478a12dcb"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1021"
+          ],
+          "attack_ids_raw": [
+            "T1021.001"
+          ],
+          "tactic": "lateral-movement",
+          "cue_en": "GREASE is a tool capable of adding a Windows administrator account and enabling RDP while avoiding firewall rules (Remote Services: Remote Desktop Protocol )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-301a"
+          ],
+          "order": 3,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--54a649ff-439a-41a4-9856-8d144a2551ba"
           ]
         }
       ]
@@ -5010,20 +5010,20 @@
       "steps": [
         {
           "attack_ids": [
-            "T1219"
+            "T1059"
           ],
           "attack_ids_raw": [
-            "T1219"
+            "T1059.003"
           ],
-          "tactic": "command-and-control",
-          "cue_en": "A common software that can be maliciously used by threat actors to obtain remote access and maintain persistence",
+          "tactic": "execution",
+          "cue_en": "A batch script likely used to place 1.ps1 on victim systems for ransomware staging purposes",
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
           ],
           "order": 1,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--4061e78c-1284-44b4-9116-73e4ac3912f7"
+            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
           ]
         },
         {
@@ -5046,20 +5046,20 @@
         },
         {
           "attack_ids": [
-            "T1059"
+            "T1219"
           ],
           "attack_ids_raw": [
-            "T1059.003"
+            "T1219"
           ],
-          "tactic": "execution",
-          "cue_en": "A batch script likely used to place 1.ps1 on victim systems for ransomware staging purposes",
+          "tactic": "command-and-control",
+          "cue_en": "A common software that can be maliciously used by threat actors to obtain remote access and maintain persistence",
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-319a"
           ],
           "order": 3,
           "cue_type": "described",
           "stix_ids": [
-            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
+            "attack-pattern--4061e78c-1284-44b4-9116-73e4ac3912f7"
           ]
         }
       ]
@@ -5665,24 +5665,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1071"
-          ],
-          "attack_ids_raw": [
-            "T1071.002"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "The actors have also used SNScan for enumeration [TA0007], and a local file transfer protocol (FTP) server to move data through the victim network",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-270a"
-          ],
-          "order": 1,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--355be19c-ffc9-46d5-8d50-d6a036c675b6"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1199"
           ],
           "attack_ids_raw": [
@@ -5693,10 +5675,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-270a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--9fa07bef-9c81-421e-a8e5-ad4366c5a925"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1071"
+          ],
+          "attack_ids_raw": [
+            "T1071.002"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "The actors have also used SNScan for enumeration [TA0007], and a local file transfer protocol (FTP) server to move data through the victim network",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-270a"
+          ],
+          "order": 2,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--355be19c-ffc9-46d5-8d50-d6a036c675b6"
           ]
         },
         {
@@ -5795,42 +5795,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1071"
-          ],
-          "attack_ids_raw": [
-            "T1071.001"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "Possible command and control network traffic involved HTTP POST requests to Uniform Resource Identifiers consisting of nonsensical random length alphabetical directories to known Emotet-related domains or IPs with the following user agent string (Application Layer Protocol: Web Protocols )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-280a"
-          ],
-          "order": 1,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--355be19c-ffc9-46d5-8d50-d6a036c675b6"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1210"
-          ],
-          "attack_ids_raw": [
-            "T1210"
-          ],
-          "tactic": "lateral-movement",
-          "cue_en": "In one instance, traffic from an Emotet-related IP attempted to connect to a suspected compromised site over port 445, possibly indicating the use of Server Message Block exploitation frameworks along with Emotet (Exploitation of Remote Services )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-280a"
-          ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--9db0cf3a-a3c9-4012-8268-123b9db6fd82"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1547"
           ],
           "attack_ids_raw": [
@@ -5841,7 +5805,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-280a"
           ],
-          "order": 3,
+          "order": 1,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--1ecb2399-e8ba-4f6b-8ba7-5c27d49405cf"
@@ -5859,10 +5823,46 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-280a"
           ],
-          "order": 4,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--3fc9b85a-2862-4363-a64d-d692e3ffbee0"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1210"
+          ],
+          "attack_ids_raw": [
+            "T1210"
+          ],
+          "tactic": "lateral-movement",
+          "cue_en": "In one instance, traffic from an Emotet-related IP attempted to connect to a suspected compromised site over port 445, possibly indicating the use of Server Message Block exploitation frameworks along with Emotet (Exploitation of Remote Services )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-280a"
+          ],
+          "order": 3,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--9db0cf3a-a3c9-4012-8268-123b9db6fd82"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1071"
+          ],
+          "attack_ids_raw": [
+            "T1071.001"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "Possible command and control network traffic involved HTTP POST requests to Uniform Resource Identifiers consisting of nonsensical random length alphabetical directories to known Emotet-related domains or IPs with the following user agent string (Application Layer Protocol: Web Protocols )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-280a"
+          ],
+          "order": 4,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--355be19c-ffc9-46d5-8d50-d6a036c675b6"
           ]
         }
       ]
@@ -6214,24 +6214,6 @@
       "steps": [
         {
           "attack_ids": [
-            "T1573"
-          ],
-          "attack_ids_raw": [
-            "T1573.001"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "FALLCHILL malware uses an RC4 encryption algorithm with a 16-byte key to protect its communications (Encrypted Channel: Symmetric Cryptography )",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
-          ],
-          "order": 1,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--b8902400-e6c5-4ba2-95aa-2d35b442b118"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1204"
           ],
           "attack_ids_raw": [
@@ -6242,7 +6224,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
           ],
-          "order": 2,
+          "order": 1,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--8c32eb4d-805f-4fc5-bf60-c4d476c131b5"
@@ -6260,10 +6242,28 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--b3d682b6-98f2-4fb0-aa3b-b4df007ca70a"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1573"
+          ],
+          "attack_ids_raw": [
+            "T1573.001"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "FALLCHILL malware uses an RC4 encryption algorithm with a 16-byte key to protect its communications (Encrypted Channel: Symmetric Cryptography )",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-048a"
+          ],
+          "order": 3,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--b8902400-e6c5-4ba2-95aa-2d35b442b118"
           ]
         }
       ]
@@ -6279,6 +6279,24 @@
       "steps": [
         {
           "attack_ids": [
+            "T1133"
+          ],
+          "attack_ids_raw": [
+            "T1133"
+          ],
+          "tactic": "initial-access",
+          "cue_en": "Play ransomware actors have been observed to use external-facing services such as Remote Desktop Protocol (RDP) and Virtual Private Networks (VPN) for initial access",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
+          ],
+          "order": 1,
+          "cue_type": "named",
+          "stix_ids": [
+            "attack-pattern--10d51417-ee35-4589-b1ff-b6df1c334e8d"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1078",
             "T1190"
           ],
@@ -6291,29 +6309,11 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--b17a1a56-e99c-403c-8948-561df0cffe81",
             "attack-pattern--3f886f2a-874f-4333-b794-aa6075009b1c"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1133"
-          ],
-          "attack_ids_raw": [
-            "T1133"
-          ],
-          "tactic": "initial-access",
-          "cue_en": "Play ransomware actors have been observed to use external-facing services such as Remote Desktop Protocol (RDP) and Virtual Private Networks (VPN) for initial access",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
-          ],
-          "order": 2,
-          "cue_type": "named",
-          "stix_ids": [
-            "attack-pattern--10d51417-ee35-4589-b1ff-b6df1c334e8d"
           ]
         },
         {
@@ -6482,6 +6482,24 @@
       "steps": [
         {
           "attack_ids": [
+            "T1059"
+          ],
+          "attack_ids_raw": [
+            "T1059"
+          ],
+          "tactic": "execution",
+          "cue_en": "According to open source reporting , to further enumerate vulnerabilities, Play ransomware actors use Windows Privilege Escalation Awesome Scripts (WinPEAS) to search for additional privilege escalation paths",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
+          ],
+          "order": 1,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
+          ]
+        },
+        {
+          "attack_ids": [
             "T1562",
             "T1070"
           ],
@@ -6494,7 +6512,7 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
           ],
-          "order": 1,
+          "order": 2,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--799ace7f-e227-4411-baa0-8868704f2a69"
@@ -6514,29 +6532,11 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
           ],
-          "order": 2,
+          "order": 3,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--435dfb86-2697-4867-85b5-2fef496c0517",
             "attack-pattern--0a3ead4e-6d47-4ccb-854c-a6a4f9d96b22"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1059"
-          ],
-          "attack_ids_raw": [
-            "T1059"
-          ],
-          "tactic": "execution",
-          "cue_en": "According to open source reporting , to further enumerate vulnerabilities, Play ransomware actors use Windows Privilege Escalation Awesome Scripts (WinPEAS) to search for additional privilege escalation paths",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a"
-          ],
-          "order": 3,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--7385dfaf-6886-4229-9ecd-6fd678040830"
           ]
         }
       ]
@@ -6976,24 +6976,6 @@
         },
         {
           "attack_ids": [
-            "T1105"
-          ],
-          "attack_ids_raw": [
-            "T1105"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "Around the same period, CISA observed the actors attempt to download and execute a malicious file from 109.248.150[.]13",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
-          ],
-          "order": 2,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--e6919abc-99f9-4c6c-95a5-14761e7b2add"
-          ]
-        },
-        {
-          "attack_ids": [
             "T1021"
           ],
           "attack_ids_raw": [
@@ -7004,28 +6986,10 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
           ],
-          "order": 3,
+          "order": 2,
           "cue_type": "named",
           "stix_ids": [
             "attack-pattern--54a649ff-439a-41a4-9856-8d144a2551ba"
-          ]
-        },
-        {
-          "attack_ids": [
-            "T1573"
-          ],
-          "attack_ids_raw": [
-            "T1573.001"
-          ],
-          "tactic": "command-and-control",
-          "cue_en": "The executable’s inbound and outbound communications are encrypted with an XOR key Commands and data sent are encrypted via RC4",
-          "cti_source": [
-            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
-          ],
-          "order": 4,
-          "cue_type": "described",
-          "stix_ids": [
-            "attack-pattern--b8902400-e6c5-4ba2-95aa-2d35b442b118"
           ]
         },
         {
@@ -7040,10 +7004,46 @@
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
           ],
-          "order": 5,
+          "order": 3,
           "cue_type": "described",
           "stix_ids": [
             "attack-pattern--53ac20cd-aca3-406e-9aa0-9fc7fdc60a5a"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1105"
+          ],
+          "attack_ids_raw": [
+            "T1105"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "Around the same period, CISA observed the actors attempt to download and execute a malicious file from 109.248.150[.]13",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
+          ],
+          "order": 4,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--e6919abc-99f9-4c6c-95a5-14761e7b2add"
+          ]
+        },
+        {
+          "attack_ids": [
+            "T1573"
+          ],
+          "attack_ids_raw": [
+            "T1573.001"
+          ],
+          "tactic": "command-and-control",
+          "cue_en": "The executable’s inbound and outbound communications are encrypted with an XOR key Commands and data sent are encrypted via RC4",
+          "cti_source": [
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-174a"
+          ],
+          "order": 5,
+          "cue_type": "described",
+          "stix_ids": [
+            "attack-pattern--b8902400-e6c5-4ba2-95aa-2d35b442b118"
           ]
         }
       ]
@@ -7140,21 +7140,20 @@
       "steps": [
         {
           "attack_ids": [
-            "T1555"
+            "T1204"
           ],
           "attack_ids_raw": [
-            "T1555",
-            "T1555.003"
+            "T1204.002"
           ],
-          "tactic": "credential-access",
-          "cue_en": "The malware steals credentials through the use of a keylogger to monitor browser and desktop activity (Credentials from Password Stores ) (Credentials from Password Stores: Credentials from Web Browsers )",
+          "tactic": "execution",
+          "cue_en": "Malicious cyber actors typically use LokiBot to target Windows and Android operating systems and distribute the malware via email, malicious websites, text, and other private messages (User Execution: Malicious File )",
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-266a"
           ],
           "order": 1,
           "cue_type": "named",
           "stix_ids": [
-            "attack-pattern--3fc9b85a-2862-4363-a64d-d692e3ffbee0"
+            "attack-pattern--8c32eb4d-805f-4fc5-bf60-c4d476c131b5"
           ]
         },
         {
@@ -7177,20 +7176,21 @@
         },
         {
           "attack_ids": [
-            "T1204"
+            "T1555"
           ],
           "attack_ids_raw": [
-            "T1204.002"
+            "T1555",
+            "T1555.003"
           ],
-          "tactic": "execution",
-          "cue_en": "Malicious cyber actors typically use LokiBot to target Windows and Android operating systems and distribute the malware via email, malicious websites, text, and other private messages (User Execution: Malicious File )",
+          "tactic": "credential-access",
+          "cue_en": "The malware steals credentials through the use of a keylogger to monitor browser and desktop activity (Credentials from Password Stores ) (Credentials from Password Stores: Credentials from Web Browsers )",
           "cti_source": [
             "https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-266a"
           ],
           "order": 3,
           "cue_type": "named",
           "stix_ids": [
-            "attack-pattern--8c32eb4d-805f-4fc5-bf60-c4d476c131b5"
+            "attack-pattern--3fc9b85a-2862-4363-a64d-d692e3ffbee0"
           ]
         },
         {

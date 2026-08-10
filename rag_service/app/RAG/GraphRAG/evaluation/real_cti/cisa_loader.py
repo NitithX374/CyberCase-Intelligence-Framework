@@ -49,6 +49,7 @@ if hasattr(sys.stdout, "reconfigure"):
 else:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
+from ..make_incident_dataset import KILL_CHAIN_ORDER
 from .ctid_loader import MAX_TECHNIQUES, MIN_TECHNIQUES, resolve_stix_ids
 from .fetch_cisa import DEST as CISA_JSONL, ZENODO_DOI
 
@@ -170,6 +171,27 @@ def parse_advisory(
 # ══════════════════════════════════════════════════════════════════════════════
 # 3. CHUNK
 # ══════════════════════════════════════════════════════════════════════════════
+
+
+def order_by_kill_chain(steps: list[dict]) -> list[dict]:
+    """Reorder an advisory's steps into kill-chain phase order.
+
+    CISA does not narrate reliably in time order — an advisory often walks
+    through one malware family, then another, so an initial-access finding
+    can land after a persistence one. A Thai case file is chronological, so a
+    chain has to be narratable as a sequence.
+
+    Narrative position is kept as the tiebreak within a phase, so CISA's own
+    ordering still decides everything the kill chain leaves open.
+    """
+    def key(item: tuple[int, dict]) -> tuple[int, int]:
+        i, step = item
+        tactic = step.get("tactic", "")
+        phase = (KILL_CHAIN_ORDER.index(tactic)
+                 if tactic in KILL_CHAIN_ORDER else len(KILL_CHAIN_ORDER))
+        return phase, i
+
+    return [s for _, s in sorted(enumerate(steps), key=key)]
 
 
 def merge_repeat_steps(steps: list[dict]) -> list[dict]:
@@ -313,6 +335,10 @@ def build_chains(use_neo4j: bool = True) -> tuple[list[dict], dict]:
         for chunk in chunk_narrative(steps):
             if made >= MAX_CHAINS_PER_ADVISORY:
                 break
+            # sort inside the chain, not across the advisory: chunking first
+            # keeps each chain to one stretch of narrative, and sorting after
+            # makes that stretch readable as a chronology
+            chunk = order_by_kill_chain(chunk)
             for i, step in enumerate(chunk, start=1):
                 step["cue_type"] = classify_cue_type(step, names)
                 step["order"] = i

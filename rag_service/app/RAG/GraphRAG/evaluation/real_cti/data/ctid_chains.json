@@ -4,6 +4,11 @@
     "8.A.2",
     "x"
   ],
+  "corrected_attack_ids": [
+    "T1021 -> T1201 (Password Policy Discovery)",
+    "T1082 -> T1564.001 (Hide Artifacts: Hidden Files & Directories)",
+    "T1553.005 -> T1053.005 (Scheduled Task/Job: Scheduled Task)"
+  ],
   "rolled_up_subtechniques": [
     "T1003.001",
     "T1003.002",
@@ -49,12 +54,12 @@
     "T1550.002",
     "T1552.003",
     "T1552.004",
-    "T1553.005",
     "T1555.003",
     "T1555.004",
     "T1558.003",
     "T1560.001",
     "T1561.001",
+    "T1564.001",
     "T1566.002",
     "T1567.002",
     "T1569.002",
@@ -602,7 +607,7 @@
           "technique_name": "Boot or Logon Autostart Execution: Shortcut Modification",
           "tactic": "persistence",
           "red_team_name": "Persistent Service 1",
-          "red_team_description": "Leverage modified Sysinternals\nLeverage modified Sysinternals",
+          "red_team_description": "Leverage modified Sysinternals",
           "procedure_group": "procedure_persistence",
           "procedure_step": "5.A.2, 5.B.1",
           "cti_source": [
@@ -812,7 +817,7 @@
           "technique_name": "Access Token Manipulation: Token Impersonation/Theft",
           "tactic": "defensive-evasion",
           "red_team_name": "Remote File Copy (T1105)",
-          "red_team_description": "A token theft script was executed to steal and assume the token of another user’s existing process, changing the user context of the process.\nA token theft script was executed to steal and assume the token of another user’s existing process, changing the user context of the process.",
+          "red_team_description": "A token theft script was executed to steal and assume the token of another user’s existing process, changing the user context of the process.",
           "procedure_group": "procedure_def_evasion",
           "procedure_step": "7.B.2, 7.C.1",
           "cti_source": [
@@ -829,7 +834,7 @@
           "technique_name": "Command and Scripting Interpreter: PowerShell",
           "tactic": "execution",
           "red_team_name": "Remote System Discovery (T1018)",
-          "red_team_description": "Custom PowerShell script to perform AD triage for domain bound computers.\nCustom PowerShell script to perform AD triage for domain bound computers.",
+          "red_team_description": "Custom PowerShell script to perform AD triage for domain bound computers.",
           "procedure_group": "procedure_execution",
           "procedure_step": "8.A.1, 8.A.2",
           "cti_source": [
@@ -2554,7 +2559,7 @@
           "technique_name": "System Network Configuration Discovery",
           "tactic": "discovery",
           "red_team_name": "System Network Configuration Discovery",
-          "red_team_description": "Scan for nameservers and enumerate NetBIOS sessions\nScan for nameservers and enumerate NetBIOS sessions",
+          "red_team_description": "Scan for nameservers and enumerate NetBIOS sessions",
           "procedure_group": "procedure_discovery",
           "procedure_step": "3.E, 3.F",
           "cti_source": [
@@ -2698,9 +2703,9 @@
           "stix_id": "attack-pattern--01a5a209-b94c-450b-b7f9-946497d91055"
         },
         {
-          "attack_id": "T1553",
+          "attack_id": "T1053",
           "attack_ids_raw": [
-            "T1553.005"
+            "T1053.005"
           ],
           "technique_name": "Scheduled Task/Job: Scheduled Task",
           "tactic": "persistence",
@@ -2712,7 +2717,7 @@
             "https://pwc.co.uk/cyber-security/pdf/cloud-hopper-annex-b-final.pdf"
           ],
           "order": 3,
-          "stix_id": "attack-pattern--b83e166d-13d7-4b52-8677-dff90c548fd7"
+          "stix_id": "attack-pattern--35dd844a-b219-4e2b-a6bb-efa9a75995a9"
         }
       ]
     },
@@ -2816,9 +2821,9 @@
           "stix_id": "attack-pattern--15dbf668-795c-41e6-8219-f0447c0e64ce"
         },
         {
-          "attack_id": "T1021",
+          "attack_id": "T1201",
           "attack_ids_raw": [
-            "T1021"
+            "T1201"
           ],
           "technique_name": "Password Policy Discovery",
           "tactic": "Discovery",
@@ -2828,7 +2833,7 @@
           "procedure_step": "2.A.9",
           "cti_source": [],
           "order": 7,
-          "stix_id": "attack-pattern--54a649ff-439a-41a4-9856-8d144a2551ba"
+          "stix_id": "attack-pattern--b6075259-dba3-44e9-87c7-e954f37ec0d5"
         }
       ]
     },
@@ -3085,9 +3090,9 @@
           "stix_id": "attack-pattern--d456de47-a16f-4e46-8980-e67478a12dcb"
         },
         {
-          "attack_id": "T1082",
+          "attack_id": "T1564",
           "attack_ids_raw": [
-            "T1082"
+            "T1564.001"
           ],
           "technique_name": "Hide Artifacts: Hidden Files & Directories",
           "tactic": "defense-evasion",
@@ -3097,7 +3102,7 @@
           "procedure_step": "4.A.4",
           "cti_source": [],
           "order": 2,
-          "stix_id": "attack-pattern--354a7f88-63fb-41b5-a801-ce3b377b36f1"
+          "stix_id": "attack-pattern--22905430-4901-4c2a-84f6-98243cb173f8"
         },
         {
           "attack_id": "T1033",
@@ -3522,7 +3527,7 @@
           "technique_name": "Abuse Elevation Control Mechanism: Setuid and Setgid",
           "tactic": "privilege-escalation",
           "red_team_name": "Sandworm Set Up SUID for Agent Execution",
-          "red_team_description": "Sandworm executes the downloaded agent executable by running SUID binary /bin/backup.\nThis binary executes check.sh, which causes the agent to be executed with root privileges.\nThis ability must be run by an agent running on the attacker-controlled machine (e.g. on the C2 server itself),\nsince it will target patient zero. Requires curl to be installed on the attacker-controlled machine.\nSandworm executes the downloaded agent executable by running SUID binary /bin/backup.\nThis binary executes check.sh, which causes the agent to be executed with root privileges.\nThis ability must be run by an agent running on the attacker-controlled machine (e.g. on the C2 server itself),\nsince it will target patient zero. Requires curl to be installed on the attacker-controlled machine.\nWait for the SUID privilege escalation to spawn an elevated agent beacon.\nThis ability must be run by an agent running on the attacker-controlled machine (e.g. on the C2 server itself).",
+          "red_team_description": "Sandworm executes the downloaded agent executable by running SUID binary /bin/backup.\nThis binary executes check.sh, which causes the agent to be executed with root privileges.\nThis ability must be run by an agent running on the attacker-controlled machine (e.g. on the C2 server itself),\nsince it will target patient zero. Requires curl to be installed on the attacker-controlled machine.\nWait for the SUID privilege escalation to spawn an elevated agent beacon.\nThis ability must be run by an agent running on the attacker-controlled machine (e.g. on the C2 server itself).",
           "procedure_group": "procedure_privilege_escalation",
           "procedure_step": "13.A.2, 13.A.2-5, 13.A.2-5",
           "cti_source": [

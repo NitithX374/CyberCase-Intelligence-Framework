@@ -56,6 +56,22 @@ MAX_TECHNIQUES = 6   # above this the Thai narrative gets unnaturally long
 # placeholder ("x") where the ATT&CK ID belongs. Those steps are dropped.
 ATTACK_ID_RE = re.compile(r"^T\d{4}(\.\d{3})?$")
 
+# Upstream typos: three plan steps carry an attack_id that contradicts the
+# technique name written beside it. The name is unambiguous and the ID is a
+# transposition, so the name wins. Verified against Neo4j — each corrected ID
+# resolves to exactly the named technique. Keyed by (bad_id, plan name).
+#
+#   T1553.005 (parent "Subvert Trust Controls") -> T1053.005 "Scheduled Task"
+#   T1021 "Remote Services"               -> T1201 "Password Policy Discovery"
+#   T1082 "System Information Discovery"  -> T1564 "Hide Artifacts"
+#
+# Left uncorrected, these hand the retriever gold it cannot possibly match.
+ID_CORRECTIONS: dict[tuple[str, str], str] = {
+    ("T1553.005", "Scheduled Task/Job: Scheduled Task"): "T1053.005",
+    ("T1021", "Password Policy Discovery"): "T1201",
+    ("T1082", "Hide Artifacts: Hidden Files & Directories"): "T1564.001",
+}
+
 STIX_CYPHER = """
 MATCH (t:Technique)
 WHERE t.attack_id IN $ids
@@ -76,12 +92,13 @@ def _as_list(value) -> list[str]:
     return [str(v) for v in value if v]
 
 
-def parse_plan(path: Path) -> tuple[dict, list[dict], list[str]]:
-    """Return (plan_details, ordered steps, dropped raw ids) for one plan."""
+def parse_plan(path: Path) -> tuple[dict, list[dict], list[str], list[str]]:
+    """Return (details, ordered steps, dropped raw ids, applied corrections)."""
     docs = yaml.safe_load(path.read_text(encoding="utf-8"))
     details: dict = {}
     steps: list[dict] = []
     dropped: list[str] = []
+    corrections: list[str] = []
     for entry in docs:
         if not isinstance(entry, dict):
             continue
@@ -92,6 +109,11 @@ def parse_plan(path: Path) -> tuple[dict, list[dict], list[str]]:
         if not isinstance(tech, dict) or not tech.get("attack_id"):
             continue
         raw_id = str(tech["attack_id"]).strip()
+        tech_name = tech.get("name", "")
+        corrected = ID_CORRECTIONS.get((raw_id, tech_name))
+        if corrected:
+            corrections.append(f"{raw_id} -> {corrected} ({tech_name})")
+            raw_id = corrected
         if not ATTACK_ID_RE.match(raw_id):
             dropped.append(raw_id)
             continue
@@ -112,7 +134,7 @@ def parse_plan(path: Path) -> tuple[dict, list[dict], list[str]]:
             # some plans give one URL, others a list — normalise to a list
             "cti_source": _as_list(entry.get("cti_source")),
         })
-    return details, steps, dropped
+    return details, steps, dropped, corrections
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -251,9 +273,11 @@ def build_chains(use_neo4j: bool = True) -> tuple[list[dict], dict]:
 
     raw: list[dict] = []
     dropped_ids: list[str] = []
+    corrections: list[str] = []
     for path in plan_paths:
-        details, steps, dropped = parse_plan(path)
+        details, steps, dropped, fixed = parse_plan(path)
         dropped_ids += dropped
+        corrections += fixed
         adversary = details.get("adversary_name", path.stem)
         for i, chain_steps in enumerate(chunk_steps(steps), start=1):
             chain_steps = collapse_repeats(chain_steps)
@@ -274,6 +298,7 @@ def build_chains(use_neo4j: bool = True) -> tuple[list[dict], dict]:
     all_raw = {r for c in raw for s in c["steps"] for r in s["attack_ids_raw"]}
     report = {
         "dropped_malformed_ids": sorted(set(dropped_ids)),
+        "corrected_attack_ids": sorted(set(corrections)),
         "rolled_up_subtechniques": sorted(r for r in all_raw if "." in r),
         "unresolved_attack_ids": [],
     }
@@ -303,6 +328,10 @@ def print_stats(chains: list[dict], report: dict) -> None:
     if dropped:
         print(f"[INFO] dropped {len(dropped)} steps with a malformed "
               f"attack_id: {', '.join(dropped)}")
+    fixed = report["corrected_attack_ids"]
+    if fixed:
+        print(f"[INFO] corrected {len(fixed)} upstream attack_id typos: "
+              f"{'; '.join(fixed)}")
     rolled = report["rolled_up_subtechniques"]
     if rolled:
         print(f"[INFO] {len(rolled)} distinct sub-technique labels rolled up "
