@@ -233,13 +233,29 @@ def _make_generation_fn(embed_model=None, use_local: bool = False):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+class _ArmSkipped(Exception):
+    """Raised to skip an arm the caller did not select in --arms."""
+
+
 class EvalRunner:
     """Orchestrates the full evaluation pipeline."""
 
-    def __init__(self, dataset_path: str, mode: str = "full", use_local: bool = False, max_samples: int = 0):
+    # Only the quota arm spends money — it calls an LLM to decompose each
+    # incident. Keeping the arms selectable means a free run is one flag away.
+    ALL_ARMS = ("vector", "graph", "hybrid", "quota")
+    PAID_ARMS = ("quota",)
+
+    def __init__(self, dataset_path: str, mode: str = "full", use_local: bool = False,
+                 max_samples: int = 0, arms: tuple[str, ...] | None = None,
+                 k_values: list[int] | None = None):
         self.dataset_path = Path(dataset_path)
         self.mode = mode
         self.use_local = use_local
+        self.arms = tuple(arms) if arms else self.ALL_ARMS
+        # Hybrid returns hundreds of ids (vector hits + every graph neighbour).
+        # Scoring only the top 10 cannot distinguish "never retrieved" from
+        # "retrieved but ranked far down", so the cutoffs are configurable.
+        self.k_values = k_values or [1, 3, 5, 10]
 
         all_samples = load_ground_truth(self.dataset_path)
         # Filter out samples with > 50 relevant STIX IDs
@@ -310,7 +326,7 @@ class EvalRunner:
         if cleanup:
             self._cleanups.append(cleanup)
         vr_result = evaluate_retriever(
-            fn, eval_samples, retriever_name="Vector (ChromaDB)"
+            fn, eval_samples, k_values=self.k_values, retriever_name="Vector (ChromaDB)"
         )
         results.append(vr_result)
         print(vr_result.to_table())
@@ -320,14 +336,18 @@ class EvalRunner:
         print("  Evaluating: Graph Retriever (Neo4j)")
         print("═" * 60)
         try:
+            if "graph" not in self.arms:
+                raise _ArmSkipped()
             fn, cleanup = _make_graph_retriever_fn()
             if cleanup:
                 self._cleanups.append(cleanup)
             gr_result = evaluate_retriever(
-                fn, eval_samples, retriever_name="Graph (Neo4j)"
+                fn, eval_samples, k_values=self.k_values, retriever_name="Graph (Neo4j)"
             )
             results.append(gr_result)
             print(gr_result.to_table())
+        except _ArmSkipped:
+            print("  [SKIP] not selected in --arms")
         except Exception as e:
             print(f"  [SKIP] Graph retriever unavailable: {e}")
 
@@ -336,14 +356,18 @@ class EvalRunner:
         print("  Evaluating: Hybrid Retriever (Vector + Graph)")
         print("═" * 60)
         try:
+            if "hybrid" not in self.arms:
+                raise _ArmSkipped()
             fn, cleanup = _make_hybrid_retriever_fn(embed_model)
             if cleanup:
                 self._cleanups.append(cleanup)
             hr_result = evaluate_retriever(
-                fn, eval_samples, retriever_name="Hybrid (Vector+Graph)"
+                fn, eval_samples, k_values=self.k_values, retriever_name="Hybrid (Vector+Graph)"
             )
             results.append(hr_result)
             print(hr_result.to_table())
+        except _ArmSkipped:
+            print("  [SKIP] not selected in --arms")
         except Exception as e:
             print(f"  [SKIP] Hybrid retriever unavailable: {e}")
 
@@ -352,16 +376,20 @@ class EvalRunner:
         print("  Evaluating: Hybrid + Quota (decompose + per-query quota)")
         print("═" * 60)
         try:
+            if "quota" not in self.arms:
+                raise _ArmSkipped()
             fn, cleanup = _make_hybrid_quota_retriever_fn(
                 embed_model, use_local=self.use_local
             )
             if cleanup:
                 self._cleanups.append(cleanup)
             hq_result = evaluate_retriever(
-                fn, eval_samples, retriever_name="Hybrid+Quota (decompose)"
+                fn, eval_samples, k_values=self.k_values, retriever_name="Hybrid+Quota (decompose)"
             )
             results.append(hq_result)
             print(hq_result.to_table())
+        except _ArmSkipped:
+            print("  [SKIP] not selected in --arms")
         except Exception as e:
             print(f"  [SKIP] Hybrid+Quota retriever unavailable: {e}")
 
@@ -458,6 +486,22 @@ def main():
         help="Limit evaluation to first N samples (0 = no limit)",
     )
     parser.add_argument(
+        "--arms",
+        type=str,
+        default="",
+        help=(
+            "Comma-separated retriever arms to run: vector,graph,hybrid,quota "
+            "(default: all). Only 'quota' calls an LLM — "
+            "'--arms vector,graph,hybrid' is a free run."
+        ),
+    )
+    parser.add_argument(
+        "--k",
+        type=str,
+        default="1,3,5,10",
+        help="Comma-separated K cutoffs for @K metrics (default: 1,3,5,10)",
+    )
+    parser.add_argument(
         "--local",
         action="store_true",
         help=(
@@ -490,7 +534,17 @@ def main():
         sys.stdout_orig = sys.stdout  # type: ignore
         sys.stdout = Tee()  # type: ignore
 
-    runner = EvalRunner(dataset_path=args.dataset, mode=args.mode, use_local=args.local, max_samples=args.max_samples)
+    arms = tuple(a.strip() for a in args.arms.split(",") if a.strip()) or None
+    if arms:
+        unknown = set(arms) - set(EvalRunner.ALL_ARMS)
+        if unknown:
+            parser.error(
+                f"unknown arm(s): {', '.join(sorted(unknown))} — "
+                f"choose from {', '.join(EvalRunner.ALL_ARMS)}"
+            )
+    k_values = sorted({int(k) for k in args.k.split(",") if k.strip()})
+    runner = EvalRunner(dataset_path=args.dataset, mode=args.mode, use_local=args.local,
+                        max_samples=args.max_samples, arms=arms, k_values=k_values)
     runner.run()
 
     print("\n" + "═" * 60)
