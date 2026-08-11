@@ -124,6 +124,70 @@ def _make_graph_retriever_fn():
     return fn, retriever.close
 
 
+def _subtechnique_parent_map() -> dict[str, str]:
+    """sub-technique stix_id -> parent technique stix_id.
+
+    Qdrant holds 2,195 entities including 522 sub-techniques; Neo4j holds 299
+    parent techniques and no sub-techniques. Gold is resolved through Neo4j, so
+    it is always parent-granular — while the retriever can and does return the
+    sub-technique. Verified that the 299 parent stix_ids are identical in both
+    stores, so the map can be built from Qdrant alone.
+    """
+    from .embed_ab.arms import make_client
+    from ..config import QDRANT_COLLECTION_ENTITIES
+
+    client = make_client()
+    by_attack_id: dict[str, str] = {}
+    subs: list[tuple[str, str]] = []  # (sub stix_id, parent attack_id)
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            QDRANT_COLLECTION_ENTITIES, limit=1000, offset=offset, with_payload=True
+        )
+        for p in points:
+            payload = p.payload or {}
+            attack_id, stix_id = payload.get("attack_id"), payload.get("stix_id")
+            if not attack_id or not stix_id:
+                continue
+            by_attack_id[attack_id] = stix_id
+            if "." in attack_id:
+                subs.append((stix_id, attack_id.split(".")[0]))
+        if offset is None:
+            break
+
+    mapping = {
+        sub_stix: by_attack_id[parent_aid]
+        for sub_stix, parent_aid in subs
+        if parent_aid in by_attack_id
+    }
+    print(f"[EVAL] Sub-technique -> parent map: {len(mapping)} entries")
+    return mapping
+
+
+def _normalise_to_parent(fn, parent_map: dict[str, str]):
+    """Wrap a retriever fn so its ids are parent-granular, like the gold.
+
+    Gold was rolled up to parent because the graph has no sub-techniques.
+    Scoring predictions without the same roll-up compares the two at different
+    granularities and marks a correct sub-technique hit as a miss — which is a
+    defect in the measurement, not a concession to the retriever.
+
+    Ids are replaced (not appended) and de-duplicated, so one retrieved item
+    still occupies one rank and @K keeps its meaning.
+    """
+    def wrapped(query: str) -> list[str]:
+        out: list[str] = []
+        seen: set[str] = set()
+        for stix_id in fn(query):
+            canonical = parent_map.get(stix_id, stix_id)
+            if canonical not in seen:
+                seen.add(canonical)
+                out.append(canonical)
+        return out
+
+    return wrapped
+
+
 def _collect_hybrid_ids(result) -> list[str]:
     """Flatten a GraphRAGResult into an ordered, deduped STIX-id list
     (vector hits first, then each subgraph's center node + neighbors)."""
@@ -327,6 +391,7 @@ class EvalRunner:
         results = []
         embed_model = self._get_embed_model()
         print(f"[EVAL] Arms: {', '.join(self.arms)}")
+        parent_map = _subtechnique_parent_map()
 
         # 1. Vector Retriever
         print("\n" + "═" * 60)
@@ -336,6 +401,7 @@ class EvalRunner:
             print("  [SKIP] not selected in --arms")
         else:
             fn, cleanup = _make_vector_retriever_fn(embed_model)
+            fn = _normalise_to_parent(fn, parent_map)
             if cleanup:
                 self._cleanups.append(cleanup)
             vr_result = evaluate_retriever(
@@ -353,6 +419,7 @@ class EvalRunner:
             if "graph" not in self.arms:
                 raise _ArmSkipped()
             fn, cleanup = _make_graph_retriever_fn()
+            fn = _normalise_to_parent(fn, parent_map)
             if cleanup:
                 self._cleanups.append(cleanup)
             gr_result = evaluate_retriever(
@@ -373,6 +440,7 @@ class EvalRunner:
             if "hybrid" not in self.arms:
                 raise _ArmSkipped()
             fn, cleanup = _make_hybrid_retriever_fn(embed_model)
+            fn = _normalise_to_parent(fn, parent_map)
             if cleanup:
                 self._cleanups.append(cleanup)
             hr_result = evaluate_retriever(
@@ -395,6 +463,7 @@ class EvalRunner:
             fn, cleanup = _make_hybrid_quota_retriever_fn(
                 embed_model, use_local=self.use_local
             )
+            fn = _normalise_to_parent(fn, parent_map)
             if cleanup:
                 self._cleanups.append(cleanup)
             hq_result = evaluate_retriever(
