@@ -8,7 +8,6 @@ top-K cut that feeds graph expansion and the LLM context.
 """
 from __future__ import annotations
 
-
 from .vector_retriever import VectorResult
 from ..config import DEVICE, FINAL_TOP_K, RERANKER_MODEL
 
@@ -31,23 +30,26 @@ class Reranker:
         """Score each (query, document) pair and return top_k results sorted
         by cross-encoder score, in [0, 1].
 
-        CrossEncoder.predict() already applies the sigmoid for a 1-label
-        model, so the value it returns is the probability, not a logit.
-        Applying sigmoid to it a second time (as this did) squashed the whole
-        range into [0.5, 0.731]: a perfect match scored 0.731 and an obvious
-        non-match 0.500, which is where the "reranker saturates at 0.500" note
-        in config.py came from. Ordering was unaffected — sigmoid is monotonic
-        — but every score-based threshold downstream was calibrated against a
-        compressed scale.
+        ``CrossEncoder.predict()`` already applies the model's default
+        activation, which is ``nn.Sigmoid()`` for a ``num_labels=1`` model such
+        as bge-reranker-v2-m3. Scores are therefore already in [0, 1] — do NOT
+        apply sigmoid again here (doing so squashes the whole range into
+        [0.5, 0.731] and destroys any absolute score threshold downstream).
+
+        The double application is where the "reranker saturates at 0.500" note
+        in config.py came from: 0.500 was an untouched non-match and 0.731 a
+        perfect one. Ordering was never affected — sigmoid is monotonic — but
+        MITRE_TABLE_SCORE_THRESHOLD was calibrated against that compressed
+        scale and still needs recalibrating.
         """
         if not results:
             return results
 
         pairs = [(query, r.document[:512]) for r in results]
-        raw_scores = self.model.predict(pairs)
+        scores = self.model.predict(pairs)
 
-        for result, raw in zip(results, raw_scores):
-            result.score = float(raw)
+        for result, score in zip(results, scores):
+            result.score = float(score)
 
         reranked = sorted(results, key=lambda r: r.score, reverse=True)
 
