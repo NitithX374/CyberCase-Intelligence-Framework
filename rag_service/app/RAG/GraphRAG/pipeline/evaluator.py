@@ -20,18 +20,16 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ..config import (
-    ANTHROPIC_API_KEY,
     EVALUATOR_LLM_MODEL,
     EVALUATOR_MAX_TOKENS,
     EVALUATOR_TEMPERATURE,
-    LOCAL_EVAL_MODEL,
-    OLLAMA_BASE_URL,
     sep,
 )
+from ..llm_content import require_message_text
+from ..llm_provider import CoreLlmConfigurationError, create_core_chat_model
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Evaluation verdicts
@@ -164,25 +162,16 @@ Never use FORCE_SUFFICIENT — answering with known-incomplete context without f
 class ContextEvaluator:
     """Evaluates whether retrieved context is sufficient to answer a query."""
 
-    def __init__(self, use_local: bool = False) -> None:
-        if use_local:
-            from langchain_ollama import ChatOllama
-            self.llm = ChatOllama(
-                model=LOCAL_EVAL_MODEL,
-                base_url=OLLAMA_BASE_URL,
+    def __init__(self) -> None:
+        try:
+            self.llm = create_core_chat_model(
+                anthropic_model=EVALUATOR_LLM_MODEL,
                 temperature=EVALUATOR_TEMPERATURE,
-                num_predict=EVALUATOR_MAX_TOKENS,
+                max_tokens=EVALUATOR_MAX_TOKENS,
             )
-            print(f"[EVALUATOR] Local model: {LOCAL_EVAL_MODEL}")
-        elif ANTHROPIC_API_KEY:
-            self.llm = ChatAnthropic(  # type: ignore[call-arg]
-                model_name=EVALUATOR_LLM_MODEL,
-                api_key=ANTHROPIC_API_KEY,
-                temperature=EVALUATOR_TEMPERATURE,
-                max_tokens_to_sample=EVALUATOR_MAX_TOKENS,
-            )
-        else:
+        except CoreLlmConfigurationError as exc:
             self.llm = None
+            print(f"[EVALUATOR] No cloud LLM configured: {exc}")
 
     # ------------------------------------------------------------------
     def evaluate(
@@ -251,7 +240,9 @@ class ContextEvaluator:
             ]
         )
 
-        result = self._parse_response(str(response.content))
+        result = self._parse_response(
+            require_message_text(response, operation="context evaluation")
+        )
 
         if verbose:
             print(f"  Verdict   : {result.verdict}")

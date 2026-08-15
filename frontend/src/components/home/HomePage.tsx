@@ -9,26 +9,26 @@ const pillars: Array<{
 }> = [
   {
     number: "01",
-    title: "Investigate",
+    title: "Ask",
     description:
-      "Turn scattered incident details, logs, and reports into a structured case context.",
-    label: "Case intake",
+      "Bring an incident, question, or piece of evidence into one persistent conversation.",
+    label: "Start anywhere",
     type: "bars",
   },
   {
     number: "02",
-    title: "Map",
+    title: "Clarify",
     description:
-      "Connect observed behaviors with MITRE ATT&CK techniques and supporting evidence.",
-    label: "Threat mapping",
+      "Work through missing context with focused, backend-managed follow-up questions.",
+    label: "Guided context",
     type: "grid",
   },
   {
     number: "03",
-    title: "Report",
+    title: "Continue",
     description:
-      "Generate analyst-ready reports with findings, gaps, evidence, and recommendations.",
-    label: "Report generation",
+      "Keep saved chat threads available so every investigation can pick up where it left off.",
+    label: "Saved threads",
     type: "line",
   },
 ];
@@ -40,7 +40,7 @@ function MiniVisual({ type }: { type: "bars" | "grid" | "line" }) {
         {[100, 78, 88, 56, 70].map((width, index) => (
           <div
             key={index}
-            className="h-px bg-white/30"
+            className="h-px bg-ivory/30"
             style={{ width: `${width}%` }}
           />
         ))}
@@ -56,8 +56,8 @@ function MiniVisual({ type }: { type: "bars" | "grid" | "line" }) {
             key={index}
             className={`aspect-square border ${
               index === 2 || index === 6
-                ? "border-white bg-white"
-                : "border-white/30"
+                ? "border-ivory bg-ivory"
+                : "border-ivory/30"
             }`}
           />
         ))}
@@ -76,7 +76,7 @@ function MiniVisual({ type }: { type: "bars" | "grid" | "line" }) {
       <polyline
         points="10,88 68,45 118,72 168,30 220,58 250,18"
         fill="none"
-        stroke="white"
+        stroke="var(--color-ivory)"
         strokeWidth="2"
       />
       {[
@@ -87,7 +87,7 @@ function MiniVisual({ type }: { type: "bars" | "grid" | "line" }) {
         ["220", "58"],
         ["250", "18"],
       ].map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="3" fill="white" />
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="3" fill="var(--color-ivory)" />
       ))}
     </svg>
   );
@@ -95,46 +95,46 @@ function MiniVisual({ type }: { type: "bars" | "grid" | "line" }) {
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#b7b7b7] text-black">
-      <div className="mx-auto overflow-hidden bg-[#f4f4f2] shadow-2xl">
+    <main className="min-h-screen bg-line-strong text-charcoal">
+      <div className="mx-auto overflow-hidden bg-ivory shadow-2xl">
         {/* Navigation */}
-        <header className="flex items-center justify-between border-b border-black/10 px-5 py-4 md:px-8">
+        <header className="flex items-center justify-between border-b border-charcoal/10 px-5 py-4 md:px-8">
           <Link
             href="/"
             className="flex items-center gap-2 font-semibold tracking-tight"
           >
-            <span className="grid h-6 w-6 place-items-center bg-black text-xs font-black text-white">
+            <span className="grid h-6 w-6 place-items-center bg-charcoal text-xs font-black text-ivory">
               C
             </span>
             <span>CyberCase Framework</span>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-[11px] font-bold uppercase tracking-widest text-black/60 md:flex">
-            <a href="#platform" className="transition hover:text-black">
+          <nav className="hidden items-center gap-7 text-[11px] font-bold uppercase tracking-widest text-charcoal/60 md:flex">
+            <a href="#platform" className="transition hover:text-charcoal">
               Platform
             </a>
-            <a href="#workflow" className="transition hover:text-black">
+            <a href="#workflow" className="transition hover:text-charcoal">
               Workflow
             </a>
-            <a href="#intelligence" className="transition hover:text-black">
+            <a href="#intelligence" className="transition hover:text-charcoal">
               Intelligence
             </a>
-            <a href="#about" className="transition hover:text-black">
+            <a href="#about" className="transition hover:text-charcoal">
               About
             </a>
           </nav>
 
           <div className="flex items-center gap-3">
             <Link
-              href="/cases"
-              className="hidden text-[11px] font-bold uppercase tracking-wider text-black/60 hover:text-black sm:block"
+              href="/chat"
+              className="hidden text-[11px] font-bold uppercase tracking-wider text-charcoal/60 hover:text-charcoal sm:block"
             >
-              Open workspace
+              Open chat
             </Link>
 
             <Link
-              href="/cases"
-              className="flex items-center gap-3 bg-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-black/80"
+              href="/chat"
+              className="flex items-center gap-3 bg-charcoal px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-ivory transition hover:bg-charcoal-hover active:bg-charcoal-pressed"
             >
               Start case
               <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
@@ -145,45 +145,45 @@ export default function HomePage() {
         {/* Hero */}
         <section className="relative min-h-180 overflow-hidden px-5 pb-10 pt-20 md:min-h-205 md:px-10 md:pt-28">
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[58%] items-end justify-center gap-0 opacity-80">
-            <div className="h-[32%] w-[14%] border border-black/10" />
-            <div className="h-[48%] w-[14%] border border-black/10" />
-            <div className="h-[68%] w-[14%] border border-black/10" />
-            <div className="h-[94%] w-[14%] border border-black/10" />
-            <div className="h-[74%] w-[14%] border border-black/10" />
-            <div className="h-[90%] w-[14%] border border-black/10" />
-            <div className="h-[46%] w-[14%] border border-black/10" />
+            <div className="h-[32%] w-[14%] border border-charcoal/10" />
+            <div className="h-[48%] w-[14%] border border-charcoal/10" />
+            <div className="h-[68%] w-[14%] border border-charcoal/10" />
+            <div className="h-[94%] w-[14%] border border-charcoal/10" />
+            <div className="h-[74%] w-[14%] border border-charcoal/10" />
+            <div className="h-[90%] w-[14%] border border-charcoal/10" />
+            <div className="h-[46%] w-[14%] border border-charcoal/10" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-4xl text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-black/50">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal/60">
               Cyber Threat Intelligence Framework
             </p>
 
             <h1 className="mt-7 text-5xl font-light leading-[0.94] tracking-normal sm:text-6xl md:text-8xl">
-              Make every case
+              Make every investigation
               <br />
               <span className="font-normal">clearer, faster,</span>
               <br />
               and defensible.
             </h1>
 
-            <p className="mx-auto mt-8 max-w-xl text-sm leading-relaxed text-black/55 md:text-base">
-              CyberCase transforms fragmented incident data into structured
-              intelligence, MITRE ATT&CK mappings, evidence gaps, and
-              investigation-ready reports.
+            <p className="mx-auto mt-8 max-w-xl text-sm leading-relaxed text-ink-secondary md:text-base">
+              CyberCase turns fragmented incident details into a persistent
+              conversation where you can ask questions, add evidence, and
+              keep the reasoning in one place.
             </p>
 
             <div className="mt-9 flex flex-wrap justify-center gap-3">
               <Link
-                href="/cases"
-                className="bg-black px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-white transition hover:bg-black/80"
+                href="/chat"
+                className="bg-charcoal px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-ivory transition hover:bg-charcoal-hover active:bg-charcoal-pressed"
               >
-                Analyze a case
+                Start a chat
               </Link>
 
               <a
                 href="#platform"
-                className="border border-black px-5 py-3 text-[11px] font-bold uppercase tracking-widest transition hover:bg-black hover:text-white"
+                className="border border-charcoal px-5 py-3 text-[11px] font-bold uppercase tracking-widest transition hover:bg-charcoal hover:text-ivory active:bg-charcoal-pressed"
               >
                 Explore platform
               </a>
@@ -191,21 +191,21 @@ export default function HomePage() {
           </div>
 
           <div className="absolute bottom-7 left-5 z-10 max-w-52.5 md:bottom-10 md:left-10">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-black/45">
-              Evidence-led analysis
+            <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal/60">
+              Evidence-led conversation
             </p>
-            <p className="mt-2 text-xs leading-relaxed text-black/55">
-              Ground every output in retrieved context, verified facts, and
+            <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
+              Keep each conversation grounded in retrieved context and
               analyst-confirmed details.
             </p>
           </div>
 
           <div className="absolute bottom-7 right-5 z-10 text-right md:bottom-10 md:right-10">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-black/45">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal/60">
               Built for analysts
             </p>
-            <p className="mt-2 text-xs text-black/55">
-              RAG · Graph Intelligence · MITRE ATT&CK
+            <p className="mt-2 text-xs text-ink-secondary">
+              Persistent chat · Guided follow-up · Saved threads
             </p>
           </div>
         </section>
@@ -213,23 +213,23 @@ export default function HomePage() {
         {/* Dark Platform */}
         <section
           id="platform"
-          className="bg-[#111111] px-5 py-10 text-white md:px-10 md:py-16"
+          className="bg-charcoal px-5 py-10 text-ivory md:px-10 md:py-16"
         >
-          <div className="flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-col gap-6 border-b border-ivory/10 pb-8 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ivory/60">
                 CyberCase platform
               </p>
               <h2 className="mt-4 max-w-2xl text-4xl font-light leading-none tracking-normal md:text-6xl">
-                From incident signals
+                From an open question
                 <br />
-                to actionable intelligence.
+                to a clear next step.
               </h2>
             </div>
 
-            <p className="max-w-xs text-sm leading-relaxed text-white/45">
-              A structured workflow for threat investigation, evidence
-              validation, MITRE mapping, and report generation.
+            <p className="max-w-xs text-sm leading-relaxed text-ivory/70">
+              A persistent workflow for asking, clarifying, and returning to
+              every saved conversation.
             </p>
           </div>
 
@@ -237,13 +237,13 @@ export default function HomePage() {
             {pillars.map((pillar) => (
               <article
                 key={pillar.number}
-                className="group min-h-90 border border-white/15 bg-[#151515] p-5 transition hover:-translate-y-1 hover:border-white/50"
+                className="group min-h-90 border border-ivory/15 bg-charcoal-pressed p-5 transition hover:-translate-y-1 hover:border-ivory/50"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-light text-white/50">
+                  <span className="text-sm font-light text-ivory/70">
                     {pillar.number}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/35">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-ivory/60">
                     {pillar.label}
                   </span>
                 </div>
@@ -254,12 +254,12 @@ export default function HomePage() {
                   <h3 className="text-3xl font-light tracking-normal">
                     {pillar.title}
                   </h3>
-                  <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/50">
+                  <p className="mt-4 max-w-xs text-sm leading-relaxed text-ivory/70">
                     {pillar.description}
                   </p>
                 </div>
 
-                <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-4 text-[10px] font-bold uppercase tracking-widest text-white/45">
+                <div className="mt-8 flex items-center justify-between border-t border-ivory/10 pt-4 text-[10px] font-bold uppercase tracking-widest text-ivory/65">
                   <span>Explore module</span>
                   <span className="text-red-500">↗</span>
                 </div>
@@ -270,18 +270,18 @@ export default function HomePage() {
 
         {/* Workflow */}
         <section id="workflow" className="px-5 py-12 md:px-10 md:py-20">
-          <div className="border border-black bg-[#f7f7f5]">
-            <div className="flex items-center justify-between border-b border-black px-5 py-4">
+          <div className="border border-charcoal bg-surface">
+            <div className="flex items-center justify-between border-b border-charcoal px-5 py-4">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-light text-red-600">01</span>
                 <span className="text-xs font-bold uppercase tracking-widest">
-                  Guided investigation
+                  Guided chat
                 </span>
               </div>
 
               <Link
-                href="/cases"
-                className="border border-black px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition hover:bg-black hover:text-white"
+                href="/chat"
+                className="border border-charcoal px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition hover:bg-charcoal hover:text-ivory active:bg-charcoal-pressed"
               >
                 Open chat
               </Link>
@@ -289,57 +289,57 @@ export default function HomePage() {
 
             <div className="grid min-h-132.5 gap-10 px-6 py-16 md:grid-cols-[1.2fr_0.8fr] md:px-14">
               <div className="flex flex-col justify-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal/60">
                   Context first
                 </p>
 
                 <h2 className="mt-5 text-5xl font-light leading-[0.95] tracking-normal md:text-7xl">
-                  Improve your
+                  Keep your
                   <br />
-                  <span className="text-black/20">case confidence.</span>
+                  <span className="text-charcoal/25">context together.</span>
                 </h2>
 
-                <p className="mt-7 max-w-md text-sm leading-relaxed text-black/55">
-                  CyberCase identifies missing details early, asks precise
-                  follow-up questions, and keeps the investigation grounded in
-                  available evidence.
+                <p className="mt-7 max-w-md text-sm leading-relaxed text-ink-secondary">
+                  CyberCase keeps the context in one thread, asks focused
+                  follow-up questions when something is missing, and lets you
+                  return to saved conversations.
                 </p>
 
                 <Link
-                  href="/cases"
-                  className="mt-9 inline-flex w-fit items-center gap-3 bg-black px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-white transition hover:bg-black/80"
+                  href="/chat"
+                  className="mt-9 inline-flex w-fit items-center gap-3 bg-charcoal px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-ivory transition hover:bg-charcoal-hover active:bg-charcoal-pressed"
                 >
-                  Start investigation
+                  Start a conversation
                   <span className="text-red-500">●</span>
                 </Link>
               </div>
 
-              <div className="flex flex-col justify-end border-l border-black/10 pl-6 md:pl-10">
+              <div className="flex flex-col justify-end border-l border-charcoal/10 pl-6 md:pl-10">
                 {[
                   [
                     "01",
-                    "Collect",
-                    "Capture incident facts, evidence, and observed indicators.",
+                    "Start",
+                    "Open a chat and describe what you need to understand.",
                   ],
                   [
                     "02",
-                    "Validate",
-                    "Detect ambiguity and request the missing details.",
+                    "Clarify",
+                    "Answer focused follow-ups when more context is needed.",
                   ],
                   [
                     "03",
-                    "Connect",
-                    "Map verified behavior to MITRE and related intelligence.",
+                    "Continue",
+                    "Keep each accepted message and response in the thread.",
                   ],
                   [
                     "04",
-                    "Generate",
-                    "Produce structured reports ready for analyst review.",
+                    "Return",
+                    "Come back to any saved chat without losing the thread.",
                   ],
                 ].map(([number, title, description]) => (
                   <div
                     key={number}
-                    className="border-t border-black/15 py-5 first:border-t-0 first:pt-0"
+                    className="border-t border-charcoal/15 py-5 first:border-t-0 first:pt-0"
                   >
                     <div className="flex gap-4">
                       <span className="text-xs font-bold text-red-600">
@@ -347,7 +347,7 @@ export default function HomePage() {
                       </span>
                       <div>
                         <h3 className="text-lg font-medium">{title}</h3>
-                        <p className="mt-1 text-xs leading-relaxed text-black/50">
+                        <p className="mt-1 text-xs leading-relaxed text-ink-secondary">
                           {description}
                         </p>
                       </div>
@@ -362,49 +362,48 @@ export default function HomePage() {
         {/* Intelligence */}
         <section
           id="intelligence"
-          className="grid border-t border-black/10 md:grid-cols-2"
+          className="grid border-t border-charcoal/10 md:grid-cols-2"
         >
-          <div className="bg-black px-6 py-14 text-white md:px-12 md:py-20">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+          <div className="bg-charcoal px-6 py-14 text-ivory md:px-12 md:py-20">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-ivory/60">
               Intelligence layer
             </p>
 
             <h2 className="mt-5 text-4xl font-light leading-none tracking-normal md:text-6xl">
-              Grounded outputs,
+              Grounded answers,
               <br />
               not guesses.
             </h2>
 
-            <p className="mt-7 max-w-md text-sm leading-relaxed text-white/50">
-              Retrieval-Augmented Generation, knowledge graphs, and
-              analyst-confirmed facts work together to reduce hallucination and
-              make findings traceable.
+            <p className="mt-7 max-w-md text-sm leading-relaxed text-ivory/70">
+              Retrieval-Augmented Generation and persisted conversation context
+              work together to keep answers traceable and useful.
             </p>
           </div>
 
-          <div className="bg-[#e8e8e5] px-6 py-14 md:px-12 md:py-20">
+          <div className="bg-surface-hover px-6 py-14 md:px-12 md:py-20">
             <div className="space-y-6">
               {[
                 [
-                  "RAG Retrieval",
-                  "Relevant laws, case documents, and CTI context.",
+                  "Persistent context",
+                  "Keep the accepted conversation available across sessions.",
                 ],
                 [
-                  "Graph Intelligence",
-                  "Verified relationships between techniques, evidence, and standards.",
+                  "Guided follow-up",
+                  "Ask for the missing detail before continuing the analysis.",
                 ],
                 [
-                  "Gap Analysis",
-                  "Targeted follow-ups when context is insufficient.",
+                  "Saved threads",
+                  "Switch between multiple conversations from one workspace.",
                 ],
                 [
-                  "Report Engine",
-                  "Structured outputs for incident response and documentation.",
+                  "Clear handoff",
+                  "Keep questions, answers, and backend responses together.",
                 ],
               ].map(([title, description], index) => (
                 <article
                   key={title}
-                  className="flex gap-5 border-b border-black/15 pb-6 last:border-b-0"
+                  className="flex gap-5 border-b border-charcoal/15 pb-6 last:border-b-0"
                 >
                   <span className="text-sm font-light text-red-600">
                     0{index + 1}
@@ -413,7 +412,7 @@ export default function HomePage() {
                     <h3 className="text-xl font-medium tracking-tight">
                       {title}
                     </h3>
-                    <p className="mt-2 max-w-md text-sm leading-relaxed text-black/55">
+                    <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-secondary">
                       {description}
                     </p>
                   </div>
@@ -426,21 +425,18 @@ export default function HomePage() {
         {/* Footer */}
         <footer
           id="about"
-          className="flex flex-col gap-5 border-t border-black/10 px-5 py-7 text-xs text-black/45 md:flex-row md:items-center md:justify-between md:px-10"
+          className="flex flex-col gap-5 border-t border-charcoal/10 px-5 py-7 text-xs text-ink-secondary md:flex-row md:items-center md:justify-between md:px-10"
         >
           <p>CyberCase Intelligence Framework</p>
           <div className="flex gap-5">
-            <Link href="/chat" className="hover:text-black">
+            <Link href="/chat" className="hover:text-charcoal">
               Workspace
             </Link>
-            <Link href="/report" className="hover:text-black">
-              Reports
-            </Link>
-            <a href="#platform" className="hover:text-black">
+            <a href="#platform" className="hover:text-charcoal">
               Platform
             </a>
           </div>
-          <p>Built for evidence-led cyber investigations.</p>
+          <p>Built for evidence-led cyber conversations.</p>
         </footer>
       </div>
     </main>

@@ -1,12 +1,20 @@
 """
 Cross-Lingual Translation Layer
 =================================
-Handles language routing for the cross-lingual RAG pipeline.
+Language routing for the RAG pipeline. Two halves with different lifetimes:
 
-Pipeline stages:
-  1. Pre-retrieval  : Thai query  → English query  (query translate LLM)
-  2. Reasoning      : English context → Simplified English narrative (reasoning LLM)
-  3. Translation    : Simplified English → Thai output (translation LLM)
+LIVE — used by the agent, all @staticmethods, no instance needed:
+  • should_respond_in_thai()     language detection
+  • get_fast_system_prompt()     the default single-call prompt (Thai direct)
+  • get_reasoning_system_prompt()  English answers, and the two-stage rollback
+  • get_translation_system_prompt()  the translate_output node
+
+EVALUATION ONLY — the pre-retrieval translation half:
+  • __init__ / translate_query()   Thai query → English query
+  • build_retrieval_queries()      dual-query fan-out, DUAL_QUERY_RETRIEVAL
+Nothing in the served pipeline translates the input: BGE-M3 is multilingual, so
+the agent retrieves on the Thai text as-is. These survive for pipeline/chain.py
+and evaluation/, which measure the old translate-then-retrieve baseline.
 
 Technical terms (ATT&CK IDs, technique names, group names) are preserved as-is
 throughout all stages.
@@ -15,14 +23,14 @@ throughout all stages.
 import re
 
 from ..config import (
-    ANTHROPIC_API_KEY,
     DUAL_QUERY_RETRIEVAL,
     LLM_MODEL,
     LOCAL_LLM_MODEL,
     OLLAMA_BASE_URL,
 )
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
+from ..llm_content import LlmContentError, require_message_text
+from ..llm_provider import CoreLlmConfigurationError, create_core_chat_model
 
 # ──────────────────────────────────────────────────────────────────────────────
 # TRANSLATION PROMPT
@@ -186,16 +194,16 @@ class CrossLingualLayer:
                 num_predict=256,
             )
             print(f"[TRANSLATE] Local model: {LOCAL_LLM_MODEL}")
-        elif not ANTHROPIC_API_KEY:
-            print("[WARN] No ANTHROPIC_API_KEY — translation will be skipped")
-            self.llm = None
         else:
-            self.llm = ChatAnthropic(
-                model=LLM_MODEL,
-                api_key=ANTHROPIC_API_KEY,
-                temperature=0,
-                max_tokens=256,
-            )
+            try:
+                self.llm = create_core_chat_model(
+                    anthropic_model=LLM_MODEL,
+                    temperature=0,
+                    max_tokens=256,
+                )
+            except CoreLlmConfigurationError as exc:
+                print(f"[WARN] Translation cloud LLM unavailable: {exc}")
+                self.llm = None
 
     def translate_query(self, query: str) -> str:
         """Translate a Thai query to English for retrieval.
@@ -218,7 +226,13 @@ class CrossLingualLayer:
 
         response = self.llm.invoke([HumanMessage(content=prompt)])
 
-        translated = response.content
+        try:
+            translated = require_message_text(
+                response,
+                operation="query translation",
+            )
+        except LlmContentError:
+            return query
         print(f"[TRANSLATE] Original: {query}")
         print(f"[TRANSLATE] English:  {translated}")
 
@@ -244,12 +258,13 @@ class CrossLingualLayer:
 
     @staticmethod
     def get_fast_system_prompt(respond_in_thai: bool) -> str:
-        """Single-pass system prompt for --fast mode.
+        """The DEFAULT production prompt for Thai answers, despite the name.
 
-        Same jargon-simplification + 4-section structure as the reasoning stage,
-        but the model writes the FINAL answer directly in the response language —
-        there is no separate downstream translation stage in fast mode, so we fold
-        reasoning + translation into one LLM call.
+        Named for --fast, but SINGLE_CALL_GENERATION (on by default) makes the
+        agent's own reasoning node use it too — so this is what most traffic
+        actually hits. Same jargon-simplification + 4-section structure as the
+        reasoning stage, but the model writes the FINAL answer directly in the
+        response language, folding reasoning + translation into one LLM call.
         """
         if not respond_in_thai:
             return REASONING_SYSTEM_PROMPT

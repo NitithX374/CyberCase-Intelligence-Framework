@@ -1,163 +1,127 @@
 # CyberCase Intelligence Framework
 
-CyberCase Intelligence Framework is an interactive web-based Retrieval-Augmented Generation (RAG) platform for cybercrime case analysis. It helps users submit incident details, identify missing investigative information, map technical evidence to cybersecurity knowledge such as MITRE ATT&CK, and generate structured investigation reports.
+CyberCase is an interactive, trust-bounded cyber incident analysis system. It converts unstructured investigator narratives and clarification answers into provenance-aware relational case representations (entities, relationships, evidence candidates, timeline events, missing facts, and explicit uncertainty) while strictly preventing external background knowledge or RAG outputs from contaminating user-reported evidence.
 
-It features a modern Next.js frontend, a high-performance FastAPI backend, and a standalone RAG service that combines vector retrieval, graph-based MITRE ATT&CK knowledge, and LLM reasoning to provide grounded, evidence-based analysis.
+> [!NOTE]
+> **Research Scope Division**:
+> - **Primary System Scope (This Project / Core Architecture)**: Pre-RAG material-fact clarification, source-bounded trust-boundary fact extraction, relational case representation & visualization, provenance validation, backend service architecture, and empirical representation trade-off evaluation (B0 vs. D1 vs. B2).
+> - **External Knowledge Scope (Collaborator/RAG Module)**: External MITRE ATT&CK GraphRAG retrieval (`rag_service/`), hybrid Qdrant vector + Neo4j graph search, and LangGraph self-reflection.
 
-## Project Structure
+---
 
-*   `Documents/`: Source reference documents and case-analysis knowledge assets.
-*   `rag_service/`: Standalone RAG service with GraphRAG pipelines.
-*   `backend/`: FastAPI application providing API endpoints, backed by PostgreSQL and SQLAlchemy. Calls `rag_service` for RAG capabilities.
-*   `frontend/`: Next.js 15 web application with a modern dark-theme UI.
+## 🌟 Key Architecture & Principles
 
-## Quick Start
+### 1. Trust-Boundary Principle: "Analytical Knowledge ≠ Case Evidence"
+General LLM model knowledge, RAG answers, and MITRE ATT&CK descriptions are **analytical context**, not factual incident evidence. The extraction pipeline ([backend/app/services/extraction/llm_extraction.py](file:///f:/Cybercase%20Framework/backend/app/services/extraction/llm_extraction.py)) strictly restricts its input packet (`ExtractionInput`) to user-authored case messages (`user_case_statement` and `clarification_answer`), excluding RAG outputs to eliminate hallucination contamination.
 
-### 1. Environment Setup
+### 2. Pre-RAG Material-Fact Clarification Gate
+Before invoking external knowledge retrieval, the backend clarification policy ([backend/app/services/chat/followup_policy.py](file:///f:/Cybercase%20Framework/backend/app/services/chat/followup_policy.py)) evaluates whether material case facts are missing or ambiguous. It asks up to 3 bounded, concise clarification questions in the user's language or proceeds when context is sufficient or unavailable.
 
-#### Python (for RAG and Backend)
-Create a virtual environment to manage Python dependencies:
-```bash
-# In the project root directory
-python -m venv env_mitre
+### 3. Provenance-Aware Relational Case Representation
+Unstructured text is transformed into an explicit Pydantic JSON schema (`BaselineExtraction`) containing:
+- **Entities & Entity-to-Entity Relationships**: Explicitly stated connections with status (`reported`, `suspected`, `contradicted`, `not_established`).
+- **Evidence Candidates & Timeline Events**: Incident indicators and chronological actions.
+- **Missing Information**: Identified gaps requiring further investigation.
+- **Source Message Provenance**: Every extracted item maintains direct binding to user message IDs (`source_message_ids`).
+
+### 4. Empirical Representation Study (B0 vs. D1 vs. B2)
+Evaluates intermediate case representations for incident analysis:
+- **B0**: Direct report generation (`raw case → report`)
+- **D1**: Dehing-adapted summary-first (`raw case → source-preserving text summary → report`)
+- **B2**: CyberCase relationship-first (`raw case → structured relational representation → report`)
+
+---
+
+## 🛠️ Tech Stack & Model Routing
+
+- **Frontend**: Next.js 16 (App Router) + React 19 + Tailwind CSS 4 + TypeScript + D3/SVG Graph Rendering
+- **Backend**: FastAPI + SQLAlchemy (Async) + PostgreSQL + Alembic
+- **Default LLM Routing**: OpenRouter / Anthropic via `openai/gpt-5.6-luna` (configured in `backend/app/config.py`)
+- **External RAG**: FastAPI `rag_service` on port 8001 (Qdrant Dense BGE-M3 + Neo4j 2-hop Graph Expansion)
+
+---
+
+## 📂 Services Architecture
+
+```
+backend/app/services/
+├── __init__.py               # Re-exports domain modules
+├── chat/                     # Chat Session Lifecycle, Thread/Message CRUD & Background Worker
+│   ├── chat_management.py
+│   ├── chat_message.py
+│   ├── chat_worker.py
+│   ├── followup_policy.py
+│   └── rag_client.py
+├── llm/                      # Core LLM Provider & Structured Output Infrastructure
+│   ├── core_llm.py
+│   ├── structured_output.py
+│   ├── structured_output_router.py
+│   └── structured_output_request_router.py
+├── extraction/               # Source-Bounded Fact & Entity/Relationship Extraction
+│   └── llm_extraction.py
+└── reports/                  # Incident Report Generation & PDF Export
+    ├── report_service.py
+    ├── report_generation.py
+    ├── report_prompt.py
+    ├── report_provider_schema.py
+    └── report_pdf.py
 ```
 
-Activate the virtual environment:
-*   **Windows:** `.\env_mitre\Scripts\activate`
-*   **macOS/Linux:** `source env_mitre/bin/activate`
+---
 
-Install the required Python packages:
-```bash
-# This script installs dependencies for both backend and rag_service
-python install_deps.py
+## 🚀 Quick Start
+
+### Docker Compose
+
+```powershell
+doppler run -- docker compose up --build
 ```
 
-### 2. Environment Management (Doppler)
-This project uses **Doppler** to manage environment variables securely. This replaces the need for manual `.env` files.
+Starts PostgreSQL, backend (port 8000), external RAG service (port 8001), and frontend (port 3000).
 
-#### Login & Setup
-If you haven't already, authenticate and select the project configuration:
-```bash
-doppler login
-doppler setup
-```
-
-#### Running with Secrets
-To run any command with environment variables injected:
-```bash
-doppler run -- <command>
-```
-
-### 3. Database Setup
-You need a running PostgreSQL database. You can use the provided `docker-compose.yml`:
-```bash
-docker-compose up -d
-```
-
-### 4. RAG Service Setup (FastAPI)
-```bash
-cd rag_service/app
-# Start the RAG service with Doppler secrets
-doppler run -- uvicorn main:app --port 8001
-```
-The RAG service will be available at `http://localhost:8001`.
-
-### 5. Backend Setup (FastAPI)
-You don't need a `.env` file if you use Doppler.
-```bash
+Apply PostgreSQL database migrations:
+```powershell
 cd backend
-# Run migrations using Doppler secrets
-doppler run -- alembic upgrade head
-
-# Start the server with Doppler secrets
-doppler run -- uvicorn app.main:app --reload
+doppler run -- python -m alembic upgrade head
 ```
-The backend will be available at `http://localhost:8000`.
 
-### 6. Frontend Setup
-Create a `.env.local` file in the `frontend/` directory.
-```bash
+### Local Development
+
+1. **Activate Virtual Environment & Install Dependencies**:
+   ```powershell
+   .\env_mitre\Scripts\Activate.ps1
+   python install_deps.py
+   ```
+
+2. **Run Backend API**:
+   ```powershell
+   cd backend
+   doppler run -- python -m alembic upgrade head
+   doppler run -- uvicorn app.main:app --port 8000 --reload
+   ```
+
+3. **Run Frontend**:
+   ```powershell
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+4. Open `http://localhost:3000/chat`. OpenAPI documentation is available at `http://localhost:8000/docs`.
+
+---
+
+## 🧪 Validation & Testing
+
+```powershell
+# Backend Pytest Suite (129 tests)
+cd backend
+..\env_mitre\Scripts\python.exe -m pytest tests -q -p no:cacheprovider
+python -m alembic heads
+
+# Frontend Type-check & Production Build
 cd frontend
-npm install
-npm run dev
-```
-The frontend will be available at `http://localhost:3000`.
-
-### 7. RAG CLI Tools
-You can also run the RAG pipelines directly via CLI for testing:
-```bash
-cd rag_service/app/RAG/GraphRAG
-python main.py --test
-```
-*(Requires `ANTHROPIC_API_KEY` to be set in your environment for generation capabilities).*
-
-## Documentation
-*   `SKILL.md`: Technical overview and guidelines for AI agents working on the codebase.
-
-## Evidence-Traceable Preliminary Legal Relevance Reports
-
-The report workflow now builds an evidence registry and Case Fact Pack before generating a preliminary investigation report. The report is evidence-locked: facts, timeline items, MITRE mappings, and optional legal relevance must cite known evidence IDs such as `E-001`.
-
-```mermaid
-flowchart LR
-    A[Case input or upload] --> B[Evidence registry]
-    B --> C[Case Fact Pack]
-    C --> D{Completeness gate}
-    D -->|Incomplete| E[Follow-up session]
-    E --> C
-    D -->|Sufficient or force generate| F[Hybrid RAG / GraphRAG]
-    F --> G[Evidence-locked report]
-    G --> H[Human review status]
-```
-
-### Terminology
-
-* `confirmed`: supported by submitted or retrieved evidence and treated as verified for the preliminary report.
-* `reported`: provided by the user, uploaded content, logs, or OCR extraction but still requiring review.
-* `inferred`: derived from retrieval or analysis and requiring investigator confirmation.
-* `unknown`: missing or not supported by available evidence.
-
-### Legal Mode
-
-Legal relevance is disabled by default. When enabled, the system uses preliminary wording and includes this disclaimer:
-
-> This is preliminary investigation support only and is not a legal conclusion.
-
-The system must not determine guilt or innocence, claim court admissibility, make final legal conclusions, or invent laws, MITRE techniques, evidence, dates, or citations.
-
-### Evidence IDs And Provenance Metadata
-
-* User text and uploaded files are registered as evidence references such as `E-001`, `E-002`.
-* Uploaded files include provenance metadata: original filename, content type, SHA-256 hash, upload timestamp, extraction method, and page number when available.
-* This is evidence provenance metadata, not chain-of-custody compliance.
-* Report validators reject unknown evidence IDs and MITRE technique IDs that were not present in retrieved MITRE data.
-
-### Report API Summary
-
-The actual report generation is managed by the backend `ReportWorkflowService` and `backend/app/services/reporting/generator.py::ReportGenerator`.
-
-* `POST /api/v1/cases/{case_id}/report`: start report analysis for a specific case from its facts and evidence.
-* `POST /api/v1/cases/{case_id}/report/resume`: resume report generation for a case after a follow-up answer is submitted.
-* `GET /api/v1/cases/{case_id}/report`: retrieve the latest generated report for a case.
-* `GET /api/v1/reports`: retrieve all reports summaries for the reports registry library.
-* `GET /api/v1/reports/{report_id}`: retrieve a generated report and Case Fact Pack.
-* `PATCH /api/v1/reports/{report_id}/review-status`: update review status (`draft`, `ai_generated`, `reviewed`, `approved`).
-
-Report generation is case-owned. Standalone legacy `/reports/generate`, `/reports/generate-file`, and `/reports/resume` endpoints are not exposed.
-
-### Migrations And Tests
-
-This platform stores generated report/review and session states in the PostgreSQL database via SQLAlchemy models `ReportRecord` and `ReportSessionRecord`. Migrations are managed by Alembic. To apply migrations, run:
-
-```bash
-cd backend
-alembic upgrade head
-```
-
-Run focused checks with:
-
-```bash
-cd backend && pytest
-cd frontend && npm run lint
-cd frontend && npm run build
+npm run lint
+npm run test
+npm run build
 ```
