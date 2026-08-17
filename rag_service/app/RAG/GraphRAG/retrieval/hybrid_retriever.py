@@ -298,18 +298,30 @@ class HybridRetriever:
                 if cid not in seen_graph:
                     seen_graph[cid] = sg
 
-        # Round-robin interleave: query1[0], query2[0], …, query1[1], query2[1], …
-        # so the top of the list spans all sub-queries (no technique gets dropped).
+        # Round-robin interleave: every sub-query's best hit before anyone's
+        # second, so the top of the list spans all sub-queries and no technique
+        # gets dropped by the final trim.
+        #
+        # Within one round the sub-queries are visited in *score* order rather
+        # than in the order the decomposer emitted them. Emission order carries
+        # no information about confidence, and taking it literally put whichever
+        # sub-query happened to come first at rank 1: on one traced case the
+        # rank-1 hit scored 0.249 while a 0.990 hit sat at rank 6. Sorting costs
+        # nothing and does not change which items survive — only their order.
+        #
+        # Scores across sub-queries are not strictly comparable (each is a
+        # cross-encoder score against a different question), so this is a better
+        # ordering heuristic rather than a principled ranking.
         merged_vector: list = []
         seen_vec: set[str] = set()
         depth = max((len(v) for v in per_query_vectors), default=0)
         for rank in range(depth):
-            for vecs in per_query_vectors:
-                if rank < len(vecs):
-                    vr = vecs[rank]
-                    if vr.stix_id not in seen_vec:
-                        seen_vec.add(vr.stix_id)
-                        merged_vector.append(vr)
+            round_hits = [vecs[rank] for vecs in per_query_vectors if rank < len(vecs)]
+            round_hits.sort(key=lambda vr: vr.score, reverse=True)
+            for vr in round_hits:
+                if vr.stix_id not in seen_vec:
+                    seen_vec.add(vr.stix_id)
+                    merged_vector.append(vr)
             if len(merged_vector) >= max_vector:
                 break
         merged_vector = merged_vector[:max_vector]

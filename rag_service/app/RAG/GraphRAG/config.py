@@ -249,9 +249,26 @@ RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 # as a visible "retrieved_only" row while a false drop silently loses a real
 # technique. NOTE: reranking a Thai query directly scores near-zero across the
 # board (the DUAL_QUERY_RETRIEVAL Thai channel) — entities found only via that
-# channel will not clear any threshold. Re-run the sweep to settle the value:
-#   python -m evaluation.crosslingual_generation_benchmark \
-#       --thresholds 0.03,0.05,0.10,0.15,0.20,0.30
+# channel will not clear any threshold.
+#
+# The sweep has since been run directly on the corrected scale: 30 real-CTI
+# cases through the served path, 201 candidates after build_mitre_table's
+# entity-only filter, scored with the same ×1.2 Technique weight.
+#
+#   thr    kept   precision   recall    F1
+#   0.00    201       .299     .583    .395
+#   0.05    132       .409     .524    .460   <- current
+#   0.20     83       .530     .427    .473
+#   0.50     56       .679     .369    .478   <- best F1
+#   0.62     44       .705     .301    .422
+#
+# 0.05 is kept. F1 peaks at 0.50 but by .018 on 30 cases, which is not a real
+# difference, and buying it costs 30% of recall — 16 of the 60 correct
+# techniques that were retrieved at all. The asymmetry above still holds: an
+# extra row is visible and dismissable, a dropped one is not. Note also that
+# recall is capped at .583 here because only 60 of 103 gold ids reach the
+# candidate list in the first place; that ceiling is a retrieval problem and
+# no threshold can move it.
 MITRE_TABLE_SCORE_THRESHOLD = float(os.getenv("MITRE_TABLE_SCORE_THRESHOLD", "0.05"))
 
 # ──────────────────────────────────────────────────────────────────────────────

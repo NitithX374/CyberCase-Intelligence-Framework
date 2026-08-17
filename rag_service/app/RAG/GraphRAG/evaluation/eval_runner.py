@@ -124,6 +124,70 @@ def _make_graph_retriever_fn():
     return fn, retriever.close
 
 
+def _subtechnique_parent_map() -> dict[str, str]:
+    """sub-technique stix_id -> parent technique stix_id.
+
+    Qdrant holds 2,195 entities including 522 sub-techniques; Neo4j holds 299
+    parent techniques and no sub-techniques. Gold is resolved through Neo4j, so
+    it is always parent-granular — while the retriever can and does return the
+    sub-technique. Verified that the 299 parent stix_ids are identical in both
+    stores, so the map can be built from Qdrant alone.
+    """
+    from .embed_ab.arms import make_client
+    from ..config import QDRANT_COLLECTION_ENTITIES
+
+    client = make_client()
+    by_attack_id: dict[str, str] = {}
+    subs: list[tuple[str, str]] = []  # (sub stix_id, parent attack_id)
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            QDRANT_COLLECTION_ENTITIES, limit=1000, offset=offset, with_payload=True
+        )
+        for p in points:
+            payload = p.payload or {}
+            attack_id, stix_id = payload.get("attack_id"), payload.get("stix_id")
+            if not attack_id or not stix_id:
+                continue
+            by_attack_id[attack_id] = stix_id
+            if "." in attack_id:
+                subs.append((stix_id, attack_id.split(".")[0]))
+        if offset is None:
+            break
+
+    mapping = {
+        sub_stix: by_attack_id[parent_aid]
+        for sub_stix, parent_aid in subs
+        if parent_aid in by_attack_id
+    }
+    print(f"[EVAL] Sub-technique -> parent map: {len(mapping)} entries")
+    return mapping
+
+
+def _normalise_to_parent(fn, parent_map: dict[str, str]):
+    """Wrap a retriever fn so its ids are parent-granular, like the gold.
+
+    Gold was rolled up to parent because the graph has no sub-techniques.
+    Scoring predictions without the same roll-up compares the two at different
+    granularities and marks a correct sub-technique hit as a miss — which is a
+    defect in the measurement, not a concession to the retriever.
+
+    Ids are replaced (not appended) and de-duplicated, so one retrieved item
+    still occupies one rank and @K keeps its meaning.
+    """
+    def wrapped(query: str) -> list[str]:
+        out: list[str] = []
+        seen: set[str] = set()
+        for stix_id in fn(query):
+            canonical = parent_map.get(stix_id, stix_id)
+            if canonical not in seen:
+                seen.add(canonical)
+                out.append(canonical)
+        return out
+
+    return wrapped
+
+
 def _collect_hybrid_ids(result) -> list[str]:
     """Flatten a GraphRAGResult into an ordered, deduped STIX-id list
     (vector hits first, then each subgraph's center node + neighbors)."""
@@ -179,8 +243,17 @@ def _make_hybrid_quota_retriever_fn(embed_model=None, use_local: bool = False):
 
     def fn(query: str) -> list[str]:
         sub_queries = decomposer.decompose(incident=query, verbose=False)
+        # The full incident goes in FIRST, exactly as _node_retrieve does it:
+        # production keeps it as a holistic channel because the atomic
+        # sub-queries lose the surrounding context, and its own comment records
+        # that this improves technique coverage. Omitting it here made the arm
+        # score below the system it is supposed to represent.
+        all_queries: list[str] = []
+        for q in [query, *sub_queries]:
+            if q and q.strip() and q not in all_queries:
+                all_queries.append(q)
         result = retriever.retrieve_multi_quota(
-            sub_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
+            all_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
         )
         return _collect_hybrid_ids(result)
 
@@ -192,40 +265,43 @@ def _make_hybrid_quota_retriever_fn(embed_model=None, use_local: bool = False):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _make_generation_fn(embed_model=None, use_local: bool = False):
-    """Create a generation function wrapping GraphRAGChain."""
-    from ..pipeline.chain import GraphRAGChain
+def _make_generation_fn(embed_model=None):
+    """Create a generation function wrapping GraphRAGAgent — the served path.
 
-    chain = GraphRAGChain(embed_model=embed_model, use_local=use_local)
+    This used to wrap GraphRAGChain, which measured a pipeline the service no
+    longer runs: main.py loads only GraphRAGAgent and /query reaches only that.
+    The chain translates the Thai query to English first (production does not —
+    _node_prepare states "NO input translation"), retrieves with retrieve_multi
+    instead of the per-query quota, and has no evaluator loop. Generation scores
+    from it describe a system that does not exist, and none of the retrieval
+    work measured elsewhere in this repo would show up in them.
+
+    One agent.query() call returns both the answer and the context it was
+    written from, so the contexts handed to RAGAS are the ones the model
+    actually saw rather than a second retrieval pass.
+    """
+    from ..pipeline.agent_graph import GraphRAGAgent
+
+    agent = GraphRAGAgent(embed_model=embed_model)
 
     def fn(query: str) -> tuple[str, list[str]]:
         """Returns (answer, list_of_context_chunks)."""
-        # Get retrieval context (same dual-query flow as GraphRAGChain.query)
-        from ..pipeline.cross_lingual import build_retrieval_queries
+        response = agent.query(query, verbose=False)
 
-        english_query = chain.translator.translate_query(query)
-        queries = build_retrieval_queries(query, english_query)
-        graphrag_result = chain.retriever.retrieve_multi(queries)
+        # RAGAS wants the context as discrete chunks. Rebuild them from the
+        # same GraphRAGResult the answer came from — vector documents first,
+        # then one chunk per subgraph.
+        chunks: list[str] = []
+        result = response.graphrag_result
+        if result is not None:
+            chunks += [vr.document for vr in result.vector_results[:5] if vr.document]
+            chunks += [t for gr in result.graph_results if (t := gr.to_text())]
+        if not chunks and response.context:
+            chunks = [response.context]
 
-        from ..pipeline.context_builder import build_context
+        return response.answer, chunks
 
-        build_context(graphrag_result)
-
-        # Get answer
-        answer = chain.query(query, verbose=False)
-
-        # Split context into chunks for RAGAS (one per semantic result)
-        context_chunks = []
-        for vr in graphrag_result.vector_results[:5]:
-            context_chunks.append(vr.document)
-        for gr in graphrag_result.graph_results:
-            text = gr.to_text()
-            if text:
-                context_chunks.append(text)
-
-        return answer, context_chunks
-
-    return fn, chain.close
+    return fn, agent.close
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -233,13 +309,29 @@ def _make_generation_fn(embed_model=None, use_local: bool = False):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+class _ArmSkipped(Exception):
+    """Raised to skip an arm the caller did not select in --arms."""
+
+
 class EvalRunner:
     """Orchestrates the full evaluation pipeline."""
 
-    def __init__(self, dataset_path: str, mode: str = "full", use_local: bool = False, max_samples: int = 0):
+    # Only the quota arm spends money — it calls an LLM to decompose each
+    # incident. Keeping the arms selectable means a free run is one flag away.
+    ALL_ARMS = ("vector", "graph", "hybrid", "quota")
+    PAID_ARMS = ("quota",)
+
+    def __init__(self, dataset_path: str, mode: str = "full", use_local: bool = False,
+                 max_samples: int = 0, arms: tuple[str, ...] | None = None,
+                 k_values: list[int] | None = None):
         self.dataset_path = Path(dataset_path)
         self.mode = mode
         self.use_local = use_local
+        self.arms = tuple(arms) if arms else self.ALL_ARMS
+        # Hybrid returns hundreds of ids (vector hits + every graph neighbour).
+        # Scoring only the top 10 cannot distinguish "never retrieved" from
+        # "retrieved but ranked far down", so the cutoffs are configurable.
+        self.k_values = k_values or [1, 3, 5, 10]
 
         all_samples = load_ground_truth(self.dataset_path)
         # Filter out samples with > 50 relevant STIX IDs
@@ -301,33 +393,45 @@ class EvalRunner:
 
         results = []
         embed_model = self._get_embed_model()
+        print(f"[EVAL] Arms: {', '.join(self.arms)}")
+        parent_map = _subtechnique_parent_map()
 
         # 1. Vector Retriever
         print("\n" + "═" * 60)
         print("  Evaluating: Vector Retriever (ChromaDB)")
         print("═" * 60)
-        fn, cleanup = _make_vector_retriever_fn(embed_model)
-        if cleanup:
-            self._cleanups.append(cleanup)
-        vr_result = evaluate_retriever(
-            fn, eval_samples, retriever_name="Vector (ChromaDB)"
-        )
-        results.append(vr_result)
-        print(vr_result.to_table())
+        if "vector" not in self.arms:
+            print("  [SKIP] not selected in --arms")
+        else:
+            fn, cleanup = _make_vector_retriever_fn(embed_model)
+            fn = _normalise_to_parent(fn, parent_map)
+            if cleanup:
+                self._cleanups.append(cleanup)
+            vr_result = evaluate_retriever(
+                fn, eval_samples, k_values=self.k_values,
+                retriever_name="Vector (ChromaDB)"
+            )
+            results.append(vr_result)
+            print(vr_result.to_table())
 
         # 2. Graph Retriever
         print("\n" + "═" * 60)
         print("  Evaluating: Graph Retriever (Neo4j)")
         print("═" * 60)
         try:
+            if "graph" not in self.arms:
+                raise _ArmSkipped()
             fn, cleanup = _make_graph_retriever_fn()
+            fn = _normalise_to_parent(fn, parent_map)
             if cleanup:
                 self._cleanups.append(cleanup)
             gr_result = evaluate_retriever(
-                fn, eval_samples, retriever_name="Graph (Neo4j)"
+                fn, eval_samples, k_values=self.k_values, retriever_name="Graph (Neo4j)"
             )
             results.append(gr_result)
             print(gr_result.to_table())
+        except _ArmSkipped:
+            print("  [SKIP] not selected in --arms")
         except Exception as e:
             print(f"  [SKIP] Graph retriever unavailable: {e}")
 
@@ -336,14 +440,19 @@ class EvalRunner:
         print("  Evaluating: Hybrid Retriever (Vector + Graph)")
         print("═" * 60)
         try:
+            if "hybrid" not in self.arms:
+                raise _ArmSkipped()
             fn, cleanup = _make_hybrid_retriever_fn(embed_model)
+            fn = _normalise_to_parent(fn, parent_map)
             if cleanup:
                 self._cleanups.append(cleanup)
             hr_result = evaluate_retriever(
-                fn, eval_samples, retriever_name="Hybrid (Vector+Graph)"
+                fn, eval_samples, k_values=self.k_values, retriever_name="Hybrid (Vector+Graph)"
             )
             results.append(hr_result)
             print(hr_result.to_table())
+        except _ArmSkipped:
+            print("  [SKIP] not selected in --arms")
         except Exception as e:
             print(f"  [SKIP] Hybrid retriever unavailable: {e}")
 
@@ -352,16 +461,21 @@ class EvalRunner:
         print("  Evaluating: Hybrid + Quota (decompose + per-query quota)")
         print("═" * 60)
         try:
+            if "quota" not in self.arms:
+                raise _ArmSkipped()
             fn, cleanup = _make_hybrid_quota_retriever_fn(
                 embed_model, use_local=self.use_local
             )
+            fn = _normalise_to_parent(fn, parent_map)
             if cleanup:
                 self._cleanups.append(cleanup)
             hq_result = evaluate_retriever(
-                fn, eval_samples, retriever_name="Hybrid+Quota (decompose)"
+                fn, eval_samples, k_values=self.k_values, retriever_name="Hybrid+Quota (decompose)"
             )
             results.append(hq_result)
             print(hq_result.to_table())
+        except _ArmSkipped:
+            print("  [SKIP] not selected in --arms")
         except Exception as e:
             print(f"  [SKIP] Hybrid+Quota retriever unavailable: {e}")
 
@@ -372,11 +486,12 @@ class EvalRunner:
     def _run_generation_eval(self) -> GenerationEvalResult:
         """Run generation evaluation."""
         print("\n" + "═" * 60)
-        print("  Evaluating: Answer Generation (GraphRAGChain)")
+        print("  Evaluating: Answer Generation (GraphRAGAgent — served path)")
         print("═" * 60)
 
         embed_model = self._get_embed_model()
-        fn, cleanup = _make_generation_fn(embed_model, use_local=self.use_local)
+        # GraphRAGAgent is cloud-only; --local no longer reaches generation.
+        fn, cleanup = _make_generation_fn(embed_model)
         if cleanup:
             self._cleanups.append(cleanup)
 
@@ -458,6 +573,22 @@ def main():
         help="Limit evaluation to first N samples (0 = no limit)",
     )
     parser.add_argument(
+        "--arms",
+        type=str,
+        default="",
+        help=(
+            "Comma-separated retriever arms to run: vector,graph,hybrid,quota "
+            "(default: all). Only 'quota' calls an LLM — "
+            "'--arms vector,graph,hybrid' is a free run."
+        ),
+    )
+    parser.add_argument(
+        "--k",
+        type=str,
+        default="1,3,5,10",
+        help="Comma-separated K cutoffs for @K metrics (default: 1,3,5,10)",
+    )
+    parser.add_argument(
         "--local",
         action="store_true",
         help=(
@@ -490,7 +621,17 @@ def main():
         sys.stdout_orig = sys.stdout  # type: ignore
         sys.stdout = Tee()  # type: ignore
 
-    runner = EvalRunner(dataset_path=args.dataset, mode=args.mode, use_local=args.local, max_samples=args.max_samples)
+    arms = tuple(a.strip() for a in args.arms.split(",") if a.strip()) or None
+    if arms:
+        unknown = set(arms) - set(EvalRunner.ALL_ARMS)
+        if unknown:
+            parser.error(
+                f"unknown arm(s): {', '.join(sorted(unknown))} — "
+                f"choose from {', '.join(EvalRunner.ALL_ARMS)}"
+            )
+    k_values = sorted({int(k) for k in args.k.split(",") if k.strip()})
+    runner = EvalRunner(dataset_path=args.dataset, mode=args.mode, use_local=args.local,
+                        max_samples=args.max_samples, arms=arms, k_values=k_values)
     runner.run()
 
     print("\n" + "═" * 60)
