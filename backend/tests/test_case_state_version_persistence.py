@@ -10,7 +10,7 @@ from app.services.chat.chat_worker import (
     ChatRunWorker,
     RagContextPayload,
 )
-from app.services.extraction.llm_extraction import BaselineExtraction
+from app.services.extraction.llm_extraction import CaseState
 
 
 class _Transaction:
@@ -51,11 +51,7 @@ class CaseStateVersionPersistenceTests(unittest.IsolatedAsyncioTestCase):
 
     @staticmethod
     def _validated_state() -> dict[str, object]:
-        extraction = BaselineExtraction(
-            version="baseline_extraction_v2",
-            mode="single_pass_llm",
-            status="candidate",
-        )
+        extraction = CaseState()
         return extraction.model_dump(mode="json")
 
     @staticmethod

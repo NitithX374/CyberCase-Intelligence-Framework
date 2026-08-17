@@ -263,8 +263,6 @@ def build_merged_extraction_metadata(
 
     mutation_metadata = mutation_metadata or {}
     metadata: dict[str, Any] = {
-        "version": BASELINE_EXTRACTION_VERSION,
-        "mode": BASELINE_EXTRACTION_MODE,
         "status": "candidate",
         "prompt_version": BASELINE_EXTRACTION_PROMPT_VERSION,
         "provider": mutation_metadata.get("provider"),

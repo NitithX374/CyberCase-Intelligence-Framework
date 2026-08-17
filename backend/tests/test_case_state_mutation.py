@@ -106,7 +106,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
                 walk(schema)
                 self.assertEqual(
                     set(schema["properties"]),
-                    {"version", "changes"},
+                    {"changes"},
                 )
                 change_schema = schema["$defs"]["CaseStateDeltaChange"]
                 self.assertEqual(
@@ -139,14 +139,14 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
     def test_empty_changes_is_the_only_no_change_shape(self) -> None:
         self.assertEqual(
             CaseStateDelta(changes=[]).model_dump(mode="json"),
-            {"version": "case_state_delta_v3", "changes": []},
+            {"changes": []},
         )
         with self.assertRaises(ValidationError):
             CaseStateDelta.model_validate(
                 {
-                    "version": "case_state_delta_v1",
                     "operation": "no_change",
                     "changes": [],
+                    "extra": "invalid",
                 }
             )
 
@@ -464,7 +464,6 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         )
         analysis_call = AsyncMock(return_value="Fresh grounded overview")
         delta_payload = {
-            "version": "case_state_delta_v3",
             "changes": [
                 {
                     "target_type": "evidence",
@@ -522,9 +521,10 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNotNone(outcome.case_state_delta_json)
         self.assertEqual(
-            outcome.case_state_delta_json["version"],
-            CASE_STATE_DELTA_VERSION,
+            set(outcome.case_state_delta_json),
+            {"changes"},
         )
+        self.assertNotIn("version", outcome.case_state_delta_json)
         self.assertNotIn("operation", outcome.case_state_delta_json)
         self.assertEqual(outcome.rag_context_payload.retrieval_context_id, "retrieval-2")
         self.assertEqual(len(adapter.calls), 1)
@@ -572,7 +572,6 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         worker.complete_run = AsyncMock(return_value=True)
         rag_call = AsyncMock()
         payload = {
-            "version": "case_state_delta_v3",
             "changes": [],
         }
         with (
@@ -629,7 +628,6 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         )
         analysis_call = AsyncMock(return_value="Updated overview")
         delta_payload = {
-            "version": "case_state_delta_v3",
             "changes": [
                 {
                     "target_type": "entity",
@@ -690,7 +688,6 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         worker.fail_run = AsyncMock(return_value=True)
         rag_call = AsyncMock()
         invalid_delta = {
-            "version": "case_state_delta_v3",
             "changes": [
                 {
                     "target_type": "relationship",
@@ -830,7 +827,8 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(child.parent_version_id, parent_id)
         self.assertEqual(child.version, 2)
         self.assertEqual(child.trigger_message_id, message_id)
-        self.assertEqual(child.delta_json["version"], "case_state_delta_v3")
+        self.assertEqual(child.delta_json, mutation_delta.model_dump(mode="json"))
+        self.assertNotIn("version", child.delta_json)
         self.assertNotIn("operation", child.delta_json)
         self.assertEqual(parent.delta_json, historical_parent_delta)
         self.assertEqual(context.case_state_version_id, child.id)
@@ -948,7 +946,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
                 context="fresh",
                 mitre_table=(),
             ),
-            case_state_delta_json={"version": "case_state_delta_v3", "changes": []},
+            case_state_delta_json={"changes": []},
             expected_parent_case_state_version_id=uuid4(),
         )
         with self.assertRaises(CaseStateMutationFailure):

@@ -194,9 +194,17 @@ export interface ChatBaselineMissingInformation {
   source_message_ids: string[];
 }
 
+export interface ChatCaseState {
+  entities: ChatBaselineEntity[];
+  relationships: ChatBaselineRelationship[];
+  evidence: ChatBaselineEvidence[];
+  timeline: ChatBaselineTimelineEvent[];
+  warnings: string[];
+}
+
 export interface ChatBaselineExtraction {
-  version: "baseline_extraction_v1" | "baseline_extraction_v2";
-  mode: "single_pass_llm";
+  version?: string;
+  mode?: string;
   status: "candidate";
   case_summary?: string;
   entities: ChatBaselineEntity[];
@@ -217,8 +225,8 @@ export interface ChatBaselineExtraction {
 }
 
 export interface ChatBaselineExtractionFailure {
-  version: "baseline_extraction_v1" | "baseline_extraction_v2";
-  mode: "single_pass_llm";
+  version?: string;
+  mode?: string;
   status: "failed";
   prompt_version: string;
   provider: string;

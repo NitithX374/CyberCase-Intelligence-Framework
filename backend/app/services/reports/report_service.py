@@ -24,8 +24,10 @@ from app.services.extraction.llm_extraction import (
     EXTRACTION_METADATA_KEY,
     LEGACY_BASELINE_EXTRACTION_VERSION,
     BaselineExtraction,
+    CaseState,
     ExtractionInput,
     build_extraction_input,
+    normalize_case_state,
     validate_baseline_extraction,
 )
 from app.services.reports.report_generation import (
@@ -153,12 +155,7 @@ def build_current_report_snapshot(
             "A validated baseline extraction is required before generating a report.",
         )
     if (
-        extraction_metadata.get("version")
-        not in {BASELINE_EXTRACTION_VERSION, LEGACY_BASELINE_EXTRACTION_VERSION}
-        or extraction_metadata.get("mode") != "single_pass_llm"
-        or extraction_metadata.get("prompt_version")
-        not in ACCEPTED_BASELINE_EXTRACTION_PROMPT_VERSIONS
-        or extraction_metadata.get("status") != "candidate"
+        extraction_metadata.get("status") != "candidate"
         or extraction_metadata.get("validation_status") != "validated"
     ):
         raise ReportGenerationConflict(
@@ -200,13 +197,9 @@ def build_current_report_snapshot(
         extraction_payload = (
             current_case_state_json
             if current_case_state_json is not None
-            else {
-                field_name: extraction_metadata[field_name]
-                for field_name in _EXTRACTION_FIELDS
-                if field_name in extraction_metadata
-            }
+            else extraction_metadata
         )
-        extraction = validate_baseline_extraction(extraction_payload, extraction_input)
+        extraction = normalize_case_state(extraction_payload)
     except Exception as exc:
         raise ReportGenerationConflict(
             "report_extraction_not_validated",
@@ -235,11 +228,16 @@ def build_current_report_snapshot(
         )
 
     extraction_id = extraction_assistant.id
+    original_version = (
+        extraction_metadata.get("version")
+        or extraction_metadata.get("prompt_version")
+        or "canonical_case_state"
+    )
     return ReportInputSnapshot(
         thread_id=thread.id,
         thread_title=thread.title or "New chat",
         extraction_id=extraction_id,
-        extraction_version=BASELINE_EXTRACTION_VERSION,
+        extraction_version=str(original_version),
         source_messages=report_source_messages,
         extraction=extraction,
         mitre_rows=mitre_rows,
