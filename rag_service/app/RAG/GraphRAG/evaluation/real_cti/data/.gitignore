@@ -1,0 +1,3 @@
+# Fetched from Zenodo (DOI 10.5281/zenodo.14659512) by fetch_cisa.py.
+# 4.1 MB of source text; the derived cisa_chains.json is what the eval reads.
+cisa_ttp_articles.jsonl

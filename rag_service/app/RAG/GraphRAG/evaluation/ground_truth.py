@@ -19,15 +19,31 @@ from typing import Optional
 
 @dataclass
 class EvalSample:
-    """A single evaluation sample."""
+    """A single evaluation sample.
+
+    Incident-style samples additionally carry an ordered attack chain. These
+    were being dropped on load, which silently reduced every incident sample
+    to flat recall over the union of its gold IDs — the retriever could miss a
+    whole step and still score well. Keeping them lets retriever_metrics score
+    per step, and by cue type.
+    """
     query: str
     relevant_stix_ids: list[str]
     reference_answer: str = ""
     language: str = "en"
     category: str = "general"
+    attack_steps: list[dict] = field(default_factory=list)
+    gold_attack_ids: list[str] = field(default_factory=list)
+    # English parallel of `query`. The cross-lingual A/B harness needs a
+    # TH/EN pair per item; datasets that carry the pair inline (real_cti)
+    # would otherwise look monolingual and be skipped entirely.
+    query_en: str = ""
 
     def has_reference_answer(self) -> bool:
         return bool(self.reference_answer.strip())
+
+    def has_attack_steps(self) -> bool:
+        return bool(self.attack_steps)
 
 
 def load_ground_truth(path: str | Path) -> list[EvalSample]:
@@ -52,6 +68,12 @@ def load_ground_truth(path: str | Path) -> list[EvalSample]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    # Bare list is the original format; the real-CTI tier wraps its samples in
+    # an object carrying provenance (tier, source description), so accept both
+    # rather than forcing every dataset to drop its metadata.
+    if isinstance(data, dict):
+        data = data.get("samples", [])
+
     samples = []
     for item in data:
         samples.append(
@@ -61,6 +83,9 @@ def load_ground_truth(path: str | Path) -> list[EvalSample]:
                 reference_answer=item.get("reference_answer", ""),
                 language=item.get("language", "en"),
                 category=item.get("category", "general"),
+                attack_steps=item.get("attack_steps", []),
+                gold_attack_ids=item.get("gold_attack_ids", []),
+                query_en=item.get("query_en", ""),
             )
         )
 
