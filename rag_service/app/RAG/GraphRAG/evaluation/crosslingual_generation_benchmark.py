@@ -89,7 +89,12 @@ GENERATIONS_PATH = BENCH_DIR / "generations.jsonl"
 REPORT_PATH = RESULTS_DIR / "crosslingual_generation_report.md"
 LOOKUP_PATH = DATA_DIR / "attack_lookup.json"
 
-DEFAULT_DATASET = DATA_DIR / "incident_draft.json"
+# The real-CTI set: gold assigned by CTID and CISA analysts, narratives rewritten
+# by hand. incident_draft.json — LLM-written narratives over gold sampled from the
+# same graph the retriever searches — is still readable by passing --dataset, but
+# is no longer the default: measuring the system against text an LLM produced
+# from the answer is the thing this tier exists to stop doing.
+DEFAULT_DATASET = DATA_DIR.parent / "real_cti" / "data" / "CTI_dataset.json"
 
 VARIANTS = ["A", "B", "C", "D", "E"]
 
@@ -106,9 +111,17 @@ HEADINGS_EN = ["INCIDENT SUMMARY", "ATTACK SEQUENCE",
 
 
 def load_samples(dataset_path: Path, max_samples: int = 0) -> list[dict]:
-    """Thai incident samples with gold IDs (the benchmark's unit of work)."""
+    """Thai incident samples with gold IDs (the benchmark's unit of work).
+
+    A bare list is the original layout. The real-CTI set wraps its samples in
+    an object so the file can carry its own provenance (tier, sources), and
+    reading it as a list yields the dict's keys — every sample silently
+    filtered out, reported as "0 samples" rather than as an error.
+    """
     with open(dataset_path, "r", encoding="utf-8") as f:
         data = json.load(f)
+    if isinstance(data, dict):
+        data = data.get("samples", [])
 
     samples = [
         s for s in data
