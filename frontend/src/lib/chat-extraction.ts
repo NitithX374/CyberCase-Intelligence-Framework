@@ -17,7 +17,8 @@ export function chatBaselineExtractionForMessage(
   const raw = message.metadata_json.chat_extraction;
   if (!isRecord(raw)) return null;
   if (
-    raw.version !== "baseline_extraction_v1" ||
+    (raw.version !== "baseline_extraction_v1" &&
+      raw.version !== "baseline_extraction_v2") ||
     raw.mode !== "single_pass_llm"
   ) {
     return null;
@@ -37,7 +38,7 @@ export function chatBaselineExtractionForMessage(
           : "The extraction did not produce a validated result.",
     };
   }
-  if (raw.status !== "candidate" || typeof raw.case_summary !== "string") {
+  if (raw.status !== "candidate") {
     return null;
   }
 
@@ -123,12 +124,16 @@ export function chatBaselineExtractionForMessage(
     ...metadata,
     status: "candidate",
     validation_status: "validated",
-    case_summary: raw.case_summary,
+    ...(typeof raw.case_summary === "string"
+      ? { case_summary: raw.case_summary }
+      : {}),
     entities,
     relationships,
     evidence,
     timeline,
-    missing_information: missingInformation,
+    ...(missingInformation.length > 0
+      ? { missing_information: missingInformation }
+      : {}),
     warnings: warnings ?? [],
   };
 }
@@ -297,13 +302,17 @@ function parseBaselineMissingInformation(
 }
 
 function baselineMetadata(raw: Record<string, unknown>) {
+  const version =
+    raw.version === "baseline_extraction_v2"
+      ? ("baseline_extraction_v2" as const)
+      : ("baseline_extraction_v1" as const);
   return {
-    version: "baseline_extraction_v1" as const,
+    version,
     mode: "single_pass_llm" as const,
     prompt_version:
       typeof raw.prompt_version === "string"
         ? raw.prompt_version
-        : "baseline_extraction_prompt_v1",
+        : "baseline_extraction_prompt_v4",
     provider: typeof raw.provider === "string" ? raw.provider : "unknown",
     model: typeof raw.model === "string" ? raw.model : "unknown",
     latency_ms: typeof raw.latency_ms === "number" ? raw.latency_ms : 0,

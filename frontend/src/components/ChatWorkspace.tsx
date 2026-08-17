@@ -28,7 +28,6 @@ import { ChatPanel } from "@/components/conversation/ChatPanel";
 import { ChatExtractionView } from "@/components/analysis/ChatExtractionView";
 import { ChatRelationshipsView } from "@/components/relationships/ChatRelationshipsView";
 import { ChatReportView } from "@/components/report/ChatReportView";
-import { ChatTimelineView } from "@/components/timeline/ChatTimelineView";
 import { DeleteChatDialog } from "@/components/common/DeleteChatDialog";
 import { Icon } from "@/components/common/icons";
 import { WorkspaceSidebar } from "@/components/layout/WorkspaceSidebar";
@@ -134,7 +133,6 @@ function chatRouteState(pathname: string): ChatRouteState {
   const routeSegment = segments[2];
   const view: WorkspaceRouteView =
     routeSegment === "extraction" ||
-      routeSegment === "timeline" ||
       routeSegment === "relationships" ||
       routeSegment === "report"
       ? routeSegment
@@ -845,7 +843,6 @@ export function ChatWorkspace() {
             >
               <option value="chat">Chat</option>
               <option value="extraction">Case details</option>
-              <option value="timeline">Timeline</option>
               <option value="relationships">Relationships</option>
               <option value="report">Report generation</option>
             </select>
@@ -925,11 +922,6 @@ export function ChatWorkspace() {
                   onSubmit={handleSubmit}
                 />
               </div>
-            ) : activeView === "timeline" ? (
-              <ChatTimelineView
-                extraction={latestExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
             ) : activeView === "relationships" ? (
               <ChatRelationshipsView
                 extraction={latestExtraction}

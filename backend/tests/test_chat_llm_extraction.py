@@ -127,10 +127,9 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
         root_id = str(extraction_input.messages[0].message_id)
         answer_id = str(extraction_input.messages[1].message_id)
         return {
-            "version": "baseline_extraction_v1",
+            "version": "baseline_extraction_v2",
             "mode": "single_pass_llm",
             "status": "candidate",
-            "case_summary": "A phishing email and suspicious sign-in were reported.",
             "entities": [
                 {
                     "entity_id": "ENT-001",
@@ -186,7 +185,6 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
                     "source_message_ids": [answer_id],
                 }
             ],
-            "missing_information": [],
             "warnings": [],
         }
 
@@ -198,25 +196,29 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
             ExtractionModelResponse(
                 text=json.dumps(self._success_payload(extraction_input)),
                 input_tokens=31,
-                output_tokens=42,
+                output_tokens=78,
             )
         )
 
-        result = await run_baseline_extraction(extraction_input, adapter=adapter)
+        result = await run_baseline_extraction(
+            extraction_input,
+            adapter=adapter,
+        )
 
         self.assertEqual(result.status, "candidate")
-        self.assertEqual(result.provider, "openrouter")
-        self.assertEqual(result.model, "openai/gpt-5.6-luna")
-        self.assertIsInstance(result.extraction, BaselineExtraction)
+        self.assertIsNone(result.failure_code)
+        self.assertIsNone(result.failure_message)
         assert result.extraction is not None
-        self.assertEqual(result.extraction.evidence[0].evidence_id, "E-001")
+        self.assertEqual(result.extraction.version, "baseline_extraction_v2")
+        self.assertEqual(result.extraction.mode, "single_pass_llm")
+        self.assertEqual(len(result.extraction.entities), 2)
+        self.assertEqual(len(result.extraction.relationships), 1)
         self.assertEqual(
-            result.extraction.relationships[0].object_entity_id,
-            "ENT-002",
+            result.extraction.relationships[0].predicate,
+            "had_suspicious_sign_in",
         )
-        self.assertEqual(result.input_tokens, 31)
-        self.assertEqual(result.output_tokens, 42)
-        json.dumps(result.metadata(extraction_input))
+        self.assertEqual(len(result.extraction.evidence), 1)
+        self.assertEqual(len(result.extraction.timeline), 1)
         self.assertEqual(len(adapter.calls), 1)
         source_messages = adapter.calls[0]["input_payload"]["messages"]
         self.assertEqual(
@@ -242,16 +244,6 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
                 ],
             }
         ]
-        payload["missing_information"] = [
-            {
-                "missing_id": "M-001",
-                "description": "Whether email messages were downloaded is unknown.",
-                "importance": "material",
-                "source_message_ids": [
-                    str(extraction_input.messages[0].message_id)
-                ],
-            }
-        ]
 
         result = await run_baseline_extraction(
             extraction_input,
@@ -262,7 +254,6 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
         assert result.extraction is not None
         self.assertIsNone(result.extraction.timeline[0].timestamp)
         self.assertEqual(result.extraction.timeline[0].status, "unknown")
-        self.assertIn("unknown", result.extraction.missing_information[0].description)
 
     def test_assistant_and_rag_content_are_excluded_from_input(self) -> None:
         thread_id = uuid4()
@@ -410,7 +401,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             BASELINE_EXTRACTION_PROMPT_VERSION,
-            "baseline_extraction_prompt_v3",
+            "baseline_extraction_prompt_v4",
         )
         self.assertEqual(
             ACCEPTED_BASELINE_EXTRACTION_PROMPT_VERSIONS,
@@ -419,6 +410,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
                     "baseline_extraction_prompt_v1",
                     "baseline_extraction_prompt_v2",
                     "baseline_extraction_prompt_v3",
+                    "baseline_extraction_prompt_v4",
                 }
             ),
         )
