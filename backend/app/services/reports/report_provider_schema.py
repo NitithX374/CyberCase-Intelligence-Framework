@@ -77,7 +77,7 @@ class ProviderStructuredReport(BaseModel):
     report_version: Literal["baseline_report_v1"]
     status: ReportStatus
     title: str = Field(min_length=1, max_length=200)
-    sections: list[ReportSection] = Field(min_length=7, max_length=7)
+    sections: list[ReportSection] = Field(min_length=1, max_length=12)
     claims: list[ProviderReportClaim] = Field(default_factory=list, max_length=96)
     limitations: list[str] = Field(default_factory=list, max_length=32)
 
@@ -86,6 +86,23 @@ def provider_report_to_structured_report(
     report: ProviderStructuredReport,
 ) -> StructuredReport:
     """Convert scalar provider claims exactly into public reference arrays."""
+
+    present_sections = {section.section_id: section for section in report.sections}
+    completed_sections: list[ReportSection] = []
+    from app.schemas.chat.reports import REPORT_SECTION_HEADINGS, REPORT_SECTION_IDS
+
+    for sec_id in REPORT_SECTION_IDS:
+        if sec_id in present_sections:
+            completed_sections.append(present_sections[sec_id])
+        else:
+            completed_sections.append(
+                ReportSection(
+                    section_id=sec_id,
+                    heading=REPORT_SECTION_HEADINGS[sec_id],
+                    paragraphs=["Not reported or not applicable for this case statement."],
+                    items=[],
+                )
+            )
 
     claims: list[ReportClaim] = []
     for claim in report.claims:
@@ -128,7 +145,7 @@ def provider_report_to_structured_report(
         report_version=report.report_version,
         status=report.status,
         title=report.title,
-        sections=report.sections,
+        sections=completed_sections,
         claims=claims,
         limitations=report.limitations,
     )

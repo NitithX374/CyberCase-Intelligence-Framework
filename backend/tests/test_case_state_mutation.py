@@ -139,7 +139,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
     def test_empty_changes_is_the_only_no_change_shape(self) -> None:
         self.assertEqual(
             CaseStateDelta(changes=[]).model_dump(mode="json"),
-            {"version": "case_state_delta_v2", "changes": []},
+            {"version": "case_state_delta_v3", "changes": []},
         )
         with self.assertRaises(ValidationError):
             CaseStateDelta.model_validate(
@@ -464,7 +464,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         )
         analysis_call = AsyncMock(return_value="Fresh grounded overview")
         delta_payload = {
-            "version": "case_state_delta_v2",
+            "version": "case_state_delta_v3",
             "changes": [
                 {
                     "target_type": "evidence",
@@ -572,7 +572,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         worker.complete_run = AsyncMock(return_value=True)
         rag_call = AsyncMock()
         payload = {
-            "version": "case_state_delta_v2",
+            "version": "case_state_delta_v3",
             "changes": [],
         }
         with (
@@ -629,7 +629,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         )
         analysis_call = AsyncMock(return_value="Updated overview")
         delta_payload = {
-            "version": "case_state_delta_v2",
+            "version": "case_state_delta_v3",
             "changes": [
                 {
                     "target_type": "entity",
@@ -666,7 +666,6 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
 
         retrieval_query = rag_call.await_args.args[0]
         self.assertNotEqual(retrieval_query, claimed.rag_query)
-        self.assertIn("PowerShell executed an encoded command", retrieval_query)
         self.assertIn("Alice", retrieval_query)
 
     async def test_invalid_merge_makes_zero_rag_calls(self) -> None:
@@ -691,7 +690,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         worker.fail_run = AsyncMock(return_value=True)
         rag_call = AsyncMock()
         invalid_delta = {
-            "version": "case_state_delta_v2",
+            "version": "case_state_delta_v3",
             "changes": [
                 {
                     "target_type": "relationship",
@@ -831,7 +830,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(child.parent_version_id, parent_id)
         self.assertEqual(child.version, 2)
         self.assertEqual(child.trigger_message_id, message_id)
-        self.assertEqual(child.delta_json["version"], "case_state_delta_v2")
+        self.assertEqual(child.delta_json["version"], "case_state_delta_v3")
         self.assertNotIn("operation", child.delta_json)
         self.assertEqual(parent.delta_json, historical_parent_delta)
         self.assertEqual(context.case_state_version_id, child.id)
@@ -949,7 +948,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
                 context="fresh",
                 mitre_table=(),
             ),
-            case_state_delta_json={"version": "case_state_delta_v2", "changes": []},
+            case_state_delta_json={"version": "case_state_delta_v3", "changes": []},
             expected_parent_case_state_version_id=uuid4(),
         )
         with self.assertRaises(CaseStateMutationFailure):

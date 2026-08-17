@@ -57,7 +57,6 @@ const threadStatusConfig: Record<
 const workspaceTabs: Array<{ view: WorkspaceView; icon: IconName }> = [
   { view: "chat", icon: "chat" },
   { view: "extraction", icon: "details" },
-  { view: "timeline", icon: "timeline" },
   { view: "relationships", icon: "relationships" },
   { view: "report", icon: "report" },
 ];

@@ -313,4 +313,61 @@ describe("chat baseline extraction metadata", () => {
       failure_code: "extraction_invalid_json",
     });
   });
+
+  it("parses baseline_extraction_v2 without case_summary or missing_information", () => {
+    const extraction = chatBaselineExtractionForMessage(
+      message({
+        chat_extraction: {
+          version: "baseline_extraction_v2",
+          mode: "single_pass_llm",
+          status: "candidate",
+          prompt_version: "baseline_extraction_prompt_v4",
+          provider: "openrouter",
+          model: "openai/gpt-5.6-luna",
+          validation_status: "validated",
+          latency_ms: 15,
+          input_tokens: 25,
+          output_tokens: 35,
+          source_message_ids: ["message-1"],
+          raw_response: null,
+          entities: [
+            {
+              entity_id: "ENT-001",
+              name: "finance-host-1",
+              entity_type: "hostname",
+              reported_role: null,
+              confidence: "high",
+              source_message_ids: ["message-1"],
+            },
+          ],
+          relationships: [],
+          evidence: [],
+          timeline: [],
+          warnings: [],
+        },
+      }),
+    );
+
+    expect(extraction).not.toBeNull();
+    expect(extraction).toMatchObject({
+      version: "baseline_extraction_v2",
+      mode: "single_pass_llm",
+      status: "candidate",
+      validation_status: "validated",
+      entities: [
+        {
+          entity_id: "ENT-001",
+          name: "finance-host-1",
+        },
+      ],
+      relationships: [],
+      evidence: [],
+      timeline: [],
+      warnings: [],
+    });
+    if (extraction && extraction.status === "candidate") {
+      expect(extraction.case_summary).toBeUndefined();
+      expect(extraction.missing_information).toBeUndefined();
+    }
+  });
 });

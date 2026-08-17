@@ -195,15 +195,15 @@ export interface ChatBaselineMissingInformation {
 }
 
 export interface ChatBaselineExtraction {
-  version: "baseline_extraction_v1";
+  version: "baseline_extraction_v1" | "baseline_extraction_v2";
   mode: "single_pass_llm";
   status: "candidate";
-  case_summary: string;
+  case_summary?: string;
   entities: ChatBaselineEntity[];
   relationships: ChatBaselineRelationship[];
   evidence: ChatBaselineEvidence[];
   timeline: ChatBaselineTimelineEvent[];
-  missing_information: ChatBaselineMissingInformation[];
+  missing_information?: ChatBaselineMissingInformation[];
   warnings: string[];
   prompt_version: string;
   provider: string;
@@ -217,7 +217,7 @@ export interface ChatBaselineExtraction {
 }
 
 export interface ChatBaselineExtractionFailure {
-  version: "baseline_extraction_v1";
+  version: "baseline_extraction_v1" | "baseline_extraction_v2";
   mode: "single_pass_llm";
   status: "failed";
   prompt_version: string;

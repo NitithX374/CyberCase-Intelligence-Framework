@@ -36,16 +36,18 @@ function BaselineExtractionSummary({
       title="User-reported incident facts"
       description="This single-pass baseline uses only the selected thread’s user case statement and clarification answers. It is a candidate extraction, not validated forensic evidence."
     >
-      <div className="mb-4 rounded-xl border border-line bg-surface-nested p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h4 className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-ink-secondary">
-            Case summary
-          </h4>
+      {extraction.case_summary ? (
+        <div className="mb-4 rounded-xl border border-line bg-surface-nested p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h4 className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-ink-secondary">
+              Case summary
+            </h4>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-ink">
+            {extraction.case_summary}
+          </p>
         </div>
-        <p className="mt-2 text-sm leading-6 text-ink">
-          {extraction.case_summary}
-        </p>
-      </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <ExtractionList
@@ -95,24 +97,27 @@ function BaselineExtractionSummary({
           ))}
         </ExtractionList>
 
-        <ExtractionList
-          title="Missing information"
-          count={extraction.missing_information.length}
-          emptyMessage="No explicit missing-information item was extracted."
-        >
-          {extraction.missing_information.map((item) => (
-            <li key={item.missing_id} className="rounded-xl bg-surface p-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm leading-5 text-ink">
-                  {item.description}
-                </p>
-                <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-secondary">
-                  {item.importance}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ExtractionList>
+        {extraction.missing_information &&
+        extraction.missing_information.length > 0 ? (
+          <ExtractionList
+            title="Missing information"
+            count={extraction.missing_information.length}
+            emptyMessage="No explicit missing-information item was extracted."
+          >
+            {extraction.missing_information.map((item) => (
+              <li key={item.missing_id} className="rounded-xl bg-surface p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm leading-5 text-ink">
+                    {item.description}
+                  </p>
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-secondary">
+                    {item.importance}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ExtractionList>
+        ) : null}
       </div>
 
       <div className="mt-4 rounded-xl border border-line bg-surface p-4">

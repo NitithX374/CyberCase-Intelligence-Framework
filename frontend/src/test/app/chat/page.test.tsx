@@ -382,7 +382,6 @@ describe("active chat route", () => {
       "true",
     );
     expect(screen.getByRole("tab", { name: "Case details" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Timeline" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Relationships" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Report generation" })).toBeInTheDocument();
     expect(
@@ -522,10 +521,10 @@ describe("active chat route", () => {
     expect(screen.queryByText("Latest assistant extraction.")).not.toBeInTheDocument();
     expect(screen.queryByText("Older candidate")).not.toBeInTheDocument();
 
-    navigation.pathname = "/chat/thread-1/timeline";
+    navigation.pathname = "/chat/thread-1/relationships";
     view.rerender(<ChatWorkspace />);
 
-    expect(await screen.findByText("Latest event.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entity relationship graph" })).toBeInTheDocument();
     expect(screen.queryByText("Latest candidate")).not.toBeInTheDocument();
   });
 
@@ -559,7 +558,6 @@ describe("active chat route", () => {
 
   it.each([
     ["extraction", "No extraction for this chat yet"],
-    ["timeline", "No extraction for this chat yet"],
     ["relationships", "No extraction for this chat yet"],
     ["report", "Digital-forensics report"],
   ] as const)(
@@ -643,10 +641,6 @@ describe("active chat route", () => {
 
   it.each([
     [
-      "timeline",
-      "No timestamped or sequenced events were explicitly reported in this chat.",
-    ],
-    [
       "relationships",
       "No explicit entity-to-entity relationship was extracted.",
     ],
@@ -687,7 +681,7 @@ describe("active chat route", () => {
         },
       },
     };
-    navigation.pathname = "/chat/thread-1/timeline";
+    navigation.pathname = "/chat/thread-1/relationships";
     vi.mocked(getChatThread).mockResolvedValue(failedThread);
 
     await renderLoadedPage();

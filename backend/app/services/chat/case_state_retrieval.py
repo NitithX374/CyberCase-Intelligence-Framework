@@ -31,7 +31,6 @@ def project_case_state_to_retrieval_query(
         deepcopy(dict(case_state_json)),
     )
     payload = {
-        "case_summary": validated.case_summary,
         "entities": [
             {
                 "entity_id": item.entity_id,
@@ -82,14 +81,6 @@ def project_case_state_to_retrieval_query(
                 "confidence": item.confidence,
             }
             for item in validated.timeline
-        ],
-        "missing_information": [
-            {
-                "missing_id": item.missing_id,
-                "description": item.description,
-                "importance": item.importance,
-            }
-            for item in validated.missing_information
         ],
     }
     serialized = json.dumps(

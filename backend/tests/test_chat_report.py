@@ -411,10 +411,9 @@ def _report_thread() -> ChatThread:
                 {"technique_id": "not-a-mitre-id", "name": "Ignore me"},
             ],
             "chat_extraction": {
-                "version": "baseline_extraction_v1",
+                "version": "baseline_extraction_v2",
                 "mode": "single_pass_llm",
                 "status": "candidate",
-                "case_summary": "A reported PowerShell event occurred.",
                 "entities": [],
                 "evidence": [
                     {
@@ -441,7 +440,6 @@ def _report_thread() -> ChatThread:
                         "source_message_ids": [str(root.id)],
                     }
                 ],
-                "missing_information": [],
                 "warnings": [],
                 "prompt_version": BASELINE_EXTRACTION_PROMPT_VERSION,
                 "provider": "anthropic",

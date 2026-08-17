@@ -97,7 +97,7 @@ class ReportInputSnapshot(BaseModel):
     thread_id: UUID
     thread_title: str = Field(min_length=1, max_length=255)
     extraction_id: UUID
-    extraction_version: Literal["baseline_extraction_v1"]
+    extraction_version: Literal["baseline_extraction_v1", "baseline_extraction_v2"]
     source_messages: list[ReportSourceMessage] = Field(min_length=1)
     extraction: BaselineExtraction
     mitre_rows: list[AdmittedMitreRow] = Field(default_factory=list, max_length=64)

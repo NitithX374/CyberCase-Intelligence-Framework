@@ -52,10 +52,9 @@ class CaseStateVersionPersistenceTests(unittest.IsolatedAsyncioTestCase):
     @staticmethod
     def _validated_state() -> dict[str, object]:
         extraction = BaselineExtraction(
-            version="baseline_extraction_v1",
+            version="baseline_extraction_v2",
             mode="single_pass_llm",
             status="candidate",
-            case_summary="A validated incident summary.",
         )
         return extraction.model_dump(mode="json")
 

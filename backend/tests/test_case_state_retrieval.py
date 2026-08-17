@@ -104,15 +104,12 @@ class CaseStateRetrievalProjectionTests(unittest.TestCase):
         self.assertEqual(
             set(payload),
             {
-                "case_summary",
                 "entities",
                 "relationships",
                 "evidence",
                 "timeline",
-                "missing_information",
             },
         )
-        self.assertIn("PowerShell", payload["case_summary"])
         self.assertEqual(payload["entities"][0]["confidence"], "high")
         self.assertEqual(payload["relationships"][0]["status"], "reported")
         self.assertEqual(payload["evidence"][0]["confidence"], "high")
