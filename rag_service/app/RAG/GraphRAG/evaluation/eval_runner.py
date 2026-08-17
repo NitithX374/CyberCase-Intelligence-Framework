@@ -265,40 +265,43 @@ def _make_hybrid_quota_retriever_fn(embed_model=None, use_local: bool = False):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _make_generation_fn(embed_model=None, use_local: bool = False):
-    """Create a generation function wrapping GraphRAGChain."""
-    from ..pipeline.chain import GraphRAGChain
+def _make_generation_fn(embed_model=None):
+    """Create a generation function wrapping GraphRAGAgent — the served path.
 
-    chain = GraphRAGChain(embed_model=embed_model, use_local=use_local)
+    This used to wrap GraphRAGChain, which measured a pipeline the service no
+    longer runs: main.py loads only GraphRAGAgent and /query reaches only that.
+    The chain translates the Thai query to English first (production does not —
+    _node_prepare states "NO input translation"), retrieves with retrieve_multi
+    instead of the per-query quota, and has no evaluator loop. Generation scores
+    from it describe a system that does not exist, and none of the retrieval
+    work measured elsewhere in this repo would show up in them.
+
+    One agent.query() call returns both the answer and the context it was
+    written from, so the contexts handed to RAGAS are the ones the model
+    actually saw rather than a second retrieval pass.
+    """
+    from ..pipeline.agent_graph import GraphRAGAgent
+
+    agent = GraphRAGAgent(embed_model=embed_model)
 
     def fn(query: str) -> tuple[str, list[str]]:
         """Returns (answer, list_of_context_chunks)."""
-        # Get retrieval context (same dual-query flow as GraphRAGChain.query)
-        from ..pipeline.cross_lingual import build_retrieval_queries
+        response = agent.query(query, verbose=False)
 
-        english_query = chain.translator.translate_query(query)
-        queries = build_retrieval_queries(query, english_query)
-        graphrag_result = chain.retriever.retrieve_multi(queries)
+        # RAGAS wants the context as discrete chunks. Rebuild them from the
+        # same GraphRAGResult the answer came from — vector documents first,
+        # then one chunk per subgraph.
+        chunks: list[str] = []
+        result = response.graphrag_result
+        if result is not None:
+            chunks += [vr.document for vr in result.vector_results[:5] if vr.document]
+            chunks += [t for gr in result.graph_results if (t := gr.to_text())]
+        if not chunks and response.context:
+            chunks = [response.context]
 
-        from ..pipeline.context_builder import build_context
+        return response.answer, chunks
 
-        build_context(graphrag_result)
-
-        # Get answer
-        answer = chain.query(query, verbose=False)
-
-        # Split context into chunks for RAGAS (one per semantic result)
-        context_chunks = []
-        for vr in graphrag_result.vector_results[:5]:
-            context_chunks.append(vr.document)
-        for gr in graphrag_result.graph_results:
-            text = gr.to_text()
-            if text:
-                context_chunks.append(text)
-
-        return answer, context_chunks
-
-    return fn, chain.close
+    return fn, agent.close
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -483,11 +486,12 @@ class EvalRunner:
     def _run_generation_eval(self) -> GenerationEvalResult:
         """Run generation evaluation."""
         print("\n" + "═" * 60)
-        print("  Evaluating: Answer Generation (GraphRAGChain)")
+        print("  Evaluating: Answer Generation (GraphRAGAgent — served path)")
         print("═" * 60)
 
         embed_model = self._get_embed_model()
-        fn, cleanup = _make_generation_fn(embed_model, use_local=self.use_local)
+        # GraphRAGAgent is cloud-only; --local no longer reaches generation.
+        fn, cleanup = _make_generation_fn(embed_model)
         if cleanup:
             self._cleanups.append(cleanup)
 
