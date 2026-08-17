@@ -8,6 +8,7 @@ from app.services.extraction.llm_extraction import (
     BASELINE_EXTRACTION_VERSION,
     AnthropicExtractionAdapter,
     BaselineExtraction,
+    CaseState,
     ExtractedEntity,
     ExtractedEvidence,
     ExtractedMissingInformation,
@@ -21,6 +22,7 @@ from app.services.extraction.llm_extraction import (
     ExtractionSourceMessage,
     ExtractionValidationError,
     build_extraction_input,
+    normalize_case_state,
     run_baseline_extraction,
     validate_baseline_extraction,
 )
@@ -33,6 +35,7 @@ __all__ = [
     "BASELINE_EXTRACTION_VERSION",
     "AnthropicExtractionAdapter",
     "BaselineExtraction",
+    "CaseState",
     "ExtractedEntity",
     "ExtractedEvidence",
     "ExtractedMissingInformation",
@@ -46,6 +49,7 @@ __all__ = [
     "ExtractionSourceMessage",
     "ExtractionValidationError",
     "build_extraction_input",
+    "normalize_case_state",
     "run_baseline_extraction",
     "validate_baseline_extraction",
 ]

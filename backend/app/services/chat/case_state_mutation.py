@@ -27,6 +27,7 @@ from app.services.extraction.llm_extraction import (
     ExtractionModelResponse,
     ExtractionValidationError,
     _safe_retained_response,
+    normalize_case_state,
     validate_baseline_extraction,
 )
 from app.services.llm.core_llm import (
@@ -191,7 +192,6 @@ class CaseStateDelta(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["case_state_delta_v3"] = CASE_STATE_DELTA_VERSION
     changes: list[CaseStateDeltaChange] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -277,8 +277,6 @@ class CaseStateDeltaRunResult:
 
     def metadata(self, delta_input: CaseStateDeltaInput) -> dict[str, object]:
         metadata: dict[str, object] = {
-            "version": CASE_STATE_DELTA_VERSION,
-            "mode": CASE_STATE_DELTA_MODE,
             "status": self.status,
             "prompt_version": CASE_STATE_DELTA_PROMPT_VERSION,
             "provider": self.provider,
@@ -307,15 +305,14 @@ def validate_case_state_delta(
     *,
     source_message_id: UUID | None = None,
 ) -> CaseStateDelta:
-    """Validate the closed v2 delta contract before it reaches the merge."""
+    """Validate the delta contract before it reaches the merge."""
 
-    if not isinstance(delta, CaseStateDelta):
-        delta = CaseStateDelta.model_validate(delta)
-    # Kept as a keyword for compatibility with callers that supply the
-    # authoritative backend source. It is intentionally absent from provider
-    # output and is enforced by apply_case_state_delta for non-empty changes.
-    del source_message_id
-    return delta
+    if isinstance(delta, CaseStateDelta):
+        return delta
+    if isinstance(delta, Mapping):
+        changes = delta.get("changes", [])
+        return CaseStateDelta.model_validate({"changes": changes})
+    raise TypeError(f"Cannot validate {type(delta)} as CaseStateDelta")
 
 
 _TARGET_COLLECTIONS: dict[str, tuple[str, str]] = {
@@ -335,7 +332,8 @@ def apply_case_state_delta(
     """Apply a validated delta without mutating the persisted parent snapshot."""
 
     try:
-        parent = validate_baseline_extraction(deepcopy(dict(parent_state)))
+        parent = normalize_case_state(deepcopy(dict(parent_state)))
+        validate_baseline_extraction(parent)
     except Exception as exc:
         raise CaseStateMutationFailure(
             "case_state_parent_invalid",

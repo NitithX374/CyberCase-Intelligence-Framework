@@ -16,14 +16,6 @@ export function chatBaselineExtractionForMessage(
   if (message.role !== "assistant") return null;
   const raw = message.metadata_json.chat_extraction;
   if (!isRecord(raw)) return null;
-  if (
-    (raw.version !== "baseline_extraction_v1" &&
-      raw.version !== "baseline_extraction_v2") ||
-    raw.mode !== "single_pass_llm"
-  ) {
-    return null;
-  }
-
   const metadata = baselineMetadata(raw);
   if (raw.status === "failed") {
     if (typeof raw.failure_code !== "string") return null;
@@ -38,7 +30,7 @@ export function chatBaselineExtractionForMessage(
           : "The extraction did not produce a validated result.",
     };
   }
-  if (raw.status !== "candidate") {
+  if (raw.status !== "candidate" && raw.validation_status !== "validated" && !Array.isArray(raw.entities)) {
     return null;
   }
 
@@ -302,13 +294,9 @@ function parseBaselineMissingInformation(
 }
 
 function baselineMetadata(raw: Record<string, unknown>) {
-  const version =
-    raw.version === "baseline_extraction_v2"
-      ? ("baseline_extraction_v2" as const)
-      : ("baseline_extraction_v1" as const);
   return {
-    version,
-    mode: "single_pass_llm" as const,
+    ...(typeof raw.version === "string" ? { version: raw.version } : {}),
+    ...(typeof raw.mode === "string" ? { mode: raw.mode } : {}),
     prompt_version:
       typeof raw.prompt_version === "string"
         ? raw.prompt_version

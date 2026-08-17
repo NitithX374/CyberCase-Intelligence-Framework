@@ -48,8 +48,6 @@ async def run_validated_case_state_extraction(
 
     if claimed_run.extraction_input is None:
         return None, {
-            "version": BASELINE_EXTRACTION_VERSION,
-            "mode": BASELINE_EXTRACTION_MODE,
             "status": "failed",
             "prompt_version": BASELINE_EXTRACTION_PROMPT_VERSION,
             "validation_status": "failed",
@@ -79,8 +77,6 @@ async def run_validated_case_state_extraction(
             require_key=False,
         )
         extraction_metadata = {
-            "version": BASELINE_EXTRACTION_VERSION,
-            "mode": BASELINE_EXTRACTION_MODE,
             "status": "failed",
             "prompt_version": BASELINE_EXTRACTION_PROMPT_VERSION,
             "provider": target.provider,

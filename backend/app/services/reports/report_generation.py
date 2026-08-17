@@ -25,7 +25,7 @@ from app.schemas.chat.reports import (
     REPORT_SECTION_IDS,
     StructuredReport,
 )
-from app.services.extraction.llm_extraction import BaselineExtraction
+from app.services.extraction.llm_extraction import CaseState
 from app.services.reports.report_prompt import (
     REPORT_PROMPT_VERSION,
     REPORT_SYSTEM_PROMPT,
@@ -97,9 +97,9 @@ class ReportInputSnapshot(BaseModel):
     thread_id: UUID
     thread_title: str = Field(min_length=1, max_length=255)
     extraction_id: UUID
-    extraction_version: Literal["baseline_extraction_v1", "baseline_extraction_v2"]
+    extraction_version: str = Field(min_length=1, max_length=80)
     source_messages: list[ReportSourceMessage] = Field(min_length=1)
-    extraction: BaselineExtraction
+    extraction: CaseState
     mitre_rows: list[AdmittedMitreRow] = Field(default_factory=list, max_length=64)
     metadata: dict[str, object] = Field(default_factory=dict)
 

@@ -197,19 +197,19 @@ class ExtractedMissingInformation(BaseModel):
     source_message_ids: list[UUID] = Field(min_length=1)
 
 
-class BaselineExtraction(BaseModel):
-    """Validated candidate extraction returned by the baseline model."""
+class CaseState(BaseModel):
+    """Canonical factual Case State stored in case_state_versions.state_json."""
 
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["baseline_extraction_v2"] = BASELINE_EXTRACTION_VERSION
-    mode: Literal["single_pass_llm"] = BASELINE_EXTRACTION_MODE
-    status: Literal["candidate"] = "candidate"
     entities: list[ExtractedEntity] = Field(default_factory=list)
     relationships: list[ExtractedRelationship] = Field(default_factory=list)
     evidence: list[ExtractedEvidence] = Field(default_factory=list)
     timeline: list[ExtractedTimelineEvent] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+BaselineExtraction = CaseState
 
 
 class LegacyBaselineExtractionV1(BaseModel):
@@ -279,7 +279,7 @@ class ExtractionModelAdapter(Protocol):
 @dataclass(frozen=True)
 class ExtractionRunResult:
     status: Literal["candidate", "failed"]
-    extraction: BaselineExtraction | None
+    extraction: CaseState | None
     failure_code: str | None
     failure_message: str | None
     raw_response: str | None
@@ -671,46 +671,38 @@ async def run_baseline_extraction(
     )
 
 
-def validate_baseline_extraction(
-    value: object,
-    extraction_input: ExtractionInput | None = None,
-) -> BaselineExtraction:
-    """Validate structure, provenance references, limits, and safe text."""
+def normalize_case_state(value: object) -> CaseState:
+    """Safely normalize any case state object, mapping, or legacy payload to canonical CaseState."""
 
-    if isinstance(value, BaselineExtraction):
-        extraction = value
-    elif isinstance(value, LegacyBaselineExtractionV1):
-        extraction = BaselineExtraction(
-            version=BASELINE_EXTRACTION_VERSION,
-            mode=BASELINE_EXTRACTION_MODE,
-            status="candidate",
+    if isinstance(value, CaseState):
+        return value
+    if isinstance(value, LegacyBaselineExtractionV1):
+        return CaseState(
             entities=value.entities,
             relationships=value.relationships,
             evidence=value.evidence,
             timeline=value.timeline,
             warnings=value.warnings,
         )
-    elif isinstance(value, dict) and value.get("version") == "baseline_extraction_v1":
-        legacy = LegacyBaselineExtractionV1.model_validate(value)
-        extraction = BaselineExtraction(
-            version=BASELINE_EXTRACTION_VERSION,
-            mode=BASELINE_EXTRACTION_MODE,
-            status="candidate",
-            entities=legacy.entities,
-            relationships=legacy.relationships,
-            evidence=legacy.evidence,
-            timeline=legacy.timeline,
-            warnings=legacy.warnings,
-        )
-    else:
-        try:
-            extraction = (
-                value
-                if isinstance(value, BaselineExtraction)
-                else BaselineExtraction.model_validate(value)
-            )
-        except ValidationError:
-            raise
+    if isinstance(value, Mapping):
+        data = {
+            "entities": value.get("entities", []),
+            "relationships": value.get("relationships", []),
+            "evidence": value.get("evidence", []),
+            "timeline": value.get("timeline", []),
+            "warnings": value.get("warnings", []),
+        }
+        return CaseState.model_validate(data)
+    raise TypeError(f"Cannot normalize {type(value)} to CaseState")
+
+
+def validate_baseline_extraction(
+    value: object,
+    extraction_input: ExtractionInput | None = None,
+) -> CaseState:
+    """Validate structure, provenance references, limits, and safe text."""
+
+    extraction = normalize_case_state(value)
 
     limits = (
         ("entities", extraction.entities, settings.chat_extraction_max_entities),
@@ -953,6 +945,7 @@ __all__ = [
     "BASELINE_EXTRACTION_SYSTEM_PROMPT",
     "BASELINE_EXTRACTION_VERSION",
     "BaselineExtraction",
+    "CaseState",
     "LegacyBaselineExtractionV1",
     "ExtractedEntity",
     "ExtractedEvidence",
@@ -967,6 +960,7 @@ __all__ = [
     "ExtractionSourceMessage",
     "ExtractionValidationError",
     "build_extraction_input",
+    "normalize_case_state",
     "run_baseline_extraction",
     "validate_baseline_extraction",
 ]

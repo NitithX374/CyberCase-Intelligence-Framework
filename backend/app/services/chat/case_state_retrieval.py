@@ -6,7 +6,7 @@ from copy import deepcopy
 import json
 from collections.abc import Mapping
 
-from app.services.extraction.llm_extraction import validate_baseline_extraction
+from app.services.extraction.llm_extraction import CaseState, normalize_case_state
 
 
 _RETRIEVAL_QUERY_PREFIX = (
@@ -18,7 +18,7 @@ _RETRIEVAL_QUERY_SUFFIX = "\n</case_state_retrieval_json>"
 
 
 def project_case_state_to_retrieval_query(
-    case_state_json: Mapping[str, object],
+    case_state_json: CaseState | Mapping[str, object],
 ) -> str:
     """Project one complete validated Case State into a retrieval-only query.
 
@@ -27,8 +27,10 @@ def project_case_state_to_retrieval_query(
     likewise do not influence retrieval. No caller-owned values are mutated.
     """
 
-    validated = validate_baseline_extraction(
-        deepcopy(dict(case_state_json)),
+    validated = (
+        case_state_json
+        if isinstance(case_state_json, CaseState)
+        else normalize_case_state(deepcopy(dict(case_state_json)))
     )
     payload = {
         "entities": [

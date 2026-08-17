@@ -23,6 +23,7 @@ from app.services.extraction.llm_extraction import (
     ExtractionSourceMessage,
     ExtractionValidationError,
     build_extraction_input,
+    normalize_case_state,
     run_baseline_extraction,
     validate_baseline_extraction,
 )
@@ -127,9 +128,6 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
         root_id = str(extraction_input.messages[0].message_id)
         answer_id = str(extraction_input.messages[1].message_id)
         return {
-            "version": "baseline_extraction_v2",
-            "mode": "single_pass_llm",
-            "status": "candidate",
             "entities": [
                 {
                     "entity_id": "ENT-001",
@@ -209,8 +207,8 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result.failure_code)
         self.assertIsNone(result.failure_message)
         assert result.extraction is not None
-        self.assertEqual(result.extraction.version, "baseline_extraction_v2")
-        self.assertEqual(result.extraction.mode, "single_pass_llm")
+        self.assertEqual(result.prompt_version, "baseline_extraction_prompt_v4")
+        self.assertFalse(hasattr(result.extraction, "version"))
         self.assertEqual(len(result.extraction.entities), 2)
         self.assertEqual(len(result.extraction.relationships), 1)
         self.assertEqual(
@@ -491,11 +489,14 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
             enriched.metadata_json["chat_extraction"]["status"],
             "candidate",
         )
-        expected_case_state = BaselineExtraction.model_validate(
+        expected_case_state = normalize_case_state(
             self._success_payload(extraction_input)
         ).model_dump(mode="json")
         self.assertEqual(enriched.validated_case_state_json, expected_case_state)
         assert enriched.validated_case_state_json is not None
+        self.assertNotIn("version", enriched.validated_case_state_json)
+        self.assertNotIn("mode", enriched.validated_case_state_json)
+        self.assertNotIn("status", enriched.validated_case_state_json)
         self.assertNotIn("provider", enriched.validated_case_state_json)
         self.assertNotIn("raw_response", enriched.validated_case_state_json)
         self.assertEqual(unchanged, awaiting)

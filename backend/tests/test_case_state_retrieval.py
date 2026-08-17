@@ -120,10 +120,9 @@ class CaseStateRetrievalProjectionTests(unittest.TestCase):
         self.assertNotIn("provider audit metadata", first)
 
     def test_projection_defensively_rejects_non_baseline_state(self) -> None:
-        invalid = _complete_case_state()
-        invalid["analysis_metadata"] = {"answer": "model output"}
+        invalid = {"entities": "not-a-list"}
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises((ValueError, TypeError)):
             project_case_state_to_retrieval_query(invalid)
 
 
