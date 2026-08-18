@@ -1,0 +1,207 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-012",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "medium",
+        "entity_id": "person-012-ana",
+        "entity_type": "person",
+        "name": "Ana Torres",
+        "reported_role": "listed owner of support account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "account-012-support",
+        "entity_type": "user_account",
+        "name": "support.admin",
+        "reported_role": "shared support account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "device-012",
+        "entity_type": "workstation",
+        "name": "OPS-WS-12",
+        "reported_role": "shared operations workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "tool-012",
+        "entity_type": "remote_access_tool",
+        "name": "QuickRemote-12",
+        "reported_role": "remote support utility",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "ip-012",
+        "entity_type": "ip_address",
+        "name": "203.0.113.212",
+        "reported_role": "connection source",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "ticket-012",
+        "entity_type": "support_ticket",
+        "name": "HELP-12012",
+        "reported_role": "ticket referencing maintenance",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "remote_access_log",
+        "confidence": "high",
+        "description": "QuickRemote-12 logged a support.admin session on OPS-WS-12 from 203.0.113.212 at 19:22 UTC.",
+        "evidence_id": "evidence-012-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Remote tool session log"
+      },
+      {
+        "artifact_type": "ticket_record",
+        "confidence": "medium",
+        "description": "HELP-12012 describes maintenance on OPS-WS-12 during the session window but does not name the operator.",
+        "evidence_id": "evidence-012-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Support ticket"
+      },
+      {
+        "artifact_type": "account_inventory",
+        "confidence": "medium",
+        "description": "Ana Torres is listed as an owner of the shared support.admin account; the record does not establish that she operated this session.",
+        "evidence_id": "evidence-012-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Account ownership record"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "medium",
+        "object_entity_id": "account-012-support",
+        "predicate": "listed_owner_of",
+        "relationship_id": "rel-012-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "statement": "Ana Torres is listed as an owner of the shared support.admin account.",
+        "status": "reported",
+        "subject_entity_id": "person-012-ana"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "tool-012",
+        "predicate": "launched",
+        "relationship_id": "rel-012-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "statement": "The support.admin account launched QuickRemote-12 on OPS-WS-12.",
+        "status": "reported",
+        "subject_entity_id": "account-012-support"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "ip-012",
+        "predicate": "connected_from",
+        "relationship_id": "rel-012-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "statement": "QuickRemote-12 recorded a connection from 203.0.113.212.",
+        "status": "reported",
+        "subject_entity_id": "tool-012"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "device-012",
+        "predicate": "referenced_maintenance_on",
+        "relationship_id": "rel-012-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "statement": "Support ticket HELP-12012 references maintenance on OPS-WS-12 during the same window.",
+        "status": "reported",
+        "subject_entity_id": "ticket-012"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "account-012-support",
+          "tool-012",
+          "ip-012"
+        ],
+        "confidence": "high",
+        "event": "QuickRemote-12 recorded a support.admin session on OPS-WS-12 from 203.0.113.212.",
+        "event_id": "event-012-01",
+        "evidence_ids": [
+          "evidence-012-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-22T19:22:00Z",
+        "timestamp_text": "19:22 UTC"
+      },
+      {
+        "actors": [
+          "ticket-012",
+          "device-012"
+        ],
+        "confidence": "medium",
+        "event": "HELP-12012 was linked to maintenance on OPS-WS-12 during the session window.",
+        "event_id": "event-012-02",
+        "evidence_ids": [
+          "evidence-012-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000012"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-22T19:30:00Z",
+        "timestamp_text": "19:30 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3635,
+    "production_projection_sha256": "21c3a6859ad1d90c9f5783bdc35070a5b86276fd78fa68beeec3c16895971ac3",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

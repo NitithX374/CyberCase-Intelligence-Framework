@@ -288,7 +288,7 @@ Examples (run from rag_service/app):
         "-m",
         type=str,
         default=None,
-        help="Select OpenRouter model alias (deepseek, qwen, sonnet, haiku, luna, 4o) or custom model ID",
+        help="Select OpenRouter model alias (4o-mini, oss, sonnet, haiku, luna, 4o) or custom model ID",
     )
 
     arg_parser.add_argument(

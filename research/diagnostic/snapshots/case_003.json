@@ -1,0 +1,228 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-003",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "account-003-maya",
+        "entity_type": "user_account",
+        "name": "mroberts",
+        "reported_role": "cloud user account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "person-003-maya",
+        "entity_type": "person",
+        "name": "Maya Roberts",
+        "reported_role": "account owner",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "token-003",
+        "entity_type": "authentication_token",
+        "name": "session-token-03",
+        "reported_role": "token associated with the account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "cloud-003",
+        "entity_type": "cloud_service",
+        "name": "Northbridge Object Store",
+        "reported_role": "cloud storage service",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "ip-003-a",
+        "entity_type": "ip_address",
+        "name": "198.51.100.30",
+        "reported_role": "office egress address",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "ip-003-b",
+        "entity_type": "ip_address",
+        "name": "198.51.100.92",
+        "reported_role": "unfamiliar source address",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "object-003",
+        "entity_type": "cloud_object",
+        "name": "customer-export-03.csv",
+        "reported_role": "object downloaded from storage",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "cloud_audit_log",
+        "confidence": "medium",
+        "description": "The cloud audit records a successful object request using session-token-03 at 14:21 UTC.",
+        "evidence_id": "evidence-003-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Cloud audit request"
+      },
+      {
+        "artifact_type": "network_log",
+        "confidence": "low",
+        "description": "The token request was associated with 198.51.100.92, which the investigator described as unfamiliar; VPN egress and proxy use have not been ruled out.",
+        "evidence_id": "evidence-003-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Source-address anomaly"
+      },
+      {
+        "artifact_type": "cloud_object_log",
+        "confidence": "medium",
+        "description": "The audit entry names customer-export-03.csv as the object returned by the request.",
+        "evidence_id": "evidence-003-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Object access record"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "account-003-maya",
+        "predicate": "owns_account",
+        "relationship_id": "rel-003-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "statement": "Maya Roberts is listed as the owner of account mroberts.",
+        "status": "reported",
+        "subject_entity_id": "person-003-maya"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "cloud-003",
+        "predicate": "accepted_by",
+        "relationship_id": "rel-003-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "statement": "session-token-03 was accepted by Northbridge Object Store for a request.",
+        "status": "reported",
+        "subject_entity_id": "token-003"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "token-003",
+        "predicate": "associated_with",
+        "relationship_id": "rel-003-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "statement": "The token is recorded as associated with account mroberts.",
+        "status": "reported",
+        "subject_entity_id": "account-003-maya"
+      },
+      {
+        "confidence": "low",
+        "object_entity_id": "ip-003-b",
+        "predicate": "used_from",
+        "relationship_id": "rel-003-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "statement": "session-token-03 may have been used from 198.51.100.92.",
+        "status": "suspected",
+        "subject_entity_id": "token-003"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "object-003",
+        "predicate": "served_object",
+        "relationship_id": "rel-003-05",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "statement": "Northbridge Object Store served customer-export-03.csv in a request associated with the token.",
+        "status": "reported",
+        "subject_entity_id": "cloud-003"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "account-003-maya",
+          "ip-003-a"
+        ],
+        "confidence": "medium",
+        "event": "A normal account session from the office egress address was recorded.",
+        "event_id": "event-003-01",
+        "evidence_ids": [],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-13T14:20:00Z",
+        "timestamp_text": "14:20 UTC"
+      },
+      {
+        "actors": [
+          "token-003",
+          "ip-003-b",
+          "object-003"
+        ],
+        "confidence": "medium",
+        "event": "A token-backed request from the unfamiliar address returned customer-export-03.csv.",
+        "event_id": "event-003-02",
+        "evidence_ids": [
+          "evidence-003-01",
+          "evidence-003-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-13T14:21:00Z",
+        "timestamp_text": "14:21 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3998,
+    "production_projection_sha256": "73f490b5becd2f199ae5d85301048e17f2ea220b1ef2d40f0157005d06cb619a",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

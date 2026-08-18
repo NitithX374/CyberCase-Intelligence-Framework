@@ -13,15 +13,18 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import async_session
 from app.models.case_state import CaseStateVersion
 from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.models.rag_context import RagContext
 from app.schemas.chat.rag import QueryResponse
 from app.services.case_analysis import (
+    CASE_ANALYSIS_PROMPT_VERSION,
     CaseAnalysisFailure,
     request_case_analysis,
 )
+from app.services.chat.raw_evidence import resolve_raw_case_evidence_history
 from app.services.chat.chat_message import reconstruct_clarification_chain
 from app.services.chat.case_state_retrieval import (
     project_case_state_to_retrieval_query,
@@ -101,6 +104,7 @@ class ClaimedChatRun:
     case_state_version_id: UUID | None = None
     case_state_json: dict[str, object] | None = None
     analysis_context: dict[str, object] | None = None
+    raw_case_narrative: str | None = None
 
 
 class ChatRunWorker:
@@ -363,6 +367,20 @@ class ChatRunWorker:
                         run.id,
                     )
 
+            if requested_round == 0 and post_answer_action is None and isinstance(content, str) and content.strip():
+                raw_case_narrative = content.strip()
+            else:
+                raw_case_narrative = await resolve_raw_case_evidence_history(
+                    self.db,
+                    thread_id=run.thread_id,
+                    current_request_message_id=run.request_message_id,
+                    current_request_payload=(
+                        request_payload if isinstance(request_payload, dict) else {}
+                    ),
+                    current_content=content if isinstance(content, str) else None,
+                    history=history,
+                )
+
             claimed_run = ClaimedChatRun(
                 id=run.id,
                 operation=run.operation,
@@ -380,6 +398,7 @@ class ChatRunWorker:
                 case_state_version_id=case_state_version_id,
                 case_state_json=case_state_json,
                 analysis_context=analysis_context,
+                raw_case_narrative=raw_case_narrative,
             )
             await self.db.flush()
 
@@ -753,9 +772,28 @@ async def process_chat_run(
                 rag_context_payload = _validated_rag_context_payload(response)
                 analysis_context = rag_context_payload.to_analysis_context()
                 _log_stage("ANALYZING UPDATED CASE OVERVIEW", run_id)
+                raw_narrative = (
+                    claimed_run.raw_case_narrative
+                    or (
+                        str(claimed_run.original_user_content)
+                        if isinstance(claimed_run.original_user_content, str)
+                        and claimed_run.original_user_content.strip()
+                        and claimed_run.post_answer_action != "add_case_info"
+                        else None
+                    )
+                )
+                if (
+                    settings.analysis_input_mode == "raw_direct"
+                    and (not isinstance(raw_narrative, str) or not raw_narrative.strip())
+                ):
+                    raise CaseAnalysisFailure(
+                        "analysis_context_missing",
+                        "The accumulated raw case evidence could not be loaded for mutation in RAW_DIRECT mode",
+                    )
                 answer = await (ask_call or request_case_analysis)(
                     mode='case_overview',
                     case_state_json=merged_case_state_json,
+                    raw_case_narrative=raw_narrative,
                     analysis_context=analysis_context,
                     question=None,
                 )
@@ -841,9 +879,19 @@ async def process_chat_run(
                     'analysis_context_missing',
                     'The latest completed analysis could not be loaded for ASK',
                 )
+            raw_narrative = claimed_run.raw_case_narrative
+            if (
+                settings.analysis_input_mode == "raw_direct"
+                and (not isinstance(raw_narrative, str) or not raw_narrative.strip())
+            ):
+                raise CaseAnalysisFailure(
+                    'analysis_context_missing',
+                    'The accumulated raw case evidence could not be loaded for ASK in RAW_DIRECT mode',
+                )
             answer = await (ask_call or request_case_analysis)(
                 mode='question_answer',
                 case_state_json=claimed_run.case_state_json,
+                raw_case_narrative=raw_narrative,
                 analysis_context=claimed_run.analysis_context,
                 question=claimed_run.content,
             )
@@ -900,9 +948,23 @@ async def process_chat_run(
         rag_context_payload = _validated_rag_context_payload(response)
         analysis_context = rag_context_payload.to_analysis_context()
         _log_stage("ANALYZING INITIAL CASE OVERVIEW", run_id)
+        raw_narrative = (
+            claimed_run.raw_case_narrative
+            or (str(claimed_run.original_user_content) if isinstance(claimed_run.original_user_content, str) and claimed_run.original_user_content.strip() else None)
+            or (str(claimed_run.content) if isinstance(claimed_run.content, str) and claimed_run.content.strip() else None)
+        )
+        if (
+            settings.analysis_input_mode == "raw_direct"
+            and (not isinstance(raw_narrative, str) or not raw_narrative.strip())
+        ):
+            raise CaseAnalysisFailure(
+                'analysis_context_missing',
+                'The initial raw case narrative could not be loaded in RAW_DIRECT mode',
+            )
         answer = await (ask_call or request_case_analysis)(
             mode='case_overview',
             case_state_json=validated_case_state_json,
+            raw_case_narrative=raw_narrative,
             analysis_context=analysis_context,
             question=None,
         )
@@ -1047,6 +1109,7 @@ def _attach_post_analysis_followup_outcome(
         {
             EXTRACTION_METADATA_KEY: deepcopy(extraction_metadata),
             "analysis_kind": "grounded_main_analysis",
+            "analysis_input_mode": settings.analysis_input_mode,
             "retrieved_context": rag_context_payload.context,
             "mitre_table": deepcopy(list(rag_context_payload.mitre_table)),
             "chat_action": {
@@ -1058,6 +1121,8 @@ def _attach_post_analysis_followup_outcome(
                 "rag_invoked": True,
                 "retrieval_context_reused": False,
                 "analysis_mode": "case_overview",
+                "analysis_input_mode": settings.analysis_input_mode,
+                "prompt_version": CASE_ANALYSIS_PROMPT_VERSION,
             },
         }
     )

@@ -1,0 +1,208 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-009",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "person-009",
+        "entity_type": "person",
+        "name": "Jordan Lee",
+        "reported_role": "employee",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "account-009",
+        "entity_type": "user_account",
+        "name": "jlee",
+        "reported_role": "employee account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "device-009",
+        "entity_type": "workstation",
+        "name": "ENG-WS-09",
+        "reported_role": "engineering workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "browser-009",
+        "entity_type": "browser_session",
+        "name": "Browser session 09",
+        "reported_role": "browser session",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "archive-009",
+        "entity_type": "archive",
+        "name": "project-update.zip",
+        "reported_role": "downloaded archive",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "file-009",
+        "entity_type": "executable_file",
+        "name": "helper.exe",
+        "reported_role": "file inside the archive",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "browser_history",
+        "confidence": "medium",
+        "description": "Browser session 09 downloaded project-update.zip at 13:06 UTC.",
+        "evidence_id": "evidence-009-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Browser download record"
+      },
+      {
+        "artifact_type": "archive_listing",
+        "confidence": "medium",
+        "description": "A preliminary listing of project-update.zip includes a file named helper.exe; the file has not been classified.",
+        "evidence_id": "evidence-009-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Archive listing"
+      },
+      {
+        "artifact_type": "process_telemetry",
+        "confidence": "low",
+        "description": "The supplied endpoint review has no confirmed process-start record for helper.exe.",
+        "evidence_id": "evidence-009-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Endpoint telemetry review"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "account-009",
+        "predicate": "owns_account",
+        "relationship_id": "rel-009-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "statement": "Jordan Lee is listed as the owner of account jlee.",
+        "status": "reported",
+        "subject_entity_id": "person-009"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "archive-009",
+        "predicate": "downloaded",
+        "relationship_id": "rel-009-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "statement": "Browser session 09 downloaded project-update.zip to ENG-WS-09.",
+        "status": "reported",
+        "subject_entity_id": "browser-009"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "file-009",
+        "predicate": "contained",
+        "relationship_id": "rel-009-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "statement": "The downloaded archive was reported to contain helper.exe.",
+        "status": "reported",
+        "subject_entity_id": "archive-009"
+      },
+      {
+        "confidence": "low",
+        "object_entity_id": "device-009",
+        "predicate": "executed_on",
+        "relationship_id": "rel-009-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "statement": "No process telemetry in the supplied materials establishes that helper.exe executed on ENG-WS-09.",
+        "status": "not_established",
+        "subject_entity_id": "file-009"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "browser-009",
+          "archive-009",
+          "device-009"
+        ],
+        "confidence": "medium",
+        "event": "Browser session 09 downloaded project-update.zip to ENG-WS-09.",
+        "event_id": "event-009-01",
+        "evidence_ids": [
+          "evidence-009-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-19T13:06:00Z",
+        "timestamp_text": "13:06 UTC"
+      },
+      {
+        "actors": [
+          "archive-009",
+          "file-009"
+        ],
+        "confidence": "medium",
+        "event": "The archive was listed as containing helper.exe; no execution was confirmed in the reviewed telemetry.",
+        "event_id": "event-009-02",
+        "evidence_ids": [
+          "evidence-009-02",
+          "evidence-009-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000009"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-19T15:00:00Z",
+        "timestamp_text": "15:00 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3495,
+    "production_projection_sha256": "ca522d59a62cae59af506caea9a90dd5a584c2b23759dd456bf7cc81ffef450f",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

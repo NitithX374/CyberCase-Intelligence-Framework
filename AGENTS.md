@@ -21,6 +21,7 @@ This file provides system architecture, rules, guidelines, and commands for AI c
   - **OpenRouter Default**: `openai/gpt-5.6-luna` (alias: `luna`)
   - **Ready-Selection Aliases**:
     - `luna` $\to$ `openai/gpt-5.6-luna` (Default)
+    - `4o-mini` $\to$ `openai/gpt-4o-mini`
     - `oss` $\to$ `openai/gpt-oss-120b`
     - `sonnet` $\to$ `anthropic/claude-3.5-sonnet`
     - `haiku` $\to$ `anthropic/claude-3.5-haiku`
