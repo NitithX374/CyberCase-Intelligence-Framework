@@ -202,6 +202,8 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
         rag_context_result = _result(rag_context)
         request_result = _result(request_message)
 
+        intake_narrative_result = _result("Initial case narrative")
+
         db = Mock()
         db.begin.return_value = _Transaction()
         db.execute = AsyncMock(
@@ -211,6 +213,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
                 state_result,
                 rag_context_result,
                 request_result,
+                intake_narrative_result,
             ]
         )
         db.flush = AsyncMock()
@@ -220,6 +223,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(claimed)
         assert claimed is not None
         self.assertEqual(claimed.case_state_json, state.state_json)
+        self.assertEqual(claimed.raw_case_narrative, "Initial case narrative")
         self.assertEqual(
             claimed.analysis_context,
             {
@@ -534,6 +538,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
         analysis_call.assert_awaited_once_with(
             mode="case_overview",
             case_state_json=case_state,
+            raw_case_narrative="Investigate the suspicious PowerShell event.",
             analysis_context={
                 "retrieved_context": "bounded context",
                 "retrieval_context_id": "retrieval-1",

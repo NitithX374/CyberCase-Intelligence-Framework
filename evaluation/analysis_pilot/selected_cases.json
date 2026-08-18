@@ -1,0 +1,4096 @@
+[
+  {
+    "case_id": "sv-en-001",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-en-001-user-a",
+          "entity_type": "user",
+          "name": "Analyst-001-A"
+        },
+        {
+          "entity_id": "sv-en-001-user-b",
+          "entity_type": "user",
+          "name": "Employee-001-B"
+        },
+        {
+          "entity_id": "sv-en-001-account-a",
+          "entity_type": "account",
+          "name": "account-001-primary"
+        },
+        {
+          "entity_id": "sv-en-001-account-b",
+          "entity_type": "account",
+          "name": "account-001-secondary"
+        },
+        {
+          "entity_id": "sv-en-001-email",
+          "entity_type": "email",
+          "name": "email-001"
+        },
+        {
+          "entity_id": "sv-en-001-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-001.zip"
+        },
+        {
+          "entity_id": "sv-en-001-file",
+          "entity_type": "file",
+          "name": "document-001.exe"
+        },
+        {
+          "entity_id": "sv-en-001-process",
+          "entity_type": "process",
+          "name": "process-001"
+        },
+        {
+          "entity_id": "sv-en-001-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-001-A"
+        },
+        {
+          "entity_id": "sv-en-001-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-001-B"
+        },
+        {
+          "entity_id": "sv-en-001-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.2"
+        },
+        {
+          "entity_id": "sv-en-001-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.2"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-en-001-prop-001"
+          ],
+          "subject_entity_id": "sv-en-001-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-email",
+          "predicate": "sent",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-en-001-prop-002"
+          ],
+          "subject_entity_id": "sv-en-001-account-a",
+          "timestamp": "2025-04-01T08:00Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-attachment",
+          "predicate": "included",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-en-001-prop-002"
+          ],
+          "subject_entity_id": "sv-en-001-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-file",
+          "predicate": "stored_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-en-001-prop-003"
+          ],
+          "subject_entity_id": "sv-en-001-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-process",
+          "predicate": "executed",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-en-001-prop-003"
+          ],
+          "subject_entity_id": "sv-en-001-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-en-001-prop-004"
+          ],
+          "subject_entity_id": "sv-en-001-process",
+          "timestamp": "2025-04-01T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-en-001-prop-005"
+          ],
+          "subject_entity_id": "sv-en-001-account-b",
+          "timestamp": "2025-04-01T08:00Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-001-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-en-001-prop-005"
+          ],
+          "subject_entity_id": "sv-en-001-account-b",
+          "timestamp": "2025-04-01T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-001-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-001-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-en-001-prop-006"
+          ],
+          "subject_entity_id": "sv-en-001-user-b",
+          "timestamp": "2025-04-01T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-001-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-en-001-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-en-001-prop-006"
+          ],
+          "subject_entity_id": "sv-en-001-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-en-001-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-en-001-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-en-001-prop-005"
+          ],
+          "target_entity_id": "sv-en-001-endpoint-b",
+          "timestamp": "2025-04-01T08:00Z"
+        },
+        {
+          "actor_entity_id": "sv-en-001-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-en-001-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-en-001-prop-005"
+          ],
+          "target_entity_id": "sv-en-001-ip-b",
+          "timestamp": "2025-04-01T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-en-001-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-en-001-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-en-001-prop-006"
+          ],
+          "target_entity_id": "sv-en-001-email",
+          "timestamp": "2025-04-01T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-en-001-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-en-001-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-en-001-prop-004"
+          ],
+          "target_entity_id": "sv-en-001-endpoint-a",
+          "timestamp": "2025-04-01T09:10Z"
+        }
+      ]
+    },
+    "language": "en",
+    "narrative": "Analyst-001-A owned account-001-primary. account-001-primary sent email-001 at 2025-04-01T08:00Z, and it included attachment-001.zip. attachment-001.zip was stored as document-001.exe, and it executed process-001. process-001 ran on endpoint-001-A at 2025-04-01T09:10Z. account-001-secondary authenticated on endpoint-001-B at 2025-04-01T08:00Z; account-001-secondary may have signed in from 198.51.100.2 at 2025-04-01T08:50Z. Employee-001-B submitted credentials to email-001 at 2025-04-01T08:30Z; endpoint-001-B may not have connected to 192.0.2.2.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-en-001-rel-001"
+        ],
+        "proposition_id": "sv-en-001-prop-001",
+        "style": "basic",
+        "text": "Analyst-001-A owned account-001-primary."
+      },
+      {
+        "fact_ids": [
+          "sv-en-001-rel-002",
+          "sv-en-001-rel-003"
+        ],
+        "proposition_id": "sv-en-001-prop-002",
+        "style": "coreference",
+        "text": "account-001-primary sent email-001 at 2025-04-01T08:00Z, and it included attachment-001.zip."
+      },
+      {
+        "fact_ids": [
+          "sv-en-001-rel-004",
+          "sv-en-001-rel-005"
+        ],
+        "proposition_id": "sv-en-001-prop-003",
+        "style": "coreference",
+        "text": "attachment-001.zip was stored as document-001.exe, and it executed process-001."
+      },
+      {
+        "fact_ids": [
+          "sv-en-001-rel-006",
+          "sv-en-001-time-004"
+        ],
+        "proposition_id": "sv-en-001-prop-004",
+        "style": "basic",
+        "text": "process-001 ran on endpoint-001-A at 2025-04-01T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-001-rel-007",
+          "sv-en-001-time-001",
+          "sv-en-001-rel-008",
+          "sv-en-001-time-002"
+        ],
+        "proposition_id": "sv-en-001-prop-005",
+        "style": "combined",
+        "text": "account-001-secondary authenticated on endpoint-001-B at 2025-04-01T08:00Z; account-001-secondary may have signed in from 198.51.100.2 at 2025-04-01T08:50Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-001-rel-009",
+          "sv-en-001-time-003",
+          "sv-en-001-rel-010"
+        ],
+        "proposition_id": "sv-en-001-prop-006",
+        "style": "combined",
+        "text": "Employee-001-B submitted credentials to email-001 at 2025-04-01T08:30Z; endpoint-001-B may not have connected to 192.0.2.2."
+      }
+    ],
+    "narrative_template_id": "en-layout-1",
+    "scenario_id": "email_execution",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "Analyst-001-A owned account-001-primary.",
+        "claim_id": "sv-en-001-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-001"
+        ]
+      },
+      {
+        "claim": "account-001-primary sent email-001 at 2025-04-01T08:00Z.",
+        "claim_id": "sv-en-001-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-002"
+        ]
+      },
+      {
+        "claim": "email-001 included attachment-001.zip.",
+        "claim_id": "sv-en-001-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-003"
+        ]
+      },
+      {
+        "claim": "attachment-001.zip was stored as document-001.exe.",
+        "claim_id": "sv-en-001-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-004"
+        ]
+      },
+      {
+        "claim": "Employee-001-B owned account-001-primary.",
+        "claim_id": "sv-en-001-claim-005",
+        "error_type": "actor_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-001"
+        ]
+      },
+      {
+        "claim": "Analyst-001-A owned account-001-secondary.",
+        "claim_id": "sv-en-001-claim-006",
+        "error_type": "target_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-001"
+        ]
+      },
+      {
+        "claim": "account-001-primary accessed email-001 at 2025-04-01T08:00Z.",
+        "claim_id": "sv-en-001-claim-007",
+        "error_type": "predicate_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-002"
+        ]
+      },
+      {
+        "claim": "process-001 ran on endpoint-001-A at 2025-04-01T12:10Z.",
+        "claim_id": "sv-en-001-claim-008",
+        "error_type": "timestamp_shift",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-001-rel-006"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-th-053",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-th-053-user-a",
+          "entity_type": "user",
+          "name": "Analyst-053-A"
+        },
+        {
+          "entity_id": "sv-th-053-user-b",
+          "entity_type": "user",
+          "name": "Employee-053-B"
+        },
+        {
+          "entity_id": "sv-th-053-account-a",
+          "entity_type": "account",
+          "name": "account-053-primary"
+        },
+        {
+          "entity_id": "sv-th-053-account-b",
+          "entity_type": "account",
+          "name": "account-053-secondary"
+        },
+        {
+          "entity_id": "sv-th-053-email",
+          "entity_type": "email",
+          "name": "email-053"
+        },
+        {
+          "entity_id": "sv-th-053-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-053.zip"
+        },
+        {
+          "entity_id": "sv-th-053-file",
+          "entity_type": "file",
+          "name": "document-053.exe"
+        },
+        {
+          "entity_id": "sv-th-053-process",
+          "entity_type": "process",
+          "name": "process-053"
+        },
+        {
+          "entity_id": "sv-th-053-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-053-A"
+        },
+        {
+          "entity_id": "sv-th-053-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-053-B"
+        },
+        {
+          "entity_id": "sv-th-053-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.54"
+        },
+        {
+          "entity_id": "sv-th-053-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.54"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-th-053-prop-001"
+          ],
+          "subject_entity_id": "sv-th-053-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-email",
+          "predicate": "sent",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-th-053-prop-002"
+          ],
+          "subject_entity_id": "sv-th-053-account-a",
+          "timestamp": "2025-04-13T08:00Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-attachment",
+          "predicate": "included",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-th-053-prop-002"
+          ],
+          "subject_entity_id": "sv-th-053-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-file",
+          "predicate": "stored_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-th-053-prop-003"
+          ],
+          "subject_entity_id": "sv-th-053-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-process",
+          "predicate": "executed",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-th-053-prop-003"
+          ],
+          "subject_entity_id": "sv-th-053-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-th-053-prop-004"
+          ],
+          "subject_entity_id": "sv-th-053-process",
+          "timestamp": "2025-04-13T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-th-053-prop-005"
+          ],
+          "subject_entity_id": "sv-th-053-account-b",
+          "timestamp": "2025-04-13T08:00Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-053-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-th-053-prop-005"
+          ],
+          "subject_entity_id": "sv-th-053-account-b",
+          "timestamp": "2025-04-13T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-053-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-053-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-th-053-prop-006"
+          ],
+          "subject_entity_id": "sv-th-053-user-b",
+          "timestamp": "2025-04-13T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-053-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-th-053-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-th-053-prop-006"
+          ],
+          "subject_entity_id": "sv-th-053-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-th-053-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-th-053-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-th-053-prop-005"
+          ],
+          "target_entity_id": "sv-th-053-endpoint-b",
+          "timestamp": "2025-04-13T08:00Z"
+        },
+        {
+          "actor_entity_id": "sv-th-053-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-th-053-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-th-053-prop-005"
+          ],
+          "target_entity_id": "sv-th-053-ip-b",
+          "timestamp": "2025-04-13T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-th-053-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-th-053-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-th-053-prop-006"
+          ],
+          "target_entity_id": "sv-th-053-email",
+          "timestamp": "2025-04-13T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-th-053-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-th-053-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-th-053-prop-004"
+          ],
+          "target_entity_id": "sv-th-053-endpoint-a",
+          "timestamp": "2025-04-13T09:10Z"
+        }
+      ]
+    },
+    "language": "th",
+    "narrative": "Analyst-053-A เป็นเจ้าของ account-053-primary. account-053-primary ส่ง email-053 เมื่อ 2025-04-13T08:00Z และสิ่งดังกล่าว มี attachment-053.zip. attachment-053.zip ถูกจัดเก็บเป็น document-053.exe และสิ่งดังกล่าว เรียกใช้งาน process-053. process-053 ทำงานบน endpoint-053-A เมื่อ 2025-04-13T09:10Z. account-053-secondary ยืนยันตัวตนบน endpoint-053-B เมื่อ 2025-04-13T08:00Z; account-053-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.54 เมื่อ 2025-04-13T08:50Z. Employee-053-B ส่งข้อมูลรับรองไปยัง email-053 เมื่อ 2025-04-13T08:30Z; endpoint-053-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.54.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-th-053-rel-001"
+        ],
+        "proposition_id": "sv-th-053-prop-001",
+        "style": "basic",
+        "text": "Analyst-053-A เป็นเจ้าของ account-053-primary."
+      },
+      {
+        "fact_ids": [
+          "sv-th-053-rel-002",
+          "sv-th-053-rel-003"
+        ],
+        "proposition_id": "sv-th-053-prop-002",
+        "style": "coreference",
+        "text": "account-053-primary ส่ง email-053 เมื่อ 2025-04-13T08:00Z และสิ่งดังกล่าว มี attachment-053.zip."
+      },
+      {
+        "fact_ids": [
+          "sv-th-053-rel-004",
+          "sv-th-053-rel-005"
+        ],
+        "proposition_id": "sv-th-053-prop-003",
+        "style": "coreference",
+        "text": "attachment-053.zip ถูกจัดเก็บเป็น document-053.exe และสิ่งดังกล่าว เรียกใช้งาน process-053."
+      },
+      {
+        "fact_ids": [
+          "sv-th-053-rel-006",
+          "sv-th-053-time-004"
+        ],
+        "proposition_id": "sv-th-053-prop-004",
+        "style": "basic",
+        "text": "process-053 ทำงานบน endpoint-053-A เมื่อ 2025-04-13T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-053-rel-007",
+          "sv-th-053-time-001",
+          "sv-th-053-rel-008",
+          "sv-th-053-time-002"
+        ],
+        "proposition_id": "sv-th-053-prop-005",
+        "style": "combined",
+        "text": "account-053-secondary ยืนยันตัวตนบน endpoint-053-B เมื่อ 2025-04-13T08:00Z; account-053-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.54 เมื่อ 2025-04-13T08:50Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-053-rel-009",
+          "sv-th-053-time-003",
+          "sv-th-053-rel-010"
+        ],
+        "proposition_id": "sv-th-053-prop-006",
+        "style": "combined",
+        "text": "Employee-053-B ส่งข้อมูลรับรองไปยัง email-053 เมื่อ 2025-04-13T08:30Z; endpoint-053-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.54."
+      }
+    ],
+    "narrative_template_id": "th-layout-1",
+    "scenario_id": "email_execution",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "Employee-053-B ส่งข้อมูลรับรองไปยัง email-053 เมื่อ 2025-04-13T08:30Z.",
+        "claim_id": "sv-th-053-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-time-003"
+        ]
+      },
+      {
+        "claim": "process-053 ทำงานบน endpoint-053-A เมื่อ 2025-04-13T09:10Z.",
+        "claim_id": "sv-th-053-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-time-004"
+        ]
+      },
+      {
+        "claim": "Analyst-053-A เป็นเจ้าของ account-053-primary.",
+        "claim_id": "sv-th-053-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-rel-001"
+        ]
+      },
+      {
+        "claim": "account-053-primary ส่ง email-053 เมื่อ 2025-04-13T08:00Z.",
+        "claim_id": "sv-th-053-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-rel-002"
+        ]
+      },
+      {
+        "claim": "Employee-053-B เป็นเจ้าของ account-053-primary.",
+        "claim_id": "sv-th-053-claim-005",
+        "error_type": "actor_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-rel-001"
+        ]
+      },
+      {
+        "claim": "Analyst-053-A เป็นเจ้าของ account-053-secondary.",
+        "claim_id": "sv-th-053-claim-006",
+        "error_type": "target_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-rel-001"
+        ]
+      },
+      {
+        "claim": "account-053-primary เข้าถึง email-053 เมื่อ 2025-04-13T08:00Z.",
+        "claim_id": "sv-th-053-claim-007",
+        "error_type": "predicate_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-rel-002"
+        ]
+      },
+      {
+        "claim": "process-053 ทำงานบน endpoint-053-A เมื่อ 2025-04-13T12:10Z.",
+        "claim_id": "sv-th-053-claim-008",
+        "error_type": "timestamp_shift",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-053-rel-006"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-en-002",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-en-002-user-a",
+          "entity_type": "user",
+          "name": "Analyst-002-A"
+        },
+        {
+          "entity_id": "sv-en-002-user-b",
+          "entity_type": "user",
+          "name": "Employee-002-B"
+        },
+        {
+          "entity_id": "sv-en-002-account-a",
+          "entity_type": "account",
+          "name": "account-002-primary"
+        },
+        {
+          "entity_id": "sv-en-002-account-b",
+          "entity_type": "account",
+          "name": "account-002-secondary"
+        },
+        {
+          "entity_id": "sv-en-002-email",
+          "entity_type": "email",
+          "name": "email-002"
+        },
+        {
+          "entity_id": "sv-en-002-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-002.zip"
+        },
+        {
+          "entity_id": "sv-en-002-file",
+          "entity_type": "file",
+          "name": "document-002.exe"
+        },
+        {
+          "entity_id": "sv-en-002-process",
+          "entity_type": "process",
+          "name": "process-002"
+        },
+        {
+          "entity_id": "sv-en-002-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-002-A"
+        },
+        {
+          "entity_id": "sv-en-002-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-002-B"
+        },
+        {
+          "entity_id": "sv-en-002-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.3"
+        },
+        {
+          "entity_id": "sv-en-002-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.3"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-en-002-prop-004"
+          ],
+          "subject_entity_id": "sv-en-002-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-email",
+          "predicate": "forwarded",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-en-002-prop-001"
+          ],
+          "subject_entity_id": "sv-en-002-account-a",
+          "timestamp": "2025-04-02T08:00Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-attachment",
+          "predicate": "contained",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-en-002-prop-002"
+          ],
+          "subject_entity_id": "sv-en-002-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-file",
+          "predicate": "saved_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-en-002-prop-002"
+          ],
+          "subject_entity_id": "sv-en-002-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-process",
+          "predicate": "opened",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-en-002-prop-003"
+          ],
+          "subject_entity_id": "sv-en-002-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-en-002-prop-003"
+          ],
+          "subject_entity_id": "sv-en-002-process",
+          "timestamp": "2025-04-02T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-en-002-prop-004"
+          ],
+          "subject_entity_id": "sv-en-002-account-b",
+          "timestamp": "2025-04-02T08:00Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-002-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-en-002-prop-005"
+          ],
+          "subject_entity_id": "sv-en-002-account-b",
+          "timestamp": "2025-04-02T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-002-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-002-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-en-002-prop-005"
+          ],
+          "subject_entity_id": "sv-en-002-user-b",
+          "timestamp": "2025-04-02T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-002-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-en-002-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-en-002-prop-006"
+          ],
+          "subject_entity_id": "sv-en-002-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-en-002-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-en-002-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-en-002-prop-004"
+          ],
+          "target_entity_id": "sv-en-002-endpoint-b",
+          "timestamp": "2025-04-02T08:00Z"
+        },
+        {
+          "actor_entity_id": "sv-en-002-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-en-002-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-en-002-prop-005"
+          ],
+          "target_entity_id": "sv-en-002-ip-b",
+          "timestamp": "2025-04-02T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-en-002-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-en-002-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-en-002-prop-005"
+          ],
+          "target_entity_id": "sv-en-002-email",
+          "timestamp": "2025-04-02T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-en-002-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-en-002-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-en-002-prop-003"
+          ],
+          "target_entity_id": "sv-en-002-endpoint-a",
+          "timestamp": "2025-04-02T09:10Z"
+        }
+      ]
+    },
+    "language": "en",
+    "narrative": "account-002-primary forwarded email-002 at 2025-04-02T08:00Z. email-002 contained attachment-002.zip, and it was saved as document-002.exe. document-002.exe opened process-002, and it ran on endpoint-002-A at 2025-04-02T09:10Z. Analyst-002-A owned account-002-primary; account-002-secondary authenticated on endpoint-002-B at 2025-04-02T08:00Z. Employee-002-B submitted credentials to email-002 at 2025-04-02T08:30Z; account-002-secondary may have signed in from 198.51.100.3 at 2025-04-02T08:50Z. endpoint-002-B may not have connected to 192.0.2.3.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-en-002-rel-002"
+        ],
+        "proposition_id": "sv-en-002-prop-001",
+        "style": "basic",
+        "text": "account-002-primary forwarded email-002 at 2025-04-02T08:00Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-002-rel-003",
+          "sv-en-002-rel-004"
+        ],
+        "proposition_id": "sv-en-002-prop-002",
+        "style": "coreference",
+        "text": "email-002 contained attachment-002.zip, and it was saved as document-002.exe."
+      },
+      {
+        "fact_ids": [
+          "sv-en-002-rel-005",
+          "sv-en-002-rel-006",
+          "sv-en-002-time-004"
+        ],
+        "proposition_id": "sv-en-002-prop-003",
+        "style": "coreference",
+        "text": "document-002.exe opened process-002, and it ran on endpoint-002-A at 2025-04-02T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-002-rel-001",
+          "sv-en-002-rel-007",
+          "sv-en-002-time-001"
+        ],
+        "proposition_id": "sv-en-002-prop-004",
+        "style": "combined",
+        "text": "Analyst-002-A owned account-002-primary; account-002-secondary authenticated on endpoint-002-B at 2025-04-02T08:00Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-002-rel-009",
+          "sv-en-002-time-003",
+          "sv-en-002-rel-008",
+          "sv-en-002-time-002"
+        ],
+        "proposition_id": "sv-en-002-prop-005",
+        "style": "combined",
+        "text": "Employee-002-B submitted credentials to email-002 at 2025-04-02T08:30Z; account-002-secondary may have signed in from 198.51.100.3 at 2025-04-02T08:50Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-002-rel-010"
+        ],
+        "proposition_id": "sv-en-002-prop-006",
+        "style": "basic",
+        "text": "endpoint-002-B may not have connected to 192.0.2.3."
+      }
+    ],
+    "narrative_template_id": "en-layout-2",
+    "scenario_id": "forwarded_attachment",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "document-002.exe opened process-002.",
+        "claim_id": "sv-en-002-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-rel-005"
+        ]
+      },
+      {
+        "claim": "process-002 ran on endpoint-002-A at 2025-04-02T09:10Z.",
+        "claim_id": "sv-en-002-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-rel-006"
+        ]
+      },
+      {
+        "claim": "account-002-secondary authenticated on endpoint-002-B at 2025-04-02T08:00Z.",
+        "claim_id": "sv-en-002-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-rel-007"
+        ]
+      },
+      {
+        "claim": "account-002-secondary may have signed in from 198.51.100.3 at 2025-04-02T08:50Z.",
+        "claim_id": "sv-en-002-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-rel-008"
+        ]
+      },
+      {
+        "claim": "endpoint-002-B may have connected to 192.0.2.3.",
+        "claim_id": "sv-en-002-claim-005",
+        "error_type": "negation_flip",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-rel-010"
+        ]
+      },
+      {
+        "claim": "account-002-secondary signed in from 198.51.100.3 at 2025-04-02T08:50Z.",
+        "claim_id": "sv-en-002-claim-006",
+        "error_type": "certainty_strengthening",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-rel-008"
+        ]
+      },
+      {
+        "claim": "The event in which Employee-002-B submitted credentials to email-002 at 2025-04-02T08:30Z caused the later event in which account-002-secondary may have signed in from 198.51.100.3 at 2025-04-02T08:50Z.",
+        "claim_id": "sv-en-002-claim-007",
+        "error_type": "causality_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-time-003",
+          "sv-en-002-time-002"
+        ]
+      },
+      {
+        "claim": "Analyst-002-A initiated the event in which process-002 ran on endpoint-002-A at 2025-04-02T09:10Z.",
+        "claim_id": "sv-en-002-claim-008",
+        "error_type": "attribution_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-002-time-004"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-th-054",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-th-054-user-a",
+          "entity_type": "user",
+          "name": "Analyst-054-A"
+        },
+        {
+          "entity_id": "sv-th-054-user-b",
+          "entity_type": "user",
+          "name": "Employee-054-B"
+        },
+        {
+          "entity_id": "sv-th-054-account-a",
+          "entity_type": "account",
+          "name": "account-054-primary"
+        },
+        {
+          "entity_id": "sv-th-054-account-b",
+          "entity_type": "account",
+          "name": "account-054-secondary"
+        },
+        {
+          "entity_id": "sv-th-054-email",
+          "entity_type": "email",
+          "name": "email-054"
+        },
+        {
+          "entity_id": "sv-th-054-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-054.zip"
+        },
+        {
+          "entity_id": "sv-th-054-file",
+          "entity_type": "file",
+          "name": "document-054.exe"
+        },
+        {
+          "entity_id": "sv-th-054-process",
+          "entity_type": "process",
+          "name": "process-054"
+        },
+        {
+          "entity_id": "sv-th-054-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-054-A"
+        },
+        {
+          "entity_id": "sv-th-054-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-054-B"
+        },
+        {
+          "entity_id": "sv-th-054-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.55"
+        },
+        {
+          "entity_id": "sv-th-054-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.55"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-th-054-prop-004"
+          ],
+          "subject_entity_id": "sv-th-054-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-email",
+          "predicate": "forwarded",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-th-054-prop-001"
+          ],
+          "subject_entity_id": "sv-th-054-account-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-attachment",
+          "predicate": "contained",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-th-054-prop-002"
+          ],
+          "subject_entity_id": "sv-th-054-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-file",
+          "predicate": "saved_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-th-054-prop-002"
+          ],
+          "subject_entity_id": "sv-th-054-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-process",
+          "predicate": "opened",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-th-054-prop-003"
+          ],
+          "subject_entity_id": "sv-th-054-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-th-054-prop-003"
+          ],
+          "subject_entity_id": "sv-th-054-process",
+          "timestamp": "2025-04-14T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-th-054-prop-004"
+          ],
+          "subject_entity_id": "sv-th-054-account-b",
+          "timestamp": null
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-054-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-th-054-prop-005"
+          ],
+          "subject_entity_id": "sv-th-054-account-b",
+          "timestamp": "2025-04-14T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-054-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-054-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-th-054-prop-005"
+          ],
+          "subject_entity_id": "sv-th-054-user-b",
+          "timestamp": "2025-04-14T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-054-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-th-054-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-th-054-prop-006"
+          ],
+          "subject_entity_id": "sv-th-054-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-th-054-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-th-054-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-th-054-prop-004"
+          ],
+          "target_entity_id": "sv-th-054-endpoint-b",
+          "timestamp": null
+        },
+        {
+          "actor_entity_id": "sv-th-054-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-th-054-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-th-054-prop-005"
+          ],
+          "target_entity_id": "sv-th-054-ip-b",
+          "timestamp": "2025-04-14T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-th-054-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-th-054-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-th-054-prop-005"
+          ],
+          "target_entity_id": "sv-th-054-email",
+          "timestamp": "2025-04-14T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-th-054-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-th-054-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-th-054-prop-003"
+          ],
+          "target_entity_id": "sv-th-054-endpoint-a",
+          "timestamp": "2025-04-14T09:10Z"
+        }
+      ]
+    },
+    "language": "th",
+    "narrative": "account-054-primary ส่งต่อ email-054. email-054 บรรจุ attachment-054.zip และสิ่งดังกล่าว ถูกบันทึกเป็น document-054.exe. document-054.exe เปิด process-054 และสิ่งดังกล่าว ทำงานบน endpoint-054-A เมื่อ 2025-04-14T09:10Z. Analyst-054-A เป็นเจ้าของ account-054-primary; account-054-secondary ยืนยันตัวตนบน endpoint-054-B. Employee-054-B ส่งข้อมูลรับรองไปยัง email-054 เมื่อ 2025-04-14T08:30Z; account-054-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.55 เมื่อ 2025-04-14T08:50Z. endpoint-054-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.55.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-th-054-rel-002"
+        ],
+        "proposition_id": "sv-th-054-prop-001",
+        "style": "basic",
+        "text": "account-054-primary ส่งต่อ email-054."
+      },
+      {
+        "fact_ids": [
+          "sv-th-054-rel-003",
+          "sv-th-054-rel-004"
+        ],
+        "proposition_id": "sv-th-054-prop-002",
+        "style": "coreference",
+        "text": "email-054 บรรจุ attachment-054.zip และสิ่งดังกล่าว ถูกบันทึกเป็น document-054.exe."
+      },
+      {
+        "fact_ids": [
+          "sv-th-054-rel-005",
+          "sv-th-054-rel-006",
+          "sv-th-054-time-004"
+        ],
+        "proposition_id": "sv-th-054-prop-003",
+        "style": "coreference",
+        "text": "document-054.exe เปิด process-054 และสิ่งดังกล่าว ทำงานบน endpoint-054-A เมื่อ 2025-04-14T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-054-rel-001",
+          "sv-th-054-rel-007",
+          "sv-th-054-time-001"
+        ],
+        "proposition_id": "sv-th-054-prop-004",
+        "style": "combined",
+        "text": "Analyst-054-A เป็นเจ้าของ account-054-primary; account-054-secondary ยืนยันตัวตนบน endpoint-054-B."
+      },
+      {
+        "fact_ids": [
+          "sv-th-054-rel-009",
+          "sv-th-054-time-003",
+          "sv-th-054-rel-008",
+          "sv-th-054-time-002"
+        ],
+        "proposition_id": "sv-th-054-prop-005",
+        "style": "combined",
+        "text": "Employee-054-B ส่งข้อมูลรับรองไปยัง email-054 เมื่อ 2025-04-14T08:30Z; account-054-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.55 เมื่อ 2025-04-14T08:50Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-054-rel-010"
+        ],
+        "proposition_id": "sv-th-054-prop-006",
+        "style": "basic",
+        "text": "endpoint-054-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.55."
+      }
+    ],
+    "narrative_template_id": "th-layout-2",
+    "scenario_id": "forwarded_attachment",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "email-054 บรรจุ attachment-054.zip.",
+        "claim_id": "sv-th-054-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-rel-003"
+        ]
+      },
+      {
+        "claim": "attachment-054.zip ถูกบันทึกเป็น document-054.exe.",
+        "claim_id": "sv-th-054-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-rel-004"
+        ]
+      },
+      {
+        "claim": "document-054.exe เปิด process-054.",
+        "claim_id": "sv-th-054-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-rel-005"
+        ]
+      },
+      {
+        "claim": "process-054 ทำงานบน endpoint-054-A เมื่อ 2025-04-14T09:10Z.",
+        "claim_id": "sv-th-054-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-rel-006"
+        ]
+      },
+      {
+        "claim": "endpoint-054-B อาจเชื่อมต่อไปยัง 192.0.2.55.",
+        "claim_id": "sv-th-054-claim-005",
+        "error_type": "negation_flip",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-rel-010"
+        ]
+      },
+      {
+        "claim": "account-054-secondary ลงชื่อเข้าใช้จาก 198.51.100.55 เมื่อ 2025-04-14T08:50Z.",
+        "claim_id": "sv-th-054-claim-006",
+        "error_type": "certainty_strengthening",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-rel-008"
+        ]
+      },
+      {
+        "claim": "เหตุการณ์ที่Employee-054-B ส่งข้อมูลรับรองไปยัง email-054 เมื่อ 2025-04-14T08:30Zเป็นสาเหตุให้เกิดเหตุการณ์ภายหลังที่account-054-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.55 เมื่อ 2025-04-14T08:50Z.",
+        "claim_id": "sv-th-054-claim-007",
+        "error_type": "causality_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-time-003",
+          "sv-th-054-time-002"
+        ]
+      },
+      {
+        "claim": "Analyst-054-Aเป็นผู้เริ่มเหตุการณ์ที่process-054 ทำงานบน endpoint-054-A เมื่อ 2025-04-14T09:10Z.",
+        "claim_id": "sv-th-054-claim-008",
+        "error_type": "attribution_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-054-time-004"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-en-004",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-en-004-user-a",
+          "entity_type": "user",
+          "name": "Analyst-004-A"
+        },
+        {
+          "entity_id": "sv-en-004-user-b",
+          "entity_type": "user",
+          "name": "Employee-004-B"
+        },
+        {
+          "entity_id": "sv-en-004-account-a",
+          "entity_type": "account",
+          "name": "account-004-primary"
+        },
+        {
+          "entity_id": "sv-en-004-account-b",
+          "entity_type": "account",
+          "name": "account-004-secondary"
+        },
+        {
+          "entity_id": "sv-en-004-email",
+          "entity_type": "email",
+          "name": "email-004"
+        },
+        {
+          "entity_id": "sv-en-004-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-004.zip"
+        },
+        {
+          "entity_id": "sv-en-004-file",
+          "entity_type": "file",
+          "name": "document-004.exe"
+        },
+        {
+          "entity_id": "sv-en-004-process",
+          "entity_type": "process",
+          "name": "process-004"
+        },
+        {
+          "entity_id": "sv-en-004-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-004-A"
+        },
+        {
+          "entity_id": "sv-en-004-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-004-B"
+        },
+        {
+          "entity_id": "sv-en-004-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.5"
+        },
+        {
+          "entity_id": "sv-en-004-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.5"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-en-004-prop-006"
+          ],
+          "subject_entity_id": "sv-en-004-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-email",
+          "predicate": "sent",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-en-004-prop-003"
+          ],
+          "subject_entity_id": "sv-en-004-account-a",
+          "timestamp": "2025-04-04T08:00Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-attachment",
+          "predicate": "contained",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-en-004-prop-004"
+          ],
+          "subject_entity_id": "sv-en-004-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-file",
+          "predicate": "stored_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-en-004-prop-004"
+          ],
+          "subject_entity_id": "sv-en-004-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-process",
+          "predicate": "opened",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-en-004-prop-005"
+          ],
+          "subject_entity_id": "sv-en-004-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-en-004-prop-005"
+          ],
+          "subject_entity_id": "sv-en-004-process",
+          "timestamp": "2025-04-04T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-en-004-prop-002"
+          ],
+          "subject_entity_id": "sv-en-004-account-b",
+          "timestamp": "2025-04-04T08:00Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-004-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-en-004-prop-006"
+          ],
+          "subject_entity_id": "sv-en-004-account-b",
+          "timestamp": "2025-04-04T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-004-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-004-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-en-004-prop-001"
+          ],
+          "subject_entity_id": "sv-en-004-user-b",
+          "timestamp": null
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-004-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-en-004-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-en-004-prop-002"
+          ],
+          "subject_entity_id": "sv-en-004-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-en-004-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-en-004-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-en-004-prop-002"
+          ],
+          "target_entity_id": "sv-en-004-endpoint-b",
+          "timestamp": "2025-04-04T08:00Z"
+        },
+        {
+          "actor_entity_id": "sv-en-004-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-en-004-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-en-004-prop-006"
+          ],
+          "target_entity_id": "sv-en-004-ip-b",
+          "timestamp": "2025-04-04T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-en-004-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-en-004-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-en-004-prop-001"
+          ],
+          "target_entity_id": "sv-en-004-email",
+          "timestamp": null
+        },
+        {
+          "actor_entity_id": "sv-en-004-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-en-004-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-en-004-prop-005"
+          ],
+          "target_entity_id": "sv-en-004-endpoint-a",
+          "timestamp": "2025-04-04T09:10Z"
+        }
+      ]
+    },
+    "language": "en",
+    "narrative": "Employee-004-B submitted credentials to email-004. account-004-secondary authenticated on endpoint-004-B at 2025-04-04T08:00Z; endpoint-004-B may not have connected to 192.0.2.5. account-004-primary sent email-004 at 2025-04-04T08:00Z. email-004 contained attachment-004.zip, and it was stored as document-004.exe. document-004.exe opened process-004, and it ran on endpoint-004-A at 2025-04-04T09:10Z. Analyst-004-A owned account-004-primary; account-004-secondary may have signed in from 198.51.100.5 at 2025-04-04T08:50Z.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-en-004-rel-009",
+          "sv-en-004-time-003"
+        ],
+        "proposition_id": "sv-en-004-prop-001",
+        "style": "basic",
+        "text": "Employee-004-B submitted credentials to email-004."
+      },
+      {
+        "fact_ids": [
+          "sv-en-004-rel-007",
+          "sv-en-004-time-001",
+          "sv-en-004-rel-010"
+        ],
+        "proposition_id": "sv-en-004-prop-002",
+        "style": "combined",
+        "text": "account-004-secondary authenticated on endpoint-004-B at 2025-04-04T08:00Z; endpoint-004-B may not have connected to 192.0.2.5."
+      },
+      {
+        "fact_ids": [
+          "sv-en-004-rel-002"
+        ],
+        "proposition_id": "sv-en-004-prop-003",
+        "style": "basic",
+        "text": "account-004-primary sent email-004 at 2025-04-04T08:00Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-004-rel-003",
+          "sv-en-004-rel-004"
+        ],
+        "proposition_id": "sv-en-004-prop-004",
+        "style": "coreference",
+        "text": "email-004 contained attachment-004.zip, and it was stored as document-004.exe."
+      },
+      {
+        "fact_ids": [
+          "sv-en-004-rel-005",
+          "sv-en-004-rel-006",
+          "sv-en-004-time-004"
+        ],
+        "proposition_id": "sv-en-004-prop-005",
+        "style": "coreference",
+        "text": "document-004.exe opened process-004, and it ran on endpoint-004-A at 2025-04-04T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-004-rel-001",
+          "sv-en-004-rel-008",
+          "sv-en-004-time-002"
+        ],
+        "proposition_id": "sv-en-004-prop-006",
+        "style": "combined",
+        "text": "Analyst-004-A owned account-004-primary; account-004-secondary may have signed in from 198.51.100.5 at 2025-04-04T08:50Z."
+      }
+    ],
+    "narrative_template_id": "en-layout-4",
+    "scenario_id": "mail_endpoint_review",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "Employee-004-B submitted credentials to email-004.",
+        "claim_id": "sv-en-004-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-time-003"
+        ]
+      },
+      {
+        "claim": "process-004 ran on endpoint-004-A at 2025-04-04T09:10Z.",
+        "claim_id": "sv-en-004-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-time-004"
+        ]
+      },
+      {
+        "claim": "Analyst-004-A owned account-004-primary.",
+        "claim_id": "sv-en-004-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-rel-001"
+        ]
+      },
+      {
+        "claim": "account-004-primary sent email-004 at 2025-04-04T08:00Z.",
+        "claim_id": "sv-en-004-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-rel-002"
+        ]
+      },
+      {
+        "claim": "endpoint-004-B may have connected to 192.0.2.5.",
+        "claim_id": "sv-en-004-claim-005",
+        "error_type": "negation_flip",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-rel-010"
+        ]
+      },
+      {
+        "claim": "account-004-secondary signed in from 198.51.100.5 at 2025-04-04T08:50Z.",
+        "claim_id": "sv-en-004-claim-006",
+        "error_type": "certainty_strengthening",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-rel-008"
+        ]
+      },
+      {
+        "claim": "The event in which Employee-004-B submitted credentials to email-004 caused the later event in which account-004-secondary may have signed in from 198.51.100.5 at 2025-04-04T08:50Z.",
+        "claim_id": "sv-en-004-claim-007",
+        "error_type": "causality_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-time-003",
+          "sv-en-004-time-002"
+        ]
+      },
+      {
+        "claim": "Analyst-004-A initiated the event in which process-004 ran on endpoint-004-A at 2025-04-04T09:10Z.",
+        "claim_id": "sv-en-004-claim-008",
+        "error_type": "attribution_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-004-time-004"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-th-052",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-th-052-user-a",
+          "entity_type": "user",
+          "name": "Analyst-052-A"
+        },
+        {
+          "entity_id": "sv-th-052-user-b",
+          "entity_type": "user",
+          "name": "Employee-052-B"
+        },
+        {
+          "entity_id": "sv-th-052-account-a",
+          "entity_type": "account",
+          "name": "account-052-primary"
+        },
+        {
+          "entity_id": "sv-th-052-account-b",
+          "entity_type": "account",
+          "name": "account-052-secondary"
+        },
+        {
+          "entity_id": "sv-th-052-email",
+          "entity_type": "email",
+          "name": "email-052"
+        },
+        {
+          "entity_id": "sv-th-052-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-052.zip"
+        },
+        {
+          "entity_id": "sv-th-052-file",
+          "entity_type": "file",
+          "name": "document-052.exe"
+        },
+        {
+          "entity_id": "sv-th-052-process",
+          "entity_type": "process",
+          "name": "process-052"
+        },
+        {
+          "entity_id": "sv-th-052-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-052-A"
+        },
+        {
+          "entity_id": "sv-th-052-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-052-B"
+        },
+        {
+          "entity_id": "sv-th-052-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.53"
+        },
+        {
+          "entity_id": "sv-th-052-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.53"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-th-052-prop-006"
+          ],
+          "subject_entity_id": "sv-th-052-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-email",
+          "predicate": "sent",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-th-052-prop-003"
+          ],
+          "subject_entity_id": "sv-th-052-account-a",
+          "timestamp": "2025-04-12T08:00Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-attachment",
+          "predicate": "contained",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-th-052-prop-004"
+          ],
+          "subject_entity_id": "sv-th-052-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-file",
+          "predicate": "stored_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-th-052-prop-004"
+          ],
+          "subject_entity_id": "sv-th-052-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-process",
+          "predicate": "opened",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-th-052-prop-005"
+          ],
+          "subject_entity_id": "sv-th-052-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-th-052-prop-005"
+          ],
+          "subject_entity_id": "sv-th-052-process",
+          "timestamp": "2025-04-12T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-th-052-prop-002"
+          ],
+          "subject_entity_id": "sv-th-052-account-b",
+          "timestamp": "2025-04-12T08:00Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-052-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-th-052-prop-006"
+          ],
+          "subject_entity_id": "sv-th-052-account-b",
+          "timestamp": "2025-04-12T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-052-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-052-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-th-052-prop-001"
+          ],
+          "subject_entity_id": "sv-th-052-user-b",
+          "timestamp": null
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-052-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-th-052-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-th-052-prop-002"
+          ],
+          "subject_entity_id": "sv-th-052-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-th-052-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-th-052-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-th-052-prop-002"
+          ],
+          "target_entity_id": "sv-th-052-endpoint-b",
+          "timestamp": "2025-04-12T08:00Z"
+        },
+        {
+          "actor_entity_id": "sv-th-052-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-th-052-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-th-052-prop-006"
+          ],
+          "target_entity_id": "sv-th-052-ip-b",
+          "timestamp": "2025-04-12T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-th-052-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-th-052-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-th-052-prop-001"
+          ],
+          "target_entity_id": "sv-th-052-email",
+          "timestamp": null
+        },
+        {
+          "actor_entity_id": "sv-th-052-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-th-052-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-th-052-prop-005"
+          ],
+          "target_entity_id": "sv-th-052-endpoint-a",
+          "timestamp": "2025-04-12T09:10Z"
+        }
+      ]
+    },
+    "language": "th",
+    "narrative": "Employee-052-B ส่งข้อมูลรับรองไปยัง email-052. account-052-secondary ยืนยันตัวตนบน endpoint-052-B เมื่อ 2025-04-12T08:00Z; endpoint-052-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.53. account-052-primary ส่ง email-052 เมื่อ 2025-04-12T08:00Z. email-052 บรรจุ attachment-052.zip และสิ่งดังกล่าว ถูกจัดเก็บเป็น document-052.exe. document-052.exe เปิด process-052 และสิ่งดังกล่าว ทำงานบน endpoint-052-A เมื่อ 2025-04-12T09:10Z. Analyst-052-A เป็นเจ้าของ account-052-primary; account-052-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.53 เมื่อ 2025-04-12T08:50Z.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-th-052-rel-009",
+          "sv-th-052-time-003"
+        ],
+        "proposition_id": "sv-th-052-prop-001",
+        "style": "basic",
+        "text": "Employee-052-B ส่งข้อมูลรับรองไปยัง email-052."
+      },
+      {
+        "fact_ids": [
+          "sv-th-052-rel-007",
+          "sv-th-052-time-001",
+          "sv-th-052-rel-010"
+        ],
+        "proposition_id": "sv-th-052-prop-002",
+        "style": "combined",
+        "text": "account-052-secondary ยืนยันตัวตนบน endpoint-052-B เมื่อ 2025-04-12T08:00Z; endpoint-052-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.53."
+      },
+      {
+        "fact_ids": [
+          "sv-th-052-rel-002"
+        ],
+        "proposition_id": "sv-th-052-prop-003",
+        "style": "basic",
+        "text": "account-052-primary ส่ง email-052 เมื่อ 2025-04-12T08:00Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-052-rel-003",
+          "sv-th-052-rel-004"
+        ],
+        "proposition_id": "sv-th-052-prop-004",
+        "style": "coreference",
+        "text": "email-052 บรรจุ attachment-052.zip และสิ่งดังกล่าว ถูกจัดเก็บเป็น document-052.exe."
+      },
+      {
+        "fact_ids": [
+          "sv-th-052-rel-005",
+          "sv-th-052-rel-006",
+          "sv-th-052-time-004"
+        ],
+        "proposition_id": "sv-th-052-prop-005",
+        "style": "coreference",
+        "text": "document-052.exe เปิด process-052 และสิ่งดังกล่าว ทำงานบน endpoint-052-A เมื่อ 2025-04-12T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-052-rel-001",
+          "sv-th-052-rel-008",
+          "sv-th-052-time-002"
+        ],
+        "proposition_id": "sv-th-052-prop-006",
+        "style": "combined",
+        "text": "Analyst-052-A เป็นเจ้าของ account-052-primary; account-052-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.53 เมื่อ 2025-04-12T08:50Z."
+      }
+    ],
+    "narrative_template_id": "th-layout-4",
+    "scenario_id": "mail_endpoint_review",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "Employee-052-B ส่งข้อมูลรับรองไปยัง email-052.",
+        "claim_id": "sv-th-052-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-rel-009"
+        ]
+      },
+      {
+        "claim": "endpoint-052-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.53.",
+        "claim_id": "sv-th-052-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-rel-010"
+        ]
+      },
+      {
+        "claim": "account-052-secondary ยืนยันตัวตนบน endpoint-052-B เมื่อ 2025-04-12T08:00Z.",
+        "claim_id": "sv-th-052-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-time-001"
+        ]
+      },
+      {
+        "claim": "account-052-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.53 เมื่อ 2025-04-12T08:50Z.",
+        "claim_id": "sv-th-052-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-time-002"
+        ]
+      },
+      {
+        "claim": "endpoint-052-B อาจเชื่อมต่อไปยัง 192.0.2.53.",
+        "claim_id": "sv-th-052-claim-005",
+        "error_type": "negation_flip",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-rel-010"
+        ]
+      },
+      {
+        "claim": "account-052-secondary ลงชื่อเข้าใช้จาก 198.51.100.53 เมื่อ 2025-04-12T08:50Z.",
+        "claim_id": "sv-th-052-claim-006",
+        "error_type": "certainty_strengthening",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-rel-008"
+        ]
+      },
+      {
+        "claim": "เหตุการณ์ที่Employee-052-B ส่งข้อมูลรับรองไปยัง email-052เป็นสาเหตุให้เกิดเหตุการณ์ภายหลังที่account-052-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.53 เมื่อ 2025-04-12T08:50Z.",
+        "claim_id": "sv-th-052-claim-007",
+        "error_type": "causality_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-time-003",
+          "sv-th-052-time-002"
+        ]
+      },
+      {
+        "claim": "Analyst-052-Aเป็นผู้เริ่มเหตุการณ์ที่process-052 ทำงานบน endpoint-052-A เมื่อ 2025-04-12T09:10Z.",
+        "claim_id": "sv-th-052-claim-008",
+        "error_type": "attribution_insertion",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-052-time-004"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-en-003",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-en-003-user-a",
+          "entity_type": "user",
+          "name": "Analyst-003-A"
+        },
+        {
+          "entity_id": "sv-en-003-user-b",
+          "entity_type": "user",
+          "name": "Employee-003-B"
+        },
+        {
+          "entity_id": "sv-en-003-account-a",
+          "entity_type": "account",
+          "name": "account-003-primary"
+        },
+        {
+          "entity_id": "sv-en-003-account-b",
+          "entity_type": "account",
+          "name": "account-003-secondary"
+        },
+        {
+          "entity_id": "sv-en-003-email",
+          "entity_type": "email",
+          "name": "email-003"
+        },
+        {
+          "entity_id": "sv-en-003-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-003.zip"
+        },
+        {
+          "entity_id": "sv-en-003-file",
+          "entity_type": "file",
+          "name": "document-003.exe"
+        },
+        {
+          "entity_id": "sv-en-003-process",
+          "entity_type": "process",
+          "name": "process-003"
+        },
+        {
+          "entity_id": "sv-en-003-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-003-A"
+        },
+        {
+          "entity_id": "sv-en-003-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-003-B"
+        },
+        {
+          "entity_id": "sv-en-003-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.4"
+        },
+        {
+          "entity_id": "sv-en-003-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.4"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-en-003-prop-002"
+          ],
+          "subject_entity_id": "sv-en-003-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-email",
+          "predicate": "received",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-en-003-prop-003"
+          ],
+          "subject_entity_id": "sv-en-003-account-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-attachment",
+          "predicate": "included",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-en-003-prop-004"
+          ],
+          "subject_entity_id": "sv-en-003-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-file",
+          "predicate": "saved_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-en-003-prop-004"
+          ],
+          "subject_entity_id": "sv-en-003-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-process",
+          "predicate": "executed",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-en-003-prop-005"
+          ],
+          "subject_entity_id": "sv-en-003-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-en-003-prop-005"
+          ],
+          "subject_entity_id": "sv-en-003-process",
+          "timestamp": "2025-04-03T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-en-003-prop-003"
+          ],
+          "subject_entity_id": "sv-en-003-account-b",
+          "timestamp": null
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-003-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-en-003-prop-001"
+          ],
+          "subject_entity_id": "sv-en-003-account-b",
+          "timestamp": "2025-04-03T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-003-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-003-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-en-003-prop-006"
+          ],
+          "subject_entity_id": "sv-en-003-user-b",
+          "timestamp": "2025-04-03T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-003-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-en-003-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-en-003-prop-001"
+          ],
+          "subject_entity_id": "sv-en-003-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-en-003-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-en-003-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-en-003-prop-003"
+          ],
+          "target_entity_id": "sv-en-003-endpoint-b",
+          "timestamp": null
+        },
+        {
+          "actor_entity_id": "sv-en-003-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-en-003-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-en-003-prop-001"
+          ],
+          "target_entity_id": "sv-en-003-ip-b",
+          "timestamp": "2025-04-03T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-en-003-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-en-003-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-en-003-prop-006"
+          ],
+          "target_entity_id": "sv-en-003-email",
+          "timestamp": "2025-04-03T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-en-003-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-en-003-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-en-003-prop-005"
+          ],
+          "target_entity_id": "sv-en-003-endpoint-a",
+          "timestamp": "2025-04-03T09:10Z"
+        }
+      ]
+    },
+    "language": "en",
+    "narrative": "account-003-secondary may have signed in from 198.51.100.4 at 2025-04-03T08:50Z; endpoint-003-B may not have connected to 192.0.2.4. Analyst-003-A owned account-003-primary. account-003-secondary authenticated on endpoint-003-B; account-003-primary received email-003. email-003 included attachment-003.zip, and it was saved as document-003.exe. document-003.exe executed process-003, and it ran on endpoint-003-A at 2025-04-03T09:10Z. Employee-003-B submitted credentials to email-003 at 2025-04-03T08:30Z.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-en-003-rel-008",
+          "sv-en-003-time-002",
+          "sv-en-003-rel-010"
+        ],
+        "proposition_id": "sv-en-003-prop-001",
+        "style": "combined",
+        "text": "account-003-secondary may have signed in from 198.51.100.4 at 2025-04-03T08:50Z; endpoint-003-B may not have connected to 192.0.2.4."
+      },
+      {
+        "fact_ids": [
+          "sv-en-003-rel-001"
+        ],
+        "proposition_id": "sv-en-003-prop-002",
+        "style": "basic",
+        "text": "Analyst-003-A owned account-003-primary."
+      },
+      {
+        "fact_ids": [
+          "sv-en-003-rel-007",
+          "sv-en-003-time-001",
+          "sv-en-003-rel-002"
+        ],
+        "proposition_id": "sv-en-003-prop-003",
+        "style": "combined",
+        "text": "account-003-secondary authenticated on endpoint-003-B; account-003-primary received email-003."
+      },
+      {
+        "fact_ids": [
+          "sv-en-003-rel-003",
+          "sv-en-003-rel-004"
+        ],
+        "proposition_id": "sv-en-003-prop-004",
+        "style": "coreference",
+        "text": "email-003 included attachment-003.zip, and it was saved as document-003.exe."
+      },
+      {
+        "fact_ids": [
+          "sv-en-003-rel-005",
+          "sv-en-003-rel-006",
+          "sv-en-003-time-004"
+        ],
+        "proposition_id": "sv-en-003-prop-005",
+        "style": "coreference",
+        "text": "document-003.exe executed process-003, and it ran on endpoint-003-A at 2025-04-03T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-003-rel-009",
+          "sv-en-003-time-003"
+        ],
+        "proposition_id": "sv-en-003-prop-006",
+        "style": "basic",
+        "text": "Employee-003-B submitted credentials to email-003 at 2025-04-03T08:30Z."
+      }
+    ],
+    "narrative_template_id": "en-layout-3",
+    "scenario_id": "received_document",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "Employee-003-B submitted credentials to email-003 at 2025-04-03T08:30Z.",
+        "claim_id": "sv-en-003-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-rel-009"
+        ]
+      },
+      {
+        "claim": "endpoint-003-B may not have connected to 192.0.2.4.",
+        "claim_id": "sv-en-003-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-rel-010"
+        ]
+      },
+      {
+        "claim": "account-003-secondary authenticated on endpoint-003-B.",
+        "claim_id": "sv-en-003-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-time-001"
+        ]
+      },
+      {
+        "claim": "account-003-secondary may have signed in from 198.51.100.4 at 2025-04-03T08:50Z.",
+        "claim_id": "sv-en-003-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-time-002"
+        ]
+      },
+      {
+        "claim": "Employee-003-B owned account-003-primary.",
+        "claim_id": "sv-en-003-claim-005",
+        "error_type": "actor_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-rel-001"
+        ]
+      },
+      {
+        "claim": "Analyst-003-A owned account-003-secondary.",
+        "claim_id": "sv-en-003-claim-006",
+        "error_type": "target_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-rel-001"
+        ]
+      },
+      {
+        "claim": "account-003-primary accessed email-003.",
+        "claim_id": "sv-en-003-claim-007",
+        "error_type": "predicate_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-rel-002"
+        ]
+      },
+      {
+        "claim": "process-003 ran on endpoint-003-A at 2025-04-03T12:10Z.",
+        "claim_id": "sv-en-003-claim-008",
+        "error_type": "timestamp_shift",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-003-rel-006"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-th-051",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-th-051-user-a",
+          "entity_type": "user",
+          "name": "Analyst-051-A"
+        },
+        {
+          "entity_id": "sv-th-051-user-b",
+          "entity_type": "user",
+          "name": "Employee-051-B"
+        },
+        {
+          "entity_id": "sv-th-051-account-a",
+          "entity_type": "account",
+          "name": "account-051-primary"
+        },
+        {
+          "entity_id": "sv-th-051-account-b",
+          "entity_type": "account",
+          "name": "account-051-secondary"
+        },
+        {
+          "entity_id": "sv-th-051-email",
+          "entity_type": "email",
+          "name": "email-051"
+        },
+        {
+          "entity_id": "sv-th-051-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-051.zip"
+        },
+        {
+          "entity_id": "sv-th-051-file",
+          "entity_type": "file",
+          "name": "document-051.exe"
+        },
+        {
+          "entity_id": "sv-th-051-process",
+          "entity_type": "process",
+          "name": "process-051"
+        },
+        {
+          "entity_id": "sv-th-051-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-051-A"
+        },
+        {
+          "entity_id": "sv-th-051-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-051-B"
+        },
+        {
+          "entity_id": "sv-th-051-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.52"
+        },
+        {
+          "entity_id": "sv-th-051-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.52"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-th-051-prop-002"
+          ],
+          "subject_entity_id": "sv-th-051-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-email",
+          "predicate": "received",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-th-051-prop-003"
+          ],
+          "subject_entity_id": "sv-th-051-account-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-attachment",
+          "predicate": "included",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-th-051-prop-004"
+          ],
+          "subject_entity_id": "sv-th-051-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-file",
+          "predicate": "saved_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-th-051-prop-004"
+          ],
+          "subject_entity_id": "sv-th-051-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-process",
+          "predicate": "executed",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-th-051-prop-005"
+          ],
+          "subject_entity_id": "sv-th-051-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-th-051-prop-005"
+          ],
+          "subject_entity_id": "sv-th-051-process",
+          "timestamp": "2025-04-11T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-th-051-prop-003"
+          ],
+          "subject_entity_id": "sv-th-051-account-b",
+          "timestamp": null
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-051-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-th-051-prop-001"
+          ],
+          "subject_entity_id": "sv-th-051-account-b",
+          "timestamp": "2025-04-11T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-051-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-051-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-th-051-prop-006"
+          ],
+          "subject_entity_id": "sv-th-051-user-b",
+          "timestamp": "2025-04-11T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-051-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-th-051-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-th-051-prop-001"
+          ],
+          "subject_entity_id": "sv-th-051-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-th-051-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-th-051-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-th-051-prop-003"
+          ],
+          "target_entity_id": "sv-th-051-endpoint-b",
+          "timestamp": null
+        },
+        {
+          "actor_entity_id": "sv-th-051-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-th-051-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-th-051-prop-001"
+          ],
+          "target_entity_id": "sv-th-051-ip-b",
+          "timestamp": "2025-04-11T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-th-051-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-th-051-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-th-051-prop-006"
+          ],
+          "target_entity_id": "sv-th-051-email",
+          "timestamp": "2025-04-11T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-th-051-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-th-051-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-th-051-prop-005"
+          ],
+          "target_entity_id": "sv-th-051-endpoint-a",
+          "timestamp": "2025-04-11T09:10Z"
+        }
+      ]
+    },
+    "language": "th",
+    "narrative": "account-051-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.52 เมื่อ 2025-04-11T08:50Z; endpoint-051-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.52. Analyst-051-A เป็นเจ้าของ account-051-primary. account-051-secondary ยืนยันตัวตนบน endpoint-051-B; account-051-primary ได้รับ email-051. email-051 มี attachment-051.zip และสิ่งดังกล่าว ถูกบันทึกเป็น document-051.exe. document-051.exe เรียกใช้งาน process-051 และสิ่งดังกล่าว ทำงานบน endpoint-051-A เมื่อ 2025-04-11T09:10Z. Employee-051-B ส่งข้อมูลรับรองไปยัง email-051 เมื่อ 2025-04-11T08:30Z.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-th-051-rel-008",
+          "sv-th-051-time-002",
+          "sv-th-051-rel-010"
+        ],
+        "proposition_id": "sv-th-051-prop-001",
+        "style": "combined",
+        "text": "account-051-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.52 เมื่อ 2025-04-11T08:50Z; endpoint-051-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.52."
+      },
+      {
+        "fact_ids": [
+          "sv-th-051-rel-001"
+        ],
+        "proposition_id": "sv-th-051-prop-002",
+        "style": "basic",
+        "text": "Analyst-051-A เป็นเจ้าของ account-051-primary."
+      },
+      {
+        "fact_ids": [
+          "sv-th-051-rel-007",
+          "sv-th-051-time-001",
+          "sv-th-051-rel-002"
+        ],
+        "proposition_id": "sv-th-051-prop-003",
+        "style": "combined",
+        "text": "account-051-secondary ยืนยันตัวตนบน endpoint-051-B; account-051-primary ได้รับ email-051."
+      },
+      {
+        "fact_ids": [
+          "sv-th-051-rel-003",
+          "sv-th-051-rel-004"
+        ],
+        "proposition_id": "sv-th-051-prop-004",
+        "style": "coreference",
+        "text": "email-051 มี attachment-051.zip และสิ่งดังกล่าว ถูกบันทึกเป็น document-051.exe."
+      },
+      {
+        "fact_ids": [
+          "sv-th-051-rel-005",
+          "sv-th-051-rel-006",
+          "sv-th-051-time-004"
+        ],
+        "proposition_id": "sv-th-051-prop-005",
+        "style": "coreference",
+        "text": "document-051.exe เรียกใช้งาน process-051 และสิ่งดังกล่าว ทำงานบน endpoint-051-A เมื่อ 2025-04-11T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-051-rel-009",
+          "sv-th-051-time-003"
+        ],
+        "proposition_id": "sv-th-051-prop-006",
+        "style": "basic",
+        "text": "Employee-051-B ส่งข้อมูลรับรองไปยัง email-051 เมื่อ 2025-04-11T08:30Z."
+      }
+    ],
+    "narrative_template_id": "th-layout-3",
+    "scenario_id": "received_document",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "document-051.exe เรียกใช้งาน process-051.",
+        "claim_id": "sv-th-051-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-005"
+        ]
+      },
+      {
+        "claim": "process-051 ทำงานบน endpoint-051-A เมื่อ 2025-04-11T09:10Z.",
+        "claim_id": "sv-th-051-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-006"
+        ]
+      },
+      {
+        "claim": "account-051-secondary ยืนยันตัวตนบน endpoint-051-B.",
+        "claim_id": "sv-th-051-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-007"
+        ]
+      },
+      {
+        "claim": "account-051-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.52 เมื่อ 2025-04-11T08:50Z.",
+        "claim_id": "sv-th-051-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-008"
+        ]
+      },
+      {
+        "claim": "Employee-051-B เป็นเจ้าของ account-051-primary.",
+        "claim_id": "sv-th-051-claim-005",
+        "error_type": "actor_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-001"
+        ]
+      },
+      {
+        "claim": "Analyst-051-A เป็นเจ้าของ account-051-secondary.",
+        "claim_id": "sv-th-051-claim-006",
+        "error_type": "target_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-001"
+        ]
+      },
+      {
+        "claim": "account-051-primary เข้าถึง email-051.",
+        "claim_id": "sv-th-051-claim-007",
+        "error_type": "predicate_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-002"
+        ]
+      },
+      {
+        "claim": "process-051 ทำงานบน endpoint-051-A เมื่อ 2025-04-11T12:10Z.",
+        "claim_id": "sv-th-051-claim-008",
+        "error_type": "timestamp_shift",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-051-rel-006"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-en-005",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-en-005-user-a",
+          "entity_type": "user",
+          "name": "Analyst-005-A"
+        },
+        {
+          "entity_id": "sv-en-005-user-b",
+          "entity_type": "user",
+          "name": "Employee-005-B"
+        },
+        {
+          "entity_id": "sv-en-005-account-a",
+          "entity_type": "account",
+          "name": "account-005-primary"
+        },
+        {
+          "entity_id": "sv-en-005-account-b",
+          "entity_type": "account",
+          "name": "account-005-secondary"
+        },
+        {
+          "entity_id": "sv-en-005-email",
+          "entity_type": "email",
+          "name": "email-005"
+        },
+        {
+          "entity_id": "sv-en-005-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-005.zip"
+        },
+        {
+          "entity_id": "sv-en-005-file",
+          "entity_type": "file",
+          "name": "document-005.exe"
+        },
+        {
+          "entity_id": "sv-en-005-process",
+          "entity_type": "process",
+          "name": "process-005"
+        },
+        {
+          "entity_id": "sv-en-005-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-005-A"
+        },
+        {
+          "entity_id": "sv-en-005-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-005-B"
+        },
+        {
+          "entity_id": "sv-en-005-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.6"
+        },
+        {
+          "entity_id": "sv-en-005-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.6"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-en-005-prop-001"
+          ],
+          "subject_entity_id": "sv-en-005-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-email",
+          "predicate": "sent",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-en-005-prop-002"
+          ],
+          "subject_entity_id": "sv-en-005-account-a",
+          "timestamp": "2025-04-05T08:00Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-attachment",
+          "predicate": "included",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-en-005-prop-002"
+          ],
+          "subject_entity_id": "sv-en-005-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-file",
+          "predicate": "stored_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-en-005-prop-003"
+          ],
+          "subject_entity_id": "sv-en-005-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-process",
+          "predicate": "executed",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-en-005-prop-003"
+          ],
+          "subject_entity_id": "sv-en-005-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-en-005-prop-004"
+          ],
+          "subject_entity_id": "sv-en-005-process",
+          "timestamp": "2025-04-05T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-en-005-prop-005"
+          ],
+          "subject_entity_id": "sv-en-005-account-b",
+          "timestamp": "2025-04-05T08:00Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-005-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-en-005-prop-005"
+          ],
+          "subject_entity_id": "sv-en-005-account-b",
+          "timestamp": "2025-04-05T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-en-005-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-en-005-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-en-005-prop-006"
+          ],
+          "subject_entity_id": "sv-en-005-user-b",
+          "timestamp": "2025-04-05T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-en-005-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-en-005-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-en-005-prop-006"
+          ],
+          "subject_entity_id": "sv-en-005-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-en-005-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-en-005-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-en-005-prop-005"
+          ],
+          "target_entity_id": "sv-en-005-endpoint-b",
+          "timestamp": "2025-04-05T08:00Z"
+        },
+        {
+          "actor_entity_id": "sv-en-005-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-en-005-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-en-005-prop-005"
+          ],
+          "target_entity_id": "sv-en-005-ip-b",
+          "timestamp": "2025-04-05T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-en-005-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-en-005-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-en-005-prop-006"
+          ],
+          "target_entity_id": "sv-en-005-email",
+          "timestamp": "2025-04-05T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-en-005-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-en-005-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-en-005-prop-004"
+          ],
+          "target_entity_id": "sv-en-005-endpoint-a",
+          "timestamp": "2025-04-05T09:10Z"
+        }
+      ]
+    },
+    "language": "en",
+    "narrative": "Analyst-005-A owned account-005-primary. account-005-primary sent email-005 at 2025-04-05T08:00Z, and it included attachment-005.zip. attachment-005.zip was stored as document-005.exe, and it executed process-005. process-005 ran on endpoint-005-A at 2025-04-05T09:10Z. account-005-secondary authenticated on endpoint-005-B at 2025-04-05T08:00Z; account-005-secondary may have signed in from 198.51.100.6 at 2025-04-05T08:50Z. Employee-005-B submitted credentials to email-005 at 2025-04-05T08:30Z; endpoint-005-B may not have connected to 192.0.2.6.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-en-005-rel-001"
+        ],
+        "proposition_id": "sv-en-005-prop-001",
+        "style": "basic",
+        "text": "Analyst-005-A owned account-005-primary."
+      },
+      {
+        "fact_ids": [
+          "sv-en-005-rel-002",
+          "sv-en-005-rel-003"
+        ],
+        "proposition_id": "sv-en-005-prop-002",
+        "style": "coreference",
+        "text": "account-005-primary sent email-005 at 2025-04-05T08:00Z, and it included attachment-005.zip."
+      },
+      {
+        "fact_ids": [
+          "sv-en-005-rel-004",
+          "sv-en-005-rel-005"
+        ],
+        "proposition_id": "sv-en-005-prop-003",
+        "style": "coreference",
+        "text": "attachment-005.zip was stored as document-005.exe, and it executed process-005."
+      },
+      {
+        "fact_ids": [
+          "sv-en-005-rel-006",
+          "sv-en-005-time-004"
+        ],
+        "proposition_id": "sv-en-005-prop-004",
+        "style": "basic",
+        "text": "process-005 ran on endpoint-005-A at 2025-04-05T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-005-rel-007",
+          "sv-en-005-time-001",
+          "sv-en-005-rel-008",
+          "sv-en-005-time-002"
+        ],
+        "proposition_id": "sv-en-005-prop-005",
+        "style": "combined",
+        "text": "account-005-secondary authenticated on endpoint-005-B at 2025-04-05T08:00Z; account-005-secondary may have signed in from 198.51.100.6 at 2025-04-05T08:50Z."
+      },
+      {
+        "fact_ids": [
+          "sv-en-005-rel-009",
+          "sv-en-005-time-003",
+          "sv-en-005-rel-010"
+        ],
+        "proposition_id": "sv-en-005-prop-006",
+        "style": "combined",
+        "text": "Employee-005-B submitted credentials to email-005 at 2025-04-05T08:30Z; endpoint-005-B may not have connected to 192.0.2.6."
+      }
+    ],
+    "narrative_template_id": "en-layout-1",
+    "scenario_id": "email_execution",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "email-005 included attachment-005.zip.",
+        "claim_id": "sv-en-005-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-003"
+        ]
+      },
+      {
+        "claim": "attachment-005.zip was stored as document-005.exe.",
+        "claim_id": "sv-en-005-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-004"
+        ]
+      },
+      {
+        "claim": "document-005.exe executed process-005.",
+        "claim_id": "sv-en-005-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-005"
+        ]
+      },
+      {
+        "claim": "process-005 ran on endpoint-005-A at 2025-04-05T09:10Z.",
+        "claim_id": "sv-en-005-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-006"
+        ]
+      },
+      {
+        "claim": "Employee-005-B owned account-005-primary.",
+        "claim_id": "sv-en-005-claim-005",
+        "error_type": "actor_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-001"
+        ]
+      },
+      {
+        "claim": "Analyst-005-A owned account-005-secondary.",
+        "claim_id": "sv-en-005-claim-006",
+        "error_type": "target_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-001"
+        ]
+      },
+      {
+        "claim": "account-005-primary accessed email-005 at 2025-04-05T08:00Z.",
+        "claim_id": "sv-en-005-claim-007",
+        "error_type": "predicate_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-002"
+        ]
+      },
+      {
+        "claim": "process-005 ran on endpoint-005-A at 2025-04-05T12:10Z.",
+        "claim_id": "sv-en-005-claim-008",
+        "error_type": "timestamp_shift",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-en-005-rel-006"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "sv-th-057",
+    "gold_facts": {
+      "entities": [
+        {
+          "entity_id": "sv-th-057-user-a",
+          "entity_type": "user",
+          "name": "Analyst-057-A"
+        },
+        {
+          "entity_id": "sv-th-057-user-b",
+          "entity_type": "user",
+          "name": "Employee-057-B"
+        },
+        {
+          "entity_id": "sv-th-057-account-a",
+          "entity_type": "account",
+          "name": "account-057-primary"
+        },
+        {
+          "entity_id": "sv-th-057-account-b",
+          "entity_type": "account",
+          "name": "account-057-secondary"
+        },
+        {
+          "entity_id": "sv-th-057-email",
+          "entity_type": "email",
+          "name": "email-057"
+        },
+        {
+          "entity_id": "sv-th-057-attachment",
+          "entity_type": "attachment",
+          "name": "attachment-057.zip"
+        },
+        {
+          "entity_id": "sv-th-057-file",
+          "entity_type": "file",
+          "name": "document-057.exe"
+        },
+        {
+          "entity_id": "sv-th-057-process",
+          "entity_type": "process",
+          "name": "process-057"
+        },
+        {
+          "entity_id": "sv-th-057-endpoint-a",
+          "entity_type": "endpoint",
+          "name": "endpoint-057-A"
+        },
+        {
+          "entity_id": "sv-th-057-endpoint-b",
+          "entity_type": "endpoint",
+          "name": "endpoint-057-B"
+        },
+        {
+          "entity_id": "sv-th-057-ip-a",
+          "entity_type": "ip_address",
+          "name": "192.0.2.58"
+        },
+        {
+          "entity_id": "sv-th-057-ip-b",
+          "entity_type": "ip_address",
+          "name": "198.51.100.58"
+        }
+      ],
+      "relationships": [
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-001",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-account-a",
+          "predicate": "owns",
+          "slot": "rel-001",
+          "source_proposition_ids": [
+            "sv-th-057-prop-001"
+          ],
+          "subject_entity_id": "sv-th-057-user-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-002",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-email",
+          "predicate": "sent",
+          "slot": "rel-002",
+          "source_proposition_ids": [
+            "sv-th-057-prop-002"
+          ],
+          "subject_entity_id": "sv-th-057-account-a",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-003",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-attachment",
+          "predicate": "included",
+          "slot": "rel-003",
+          "source_proposition_ids": [
+            "sv-th-057-prop-002"
+          ],
+          "subject_entity_id": "sv-th-057-email",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-004",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-file",
+          "predicate": "stored_as",
+          "slot": "rel-004",
+          "source_proposition_ids": [
+            "sv-th-057-prop-003"
+          ],
+          "subject_entity_id": "sv-th-057-attachment",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-005",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-process",
+          "predicate": "executed",
+          "slot": "rel-005",
+          "source_proposition_ids": [
+            "sv-th-057-prop-003"
+          ],
+          "subject_entity_id": "sv-th-057-file",
+          "timestamp": null
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-006",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-endpoint-a",
+          "predicate": "ran_on",
+          "slot": "rel-006",
+          "source_proposition_ids": [
+            "sv-th-057-prop-004"
+          ],
+          "subject_entity_id": "sv-th-057-process",
+          "timestamp": "2025-04-17T09:10Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-007",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-endpoint-b",
+          "predicate": "authenticated_on",
+          "slot": "rel-007",
+          "source_proposition_ids": [
+            "sv-th-057-prop-005"
+          ],
+          "subject_entity_id": "sv-th-057-account-b",
+          "timestamp": null
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-057-rel-008",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-ip-b",
+          "predicate": "signed_in_from",
+          "slot": "rel-008",
+          "source_proposition_ids": [
+            "sv-th-057-prop-005"
+          ],
+          "subject_entity_id": "sv-th-057-account-b",
+          "timestamp": "2025-04-17T08:50Z"
+        },
+        {
+          "certainty": "reported",
+          "fact_id": "sv-th-057-rel-009",
+          "fact_kind": "relationship",
+          "negated": false,
+          "object_entity_id": "sv-th-057-email",
+          "predicate": "submitted_credentials_to",
+          "slot": "rel-009",
+          "source_proposition_ids": [
+            "sv-th-057-prop-006"
+          ],
+          "subject_entity_id": "sv-th-057-user-b",
+          "timestamp": "2025-04-17T08:30Z"
+        },
+        {
+          "certainty": "suspected",
+          "fact_id": "sv-th-057-rel-010",
+          "fact_kind": "relationship",
+          "negated": true,
+          "object_entity_id": "sv-th-057-ip-a",
+          "predicate": "connected_to",
+          "slot": "rel-010",
+          "source_proposition_ids": [
+            "sv-th-057-prop-006"
+          ],
+          "subject_entity_id": "sv-th-057-endpoint-b",
+          "timestamp": null
+        }
+      ],
+      "timeline": [
+        {
+          "actor_entity_id": "sv-th-057-account-b",
+          "certainty": "reported",
+          "event_type": "authentication",
+          "fact_id": "sv-th-057-time-001",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "authenticated_on",
+          "slot": "time-001",
+          "source_proposition_ids": [
+            "sv-th-057-prop-005"
+          ],
+          "target_entity_id": "sv-th-057-endpoint-b",
+          "timestamp": null
+        },
+        {
+          "actor_entity_id": "sv-th-057-account-b",
+          "certainty": "suspected",
+          "event_type": "suspicious_login",
+          "fact_id": "sv-th-057-time-002",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "signed_in_from",
+          "slot": "time-002",
+          "source_proposition_ids": [
+            "sv-th-057-prop-005"
+          ],
+          "target_entity_id": "sv-th-057-ip-b",
+          "timestamp": "2025-04-17T08:50Z"
+        },
+        {
+          "actor_entity_id": "sv-th-057-user-b",
+          "certainty": "reported",
+          "event_type": "credential_submission",
+          "fact_id": "sv-th-057-time-003",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "submitted_credentials_to",
+          "slot": "time-003",
+          "source_proposition_ids": [
+            "sv-th-057-prop-006"
+          ],
+          "target_entity_id": "sv-th-057-email",
+          "timestamp": "2025-04-17T08:30Z"
+        },
+        {
+          "actor_entity_id": "sv-th-057-process",
+          "certainty": "reported",
+          "event_type": "endpoint_activity",
+          "fact_id": "sv-th-057-time-004",
+          "fact_kind": "timeline",
+          "negated": false,
+          "relationship_predicate": "ran_on",
+          "slot": "time-004",
+          "source_proposition_ids": [
+            "sv-th-057-prop-004"
+          ],
+          "target_entity_id": "sv-th-057-endpoint-a",
+          "timestamp": "2025-04-17T09:10Z"
+        }
+      ]
+    },
+    "language": "th",
+    "narrative": "Analyst-057-A เป็นเจ้าของ account-057-primary. account-057-primary ส่ง email-057 และสิ่งดังกล่าว มี attachment-057.zip. attachment-057.zip ถูกจัดเก็บเป็น document-057.exe และสิ่งดังกล่าว เรียกใช้งาน process-057. process-057 ทำงานบน endpoint-057-A เมื่อ 2025-04-17T09:10Z. account-057-secondary ยืนยันตัวตนบน endpoint-057-B; account-057-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.58 เมื่อ 2025-04-17T08:50Z. Employee-057-B ส่งข้อมูลรับรองไปยัง email-057 เมื่อ 2025-04-17T08:30Z; endpoint-057-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.58.",
+    "narrative_propositions": [
+      {
+        "fact_ids": [
+          "sv-th-057-rel-001"
+        ],
+        "proposition_id": "sv-th-057-prop-001",
+        "style": "basic",
+        "text": "Analyst-057-A เป็นเจ้าของ account-057-primary."
+      },
+      {
+        "fact_ids": [
+          "sv-th-057-rel-002",
+          "sv-th-057-rel-003"
+        ],
+        "proposition_id": "sv-th-057-prop-002",
+        "style": "coreference",
+        "text": "account-057-primary ส่ง email-057 และสิ่งดังกล่าว มี attachment-057.zip."
+      },
+      {
+        "fact_ids": [
+          "sv-th-057-rel-004",
+          "sv-th-057-rel-005"
+        ],
+        "proposition_id": "sv-th-057-prop-003",
+        "style": "coreference",
+        "text": "attachment-057.zip ถูกจัดเก็บเป็น document-057.exe และสิ่งดังกล่าว เรียกใช้งาน process-057."
+      },
+      {
+        "fact_ids": [
+          "sv-th-057-rel-006",
+          "sv-th-057-time-004"
+        ],
+        "proposition_id": "sv-th-057-prop-004",
+        "style": "basic",
+        "text": "process-057 ทำงานบน endpoint-057-A เมื่อ 2025-04-17T09:10Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-057-rel-007",
+          "sv-th-057-time-001",
+          "sv-th-057-rel-008",
+          "sv-th-057-time-002"
+        ],
+        "proposition_id": "sv-th-057-prop-005",
+        "style": "combined",
+        "text": "account-057-secondary ยืนยันตัวตนบน endpoint-057-B; account-057-secondary อาจลงชื่อเข้าใช้จาก 198.51.100.58 เมื่อ 2025-04-17T08:50Z."
+      },
+      {
+        "fact_ids": [
+          "sv-th-057-rel-009",
+          "sv-th-057-time-003",
+          "sv-th-057-rel-010"
+        ],
+        "proposition_id": "sv-th-057-prop-006",
+        "style": "combined",
+        "text": "Employee-057-B ส่งข้อมูลรับรองไปยัง email-057 เมื่อ 2025-04-17T08:30Z; endpoint-057-B อาจไม่ได้เชื่อมต่อไปยัง 192.0.2.58."
+      }
+    ],
+    "narrative_template_id": "th-layout-1",
+    "scenario_id": "email_execution",
+    "schema_version": "2.0",
+    "seed": 314159,
+    "verification_pairs": [
+      {
+        "claim": "Analyst-057-A เป็นเจ้าของ account-057-primary.",
+        "claim_id": "sv-th-057-claim-001",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-001"
+        ]
+      },
+      {
+        "claim": "account-057-primary ส่ง email-057.",
+        "claim_id": "sv-th-057-claim-002",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-002"
+        ]
+      },
+      {
+        "claim": "email-057 มี attachment-057.zip.",
+        "claim_id": "sv-th-057-claim-003",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-003"
+        ]
+      },
+      {
+        "claim": "attachment-057.zip ถูกจัดเก็บเป็น document-057.exe.",
+        "claim_id": "sv-th-057-claim-004",
+        "error_type": "none",
+        "label": "SUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-004"
+        ]
+      },
+      {
+        "claim": "Employee-057-B เป็นเจ้าของ account-057-primary.",
+        "claim_id": "sv-th-057-claim-005",
+        "error_type": "actor_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-001"
+        ]
+      },
+      {
+        "claim": "Analyst-057-A เป็นเจ้าของ account-057-secondary.",
+        "claim_id": "sv-th-057-claim-006",
+        "error_type": "target_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-001"
+        ]
+      },
+      {
+        "claim": "account-057-primary เข้าถึง email-057.",
+        "claim_id": "sv-th-057-claim-007",
+        "error_type": "predicate_swap",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-002"
+        ]
+      },
+      {
+        "claim": "process-057 ทำงานบน endpoint-057-A เมื่อ 2025-04-17T12:10Z.",
+        "claim_id": "sv-th-057-claim-008",
+        "error_type": "timestamp_shift",
+        "label": "UNSUPPORTED",
+        "source_fact_ids": [
+          "sv-th-057-rel-006"
+        ]
+      }
+    ]
+  }
+]

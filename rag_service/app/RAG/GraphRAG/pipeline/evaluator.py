@@ -28,7 +28,7 @@ from ..config import (
     EVALUATOR_TEMPERATURE,
     sep,
 )
-from ..llm_content import require_message_text
+from ..llm_content import LlmContentError, require_message_text
 from ..llm_provider import CoreLlmConfigurationError, create_core_chat_model
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -243,6 +243,8 @@ class ContextEvaluator:
             result = self._parse_response(
                 require_message_text(response, operation="context evaluation")
             )
+        except LlmContentError:
+            raise
         except Exception as exc:
             if verbose:
                 print(f"  [EVALUATOR] Context evaluation exception ({exc}), defaulting to SUFFICIENT")

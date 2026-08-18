@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from app.config import settings
 from app.schemas.chat.rag import QueryResponse
 from app.services.case_analysis import CASE_ANALYSIS_PROMPT_VERSION
 from app.services.chat.rag_client import RagCallFailure
@@ -104,14 +105,17 @@ def map_initial_case_analysis_response(
     validated_case_state_json: dict[str, object],
     extraction_metadata: dict[str, Any],
     followup_metadata_json: dict[str, Any],
+    analysis_input_mode: str | None = None,
 ) -> AssistantOutcome:
     """Create the one durable initial Main analysis plus its grounding audit."""
 
+    resolved_mode = analysis_input_mode or settings.analysis_input_mode
     metadata_json = deepcopy(followup_metadata_json)
     metadata_json.update(
         {
             EXTRACTION_METADATA_KEY: deepcopy(extraction_metadata),
             "analysis_kind": "grounded_main_analysis",
+            "analysis_input_mode": resolved_mode,
             "retrieved_context": rag_context_payload.context,
             "mitre_table": deepcopy(list(rag_context_payload.mitre_table)),
             "chat_action": {
@@ -123,6 +127,7 @@ def map_initial_case_analysis_response(
                 "rag_invoked": True,
                 "retrieval_context_reused": False,
                 "analysis_mode": "case_overview",
+                "analysis_input_mode": resolved_mode,
                 "prompt_version": CASE_ANALYSIS_PROMPT_VERSION,
             },
         }
@@ -142,9 +147,11 @@ def map_case_analysis_response(
     answer: str,
     *,
     analysis_context: dict[str, object],
+    analysis_input_mode: str | None = None,
 ) -> AssistantOutcome:
     """Persist an ASK answer while carrying forward the prior retrieval handle."""
 
+    resolved_mode = analysis_input_mode or settings.analysis_input_mode
     retrieval_context_id = analysis_context.get("retrieval_context_id")
     if not isinstance(retrieval_context_id, str):
         retrieval_context_id = None
@@ -156,6 +163,7 @@ def map_case_analysis_response(
         retrieval_context_id=retrieval_context_id,
         metadata_json={
             "mitre_table": deepcopy(mitre_table),
+            "analysis_input_mode": resolved_mode,
             "chat_action": {
                 "action": "ask",
                 "route": "analysis",
@@ -164,6 +172,7 @@ def map_case_analysis_response(
                 "rag_invoked": False,
                 "retrieval_context_reused": True,
                 "analysis_mode": "question_answer",
+                "analysis_input_mode": resolved_mode,
                 "prompt_version": CASE_ANALYSIS_PROMPT_VERSION,
             },
         },
@@ -183,9 +192,11 @@ def map_case_state_mutation_response(
     extraction_metadata: dict[str, Any] | None = None,
     followup_metadata_json: dict[str, Any] | None = None,
     action: str = "add_case_info",
+    analysis_input_mode: str | None = None,
 ) -> AssistantOutcome:
     """Map a successful explicit mutation into an atomic child-version outcome."""
 
+    resolved_mode = analysis_input_mode or settings.analysis_input_mode
     metadata_json: dict[str, Any] = deepcopy(followup_metadata_json or {})
     metadata_json.update(
         {
@@ -194,6 +205,7 @@ def map_case_state_mutation_response(
             "mitre_table": deepcopy(list(rag_context_payload.mitre_table)),
             "case_state_delta": deepcopy(delta_json),
             "analysis_kind": "grounded_main_analysis",
+            "analysis_input_mode": resolved_mode,
             "chat_action": {
                 "action": action,
                 "route": "analysis",
@@ -203,6 +215,7 @@ def map_case_state_mutation_response(
                 "rag_invoked": True,
                 "retrieval_context_reused": False,
                 "analysis_mode": "case_overview",
+                "analysis_input_mode": resolved_mode,
                 "prompt_version": CASE_ANALYSIS_PROMPT_VERSION,
             },
         },

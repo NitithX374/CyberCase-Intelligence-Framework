@@ -106,6 +106,10 @@ class Settings(BaseSettings):
     chat_ask_max_output_tokens: int = 2_048
     chat_ask_max_input_chars: int = 20_000
 
+    # Analysis input mode: "case_state" (default) or "raw_direct" (experimental ablation)
+    analysis_input_mode: Literal["case_state", "raw_direct"] = "case_state"
+
+
     # Terminal chat extraction baseline. A missing provider key produces an
     # explicit failed extraction record rather than falling back to regex.
     chat_extraction_enabled: bool = True
@@ -133,5 +137,6 @@ class Settings(BaseSettings):
     chat_report_max_text_chars: int = 8_000
     chat_report_max_claims: int = 128
     chat_report_max_limitations: int = 48
+
 
 settings = Settings()

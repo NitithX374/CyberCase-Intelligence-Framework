@@ -309,7 +309,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["analysis_mode"], "question_answer")
         self.assertEqual(payload["question"], exact_question)
         self.assertTrue(payload["context_truncated"])
-        self.assertTrue(payload["case_state"]["truncated"])
+        self.assertTrue(payload["case_narrative"]["truncated"])
         self.assertTrue(payload["analysis_context"]["truncated"])
 
 

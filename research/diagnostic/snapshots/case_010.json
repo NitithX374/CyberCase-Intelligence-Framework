@@ -1,0 +1,311 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-010",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "person-010",
+        "entity_type": "person",
+        "name": "Priya Nair",
+        "reported_role": "employee and listed account owner",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "account-010",
+        "entity_type": "user_account",
+        "name": "pnair",
+        "reported_role": "employee account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "email-010",
+        "entity_type": "email",
+        "name": "benefits-update-10.eml",
+        "reported_role": "message sent from the account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "attachment-010",
+        "entity_type": "document",
+        "name": "benefits_update.docm",
+        "reported_role": "message attachment",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "device-010",
+        "entity_type": "workstation",
+        "name": "HR-WS-10",
+        "reported_role": "HR workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "document-010",
+        "entity_type": "file",
+        "name": "benefits_update.docm on HR-WS-10",
+        "reported_role": "saved attachment",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "process-010",
+        "entity_type": "process",
+        "name": "WINWORD.EXE",
+        "reported_role": "document process",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "account-010-secondary",
+        "entity_type": "user_account",
+        "name": "hr.shared",
+        "reported_role": "shared HR account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      },
+      {
+        "confidence": "low",
+        "entity_id": "ip-010",
+        "entity_type": "ip_address",
+        "name": "198.51.100.110",
+        "reported_role": "possible external source",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "mail_audit_log",
+        "confidence": "high",
+        "description": "The mail audit records benefits-update-10.eml sent from pnair and containing benefits_update.docm.",
+        "evidence_id": "evidence-010-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Mail audit record"
+      },
+      {
+        "artifact_type": "process_telemetry",
+        "confidence": "medium",
+        "description": "Endpoint telemetry records WINWORD.EXE opening the saved document on HR-WS-10.",
+        "evidence_id": "evidence-010-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Document process event"
+      },
+      {
+        "artifact_type": "authentication_log",
+        "confidence": "medium",
+        "description": "The hr.shared account authenticated on HR-WS-10; a possible connection to 198.51.100.110 is not confirmed.",
+        "evidence_id": "evidence-010-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Shared-account authentication"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "account-010",
+        "predicate": "owns_account",
+        "relationship_id": "rel-010-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "statement": "Priya Nair is listed as the owner of account pnair.",
+        "status": "reported",
+        "subject_entity_id": "person-010"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "email-010",
+        "predicate": "sent",
+        "relationship_id": "rel-010-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "statement": "Account pnair sent benefits-update-10.eml.",
+        "status": "reported",
+        "subject_entity_id": "account-010"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "attachment-010",
+        "predicate": "contained",
+        "relationship_id": "rel-010-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "statement": "benefits-update-10.eml contained benefits_update.docm.",
+        "status": "reported",
+        "subject_entity_id": "email-010"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "document-010",
+        "predicate": "saved_as",
+        "relationship_id": "rel-010-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "statement": "The attachment was saved as benefits_update.docm on HR-WS-10.",
+        "status": "reported",
+        "subject_entity_id": "attachment-010"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "process-010",
+        "predicate": "opened_by",
+        "relationship_id": "rel-010-05",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "statement": "WINWORD.EXE opened the saved document; the supplied materials do not establish whether macros were enabled.",
+        "status": "reported",
+        "subject_entity_id": "document-010"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "device-010",
+        "predicate": "authenticated_on",
+        "relationship_id": "rel-010-06",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "statement": "The hr.shared account authenticated on HR-WS-10 during the same period.",
+        "status": "reported",
+        "subject_entity_id": "account-010-secondary"
+      },
+      {
+        "confidence": "low",
+        "object_entity_id": "ip-010",
+        "predicate": "may_have_connected_to",
+        "relationship_id": "rel-010-07",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "statement": "The hr.shared account may have connected to 198.51.100.110.",
+        "status": "suspected",
+        "subject_entity_id": "account-010-secondary"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "account-010",
+          "email-010",
+          "attachment-010"
+        ],
+        "confidence": "high",
+        "event": "pnair sent benefits-update-10.eml containing benefits_update.docm.",
+        "event_id": "event-010-01",
+        "evidence_ids": [
+          "evidence-010-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-20T08:00:00Z",
+        "timestamp_text": "08:00 UTC"
+      },
+      {
+        "actors": [
+          "attachment-010",
+          "document-010",
+          "process-010",
+          "device-010"
+        ],
+        "confidence": "medium",
+        "event": "The attachment was saved and opened by WINWORD.EXE on HR-WS-10.",
+        "event_id": "event-010-02",
+        "evidence_ids": [
+          "evidence-010-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-20T08:12:00Z",
+        "timestamp_text": "08:12 UTC"
+      },
+      {
+        "actors": [
+          "account-010-secondary",
+          "device-010"
+        ],
+        "confidence": "medium",
+        "event": "hr.shared authenticated on HR-WS-10.",
+        "event_id": "event-010-03",
+        "evidence_ids": [
+          "evidence-010-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-20T08:15:00Z",
+        "timestamp_text": "08:15 UTC"
+      },
+      {
+        "actors": [
+          "account-010-secondary",
+          "ip-010"
+        ],
+        "confidence": "low",
+        "event": "A possible hr.shared connection to 198.51.100.110 was noted.",
+        "event_id": "event-010-04",
+        "evidence_ids": [
+          "evidence-010-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000010"
+        ],
+        "status": "not_confirmed",
+        "timestamp": "2026-05-20T08:20:00Z",
+        "timestamp_text": "08:20 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 5261,
+    "production_projection_sha256": "daef6ef02c96dc7424fbb7edc3515976b716fe60591c54985135ca8d045b8cc9",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

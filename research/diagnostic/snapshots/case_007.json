@@ -1,0 +1,186 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-007",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "account-007",
+        "entity_type": "service_account",
+        "name": "batch.ops",
+        "reported_role": "scheduled-job account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "device-007-ws",
+        "entity_type": "workstation",
+        "name": "OPS-WS-07",
+        "reported_role": "operations workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "server-007",
+        "entity_type": "server",
+        "name": "APP-SRV-07",
+        "reported_role": "application server",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "task-007",
+        "entity_type": "scheduled_task",
+        "name": "NightlySync-07",
+        "reported_role": "scheduled synchronization task",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "session-007",
+        "entity_type": "remote_session",
+        "name": "remote-session-07",
+        "reported_role": "server authentication session",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "task_scheduler_log",
+        "confidence": "high",
+        "description": "The scheduler recorded NightlySync-07 starting on OPS-WS-07 at 01:00 UTC.",
+        "evidence_id": "evidence-007-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Task scheduler record"
+      },
+      {
+        "artifact_type": "authentication_log",
+        "confidence": "medium",
+        "description": "APP-SRV-07 recorded a batch.ops authentication at 01:04 UTC.",
+        "evidence_id": "evidence-007-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Server authentication record"
+      },
+      {
+        "artifact_type": "network_flow",
+        "confidence": "medium",
+        "description": "A flow record shows traffic from OPS-WS-07 to APP-SRV-07 after the task start; the flow does not identify the initiating process.",
+        "evidence_id": "evidence-007-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Network flow record"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "device-007-ws",
+        "predicate": "ran_on",
+        "relationship_id": "rel-007-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "statement": "NightlySync-07 ran on OPS-WS-07.",
+        "status": "reported",
+        "subject_entity_id": "task-007"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "server-007",
+        "predicate": "authenticated_to",
+        "relationship_id": "rel-007-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "statement": "The batch.ops account authenticated to APP-SRV-07 during the same investigation window.",
+        "status": "reported",
+        "subject_entity_id": "account-007"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "server-007",
+        "predicate": "connected_to",
+        "relationship_id": "rel-007-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "statement": "OPS-WS-07 connected to APP-SRV-07 after the scheduled task event.",
+        "status": "reported",
+        "subject_entity_id": "device-007-ws"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "task-007",
+          "device-007-ws"
+        ],
+        "confidence": "high",
+        "event": "NightlySync-07 started on OPS-WS-07.",
+        "event_id": "event-007-01",
+        "evidence_ids": [
+          "evidence-007-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-17T01:00:00Z",
+        "timestamp_text": "01:00 UTC"
+      },
+      {
+        "actors": [
+          "account-007",
+          "server-007",
+          "device-007-ws"
+        ],
+        "confidence": "medium",
+        "event": "batch.ops authenticated to APP-SRV-07 and network traffic followed from OPS-WS-07.",
+        "event_id": "event-007-02",
+        "evidence_ids": [
+          "evidence-007-02",
+          "evidence-007-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000007"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-17T01:04:00Z",
+        "timestamp_text": "01:04 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3113,
+    "production_projection_sha256": "a067c7ff7295b2d61bf6a334a42f0834bba1560dd15b5ca177e871217b518521",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}
