@@ -3,9 +3,9 @@ import unittest
 
 import httpx
 
-from app.schemas.chat.rag import QueryResponse
-from app.services.chat.chat_worker import map_rag_response
-from app.services.chat.rag_client import RagCallFailure, request_rag
+from app.schemas.rag import QueryResponse
+from app.services.clients import RagCallFailure, request_rag
+from app.services.workflow import map_rag_response
 
 
 class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):

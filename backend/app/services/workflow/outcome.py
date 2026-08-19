@@ -8,9 +8,9 @@ from typing import Any
 from uuid import UUID
 
 from app.config import settings
-from app.schemas.chat.rag import QueryResponse
+from app.schemas.rag import QueryResponse
 from app.services.case_analysis import CASE_ANALYSIS_PROMPT_VERSION
-from app.services.chat.rag_client import RagCallFailure
+from app.services.clients.rag_client import RagCallFailure
 from app.services.extraction.llm_extraction import (
     BASELINE_EXTRACTION_MODE,
     BASELINE_EXTRACTION_PROMPT_VERSION,
@@ -289,3 +289,16 @@ def build_merged_extraction_metadata(
     }
     metadata.update(deepcopy(case_state_json))
     return metadata
+
+
+__all__ = [
+    "AssistantOutcome",
+    "RagContextPayload",
+    "_validated_rag_context_payload",
+    "build_merged_extraction_metadata",
+    "map_case_analysis_response",
+    "map_case_state_mutation_response",
+    "map_case_state_no_change_response",
+    "map_initial_case_analysis_response",
+    "map_rag_response",
+]

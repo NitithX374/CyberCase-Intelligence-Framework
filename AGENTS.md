@@ -38,10 +38,19 @@ Cybercase Framework/
 ├── backend/                  # FastAPI chat persistence/orchestration API
 │   ├── app/
 │   │   ├── main.py           # FastAPI entrypoint
-│   │   ├── models/chat.py     # Persisted chat threads, messages, and runs
-│   │   ├── routers/           # Health and chat endpoints
-│   │   ├── services/chat/     # Chat lifecycle, worker, clarification, RAG client
-│   │   ├── services/llm/      # LLM provider routing & model registry
+│   │   ├── models/           # SQLAlchemy models (chat, case_state, rag_context, report)
+│   │   ├── routers/          # Health and chat endpoints
+│   │   ├── schemas/          # Domain request/response schemas (chat, rag, reports)
+│   │   ├── services/         # Domain service modules:
+│   │   │   ├── case_analysis/# Grounded case overview & Q&A prompt reasoning
+│   │   │   ├── case_state/   # State mutation, validation, and retrieval projection
+│   │   │   ├── chat/         # Thread & message management + compatibility facade
+│   │   │   ├── clients/      # HTTP service clients (GraphRAG API client)
+│   │   │   ├── extraction/   # Baseline extraction & adapter execution
+│   │   │   ├── followup/     # Gap analysis & clarification policy gating
+│   │   │   ├── llm/          # LLM provider routing & model registry
+│   │   │   ├── reports/      # Markdown & PDF report generation service
+│   │   │   └── workflow/     # Background run lease worker, pipeline & outcomes
 │   │   └── database.py       # Async engine and session management
 │   └── alembic/              # Async PostgreSQL migrations
 ├── rag_service/              # Standalone GraphRAG FastAPI service

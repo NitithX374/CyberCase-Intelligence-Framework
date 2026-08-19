@@ -7,26 +7,26 @@ from uuid import uuid4
 import httpx
 
 from app.config import settings
-from app.schemas.chat.rag import QueryResponse
-from app.services.chat.case_state_retrieval import (
+from app.schemas.rag import QueryResponse
+from app.services.case_state import (
     project_case_state_to_retrieval_query,
 )
-from app.services.chat.gap_and_followup import (
+from app.services.followup import (
     AnthropicFollowUpPolicy,
+    AnthropicGapAnalysis,
     ClarificationExchange,
+    FollowUpDecision,
+    FollowUpPolicyResult,
+    GAP_ANALYSIS_SCHEMA,
     GapAnalysis,
     GapAnalysisResult,
     GapItem,
-    FollowUpDecision,
-    FollowUpPolicyResult,
     build_clarified_query,
+    resolve_followup_outcome,
 )
-from app.services.chat.gap_and_followup.gap_analysis import AnthropicGapAnalysis
-from app.services.chat.gap_and_followup.prompts import GAP_ANALYSIS_SCHEMA
-from app.services.chat.chat_worker import (
+from app.services.workflow import (
     ClaimedChatRun,
     process_chat_run,
-    resolve_followup_outcome,
 )
 
 
@@ -793,7 +793,7 @@ class FollowUpOutcomeTests(unittest.IsolatedAsyncioTestCase):
             policy=policy,
         )
 
-        self.assertEqual(settings.chat_followup_max_rounds, 8)
+        self.assertEqual(settings.chat_followup_max_rounds, 2)
         self.assertEqual(policy.calls, [])
         self.assertIsNone(outcome)
 
@@ -1002,15 +1002,15 @@ class ChatWorkerFollowUpTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
-             patch(
-                "app.services.chat.chat_worker.run_validated_case_state_extraction",
+            patch(
+                "app.services.workflow.pipeline.run_validated_case_state_extraction",
                 new=extraction_call,
             ),
         ):

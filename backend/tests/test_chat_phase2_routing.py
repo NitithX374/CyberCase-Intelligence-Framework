@@ -9,17 +9,17 @@ from fastapi import HTTPException
 from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.models.rag_context import RagContext
 from app.schemas.chat import ChatMessageCreate
-from app.schemas.chat.rag import QueryResponse
+from app.schemas.rag import QueryResponse
 from app.services.case_analysis import build_case_analysis_prompt
-from app.services.chat.case_state_retrieval import (
+from app.services.case_state import (
     project_case_state_to_retrieval_query,
 )
-from app.services.chat.chat_message import ChatMessageService
-from app.services.chat.chat_worker import (
+from app.services.chat import ChatMessageService
+from app.services.followup import FollowUpResolution
+from app.services.workflow import (
     ClaimedChatRun,
     AssistantOutcome,
     ChatRunWorker,
-    FollowUpResolution,
     map_rag_response,
     process_chat_run,
 )
@@ -312,7 +312,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(thread.current_case_state_version_id, state.id)
 
     async def test_add_case_info_worker_routes_through_mutation_pipeline(self) -> None:
-        from app.services.chat.case_state_mutation import CaseStateDelta
+        from app.services.case_state import CaseStateDelta
 
         source_message_id = uuid4()
         state_id = uuid4()
@@ -345,15 +345,15 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
             patch(
-                "app.services.chat.chat_worker.run_case_state_delta_extraction",
+                "app.services.workflow.pipeline.run_case_state_delta_extraction",
                 new=AsyncMock(
                     return_value=(
                         delta,
@@ -405,6 +405,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
             post_answer_action="ask",
             case_state_json=case_state,
             analysis_context=analysis_context,
+            raw_case_narrative="reported host-7 activity",
         )
         worker = Mock()
         worker.claim_run = AsyncMock(return_value=claimed)
@@ -419,19 +420,19 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
             patch(
-                "app.services.chat.chat_worker.request_rag",
+                "app.services.workflow.pipeline.request_rag",
                 new=AsyncMock(),
             ) as default_rag_call,
             patch(
-                "app.services.chat.chat_worker.run_validated_case_state_extraction",
+                "app.services.workflow.pipeline.run_validated_case_state_extraction",
                 new=extraction_call,
             ),
         ):
@@ -504,15 +505,15 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
             patch(
-                "app.services.chat.chat_worker.evaluate_followup_outcome",
+                "app.services.workflow.pipeline.evaluate_followup_outcome",
                 new=AsyncMock(
                     return_value=FollowUpResolution(
                         outcome=None,
@@ -521,7 +522,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
                 ),
             ),
             patch(
-                "app.services.chat.chat_worker.run_validated_case_state_extraction",
+                "app.services.workflow.pipeline.run_validated_case_state_extraction",
                 new=AsyncMock(return_value=(case_state, extraction_metadata)),
             ) as extraction_call,
         ):
@@ -599,15 +600,15 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
 
                 with (
                     patch(
-                        "app.services.chat.chat_worker.async_session",
+                        "app.services.workflow.pipeline.async_session",
                         return_value=_SessionContext(Mock()),
                     ),
                     patch(
-                        "app.services.chat.chat_worker.ChatRunWorker",
+                        "app.services.workflow.pipeline.ChatRunWorker",
                         return_value=worker,
                     ),
                     patch(
-                        "app.services.chat.chat_worker.evaluate_followup_outcome",
+                        "app.services.workflow.pipeline.evaluate_followup_outcome",
                         new=AsyncMock(
                             return_value=FollowUpResolution(
                                 outcome=None,
@@ -616,7 +617,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
                         ),
                     ),
                     patch(
-                        "app.services.chat.chat_worker.run_validated_case_state_extraction",
+                        "app.services.workflow.pipeline.run_validated_case_state_extraction",
                         new=AsyncMock(
                             return_value=(
                                 _validated_case_state("validated case state"),

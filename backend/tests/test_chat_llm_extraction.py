@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 from app.config import settings
-from app.schemas.chat.rag import QueryResponse
-from app.services.chat.chat_worker import (
+from app.schemas.rag import QueryResponse
+from app.services.extraction import attach_llm_extraction
+from app.services.followup import FollowUpDecision
+from app.services.workflow import (
     AssistantOutcome,
     ClaimedChatRun,
-    attach_llm_extraction,
     process_chat_run,
 )
-from app.services.chat.gap_and_followup import FollowUpDecision
 from app.services.extraction.llm_extraction import (
     ACCEPTED_BASELINE_EXTRACTION_PROMPT_VERSIONS,
     BASELINE_EXTRACTION_PROMPT_VERSION,
@@ -572,11 +572,11 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=SessionContext(),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):

@@ -16,8 +16,12 @@ from app.models.case_state import CaseStateVersion
 from app.models.chat import ChatMessage, ChatThread
 from app.models.rag_context import RagContext
 from app.models.report import ChatReport
-from app.schemas.chat import ChatReportCreate, ChatReportRead, MitreTableRow
-from app.schemas.chat.reports import StructuredReport
+from app.schemas.rag import MitreTableRow
+from app.schemas.reports import (
+    ChatReportCreate,
+    ChatReportRead,
+    StructuredReport,
+)
 from app.services.extraction.llm_extraction import (
     ACCEPTED_BASELINE_EXTRACTION_PROMPT_VERSIONS,
     BASELINE_EXTRACTION_VERSION,

@@ -11,7 +11,7 @@ from app.services.llm.structured_output_request_router import (
     StructuredOutputFeature,
     structured_output_request_options,
 )
-from app.services.chat.gap_and_followup import AnthropicFollowUpPolicy
+from app.services.followup import AnthropicFollowUpPolicy
 from app.services.extraction.llm_extraction import (
     AnthropicExtractionAdapter,
     ExtractionFailure,

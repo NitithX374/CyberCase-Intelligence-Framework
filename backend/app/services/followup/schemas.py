@@ -202,14 +202,14 @@ class FollowUpPolicy(Protocol):
 
 __all__ = [
     "ClarificationExchange",
+    "FollowUpDecision",
+    "FollowUpPolicy",
+    "FollowUpPolicyResult",
+    "FollowUpReasonCode",
     "GapAnalysis",
     "GapAnalysisResult",
     "GapAnalyzer",
     "GapItem",
     "GapPriority",
     "GapStatus",
-    "FollowUpDecision",
-    "FollowUpPolicy",
-    "FollowUpPolicyResult",
-    "FollowUpReasonCode",
 ]

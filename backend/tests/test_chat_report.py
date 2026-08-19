@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from app.config import settings
 from app.models.chat import ChatMessage, ChatThread
 from app.models.report import ChatReport
-from app.schemas.chat import ChatReportCreate
+from app.schemas.reports import ChatReportCreate
 from app.services.extraction.llm_extraction import (
     BASELINE_EXTRACTION_PROMPT_VERSION,
 )

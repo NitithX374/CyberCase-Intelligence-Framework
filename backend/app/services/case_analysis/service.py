@@ -172,7 +172,19 @@ def resolve_analysis_case_narrative(
     - 'case_state': returns a defensive copy of the validated current Case State JSON dict.
     - 'raw_direct': returns the original user case narrative text directly.
     """
-    resolved_mode = mode or settings.analysis_input_mode
+    if mode is not None:
+        resolved_mode = mode
+    elif settings.analysis_input_mode == "raw_direct" and isinstance(raw_case_narrative, str) and raw_case_narrative.strip():
+        resolved_mode = "raw_direct"
+    elif settings.analysis_input_mode == "case_state" and isinstance(case_state_json, dict):
+        resolved_mode = "case_state"
+    elif isinstance(raw_case_narrative, str) and raw_case_narrative.strip():
+        resolved_mode = "raw_direct"
+    elif isinstance(case_state_json, dict):
+        resolved_mode = "case_state"
+    else:
+        resolved_mode = settings.analysis_input_mode
+
     if resolved_mode not in VALID_ANALYSIS_INPUT_MODES:
         raise CaseAnalysisFailure(
             "analysis_invalid_mode",

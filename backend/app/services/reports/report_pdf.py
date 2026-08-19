@@ -26,7 +26,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from app.schemas.chat.reports import ChatReportRead, ReportClaim, ReportSection
+from app.schemas.reports import ChatReportRead, ReportClaim, ReportSection
 
 
 _INK = colors.HexColor("#171717")
