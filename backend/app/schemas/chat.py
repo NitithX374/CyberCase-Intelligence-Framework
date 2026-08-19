@@ -1,9 +1,12 @@
+"""Chat Thread, Message, and Run API schemas."""
+
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 ThreadStatus = Literal[
     "idle",
@@ -23,6 +26,30 @@ RunStatus = Literal[
 ]
 
 RunOperation = Literal["query", "resume"]
+
+
+class ChatThreadCreate(BaseModel):
+    title: str = Field(
+        default="New chat",
+        min_length=1,
+        max_length=255,
+    )
+
+
+class ChatThreadUpdate(BaseModel):
+    title: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+
+
+class ChatMessageCreate(BaseModel):
+    content: str = Field(min_length=1)
+    idempotency_key: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+    action: Literal["ask", "add_case_info"] | None = None
 
 
 class ChatThreadRead(BaseModel):
@@ -69,3 +96,19 @@ class ChatRunRead(BaseModel):
 class ChatMessageAccepted(BaseModel):
     message: ChatMessageRead
     run: ChatRunRead
+
+
+__all__ = [
+    "ChatMessageAccepted",
+    "ChatMessageCreate",
+    "ChatMessageRead",
+    "ChatRunRead",
+    "ChatThreadCreate",
+    "ChatThreadDetail",
+    "ChatThreadRead",
+    "ChatThreadUpdate",
+    "MessageRole",
+    "RunOperation",
+    "RunStatus",
+    "ThreadStatus",
+]

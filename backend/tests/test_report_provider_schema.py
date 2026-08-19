@@ -2,7 +2,7 @@ import unittest
 
 from pydantic import ValidationError
 
-from app.schemas.chat.reports import REPORT_SECTION_HEADINGS, REPORT_SECTION_IDS
+from app.schemas.reports import REPORT_SECTION_HEADINGS, REPORT_SECTION_IDS
 from app.services.reports.report_provider_schema import (
     ProviderStructuredReport,
     provider_report_to_structured_report,

@@ -6,7 +6,7 @@ import httpx
 from pydantic import ValidationError
 
 from app.config import settings
-from app.schemas.chat.rag import QueryRequest, QueryResponse
+from app.schemas.rag import QueryRequest, QueryResponse
 
 
 RAG_HTTP_TIMEOUT_SECONDS = 300.0
@@ -69,3 +69,10 @@ async def _post_and_validate(
             "rag_invalid_response",
             "RAG service returned an invalid response",
         ) from exc
+
+
+__all__ = [
+    "RAG_HTTP_TIMEOUT_SECONDS",
+    "RagCallFailure",
+    "request_rag",
+]

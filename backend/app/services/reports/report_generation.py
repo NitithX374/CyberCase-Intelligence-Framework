@@ -20,7 +20,7 @@ from app.services.llm.core_llm import (
     CoreLlmConfigurationError,
     resolve_core_llm_target,
 )
-from app.schemas.chat.reports import (
+from app.schemas.reports import (
     REPORT_SECTION_HEADINGS,
     REPORT_SECTION_IDS,
     StructuredReport,

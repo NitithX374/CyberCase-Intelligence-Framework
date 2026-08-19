@@ -14,7 +14,7 @@ from pydantic import ValidationError
 from app.config import Settings, settings
 from app.models.case_state import CaseStateVersion
 from app.models.chat import ChatMessage, ChatRun, ChatThread
-from app.schemas.chat.rag import QueryResponse
+from app.schemas.rag import QueryResponse
 from app.services.case_analysis import (
     AnalysisInputMode,
     AnalysisMode,
@@ -29,23 +29,21 @@ from app.services.case_analysis import (
     resolve_analysis_case_evidence,
     resolve_analysis_case_narrative,
 )
-from app.services.chat.raw_evidence import (
+from app.services.case_state import (
     extract_raw_case_evidence_segments,
     format_raw_case_evidence_segments,
     resolve_raw_case_evidence_history,
 )
-from app.services.chat.chat_worker import (
+from app.services.followup import FollowUpResolution
+from app.services.workflow import (
+    AssistantOutcome,
     ChatRunWorker,
     ClaimedChatRun,
-    process_chat_run,
-)
-from app.services.chat.clarification_gate import FollowUpResolution
-from app.services.chat.outcome_mapper import (
-    AssistantOutcome,
     RagContextPayload,
     map_case_analysis_response,
     map_case_state_mutation_response,
     map_initial_case_analysis_response,
+    process_chat_run,
 )
 from app.services.llm.core_llm import CoreLlmTarget
 
@@ -406,15 +404,15 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(settings, "analysis_input_mode", "raw_direct"),
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
             patch(
-                "app.services.chat.chat_worker.evaluate_followup_outcome",
+                "app.services.workflow.pipeline.evaluate_followup_outcome",
                 new=AsyncMock(
                     return_value=FollowUpResolution(
                         outcome=None,
@@ -423,7 +421,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
                 ),
             ),
             patch(
-                "app.services.chat.chat_worker.run_validated_case_state_extraction",
+                "app.services.workflow.pipeline.run_validated_case_state_extraction",
                 new=AsyncMock(return_value=(case_state, extraction_metadata)),
             ) as extraction_mock,
         ):
@@ -485,11 +483,11 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(settings, "analysis_input_mode", "raw_direct"),
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):
@@ -733,23 +731,23 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(settings, "analysis_input_mode", "raw_direct"),
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
             patch(
-                "app.services.chat.chat_worker.run_case_state_delta_extraction",
+                "app.services.workflow.pipeline.run_case_state_delta_extraction",
                 new=AsyncMock(return_value=(delta_mock, {"status": "candidate"})),
             ),
             patch(
-                "app.services.chat.chat_worker.apply_case_state_delta",
+                "app.services.workflow.pipeline.apply_case_state_delta",
                 return_value=case_state,
             ),
             patch(
-                "app.services.chat.chat_worker.request_rag",
+                "app.services.workflow.pipeline.request_rag",
                 new=AsyncMock(
                     return_value=QueryResponse(
                         status="completed",
@@ -759,7 +757,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
                 ),
             ),
             patch(
-                "app.services.chat.chat_worker.evaluate_followup_outcome",
+                "app.services.workflow.pipeline.evaluate_followup_outcome",
                 new=AsyncMock(
                     return_value=FollowUpResolution(
                         outcome=None,
@@ -818,11 +816,11 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(settings, "analysis_input_mode", "raw_direct"),
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):
@@ -864,11 +862,11 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(settings, "analysis_input_mode", "raw_direct"),
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):

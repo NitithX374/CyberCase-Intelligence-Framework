@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 import httpx
 
 from app.config import settings
-from app.services.chat.gap_and_followup.prompts import (
+from app.services.followup.prompts import (
     FOLLOWUP_POLICY_PROVIDER,
     FOLLOWUP_POLICY_SCHEMA,
     FOLLOWUP_POLICY_SYSTEM,
@@ -17,7 +17,7 @@ from app.services.chat.gap_and_followup.prompts import (
     FOLLOWUP_PROMPT_VERSION,
     build_bounded_context,
 )
-from app.services.chat.gap_and_followup.schemas import (
+from app.services.followup.schemas import (
     ClarificationExchange,
     GapAnalysis,
     FollowUpDecision,

@@ -12,23 +12,21 @@ import unicodedata
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, replace
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 from uuid import UUID
 
 import httpx
 
 from app.config import settings
-from app.services.chat.gap_and_followup.gap_analysis import AnthropicGapAnalysis
-from app.services.chat.gap_and_followup.followup_policy import (
-    AnthropicFollowUpPolicy,
-)
-from app.services.chat.gap_and_followup.prompts import (
+from app.services.followup.gap_analysis import AnthropicGapAnalysis
+from app.services.followup.policy import AnthropicFollowUpPolicy
+from app.services.followup.prompts import (
     FOLLOWUP_POLICY_VERSION,
     FOLLOWUP_PROMPT_VERSION,
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_VERSION,
 )
-from app.services.chat.gap_and_followup.schemas import (
+from app.services.followup.schemas import (
     ClarificationExchange,
     GapAnalysis,
     GapAnalysisResult,
@@ -38,8 +36,10 @@ from app.services.chat.gap_and_followup.schemas import (
     FollowUpPolicy,
     FollowUpPolicyResult,
 )
-from app.services.chat.outcome_mapper import AssistantOutcome
 from app.services.llm.core_llm import resolve_core_llm_target
+
+if TYPE_CHECKING:
+    from app.services.workflow.outcome import AssistantOutcome
 
 logger = logging.getLogger("app.chat")
 
@@ -329,6 +329,8 @@ async def evaluate_followup_outcome(
         model=result.model,
         rag_skipped=True,
     )
+    from app.services.workflow.outcome import AssistantOutcome
+
     return FollowUpResolution(
         outcome=AssistantOutcome(
             content=decision.question,
@@ -632,3 +634,12 @@ def _normalized_question(question: str) -> str:
     while normalized and unicodedata.category(normalized[-1]).startswith("P"):
         normalized = normalized[:-1].rstrip()
     return normalized
+
+
+__all__ = [
+    "FollowUpResolution",
+    "_mark_followup_rag_invoked",
+    "_mark_followup_rag_invoked_metadata",
+    "evaluate_followup_outcome",
+    "resolve_followup_outcome",
+]

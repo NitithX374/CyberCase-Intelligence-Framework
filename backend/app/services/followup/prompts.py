@@ -6,7 +6,7 @@ import json
 from collections.abc import Mapping, Sequence
 
 from app.config import settings
-from app.services.chat.gap_and_followup.schemas import (
+from app.services.followup.schemas import (
     ClarificationExchange,
     GapAnalysis,
 )

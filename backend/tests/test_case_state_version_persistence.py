@@ -5,7 +5,7 @@ from uuid import uuid4
 from app.models.case_state import CaseStateVersion
 from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.models.rag_context import RagContext
-from app.services.chat.chat_worker import (
+from app.services.workflow import (
     AssistantOutcome,
     ChatRunWorker,
     RagContextPayload,

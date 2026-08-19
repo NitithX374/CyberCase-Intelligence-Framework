@@ -8,8 +8,8 @@ from pydantic import ValidationError
 from app.models.case_state import CaseStateVersion
 from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.models.rag_context import RagContext
-from app.schemas.chat.rag import QueryResponse
-from app.services.chat.case_state_mutation import (
+from app.schemas.rag import QueryResponse
+from app.services.case_state import (
     CASE_STATE_DELTA_PROMPT_VERSION,
     CASE_STATE_DELTA_SYSTEM_PROMPT,
     CASE_STATE_DELTA_VERSION,
@@ -17,12 +17,10 @@ from app.services.chat.case_state_mutation import (
     CaseStateDeltaChange,
     CaseStateMutationFailure,
     apply_case_state_delta,
-)
-from app.services.chat.case_state_retrieval import (
     project_case_state_to_retrieval_query,
 )
 from app.services.llm.structured_output_router import structured_output_schema
-from app.services.chat.chat_worker import (
+from app.services.workflow import (
     AssistantOutcome,
     ClaimedChatRun,
     ChatRunWorker,
@@ -451,6 +449,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
             post_answer_action="add_case_info",
             case_state_version_id=state_id,
             case_state_json=parent,
+            raw_case_narrative="The affected file was Update.zip.",
         )
         worker = Mock()
         worker.claim_run = AsyncMock(return_value=claimed)
@@ -486,11 +485,11 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):
@@ -576,11 +575,11 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         }
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):
@@ -615,6 +614,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
             post_answer_action="add_case_info",
             case_state_version_id=state_id,
             case_state_json=parent,
+            raw_case_narrative="Initial case narrative with Update.zip",
         )
         worker = Mock()
         worker.claim_run = AsyncMock(return_value=claimed)
@@ -647,11 +647,11 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):
@@ -709,11 +709,11 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.chat.chat_worker.async_session",
+                "app.services.workflow.pipeline.async_session",
                 return_value=_SessionContext(Mock()),
             ),
             patch(
-                "app.services.chat.chat_worker.ChatRunWorker",
+                "app.services.workflow.pipeline.ChatRunWorker",
                 return_value=worker,
             ),
         ):
@@ -802,7 +802,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
             mutation_delta,
             source_message_id=message_id,
         )
-        from app.services.chat.outcome_mapper import RagContextPayload
+        from app.services.workflow import RagContextPayload
 
         outcome = AssistantOutcome(
             content="Updated overview",
@@ -879,7 +879,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         worker = ChatRunWorker(db)
         worker._lock_run_thread = AsyncMock(return_value=thread)
         worker._lock_owned_running_run = AsyncMock(return_value=run)
-        from app.services.chat.outcome_mapper import RagContextPayload
+        from app.services.workflow import RagContextPayload
 
         outcome = AssistantOutcome(
             content="No change must not create a child",
@@ -932,7 +932,7 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         worker = ChatRunWorker(db)
         worker._lock_run_thread = AsyncMock(return_value=thread)
         worker._lock_owned_running_run = AsyncMock(return_value=run)
-        from app.services.chat.outcome_mapper import RagContextPayload
+        from app.services.workflow import RagContextPayload
 
         outcome = AssistantOutcome(
             content="stale",

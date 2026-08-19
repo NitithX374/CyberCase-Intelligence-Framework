@@ -7,7 +7,6 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from app.config import settings
-from app.services.chat.outcome_mapper import AssistantOutcome
 from app.services.extraction.llm_extraction import (
     BASELINE_EXTRACTION_MODE,
     BASELINE_EXTRACTION_PROMPT_VERSION,
@@ -19,7 +18,8 @@ from app.services.extraction.llm_extraction import (
 from app.services.llm.core_llm import resolve_core_llm_target
 
 if TYPE_CHECKING:
-    from app.services.chat.chat_worker import ClaimedChatRun
+    from app.services.workflow.worker import ClaimedChatRun
+    from app.services.workflow.outcome import AssistantOutcome
 
 logger = logging.getLogger("app.chat")
 
@@ -119,3 +119,10 @@ async def attach_llm_extraction(
         metadata_json=metadata,
         validated_case_state_json=validated_case_state_json,
     )
+
+
+__all__ = [
+    "ExtractionStageFailure",
+    "attach_llm_extraction",
+    "run_validated_case_state_extraction",
+]

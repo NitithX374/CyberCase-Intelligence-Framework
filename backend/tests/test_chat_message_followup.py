@@ -13,7 +13,7 @@ from app.services.chat.chat_message import (
     ChatMessageService,
     reconstruct_clarification_chain,
 )
-from app.services.chat.chat_worker import ChatRunWorker
+from app.services.workflow import ChatRunWorker
 
 
 class _Transaction:

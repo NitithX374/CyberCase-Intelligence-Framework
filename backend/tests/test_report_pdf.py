@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from pypdf import PdfReader
 
-from app.schemas.chat.reports import (
+from app.schemas.reports import (
     ChatReportRead,
     ReportClaim,
     ReportSection,

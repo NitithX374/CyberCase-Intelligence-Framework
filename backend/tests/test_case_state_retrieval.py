@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from app.services.chat.case_state_retrieval import (
+from app.services.case_state import (
     project_case_state_to_retrieval_query,
 )
 

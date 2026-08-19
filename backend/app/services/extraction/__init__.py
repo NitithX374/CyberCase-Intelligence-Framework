@@ -6,6 +6,7 @@ from app.services.extraction.llm_extraction import (
     BASELINE_EXTRACTION_PROMPT_VERSION,
     BASELINE_EXTRACTION_SYSTEM_PROMPT,
     BASELINE_EXTRACTION_VERSION,
+    EXTRACTION_METADATA_KEY,
     AnthropicExtractionAdapter,
     BaselineExtraction,
     CaseState,
@@ -26,6 +27,11 @@ from app.services.extraction.llm_extraction import (
     run_baseline_extraction,
     validate_baseline_extraction,
 )
+from app.services.extraction.stage import (
+    ExtractionStageFailure,
+    attach_llm_extraction,
+    run_validated_case_state_extraction,
+)
 
 __all__ = [
     "ACCEPTED_BASELINE_EXTRACTION_PROMPT_VERSIONS",
@@ -33,6 +39,7 @@ __all__ = [
     "BASELINE_EXTRACTION_PROMPT_VERSION",
     "BASELINE_EXTRACTION_SYSTEM_PROMPT",
     "BASELINE_EXTRACTION_VERSION",
+    "EXTRACTION_METADATA_KEY",
     "AnthropicExtractionAdapter",
     "BaselineExtraction",
     "CaseState",
@@ -47,9 +54,12 @@ __all__ = [
     "ExtractionModelResponse",
     "ExtractionRunResult",
     "ExtractionSourceMessage",
+    "ExtractionStageFailure",
     "ExtractionValidationError",
+    "attach_llm_extraction",
     "build_extraction_input",
     "normalize_case_state",
     "run_baseline_extraction",
+    "run_validated_case_state_extraction",
     "validate_baseline_extraction",
 ]

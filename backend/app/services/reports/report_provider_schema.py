@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.chat.reports import (
+from app.schemas.reports import (
     ReportClaim,
     ReportSection,
     ReportSectionId,
@@ -89,7 +89,10 @@ def provider_report_to_structured_report(
 
     present_sections = {section.section_id: section for section in report.sections}
     completed_sections: list[ReportSection] = []
-    from app.schemas.chat.reports import REPORT_SECTION_HEADINGS, REPORT_SECTION_IDS
+    from app.schemas.reports import (
+        REPORT_SECTION_HEADINGS,
+        REPORT_SECTION_IDS,
+    )
 
     for sec_id in REPORT_SECTION_IDS:
         if sec_id in present_sections:

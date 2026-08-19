@@ -217,3 +217,10 @@ async def resolve_raw_case_evidence_history(
         return None
 
     return format_raw_case_evidence_segments(segments)
+
+
+__all__ = [
+    "extract_raw_case_evidence_segments",
+    "format_raw_case_evidence_segments",
+    "resolve_raw_case_evidence_history",
+]

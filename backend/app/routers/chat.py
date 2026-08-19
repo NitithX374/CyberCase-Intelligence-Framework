@@ -1,36 +1,37 @@
-from app.schemas.chat import ChatMessageAccepted
+"""Chat thread, message, and report HTTP endpoints."""
+
+from uuid import UUID
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.database import get_db
 from app.schemas.chat import (
+    ChatMessageAccepted,
     ChatMessageCreate,
     ChatMessageRead,
-    ChatReportCreate,
-    ChatReportRead,
     ChatRunRead,
     ChatThreadCreate,
     ChatThreadDetail,
     ChatThreadRead,
     ChatThreadUpdate,
 )
+from app.schemas.reports import (
+    ChatReportCreate,
+    ChatReportRead,
+)
 from app.services.chat import (
     ChatMessageService,
     ChatService,
-    process_chat_run,
 )
 from app.services.reports import (
     ReportGenerationError,
     ReportService,
 )
-
-ChatReportService = ReportService
-ReportGenerationConflict = ReportGenerationError
-ReportNotFound = ReportGenerationError
-from uuid import UUID
+from app.services.workflow import process_chat_run
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
-## Chat Handler
 
 @router.get(
     "",
@@ -57,7 +58,6 @@ async def get_chat_thread(
     return await service.get_thread(thread_id)
 
 
-
 @router.post(
     "",
     response_model=ChatThreadRead,
@@ -69,6 +69,7 @@ async def create_chat_thread(
 ):
     service = ChatService(db)
     return await service.create_thread(request)
+
 
 @router.patch(
     "/{thread_id}",
@@ -97,8 +98,8 @@ async def delete_chat_thread(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-
 ## Message and Runner Handler
+
 
 @router.post(
     "/{thread_id}/messages",
@@ -112,12 +113,13 @@ async def create_chat_message(
     db: AsyncSession = Depends(get_db),
 ):
     service = ChatMessageService(db)
-    message, run = await service.create_message_and_run(thread_id,request)
+    message, run = await service.create_message_and_run(thread_id, request)
     background_tasks.add_task(process_chat_run, run.id)
     return ChatMessageAccepted(
         message=message,
         run=run,
     )
+
 
 @router.get(
     "/{thread_id}/runs/{run_id}",
@@ -133,10 +135,13 @@ async def get_chat_run(
     return await service.get_run(thread_id, run_id)
 
 
-def _report_http_exception(error: ReportGenerationConflict | ReportNotFound) -> HTTPException:
+## Reports Handler
+
+
+def _report_http_exception(error: ReportGenerationError) -> HTTPException:
     status_code = (
         status.HTTP_404_NOT_FOUND
-        if isinstance(error, ReportNotFound)
+        if "not found" in error.message.lower()
         else status.HTTP_409_CONFLICT
     )
     return HTTPException(
@@ -155,10 +160,10 @@ async def generate_chat_report(
     request: ChatReportCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    service = ChatReportService(db)
+    service = ReportService(db)
     try:
         return await service.generate_report(thread_id, request)
-    except (ReportGenerationConflict, ReportNotFound) as error:
+    except ReportGenerationError as error:
         raise _report_http_exception(error) from error
 
 
@@ -171,10 +176,10 @@ async def list_chat_reports(
     thread_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    service = ChatReportService(db)
+    service = ReportService(db)
     try:
         return await service.list_reports(thread_id)
-    except ReportNotFound as error:
+    except ReportGenerationError as error:
         raise _report_http_exception(error) from error
 
 
@@ -188,10 +193,10 @@ async def get_chat_report(
     report_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    service = ChatReportService(db)
+    service = ReportService(db)
     try:
         return await service.get_report(thread_id, report_id)
-    except ReportNotFound as error:
+    except ReportGenerationError as error:
         raise _report_http_exception(error) from error
 
 
@@ -204,11 +209,11 @@ async def download_chat_report_pdf(
     thread_id: UUID,
     report_id: UUID,
     db: AsyncSession = Depends(get_db),
-) -> Response:
-    service = ChatReportService(db)
+):
+    service = ReportService(db)
     try:
         content, filename = await service.get_report_pdf(thread_id, report_id)
-    except (ReportGenerationConflict, ReportNotFound) as error:
+    except ReportGenerationError as error:
         raise _report_http_exception(error) from error
     return Response(
         content=content,

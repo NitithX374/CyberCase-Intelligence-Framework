@@ -4,7 +4,7 @@ from unittest.mock import patch
 import httpx
 
 from app.config import settings
-from app.schemas.chat.reports import StructuredReport
+from app.schemas.reports import StructuredReport
 from app.services.extraction.llm_extraction import (
     AnthropicExtractionAdapter,
     BaselineExtraction,
