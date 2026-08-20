@@ -117,10 +117,12 @@ class Settings(BaseSettings):
     chat_extraction_timeout_seconds: float = 120.0
     chat_extraction_max_input_chars: int = 60_000
     chat_extraction_max_output_tokens: int = 16_384
+    chat_extraction_max_facts: int = 128
     chat_extraction_max_entities: int = 32
     chat_extraction_max_relationships: int = 64
     chat_extraction_max_evidence: int = 32
     chat_extraction_max_timeline: int = 48
+    chat_extraction_max_impacts: int = 32
     chat_extraction_max_missing_information: int = 24
     chat_extraction_max_text_chars: int = 8_000
     chat_extraction_max_raw_response_chars: int = 96_000

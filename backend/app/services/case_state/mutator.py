@@ -39,7 +39,7 @@ from app.services.llm.core_llm import (
 MUTATION_METADATA_KEY = "chat_mutation"
 CASE_STATE_DELTA_VERSION = "case_state_delta_v3"
 CASE_STATE_DELTA_MODE = "explicit_add_case_info"
-CASE_STATE_DELTA_PROMPT_VERSION = "case_state_delta_prompt_v3"
+CASE_STATE_DELTA_PROMPT_VERSION = "case_state_delta_prompt_v4"
 
 
 class CaseStateMutationFailure(Exception):
@@ -67,13 +67,17 @@ class CaseStateDeltaValue(BaseModel):
     """Closed provider-facing shape for one added Case State item.
 
     The OpenRouter/OpenAI structured-output contract rejects arbitrary object
-    mappings (``additionalProperties: true``).  A delta still needs to carry
-    one of the four Case State item shapes, so expose their known fields in a
-    single closed object and leave non-applicable fields null.  The merged
+    mappings (``additionalProperties: true``). A delta still needs to carry
+    one of the Case State item shapes, so expose their known fields in a
+    single closed object and leave non-applicable fields null. The merged
     Case State validator remains the authority for target-specific semantics.
     """
 
     model_config = ConfigDict(extra="forbid")
+
+    fact_id: str | None = None
+    statement: str | None = None
+    category: str | None = None
 
     entity_id: str | None = None
     name: str | None = None
@@ -84,7 +88,6 @@ class CaseStateDeltaValue(BaseModel):
     subject_entity_id: str | None = None
     predicate: str | None = None
     object_entity_id: str | None = None
-    statement: str | None = None
 
     evidence_id: str | None = None
     title: str | None = None
@@ -99,6 +102,13 @@ class CaseStateDeltaValue(BaseModel):
     actors: list[str] | None = None
     evidence_ids: list[str] | None = None
 
+    impact_id: str | None = None
+    impact_type: str | None = None
+    affected_entity_ids: list[str] | None = None
+
+    missing_id: str | None = None
+    importance: str | None = None
+
     confidence: str | None = None
     status: str | None = None
 
@@ -109,10 +119,13 @@ class CaseStateDeltaChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     target_type: Literal[
+        "fact",
         "entity",
         "relationship",
         "evidence",
         "timeline",
+        "impact",
+        "missing_information",
     ]
     target_id: str = Field(min_length=1, max_length=255)
     # These keys are required in provider output. Null is semantic, not absent:
@@ -148,6 +161,7 @@ class CaseStateDeltaChange(BaseModel):
 
         if is_add:
             required_fields: dict[str, tuple[str, ...]] = {
+                "fact": ("fact_id", "statement", "category", "status", "confidence"),
                 "entity": ("entity_id", "name", "entity_type", "confidence"),
                 "relationship": (
                     "relationship_id",
@@ -168,6 +182,14 @@ class CaseStateDeltaChange(BaseModel):
                     "source_type",
                 ),
                 "timeline": ("event_id", "event", "status", "confidence"),
+                "impact": (
+                    "impact_id",
+                    "description",
+                    "impact_type",
+                    "status",
+                    "confidence",
+                ),
+                "missing_information": ("missing_id", "description", "importance"),
             }
             assert isinstance(self.new_value, CaseStateDeltaValue)
             value = self.new_value.model_dump(mode="python", exclude_none=True)
@@ -233,7 +255,7 @@ class CaseStateDeltaInput(BaseModel):
 
 
 CASE_STATE_DELTA_SYSTEM_PROMPT = """You are the CyberCase Case State delta extractor.
-Prompt version: case_state_delta_prompt_v3.
+Prompt version: case_state_delta_prompt_v4.
 
 The explicit backend action has already authorized a case-information mutation.
 Return structured JSON only using the requested schema. The current_case_state
@@ -247,18 +269,21 @@ is answering; it is assistant-generated context and never a source of fact.
 Return the smallest OLD-to-NEW changes list. Return an empty changes list when
 the message adds no supported canonical fact. For ADD, set field and old_value
 to null and put the complete new item in new_value. Complete new items may be
-entities, relationships, evidence, or timeline events. Required fields are:
+facts, entities, relationships, evidence, timeline events, impacts, or missing_information.
+Required fields are:
+fact = fact_id/statement/category/status/confidence;
 entity = entity_id/name/entity_type/confidence;
-relationship = relationship_id/subject_entity_id/predicate/object_entity_id/
-statement/status/confidence; evidence = evidence_id/title/description/
-artifact_type/status/confidence/source_type; timeline = event_id/event/status/
-confidence. Never set one of those required fields to null; use unknown when the
-source leaves a qualification unresolved. The value object is closed: use only
-the known Case State field names and set unrelated fields to null. For MODIFY,
-provide one existing stable target ID and field, copy the exact current field
-value into old_value, and put the corrected primitive or primitive-list value in
-new_value. Do not remove items or fields. Do not return provenance or a complete
-Case State. Return only the delta supported by the new_user_message.
+relationship = relationship_id/subject_entity_id/predicate/object_entity_id/statement/status/confidence;
+evidence = evidence_id/title/description/artifact_type/status/confidence/source_type;
+timeline = event_id/event/status/confidence;
+impact = impact_id/description/impact_type/status/confidence;
+missing_information = missing_id/description/importance.
+Never set one of those required fields to null; use unknown when the source leaves a qualification unresolved.
+The value object is closed: use only the known Case State field names and set unrelated fields to null.
+For MODIFY, provide one existing stable target ID and field, copy the exact current field
+value into old_value, and put the corrected primitive or primitive-list value in new_value.
+Do not remove items or fields. Do not return provenance or a complete Case State.
+Return only the delta supported by the new_user_message.
 """
 
 
@@ -316,10 +341,13 @@ def validate_case_state_delta(
 
 
 _TARGET_COLLECTIONS: dict[str, tuple[str, str]] = {
+    "fact": ("facts", "fact_id"),
     "entity": ("entities", "entity_id"),
     "relationship": ("relationships", "relationship_id"),
     "evidence": ("evidence", "evidence_id"),
     "timeline": ("timeline", "event_id"),
+    "impact": ("impacts", "impact_id"),
+    "missing_information": ("missing_information", "missing_id"),
 }
 
 

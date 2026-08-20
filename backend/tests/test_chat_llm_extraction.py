@@ -207,7 +207,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result.failure_code)
         self.assertIsNone(result.failure_message)
         assert result.extraction is not None
-        self.assertEqual(result.prompt_version, "baseline_extraction_prompt_v4")
+        self.assertEqual(result.prompt_version, "baseline_extraction_prompt_v5")
         self.assertFalse(hasattr(result.extraction, "version"))
         self.assertEqual(len(result.extraction.entities), 2)
         self.assertEqual(len(result.extraction.relationships), 1)
@@ -363,11 +363,19 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ExtractionValidationError):
             validate_baseline_extraction(payload, extraction_input)
 
-    def test_relationship_id_is_globally_unique(self) -> None:
+    def test_relationship_id_is_unique_within_collection(self) -> None:
         extraction_input = self._input()
         payload = self._success_payload(extraction_input)
+        # Reusing an entity ID across collections is permitted
         payload["relationships"][0]["relationship_id"] = "ENT-001"
+        res = validate_baseline_extraction(payload, extraction_input)
+        self.assertIsNotNone(res)
 
+        # Duplicate ID within the relationships collection is rejected
+        second = dict(payload["relationships"][0])
+        second["relationship_id"] = "ENT-001"
+        second["predicate"] = "was_linked_to"
+        payload["relationships"].append(second)
         with self.assertRaises(ExtractionValidationError):
             validate_baseline_extraction(payload, extraction_input)
 
@@ -399,7 +407,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             BASELINE_EXTRACTION_PROMPT_VERSION,
-            "baseline_extraction_prompt_v4",
+            "baseline_extraction_prompt_v5",
         )
         self.assertEqual(
             ACCEPTED_BASELINE_EXTRACTION_PROMPT_VERSIONS,
@@ -409,6 +417,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
                     "baseline_extraction_prompt_v2",
                     "baseline_extraction_prompt_v3",
                     "baseline_extraction_prompt_v4",
+                    "baseline_extraction_prompt_v5",
                 }
             ),
         )

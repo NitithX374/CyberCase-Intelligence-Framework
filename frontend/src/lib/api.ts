@@ -103,7 +103,9 @@ export interface ChatReportSection {
 }
 
 export interface ChatStructuredReport {
-  report_version: "baseline_report_v1";
+  report_version:
+    | "baseline_report_v1"
+    | "preliminary_analysis_report_v1";
   status: "provisional_unverified";
   title: string;
   sections: ChatReportSection[];

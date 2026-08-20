@@ -104,10 +104,12 @@ class CaseStateRetrievalProjectionTests(unittest.TestCase):
         self.assertEqual(
             set(payload),
             {
+                "facts",
                 "entities",
                 "relationships",
                 "evidence",
                 "timeline",
+                "impacts",
             },
         )
         self.assertEqual(payload["entities"][0]["confidence"], "high")

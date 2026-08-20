@@ -91,8 +91,8 @@ class StructuredOutputSchemaTests(unittest.IsolatedAsyncioTestCase):
         self._assert_provider_schema(schema)
         self.assertIn("$defs", schema)
         self.assertEqual(
-            schema["properties"]["report_version"]["const"],
-            "baseline_report_v1",
+            schema["properties"]["report_version"]["enum"],
+            ["baseline_report_v1", "preliminary_analysis_report_v1"],
         )
 
     def test_extraction_schema_preserves_supported_formats_and_any_of(self) -> None:
