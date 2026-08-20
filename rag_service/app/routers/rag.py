@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
+
+from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, HTTPException, Request
 
+from RAG.GraphRAG.config import MAX_CONCURRENT_QUERIES
 from RAG.GraphRAG.pipeline.mitre_table import build_mitre_table
 from routers.context_store import (
     export_retrieval_context,
@@ -14,6 +18,37 @@ from schemas.rag import QueryRequest, QueryResponse, RetrievalContextSnapshot
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["rag"])
+
+
+def _get_query_limiter(req: Request) -> CapacityLimiter:
+    """Process-wide cap on concurrent pipeline runs.
+
+    Built lazily on first use because ``CapacityLimiter`` must be constructed
+    from inside the running event loop; the app object is the natural owner, so
+    every session in this process shares one limiter.
+    """
+    limiter = getattr(req.app.state, "query_limiter", None)
+    if limiter is None:
+        limiter = CapacityLimiter(MAX_CONCURRENT_QUERIES)
+        req.app.state.query_limiter = limiter
+    return limiter
+
+
+def _run_pipeline(rag_agent: Any, query: str) -> tuple[Any, list[Any]]:
+    """The whole blocking section, so one worker thread does all of it.
+
+    Both steps are CPU/network-bound and synchronous: the agent graph
+    (retrieval + LLM calls) and the answer-grounded MITRE table selection.
+    """
+    agent_response = rag_agent.query(query, verbose=False)
+    # Keep the old answer-grounded MITRE selection inside rag-service. The
+    # generated answer is used only as an internal relevance signal; it is
+    # deliberately excluded from the HTTP response and context snapshot.
+    mitre_table = build_mitre_table(
+        agent_response.graphrag_result,
+        agent_response.answer,
+    )
+    return agent_response, mitre_table
 
 
 @router.get("/health")
@@ -30,13 +65,15 @@ async def query_rag(request: QueryRequest, req: Request):
     if not rag_agent:
         raise HTTPException(status_code=503, detail="RAG Agent not available")
     try:
-        agent_response = rag_agent.query(request.query, verbose=False)
-        # Keep the old answer-grounded MITRE selection inside rag-service. The
-        # generated answer is used only as an internal relevance signal; it is
-        # deliberately excluded from the HTTP response and context snapshot.
-        mitre_table = build_mitre_table(
-            agent_response.graphrag_result,
-            agent_response.answer,
+        # GraphRAGAgent.query() is synchronous and takes tens of seconds.
+        # Running it inline would block the event loop for its whole duration,
+        # freezing every other session's request (including /health). Offload it
+        # to a worker thread, bounded by the shared capacity limiter.
+        agent_response, mitre_table = await to_thread.run_sync(
+            _run_pipeline,
+            rag_agent,
+            request.query,
+            limiter=_get_query_limiter(req),
         )
         retrieval_context_id = store_retrieval_context(
             req,
