@@ -10,7 +10,12 @@ from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.models.rag_context import RagContext
 from app.schemas.chat import ChatMessageCreate
 from app.schemas.rag import QueryResponse
-from app.services.case_analysis import build_case_analysis_prompt
+from app.services.case_analysis import (
+    AnalysisClaim,
+    AnalysisTraceDraft,
+    MitreAssociation,
+    build_case_analysis_prompt,
+)
 from app.services.case_state import (
     project_case_state_to_retrieval_query,
 )
@@ -21,6 +26,7 @@ from app.services.workflow import (
     AssistantOutcome,
     ChatRunWorker,
     map_rag_response,
+    map_case_analysis_response,
     process_chat_run,
 )
 
@@ -127,6 +133,90 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(outcome["retrieved_context"], "bounded context")
         self.assertNotIn("answer", outcome)
 
+    async def test_ask_trace_binds_loaded_case_state_and_reused_context(self) -> None:
+        thread_id = uuid4()
+        state_id = uuid4()
+        request_message_id = uuid4()
+        thread = ChatThread(
+            id=thread_id,
+            status="processing",
+            current_case_state_version_id=state_id,
+            next_message_ordinal=4,
+        )
+        run = ChatRun(
+            id=uuid4(),
+            thread_id=thread_id,
+            request_message_id=request_message_id,
+            operation="query",
+            status="running",
+            input_rag_session_id=None,
+            idempotency_key="ask-trace-1",
+            request_fingerprint="a" * 64,
+            request_payload={"action": "ask"},
+            attempt_count=1,
+            lease_owner="worker-1",
+        )
+        db = Mock()
+        db.begin.return_value = _Transaction()
+        db.add = Mock()
+        db.flush = AsyncMock()
+        worker = ChatRunWorker(db)
+        worker._lock_run_thread = AsyncMock(return_value=thread)
+        worker._lock_owned_running_run = AsyncMock(return_value=run)
+        outcome = map_case_analysis_response(
+            "The relationship remains unknown.",
+            analysis_context={
+                "retrieval_context_id": "retrieval-1",
+                "mitre_table": [
+                    {
+                        "technique_id": "T1078",
+                        "name": "Valid Accounts",
+                        "entity_type": "Technique",
+                    }
+                ],
+            },
+            analysis_trace_draft=AnalysisTraceDraft(
+                analysis_mode="question_answer",
+                claims=[
+                    AnalysisClaim(
+                        claim_id="A-01",
+                        claim_type="reported",
+                        text="The relationship remains unknown.",
+                        epistemic_status="unknown",
+                        entity_ids=[],
+                        relationship_ids=[],
+                        evidence_ids=[],
+                        timeline_event_ids=[],
+                    )
+                ],
+                mitre_associations=[
+                    MitreAssociation(
+                        association_id="MA-01",
+                        technique_id="T1078",
+                        claim_ids=["A-01"],
+                        reason="The external technique describes valid account use.",
+                        status="candidate_only",
+                        support_role="external_technical_context",
+                    )
+                ],
+            ),
+            expected_case_state_version_id=state_id,
+        )
+
+        self.assertTrue(await worker.complete_run(run.id, "worker-1", outcome))
+
+        assistant = next(
+            call.args[0]
+            for call in db.add.call_args_list
+            if isinstance(call.args[0], ChatMessage)
+        )
+        trace = assistant.metadata_json["analysis_trace"]
+        self.assertEqual(trace["case_state_version_id"], str(state_id))
+        self.assertEqual(trace["retrieval_context_id"], "retrieval-1")
+        self.assertEqual(trace["mitre_associations"][0]["technique_id"], "T1078")
+        self.assertEqual(trace["mitre_associations"][0]["claim_ids"], ["A-01"])
+        self.assertFalse(outcome.metadata_json["chat_action"]["rag_invoked"])
+
     def test_ask_prompt_contains_case_state_analysis_context_and_question(self) -> None:
         prompt = build_case_analysis_prompt(
             mode="question_answer",
@@ -137,6 +227,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
                 "mitre_table": [{"technique_id": "T1059"}],
             },
             question="Which host should be investigated next?",
+            response_language="english",
         )
 
         self.assertIn("reported host-7 activity", prompt)
@@ -452,6 +543,10 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
             "Which host should be investigated next?",
         )
         self.assertEqual(ask_inputs["mode"], "question_answer")
+        self.assertEqual(
+            ask_inputs["user_message"],
+            "Which host should be investigated next?",
+        )
         outcome: AssistantOutcome = worker.complete_run.await_args.args[2]
         self.assertEqual(
             outcome.content,
@@ -547,6 +642,7 @@ class ChatPhase2RoutingTests(unittest.IsolatedAsyncioTestCase):
                 "previous_analysis": None,
             },
             question=None,
+            user_message="Investigate the suspicious PowerShell event.",
         )
         outcome: AssistantOutcome = worker.complete_run.await_args.args[2]
         self.assertEqual(outcome.content, "Grounded initial analysis.")

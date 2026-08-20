@@ -20,6 +20,7 @@ interface ChatPanelProps {
   onInputChange: (value: string) => void;
   onPostAnswerActionChange: (action: ChatMessageAction) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSelectMessageOrdinal?: (ordinal: number) => void;
 }
 
 export function ChatPanel({
@@ -32,6 +33,7 @@ export function ChatPanel({
   onInputChange,
   onPostAnswerActionChange,
   onSubmit,
+  onSelectMessageOrdinal,
 }: ChatPanelProps) {
   const isProcessing = phase === "querying" || phase === "analyzing";
 
@@ -39,7 +41,11 @@ export function ChatPanel({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-canvas">
       {/* Transcript Scroll Area */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <ChatTranscript messages={messages} isProcessing={isProcessing} />
+        <ChatTranscript
+          messages={messages}
+          isProcessing={isProcessing}
+          onSelectMessageOrdinal={onSelectMessageOrdinal}
+        />
       </div>
 
       {/* Error Alert */}
@@ -65,7 +71,7 @@ export function ChatPanel({
               <button
                 type="button"
                 onClick={() => onPostAnswerActionChange("ask")}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all ${
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all cursor-pointer ${
                   postAnswerAction === "ask"
                     ? "border-primary bg-primary text-ivory shadow-sm"
                     : "border-line-strong bg-surface text-ink-secondary hover:border-primary hover:bg-surface-hover"
@@ -76,7 +82,7 @@ export function ChatPanel({
               <button
                 type="button"
                 onClick={() => onPostAnswerActionChange("add_case_info")}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all ${
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all cursor-pointer ${
                   postAnswerAction === "add_case_info"
                     ? "border-primary bg-primary text-ivory shadow-sm"
                     : "border-line-strong bg-surface text-ink-secondary hover:border-primary hover:bg-surface-hover"

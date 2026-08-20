@@ -15,10 +15,13 @@ from app.services.case_state import (
     CASE_STATE_DELTA_VERSION,
     CaseStateDelta,
     CaseStateDeltaChange,
+    CaseStateDeltaInput,
     CaseStateMutationFailure,
     apply_case_state_delta,
     project_case_state_to_retrieval_query,
+    run_case_state_delta_extraction,
 )
+from app.services.case_analysis import AnalysisClaim, AnalysisTraceDraft
 from app.services.llm.structured_output_router import structured_output_schema
 from app.services.workflow import (
     AssistantOutcome,
@@ -127,12 +130,176 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn("operation", serialized)
                 self.assertNotIn("change_type", serialized)
                 self.assertNotIn("'value'", serialized)
+                value_schema = schema["$defs"]["CaseStateDeltaValue"]
+                category_schema = value_schema["properties"]["category"]
+                category_values = next(
+                    option["enum"]
+                    for option in category_schema["anyOf"]
+                    if "enum" in option
+                )
+                self.assertEqual(
+                    set(category_values),
+                    {
+                        "background",
+                        "observation",
+                        "action",
+                        "access",
+                        "technical",
+                        "impact",
+                        "response",
+                        "attribution",
+                        "other",
+                    },
+                )
         raw_change_schema = CaseStateDelta.model_json_schema()["$defs"][
             "CaseStateDeltaChange"
         ]
         self.assertTrue(
             {"field", "old_value", "new_value"} <= set(raw_change_schema["required"])
         )
+
+    async def test_thai_clarification_normalizes_legacy_unknown_fact(self) -> None:
+        source_id = uuid4()
+        delta_input = CaseStateDeltaInput(
+            current_case_state=_parent_state(),
+            new_user_message="นาย A เจาะข้อมูลเข้าระบบผ่านบริษัท",
+            source_message_id=source_id,
+            pending_question=(
+                "โปรดระบุว่าเกิดเหตุการณ์อะไรขึ้น หรือเป็นเหตุการณ์ไซเบอร์ประเภทใด"
+            ),
+        )
+        payload = {
+            "changes": [
+                {
+                    "target_type": "fact",
+                    "target_id": "unknown",
+                    "field": None,
+                    "old_value": None,
+                    "new_value": {
+                        "fact_id": "unknown",
+                        "statement": "นาย A เจาะข้อมูลเข้าระบบผ่านบริษัท",
+                        "category": "unknown",
+                        "status": "unknown",
+                        "confidence": "unknown",
+                    },
+                }
+            ]
+        }
+
+        delta, metadata = await run_case_state_delta_extraction(
+            delta_input,
+            adapter=_DeltaAdapter(payload),
+        )
+
+        assert delta is not None
+        change = delta.changes[0]
+        assert change.new_value is not None
+        self.assertEqual(change.target_id, "F-001")
+        self.assertEqual(change.new_value.fact_id, "F-001")
+        self.assertEqual(change.new_value.category, "other")
+        self.assertEqual(metadata["validation_status"], "validated")
+        merged = apply_case_state_delta(
+            _parent_state(),
+            delta,
+            source_message_id=source_id,
+        )
+        self.assertEqual(merged["facts"][0]["fact_id"], "F-001")
+        self.assertEqual(merged["facts"][0]["source_message_ids"], [str(source_id)])
+
+    async def test_invalid_fact_category_fails_before_merge(self) -> None:
+        delta_input = CaseStateDeltaInput(
+            current_case_state=_parent_state(),
+            new_user_message="A reported action occurred.",
+            source_message_id=uuid4(),
+        )
+        payload = {
+            "changes": [
+                {
+                    "target_type": "fact",
+                    "target_id": "AUTO-F-1",
+                    "field": None,
+                    "old_value": None,
+                    "new_value": {
+                        "fact_id": "AUTO-F-1",
+                        "statement": "A reported action occurred.",
+                        "category": "impossible",
+                        "status": "reported",
+                        "confidence": "unknown",
+                    },
+                }
+            ]
+        }
+
+        delta, metadata = await run_case_state_delta_extraction(
+            delta_input,
+            adapter=_DeltaAdapter(payload),
+        )
+
+        self.assertIsNone(delta)
+        self.assertEqual(metadata["failure_code"], "extraction_validation_failed")
+
+    async def test_temporary_ids_are_allocated_and_references_are_rewritten(
+        self,
+    ) -> None:
+        source_id = uuid4()
+        delta_input = CaseStateDeltaInput(
+            current_case_state=_parent_state(),
+            new_user_message="Alice contacted host-1.",
+            source_message_id=source_id,
+        )
+        payload = {
+            "changes": [
+                {
+                    "target_type": "entity",
+                    "target_id": "AUTO-ENT-1",
+                    "field": None,
+                    "old_value": None,
+                    "new_value": {
+                        "entity_id": "AUTO-ENT-1",
+                        "name": "Alice",
+                        "entity_type": "person",
+                        "confidence": "unknown",
+                    },
+                },
+                {
+                    "target_type": "relationship",
+                    "target_id": "AUTO-REL-1",
+                    "field": None,
+                    "old_value": None,
+                    "new_value": {
+                        "relationship_id": "AUTO-REL-1",
+                        "subject_entity_id": "AUTO-ENT-1",
+                        "predicate": "contacted",
+                        "object_entity_id": "host-1",
+                        "statement": "Alice contacted host-1.",
+                        "status": "reported",
+                        "confidence": "unknown",
+                    },
+                },
+            ]
+        }
+
+        delta, _ = await run_case_state_delta_extraction(
+            delta_input,
+            adapter=_DeltaAdapter(payload),
+        )
+
+        assert delta is not None
+        entity_change, relationship_change = delta.changes
+        assert entity_change.new_value is not None
+        assert relationship_change.new_value is not None
+        self.assertEqual(entity_change.target_id, "ENT-001")
+        self.assertEqual(relationship_change.target_id, "REL-001")
+        self.assertEqual(
+            relationship_change.new_value.subject_entity_id,
+            "ENT-001",
+        )
+        merged = apply_case_state_delta(
+            _parent_state(),
+            delta,
+            source_message_id=source_id,
+        )
+        self.assertEqual(merged["relationships"][0]["subject_entity_id"], "ENT-001")
 
     def test_empty_changes_is_the_only_no_change_shape(self) -> None:
         self.assertEqual(
@@ -532,6 +699,10 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
             CASE_STATE_DELTA_SYSTEM_PROMPT,
         )
         self.assertIn(CASE_STATE_DELTA_PROMPT_VERSION, CASE_STATE_DELTA_SYSTEM_PROMPT)
+        self.assertIn(
+            "reported records provenance, not verification",
+            CASE_STATE_DELTA_SYSTEM_PROMPT,
+        )
         self.assertEqual(
             set(adapter.calls[0]["input_payload"]),
             {
@@ -807,7 +978,12 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         outcome = AssistantOutcome(
             content="Updated overview",
             retrieval_context_id="retrieval-2",
-            metadata_json={"chat_action": {"state_mutated": True}},
+            metadata_json={
+                "chat_action": {
+                    "state_mutated": True,
+                    "analysis_mode": "case_overview",
+                }
+            },
             thread_status="answered",
             active_rag_session_id=None,
             validated_case_state_json=merged_state,
@@ -818,12 +994,28 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
             ),
             case_state_delta_json=mutation_delta.model_dump(mode="json"),
             expected_parent_case_state_version_id=parent_id,
+            analysis_trace_draft=AnalysisTraceDraft(
+                analysis_mode="case_overview",
+                claims=[
+                    AnalysisClaim(
+                        claim_id="A-01",
+                        claim_type="reported",
+                        text="A new artifact was reported.",
+                        epistemic_status="reported",
+                        entity_ids=[],
+                        relationship_ids=[],
+                        evidence_ids=["artifact-2"],
+                        timeline_event_ids=[],
+                    )
+                ],
+            ),
         )
 
         self.assertTrue(await worker.complete_run(run.id, "worker-1", outcome))
         added = [call.args[0] for call in db.add.call_args_list]
         child = next(item for item in added if isinstance(item, CaseStateVersion))
         context = next(item for item in added if isinstance(item, RagContext))
+        assistant = next(item for item in added if isinstance(item, ChatMessage))
         self.assertEqual(child.parent_version_id, parent_id)
         self.assertEqual(child.version, 2)
         self.assertEqual(child.trigger_message_id, message_id)
@@ -833,6 +1025,22 @@ class CaseStateMutationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(parent.delta_json, historical_parent_delta)
         self.assertEqual(context.case_state_version_id, child.id)
         self.assertEqual(thread.current_case_state_version_id, child.id)
+        self.assertEqual(
+            assistant.metadata_json["case_update"],
+            {
+                "version": "case_update_v1",
+                "status": "updated",
+                "parent_case_state_version_id": str(parent.id),
+                "parent_version": 1,
+                "child_case_state_version_id": str(child.id),
+                "child_version": 2,
+                "delta": mutation_delta.model_dump(mode="json"),
+            },
+        )
+        trace = assistant.metadata_json["analysis_trace"]
+        self.assertEqual(trace["case_state_version_id"], str(child.id))
+        self.assertEqual(trace["retrieval_context_id"], "retrieval-2")
+        self.assertEqual(trace["mitre_associations"], [])
 
     async def test_complete_run_rejects_empty_delta_child(self) -> None:
         thread_id = uuid4()

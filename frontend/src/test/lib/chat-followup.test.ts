@@ -4,6 +4,7 @@ import {
   activeChatFollowUpForThread,
   chatTranscriptMessages,
   filterSupersededClarificationAnswers,
+  followUpGapDetailForMessage,
   latestUserAnswerBetween,
 } from "@/lib/chat-followup";
 
@@ -49,6 +50,44 @@ describe("chat follow-up projection", () => {
     expect(chatTranscriptMessages(messages).map((item) => item.content)).toEqual(
       ["Investigate this event.", "Which host was affected?"],
     );
+  });
+
+  it("returns the exact persisted selected gap detail", () => {
+    const selectedGapDetail = {
+      topic: "authentication records",
+      status: "NOT_PROVIDED",
+      description: "Authentication records were not provided.",
+      affects: "The account used for VM access remains unresolved.",
+      reason: "The reported access cannot be linked to a specific credential.",
+      priority: "high",
+      askable: true,
+    };
+    const question = clarification(2, "Do you have authentication logs?", 1);
+    question.metadata_json = {
+      chat_followup: {
+        kind: "clarification",
+        root_ordinal: 1,
+        round: 1,
+        selected_gap_detail: selectedGapDetail,
+      },
+    };
+
+    expect(followUpGapDetailForMessage(question)).toEqual(selectedGapDetail);
+  });
+
+  it("rejects malformed selected gap detail without hiding the message", () => {
+    const question = clarification(2, "Do you have authentication logs?", 1);
+    question.metadata_json = {
+      chat_followup: {
+        kind: "clarification",
+        root_ordinal: 1,
+        round: 1,
+        selected_gap_detail: { topic: "authentication records" },
+      },
+    };
+
+    expect(followUpGapDetailForMessage(question)).toBeNull();
+    expect(chatTranscriptMessages([question])).toEqual([question]);
   });
 
   it("selects the latest user answer before the next assistant message", () => {

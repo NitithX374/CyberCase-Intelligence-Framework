@@ -1,7 +1,7 @@
 from copy import deepcopy
 import json
 import unittest
-from typing import get_args
+from typing import cast, get_args
 from unittest.mock import patch
 
 import httpx
@@ -11,7 +11,9 @@ from app.services.case_analysis import (
     AnalysisMode,
     CaseAnalysisFailure,
     MainCaseAnalysisService,
+    ResponseLanguage,
     build_case_analysis_prompt,
+    resolve_response_language,
 )
 from app.services.llm.core_llm import CoreLlmTarget
 
@@ -51,6 +53,17 @@ def _case_inputs() -> tuple[dict[str, object], dict[str, object]]:
     )
 
 
+def _structured_text(answer: str) -> str:
+    return json.dumps(
+        {
+            "version": "analysis_trace_v1",
+            "answer": answer,
+            "claims": [],
+            "mitre_associations": [],
+        }
+    )
+
+
 class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
     async def test_success_does_not_mutate_nested_inputs(self) -> None:
         case_state, analysis_context = _case_inputs()
@@ -60,12 +73,29 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
         def respond(request: httpx.Request) -> httpx.Response:
             request_payload = json.loads(request.content)
             system_prompt = request_payload["system"]
+            claim_schema = request_payload["output_config"]["format"]["schema"][
+                "$defs"
+            ]["AnalysisClaim"]
+            self.assertNotIn("fact_ids", claim_schema["properties"])
+            self.assertNotIn("mitre_technique_ids", claim_schema["properties"])
+            self.assertIn(
+                "mitre_associations",
+                request_payload["output_config"]["format"]["schema"]["properties"],
+            )
+            self.assertIn("candidate_only", system_prompt)
+            self.assertIn("external_technical_context", system_prompt)
             self.assertIn("TRUST HIERARCHY", system_prompt)
             self.assertIn("Do not retrieve new information", system_prompt)
             self.assertIn("ANALYSIS MODE: question_answer", system_prompt)
             self.assertIn("Answer the supplied question directly", system_prompt)
             self.assertIn("proportional to the specific question", system_prompt)
             self.assertIn("Do not force the standard five-section", system_prompt)
+            self.assertIn("RESPONSE LANGUAGE AND VOICE", system_prompt)
+            self.assertIn("natural professional English", system_prompt)
+            self.assertIn(
+                '"response_language":"english"',
+                request_payload["messages"][0]["content"],
+            )
             self.assertIn(
                 "Which host should be investigated next?",
                 request_payload["messages"][0]["content"],
@@ -74,7 +104,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                 200,
                 json={
                     "content": [
-                        {"type": "text", "text": "Investigate host-7 next."}
+                        {"type": "text", "text": _structured_text("Investigate host-7 next.")}
                     ],
                     "stop_reason": "end_turn",
                 },
@@ -92,11 +122,104 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     case_state_json=case_state,
                     analysis_context=analysis_context,
                     question="Which host should be investigated next?",
+                    user_message="Which host should be investigated next?",
                 )
 
-        self.assertEqual(answer, "Investigate host-7 next.")
+        self.assertEqual(answer.answer, "Investigate host-7 next.")
+        self.assertEqual(answer.trace.analysis_mode, "question_answer")
         self.assertEqual(case_state, expected_case_state)
         self.assertEqual(analysis_context, expected_analysis_context)
+
+    def test_response_language_uses_thai_script_before_english_terms(self) -> None:
+        self.assertEqual(
+            resolve_response_language("ช่วยวิเคราะห์ PowerShell และ T1059 ให้หน่อย"),
+            "thai",
+        )
+        self.assertEqual(
+            resolve_response_language("Please analyze the PowerShell activity."),
+            "english",
+        )
+
+    def test_response_language_rejects_nonlinguistic_message(self) -> None:
+        with self.assertRaises(ValueError):
+            resolve_response_language("198.51.100.23 -> 10.0.0.5")
+
+        case_state, analysis_context = _case_inputs()
+        with self.assertRaises(CaseAnalysisFailure) as raised:
+            build_case_analysis_prompt(
+                mode="case_overview",
+                case_state_json=case_state,
+                analysis_context=analysis_context,
+                question=None,
+                response_language=cast(ResponseLanguage, "spanish"),
+            )
+        self.assertEqual(
+            raised.exception.code,
+            "analysis_response_language_unsupported",
+        )
+
+    async def test_thai_user_message_selects_natural_thai_response_profile(self) -> None:
+        case_state, analysis_context = _case_inputs()
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            request_payload = json.loads(request.content)
+            system_prompt = request_payload["system"]
+            user_prompt = request_payload["messages"][0]["content"]
+            self.assertIn("natural contemporary professional Thai", system_prompt)
+            self.assertIn('"response_language":"thai"', user_prompt)
+            return httpx.Response(
+                200,
+                json={
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": _structured_text("ขณะนี้ข้อมูลระบุเพียงกิจกรรมที่ถูกรายงาน"),
+                        }
+                    ],
+                    "stop_reason": "end_turn",
+                },
+            )
+
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(respond)
+        ) as client:
+            with patch(
+                "app.services.case_analysis.service.resolve_core_llm_target",
+                return_value=_target(),
+            ):
+                result = await MainCaseAnalysisService(client=client).analyze(
+                    mode="case_overview",
+                    case_state_json=case_state,
+                    analysis_context=analysis_context,
+                    question=None,
+                    user_message="ช่วยวิเคราะห์เหตุการณ์นี้ให้หน่อยครับ",
+                )
+
+        self.assertEqual(
+            result.answer,
+            "ขณะนี้ข้อมูลระบุเพียงกิจกรรมที่ถูกรายงาน",
+        )
+
+    async def test_unsupported_user_message_language_fails_before_provider(self) -> None:
+        case_state, analysis_context = _case_inputs()
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda request: self.fail("Provider must not be called")
+            )
+        ) as client:
+            with self.assertRaises(CaseAnalysisFailure) as raised:
+                await MainCaseAnalysisService(client=client).analyze(
+                    mode="case_overview",
+                    case_state_json=case_state,
+                    analysis_context=analysis_context,
+                    question=None,
+                    user_message="198.51.100.23 -> 10.0.0.5",
+                )
+
+        self.assertEqual(
+            raised.exception.code,
+            "analysis_response_language_unsupported",
+        )
 
     async def test_provider_failure_does_not_mutate_nested_inputs(self) -> None:
         case_state, analysis_context = _case_inputs()
@@ -120,6 +243,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     case_state_json=case_state,
                     analysis_context=analysis_context,
                     question="What does the current analysis support?",
+                    user_message="What does the current analysis support?",
                 )
 
         self.assertEqual(raised.exception.code, "analysis_provider_error")
@@ -143,7 +267,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                 200,
                 json={
                     "content": [
-                        {"type": "text", "text": "Bounded main case analysis."}
+                        {"type": "text", "text": _structured_text("Bounded main case analysis.")}
                     ],
                     "stop_reason": "end_turn",
                 },
@@ -161,9 +285,11 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     case_state_json=case_state,
                     analysis_context=analysis_context,
                     question=None,
+                    user_message="Please analyze this case.",
                 )
 
-        self.assertEqual(answer, "Bounded main case analysis.")
+        self.assertEqual(answer.answer, "Bounded main case analysis.")
+        self.assertEqual(answer.trace.analysis_mode, "case_overview")
 
     async def test_openrouter_output_text_block_is_accepted(self) -> None:
         case_state, analysis_context = _case_inputs()
@@ -175,7 +301,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     json={
                         "content": [
                             {"type": "redacted_thinking", "data": "omitted"},
-                            {"type": "output_text", "text": "Output-text analysis."},
+                            {"type": "output_text", "text": _structured_text("Output-text analysis.")},
                         ],
                         "stop_reason": "end_turn",
                     },
@@ -191,9 +317,10 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     case_state_json=case_state,
                     analysis_context=analysis_context,
                     question=None,
+                    user_message="Please analyze this case.",
                 )
 
-        self.assertEqual(answer, "Output-text analysis.")
+        self.assertEqual(answer.answer, "Output-text analysis.")
 
     async def test_openai_choices_envelope_is_accepted(self) -> None:
         case_state, analysis_context = _case_inputs()
@@ -207,7 +334,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                             {
                                 "message": {
                                     "role": "assistant",
-                                    "content": "Choices-envelope analysis.",
+                                    "content": _structured_text("Choices-envelope analysis."),
                                 },
                                 "finish_reason": "stop",
                             }
@@ -225,9 +352,10 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     case_state_json=case_state,
                     analysis_context=analysis_context,
                     question=None,
+                    user_message="Please analyze this case.",
                 )
 
-        self.assertEqual(answer, "Choices-envelope analysis.")
+        self.assertEqual(answer.answer, "Choices-envelope analysis.")
 
     async def test_success_error_envelope_is_classified_as_provider_error(self) -> None:
         case_state, analysis_context = _case_inputs()
@@ -258,6 +386,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     case_state_json=case_state,
                     analysis_context=analysis_context,
                     question=None,
+                    user_message="Please analyze this case.",
                 )
 
         self.assertEqual(raised.exception.code, "analysis_provider_error")
@@ -287,6 +416,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                     case_state_json=case_state,
                     analysis_context=analysis_context,
                     question=question,
+                    response_language="english",
                 )
             self.assertEqual(raised.exception.code, "analysis_invalid_request")
 
@@ -298,6 +428,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
                 case_state_json={"case_summary": "case " * 1_000},
                 analysis_context={"retrieved_context": "context " * 1_000},
                 question=exact_question,
+                response_language="english",
             )
 
         serialized = prompt.split("<case_context_json>\n", 1)[1].split(
@@ -307,6 +438,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
         payload = json.loads(serialized)
         self.assertLessEqual(len(prompt), 480)
         self.assertEqual(payload["analysis_mode"], "question_answer")
+        self.assertEqual(payload["response_language"], "english")
         self.assertEqual(payload["question"], exact_question)
         self.assertTrue(payload["context_truncated"])
         self.assertTrue(payload["case_narrative"]["truncated"])

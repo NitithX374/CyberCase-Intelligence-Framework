@@ -207,7 +207,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result.failure_code)
         self.assertIsNone(result.failure_message)
         assert result.extraction is not None
-        self.assertEqual(result.prompt_version, "baseline_extraction_prompt_v5")
+        self.assertEqual(result.prompt_version, "baseline_extraction_prompt_v6")
         self.assertFalse(hasattr(result.extraction, "version"))
         self.assertEqual(len(result.extraction.entities), 2)
         self.assertEqual(len(result.extraction.relationships), 1)
@@ -407,7 +407,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             BASELINE_EXTRACTION_PROMPT_VERSION,
-            "baseline_extraction_prompt_v5",
+            "baseline_extraction_prompt_v6",
         )
         self.assertEqual(
             ACCEPTED_BASELINE_EXTRACTION_PROMPT_VERSIONS,
@@ -418,6 +418,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
                     "baseline_extraction_prompt_v3",
                     "baseline_extraction_prompt_v4",
                     "baseline_extraction_prompt_v5",
+                    "baseline_extraction_prompt_v6",
                 }
             ),
         )
@@ -430,8 +431,7 @@ class ChatLlmExtractionTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.assertIn("Co-occurrence", BASELINE_EXTRACTION_SYSTEM_PROMPT)
-        self.assertIn("Do not infer ownership", BASELINE_EXTRACTION_SYSTEM_PROMPT)
-        self.assertIn("Never use Thai text", BASELINE_EXTRACTION_SYSTEM_PROMPT)
+        self.assertIn("PRESERVE EXACT DESCRIPTIVE NAMES", BASELINE_EXTRACTION_SYSTEM_PROMPT)
 
     def test_extraction_budget_and_raw_response_cap_are_aligned(self) -> None:
         self.assertEqual(settings.chat_extraction_max_output_tokens, 16_384)

@@ -44,9 +44,6 @@ export function FailedChatExtractionState({
       aria-label="Extraction failed"
       className="max-w-3xl rounded-2xl border border-[#E2B8B3] bg-[#FFF7F5] p-5 sm:p-6"
     >
-      <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8B1E17]">
-        Baseline LLM extraction
-      </p>
       <h2 className="mt-2 text-xl font-extrabold tracking-tight text-ink">
         Extraction failed
       </h2>
