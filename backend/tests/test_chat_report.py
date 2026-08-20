@@ -7,15 +7,30 @@ from uuid import UUID, uuid4
 from app.config import settings
 from app.models.chat import ChatMessage, ChatThread
 from app.models.report import ChatReport
-from app.schemas.reports import ChatReportCreate
+from app.schemas.reports import (
+    ChatReportCreate,
+    PRELIMINARY_REPORT_SECTION_HEADINGS,
+    PRELIMINARY_REPORT_SECTION_IDS,
+    REPORT_SECTION_HEADINGS,
+    REPORT_SECTION_IDS,
+    ReportSection,
+    StructuredReport,
+)
 from app.services.extraction.llm_extraction import (
     BASELINE_EXTRACTION_PROMPT_VERSION,
+    CaseState,
+    ExtractedEntity,
+    ExtractedEvidence,
+    ExtractedRelationship,
+    ExtractedTimelineEvent,
 )
 from app.services.reports.report_generation import (
-    AdmittedMitreRow,
-    ReportModelResponse,
-    ReportProviderFailure,
+    REPORT_TEMPLATE_MODEL,
+    REPORT_TEMPLATE_PROMPT_VERSION,
+    REPORT_TEMPLATE_PROVIDER,
+    build_template_report,
     run_report_generation,
+    validate_structured_report,
 )
 from app.services.reports.report_prompt import (
     REPORT_PROMPT_VERSION,
@@ -28,26 +43,13 @@ from app.services.reports.report_service import (
 )
 
 
-class FakeReportAdapter:
-    def __init__(self, response: object) -> None:
-        self.response = response
+class NeverCalledReportAdapter:
+    def __init__(self) -> None:
         self.calls: list[dict[str, object]] = []
 
-    async def complete(self, **kwargs: object) -> ReportModelResponse | str:
+    async def complete(self, **kwargs: object) -> str:
         self.calls.append(kwargs)
-        if isinstance(self.response, ReportModelResponse):
-            return self.response
-        return str(self.response)
-
-
-class ProviderFailureReportAdapter:
-    async def complete(self, **kwargs: object) -> ReportModelResponse:
-        raise ReportProviderFailure(
-            "report_output_limit",
-            "The report model reached the configured output-token limit",
-            input_tokens=123,
-            output_tokens=4096,
-        )
+        raise AssertionError("deterministic report generation must not call an adapter")
 
 
 class _ScalarList:
@@ -130,7 +132,7 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
             "chat_report_max_raw_response_chars": settings.chat_report_max_raw_response_chars,
         }
         settings.core_llm_provider = "openrouter"
-        settings.openrouter_cybercase = "test-openrouter-key"
+        settings.openrouter_cybercase = ""
         settings.chat_report_enabled = True
         settings.chat_report_timeout_seconds = 1.0
         settings.chat_report_max_input_chars = 80_000
@@ -166,152 +168,282 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(snapshot.source_messages[0].message_id, thread.messages[0].id)
         self.assertEqual(snapshot.mitre_rows[0].technique_id, "T1059.001")
 
-    async def test_successful_report_is_single_pass_and_provenance_bound(self) -> None:
-        thread = _report_thread()
-        snapshot = build_current_report_snapshot(thread)
-        adapter = FakeReportAdapter(
-            ReportModelResponse(
-                text=json.dumps(_report_payload()),
-                input_tokens=31,
-                output_tokens=42,
+    async def test_generation_is_deterministic_and_never_calls_adapter(self) -> None:
+        snapshot = build_current_report_snapshot(_report_thread())
+        adapter = NeverCalledReportAdapter()
+
+        first = await run_report_generation(snapshot, adapter=adapter)
+        second = await run_report_generation(snapshot, adapter=adapter)
+
+        self.assertEqual(first.status, "completed")
+        self.assertEqual(second.status, "completed")
+        assert first.report is not None
+        assert second.report is not None
+        self.assertEqual(
+            first.report.model_dump(mode="json"),
+            second.report.model_dump(mode="json"),
+        )
+        self.assertEqual(adapter.calls, [])
+        self.assertEqual(first.provider, REPORT_TEMPLATE_PROVIDER)
+        self.assertEqual(first.model, REPORT_TEMPLATE_MODEL)
+        self.assertEqual(first.prompt_version, REPORT_TEMPLATE_PROMPT_VERSION)
+        self.assertIsNone(first.input_tokens)
+        self.assertIsNone(first.output_tokens)
+
+    def test_template_preserves_statuses_and_does_not_pair_mitre_rows(self) -> None:
+        snapshot = build_current_report_snapshot(_report_thread())
+        source_id = snapshot.source_messages[0].message_id
+        snapshot.extraction.evidence.append(
+            ExtractedEvidence(
+                evidence_id="E-002",
+                title="Unresolved artifact",
+                description="The artifact remains unresolved.",
+                artifact_type="file",
+                status="not_confirmed",
+                confidence="low",
+                source_type="user_reported",
+                source_message_ids=[source_id],
             )
         )
+        snapshot.extraction.entities = [
+            ExtractedEntity(
+                entity_id="entity-host",
+                name="host-7",
+                entity_type="host",
+                reported_role="affected system",
+                confidence="high",
+                source_message_ids=[source_id],
+            ),
+            ExtractedEntity(
+                entity_id="entity-user",
+                name="account-a",
+                entity_type="account",
+                reported_role=None,
+                confidence="medium",
+                source_message_ids=[source_id],
+            ),
+        ]
+        snapshot.extraction.relationships = [
+            ExtractedRelationship(
+                relationship_id="relationship-1",
+                subject_entity_id="entity-user",
+                predicate="accessed",
+                object_entity_id="entity-host",
+                statement="The account was described as accessing the host.",
+                status="contradicted",
+                confidence="low",
+                source_message_ids=[source_id],
+            )
+        ]
 
-        result = await run_report_generation(snapshot, adapter=adapter)
+        report = build_template_report(snapshot)
 
-        self.assertEqual(result.status, "completed")
-        self.assertEqual(result.provider, "openrouter")
-        self.assertEqual(result.model, "openai/gpt-5.6-luna")
-        self.assertIsNotNone(result.report)
-        self.assertEqual(len(adapter.calls), 1)
-        self.assertEqual(result.input_tokens, 31)
-        self.assertEqual(result.output_tokens, 42)
-        self.assertEqual(result.prompt_version, REPORT_PROMPT_VERSION)
         self.assertEqual(
-            adapter.calls[0]["system_prompt"],
-            REPORT_SYSTEM_PROMPT,
+            tuple(section.section_id for section in report.sections),
+            PRELIMINARY_REPORT_SECTION_IDS,
         )
+        self.assertEqual(report.report_version, "preliminary_analysis_report_v1")
         self.assertEqual(
-            adapter.calls[0]["input_payload"]["source_messages"][0]["source_type"],
-            "user_case_statement",
+            tuple(section.heading for section in report.sections),
+            tuple(
+                PRELIMINARY_REPORT_SECTION_HEADINGS[section_id]
+                for section_id in PRELIMINARY_REPORT_SECTION_IDS
+            ),
         )
+        self.assertEqual(report.status, "provisional_unverified")
+        evidence_claims = [
+            claim for claim in report.claims if claim.section_id == "indicators_found"
+        ]
         self.assertEqual(
-            adapter.calls[0]["max_output_tokens"],
-            settings.chat_report_max_output_tokens,
+            [claim.support_type for claim in evidence_claims],
+            ["user_reported", "extraction_candidate"],
+        )
+        self.assertIn("Status: reported", evidence_claims[0].text)
+        self.assertIn("Confidence: medium", evidence_claims[0].text)
+        self.assertIn("Status: not_confirmed", evidence_claims[1].text)
+        timeline_claim = next(
+            claim
+            for claim in report.claims
+            if claim.section_id == "evidence_to_examine"
+        )
+        self.assertEqual(timeline_claim.support_type, "extraction_candidate")
+        self.assertIn("Status: unknown", timeline_claim.text)
+        self.assertTrue(
+            all(not claim.mitre_technique_ids for claim in report.claims)
         )
         self.assertNotIn(
-            "Terminal assistant prose must not enter the report",
-            json.dumps(adapter.calls[0]["input_payload"]),
+            "mitre_mapping_candidate",
+            {claim.support_type for claim in report.claims},
         )
-
-    async def test_invalid_claim_reference_fails_without_repair_call(self) -> None:
-        thread = _report_thread()
-        snapshot = build_current_report_snapshot(thread)
-        payload = _report_payload()
-        payload["claims"][0]["evidence_id"] = "E-404"
-        adapter = FakeReportAdapter(json.dumps(payload))
-
-        result = await run_report_generation(snapshot, adapter=adapter)
-
-        self.assertEqual(result.status, "failed")
-        self.assertEqual(result.failure_code, "report_validation_failed")
-        self.assertEqual(len(adapter.calls), 1)
-
-    async def test_claim_prose_id_not_carried_by_branch_fails_without_retry(
-        self,
-    ) -> None:
-        snapshot = build_current_report_snapshot(_report_thread())
-        payload = _report_payload()
-        payload["claims"][0]["text"] = (
-            "The E-001 candidate was reported and resembles T1059.001."
+        entity_section = next(
+            section
+            for section in report.sections
+            if section.section_id == "evidence_to_examine"
         )
-        adapter = FakeReportAdapter(json.dumps(payload))
-
-        result = await run_report_generation(snapshot, adapter=adapter)
-
-        self.assertEqual(result.status, "failed")
-        self.assertEqual(result.failure_code, "report_validation_failed")
-        self.assertIn(
-            "claim prose contains an unreferenced MITRE ID",
-            result.validation_errors,
-        )
-        self.assertEqual(len(adapter.calls), 1)
-
-    async def test_missing_mitre_claim_reference_fails_without_repair_call(
-        self,
-    ) -> None:
-        snapshot = build_current_report_snapshot(_report_thread())
-        snapshot.mitre_rows.append(
-            AdmittedMitreRow(
-                technique_id="T1059.002",
-                name="AppleScript",
-                entity_type="technique",
-                source="vector",
-                relevance="retrieved_only",
+        self.assertTrue(
+            any(
+                "Persisted status: not available | Confidence: high" in item
+                for item in entity_section.items
             )
         )
-        payload = _report_payload()
-        payload["claims"][1]["text"] = (
-            "The E-001 candidate is compatible with T1059.002 as a mapping "
-            "candidate."
+        self.assertTrue(
+            any(
+                "Status: contradicted | Confidence: low" in item
+                for item in entity_section.items
+            )
         )
-        adapter = FakeReportAdapter(json.dumps(payload))
+        mitre_section = next(
+            section
+            for section in report.sections
+            if section.section_id == "mitre_attack_mapping"
+        )
+        self.assertIn("Source: vector", mitre_section.items[0])
+        self.assertIn("Relevance: cited_in_answer", mitre_section.items[0])
+        self.assertIn("Score: 0.9", mitre_section.items[0])
+        self.assertIn("no evidence or timeline pairing", mitre_section.paragraphs[0])
+        rationale_section = next(
+            section
+            for section in report.sections
+            if section.section_id == "mapping_rationale"
+        )
+        self.assertIn("Retrieval source: vector", rationale_section.items[0])
+        self.assertIn("Evidence link: none persisted", rationale_section.items[0])
+        self.assertIn("no evidence-linked rationale", rationale_section.items[0])
+        self.assertNotIn("E-001", "\n".join(rationale_section.items))
 
-        result = await run_report_generation(snapshot, adapter=adapter)
+    def test_template_has_explicit_empty_states(self) -> None:
+        snapshot = build_current_report_snapshot(_report_thread())
+        snapshot.extraction = CaseState()
+        snapshot.mitre_rows = []
 
-        self.assertEqual(result.status, "failed")
-        self.assertEqual(result.failure_code, "report_validation_failed")
+        report = build_template_report(snapshot)
+        sections = {section.section_id: section for section in report.sections}
+
+        self.assertEqual(report.claims, [])
         self.assertIn(
-            "claim prose contains an unreferenced MITRE ID",
-            result.validation_errors,
+            "No evidence or indicator candidates",
+            sections["indicators_found"].items[0],
         )
-        self.assertEqual(len(adapter.calls), 1)
+        self.assertTrue(
+            any(
+                "No entities" in item
+                for item in sections["evidence_to_examine"].items
+            )
+        )
+        self.assertTrue(
+            any(
+                "No relationships" in item
+                for item in sections["evidence_to_examine"].items
+            )
+        )
+        self.assertIn(
+            "No timeline events", sections["evidence_to_examine"].items[0]
+        )
+        self.assertIn("No MITRE ATT&CK", sections["mitre_attack_mapping"].items[0])
+        self.assertIn("No mapping rationale", sections["mapping_rationale"].items[0])
+        self.assertTrue(
+            any(
+                "No extraction warnings" in item
+                for item in sections["system_limitations"].items
+            )
+        )
 
-    async def test_mirrored_mitre_claim_reference_is_accepted(self) -> None:
+    def test_template_truncation_is_stable_and_disclosed(self) -> None:
         snapshot = build_current_report_snapshot(_report_thread())
-        adapter = FakeReportAdapter(json.dumps(_report_payload()))
+        source_id = snapshot.source_messages[0].message_id
+        snapshot.extraction.timeline = [
+            ExtractedTimelineEvent(
+                event_id=f"T-{index:03d}",
+                timestamp=None,
+                timestamp_text=f"Reported time {index}",
+                event=f"Reported event {index}",
+                actors=[],
+                evidence_ids=[],
+                status="unknown",
+                confidence="low",
+                source_message_ids=[source_id],
+            )
+            for index in range(1, 41)
+        ]
 
-        result = await run_report_generation(snapshot, adapter=adapter)
+        report = build_template_report(snapshot)
+        timeline_section = next(
+            section
+            for section in report.sections
+            if section.section_id == "evidence_to_examine"
+        )
 
-        self.assertEqual(result.status, "completed")
-        self.assertEqual(len(adapter.calls), 1)
-        assert result.report is not None
+        self.assertEqual(len(timeline_section.items), 32)
+        self.assertTrue(timeline_section.items[0].startswith("T-001"))
+        self.assertTrue(timeline_section.items[29].startswith("T-030"))
+        self.assertIn("No entities", timeline_section.items[30])
+        self.assertIn("No relationships", timeline_section.items[31])
         self.assertEqual(
-            result.report.claims[1].mitre_technique_ids,
-            ["T1059.001"],
+            len(
+                [
+                    claim
+                    for claim in report.claims
+                    if claim.section_id == "evidence_to_examine"
+                ]
+            ),
+            30,
+        )
+        self.assertIn(
+            "Timeline events omitted 10 item(s)",
+            "\n".join(report.limitations),
         )
 
-    async def test_v2_prompt_leak_is_rejected(self) -> None:
-        snapshot = build_current_report_snapshot(_report_thread())
-        payload = _report_payload()
-        payload["claims"][0]["text"] = "Prompt version: chat_report_prompt_v2."
-        adapter = FakeReportAdapter(json.dumps(payload))
-
-        result = await run_report_generation(snapshot, adapter=adapter)
-
-        self.assertEqual(result.status, "failed")
-        self.assertEqual(result.failure_code, "report_validation_failed")
-        self.assertEqual(len(adapter.calls), 1)
-
-    async def test_provider_failure_preserves_usage_metadata(self) -> None:
-        snapshot = build_current_report_snapshot(_report_thread())
-
-        result = await run_report_generation(
-            snapshot,
-            adapter=ProviderFailureReportAdapter(),
+    def test_legacy_report_contract_still_validates(self) -> None:
+        legacy = StructuredReport(
+            report_version="baseline_report_v1",
+            status="provisional_unverified",
+            title="Legacy report",
+            sections=[
+                ReportSection(
+                    section_id=section_id,
+                    heading=REPORT_SECTION_HEADINGS[section_id],
+                    paragraphs=["Legacy persisted content."],
+                    items=[],
+                )
+                for section_id in REPORT_SECTION_IDS
+            ],
+            claims=[],
+            limitations=[],
         )
 
-        self.assertEqual(result.status, "failed")
-        self.assertEqual(result.failure_code, "report_output_limit")
-        self.assertEqual(result.input_tokens, 123)
-        self.assertEqual(result.output_tokens, 4096)
+        validated = validate_structured_report(
+            legacy,
+            incident_ids=set(),
+            mitre_ids=set(),
+        )
+
+        self.assertEqual(validated.report_version, "baseline_report_v1")
+        self.assertEqual(
+            tuple(section.section_id for section in validated.sections),
+            REPORT_SECTION_IDS,
+        )
+
+    async def test_template_fails_closed_on_prompt_or_unsupported_id_text(self) -> None:
+        snapshot = build_current_report_snapshot(_report_thread())
+        snapshot.extraction.evidence[0].description = "Unexpected E-404 reference."
+        adapter = NeverCalledReportAdapter()
+
+        unsupported = await run_report_generation(snapshot, adapter=adapter)
+        snapshot.extraction.evidence[0].description = (
+            "Prompt version: chat_report_prompt_v2."
+        )
+        prompt_leak = await run_report_generation(snapshot, adapter=adapter)
+
+        self.assertEqual(unsupported.failure_code, "report_validation_failed")
+        self.assertEqual(prompt_leak.failure_code, "report_validation_failed")
+        self.assertEqual(adapter.calls, [])
 
     async def test_report_service_persists_history_and_replays_same_idempotency_key(
         self,
     ) -> None:
         thread = _report_thread()
         db = FakeReportDb(thread)
-        adapter = FakeReportAdapter(json.dumps(_report_payload()))
+        adapter = NeverCalledReportAdapter()
         service = ChatReportService(db, adapter=adapter)
         request = ChatReportCreate(idempotency_key="request-1")
 
@@ -321,20 +453,19 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first.report_id, second.report_id)
         self.assertEqual(first.version_number, 1)
         self.assertEqual(second.version_number, 1)
-        self.assertEqual(
-            first.decoding_settings["max_output_tokens"],
-            settings.chat_report_max_output_tokens,
-        )
+        self.assertEqual(first.provider, REPORT_TEMPLATE_PROVIDER)
+        self.assertEqual(first.model, REPORT_TEMPLATE_MODEL)
+        self.assertEqual(first.prompt_version, REPORT_TEMPLATE_PROMPT_VERSION)
+        self.assertEqual(first.decoding_settings, {})
+        self.assertIsNone(first.input_tokens)
+        self.assertIsNone(first.output_tokens)
         self.assertEqual(len(db.reports), 1)
-        self.assertEqual(len(adapter.calls), 1)
+        self.assertEqual(adapter.calls, [])
 
     async def test_validated_report_can_be_exported_as_pdf(self) -> None:
         thread = _report_thread()
         db = FakeReportDb(thread)
-        service = ChatReportService(
-            db,
-            adapter=FakeReportAdapter(json.dumps(_report_payload())),
-        )
+        service = ChatReportService(db)
         report = await service.generate_report(
             thread.id,
             ChatReportCreate(idempotency_key="pdf-request"),
@@ -348,10 +479,7 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
     async def test_pdf_export_rejects_tampered_structured_report(self) -> None:
         thread = _report_thread()
         db = FakeReportDb(thread)
-        service = ChatReportService(
-            db,
-            adapter=FakeReportAdapter(json.dumps(_report_payload())),
-        )
+        service = ChatReportService(db)
         report = await service.generate_report(
             thread.id,
             ChatReportCreate(idempotency_key="tampered-pdf-request"),
@@ -458,62 +586,6 @@ def _report_thread() -> ChatThread:
     )
     thread.messages = [root, terminal]
     return thread
-
-
-def _report_payload() -> dict[str, object]:
-    section_ids = (
-        "executive_summary",
-        "case_background_scope",
-        "evidence_findings",
-        "individuals_accounts_systems_roles",
-        "chronological_timeline",
-        "technical_analysis_mitre",
-        "conclusions_limitations_next_steps",
-    )
-    headings = (
-        "Executive Summary",
-        "Case Background and Scope",
-        "Evidence Findings",
-        "Individuals, Accounts, Systems, and Reported Roles",
-        "Chronological Timeline",
-        "Technical Analysis and MITRE ATT&CK Mapping",
-        "Conclusions, Limitations, and Recommended Next Investigative Steps",
-    )
-    return {
-        "report_version": "baseline_report_v1",
-        "status": "provisional_unverified",
-        "title": "Provisional report",
-        "sections": [
-            {
-                "section_id": section_id,
-                "heading": heading,
-                "paragraphs": ["The report is provisional and unverified."],
-                "items": [],
-            }
-            for section_id, heading in zip(section_ids, headings)
-        ],
-        "claims": [
-            {
-                "claim_id": "C-001",
-                "section_id": "evidence_findings",
-                "text": "The E-001 candidate was reported by the user.",
-                "claim_kind": "incident_evidence",
-                "support_type": "user_reported",
-                "evidence_id": "E-001",
-            },
-            {
-                "claim_id": "C-002",
-                "section_id": "technical_analysis_mitre",
-                "text": "The E-001 candidate is compatible with T1059.001 as a mapping candidate.",
-                "claim_kind": "mitre_evidence",
-                "support_type": "mitre_mapping_candidate",
-                "evidence_id": "E-001",
-                "mitre_technique_id": "T1059.001",
-            },
-        ],
-        "limitations": ["The candidates require forensic verification."],
-    }
-
 
 if __name__ == "__main__":
     unittest.main()

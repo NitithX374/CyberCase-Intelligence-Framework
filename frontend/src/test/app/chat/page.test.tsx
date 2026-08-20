@@ -867,6 +867,40 @@ describe("active chat route", () => {
     expect(listChatReports).toHaveBeenCalledWith("thread-1", expect.any(AbortSignal));
   });
 
+  it("keeps preliminary limitations inside section 5.7 without a duplicate block", async () => {
+    const reportReadyThread = makeReportReadyThread();
+    const savedReport = makeReport(1);
+    if (!savedReport.report) {
+      throw new Error("report fixture is required");
+    }
+    savedReport.report = {
+      ...savedReport.report,
+      report_version: "preliminary_analysis_report_v1",
+      sections: [
+        "5.1 สรุปคดี",
+        "5.2 ตัวบ่งชี้ที่พบ",
+        "5.3 MITRE ATT&CK Mapping",
+        "5.4 เหตุผลของการ mapping",
+        "5.5 หลักฐานที่ควรตรวจสอบ",
+        "5.6 คำแนะนำเบื้องต้น",
+        "5.7 ข้อจำกัดของระบบ",
+      ].map((heading, index) => ({
+        section_id: `section-${index + 1}`,
+        heading,
+        paragraphs: [`Section ${index + 1} content.`],
+        items: index === 6 ? ["Provisional and unverified."] : [],
+      })),
+    };
+    vi.mocked(getChatThread).mockResolvedValue(reportReadyThread);
+    vi.mocked(listChatReports).mockResolvedValue([savedReport]);
+
+    await renderLoadedPage();
+    fireEvent.click(screen.getByRole("tab", { name: "Report generation" }));
+
+    expect(await screen.findByText("5.7 ข้อจำกัดของระบบ")).toBeInTheDocument();
+    expect(screen.queryByText("Report limitations")).not.toBeInTheDocument();
+  });
+
   it("downloads the selected validated report as a PDF", async () => {
     const reportReadyThread = makeReportReadyThread();
     const savedReport = makeReport(1);

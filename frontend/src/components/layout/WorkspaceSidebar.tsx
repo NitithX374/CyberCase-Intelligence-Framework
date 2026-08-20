@@ -25,31 +25,24 @@ interface WorkspaceNavigationProps {
 
 const threadStatusConfig: Record<
   ChatThreadRead["status"],
-  { label: string; badgeClass: string; dotClass: string }
+  { label: string; dotClass?: string }
 > = {
   idle: {
     label: "Ready",
-    badgeClass: "bg-surface-nested text-ink-secondary border-line",
-    dotClass: "bg-ink-muted",
   },
   processing: {
     label: "Analyzing...",
-    badgeClass: "bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]",
     dotClass: "bg-[#175CD3] animate-pulse motion-reduce:animate-none",
   },
   awaiting_followup: {
     label: "Clarification",
-    badgeClass: "bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]",
     dotClass: "bg-[#B54708]",
   },
   answered: {
     label: "Answered",
-    badgeClass: "bg-[#ECFDF3] text-[#027A48] border-[#ABEFC6]",
-    dotClass: "bg-[#12B76A]",
   },
   failed: {
     label: "Failed",
-    badgeClass: "bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]",
     dotClass: "bg-[#F04438]",
   },
 };
@@ -188,25 +181,20 @@ export function WorkspaceSidebar({
                     aria-label={`${thread.title}, ${statusInfo.label}`}
                     title={thread.title}
                     onClick={() => onSelectThread(thread.id)}
-                    className={`relative flex min-h-8.5 min-w-0 flex-1 flex-col justify-center rounded-md border px-2 py-1 text-left outline-none transition-[background-color,border-color,color] duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none ${
+                    className={`relative flex min-h-7.5 min-w-0 flex-1 items-center gap-1.5 rounded-md border px-2 py-1.5 text-left outline-none transition-[background-color,border-color,color] duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none ${
                       selected
                         ? "border-line bg-surface font-semibold text-ink shadow-[0_1px_2px_rgba(39,39,39,0.03)]"
                         : "border-transparent text-ink-secondary hover:bg-surface/70 hover:text-ink"
                     }`}
                   >
-                    <span className="block truncate text-[11.5px] leading-tight text-ink">
-                      {thread.title}
-                    </span>
-                    <div className="mt-0.5 flex items-center gap-1">
+                    {statusInfo.dotClass && (
                       <span
                         className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusInfo.dotClass}`}
                       />
-                      <span
-                        className={`inline-block rounded px-1 text-[8px] font-bold uppercase tracking-wider border ${statusInfo.badgeClass}`}
-                      >
-                        {statusInfo.label}
-                      </span>
-                    </div>
+                    )}
+                    <span className="block min-w-0 flex-1 truncate text-[11.5px] leading-tight text-ink">
+                      {thread.title}
+                    </span>
                   </button>
                   <button
                     type="button"

@@ -399,18 +399,19 @@ function StructuredReportView({ report }: { report: ChatStructuredReport }) {
           );
         })}
       </div>
-      {report.limitations.length > 0 && (
-        <div className="mt-6 border-t border-line pt-5">
-          <h3 className="text-sm font-extrabold uppercase tracking-[0.12em] text-ink-secondary">
-            Report limitations
-          </h3>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-ink-secondary">
-            {report.limitations.map((limitation, index) => (
-              <li key={`limitation-${index}`}>{limitation}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {report.report_version === "baseline_report_v1" &&
+        report.limitations.length > 0 && (
+          <div className="mt-6 border-t border-line pt-5">
+            <h3 className="text-sm font-extrabold uppercase tracking-[0.12em] text-ink-secondary">
+              Report limitations
+            </h3>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-ink-secondary">
+              {report.limitations.map((limitation, index) => (
+                <li key={`limitation-${index}`}>{limitation}</li>
+              ))}
+            </ul>
+          </div>
+        )}
     </>
   );
 }

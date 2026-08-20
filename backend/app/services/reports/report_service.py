@@ -371,10 +371,7 @@ class ChatReportService:
                 prompt_version=run_result.prompt_version,
                 provider=run_result.provider,
                 model=run_result.model,
-                decoding_settings={
-                    "temperature": settings.chat_report_temperature,
-                    "max_output_tokens": settings.chat_report_max_output_tokens,
-                },
+                decoding_settings={},
                 status=run_result.status,
                 validation_status=(
                     "validated" if run_result.status == "completed" else "failed"

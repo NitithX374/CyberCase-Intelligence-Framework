@@ -19,6 +19,10 @@ ReportSupportType = Literal[
 ReportStatus = Literal["provisional_unverified"]
 ReportPersistenceStatus = Literal["completed", "failed"]
 ReportValidationStatus = Literal["validated", "failed"]
+ReportVersion = Literal[
+    "baseline_report_v1",
+    "preliminary_analysis_report_v1",
+]
 ReportSectionId = Literal[
     "executive_summary",
     "case_background_scope",
@@ -27,6 +31,13 @@ ReportSectionId = Literal[
     "chronological_timeline",
     "technical_analysis_mitre",
     "conclusions_limitations_next_steps",
+    "case_summary",
+    "indicators_found",
+    "mitre_attack_mapping",
+    "mapping_rationale",
+    "evidence_to_examine",
+    "preliminary_recommendations",
+    "system_limitations",
 ]
 ReportHeading = Literal[
     "Executive Summary",
@@ -36,6 +47,13 @@ ReportHeading = Literal[
     "Chronological Timeline",
     "Technical Analysis and MITRE ATT&CK Mapping",
     "Conclusions, Limitations, and Recommended Next Investigative Steps",
+    "5.1 สรุปคดี",
+    "5.2 ตัวบ่งชี้ที่พบ",
+    "5.3 MITRE ATT&CK Mapping",
+    "5.4 เหตุผลของการ mapping",
+    "5.5 หลักฐานที่ควรตรวจสอบ",
+    "5.6 คำแนะนำเบื้องต้น",
+    "5.7 ข้อจำกัดของระบบ",
 ]
 
 REPORT_SECTION_IDS: tuple[str, ...] = (
@@ -60,6 +78,36 @@ REPORT_SECTION_HEADINGS: dict[str, str] = {
     "conclusions_limitations_next_steps": (
         "Conclusions, Limitations, and Recommended Next Investigative Steps"
     ),
+}
+
+PRELIMINARY_REPORT_SECTION_IDS: tuple[str, ...] = (
+    "case_summary",
+    "indicators_found",
+    "mitre_attack_mapping",
+    "mapping_rationale",
+    "evidence_to_examine",
+    "preliminary_recommendations",
+    "system_limitations",
+)
+
+PRELIMINARY_REPORT_SECTION_HEADINGS: dict[str, str] = {
+    "case_summary": "5.1 สรุปคดี",
+    "indicators_found": "5.2 ตัวบ่งชี้ที่พบ",
+    "mitre_attack_mapping": "5.3 MITRE ATT&CK Mapping",
+    "mapping_rationale": "5.4 เหตุผลของการ mapping",
+    "evidence_to_examine": "5.5 หลักฐานที่ควรตรวจสอบ",
+    "preliminary_recommendations": "5.6 คำแนะนำเบื้องต้น",
+    "system_limitations": "5.7 ข้อจำกัดของระบบ",
+}
+
+REPORT_SECTION_IDS_BY_VERSION: dict[str, tuple[str, ...]] = {
+    "baseline_report_v1": REPORT_SECTION_IDS,
+    "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_IDS,
+}
+
+REPORT_SECTION_HEADINGS_BY_VERSION: dict[str, dict[str, str]] = {
+    "baseline_report_v1": REPORT_SECTION_HEADINGS,
+    "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_HEADINGS,
 }
 
 
@@ -87,7 +135,7 @@ class ReportSection(BaseModel):
 class StructuredReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    report_version: Literal["baseline_report_v1"]
+    report_version: ReportVersion
     status: ReportStatus
     title: str = Field(min_length=1, max_length=200)
     sections: list[ReportSection] = Field(min_length=7, max_length=7)
@@ -140,7 +188,11 @@ __all__ = [
     "ChatReportCreate",
     "ChatReportRead",
     "REPORT_SECTION_HEADINGS",
+    "REPORT_SECTION_HEADINGS_BY_VERSION",
     "REPORT_SECTION_IDS",
+    "REPORT_SECTION_IDS_BY_VERSION",
+    "PRELIMINARY_REPORT_SECTION_HEADINGS",
+    "PRELIMINARY_REPORT_SECTION_IDS",
     "ReportClaim",
     "ReportHeading",
     "ReportPersistenceStatus",
@@ -149,5 +201,6 @@ __all__ = [
     "ReportStatus",
     "ReportSupportType",
     "ReportValidationStatus",
+    "ReportVersion",
     "StructuredReport",
 ]
