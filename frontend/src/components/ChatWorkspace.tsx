@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -25,6 +26,7 @@ import {
   type ThreadStatus,
 } from "@/lib/api";
 import { ChatPanel } from "@/components/conversation/ChatPanel";
+import { CaseStateInspector } from "@/components/conversation/CaseStateInspector";
 import { ChatExtractionView } from "@/components/analysis/ChatExtractionView";
 import { ChatRelationshipsView } from "@/components/relationships/ChatRelationshipsView";
 import { ChatReportView } from "@/components/report/ChatReportView";
@@ -47,6 +49,9 @@ import {
 import {
   latestChatExtractionForMessages,
 } from "@/lib/chat-extraction";
+import { caseUpdateForMessage, latestValidatedGaps, type CaseUpdateView } from "@/lib/case-update";
+import { mitreCandidatesForMessage } from "@/lib/mitre-candidate";
+import type { CaseStateInspectorUpdate } from "@/components/conversation/CaseStateInspector";
 
 const POLL_INTERVAL_MS = 1000;
 
@@ -790,6 +795,35 @@ export function ChatWorkspace() {
     latestExtraction.status === "candidate" &&
     latestExtraction.validation_status === "validated";
   const activeWorkspaceView = activeView;
+
+  const [selectedCaseUpdateOrdinal, setSelectedCaseUpdateOrdinal] = useState<
+    number | null
+  >(null);
+  const [isCaseInspectorOpen, setIsCaseInspectorOpen] = useState(true);
+
+  const caseUpdates = useMemo(() => {
+    return messages
+      .filter((msg) => msg.role === "assistant")
+      .map((msg): CaseStateInspectorUpdate => {
+        const update = caseUpdateForMessage(msg, messages);
+        const mitreCandidates = mitreCandidatesForMessage(msg);
+        const fallbackGaps = latestValidatedGaps(messages, msg.ordinal);
+        const resolvedUpdate: CaseUpdateView = update ?? {
+          status: "no_change",
+          parentVersion: 1,
+          childVersion: null,
+          added: [],
+          changed: [],
+          currentUnresolvedInformation: fallbackGaps,
+        };
+        return {
+          ordinal: msg.ordinal,
+          update: resolvedUpdate,
+          mitreCandidates,
+        };
+      });
+  }, [messages]);
+
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-ink">
       <WorkspaceSidebar
@@ -805,147 +839,199 @@ export function ChatWorkspace() {
         onViewChange={handleViewChange}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex min-h-[76px] shrink-0 flex-wrap items-center gap-3 border-b border-line bg-canvas px-3 py-3 sm:px-5 md:min-h-[72px] md:flex-nowrap md:px-7">
-          <div className="flex min-w-0 w-full items-center gap-3 md:flex-1">
-            <Link
-              href="/"
-              aria-label="CyberCase home"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary text-sm font-extrabold text-ivory outline-none transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
-            >
-              C
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-extrabold tracking-[-0.02em] sm:text-lg">
-                {activeThread?.title ?? "New chat"}
-              </p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-ink-secondary">
-                <span className={`h-1.5 w-1.5 rounded-full ${phase === "error" ? "bg-[#B42318]" : phase === "querying" || phase === "analyzing" ? "bg-primary motion-safe:animate-pulse" : "bg-ink-muted"}`} />
-                <span>{workspaceViewLabels[activeView]}</span>
-                <span aria-hidden="true">·</span>
-                <span>{phaseLabels[phase]}</span>
-              </p>
+      {/* Main Workspace Area (Center + Full-Ceiling Right Inspector) */}
+      <div className="flex min-w-0 flex-1 overflow-hidden">
+        {/* Center Column: Header + Main View */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="flex min-h-[76px] shrink-0 flex-wrap items-center gap-3 border-b border-line bg-canvas px-3 py-3 sm:px-5 md:min-h-[72px] md:flex-nowrap md:px-7">
+            <div className="flex min-w-0 w-full items-center gap-3 md:flex-1">
+              <Link
+                href="/"
+                aria-label="CyberCase home"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary text-sm font-extrabold text-ivory outline-none transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
+              >
+                C
+              </Link>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-extrabold tracking-[-0.02em] sm:text-lg">
+                  {activeThread?.title ?? "New chat"}
+                </p>
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-ink-secondary">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      phase === "error"
+                        ? "bg-[#B42318]"
+                        : phase === "querying" || phase === "analyzing"
+                          ? "bg-primary motion-safe:animate-pulse"
+                          : "bg-ink-muted"
+                    }`}
+                  />
+                  <span>{workspaceViewLabels[activeView]}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{phaseLabels[phase]}</span>
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex w-full items-center gap-2 md:hidden">
-            <label htmlFor="mobile-workspace-view" className="sr-only">
-              Select workspace
-            </label>
-            <select
-              id="mobile-workspace-view"
-              value={activeView}
-              onChange={(event) =>
-                handleViewChange(event.target.value as WorkspaceView)
-              }
-              aria-label="Select workspace"
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
-            >
-              <option value="chat">Chat</option>
-              <option value="extraction">Case details</option>
-              <option value="relationships">Relationships</option>
-              <option value="report">Report generation</option>
-            </select>
-          </div>
+            {/* Desktop Header Toggle Button for Case State Inspector */}
+            {activeWorkspaceView === "chat" && (
+              <div className="hidden md:flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCaseInspectorOpen((prev) => !prev)}
+                  aria-label={
+                    isCaseInspectorOpen
+                      ? "Hide Case State Inspector"
+                      : "Show Case State Inspector"
+                  }
+                  title="Toggle Case State Inspector"
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
+                    isCaseInspectorOpen
+                      ? "border-primary bg-primary text-ivory shadow-xs"
+                      : "border-line-strong bg-surface text-ink-secondary hover:border-primary hover:text-ink"
+                  }`}
+                >
+                  <Icon name="details" className="h-4 w-4" />
+                  <span>
+                    Case State {caseUpdates.length > 0 ? `(${caseUpdates.length})` : ""}
+                  </span>
+                </button>
+              </div>
+            )}
 
-          <div className="flex w-full items-center gap-2 md:hidden">
-            <select
-              value={activeThreadId ?? ""}
-              onChange={(event) => {
-                if (event.target.value) {
-                  void handleSelectThread(event.target.value);
+            <div className="flex w-full items-center gap-2 md:hidden">
+              <label htmlFor="mobile-workspace-view" className="sr-only">
+                Select workspace
+              </label>
+              <select
+                id="mobile-workspace-view"
+                value={activeView}
+                onChange={(event) =>
+                  handleViewChange(event.target.value as WorkspaceView)
                 }
-              }}
-              aria-label="Select saved chat"
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
-            >
-              <option value="">Select chat</option>
-              {threads.map((thread) => (
-                <option key={thread.id} value={thread.id}>
-                  {thread.title}
-                </option>
-              ))}
-            </select>
+                aria-label="Select workspace"
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
+              >
+                <option value="chat">Chat</option>
+                <option value="extraction">Case details</option>
+                <option value="relationships">Relationships</option>
+                <option value="report">Report generation</option>
+              </select>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => void handleNewChat()}
-              disabled={creatingThread}
-              aria-label="New chat"
-              title="New chat"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink outline-none transition-colors hover:border-primary hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-            </button>
+            <div className="flex w-full items-center gap-2 md:hidden">
+              <select
+                value={activeThreadId ?? ""}
+                onChange={(event) => {
+                  if (event.target.value) {
+                    void handleSelectThread(event.target.value);
+                  }
+                }}
+                aria-label="Select saved chat"
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
+              >
+                <option value="">Select chat</option>
+                {threads.map((thread) => (
+                  <option key={thread.id} value={thread.id}>
+                    {thread.title}
+                  </option>
+                ))}
+              </select>
 
-            {activeThread && (
               <button
                 type="button"
-                onClick={() => setDeleteCandidate(activeThread)}
-                disabled={deletingThreadId !== null}
-                aria-label={`Delete ${activeThread.title}`}
-                title={`Delete ${activeThread.title}`}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-secondary outline-none transition-colors hover:border-[#B42318] hover:bg-red-50 hover:text-[#B42318] focus-visible:ring-2 focus-visible:ring-[#B42318] disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
+                onClick={() => void handleNewChat()}
+                disabled={creatingThread}
+                aria-label="New chat"
+                title="New chat"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink outline-none transition-colors hover:border-primary hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
               >
-                <Icon name="trash" className="h-5 w-5" />
+                <Icon name="plus" className="h-5 w-5" />
               </button>
-            )}
-          </div>
-        </header>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden bg-canvas">
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            {activeWorkspaceView !== "chat" && queryError && (
-              <div
-                role="alert"
-                className="mx-4 mt-4 shrink-0 rounded-xl border border-[#E5B8B3] bg-[#FFF5F4] px-4 py-3 text-sm font-medium text-[#8F1D14] sm:mx-7 lg:mx-10"
-              >
-                {queryError}
-              </div>
-            )}
-            {activeWorkspaceView === "chat" ? (
-              <div
-                id="workspace-chat-panel"
-                role="tabpanel"
-                aria-label="Chat"
-                className="flex min-h-0 flex-1 flex-col overflow-hidden"
-              >
-                <ChatPanel
-                  messages={visibleMessages}
-                  input={input}
-                  threadStatus={threadStatus}
-                  phase={phase}
-                  error={queryError}
-                  postAnswerAction={postAnswerAction}
-                  onInputChange={setInput}
-                  onPostAnswerActionChange={handlePostAnswerActionChange}
-                  onSubmit={handleSubmit}
+              {activeThread && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteCandidate(activeThread)}
+                  disabled={deletingThreadId !== null}
+                  aria-label={`Delete ${activeThread.title}`}
+                  title={`Delete ${activeThread.title}`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-secondary outline-none transition-colors hover:border-[#B42318] hover:bg-red-50 hover:text-[#B42318] focus-visible:ring-2 focus-visible:ring-[#B42318] disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
+                >
+                  <Icon name="trash" className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+          </header>
+
+          <div className="flex min-h-0 flex-1 overflow-hidden bg-canvas">
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+              {activeWorkspaceView !== "chat" && queryError && (
+                <div
+                  role="alert"
+                  className="mx-4 mt-4 shrink-0 rounded-xl border border-[#E5B8B3] bg-[#FFF5F4] px-4 py-3 text-sm font-medium text-[#8F1D14] sm:mx-7 lg:mx-10"
+                >
+                  {queryError}
+                </div>
+              )}
+              {activeWorkspaceView === "chat" ? (
+                <div
+                  id="workspace-chat-panel"
+                  role="tabpanel"
+                  aria-label="Chat"
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                >
+                  <ChatPanel
+                    messages={visibleMessages}
+                    input={input}
+                    threadStatus={threadStatus}
+                    phase={phase}
+                    error={queryError}
+                    postAnswerAction={postAnswerAction}
+                    onInputChange={setInput}
+                    onPostAnswerActionChange={handlePostAnswerActionChange}
+                    onSubmit={handleSubmit}
+                    onSelectMessageOrdinal={(ordinal) => {
+                      setSelectedCaseUpdateOrdinal(ordinal);
+                      setIsCaseInspectorOpen(true);
+                    }}
+                  />
+                </div>
+              ) : activeView === "relationships" ? (
+                <ChatRelationshipsView
+                  extraction={latestExtraction}
+                  onOpenChat={() => handleViewChange("chat")}
                 />
-              </div>
-            ) : activeView === "relationships" ? (
-              <ChatRelationshipsView
-                extraction={latestExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
-            ) : activeWorkspaceView === "extraction" ? (
-              <ChatExtractionView
-                extraction={latestExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
-            ) : (
-              <ChatReportView
-                key={`${activeThreadId ?? "new-chat"}:${messages.at(-1)?.id ?? "empty"}`}
-                threadId={activeThreadId}
-                threadTitle={activeThread?.title ?? "New chat"}
-                threadStatus={threadStatus}
-                hasMessages={messages.length > 0}
-                hasValidatedExtraction={hasValidatedExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
-            )}
-          </main>
-
+              ) : activeWorkspaceView === "extraction" ? (
+                <ChatExtractionView
+                  extraction={latestExtraction}
+                  onOpenChat={() => handleViewChange("chat")}
+                />
+              ) : (
+                <ChatReportView
+                  key={`${activeThreadId ?? "new-chat"}:${messages.at(-1)?.id ?? "empty"}`}
+                  threadId={activeThreadId}
+                  threadTitle={activeThread?.title ?? "New chat"}
+                  threadStatus={threadStatus}
+                  hasMessages={messages.length > 0}
+                  hasValidatedExtraction={hasValidatedExtraction}
+                  onOpenChat={() => handleViewChange("chat")}
+                />
+              )}
+            </main>
+          </div>
         </div>
+
+        {/* Right Inspector Panel: Full Ceiling Height! */}
+        {activeWorkspaceView === "chat" && (
+          <CaseStateInspector
+            updates={caseUpdates}
+            selectedOrdinal={selectedCaseUpdateOrdinal}
+            onSelectOrdinal={setSelectedCaseUpdateOrdinal}
+            isOpen={isCaseInspectorOpen}
+            onClose={() => setIsCaseInspectorOpen(false)}
+          />
+        )}
       </div>
       <DeleteChatDialog
         thread={deleteCandidate}

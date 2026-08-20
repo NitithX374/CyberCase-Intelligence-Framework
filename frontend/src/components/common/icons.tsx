@@ -9,7 +9,9 @@ export type IconName =
   | "plus"
   | "report"
   | "send"
-  | "trash";
+  | "trash"
+  | "close"
+  | "chevron";
 
 const paths: Record<IconName, React.ReactNode> = {
   chat: <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />,
@@ -55,6 +57,8 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="M10 11v5M14 11v5" />
     </>
   ),
+  close: <path d="M18 6 6 18M6 6l12 12" />,
+  chevron: <polyline points="6 9 12 15 18 9" />,
 };
 
 interface IconProps extends SVGProps<SVGSVGElement> {

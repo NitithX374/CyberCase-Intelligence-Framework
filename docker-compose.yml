@@ -61,6 +61,13 @@ services:
       dockerfile: Dockerfile
     container_name: cybercase-rag-service
     restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     environment:
       CORE_LLM_PROVIDER: ${CORE_LLM_PROVIDER:-openrouter}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
