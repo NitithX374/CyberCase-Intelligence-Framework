@@ -10,9 +10,21 @@ What is being compared - read this before quoting any number
 These benchmarks are a short-text labelling task: 80-400 characters of English
 CTI prose in, a set of ATT&CK IDs out. That is NOT what this pipeline is for
 (a long Thai incident narrative in, a structured prosecutor case summary out).
-The comparable slice is retrieval plus technique identification, so the agent
-graph is deliberately bypassed: no router, no decomposition, no self-reflection
-loop. Decomposition in particular would shred an 80-character input.
+The comparable slice is retrieval plus technique identification, so most of the
+agent graph is bypassed: no router, no self-reflection loop.
+
+Decomposition is the exception, and it is opt-in via --decompose rather than
+off. It was assumed useless here on the grounds that an 80-character input has
+nothing to split, which measurement refuted: input LENGTH is not the criterion,
+the number of techniques packed into the sentence is. On single-label samples
+the decomposer returns one sub-query (a no-op for structure, though it does
+rewrite the text, which moves retrieval either way). On multi-label samples it
+splits cleanly along the gold labels - "adds collected files to a temp.zip ...
+then base64 encodes it and uploads it" becomes exactly the three sub-queries
+matching its three gold techniques. TechniqueRAG does the same thing, folded
+into its re-ranker prompt ("break down the query into distinct attack steps"),
+so running without it would be a self-inflicted handicap on the multi-label
+splits.
 
 Arms
 ----
@@ -268,6 +280,7 @@ def run_arm(
     tag: str = "",
     technique_only: bool = False,
     concurrency: int = 8,
+    decompose: bool = False,
 ) -> None:
     vmap = VersionMap.load()
     samples, unscoreable = load_dataset(dataset, vmap)
@@ -288,10 +301,16 @@ def run_arm(
 
     retriever = None
     llm = None
+    decomposer = None
     if arm != "llm-only":
         from ...retrieval.hybrid_retriever import HybridRetriever
 
         retriever = HybridRetriever()
+        if decompose:
+            from ...pipeline.query_decomposer import QueryDecomposer
+
+            decomposer = QueryDecomposer()
+            print("[BENCH] decomposition ON (one extra LLM call per sample)")
     if arm != "retrieval":
         llm = _make_llm()
 
@@ -301,12 +320,27 @@ def run_arm(
         """Sequential half: embed, rerank, format. GPU-bound, so never threaded."""
         if retriever is None:
             return [], ""
-        result = retriever.retrieve(
-            sample["input"],
-            top_k=top_k,
-            expand_graph=include_graph,
-            node_label_filter=labels,
-        )
+
+        if decomposer is not None:
+            # Multi-label samples pack several techniques into one short
+            # sentence, and a single embedding of that sentence tends to land on
+            # only one of them. Sub-queries get a per-query quota and are
+            # round-robin interleaved, so every step keeps a seat in the list.
+            sub_queries = decomposer.decompose(sample["input"], verbose=False)
+            result = retriever.retrieve_multi_quota(
+                sub_queries,
+                per_query_k=max(top_k // max(len(sub_queries), 1), 3),
+                top_k=top_k,
+                max_vector=top_k,
+                node_label_filter=labels,
+            )
+        else:
+            result = retriever.retrieve(
+                sample["input"],
+                top_k=top_k,
+                expand_graph=include_graph,
+                node_label_filter=labels,
+            )
         return (
             retrieval_ids(result, include_graph, vmap),
             candidate_context(result, vmap, max_chars=context_chars),
@@ -494,6 +528,17 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--decompose",
+        action="store_true",
+        help=(
+            "split each input into atomic sub-queries before retrieving, then "
+            "round-robin the per-sub-query results. Costs one extra LLM call per "
+            "sample. Expect little on single-label splits and a lot on "
+            "multi-label ones - TechniqueRAG does the same thing inside its "
+            "re-ranker prompt"
+        ),
+    )
+    parser.add_argument(
         "--technique-only",
         action="store_true",
         help=(
@@ -530,6 +575,7 @@ def main() -> None:
         tag=args.tag,
         technique_only=args.technique_only,
         concurrency=args.concurrency,
+        decompose=args.decompose,
     )
 
 
