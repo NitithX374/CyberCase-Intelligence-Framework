@@ -12,7 +12,6 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Filter,
     FieldCondition,
-    MatchAny,
     MatchValue,
     Prefetch,
     SparseVector,
@@ -48,21 +47,16 @@ class VectorResult:
     stix_id: str
 
 
-def _node_label_filter(
+def _wanted_labels(
     node_label_filter: Optional[Union[str, Sequence[str]]],
-) -> Optional[Filter]:
-    """Qdrant filter for one or several ``node_label`` payload values."""
+) -> Optional[set[str]]:
+    """Normalise the caller's label filter to a set, or None for "no filter"."""
     if not node_label_filter:
         return None
     if isinstance(node_label_filter, str):
-        condition = FieldCondition(
-            key="node_label", match=MatchValue(value=node_label_filter)
-        )
-    else:
-        condition = FieldCondition(
-            key="node_label", match=MatchAny(any=list(node_label_filter))
-        )
-    return Filter(must=[condition])
+        return {node_label_filter}
+    labels = {str(label) for label in node_label_filter}
+    return labels or None
 
 
 class VectorRetriever:
@@ -174,16 +168,26 @@ class VectorRetriever:
 
         ``node_label_filter`` takes one label or several — several is the useful
         case, since Technique and Subtechnique are separate labels and a caller
-        that wants "techniques" almost always wants both.
+        that wants "techniques" almost always wants both. It is applied the same
+        post-retrieval way as ``domain``, and for the same reason: the cloud
+        collection carries no payload index, and Qdrant strict mode answers a
+        filtered query on an unindexed key with 400 "Index required but not
+        found". Over-fetching keeps that off shared infra.
         """
-        q_filter = _node_label_filter(node_label_filter)
+        wanted = _wanted_labels(node_label_filter)
 
-        fetch_k = top_k * 3 if ATTACK_DOMAIN_FILTER else top_k
+        fetch_k = top_k
+        if ATTACK_DOMAIN_FILTER:
+            fetch_k *= 3
+        if wanted:
+            # Techniques and sub-techniques are ~37% of the entity collection,
+            # so ask for roughly three times what we intend to keep.
+            fetch_k *= 3
+
         results = self._search_hybrid(
             collection_name=QDRANT_COLLECTION_ENTITIES,
             query=query,
             top_k=fetch_k,
-            qdrant_filter=q_filter,
         )
 
         if ATTACK_DOMAIN_FILTER:
@@ -191,9 +195,11 @@ class VectorRetriever:
                 r
                 for r in results
                 if (r.metadata.get("domain") or "") == ATTACK_DOMAIN_FILTER
-            ][:top_k]
+            ]
+        if wanted:
+            results = [r for r in results if r.metadata.get("node_label") in wanted]
 
-        return results
+        return results[:top_k]
 
     def search_relationships(
         self,
