@@ -61,6 +61,7 @@ import io
 import json
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -266,6 +267,7 @@ def run_arm(
     context_chars: int = 9000,
     tag: str = "",
     technique_only: bool = False,
+    concurrency: int = 8,
 ) -> None:
     vmap = VersionMap.load()
     samples, unscoreable = load_dataset(dataset, vmap)
@@ -293,78 +295,121 @@ def run_arm(
     if arm != "retrieval":
         llm = _make_llm()
 
+    labels = tuple(TECHNIQUE_LABELS) if technique_only else None
+
+    def retrieve_one(sample: dict) -> tuple[list[str], str]:
+        """Sequential half: embed, rerank, format. GPU-bound, so never threaded."""
+        if retriever is None:
+            return [], ""
+        result = retriever.retrieve(
+            sample["input"],
+            top_k=top_k,
+            expand_graph=include_graph,
+            node_label_filter=labels,
+        )
+        return (
+            retrieval_ids(result, include_graph, vmap),
+            candidate_context(result, vmap, max_chars=context_chars),
+        )
+
+    def generate_one(sample: dict, context: str) -> tuple[list[str], str]:
+        """Concurrent half: one LLM round-trip, no shared state beyond the client."""
+        prompt = _PROMPTS[arm].format(context=context, query=sample["input"])
+        response = llm.invoke(prompt)
+        raw = getattr(response, "content", "") or ""
+        if isinstance(raw, list):  # some providers return content blocks
+            raw = "".join(
+                b.get("text", "") if isinstance(b, dict) else str(b) for b in raw
+            )
+        predicted: list[str] = []
+        for attack_id in extract_attack_ids(raw):
+            current = vmap.map_id(attack_id) or attack_id
+            if current not in predicted:
+                predicted.append(current)
+        return predicted, raw
+
     started = time.time()
     n_fail = 0
+    n_done = 0
+
+    def write(sample: dict, predicted: list[str], raw: str) -> None:
+        out.write(
+            json.dumps(
+                {
+                    "id": sample["id"],
+                    "arm": arm,
+                    "input": sample["input"],
+                    "gold": sample["gold"],
+                    "predicted": predicted,
+                    "raw": raw[:4000],
+                },
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
+        out.flush()
+
     try:
         with out_path.open("a", encoding="utf-8") as out:
-            for n, sample in enumerate(todo, start=1):
-                try:
-                    context = ""
-                    predicted: list[str] = []
-                    raw = ""
+            # Retrieval is sequential and LLM calls are I/O-bound, so the batch
+            # is retrieved one by one and then generated all at once. Writes stay
+            # on this thread, which keeps the resume file append-ordered and free
+            # of interleaved partial lines.
+            batch_size = max(concurrency, 1) if llm is not None else 1
+            for start in range(0, len(todo), batch_size):
+                batch = todo[start : start + batch_size]
 
-                    if retriever is not None:
-                        result = retriever.retrieve(
-                            sample["input"],
-                            top_k=top_k,
-                            expand_graph=include_graph,
-                            node_label_filter=(
-                                tuple(TECHNIQUE_LABELS) if technique_only else None
-                            ),
-                        )
-                        predicted = retrieval_ids(result, include_graph, vmap)
-                        context = candidate_context(result, vmap, max_chars=context_chars)
+                retrieved: list[tuple[dict, list[str], str]] = []
+                for sample in batch:
+                    try:
+                        ids, context = retrieve_one(sample)
+                        retrieved.append((sample, ids, context))
+                    except Exception as exc:  # noqa: BLE001 - resume later
+                        n_fail += 1
+                        print("  " + sample["id"] + ": RETRIEVE FAILED - " + str(exc))
 
-                    if llm is not None:
-                        prompt = _PROMPTS[arm].format(context=context, query=sample["input"])
-                        response = llm.invoke(prompt)
-                        raw = getattr(response, "content", "") or ""
-                        if isinstance(raw, list):  # some providers return blocks
-                            raw = "".join(
-                                b.get("text", "") if isinstance(b, dict) else str(b) for b in raw
-                            )
-                        predicted = [
-                            vmap.map_id(i) or i for i in extract_attack_ids(raw)
-                        ]
-                        # dedupe after mapping, keeping first-mention order
-                        seen: list[str] = []
-                        for i in predicted:
-                            if i not in seen:
-                                seen.append(i)
-                        predicted = seen
+                if llm is None:
+                    for sample, ids, _ in retrieved:
+                        write(sample, ids, "")
+                        n_done += 1
+                else:
+                    with ThreadPoolExecutor(max_workers=batch_size) as pool:
+                        futures = {
+                            pool.submit(generate_one, sample, context): sample
+                            for sample, _, context in retrieved
+                        }
+                        results: dict[str, tuple[list[str], str]] = {}
+                        for future in as_completed(futures):
+                            sample = futures[future]
+                            try:
+                                results[sample["id"]] = future.result()
+                            except Exception as exc:  # noqa: BLE001 - resume later
+                                n_fail += 1
+                                print("  " + sample["id"] + ": LLM FAILED - " + str(exc))
+                    # Write in batch order, not completion order, so a resumed
+                    # run reads the same way a serial one would.
+                    for sample, _, _ in retrieved:
+                        if sample["id"] in results:
+                            predicted, raw = results[sample["id"]]
+                            write(sample, predicted, raw)
+                            n_done += 1
 
-                    out.write(
-                        json.dumps(
-                            {
-                                "id": sample["id"],
-                                "arm": arm,
-                                "input": sample["input"],
-                                "gold": sample["gold"],
-                                "predicted": predicted,
-                                "raw": raw[:4000],
-                            },
-                            ensure_ascii=False,
-                        )
-                        + "\n"
-                    )
-                    out.flush()
-                except Exception as exc:  # noqa: BLE001 - keep going, resume later
-                    n_fail += 1
-                    print("  " + sample["id"] + ": FAILED - " + str(exc))
-
-                if n % 25 == 0 or n == len(todo):
-                    rate = n / max(time.time() - started, 1e-6)
-                    print(
-                        "  " + str(n) + "/" + str(len(todo))
-                        + "  " + format(rate, ".2f") + "/s"
-                        + "  eta " + format((len(todo) - n) / max(rate, 1e-6) / 60, ".1f") + "m"
-                        + ("  failures " + str(n_fail) if n_fail else "")
-                    )
+                elapsed = max(time.time() - started, 1e-6)
+                seen = start + len(batch)
+                rate = seen / elapsed
+                print(
+                    "  " + str(seen) + "/" + str(len(todo))
+                    + "  " + format(rate, ".2f") + "/s"
+                    + "  eta " + format((len(todo) - seen) / max(rate, 1e-6) / 60, ".1f") + "m"
+                    + ("  failures " + str(n_fail) if n_fail else "")
+                )
     finally:
         if retriever is not None:
             retriever.close()
 
-    print("[BENCH] wrote " + str(out_path))
+    print("[BENCH] wrote " + str(n_done) + " rows to " + str(out_path))
+    if n_fail:
+        print("[BENCH] " + str(n_fail) + " failed - rerun the same command to resume")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -439,6 +484,16 @@ def main() -> None:
     parser.add_argument("--include-graph", action="store_true", help="append graph neighbours")
     parser.add_argument("--tag", default="", help="suffix for the run file, e.g. a top-K variant")
     parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=8,
+        help=(
+            "how many LLM calls to keep in flight. Retrieval stays sequential "
+            "(GPU-bound); only the API round-trip is overlapped. Ignored by the "
+            "retrieval arm"
+        ),
+    )
+    parser.add_argument(
         "--technique-only",
         action="store_true",
         help=(
@@ -474,6 +529,7 @@ def main() -> None:
         include_graph=args.include_graph,
         tag=args.tag,
         technique_only=args.technique_only,
+        concurrency=args.concurrency,
     )
 
 
