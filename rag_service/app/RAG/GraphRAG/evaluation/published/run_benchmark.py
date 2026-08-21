@@ -230,6 +230,7 @@ def run_arm(
     include_graph: bool = False,
     context_chars: int = 6000,
     tag: str = "",
+    technique_only: bool = False,
 ) -> None:
     vmap = VersionMap.load()
     samples, unscoreable = load_dataset(dataset, vmap)
@@ -269,7 +270,12 @@ def run_arm(
 
                     if retriever is not None:
                         result = retriever.retrieve(
-                            sample["input"], top_k=top_k, expand_graph=include_graph
+                            sample["input"],
+                            top_k=top_k,
+                            expand_graph=include_graph,
+                            node_label_filter=(
+                                tuple(TECHNIQUE_LABELS) if technique_only else None
+                            ),
                         )
                         predicted = retrieval_ids(result, include_graph, vmap)
                         context = result.get_context_text(max_length=context_chars)
@@ -397,6 +403,16 @@ def main() -> None:
     parser.add_argument("--top-k", type=int, default=10, help="vector top-K before rerank")
     parser.add_argument("--include-graph", action="store_true", help="append graph neighbours")
     parser.add_argument("--tag", default="", help="suffix for the run file, e.g. a top-K variant")
+    parser.add_argument(
+        "--technique-only",
+        action="store_true",
+        help=(
+            "restrict vector search to Technique/Subtechnique nodes. On this task the "
+            "reranker otherwise spends its top slots on the Group/Software pages the "
+            "procedure text was lifted from, which is closer to how the published "
+            "retrieval baselines search (their corpus is technique summaries only)"
+        ),
+    )
     parser.add_argument("--score", action="store_true", help="score existing runs and write RESULTS.md")
     parser.add_argument(
         "--no-validity-filter",
@@ -422,6 +438,7 @@ def main() -> None:
         top_k=args.top_k,
         include_graph=args.include_graph,
         tag=args.tag,
+        technique_only=args.technique_only,
     )
 
 

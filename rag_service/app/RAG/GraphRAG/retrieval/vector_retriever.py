@@ -6,12 +6,13 @@ using BGE-M3 and Qdrant's native RRF fusion.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Sequence, Union
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Filter,
     FieldCondition,
+    MatchAny,
     MatchValue,
     Prefetch,
     SparseVector,
@@ -45,6 +46,23 @@ class VectorResult:
     metadata: dict
     score: float
     stix_id: str
+
+
+def _node_label_filter(
+    node_label_filter: Optional[Union[str, Sequence[str]]],
+) -> Optional[Filter]:
+    """Qdrant filter for one or several ``node_label`` payload values."""
+    if not node_label_filter:
+        return None
+    if isinstance(node_label_filter, str):
+        condition = FieldCondition(
+            key="node_label", match=MatchValue(value=node_label_filter)
+        )
+    else:
+        condition = FieldCondition(
+            key="node_label", match=MatchAny(any=list(node_label_filter))
+        )
+    return Filter(must=[condition])
 
 
 class VectorRetriever:
@@ -144,7 +162,7 @@ class VectorRetriever:
         self,
         query: str,
         top_k: int = VECTOR_TOP_K,
-        node_label_filter: Optional[str] = None,
+        node_label_filter: Optional[Union[str, Sequence[str]]] = None,
     ) -> list[VectorResult]:
         """Search entity descriptions semantically.
 
@@ -153,16 +171,12 @@ class VectorRetriever:
         ``domain`` payload AFTER retrieval (over-fetch then trim) rather than via a
         Qdrant filter: the cloud collection has no payload index on ``domain``, and
         post-filtering avoids mutating shared infra (no index creation needed).
+
+        ``node_label_filter`` takes one label or several — several is the useful
+        case, since Technique and Subtechnique are separate labels and a caller
+        that wants "techniques" almost always wants both.
         """
-        q_filter = None
-        if node_label_filter:
-            q_filter = Filter(
-                must=[
-                    FieldCondition(
-                        key="node_label", match=MatchValue(value=node_label_filter)
-                    )
-                ]
-            )
+        q_filter = _node_label_filter(node_label_filter)
 
         fetch_k = top_k * 3 if ATTACK_DOMAIN_FILTER else top_k
         results = self._search_hybrid(
@@ -225,6 +239,7 @@ class VectorRetriever:
         self,
         query: str,
         top_k: int = VECTOR_TOP_K,
+        node_label_filter: Optional[Union[str, Sequence[str]]] = None,
     ) -> list[VectorResult]:
         """Search both entity and relationship collections.
 
@@ -232,8 +247,19 @@ class VectorRetriever:
         biasing retrieval toward Technique/Tactic nodes for incident queries.
         Scores are min-max normalized within each collection before merging
         so RRF scores from different Qdrant collections are comparable.
+
+        ``node_label_filter`` restricts the entity side to those node labels.
+        Relationship points carry ``edge_label``, not ``node_label``, so asking
+        for specific node labels also means skipping that collection — keeping
+        them would silently readmit exactly what the caller filtered out.
         """
-        entity_results = self.search_entities(query, top_k=top_k)
+        entity_results = self.search_entities(
+            query, top_k=top_k, node_label_filter=node_label_filter
+        )
+        if node_label_filter:
+            self._normalize_scores(entity_results)
+            return entity_results[:top_k]
+
         rel_results = self.search_relationships(query, top_k=max(top_k // 2, 3))
 
         self._normalize_scores(entity_results)
