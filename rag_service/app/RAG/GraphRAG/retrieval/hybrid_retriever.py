@@ -10,7 +10,7 @@ Implements the GraphRAG architecture from schema_design.md:
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Sequence, Union
 
 from FlagEmbedding import BGEM3FlagModel
 
@@ -112,7 +112,7 @@ class HybridRetriever:
         self,
         query: str,
         top_k: int = VECTOR_TOP_K,
-        node_label_filter: Optional[str] = None,
+        node_label_filter: Optional[Union[str, Sequence[str]]] = None,
         expand_graph: bool = True,
     ) -> GraphRAGResult:
         """Execute the full GraphRAG retrieval pipeline.
@@ -120,7 +120,10 @@ class HybridRetriever:
         Args:
             query: The search query (should be in English for best results).
             top_k: Number of vector results to retrieve.
-            node_label_filter: Optional filter for entity types.
+            node_label_filter: Restrict the vector search to these entity
+                types, e.g. ``("Technique", "Subtechnique")``. Until now this
+                argument was accepted and then dropped on the floor, because
+                ``search_all`` had no such parameter.
             expand_graph: When False, skip Neo4j graph expansion and return
                 vector + rerank results only (used by --ultrafast to drop the
                 graph round-trips entirely).
@@ -131,7 +134,9 @@ class HybridRetriever:
         print(f"[RETRIEVE] Query: {query[:80]}...")
 
         # ── Step 1: Vector search ─────────────────────────────────────────
-        vector_results = self.vector_retriever.search_all(query, top_k=top_k)
+        vector_results = self.vector_retriever.search_all(
+            query, top_k=top_k, node_label_filter=node_label_filter
+        )
 
         print(f"[RETRIEVE] Vector search: {len(vector_results)} results (pre-rerank)")
 
@@ -190,7 +195,7 @@ class HybridRetriever:
         self,
         queries: list[str],
         top_k: int = VECTOR_TOP_K,
-        node_label_filter: Optional[str] = None,
+        node_label_filter: Optional[Union[str, Sequence[str]]] = None,
     ) -> GraphRAGResult:
         """Execute hybrid retrieval for multiple queries and merge results.
 
@@ -264,7 +269,7 @@ class HybridRetriever:
         top_k: int = VECTOR_TOP_K,
         max_vector: int = 15,
         max_graph: int = 8,
-        node_label_filter: Optional[str] = None,
+        node_label_filter: Optional[Union[str, Sequence[str]]] = None,
     ) -> "GraphRAGResult":
         """Multi-query retrieval with a PER-QUERY QUOTA.
 
