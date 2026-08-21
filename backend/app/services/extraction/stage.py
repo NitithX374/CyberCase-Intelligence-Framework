@@ -8,9 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.config import settings
 from app.services.extraction.llm_extraction import (
-    BASELINE_EXTRACTION_MODE,
     BASELINE_EXTRACTION_PROMPT_VERSION,
-    BASELINE_EXTRACTION_VERSION,
     EXTRACTION_METADATA_KEY,
     ExtractionModelAdapter,
     run_baseline_extraction,

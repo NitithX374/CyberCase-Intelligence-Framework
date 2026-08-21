@@ -9,7 +9,6 @@ from app.database import get_db
 from app.schemas.chat import (
     ChatMessageAccepted,
     ChatMessageCreate,
-    ChatMessageRead,
     ChatRunRead,
     ChatThreadCreate,
     ChatThreadDetail,

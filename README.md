@@ -62,8 +62,6 @@ backend/app/services/
 └── reports/                  # Incident Report Generation & PDF Export
     ├── report_service.py
     ├── report_generation.py
-    ├── report_prompt.py
-    ├── report_provider_schema.py
     └── report_pdf.py
 ```
 
