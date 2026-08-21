@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import time
 from collections.abc import Mapping, Sequence
@@ -20,6 +21,8 @@ from uuid import UUID
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+
+logger = logging.getLogger("app.extraction")
 
 from app.config import settings
 from app.services.llm.core_llm import (
@@ -713,7 +716,8 @@ async def run_baseline_extraction(
 
     try:
         extraction = validate_baseline_extraction(parsed, extraction_input)
-    except (ExtractionValidationError, ValidationError):
+    except (ExtractionValidationError, ValidationError) as exc:
+        logger.warning("Baseline extraction validation failed: %s | raw: %s", exc, raw_response)
         return failure(
             "extraction_validation_failed",
             "The extraction model output failed validation",
