@@ -16,6 +16,9 @@ from app.models.case_state import CaseStateVersion
 from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.schemas.rag import QueryResponse
 from app.services.case_analysis import (
+    AnalysisClaim,
+    AnalysisTraceDraft,
+    CaseAnalysisResult,
     AnalysisInputMode,
     AnalysisMode,
     CASE_ANALYSIS_PROMPT_VERSION,
@@ -156,6 +159,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
                 analysis_input_mode="invalid_mode",
                 analysis_context=_analysis_context_fixture(),
                 question=None,
+                response_language="english",
             )
         self.assertEqual(raised_prompt.exception.code, "analysis_invalid_mode")
 
@@ -198,6 +202,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
             analysis_input_mode="case_state",
             analysis_context=analysis_context,
             question=None,
+            response_language="english",
         )
 
         serialized = prompt.split("<case_context_json>\n", 1)[1].split(
@@ -230,6 +235,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
             analysis_input_mode="raw_direct",
             analysis_context=analysis_context,
             question=None,
+            response_language="english",
         )
 
         serialized = prompt.split("<case_context_json>\n", 1)[1].split(
@@ -256,6 +262,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
             analysis_input_mode="raw_direct",
             analysis_context=analysis_context,
             question=None,
+            response_language="english",
         )
 
         # Assert Case State internal identifiers and entity structures do NOT appear in prompt
@@ -286,7 +293,15 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
                 return httpx.Response(
                     200,
                     json={
-                        "content": [{"type": "text", "text": "Analysis answer."}],
+                        "content": [{
+                            "type": "text",
+                            "text": json.dumps({
+                                "version": "analysis_trace_v1",
+                                "answer": "Analysis answer.",
+                                "claims": [],
+                                "mitre_associations": [],
+                            }),
+                        }],
                         "stop_reason": "end_turn",
                     },
                 )
@@ -307,6 +322,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
                     analysis_input_mode="case_state",
                     analysis_context=analysis_context,
                     question=None,
+                    user_message=raw_narrative,
                 )
 
             # Test RAW_DIRECT mode
@@ -320,6 +336,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
                     analysis_input_mode="raw_direct",
                     analysis_context=analysis_context,
                     question=None,
+                    user_message=raw_narrative,
                 )
 
         # Both modes must receive identical normalized system instructions
@@ -353,6 +370,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
                 analysis_input_mode="raw_direct",
                 analysis_context={"retrieved_context": "context " * 500},
                 question=exact_question,
+                response_language="english",
             )
 
         serialized = prompt.split("<case_context_json>\n", 1)[1].split(
@@ -476,9 +494,26 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
         worker.claim_run = AsyncMock(return_value=claimed)
         worker.complete_run = AsyncMock(return_value=True)
 
-        async def capture_analysis(**kwargs: object) -> str:
+        async def capture_analysis(**kwargs: object) -> CaseAnalysisResult:
             analysis_calls.append(kwargs)
-            return "Answer to analyst question in raw_direct mode."
+            return CaseAnalysisResult(
+                answer="Answer to analyst question in raw_direct mode.",
+                trace=AnalysisTraceDraft(
+                    analysis_mode="question_answer",
+                    claims=[
+                        AnalysisClaim(
+                            claim_id="A-01",
+                            claim_type="unknown",
+                            text="The requested conclusion remains unknown.",
+                            epistemic_status="unknown",
+                            entity_ids=[],
+                            relationship_ids=[],
+                            evidence_ids=[],
+                            timeline_event_ids=[],
+                        )
+                    ],
+                ),
+            )
 
         with (
             patch.object(settings, "analysis_input_mode", "raw_direct"),
@@ -503,6 +538,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
 
         outcome: AssistantOutcome = worker.complete_run.await_args.args[2]
         self.assertEqual(outcome.content, "Answer to analyst question in raw_direct mode.")
+        self.assertEqual(outcome.analysis_trace_draft.analysis_mode, "question_answer")
         self.assertEqual(outcome.metadata_json["analysis_input_mode"], "raw_direct")
         self.assertEqual(
             outcome.metadata_json["chat_action"]["analysis_input_mode"],
@@ -968,6 +1004,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
             analysis_input_mode="raw_direct",
             analysis_context=_analysis_context_fixture(),
             question=None,
+            response_language="english",
         )
         self.assertIn(initial_narrative, prompt_turn1)
         self.assertNotIn("นาย A", prompt_turn1)
@@ -990,6 +1027,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
             analysis_input_mode="raw_direct",
             analysis_context=_analysis_context_fixture(),
             question=None,
+            response_language="thai",
         )
         self.assertIn(initial_narrative, prompt_turn2)
         self.assertIn("คนร้ายชื่อนาย A", prompt_turn2)
@@ -1011,6 +1049,7 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
             analysis_input_mode="raw_direct",
             analysis_context=_analysis_context_fixture(),
             question=ask_question,
+            response_language="thai",
         )
         self.assertIn(initial_narrative, prompt_turn3)
         self.assertIn("คนร้ายชื่อนาย A", prompt_turn3)
@@ -1028,4 +1067,3 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

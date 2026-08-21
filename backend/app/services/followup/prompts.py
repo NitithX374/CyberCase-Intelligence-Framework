@@ -13,9 +13,9 @@ from app.services.followup.schemas import (
 
 
 GAP_ANALYSIS_VERSION = "gap_analysis_v1"
-GAP_ANALYSIS_PROMPT_VERSION = "gap_analysis_prompt_v1"
-FOLLOWUP_POLICY_VERSION = "analysis_aware_followup_v3"
-FOLLOWUP_PROMPT_VERSION = "followup_policy_prompt_v1"
+GAP_ANALYSIS_PROMPT_VERSION = "gap_analysis_prompt_v2"
+FOLLOWUP_POLICY_VERSION = "analysis_aware_followup_v4"
+FOLLOWUP_PROMPT_VERSION = "followup_policy_prompt_v2"
 FOLLOWUP_POLICY_PROVIDER = "core_llm"
 
 GAP_ANALYSIS_SYSTEM = (
@@ -38,7 +38,7 @@ TRUST AND PROVENANCE
 
 IDENTIFY ALL RELEVANT INCIDENT-SPECIFIC GAPS
 For every relevant gap, return:
-- topic: a concise factual topic
+- topic: a concise factual topic in the user's language
 - status: exactly one of NOT_PROVIDED, EXPLICITLY_UNKNOWN, AMBIGUOUS, or CONFLICTING
 - description: what is missing, unknown, unclear, or inconsistent
 - affects: the analytical conclusion or case area it affects
@@ -47,6 +47,18 @@ For every relevant gap, return:
 - askable: true only when the user could realistically answer from their own
   case knowledge; false for optional enrichment, external research, or facts
   explicitly unavailable to the user
+
+STATUS SEMANTICS
+- NOT_PROVIDED means the authoritative Case State contains no reported value for
+  the topic and the user has not explicitly said that the value is unknown or
+  unavailable. Phrases in generated analysis such as "not established" do not
+  turn absent Case State information into EXPLICITLY_UNKNOWN.
+- EXPLICITLY_UNKNOWN means the user explicitly reported that they do not know
+  the value, cannot determine it, or cannot obtain it from their case sources.
+- AMBIGUOUS means reported Case State information supports multiple materially
+  different interpretations that a factual clarification could resolve.
+- CONFLICTING means reported Case State sources provide incompatible values or
+  accounts for the same topic.
 
 PRIORITY GUIDANCE
 Use high when resolving the gap could materially change interpretation,
@@ -84,6 +96,8 @@ DECISION RULES
 - Select at most one highest-priority material gap that is askable.
 - Eligible gaps have priority high or medium, askable true, and status
   NOT_PROVIDED, AMBIGUOUS, or CONFLICTING. Never ask about EXPLICITLY_UNKNOWN.
+- If at least one eligible high-priority gap exists, ask exactly one of those
+  gaps. Do not proceed merely because several material facts are missing.
 - Do not ask for optional enrichment, external investigation, ATT&CK IDs,
   ATT&CK candidates, legal labels, or general knowledge.
 - KNOWN facts and Generic knowledge requests proceed without clarification.

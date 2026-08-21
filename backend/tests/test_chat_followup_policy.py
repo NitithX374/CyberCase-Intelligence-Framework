@@ -302,6 +302,10 @@ class FollowUpPolicyHttpTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(decision.question, "Which host was affected?")
         self.assertIn("KNOWN", str(captured["system"]))
         self.assertIn("EXPLICITLY_UNKNOWN", str(captured["system"]))
+        self.assertIn(
+            "Do not proceed merely because several material facts are missing.",
+            str(captured["system"]),
+        )
         self.assertIn("Generic knowledge", str(captured["system"]))
         self.assertNotIn("rag_answer", json.dumps(captured))
         provider_schema = captured["output_config"]["format"]["schema"]
@@ -467,6 +471,9 @@ class FollowUpPolicyHttpTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result.analysis.gaps[0].status, "NOT_PROVIDED")
         self.assertFalse(result.analysis.gaps[1].askable)
+        self.assertIn("Phrases in generated analysis", str(captured["system"]))
+        self.assertIn("user explicitly reported", str(captured["system"]))
+        self.assertIn("topic in the user's language", str(captured["system"]))
         self.assertEqual(
             captured["output_config"]["format"]["schema"],  # type: ignore[index]
             GAP_ANALYSIS_SCHEMA,
@@ -608,6 +615,10 @@ class FollowUpOutcomeTests(unittest.IsolatedAsyncioTestCase):
         trace = outcome.metadata_json["chat_followup"]
         self.assertEqual(trace["decision"], "ask_followup")
         self.assertEqual(trace["selected_gap"], "affected host")
+        self.assertEqual(
+            trace["selected_gap_detail"],
+            analyzer.analysis.gaps[0].model_dump(mode="json"),
+        )
         self.assertEqual(trace["gap_analysis"]["status"], "completed")
         self.assertEqual(
             trace["gap_analysis"]["gaps"][0]["topic"],
@@ -650,6 +661,80 @@ class FollowUpOutcomeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(outcome)
 
+    async def test_proceed_is_overridden_for_required_material_gap(self) -> None:
+        analyzer = _RecordingGapAnalyzer()
+        analyzer.analysis = GapAnalysis(
+            gaps=[
+                GapItem(
+                    topic="เหตุการณ์ที่เกี่ยวข้องกับ นาย A",
+                    status="EXPLICITLY_UNKNOWN",
+                    description="ยังไม่มีการระบุเหตุการณ์",
+                    affects="Overall case characterization",
+                    reason="The incident cannot be characterized without it.",
+                    priority="high",
+                    askable=True,
+                )
+            ]
+        )
+
+        outcome = await resolve_followup_outcome(
+            original_user_content="นาย A",
+            clarification_exchanges=(),
+            followup_root_ordinal=1,
+            source_run_id=uuid4(),
+            gap_analyzer=analyzer,
+            policy=_AnswerPolicy(),
+        )
+
+        assert outcome is not None
+        self.assertEqual(
+            outcome.content,
+            "กรุณาให้ข้อมูลเพิ่มเติมเกี่ยวกับ เหตุการณ์ที่เกี่ยวข้องกับ นาย A ได้หรือไม่?",
+        )
+        trace = outcome.metadata_json["chat_followup"]
+        self.assertEqual(trace["action"], "ask_followup")
+        self.assertEqual(trace["policy_decision"], "proceed")
+        self.assertEqual(
+            trace["decision_source"],
+            "deterministic_material_gap_guard",
+        )
+        self.assertEqual(trace["stop_reason"], "required_material_gap_guard")
+        self.assertEqual(
+            trace["selected_gap_detail"]["status"],
+            "NOT_PROVIDED",
+        )
+        self.assertEqual(
+            trace["gap_analysis"]["gaps"][0]["status"],
+            "NOT_PROVIDED",
+        )
+
+    async def test_explicitly_unknown_gap_does_not_force_followup(self) -> None:
+        analyzer = _RecordingGapAnalyzer()
+        analyzer.analysis = GapAnalysis(
+            gaps=[
+                GapItem(
+                    topic="affected host",
+                    status="EXPLICITLY_UNKNOWN",
+                    description="The user reported that the host is unknown.",
+                    affects="Host-scoped interpretation",
+                    reason="It limits the incident conclusion.",
+                    priority="high",
+                    askable=False,
+                )
+            ]
+        )
+
+        outcome = await resolve_followup_outcome(
+            original_user_content="The affected host is unknown.",
+            clarification_exchanges=(),
+            followup_root_ordinal=1,
+            source_run_id=uuid4(),
+            gap_analyzer=analyzer,
+            policy=_AnswerPolicy(),
+        )
+
+        self.assertIsNone(outcome)
+
     async def test_policy_question_becomes_only_assistant_outcome(self) -> None:
         source_run_id = uuid4()
         outcome = await resolve_followup_outcome(
@@ -682,7 +767,7 @@ class FollowUpOutcomeTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(
             outcome.metadata_json["chat_followup"]["policy_version"],
-            "analysis_aware_followup_v3",
+            "analysis_aware_followup_v4",
         )
         self.assertEqual(
             outcome.metadata_json["chat_followup"]["reason_code"],

@@ -3,6 +3,7 @@ import type {
   ChatBaselineExtraction,
   ChatExtraction,
 } from "@/lib/api";
+import { caseReferenceAnchorId } from "@/lib/case-reference";
 import { FailedChatExtractionState } from "./ChatExtractionState";
 
 interface ChatExtractionSummaryProps {
@@ -80,7 +81,11 @@ function BaselineExtractionSummary({
           emptyMessage="No user-reported case detail was extracted."
         >
           {extraction.evidence.map((item) => (
-            <li key={item.evidence_id} className="rounded-xl bg-surface p-3">
+            <li
+              key={item.evidence_id}
+              id={caseReferenceAnchorId(item.evidence_id)}
+              className="scroll-mt-6 rounded-xl bg-surface p-3 target:ring-2 target:ring-primary"
+            >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-bold text-ink">{item.title}</p>
                 <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-secondary">

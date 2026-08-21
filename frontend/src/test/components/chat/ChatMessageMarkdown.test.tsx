@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
 import { ChatTranscript } from "@/components/conversation/ChatTranscript";
@@ -139,5 +139,53 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
       "bg-surface",
       "text-ink",
     );
+  });
+
+  it("expands the exact persisted follow-up explanation", () => {
+    const messages: PersistedChatMessage[] = [
+      {
+        id: "msg-follow-up",
+        thread_id: "thread-1",
+        ordinal: 2,
+        role: "assistant",
+        content: "Do you have authentication logs?",
+        retrieval_context_id: null,
+        metadata_json: {
+          chat_followup: {
+            kind: "clarification",
+            selected_gap_detail: {
+              topic: "Authentication records for VM access",
+              status: "NOT_PROVIDED",
+              description: "Authentication records were not provided.",
+              affects: "The account used for VM access remains unresolved.",
+              reason: "The reported access cannot be linked to a credential.",
+              priority: "high",
+              askable: true,
+            },
+          },
+        },
+        created_at: "2026-08-20T12:00:00Z",
+      },
+    ];
+
+    render(<ChatTranscript messages={messages} isProcessing={false} />);
+
+    const summary = screen.getByText("Why is CyberCase asking this?");
+    const details = summary.closest("details");
+    expect(details).not.toHaveAttribute("open");
+
+    fireEvent.click(summary);
+
+    expect(details).toHaveAttribute("open");
+    expect(
+      screen.getByText("Authentication records for VM access"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("The reported access cannot be linked to a credential."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("The account used for VM access remains unresolved."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("high")).toBeInTheDocument();
   });
 });
