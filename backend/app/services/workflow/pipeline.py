@@ -17,6 +17,7 @@ from app.services.case_analysis import (
     CaseAnalysisFailure,
     request_case_analysis,
 )
+from app.services.case_analysis.contracts import CaseAnalysisResult
 from app.services.case_state.mutator import (
     MUTATION_METADATA_KEY,
     CaseStateDelta,
@@ -118,7 +119,7 @@ async def process_chat_run(
     policy: FollowUpPolicy | None = None,
     gap_analyzer: GapAnalyzer | None = None,
     rag_call: Callable[[str], Awaitable[QueryResponse]] | None = None,
-    ask_call: Callable[..., Awaitable[str]] | None = None,
+    ask_call: Callable[..., Awaitable[object]] | None = None,
     extraction_adapter: ExtractionModelAdapter | None = None,
 ) -> None:
     """Process one run in-process; queued work is lost if this process exits."""
@@ -234,18 +235,17 @@ async def process_chat_run(
                         "analysis_context_missing",
                         "The accumulated raw case evidence could not be loaded for mutation in RAW_DIRECT mode",
                     )
-                answer = await (ask_call or request_case_analysis)(
-                    mode="case_overview",
-                    case_state_json=merged_case_state_json,
-                    raw_case_narrative=raw_narrative,
-                    analysis_context=analysis_context,
-                    question=None,
-                )
-                if not isinstance(answer, str) or not answer.strip():
-                    raise CaseAnalysisFailure(
-                        "analysis_invalid_response",
-                        "The mutation Main Case Analysis returned no answer",
+                analysis_result = _coerce_analysis_result(
+                    await (ask_call or request_case_analysis)(
+                        mode="case_overview",
+                        case_state_json=merged_case_state_json,
+                        raw_case_narrative=raw_narrative,
+                        analysis_context=analysis_context,
+                        question=None,
+                        user_message=claimed_run.content,
                     )
+                )
+                answer = analysis_result.answer
                 extraction_metadata = build_merged_extraction_metadata(
                     merged_case_state_json,
                     source_message_ids=_source_message_ids_for_run(claimed_run),
@@ -300,6 +300,8 @@ async def process_chat_run(
                         extraction_metadata=extraction_metadata,
                         followup_metadata_json=followup_metadata_json,
                         action=action,
+                        analysis_trace_draft=analysis_result.trace,
+                        analysis_trace_failure=analysis_result.trace_failure,
                     )
             _log_stage("PERSISTING OUTCOME & COMPLETING RUN", run_id)
             async with async_session() as finalize_db:
@@ -332,21 +334,23 @@ async def process_chat_run(
                     "analysis_context_missing",
                     "The accumulated raw case evidence could not be loaded for ASK in RAW_DIRECT mode",
                 )
-            answer = await (ask_call or request_case_analysis)(
-                mode="question_answer",
-                case_state_json=claimed_run.case_state_json,
-                raw_case_narrative=raw_narrative,
-                analysis_context=claimed_run.analysis_context,
-                question=claimed_run.content,
-            )
-            if not isinstance(answer, str) or not answer.strip():
-                raise CaseAnalysisFailure(
-                    "analysis_invalid_response",
-                    "The post-answer analysis returned no answer",
+            analysis_result = _coerce_analysis_result(
+                await (ask_call or request_case_analysis)(
+                    mode="question_answer",
+                    case_state_json=claimed_run.case_state_json,
+                    raw_case_narrative=raw_narrative,
+                    analysis_context=claimed_run.analysis_context,
+                    question=claimed_run.content,
+                    user_message=claimed_run.content,
                 )
+            )
+            answer = analysis_result.answer
             outcome = map_case_analysis_response(
-                answer.strip(),
+                answer,
                 analysis_context=claimed_run.analysis_context,
+                analysis_trace_draft=analysis_result.trace,
+                analysis_trace_failure=analysis_result.trace_failure,
+                expected_case_state_version_id=claimed_run.case_state_version_id,
             )
             _log_stage("PERSISTING ASK OUTCOME", run_id)
             async with async_session() as finalize_db:
@@ -405,18 +409,17 @@ async def process_chat_run(
                 "analysis_context_missing",
                 "The initial raw case narrative could not be loaded in RAW_DIRECT mode",
             )
-        answer = await (ask_call or request_case_analysis)(
-            mode="case_overview",
-            case_state_json=validated_case_state_json,
-            raw_case_narrative=raw_narrative,
-            analysis_context=analysis_context,
-            question=None,
-        )
-        if not isinstance(answer, str) or not answer.strip():
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The initial Main Case Analysis returned no answer",
+        analysis_result = _coerce_analysis_result(
+            await (ask_call or request_case_analysis)(
+                mode="case_overview",
+                case_state_json=validated_case_state_json,
+                raw_case_narrative=raw_narrative,
+                analysis_context=analysis_context,
+                question=None,
+                user_message=claimed_run.content,
             )
+        )
+        answer = analysis_result.answer
         _log_stage("EVALUATING CLARIFICATION & FOLLOWUP POLICY", run_id)
         followup_resolution = await evaluate_followup_outcome(
             original_user_content=claimed_run.original_user_content,
@@ -450,6 +453,8 @@ async def process_chat_run(
                 validated_case_state_json=validated_case_state_json,
                 extraction_metadata=extraction_metadata,
                 followup_metadata_json=followup_metadata_json,
+                analysis_trace_draft=analysis_result.trace,
+                analysis_trace_failure=analysis_result.trace_failure,
             )
 
         _log_stage("PERSISTING OUTCOME & COMPLETING RUN", run_id)
@@ -532,6 +537,29 @@ def _source_message_ids_for_run(claimed_run: ClaimedChatRun) -> list[UUID]:
     if claimed_run.request_message_id is not None:
         return [claimed_run.request_message_id]
     return []
+
+
+def _coerce_analysis_result(value: object) -> CaseAnalysisResult:
+    if isinstance(value, CaseAnalysisResult):
+        answer = value.answer.strip()
+        if not answer:
+            raise CaseAnalysisFailure(
+                "analysis_invalid_response",
+                "The Main Case Analysis returned no answer",
+            )
+        if answer == value.answer:
+            return value
+        return CaseAnalysisResult(
+            answer=answer,
+            trace=value.trace,
+            trace_failure=value.trace_failure,
+        )
+    if isinstance(value, str) and value.strip():
+        return CaseAnalysisResult(answer=value.strip(), trace=None)
+    raise CaseAnalysisFailure(
+        "analysis_invalid_response",
+        "The Main Case Analysis returned no answer",
+    )
 
 
 def _attach_post_analysis_followup_outcome(

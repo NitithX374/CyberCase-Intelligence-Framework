@@ -143,6 +143,47 @@ async def evaluate_followup_outcome(
             ),
         )
 
+    def ask_resolution(
+        *,
+        selected_gap: GapItem,
+        question: str,
+        reason_code: str,
+        stop_reason: str,
+        decision_source: str,
+        policy_decision: str,
+        **metadata_kwargs: Any,
+    ) -> FollowUpResolution:
+        metadata = _followup_metadata(
+            source_run_id=source_run_id,
+            followup_root_ordinal=followup_root_ordinal,
+            round_number=round_number,
+            prior_exchange_count=prior_exchange_count,
+            action="ask_followup",
+            question=question,
+            reason_code=reason_code,
+            stop_reason=stop_reason,
+            decision="ask_followup",
+            decision_source=decision_source,
+            policy_decision=policy_decision,
+            selected_gap=selected_gap.topic,
+            selected_gap_detail=selected_gap.model_dump(mode="json"),
+            gap_analysis=gap_trace,
+            rag_skipped=True,
+            **metadata_kwargs,
+        )
+        from app.services.workflow.outcome import AssistantOutcome
+
+        return FollowUpResolution(
+            outcome=AssistantOutcome(
+                content=question,
+                retrieval_context_id=None,
+                metadata_json=metadata,
+                thread_status="awaiting_followup",
+                active_rag_session_id=None,
+            ),
+            metadata_json={},
+        )
+
     if not settings.chat_followup_policy_enabled:
         return proceed_resolution(
             reason_code="followup_policy_disabled",
@@ -257,6 +298,22 @@ async def evaluate_followup_outcome(
             failure_code=failure_code,
         )
 
+    required_gap = _required_material_gap(gap_result.analysis)
+    if decision.decision == "proceed" and required_gap is not None:
+        return ask_resolution(
+            selected_gap=required_gap,
+            question=_required_gap_question(original_user_content, required_gap),
+            reason_code=_gap_reason_code(required_gap),
+            stop_reason="required_material_gap_guard",
+            decision_source="deterministic_material_gap_guard",
+            policy_decision=decision.decision,
+            latency_ms=result.latency_ms,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            provider=result.provider,
+            model=result.model,
+        )
+
     if decision.decision == "proceed":
         reason_code = decision.reason_code or (
             "unresolved_gaps_recorded"
@@ -309,37 +366,18 @@ async def evaluate_followup_outcome(
             model=result.model,
         )
 
-    reason_code = decision.reason_code or _gap_reason_code(selected_gap)
-    metadata = _followup_metadata(
-        source_run_id=source_run_id,
-        followup_root_ordinal=followup_root_ordinal,
-        round_number=round_number,
-        prior_exchange_count=prior_exchange_count,
-        action="ask_followup",
+    return ask_resolution(
+        selected_gap=selected_gap,
         question=decision.question,
-        reason_code=reason_code,
+        reason_code=decision.reason_code or _gap_reason_code(selected_gap),
         stop_reason="ask_followup",
-        decision=decision.decision,
-        selected_gap=selected_gap.topic,
-        gap_analysis=gap_trace,
+        decision_source="provider_policy",
+        policy_decision=decision.decision,
         latency_ms=result.latency_ms,
         input_tokens=result.input_tokens,
         output_tokens=result.output_tokens,
         provider=result.provider,
         model=result.model,
-        rag_skipped=True,
-    )
-    from app.services.workflow.outcome import AssistantOutcome
-
-    return FollowUpResolution(
-        outcome=AssistantOutcome(
-            content=decision.question,
-            retrieval_context_id=None,
-            metadata_json=metadata,
-            thread_status="awaiting_followup",
-            active_rag_session_id=None,
-        ),
-        metadata_json={},
     )
 
 
@@ -397,7 +435,9 @@ def _coerce_gap_analysis_result(
 ) -> GapAnalysisResult:
     if isinstance(raw_result, GapAnalysisResult):
         return GapAnalysisResult(
-            analysis=GapAnalysis.model_validate(raw_result.analysis),
+            analysis=_normalize_gap_analysis_semantics(
+                GapAnalysis.model_validate(raw_result.analysis)
+            ),
             latency_ms=(
                 raw_result.latency_ms
                 if raw_result.latency_ms is not None
@@ -409,8 +449,26 @@ def _coerce_gap_analysis_result(
             model=raw_result.model,
         )
     return GapAnalysisResult(
-        analysis=GapAnalysis.model_validate(raw_result),
+        analysis=_normalize_gap_analysis_semantics(
+            GapAnalysis.model_validate(raw_result)
+        ),
         latency_ms=elapsed_ms,
+    )
+
+
+def _normalize_gap_analysis_semantics(analysis: GapAnalysis) -> GapAnalysis:
+    return GapAnalysis(
+        gaps=[
+            GapItem.model_validate(
+                {
+                    **gap.model_dump(mode="json"),
+                    "status": "NOT_PROVIDED",
+                }
+            )
+            if gap.status == "EXPLICITLY_UNKNOWN" and gap.askable
+            else gap
+            for gap in analysis.gaps
+        ]
     )
 
 
@@ -447,6 +505,26 @@ def _gap_analysis_trace(result: GapAnalysisResult) -> dict[str, Any]:
         "model": result.model,
         "failure_code": None,
     }
+
+
+def _required_material_gap(analysis: GapAnalysis) -> GapItem | None:
+    return next(
+        (
+            gap
+            for gap in analysis.gaps
+            if gap.priority == "high"
+            and gap.askable
+            and gap.status in ("NOT_PROVIDED", "AMBIGUOUS", "CONFLICTING")
+        ),
+        None,
+    )
+
+
+def _required_gap_question(original_user_content: str, gap: GapItem) -> str:
+    topic = gap.topic.strip().rstrip(" ?？")[:180].rstrip()
+    if re.search(r"[\u0E00-\u0E7F]", original_user_content):
+        return f"กรุณาให้ข้อมูลเพิ่มเติมเกี่ยวกับ {topic} ได้หรือไม่?"
+    return f"Could you provide the missing case information about {topic}?"
 
 
 def _selected_askable_gap(
@@ -559,7 +637,10 @@ def _followup_metadata(
     model: str | None = None,
     failure_code: str | None = None,
     decision: str | None = None,
+    decision_source: str | None = None,
+    policy_decision: str | None = None,
     selected_gap: str | None = None,
+    selected_gap_detail: dict[str, Any] | None = None,
     requested_selected_gap: str | None = None,
     gap_analysis: dict[str, Any] | None = None,
     rag_skipped: bool = True,
@@ -578,8 +659,11 @@ def _followup_metadata(
             "model": model or target.model,
             "action": action,
             "decision": decision or action,
+            "decision_source": decision_source,
+            "policy_decision": policy_decision,
             "question": question,
             "selected_gap": selected_gap,
+            "selected_gap_detail": deepcopy(selected_gap_detail),
             "requested_selected_gap": requested_selected_gap,
             "reason_code": reason_code,
             "source_run_id": str(source_run_id),

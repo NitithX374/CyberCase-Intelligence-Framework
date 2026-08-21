@@ -10,6 +10,10 @@ from uuid import UUID
 from app.config import settings
 from app.schemas.rag import QueryResponse
 from app.services.case_analysis import CASE_ANALYSIS_PROMPT_VERSION
+from app.services.case_analysis.contracts import (
+    AnalysisTraceDraft,
+    AnalysisTraceFailureMetadata,
+)
 from app.services.clients.rag_client import RagCallFailure
 from app.services.extraction.llm_extraction import (
     BASELINE_EXTRACTION_MODE,
@@ -49,6 +53,9 @@ class AssistantOutcome:
     rag_context_payload: RagContextPayload | None = None
     case_state_delta_json: dict[str, object] | None = None
     expected_parent_case_state_version_id: UUID | None = None
+    analysis_trace_draft: AnalysisTraceDraft | None = None
+    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None
+    expected_analysis_case_state_version_id: UUID | None = None
 
 
 def map_rag_response(response: QueryResponse) -> dict[str, object]:
@@ -106,6 +113,8 @@ def map_initial_case_analysis_response(
     extraction_metadata: dict[str, Any],
     followup_metadata_json: dict[str, Any],
     analysis_input_mode: str | None = None,
+    analysis_trace_draft: AnalysisTraceDraft | None = None,
+    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None,
 ) -> AssistantOutcome:
     """Create the one durable initial Main analysis plus its grounding audit."""
 
@@ -140,6 +149,8 @@ def map_initial_case_analysis_response(
         active_rag_session_id=None,
         validated_case_state_json=validated_case_state_json,
         rag_context_payload=rag_context_payload,
+        analysis_trace_draft=analysis_trace_draft,
+        analysis_trace_failure=analysis_trace_failure,
     )
 
 
@@ -148,6 +159,9 @@ def map_case_analysis_response(
     *,
     analysis_context: dict[str, object],
     analysis_input_mode: str | None = None,
+    analysis_trace_draft: AnalysisTraceDraft | None = None,
+    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None,
+    expected_case_state_version_id: UUID | None = None,
 ) -> AssistantOutcome:
     """Persist an ASK answer while carrying forward the prior retrieval handle."""
 
@@ -178,6 +192,9 @@ def map_case_analysis_response(
         },
         thread_status="answered",
         active_rag_session_id=None,
+        analysis_trace_draft=analysis_trace_draft,
+        analysis_trace_failure=analysis_trace_failure,
+        expected_analysis_case_state_version_id=expected_case_state_version_id,
     )
 
 
@@ -193,6 +210,8 @@ def map_case_state_mutation_response(
     followup_metadata_json: dict[str, Any] | None = None,
     action: str = "add_case_info",
     analysis_input_mode: str | None = None,
+    analysis_trace_draft: AnalysisTraceDraft | None = None,
+    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None,
 ) -> AssistantOutcome:
     """Map a successful explicit mutation into an atomic child-version outcome."""
 
@@ -234,6 +253,8 @@ def map_case_state_mutation_response(
         expected_parent_case_state_version_id=(
             expected_parent_case_state_version_id
         ),
+        analysis_trace_draft=analysis_trace_draft,
+        analysis_trace_failure=analysis_trace_failure,
     )
 
 

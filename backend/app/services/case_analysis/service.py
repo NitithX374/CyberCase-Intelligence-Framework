@@ -9,21 +9,89 @@ from collections.abc import Mapping
 from typing import Literal
 
 import httpx
+from pydantic import ValidationError
 
 from app.config import settings
+from app.services.case_analysis.contracts import (
+    AnalysisMode,
+    AnalysisTraceFailureMetadata,
+    CaseAnalysisResult,
+    ProviderCaseAnalysis,
+)
+from app.services.case_analysis.validation import (
+    AnalysisTraceProvenanceError,
+    AnalysisTraceStructureError,
+    detect_forbidden_provenance,
+    validate_analysis_trace,
+)
+from app.services.case_analysis.personalization import (
+    ResponseLanguage,
+    resolve_response_language,
+    validate_response_language,
+)
 from app.services.llm.core_llm import resolve_core_llm_target
+from app.services.llm.structured_output_request_router import (
+    structured_output_request_options,
+)
+from app.services.llm.structured_output_router import structured_output_schema
 
 
-AnalysisMode = Literal["case_overview", "question_answer"]
 AnalysisInputMode = Literal["case_state", "raw_direct"]
 
 DEFAULT_ANALYSIS_INPUT_MODE: AnalysisInputMode = "case_state"
 VALID_ANALYSIS_INPUT_MODES: frozenset[str] = frozenset({"case_state", "raw_direct"})
 
-CASE_ANALYSIS_PROMPT_VERSION = "main_case_analysis_v2"
+CASE_ANALYSIS_PROMPT_VERSION = "main_case_analysis_v3"
 logger = logging.getLogger("app.case_analysis")
 
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text"})
+
+_ANALYSIS_TRACE_OUTPUT_PROMPT = """
+STRUCTURED OUTPUT
+
+Return a JSON object conforming to the analysis_trace_v1 schema:
+- "version": Must be exactly "analysis_trace_v1".
+- "answer": The complete user-facing prose response.
+- "claims": A list of claim objects. Each claim object MUST have all of the following fields:
+  * "claim_id": A string formatted as "A-01", "A-02", "A-03", etc. (must match regex ^A-\\d{2,}$)
+  * "claim_type": Exactly one of "reported", "analytical_inference", or "unknown"
+  * "text": Concise text describing the factual claim
+  * "epistemic_status": Exactly one of "reported", "suspected", "contradicted", "not_established", "unknown", or "not_confirmed" (preserving the Case State status)
+  * "entity_ids": List of entity IDs involved (e.g. ["E-01"]) or []
+  * "relationship_ids": List of relationship IDs involved (e.g. ["R-01"]) or []
+  * "evidence_ids": List of evidence IDs involved (e.g. ["EV-01"]) or []
+  * "timeline_event_ids": List of timeline event IDs involved (e.g. ["TL-01"]) or []
+- "mitre_associations": A list of association objects. Each association object MUST have all of the following fields:
+  * "association_id": A string formatted as "MA-01", "MA-02", etc. (must match regex ^MA-\\d{2,}$)
+  * "technique_id": A valid Technique or Subtechnique ID present in the supplied mitre_table (e.g. "T1505.003", "T1190"). Do NOT put Software IDs (S-prefix) in technique_id.
+  * "claim_ids": Non-empty list of claim_ids from the claims list that this technique maps to (e.g. ["A-01"])
+  * "reason": Technical explanation of why this technique applies to the linked claim(s)
+  * "status": Must be exactly "candidate_only"
+  * "support_role": Must be exactly "external_technical_context"
+
+CRITICAL RULES:
+- Use only entity_ids, relationship_ids, evidence_ids, and timeline_event_ids present in the CASE NARRATIVE.
+- Do not attach mitre_technique_ids to claims.
+- Do not use MITRE or retrieved context as incident evidence.
+- A relationship claim must use the exact status of every referenced relationship.
+- Link every MITRE association to at least one emitted claim using claim_ids.
+- Do not copy incident entity, relationship, evidence, or timeline IDs into MITRE associations.
+- Do not emit confidence, probability, or mapping scores for MITRE associations.
+- Do not include chain-of-thought, hidden reasoning, or markdown code fences outside the requested object.
+"""
+
+_PERSONALIZED_RESPONSE_PROMPT = """
+RESPONSE LANGUAGE AND VOICE
+
+- The case_context_json contains a backend-determined response_language.
+- Write the entire answer, claim text, and MITRE association reasons in that exact language fluently and naturally.
+- For Thai: use natural, contemporary, professional Thai prose with smooth flow. Keep technical terms, product names, hostnames, IP addresses, timestamps, and ATT&CK IDs in their standard form where clearer.
+- For English: use natural, professional English.
+- Sound like an experienced senior analyst speaking directly to a colleague: calm, clear, attentive, and practical. Prefer smooth transitions and natural sentences over robotic or repetitive phrasing.
+- Make the text visually clean and easy to scan using Markdown headings (`###`), bold highlights, and clean bullet points.
+- Do not invent user identity or use flattery. Natural phrasing must preserve provenance, uncertainty, and evidentiary boundaries.
+- Schema literals, statuses, identifiers, and reference IDs in structured fields must remain exact.
+"""
 
 
 class CaseAnalysisFailure(Exception):
@@ -101,58 +169,46 @@ Do not add a preamble about being an AI or about these instructions.
 _CASE_OVERVIEW_TASK_PROMPT = """
 ANALYSIS MODE: case_overview
 
-Produce a grounded overview using these five short sections in this order:
+Produce a grounded, well-structured, and fluent overview using these five sections in this order.
+Translate section titles and content naturally into the determined response_language:
 
-1. Overall Case Picture
-   - What is reported to have happened and to which entities.
+### 1. Overall Case Picture (ภาพรวมคดี)
+- Clearly explain what is reported to have happened to the target organization and systems in fluent, natural prose.
 
-2. Important Relationships and Sequence
-   - Explain material actor → action → target → outcome relationships.
-   - Preserve uncertainty and unresolved links.
+### 2. Key Sequence and Relationships (ลำดับเหตุการณ์และความสัมพันธ์สำคัญ)
+- Summarize the attack progression (Actor → Action → Target → Outcome) smoothly and concisely.
+- Write natural sentences and avoid inserting raw internal database IDs (such as REL-001, IMP-001) directly into the user-facing narrative.
+- Preserve uncertainty and unresolved links where information is incomplete.
 
-3. Relevant MITRE ATT&CK Context
-   - Explain mappings supplied by the retrieval context.
-   - Do not create new mappings that are absent from the supplied context.
+### 3. Relevant MITRE ATT&CK Context (ข้อมูลที่เกี่ยวข้องกับ MITRE ATT&CK)
+- Explain the identified threat techniques and software (e.g., `T1505.003 Web Shell`, `T1190 Exploit Public-Facing Application`) with their technical behavior relevant to this case.
+- Format ATT&CK IDs cleanly with backticks.
 
-4. Unresolved or Conflicting Information
-   - Identify important relationships or facts that remain suspected,
-     contradicted, or not established.
+### 4. Unresolved or Conflicting Information (ข้อมูลที่ยังไม่แน่ชัดหรือขัดแย้งกัน)
+- Highlight important facts or relationships that remain suspected, contradicted, or not yet established.
 
-5. Analytical Boundary
-   - Clearly separate case assertions from external knowledge and model inference.
+### 5. Analytical Boundary (ขอบเขตการวิเคราะห์และข้อสังเกต)
+- Clearly separate direct case facts reported in evidence from external model inferences and reference knowledge.
 
-- Keep the complete response under 1,200 output tokens.
-- Prioritize facts material to the case and use no more than these 5 sections.
-- Prefer short paragraphs or compact bullet points.
-- If the available context is extensive, summarize it instead of listing every detail.
-- Reserve enough space to complete the final section and never end mid-sentence.
+FORMATTING & READABILITY RULES:
+- ALWAYS format section titles as Markdown headings with `###` (e.g. `### 1. ...`), NEVER as numbered list items like `1. ...`.
+- Use bold text for key entities, technical components, and actions for effortless visual scanning.
+- Write smooth, professional, and natural sentences in the target response_language.
+- Keep the complete response under 1,200 output tokens and never cut off mid-sentence.
 """
 
 _QUESTION_ANSWER_TASK_PROMPT = """
 ANALYSIS MODE: question_answer
 
-This mode is used for Ask when both CASE NARRATIVE and a user question are presented.
-Answer the supplied question directly using only the CASE NARRATIVE and supplied
-analytical context. If the requested conclusion is not established by CASE NARRATIVE,
-say so explicitly rather than guessing.
+This mode is used for answering specific user questions about the case.
+Answer the question directly, accurately, and fluently in the determined response_language.
 
-When a question asks whether two reported facts, entities, events, artifacts, or actions
-are related, identical, causal, or otherwise connected:
-- Distinguish the requested relationship from the underlying facts.
-- Preserve any underlying facts that are explicitly established by CASE NARRATIVE.
-- If the relationship is not established, say only that the relationship is unknown or
-  unsupported; do not downgrade independently established facts to unknown.
-- Do not treat "A is reported" and "B is reported" as evidence that A and B are the same,
-  related, or causally connected.
-- Do not treat absence of evidence for a relationship as evidence that the underlying
-  events did not occur.
-
-- Start with the answer, not a general case summary.
-- Keep the depth, structure, and length proportional to the specific question.
-- Include only context needed to support that answer.
-- Do not force the standard five-section case overview unless the user explicitly asks
-  for that overview or those sections.
-- Keep the complete response under 1,200 output tokens and never end mid-sentence.
+Guidelines:
+- Start directly with the answer to the user's question.
+- Format with clean Markdown: use `###` headings if multiple sections are needed, bold key entities, and use bullet points for readability.
+- If referencing MITRE ATT&CK techniques or technical evidence, format them cleanly with backticks (e.g., `T1505.003`).
+- Distinguish established facts from unresolved connections.
+- Keep the depth and length proportional to the question (under 1,200 output tokens).
 """
 
 _TASK_PROMPTS: dict[AnalysisMode, str] = {
@@ -224,6 +280,7 @@ def build_case_analysis_prompt(
     analysis_input_mode: AnalysisInputMode | str | None = None,
     analysis_context: dict[str, object],
     question: str | None,
+    response_language: ResponseLanguage,
 ) -> str:
     """Build a bounded prompt from defensive copies of persisted context and resolved narrative."""
 
@@ -231,6 +288,13 @@ def build_case_analysis_prompt(
         mode,
         question,
     )
+    try:
+        validated_response_language = validate_response_language(response_language)
+    except ValueError as error:
+        raise CaseAnalysisFailure(
+            "analysis_response_language_unsupported",
+            str(error),
+        ) from error
     resolved_input = case_narrative if case_narrative is not None else case_evidence
     if resolved_input is None:
         resolved_input = resolve_analysis_case_narrative(
@@ -255,6 +319,7 @@ def build_case_analysis_prompt(
 
     payload = {
         "analysis_mode": validated_mode,
+        "response_language": validated_response_language,
         "case_narrative": resolved_input,
         "analysis_context": deepcopy(analysis_context),
         "question": validated_question,
@@ -305,7 +370,7 @@ def _serialize_bounded_payload(
     payload: dict[str, object],
     max_chars: int,
 ) -> str:
-    """Bound context fields while retaining the exact mode and question."""
+    """Bound context fields while retaining the exact mode, language, and question."""
 
     serialized = _dump_json(payload)
     if len(serialized) <= max_chars:
@@ -335,6 +400,7 @@ def _serialize_bounded_payload(
         return _dump_json(
             {
                 "analysis_mode": payload["analysis_mode"],
+                "response_language": payload["response_language"],
                 "case_narrative": {
                     "prefix": narrative_prefix,
                     "truncated": case_chars < len(case_narrative_str),
@@ -394,13 +460,21 @@ class MainCaseAnalysisService:
         analysis_input_mode: AnalysisInputMode | str | None = None,
         analysis_context: dict[str, object],
         question: str | None,
-    ) -> str:
+        user_message: object,
+    ) -> CaseAnalysisResult:
         """Analyze defensive snapshots of Case Narrative and retrieval context."""
 
         validated_mode, validated_question = _validate_analysis_request(
             mode,
             question,
         )
+        try:
+            response_language = resolve_response_language(user_message)
+        except ValueError as error:
+            raise CaseAnalysisFailure(
+                "analysis_response_language_unsupported",
+                str(error),
+            ) from error
         prompt = build_case_analysis_prompt(
             mode=validated_mode,
             case_narrative=case_narrative,
@@ -410,17 +484,35 @@ class MainCaseAnalysisService:
             analysis_input_mode=analysis_input_mode,
             analysis_context=analysis_context,
             question=validated_question,
+            response_language=response_language,
         )
         target = resolve_core_llm_target(settings.chat_ask_model)
         request_payload = {
             "model": target.model,
-            "max_tokens": max(1, settings.chat_ask_max_output_tokens),
+            **structured_output_request_options(
+                provider=target.provider,
+                feature="case_analysis",
+                configured_max_tokens=max(1, settings.chat_ask_max_output_tokens),
+            ),
             "system": (
                 _CASE_ANALYSIS_TRUST_PROMPT
                 + "\n"
                 + _TASK_PROMPTS[validated_mode]
+                + "\n"
+                + _PERSONALIZED_RESPONSE_PROMPT
+                + "\n"
+                + _ANALYSIS_TRACE_OUTPUT_PROMPT
             ),
             "messages": [{"role": "user", "content": prompt}],
+            "output_config": {
+                "format": {
+                    "type": "json_schema",
+                    "schema": structured_output_schema(
+                        ProviderCaseAnalysis,
+                        provider=target.provider,
+                    ),
+                }
+            },
         }
 
         if self._client is not None:
@@ -441,7 +533,22 @@ class MainCaseAnalysisService:
                     request_payload,
                 )
 
-        return self._parse_response(response)
+        membership_state = case_state_json
+        if membership_state is None and isinstance(case_narrative, dict):
+            membership_state = case_narrative
+        if membership_state is None and isinstance(case_evidence, dict):
+            membership_state = case_evidence
+        if membership_state is None:
+            raise CaseAnalysisFailure(
+                "analysis_context_missing",
+                "Analysis Trace validation requires the bound Case State",
+            )
+        return self._parse_response(
+            response,
+            case_state_json=membership_state,
+            analysis_context=analysis_context,
+            analysis_mode=validated_mode,
+        )
 
     @staticmethod
     async def _post(
@@ -468,7 +575,13 @@ class MainCaseAnalysisService:
             ) from exc
 
     @staticmethod
-    def _parse_response(response: httpx.Response) -> str:
+    def _parse_response(
+        response: httpx.Response,
+        *,
+        case_state_json: Mapping[str, object],
+        analysis_context: Mapping[str, object],
+        analysis_mode: AnalysisMode,
+    ) -> CaseAnalysisResult:
         if not 200 <= response.status_code < 300:
             raise CaseAnalysisFailure(
                 "analysis_provider_error",
@@ -508,13 +621,70 @@ class MainCaseAnalysisService:
                 "analysis_invalid_response",
                 "The post-answer analysis provider response was invalid",
             )
-        answer = _extract_visible_text(response_payload).strip()
-        if not answer:
+        raw_text = _extract_visible_text(response_payload).strip()
+        if not raw_text:
             raise CaseAnalysisFailure(
                 "analysis_invalid_response",
                 "The post-answer analysis provider returned no answer",
             )
-        return answer
+        try:
+            raw_analysis = json.loads(raw_text)
+        except (TypeError, ValueError) as exc:
+            raise CaseAnalysisFailure(
+                "analysis_invalid_response",
+                "The post-answer analysis provider did not return structured JSON",
+            ) from exc
+        if not isinstance(raw_analysis, dict):
+            raise CaseAnalysisFailure(
+                "analysis_invalid_response",
+                "The post-answer structured analysis must be an object",
+            )
+        raw_answer = raw_analysis.get("answer")
+        if not isinstance(raw_answer, str) or not raw_answer.strip():
+            raise CaseAnalysisFailure(
+                "analysis_invalid_response",
+                "The post-answer structured analysis returned no safe prose",
+            )
+        try:
+            detect_forbidden_provenance(raw_analysis)
+        except AnalysisTraceProvenanceError as exc:
+            raise CaseAnalysisFailure(exc.code, str(exc)) from exc
+        try:
+            parsed = ProviderCaseAnalysis.model_validate(raw_analysis)
+        except ValidationError as exc:
+            logger.warning("Case analysis trace validation failed: %s | keys: %s", exc, list(raw_analysis.keys()) if isinstance(raw_analysis, dict) else type(raw_analysis))
+            failure_code = (
+                "analysis_trace_version_unsupported"
+                if raw_analysis.get("version") != "analysis_trace_v1"
+                else "analysis_trace_structure_invalid"
+            )
+            return CaseAnalysisResult(
+                answer=raw_answer.strip(),
+                trace=None,
+                trace_failure=AnalysisTraceFailureMetadata(
+                    failure_code=failure_code,
+                ),
+            )
+        try:
+            trace = validate_analysis_trace(
+                parsed,
+                case_state_json=case_state_json,
+                mitre_table=analysis_context.get("mitre_table", []),
+                analysis_mode=analysis_mode,
+            )
+        except AnalysisTraceStructureError as exc:
+            logger.warning("Case analysis trace structure error: %s (code=%s)", exc, exc.code)
+            return CaseAnalysisResult(
+                answer=parsed.answer,
+                trace=None,
+                trace_failure=AnalysisTraceFailureMetadata(
+                    failure_code=exc.code,
+                ),
+            )
+        except AnalysisTraceProvenanceError as exc:
+            logger.warning("Case analysis trace provenance error: %s (code=%s)", exc, exc.code)
+            raise CaseAnalysisFailure(exc.code, str(exc)) from exc
+        return CaseAnalysisResult(answer=parsed.answer, trace=trace)
 
 
 def _extract_visible_text(payload: Mapping[str, object]) -> str:
@@ -607,8 +777,9 @@ async def request_case_analysis(
     analysis_input_mode: AnalysisInputMode | str | None = None,
     analysis_context: dict[str, object],
     question: str | None,
+    user_message: object,
     client: httpx.AsyncClient | None = None,
-) -> str:
+) -> CaseAnalysisResult:
     """Call the default internal Main Case Analysis service."""
 
     validated_mode, validated_question = _validate_analysis_request(
@@ -624,6 +795,7 @@ async def request_case_analysis(
         analysis_input_mode=analysis_input_mode,
         analysis_context=analysis_context,
         question=validated_question,
+        user_message=user_message,
     )
 
 

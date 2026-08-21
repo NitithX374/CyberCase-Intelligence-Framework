@@ -20,6 +20,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.config import settings
+from app.services.case_state.delta_adapter import normalize_provider_delta_payload
 from app.services.extraction.llm_extraction import (
     AnthropicExtractionAdapter,
     ExtractionFailure,
@@ -37,9 +38,9 @@ from app.services.llm.core_llm import (
 
 
 MUTATION_METADATA_KEY = "chat_mutation"
-CASE_STATE_DELTA_VERSION = "case_state_delta_v3"
+CASE_STATE_DELTA_VERSION = "case_state_delta_v4"
 CASE_STATE_DELTA_MODE = "explicit_add_case_info"
-CASE_STATE_DELTA_PROMPT_VERSION = "case_state_delta_prompt_v4"
+CASE_STATE_DELTA_PROMPT_VERSION = "case_state_delta_prompt_v5"
 
 
 class CaseStateMutationFailure(Exception):
@@ -61,6 +62,27 @@ DeltaValuePrimitive = (
     | list[float]
     | list[bool]
 )
+DeltaFactCategory = Literal[
+    "background",
+    "observation",
+    "action",
+    "access",
+    "technical",
+    "impact",
+    "response",
+    "attribution",
+    "other",
+]
+DeltaStatus = Literal[
+    "reported",
+    "suspected",
+    "contradicted",
+    "not_established",
+    "not_confirmed",
+    "unknown",
+]
+DeltaConfidence = Literal["high", "medium", "low", "unknown"]
+DeltaMissingImportance = Literal["material", "important", "useful", "unknown"]
 
 
 class CaseStateDeltaValue(BaseModel):
@@ -77,7 +99,7 @@ class CaseStateDeltaValue(BaseModel):
 
     fact_id: str | None = None
     statement: str | None = None
-    category: str | None = None
+    category: DeltaFactCategory | None = None
 
     entity_id: str | None = None
     name: str | None = None
@@ -93,7 +115,7 @@ class CaseStateDeltaValue(BaseModel):
     title: str | None = None
     description: str | None = None
     artifact_type: str | None = None
-    source_type: str | None = None
+    source_type: Literal["user_reported"] | None = None
 
     event_id: str | None = None
     timestamp: str | None = None
@@ -107,10 +129,10 @@ class CaseStateDeltaValue(BaseModel):
     affected_entity_ids: list[str] | None = None
 
     missing_id: str | None = None
-    importance: str | None = None
+    importance: DeltaMissingImportance | None = None
 
-    confidence: str | None = None
-    status: str | None = None
+    confidence: DeltaConfidence | None = None
+    status: DeltaStatus | None = None
 
 
 class CaseStateDeltaChange(BaseModel):
@@ -255,7 +277,7 @@ class CaseStateDeltaInput(BaseModel):
 
 
 CASE_STATE_DELTA_SYSTEM_PROMPT = """You are the CyberCase Case State delta extractor.
-Prompt version: case_state_delta_prompt_v4.
+Prompt version: case_state_delta_prompt_v5.
 
 The explicit backend action has already authorized a case-information mutation.
 Return structured JSON only using the requested schema. The current_case_state
@@ -278,7 +300,18 @@ evidence = evidence_id/title/description/artifact_type/status/confidence/source_
 timeline = event_id/event/status/confidence;
 impact = impact_id/description/impact_type/status/confidence;
 missing_information = missing_id/description/importance.
-Never set one of those required fields to null; use unknown when the source leaves a qualification unresolved.
+For every ADD, use a unique temporary ID such as AUTO-F-1 or AUTO-ENT-1 for
+both target_id and the item's matching ID field. Reuse that same temporary ID
+in references within this delta. The backend replaces temporary IDs with stable
+collision-free IDs before validation. Never use unknown as an identifier.
+Fact category must be background, observation, action, access, technical,
+impact, response, attribution, or other. Use other when no narrower category
+applies. Status may use unknown only when the user's epistemic qualification is
+unresolved. A direct assertion in new_user_message uses status reported unless
+the user expresses uncertainty; reported records provenance, not verification.
+Confidence may use unknown when confidence is not supplied.
+Evidence source_type must be user_reported.
+Never set a required field to null.
 The value object is closed: use only the known Case State field names and set unrelated fields to null.
 For MODIFY, provide one existing stable target ID and field, copy the exact current field
 value into old_value, and put the corrected primitive or primitive-list value in new_value.
@@ -526,7 +559,10 @@ async def run_case_state_delta_extraction(
                 "extraction_response_too_large",
                 "The Case State delta response exceeds the configured limit",
             )
-        parsed = json.loads(raw_response)
+        parsed = normalize_provider_delta_payload(
+            json.loads(raw_response),
+            delta_input.current_case_state,
+        )
         delta = validate_case_state_delta(
             CaseStateDelta.model_validate(parsed),
             source_message_id=delta_input.source_message_id,

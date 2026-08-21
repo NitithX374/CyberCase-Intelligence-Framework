@@ -22,6 +22,11 @@ from app.services.case_state.mutator import (
     apply_case_state_delta,
 )
 from app.services.case_state.raw_evidence import resolve_raw_case_evidence_history
+from app.services.case_state.update_projection import (
+    build_case_update_projection,
+    empty_case_state_delta,
+)
+from app.services.case_analysis.contracts import AnalysisTrace
 from app.services.chat.chat_message import reconstruct_clarification_chain
 from app.services.extraction.llm_extraction import (
     EXTRACTION_METADATA_KEY,
@@ -35,6 +40,16 @@ from app.services.workflow.outcome import AssistantOutcome
 
 logger = logging.getLogger("app.chat")
 RUN_LEASE_DURATION = timedelta(minutes=6)
+
+
+def _is_no_change_case_update(metadata: dict[str, Any]) -> bool:
+    action = metadata.get("chat_action")
+    return (
+        isinstance(action, dict)
+        and action.get("action") == "add_case_info"
+        and action.get("status") == "no_change"
+        and action.get("state_mutated") is False
+    )
 
 
 @dataclass(frozen=True)
@@ -397,6 +412,7 @@ class ChatRunWorker:
                 )
 
             case_state_version: CaseStateVersion | None = None
+            parent_version: CaseStateVersion | None = None
             if has_mutation:
                 expected_parent_id = outcome.expected_parent_case_state_version_id
                 if thread.current_case_state_version_id != expected_parent_id:
@@ -493,13 +509,92 @@ class ChatRunWorker:
             if has_mutation and case_state_version is not None:
                 thread.current_case_state_version_id = case_state_version.id
 
+            assistant_metadata = deepcopy(outcome.metadata_json)
+            if has_mutation and case_state_version is not None and parent_version is not None:
+                assistant_metadata["case_update"] = build_case_update_projection(
+                    parent_id=parent_version.id,
+                    parent_version=parent_version.version,
+                    child_id=case_state_version.id,
+                    child_version=case_state_version.version,
+                    delta_json=case_state_version.delta_json,
+                )
+            elif _is_no_change_case_update(assistant_metadata):
+                current_version_result = await self.db.execute(
+                    select(CaseStateVersion).where(
+                        CaseStateVersion.id == thread.current_case_state_version_id,
+                        CaseStateVersion.thread_id == thread.id,
+                    )
+                )
+                current_version = current_version_result.scalar_one_or_none()
+                if current_version is not None:
+                    assistant_metadata["case_update"] = build_case_update_projection(
+                        parent_id=current_version.id,
+                        parent_version=current_version.version,
+                        child_id=None,
+                        child_version=None,
+                        delta_json=empty_case_state_delta(),
+                    )
+
+            if outcome.analysis_trace_draft is not None:
+                bound_case_state_version_id = (
+                    case_state_version.id
+                    if case_state_version is not None
+                    else thread.current_case_state_version_id
+                )
+                expected_analysis_version_id = (
+                    outcome.expected_analysis_case_state_version_id
+                )
+                if case_state_version is None and expected_analysis_version_id is None:
+                    raise ValueError(
+                        "A reused Analysis Trace requires its loaded Case State version"
+                    )
+                if (
+                    expected_analysis_version_id is not None
+                    and bound_case_state_version_id != expected_analysis_version_id
+                ):
+                    raise CaseStateMutationFailure(
+                        "analysis_trace_stale_case_state",
+                        "The Case State changed before the analysis trace was committed",
+                    )
+                if bound_case_state_version_id is None or not outcome.retrieval_context_id:
+                    raise ValueError(
+                        "A validated Analysis Trace requires Case State and retrieval bindings"
+                    )
+                if (
+                    outcome.rag_context_payload is not None
+                    and outcome.rag_context_payload.retrieval_context_id
+                    != outcome.retrieval_context_id
+                ):
+                    raise ValueError(
+                        "Analysis Trace retrieval binding does not match durable context"
+                    )
+                chat_action = assistant_metadata.get("chat_action")
+                expected_analysis_mode = (
+                    chat_action.get("analysis_mode")
+                    if isinstance(chat_action, dict)
+                    else None
+                )
+                if expected_analysis_mode != outcome.analysis_trace_draft.analysis_mode:
+                    raise ValueError(
+                        "Analysis Trace mode does not match the persisted chat action"
+                    )
+                assistant_metadata["analysis_trace"] = AnalysisTrace(
+                    **outcome.analysis_trace_draft.model_dump(mode="python"),
+                    case_state_version_id=str(bound_case_state_version_id),
+                    retrieval_context_id=outcome.retrieval_context_id,
+                ).model_dump(mode="json")
+            elif outcome.analysis_trace_failure is not None:
+                assistant_metadata["analysis_trace_failure"] = (
+                    outcome.analysis_trace_failure.model_dump(mode="json")
+                )
+
             assistant_message = ChatMessage(
                 thread_id=thread.id,
                 ordinal=thread.next_message_ordinal,
                 role="assistant",
                 content=outcome.content,
                 retrieval_context_id=outcome.retrieval_context_id,
-                metadata_json=outcome.metadata_json,
+                metadata_json=assistant_metadata,
             )
             self.db.add(assistant_message)
 

@@ -1,5 +1,19 @@
 """Bounded Main Case Analysis and OpenRouter execution."""
 
+from app.services.case_analysis.contracts import (
+    ANALYSIS_TRACE_VERSION,
+    AnalysisClaim,
+    AnalysisTrace,
+    AnalysisTraceDraft,
+    AnalysisTraceFailureMetadata,
+    CaseAnalysisResult,
+    ClaimType,
+    EpistemicStatus,
+    MitreAssociation,
+    MitreAssociationStatus,
+    MitreSupportRole,
+    ProviderCaseAnalysis,
+)
 from app.services.case_analysis.service import (
     AnalysisInputMode,
     AnalysisMode,
@@ -14,18 +28,40 @@ from app.services.case_analysis.service import (
     resolve_analysis_case_evidence,
     resolve_analysis_case_narrative,
 )
+from app.services.case_analysis.personalization import (
+    ResponseLanguage,
+    VALID_RESPONSE_LANGUAGES,
+    resolve_response_language,
+    validate_response_language,
+)
 
 __all__ = [
+    "ANALYSIS_TRACE_VERSION",
+    "AnalysisClaim",
     "AnalysisInputMode",
     "AnalysisMode",
+    "AnalysisTrace",
+    "AnalysisTraceDraft",
+    "AnalysisTraceFailureMetadata",
     "CASE_ANALYSIS_PROMPT_VERSION",
     "CaseAnalysisFailure",
+    "CaseAnalysisResult",
+    "ClaimType",
     "DEFAULT_ANALYSIS_INPUT_MODE",
+    "EpistemicStatus",
+    "MitreAssociation",
+    "MitreAssociationStatus",
+    "MitreSupportRole",
     "MainCaseAnalysisService",
+    "ProviderCaseAnalysis",
+    "ResponseLanguage",
+    "VALID_RESPONSE_LANGUAGES",
     "VALID_ANALYSIS_INPUT_MODES",
     "build_analysis_prompt",
     "build_case_analysis_prompt",
     "request_case_analysis",
     "resolve_analysis_case_evidence",
     "resolve_analysis_case_narrative",
+    "resolve_response_language",
+    "validate_response_language",
 ]
