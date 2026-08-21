@@ -216,6 +216,16 @@ class AnalysisInputModeTests(unittest.IsolatedAsyncioTestCase):
             payload["case_narrative"]["case_summary"],
             case_state["case_summary"],
         )
+        self.assertEqual(
+            payload["relationship_status_contract"],
+            [
+                {"relationship_id": "rel_attacker_ssh", "status": "reported"},
+                {
+                    "relationship_id": "rel_exfiltration_channel",
+                    "status": "suspected",
+                },
+            ],
+        )
         self.assertIn("ent_perpetrator_program", prompt)
         self.assertIn("rel_attacker_ssh", prompt)
         self.assertNotIn("Raw narrative that should not be used", prompt)

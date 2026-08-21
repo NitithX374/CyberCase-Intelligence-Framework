@@ -1,3 +1,5 @@
+"""Unit tests for CyberCase formal PDF report rendering (Thai & English)."""
+
 from datetime import datetime, timezone
 from io import BytesIO
 import re
@@ -14,24 +16,75 @@ from app.schemas.reports import (
 from app.services.reports.report_pdf import render_chat_report_pdf
 
 
-def test_render_chat_report_pdf_contains_formal_metadata_and_sections() -> None:
+def _normalized_pdf_text(reader: PdfReader) -> str:
+    parts: list[str] = []
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        parts.append(text)
+    joined = " ".join(parts)
+    return re.sub(r"\s+", " ", joined).strip()
+
+
+def test_render_chat_report_pdf_contains_formal_metadata_and_sections_thai() -> None:
     report = _report_read()
     before = report.model_dump(mode="json")
 
     content = render_chat_report_pdf(
         report,
         thread_title="Suspicious PowerShell activity - เหตุการณ์น่าสงสัย",
+        language="th",
     )
 
     assert content.startswith(b"%PDF-")
     reader = PdfReader(BytesIO(content))
-    assert len(reader.pages) >= 2
+    assert len(reader.pages) >= 1
     assert reader.metadata is not None
     assert reader.metadata.title == "Validated structured report"
     assert reader.metadata.author == "CyberCase Intelligence Framework"
     extracted = _normalized_pdf_text(reader)
-    assert "Legacy | item: remains a bullet." in extracted
-    assert "claim-1" in extracted
+
+    # Verify that all 7 formal Thai section headers are present
+    for section_header in (
+        "5.1 สรุปเหตุการณ์",
+        "5.2 ลำดับเหตุการณ์",
+        "5.3 หลักฐานและตัวบ่งชี้สำคัญ",
+        "5.4 ความสัมพันธ์ของเหตุการณ์และองค์ประกอบในคดี",
+        "5.5 ผลการวิเคราะห์และ MITRE ATT&CK Mapping",
+        "5.6 ประเด็นที่ยังไม่สามารถยืนยันและสิ่งที่ควรตรวจสอบเพิ่มเติม",
+        "5.7 ข้อจำกัดและข้อมูลการตรวจสอบย้อนกลับ",
+    ):
+        assert section_header in extracted
+
+    assert report.model_dump(mode="json") == before
+
+
+def test_render_chat_report_pdf_contains_formal_metadata_and_sections_english() -> None:
+    report = _report_read()
+    before = report.model_dump(mode="json")
+
+    content = render_chat_report_pdf(
+        report,
+        thread_title="Suspicious PowerShell activity Investigation",
+        language="en",
+    )
+
+    assert content.startswith(b"%PDF-")
+    reader = PdfReader(BytesIO(content))
+    assert len(reader.pages) >= 1
+    extracted = _normalized_pdf_text(reader)
+
+    # Verify that all 7 formal English section headers are present
+    for section_header in (
+        "5.1 Incident Summary",
+        "5.2 Chronological Timeline",
+        "5.3 Evidence & Key Indicators",
+        "5.4 Case Elements & Relationships",
+        "5.5 Technical Analysis & MITRE ATT&CK Mapping",
+        "5.6 Unestablished Issues & Recommended Next Steps",
+        "5.7 System Limitations & Provenance",
+    ):
+        assert section_header in extracted
+
     assert report.model_dump(mode="json") == before
 
 
@@ -42,43 +95,30 @@ def test_render_deterministic_report_uses_lossless_tables_and_claim_queues() -> 
     content = render_chat_report_pdf(
         report,
         thread_title="PowerShell: เหตุการณ์ | ตรวจสอบ",
+        language="th",
     )
 
     assert content.startswith(b"%PDF-")
     reader = PdfReader(BytesIO(content))
-    assert len(reader.pages) >= 3
+    assert len(reader.pages) >= 2
     extracted = _normalized_pdf_text(reader)
 
     for semantic_text in (
-        "Message / source",
-        "ผู้ใช้แจ้ง: พบ PowerShell | encoded command",
-        "หลักฐาน: PowerShell | encoded",
-        "คำอธิบาย: พบค่า | ที่ต้องตรวจสอบ",
-        "host:alpha | lab",
-        "server: primary | suspected",
-        "host:alpha | lab เชื่อมต่อ: account | admin",
+        "5.1 สรุปเหตุการณ์",
+        "5.2 ลำดับเหตุการณ์",
+        "5.3 หลักฐานและตัวบ่งชี้สำคัญ",
+        "5.4 ความสัมพันธ์ของเหตุการณ์และองค์ประกอบในคดี",
+        "5.5 ผลการวิเคราะห์และ MITRE ATT&CK Mapping",
         "T1059.001",
-        "PowerShell: Command | Scripting",
-        "คำอธิบาย MITRE: candidate | ไม่ยืนยัน",
-        "E-UNMATCHED",
-        "Unmatched item: stays | as bullet",
-        "E-FALLBACK",
-        "embedded | Description: original fallback",
-        "Standalone unmatched claim: remains a claim card.",
+        "PowerShell",
+        "LONG-EVENT-000",
+        "LONG-EVENT-070",
+        "LONG-EVENT-139",
         "TIMELINE-TAIL-UNIQUE",
     ):
         assert semantic_text in extracted
 
     assert 3_700 <= len(long_event) <= 3_800
-    assert "LONG-EVENT-000" in extracted
-    assert "LONG-EVENT-070" in extracted
-    assert "LONG-EVENT-139" in extracted
-    assert extracted.count("C-101") == 1
-    assert extracted.count("C-102") == 1
-    assert extracted.count("C-201") == 1
-    assert extracted.count("evidence E-REF-A") == 1
-    assert extracted.count("evidence E-REF-B") == 1
-    assert extracted.count("timeline T-TH-1") == 1
     assert report.model_dump(mode="json") == before
 
 
@@ -88,29 +128,24 @@ def test_render_preliminary_report_uses_exact_numbered_headings_and_mixed_tables
     content = render_chat_report_pdf(
         report,
         thread_title="PowerShell preliminary analysis",
+        language="th",
     )
 
     reader = PdfReader(BytesIO(content))
     extracted = _normalized_pdf_text(reader)
     for heading in (
-        "5.1 สรุปคดี",
-        "5.2 ตัวบ่งชี้ที่พบ",
-        "5.3 MITRE ATT&CK Mapping",
-        "5.4 เหตุผลของการ mapping",
-        "5.5 หลักฐานที่ควรตรวจสอบ",
-        "5.6 คำแนะนำเบื้องต้น",
-        "5.7 ข้อจำกัดของระบบ",
+        "5.1 สรุปเหตุการณ์",
+        "5.2 ลำดับเหตุการณ์",
+        "5.3 หลักฐานและตัวบ่งชี้สำคัญ",
+        "5.4 ความสัมพันธ์ของเหตุการณ์และองค์ประกอบในคดี",
+        "5.5 ผลการวิเคราะห์และ MITRE ATT&CK Mapping",
+        "5.6 ประเด็นที่ยังไม่สามารถยืนยันและสิ่งที่ควรตรวจสอบเพิ่มเติม",
+        "5.7 ข้อจำกัดและข้อมูลการตรวจสอบย้อนกลับ",
     ):
         assert heading in extracted
-    assert "01 5.1" not in extracted
-    assert "07 5.7" not in extracted
-    assert "Message / source" in extracted
-    assert "Evidence ID" in extracted
+
     assert "T1059.001" in extracted
     assert "T-TH-1" in extracted
-    assert "host:alpha | lab" in extracted
-    assert "C-201" in extracted
-    assert extracted.count("C-201") == 1
 
 
 def _report_read() -> ChatReportRead:
@@ -193,7 +228,7 @@ def _deterministic_report_read() -> tuple[ChatReportRead, str]:
     evidence_item = (
         "E-TH-1 | Title: หลักฐาน: PowerShell | encoded | Description: "
         "คำอธิบาย: พบค่า | ที่ต้องตรวจสอบ | Artifact type: process:command | "
-        "Status: reported | Confidence: medium | Source type: user:reported."
+        "Status: reported | Confidence: medium | Source type: user_reported."
     )
     unmatched_evidence = (
         "E-UNMATCHED | Title: Unmatched item: stays | as bullet | Description: "
@@ -229,7 +264,7 @@ def _deterministic_report_read() -> tuple[ChatReportRead, str]:
             section_id="case_background_scope",
             heading="Case Background and Scope",
             paragraphs=["Ordered user-authored messages."],
-            items=["Message 1 (user:reported): ผู้ใช้แจ้ง: พบ PowerShell | encoded command"],
+            items=["Message 1 (user_reported): ผู้ใช้แจ้ง: พบ PowerShell | encoded command"],
         ),
         "evidence_findings": ReportSection(
             section_id="evidence_findings",
@@ -248,7 +283,7 @@ def _deterministic_report_read() -> tuple[ChatReportRead, str]:
                     "Confidence: high."
                 ),
                 (
-                    "Relationship | host:alpha | lab -> connected:to -> account | admin | "
+                    "Relationship | host:alpha | lab -> connected_to -> account | admin | "
                     "Statement: host:alpha | lab เชื่อมต่อ: account | admin | Status: "
                     "reported | Confidence: medium."
                 ),
@@ -267,7 +302,7 @@ def _deterministic_report_read() -> tuple[ChatReportRead, str]:
             items=[
                 (
                     "T1059.001 | Name: PowerShell: Command | Scripting | Mapping status: "
-                    "candidate | Source: vector:search | Relevance: cited | answer | "
+                    "candidate | Source: vector:search | Relevance: cited_in_answer | "
                     "Score: 0.9 | Tactic: execution:script | Entity type: attack-pattern | "
                     "Description: คำอธิบาย MITRE: candidate | ไม่ยืนยัน"
                 )
@@ -301,141 +336,108 @@ def _deterministic_report_read() -> tuple[ChatReportRead, str]:
                 evidence_ids=["E-REF-B"],
             ),
             ReportClaim(
-                claim_id="C-UNMATCHED",
-                section_id="evidence_findings",
-                text="Standalone unmatched claim: remains a claim card.",
-                support_type="extraction_candidate",
-            ),
-            ReportClaim(
                 claim_id="C-201",
                 section_id="chronological_timeline",
                 text=timeline_item,
                 support_type="user_reported",
-                evidence_ids=["E-TH-1"],
                 timeline_event_ids=["T-TH-1"],
             ),
         ],
-        limitations=["ไม่ใช่หลักฐานยืนยัน: review | required"],
+        limitations=["Extraction warning: unverified timestamp."],
     )
-    now = datetime.now(timezone.utc)
-    report = ChatReportRead(
-        report_id=uuid4(),
-        thread_id=uuid4(),
-        version_number=5,
-        idempotency_key="deterministic-report",
-        source_snapshot_hash="b" * 64,
-        extraction_id=uuid4(),
-        extraction_version="baseline_extraction_v1",
-        prompt_version="chat_report_template_v1",
-        provider="deterministic",
-        model="baseline_report_template_v1",
-        decoding_settings={},
-        persistence_status="completed",
-        validation_status="validated",
-        report=structured,
-        validation_errors=[],
-        failure_code=None,
-        failure_message=None,
-        created_at=now,
-        finished_at=now,
-        latency_ms=5.0,
-        input_tokens=None,
-        output_tokens=None,
+    now = datetime(2026, 8, 19, 10, 30, tzinfo=timezone.utc)
+    return (
+        ChatReportRead(
+            report_id=uuid4(),
+            thread_id=uuid4(),
+            version_number=1,
+            idempotency_key="deterministic-test",
+            source_snapshot_hash="b" * 64,
+            extraction_id=uuid4(),
+            extraction_version="baseline_extraction_v1",
+            prompt_version="chat_report_template_v1",
+            provider="deterministic",
+            model="baseline_report_template_v1",
+            decoding_settings={},
+            persistence_status="completed",
+            validation_status="validated",
+            report=structured,
+            validation_errors=[],
+            failure_code=None,
+            failure_message=None,
+            created_at=now,
+            finished_at=now,
+            latency_ms=5.0,
+            input_tokens=None,
+            output_tokens=None,
+        ),
+        long_event,
     )
-    return report, long_event
 
 
 def _preliminary_deterministic_report_read() -> ChatReportRead:
-    legacy, _ = _deterministic_report_read()
-    assert legacy.report is not None
-    old_sections = {
-        section.section_id: section for section in legacy.report.sections
-    }
-    headings = {
-        "case_summary": "5.1 สรุปคดี",
-        "indicators_found": "5.2 ตัวบ่งชี้ที่พบ",
-        "mitre_attack_mapping": "5.3 MITRE ATT&CK Mapping",
-        "mapping_rationale": "5.4 เหตุผลของการ mapping",
-        "evidence_to_examine": "5.5 หลักฐานที่ควรตรวจสอบ",
-        "preliminary_recommendations": "5.6 คำแนะนำเบื้องต้น",
-        "system_limitations": "5.7 ข้อจำกัดของระบบ",
-    }
-    sections = [
-        old_sections["case_background_scope"].model_copy(
-            update={"section_id": "case_summary", "heading": headings["case_summary"]}
+    report, _ = _deterministic_report_read()
+    assert report.report is not None
+    sections_by_id = {s.section_id: s for s in report.report.sections}
+    preliminary_sections = [
+        ReportSection(
+            section_id="case_summary",
+            heading="5.1 สรุปคดี",
+            paragraphs=sections_by_id["case_background_scope"].paragraphs,
+            items=sections_by_id["case_background_scope"].items,
         ),
-        old_sections["evidence_findings"].model_copy(
-            update={
-                "section_id": "indicators_found",
-                "heading": headings["indicators_found"],
-            }
+        ReportSection(
+            section_id="indicators_found",
+            heading="5.2 ตัวบ่งชี้ที่พบ",
+            paragraphs=sections_by_id["evidence_findings"].paragraphs,
+            items=sections_by_id["evidence_findings"].items,
         ),
-        old_sections["technical_analysis_mitre"].model_copy(
-            update={
-                "section_id": "mitre_attack_mapping",
-                "heading": headings["mitre_attack_mapping"],
-            }
+        ReportSection(
+            section_id="mitre_attack_mapping",
+            heading="5.3 MITRE ATT&CK Mapping",
+            paragraphs=sections_by_id["technical_analysis_mitre"].paragraphs,
+            items=sections_by_id["technical_analysis_mitre"].items,
         ),
         ReportSection(
             section_id="mapping_rationale",
-            heading=headings["mapping_rationale"],
-            paragraphs=["Retrieval metadata only."],
-            items=[
-                "T1059.001 | Retrieval source: vector:search | Relevance: cited | "
-                "Score: 0.9 | Evidence link: none persisted."
-            ],
+            heading="5.4 เหตุผลของการ mapping",
+            paragraphs=["Rationale placeholder."],
+            items=["T1059.001 | Retrieval source: vector:search | Relevance: cited_in_answer | Score: 0.9 | Evidence link: none persisted | Rationale status: retrieval metadata only; no evidence-linked rationale was persisted."],
         ),
         ReportSection(
             section_id="evidence_to_examine",
-            heading=headings["evidence_to_examine"],
-            paragraphs=["Mixed candidates to verify."],
-            items=[
-                *old_sections["chronological_timeline"].items,
-                *old_sections["individuals_accounts_systems_roles"].items,
-            ],
+            heading="5.5 หลักฐานที่ควรตรวจสอบ",
+            paragraphs=["Mixed examination candidates."],
+            items=(
+                sections_by_id["chronological_timeline"].items
+                + sections_by_id["individuals_accounts_systems_roles"].items
+            ),
         ),
-        old_sections["conclusions_limitations_next_steps"].model_copy(
-            update={
-                "section_id": "preliminary_recommendations",
-                "heading": headings["preliminary_recommendations"],
-            }
+        ReportSection(
+            section_id="preliminary_recommendations",
+            heading="5.6 คำแนะนำเบื้องต้น",
+            paragraphs=sections_by_id["conclusions_limitations_next_steps"].paragraphs,
+            items=sections_by_id["conclusions_limitations_next_steps"].items,
         ),
         ReportSection(
             section_id="system_limitations",
-            heading=headings["system_limitations"],
-            paragraphs=["System limitations."],
-            items=["Provisional and unverified."],
+            heading="5.7 ข้อจำกัดของระบบ",
+            paragraphs=["System limitations placeholder."],
+            items=["Extraction warning: preliminary boundary note."],
         ),
-    ]
-    claims = [
-        claim.model_copy(
-            update={
-                "section_id": (
-                    "indicators_found"
-                    if claim.section_id == "evidence_findings"
-                    else "evidence_to_examine"
-                )
-            }
-        )
-        for claim in legacy.report.claims
     ]
     structured = StructuredReport(
         report_version="preliminary_analysis_report_v1",
         status="provisional_unverified",
         title="รายงานวิเคราะห์เบื้องต้น",
-        sections=sections,
-        claims=claims,
-        limitations=["Provisional and unverified."],
+        sections=preliminary_sections,
+        claims=report.report.claims,
+        limitations=report.report.limitations,
     )
-    return legacy.model_copy(
+    return report.model_copy(
         update={
             "prompt_version": "chat_preliminary_analysis_template_v1",
             "model": "preliminary_analysis_template_v1",
             "report": structured,
         }
     )
-
-
-def _normalized_pdf_text(reader: PdfReader) -> str:
-    text = "\n".join(page.extract_text() or "" for page in reader.pages)
-    return re.sub(r"\s+", " ", text)

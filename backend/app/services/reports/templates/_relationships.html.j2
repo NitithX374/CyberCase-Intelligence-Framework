@@ -1,0 +1,25 @@
+<section class="report-section">
+    <div class="section-header">
+        <h2 class="section-number-title">{{ report.i18n.sec_5_4 }}</h2>
+    </div>
+
+    {% if report.relationship_graph_image %}
+    <div style="text-align: center; margin: 8pt 0;">
+        <img src="{{ report.relationship_graph_image }}" alt="Case Relationship Diagram" style="max-width: 100%; border: 0.5pt solid #d1d5db;" />
+    </div>
+    {% endif %}
+
+    {% if report.has_relationships %}
+    <p class="section-lead-paragraph">{{ report.i18n.sub_relationships }}</p>
+    <ul class="relationship-list">
+        {% for rel in report.relationship_rows %}
+        <li class="relationship-item">
+            {{ rel.statement }}
+            <span class="text-muted"> [{{ rel.status }} / {{ rel.confidence }}]</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="section-lead-paragraph">{{ report.i18n.empty_relationships }}</p>
+    {% endif %}
+</section>

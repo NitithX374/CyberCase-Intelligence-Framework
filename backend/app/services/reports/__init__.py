@@ -1,4 +1,4 @@
-"""Incident Report Generation & PDF Export."""
+"""Incident Report Generation, View Model & Export Services."""
 
 from app.services.reports.report_generation import (
     AdmittedMitreRow,
@@ -18,6 +18,11 @@ from app.services.reports.report_generation import (
     source_snapshot_hash,
     validate_structured_report,
 )
+from app.services.reports.report_html import (
+    get_report_css,
+    render_chat_report_html,
+    render_chat_report_html_from_view_model,
+)
 from app.services.reports.report_pdf import render_chat_report_pdf
 from app.services.reports.report_prompt import REPORT_SYSTEM_PROMPT
 from app.services.reports.report_provider_schema import (
@@ -29,6 +34,11 @@ from app.services.reports.report_service import (
     ReportGenerationConflict,
     ReportNotFound,
     ReportService,
+)
+from app.services.reports.report_view_model import (
+    ReportLanguage,
+    ReportViewModel,
+    build_report_view_model,
 )
 
 ReportGenerationError = ReportProviderFailure
@@ -42,12 +52,15 @@ __all__ = [
     "REPORT_TEMPLATE_PROMPT_VERSION",
     "REPORT_TEMPLATE_PROVIDER",
     "ReportInputSnapshot",
+    "ReportLanguage",
     "ReportModelAdapter",
     "ReportModelResponse",
     "ReportProviderFailure",
     "ReportRunResult",
     "ReportSourceMessage",
     "ReportValidationError",
+    "ReportViewModel",
+    "build_report_view_model",
     "build_template_report",
     "ReportGenerationError",
     "generate_report_payload",
@@ -56,6 +69,9 @@ __all__ = [
     "validate_structured_report",
     "build_report_pdf_bytes",
     "render_chat_report_pdf",
+    "render_chat_report_html",
+    "render_chat_report_html_from_view_model",
+    "get_report_css",
     "REPORT_SYSTEM_PROMPT",
     "ProviderStructuredReport",
     "provider_report_to_structured_report",

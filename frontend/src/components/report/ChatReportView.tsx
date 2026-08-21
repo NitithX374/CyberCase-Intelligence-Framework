@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useState } from "react";
 import {
   downloadChatReportPdf,
   generateChatReport,
@@ -11,6 +16,7 @@ import {
 } from "@/lib/api";
 import { PersistedReportCard } from "./PersistedReportCard";
 import { NoSavedReport, ReportVersionHistory } from "./ReportHistory";
+import { chatQueryKeys } from "@/lib/query-keys";
 
 interface ChatReportViewProps {
   threadId: string | null;
@@ -29,47 +35,62 @@ export function ChatReportView({
   hasValidatedExtraction,
   onOpenChat,
 }: ChatReportViewProps) {
-  const [reports, setReports] = useState<ChatReportRead[]>([]);
+  const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(threadId));
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const reportsQuery = useQuery({
+    queryKey: threadId ? chatQueryKeys.reports(threadId) : chatQueryKeys.all,
+    queryFn: ({ signal }) => listChatReports(threadId!, signal),
+    enabled: threadId !== null,
+    retry: false,
+  });
+  const generateMutation = useMutation({
+    mutationFn: ({ threadId: targetThreadId, idempotencyKey }: {
+      threadId: string;
+      idempotencyKey?: string;
+    }) => generateChatReport(targetThreadId, idempotencyKey),
+    onSuccess: (report, variables) => {
+      queryClient.setQueryData<ChatReportRead[]>(
+        chatQueryKeys.reports(variables.threadId),
+        (current) => [
+          report,
+          ...(current ?? []).filter((item) => item.report_id !== report.report_id),
+        ],
+      );
+      setSelectedReportId(report.report_id);
+    },
+  });
+  const downloadMutation = useMutation({
+    mutationFn: ({ threadId: targetThreadId, report }: {
+      threadId: string;
+      report: ChatReportRead;
+    }) => downloadChatReportPdf(targetThreadId, report.report_id),
+    onSuccess: (blob, variables) => {
+      downloadPdf(blob, variables.report.version_number);
+    },
+  });
 
-  useEffect(() => {
-    if (!threadId) {
-      return;
-    }
-
-    const controller = new AbortController();
-
-    void (async () => {
-      try {
-        const items = await listChatReports(threadId, controller.signal);
-        if (controller.signal.aborted) return;
-        setReports(items);
-        setSelectedReportId(items[0]?.report_id ?? null);
-      } catch (error: unknown) {
-        if (controller.signal.aborted) return;
-        setLoadError(
-          getApiErrorMessage(
-            error,
-            "Could not load persisted reports for this chat thread.",
-          ),
-        );
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [threadId]);
+  const reports = reportsQuery.data ?? [];
+  const isLoading = Boolean(threadId) && reportsQuery.isLoading;
+  const isGenerating = generateMutation.isPending;
+  const isDownloading = downloadMutation.isPending;
+  const loadError = reportsQuery.error
+    ? getApiErrorMessage(
+      reportsQuery.error,
+      "Could not load persisted reports for this chat thread.",
+    )
+    : null;
+  const generationError = generateMutation.error
+    ? getApiErrorMessage(
+      generateMutation.error,
+      "Failed to generate report. Please review the case details and try again.",
+    )
+    : null;
+  const downloadError = downloadMutation.error
+    ? getApiErrorMessage(
+      downloadMutation.error,
+      "Failed to download the PDF report. Please try again.",
+    )
+    : null;
 
   const selectedReport =
     reports.find((report) => report.report_id === selectedReportId) ??
@@ -87,52 +108,15 @@ export function ChatReportView({
 
   const handleGenerate = async () => {
     if (!threadId || !canGenerate) return;
-    setIsGenerating(true);
-    setGenerationError(null);
-
-    try {
-      const report = await generateChatReport(threadId, reportRequestKey());
-      setReports((current) => [
-        report,
-        ...current.filter((item) => item.report_id !== report.report_id),
-      ]);
-      setSelectedReportId(report.report_id);
-    } catch (error: unknown) {
-      setGenerationError(
-        getApiErrorMessage(
-          error,
-          "Failed to generate report. Please review the case details and try again.",
-        ),
-      );
-    } finally {
-      setIsGenerating(false);
-    }
+    await generateMutation.mutateAsync({
+      threadId,
+      idempotencyKey: reportRequestKey(),
+    }).catch(() => undefined);
   };
 
-  const handleDownloadPdf = async (report: ChatReportRead) => {
+  const handleDownloadPdf = (report: ChatReportRead) => {
     if (!threadId || isDownloading) return;
-    setIsDownloading(true);
-    setDownloadError(null);
-    try {
-      const blob = await downloadChatReportPdf(threadId, report.report_id);
-      const blobUrl = window.URL.createObjectURL(blob);
-      const downloadLink = document.createElement("a");
-      downloadLink.href = blobUrl;
-      downloadLink.download = `CyberCase-Report-v${report.version_number}.pdf`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      downloadLink.removeChild(downloadLink);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (error: unknown) {
-      setDownloadError(
-        getApiErrorMessage(
-          error,
-          "Failed to download the PDF report. Please try again.",
-        ),
-      );
-    } finally {
-      setIsDownloading(false);
-    }
+    downloadMutation.mutate({ threadId, report });
   };
 
   if (!threadId) {
@@ -243,7 +227,7 @@ export function ChatReportView({
                 threadId={threadId}
                 threadTitle={threadTitle}
                 isDownloading={isDownloading}
-                onDownloadPdf={() => void handleDownloadPdf(selectedReport)}
+                onDownloadPdf={() => handleDownloadPdf(selectedReport)}
               />
             )}
           </div>
@@ -297,4 +281,15 @@ function reportRequestKey(): string | undefined {
     return globalThis.crypto.randomUUID();
   }
   return `report-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function downloadPdf(blob: Blob, versionNumber: number): void {
+  const blobUrl = window.URL.createObjectURL(blob);
+  const downloadLink = document.createElement("a");
+  downloadLink.href = blobUrl;
+  downloadLink.download = `CyberCase-Report-v${versionNumber}.pdf`;
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  downloadLink.remove();
+  window.URL.revokeObjectURL(blobUrl);
 }
