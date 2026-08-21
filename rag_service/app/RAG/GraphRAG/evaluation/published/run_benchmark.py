@@ -272,17 +272,52 @@ def candidate_context(result, vmap: VersionMap, max_chars: int = 9000) -> str:
     return context
 
 
-def _make_llm():
+def model_slug(model: str) -> str:
+    """Filename-safe short name for a model id, used to key the run file."""
+    return model.split("/")[-1].replace(".", "-").replace(":", "-").lower()
+
+
+def _make_llm(model: str = "", disable_thinking: bool = False):
+    """Build the chat client, optionally overriding the configured model.
+
+    An override goes through the same provider factory production uses, so the
+    only thing that changes between model arms is the model id.
+
+    ``disable_thinking`` matters for reasoning models. qwen/qwen3.5-9b thinks by
+    default and, on this task, spends the entire token budget doing it: a plain
+    call returns 4096 output tokens of which 3168 are thinking, stop_reason
+    max_tokens, and NO text block at all - an empty prediction that costs
+    $0.00103. With thinking disabled the same call answers in 31 tokens for
+    $0.0000089, 115x cheaper.
+
+    It is also the methodologically correct setting here. The row we compare
+    against, Ministral 8B (RAG), is not a reasoning model, and unbounded
+    thinking is extra inference compute that would both flatter our score and
+    contradict the efficiency claim the comparison exists to support.
+    """
     from ...config import LLM_MAX_TOKENS, LLM_MODEL, LLM_TEMPERATURE
     from ...llm_provider import create_core_chat_model, resolve_core_llm_target
 
-    target = resolve_core_llm_target(LLM_MODEL)
+    selected = model or LLM_MODEL
+    target = resolve_core_llm_target(selected)
     print("[BENCH] LLM: " + target.model + " (" + target.provider + ")")
-    return create_core_chat_model(
-        anthropic_model=LLM_MODEL,
+    if model and target.model != model:
+        # resolve_openrouter_model silently falls back to the default for an
+        # unknown name without a slash. Running the wrong model and labelling
+        # the file with the requested one would quietly invalidate the whole run.
+        raise SystemExit(
+            "requested model '" + model + "' resolved to '" + target.model
+            + "'. Pass the full vendor/model id."
+        )
+    llm = create_core_chat_model(
+        anthropic_model=selected,
         temperature=LLM_TEMPERATURE,
         max_tokens=min(LLM_MAX_TOKENS, 1024),  # the output is a short ID list
     )
+    if disable_thinking:
+        print("[BENCH] thinking: disabled")
+        llm = llm.bind(thinking={"type": "disabled"})
+    return llm
 
 
 def run_arm(
@@ -296,13 +331,24 @@ def run_arm(
     technique_only: bool = False,
     concurrency: int = 8,
     decompose: bool = False,
+    model: str = "",
+    disable_thinking: bool = False,
 ) -> None:
     vmap = VersionMap.load()
     samples, unscoreable = load_dataset(dataset, vmap)
     if limit:
         samples = samples[:limit]
 
-    out_path = run_path(dataset, arm, tag)
+    # A model override becomes part of the run key: appending a second model
+    # into one file would silently blend two systems into one score.
+    file_tag = tag
+    if model:
+        file_tag = (tag + "__" if tag else "") + model_slug(model)
+    if disable_thinking:
+        # A thinking run and a non-thinking run of the same model are different
+        # systems; keep their scores in different files.
+        file_tag += "-nothink"
+    out_path = run_path(dataset, arm, file_tag)
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     done = load_done(out_path)
     todo = [s for s in samples if s["id"] not in done]
@@ -339,7 +385,7 @@ def run_arm(
                 decomposer = QueryDecomposer()
                 print("[BENCH] decomposition ON (one extra LLM call per sample)")
         if arm != "retrieval":
-            llm = _make_llm()
+            llm = _make_llm(model, disable_thinking)
 
     labels = tuple(TECHNIQUE_LABELS) if technique_only else None
 
@@ -587,6 +633,25 @@ def main() -> None:
     parser.add_argument("--include-graph", action="store_true", help="append graph neighbours")
     parser.add_argument("--tag", default="", help="suffix for the run file, e.g. a top-K variant")
     parser.add_argument(
+        "--disable-thinking",
+        action="store_true",
+        help=(
+            "turn off extended thinking. Required for reasoning models such as "
+            "qwen/qwen3.5-9b, which otherwise spend the whole token budget "
+            "thinking and return no answer; also the fair setting against the "
+            "non-reasoning Ministral 8B row"
+        ),
+    )
+    parser.add_argument(
+        "--model",
+        default="",
+        help=(
+            "override the configured LLM with a full vendor/model id, e.g. "
+            "qwen/qwen3.5-9b. The model becomes part of the run filename so two "
+            "models can never be appended into the same score"
+        ),
+    )
+    parser.add_argument(
         "--concurrency",
         type=int,
         default=8,
@@ -645,6 +710,8 @@ def main() -> None:
         technique_only=args.technique_only,
         concurrency=args.concurrency,
         decompose=args.decompose,
+        model=args.model,
+        disable_thinking=args.disable_thinking,
     )
 
 
