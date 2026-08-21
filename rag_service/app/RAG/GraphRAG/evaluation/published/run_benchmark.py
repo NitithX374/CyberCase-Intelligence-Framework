@@ -10,24 +10,35 @@ What is being compared - read this before quoting any number
 These benchmarks are a short-text labelling task: 80-400 characters of English
 CTI prose in, a set of ATT&CK IDs out. That is NOT what this pipeline is for
 (a long Thai incident narrative in, a structured prosecutor case summary out).
-The comparable slice is retrieval plus technique identification, so most of the
-agent graph is bypassed: no router, no self-reflection loop.
+That mismatch is a caveat to state in the write-up, not a licence to benchmark
+something other than the product. The headline arm is `agent`: the served
+pipeline exactly as POST /query runs it. If the served path handles this input
+shape badly, that is a finding to report, not a reason to swap in a different
+pipeline.
 
-Decomposition is the exception, and it is opt-in via --decompose rather than
-off. It was assumed useless here on the grounds that an 80-character input has
-nothing to split, which measurement refuted: input LENGTH is not the criterion,
-the number of techniques packed into the sentence is. On single-label samples
-the decomposer returns one sub-query (a no-op for structure, though it does
-rewrite the text, which moves retrieval either way). On multi-label samples it
-splits cleanly along the gold labels - "adds collected files to a temp.zip ...
-then base64 encodes it and uploads it" becomes exactly the three sub-queries
-matching its three gold techniques. TechniqueRAG does the same thing, folded
-into its re-ranker prompt ("break down the query into distinct attack steps"),
-so running without it would be a self-inflicted handicap on the multi-label
-splits.
+The remaining arms are ablations of that one, each removing a stage so the
+headline number can be explained rather than merely quoted. Nothing here may be
+reported as "our pipeline scores X" except the agent arm.
+
+One earlier assumption is worth recording because it was wrong. Decomposition
+was skipped on the grounds that an 80-character input has nothing to split;
+measurement refuted that. Input LENGTH is not the criterion, the number of
+techniques packed into the sentence is. On single-label samples the decomposer
+returns one sub-query (a no-op for structure, though it does rewrite the text,
+which moves retrieval either way). On multi-label samples it splits along the
+gold labels - "adds collected files to a temp.zip ... then base64 encodes it and
+uploads it" becomes exactly the three sub-queries matching its three gold
+techniques. TechniqueRAG decomposes too, folded into its re-ranker prompt
+("break down the query into distinct attack steps"). The ablation arms expose it
+as --decompose; the agent arm always does it, because production always does.
 
 Arms
 ----
+  agent       THE HEADLINE. The served pipeline exactly as POST /query runs it -
+              router, decomposition, hybrid retrieval, sufficiency evaluation,
+              BROADEN_SEARCH loop, generation. Every other arm below is an
+              ablation of this one: they explain why the headline number is what
+              it is, and none of them may be quoted as the system's score.
   retrieval   Hybrid retriever only, ranked ATT&CK IDs. No LLM, no cost.
               Compare against their retrieval/ranking baselines
               (BM25, NCE, Text2TTP, RankGPT).
@@ -87,7 +98,11 @@ from .metrics import MARKDOWN_HEADER, MODES, extract_attack_ids, score_at_k, sco
 RUNS_DIR = DATA_DIR / "runs"
 RESULTS_PATH = Path(__file__).resolve().parent / "RESULTS.md"
 
-ARMS = ("retrieval", "rag-en", "rag-th", "llm-only")
+ARMS = ("agent", "retrieval", "rag-en", "rag-th", "llm-only")
+
+# The served path. Everything else in ARMS is an ablation of it: useful for
+# explaining why the headline number is what it is, never a substitute for it.
+HEADLINE_ARM = "agent"
 TECHNIQUE_LABELS = {"Technique", "Subtechnique"}
 
 # Kept close to the upstream instruction so task framing is not a confounder;
@@ -302,19 +317,48 @@ def run_arm(
     retriever = None
     llm = None
     decomposer = None
-    if arm != "llm-only":
-        from ...retrieval.hybrid_retriever import HybridRetriever
+    agent = None
 
-        retriever = HybridRetriever()
-        if decompose:
-            from ...pipeline.query_decomposer import QueryDecomposer
+    if arm == "agent":
+        # The served path, unmodified: router, decomposition, hybrid retrieval,
+        # sufficiency evaluation and the BROADEN_SEARCH loop, exactly as
+        # POST /query drives it. No knobs - the point of this arm is that there
+        # are none.
+        from ...pipeline.agent_graph import GraphRAGAgent
 
-            decomposer = QueryDecomposer()
-            print("[BENCH] decomposition ON (one extra LLM call per sample)")
-    if arm != "retrieval":
-        llm = _make_llm()
+        agent = GraphRAGAgent()
+        print("[BENCH] agent arm: full served pipeline, sequential")
+    else:
+        if arm != "llm-only":
+            from ...retrieval.hybrid_retriever import HybridRetriever
+
+            retriever = HybridRetriever()
+            if decompose:
+                from ...pipeline.query_decomposer import QueryDecomposer
+
+                decomposer = QueryDecomposer()
+                print("[BENCH] decomposition ON (one extra LLM call per sample)")
+        if arm != "retrieval":
+            llm = _make_llm()
 
     labels = tuple(TECHNIQUE_LABELS) if technique_only else None
+
+    def run_agent(sample: dict) -> tuple[list[str], str]:
+        """One full served-pipeline call. Returns (predicted ids, answer text).
+
+        IDs are read out of the finished answer rather than out of the retrieved
+        context, because the answer is what the product actually hands back -
+        anything the pipeline retrieved but declined to cite is, correctly, not
+        a prediction.
+        """
+        response = agent.query(sample["input"], verbose=False)
+        answer = response.answer or ""
+        predicted: list[str] = []
+        for attack_id in extract_attack_ids(answer):
+            current = vmap.map_id(attack_id) or attack_id
+            if current not in predicted:
+                predicted.append(current)
+        return predicted, answer
 
     def retrieve_one(sample: dict) -> tuple[list[str], str]:
         """Sequential half: embed, rerank, format. GPU-bound, so never threaded."""
@@ -393,6 +437,29 @@ def run_arm(
             for start in range(0, len(todo), batch_size):
                 batch = todo[start : start + batch_size]
 
+                if agent is not None:
+                    # The agent owns the GPU retriever and its own LLM calls, so
+                    # it runs one sample at a time - threading it would only
+                    # contend on the same models.
+                    for sample in batch:
+                        try:
+                            ids, answer = run_agent(sample)
+                            write(sample, ids, answer)
+                            n_done += 1
+                        except Exception as exc:  # noqa: BLE001 - resume later
+                            n_fail += 1
+                            print("  " + sample["id"] + ": AGENT FAILED - " + str(exc))
+                    elapsed = max(time.time() - started, 1e-6)
+                    seen = start + len(batch)
+                    rate = seen / elapsed
+                    print(
+                        "  " + str(seen) + "/" + str(len(todo))
+                        + "  " + format(rate, ".2f") + "/s"
+                        + "  eta " + format((len(todo) - seen) / max(rate, 1e-6) / 60, ".1f") + "m"
+                        + ("  failures " + str(n_fail) if n_fail else "")
+                    )
+                    continue
+
                 retrieved: list[tuple[dict, list[str], str]] = []
                 for sample in batch:
                     try:
@@ -440,6 +507,8 @@ def run_arm(
     finally:
         if retriever is not None:
             retriever.close()
+        if agent is not None:
+            agent.close()
 
     print("[BENCH] wrote " + str(n_done) + " rows to " + str(out_path))
     if n_fail:
