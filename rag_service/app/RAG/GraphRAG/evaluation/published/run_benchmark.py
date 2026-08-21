@@ -209,6 +209,41 @@ def retrieval_ids(result, include_graph: bool, vmap: VersionMap) -> list[str]:
     return ids
 
 
+def candidate_context(result, vmap: VersionMap, max_chars: int = 9000) -> str:
+    """Format every retrieved technique as a numbered candidate for the LLM.
+
+    Deliberately NOT GraphRAGResult.get_context_text(): that caps its semantic
+    section at FINAL_TOP_K (5), which would throw away three quarters of the
+    candidate pool. The whole premise of this arm is that the retriever is a
+    strong candidate generator (gold is somewhere in the top 20 for 83% of TRAM
+    samples) and the LLM supplies the precision - so the LLM has to actually see
+    all 20.
+    """
+    lines: list[str] = []
+    seen: set[str] = set()
+    for vr in result.vector_results:
+        meta = vr.metadata or {}
+        if meta.get("node_label") not in TECHNIQUE_LABELS:
+            continue
+        attack_id = meta.get("attack_id")
+        if not attack_id:
+            continue
+        current = vmap.map_id(attack_id) or attack_id
+        if current in seen:
+            continue
+        seen.add(current)
+        name = meta.get("name", "")
+        description = " ".join((vr.document or "").split())[:320]
+        lines.append("[" + str(len(seen)) + "] " + current + " - " + name)
+        if description:
+            lines.append("    " + description)
+
+    context = "\n".join(lines)
+    if len(context) > max_chars:
+        context = context[:max_chars] + "\n... [truncated]"
+    return context
+
+
 def _make_llm():
     from ...config import LLM_MAX_TOKENS, LLM_MODEL, LLM_TEMPERATURE
     from ...llm_provider import create_core_chat_model, resolve_core_llm_target
@@ -228,7 +263,7 @@ def run_arm(
     limit: int = 0,
     top_k: int = 10,
     include_graph: bool = False,
-    context_chars: int = 6000,
+    context_chars: int = 9000,
     tag: str = "",
     technique_only: bool = False,
 ) -> None:
@@ -278,7 +313,7 @@ def run_arm(
                             ),
                         )
                         predicted = retrieval_ids(result, include_graph, vmap)
-                        context = result.get_context_text(max_length=context_chars)
+                        context = candidate_context(result, vmap, max_chars=context_chars)
 
                     if llm is not None:
                         prompt = _PROMPTS[arm].format(context=context, query=sample["input"])
