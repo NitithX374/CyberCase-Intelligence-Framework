@@ -4,7 +4,6 @@ export type IconName =
   | "chat"
   | "evidence"
   | "details"
-  | "timeline"
   | "relationships"
   | "plus"
   | "report"
@@ -25,12 +24,6 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <rect width="18" height="18" x="3" y="3" rx="2" />
       <path d="M7 8h10M7 12h10M7 16h6" />
-    </>
-  ),
-  timeline: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <polyline points="12 7 12 12 15 15" />
     </>
   ),
   relationships: (

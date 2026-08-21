@@ -2,7 +2,7 @@
 import json
 import unittest
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from app.config import settings
 from app.models.chat import ChatMessage, ChatThread
@@ -32,24 +32,11 @@ from app.services.reports.report_generation import (
     run_report_generation,
     validate_structured_report,
 )
-from app.services.reports.report_prompt import (
-    REPORT_PROMPT_VERSION,
-    REPORT_SYSTEM_PROMPT,
-)
 from app.services.reports.report_service import (
     ChatReportService,
     ReportGenerationConflict,
     build_current_report_snapshot,
 )
-
-
-class NeverCalledReportAdapter:
-    def __init__(self) -> None:
-        self.calls: list[dict[str, object]] = []
-
-    async def complete(self, **kwargs: object) -> str:
-        self.calls.append(kwargs)
-        raise AssertionError("deterministic report generation must not call an adapter")
 
 
 class _ScalarList:
@@ -124,40 +111,15 @@ class FakeReportDb:
 class ChatReportTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.original_settings = {
-            "core_llm_provider": settings.core_llm_provider,
-            "openrouter_cybercase": settings.openrouter_cybercase,
             "chat_report_enabled": settings.chat_report_enabled,
-            "chat_report_timeout_seconds": settings.chat_report_timeout_seconds,
             "chat_report_max_input_chars": settings.chat_report_max_input_chars,
-            "chat_report_max_raw_response_chars": settings.chat_report_max_raw_response_chars,
         }
-        settings.core_llm_provider = "openrouter"
-        settings.openrouter_cybercase = ""
         settings.chat_report_enabled = True
-        settings.chat_report_timeout_seconds = 1.0
         settings.chat_report_max_input_chars = 80_000
-        settings.chat_report_max_raw_response_chars = 24_000
 
     def tearDown(self) -> None:
         for name, value in self.original_settings.items():
             setattr(settings, name, value)
-
-    def test_v2_prompt_declares_mitre_claim_contract(self) -> None:
-        self.assertEqual(REPORT_PROMPT_VERSION, "chat_report_prompt_v2")
-        self.assertIn(
-            "Prompt version: chat_report_prompt_v2.",
-            REPORT_SYSTEM_PROMPT,
-        )
-        self.assertIn(
-            "If a statement relies on multiple\nevidence, timeline, or MITRE "
-            "references, split it into separate claims",
-            REPORT_SYSTEM_PROMPT,
-        )
-        self.assertIn(
-            "Each claim's text may mention only the scalar evidence_id,\n"
-            "timeline_event_id, and mitre_technique_id carried by that claim.",
-            REPORT_SYSTEM_PROMPT,
-        )
 
     async def test_report_input_excludes_terminal_assistant_prose(self) -> None:
         thread = _report_thread()
@@ -168,12 +130,11 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(snapshot.source_messages[0].message_id, thread.messages[0].id)
         self.assertEqual(snapshot.mitre_rows[0].technique_id, "T1059.001")
 
-    async def test_generation_is_deterministic_and_never_calls_adapter(self) -> None:
+    async def test_generation_is_deterministic(self) -> None:
         snapshot = build_current_report_snapshot(_report_thread())
-        adapter = NeverCalledReportAdapter()
 
-        first = await run_report_generation(snapshot, adapter=adapter)
-        second = await run_report_generation(snapshot, adapter=adapter)
+        first = await run_report_generation(snapshot)
+        second = await run_report_generation(snapshot)
 
         self.assertEqual(first.status, "completed")
         self.assertEqual(second.status, "completed")
@@ -183,7 +144,6 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
             first.report.model_dump(mode="json"),
             second.report.model_dump(mode="json"),
         )
-        self.assertEqual(adapter.calls, [])
         self.assertEqual(first.provider, REPORT_TEMPLATE_PROVIDER)
         self.assertEqual(first.model, REPORT_TEMPLATE_MODEL)
         self.assertEqual(first.prompt_version, REPORT_TEMPLATE_PROMPT_VERSION)
@@ -426,25 +386,22 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
     async def test_template_fails_closed_on_prompt_or_unsupported_id_text(self) -> None:
         snapshot = build_current_report_snapshot(_report_thread())
         snapshot.extraction.evidence[0].description = "Unexpected E-404 reference."
-        adapter = NeverCalledReportAdapter()
 
-        unsupported = await run_report_generation(snapshot, adapter=adapter)
+        unsupported = await run_report_generation(snapshot)
         snapshot.extraction.evidence[0].description = (
             "Prompt version: chat_report_prompt_v2."
         )
-        prompt_leak = await run_report_generation(snapshot, adapter=adapter)
+        prompt_leak = await run_report_generation(snapshot)
 
         self.assertEqual(unsupported.failure_code, "report_validation_failed")
         self.assertEqual(prompt_leak.failure_code, "report_validation_failed")
-        self.assertEqual(adapter.calls, [])
 
     async def test_report_service_persists_history_and_replays_same_idempotency_key(
         self,
     ) -> None:
         thread = _report_thread()
         db = FakeReportDb(thread)
-        adapter = NeverCalledReportAdapter()
-        service = ChatReportService(db, adapter=adapter)
+        service = ChatReportService(db)
         request = ChatReportCreate(idempotency_key="request-1")
 
         first = await service.generate_report(thread.id, request)
@@ -460,7 +417,6 @@ class ChatReportTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(first.input_tokens)
         self.assertIsNone(first.output_tokens)
         self.assertEqual(len(db.reports), 1)
-        self.assertEqual(adapter.calls, [])
 
     async def test_validated_report_can_be_exported_as_pdf(self) -> None:
         thread = _report_thread()

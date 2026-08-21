@@ -16,10 +16,6 @@ from app.services.extraction.llm_extraction import (
     AnthropicExtractionAdapter,
     ExtractionFailure,
 )
-from app.services.reports.report_generation import (
-    AnthropicReportAdapter,
-    ReportProviderFailure,
-)
 
 
 class _RecordingAsyncClient:
@@ -104,15 +100,6 @@ class StructuredOutputRequestRouterTests(unittest.IsolatedAsyncioTestCase):
             ),
             {"max_tokens": 2_048},
         )
-        self.assertEqual(
-            structured_output_request_options(
-                provider="anthropic",
-                feature="report",
-                configured_max_tokens=8_192,
-                temperature=0.0,
-            ),
-            {"max_tokens": 8_192, "temperature": 0.0},
-        )
 
     def test_openrouter_applies_feature_floors_and_omits_temperature(
         self,
@@ -140,24 +127,6 @@ class StructuredOutputRequestRouterTests(unittest.IsolatedAsyncioTestCase):
                 configured_max_tokens=2_048,
             ),
             {"max_tokens": 16_384},
-        )
-        self.assertEqual(
-            structured_output_request_options(
-                provider="openrouter",
-                feature="report",
-                configured_max_tokens=8_192,
-                temperature=0.0,
-            ),
-            {"max_tokens": 16_384},
-        )
-        self.assertEqual(
-            structured_output_request_options(
-                provider="openrouter",
-                feature="report",
-                configured_max_tokens=20_000,
-                temperature=0.0,
-            ),
-            {"max_tokens": 20_000},
         )
 
     def test_unknown_provider_or_feature_raises_without_fallback(self) -> None:
@@ -204,26 +173,7 @@ class StructuredOutputRequestRouterTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("temperature", extraction_client.request_payload)
         self.assertNotIn("reasoning", extraction_client.request_payload)
 
-        report_client = _RecordingAsyncClient(_text_response())
-        with patch(
-            "app.services.reports.report_generation.httpx.AsyncClient",
-            return_value=report_client,
-        ):
-            await AnthropicReportAdapter().complete(
-                system_prompt="system",
-                input_payload={},
-                model="anthropic-report-model",
-                max_output_tokens=8_192,
-                temperature=0.0,
-            )
-        assert report_client.request_payload is not None
-        self.assertEqual(report_client.request_payload["max_tokens"], 8_192)
-        self.assertEqual(report_client.request_payload["temperature"], 0.0)
-        self.assertNotIn("reasoning", report_client.request_payload)
-
-    async def test_openrouter_followup_and_report_call_sites_keep_floors(
-        self,
-    ) -> None:
+    async def test_openrouter_followup_call_site_keeps_floor(self) -> None:
         settings.core_llm_provider = "openrouter"
 
         followup_client = _RecordingAsyncClient(_followup_response())
@@ -236,23 +186,6 @@ class StructuredOutputRequestRouterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(followup_client.request_payload["max_tokens"], 2_048)
         self.assertNotIn("temperature", followup_client.request_payload)
         self.assertNotIn("reasoning", followup_client.request_payload)
-
-        report_client = _RecordingAsyncClient(_text_response())
-        with patch(
-            "app.services.reports.report_generation.httpx.AsyncClient",
-            return_value=report_client,
-        ):
-            await AnthropicReportAdapter().complete(
-                system_prompt="system",
-                input_payload={},
-                model="anthropic-report-model",
-                max_output_tokens=8_192,
-                temperature=0.0,
-            )
-        assert report_client.request_payload is not None
-        self.assertEqual(report_client.request_payload["max_tokens"], 16_384)
-        self.assertNotIn("temperature", report_client.request_payload)
-        self.assertNotIn("reasoning", report_client.request_payload)
 
     async def test_openrouter_extraction_call_site_uses_16384_floor(self) -> None:
         settings.core_llm_provider = "openrouter"
@@ -309,32 +242,6 @@ class StructuredOutputRequestRouterTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(failure.output_tokens, 8_192)
                 self.assertIsNone(failure.raw_response)
                 self.assertNotIn(secret, str(failure))
-
-    async def test_report_length_stop_is_an_output_limit_with_usage(self) -> None:
-        settings.core_llm_provider = "openrouter"
-        client = _RecordingAsyncClient(
-            {
-                "stop_reason": "length",
-                "content": [{"type": "text", "text": "partial"}],
-                "usage": {"input_tokens": 456, "output_tokens": 16_384},
-            }
-        )
-        with patch(
-            "app.services.reports.report_generation.httpx.AsyncClient",
-            return_value=client,
-        ):
-            with self.assertRaises(ReportProviderFailure) as context:
-                await AnthropicReportAdapter().complete(
-                    system_prompt="system",
-                    input_payload={},
-                    model="anthropic-report-model",
-                    max_output_tokens=8_192,
-                    temperature=0.0,
-                )
-
-        self.assertEqual(context.exception.code, "report_output_limit")
-        self.assertEqual(context.exception.input_tokens, 456)
-        self.assertEqual(context.exception.output_tokens, 16_384)
 
 
 if __name__ == "__main__":

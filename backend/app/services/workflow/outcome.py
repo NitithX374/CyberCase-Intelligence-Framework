@@ -16,9 +16,7 @@ from app.services.case_analysis.contracts import (
 )
 from app.services.clients.rag_client import RagCallFailure
 from app.services.extraction.llm_extraction import (
-    BASELINE_EXTRACTION_MODE,
     BASELINE_EXTRACTION_PROMPT_VERSION,
-    BASELINE_EXTRACTION_VERSION,
     EXTRACTION_METADATA_KEY,
 )
 

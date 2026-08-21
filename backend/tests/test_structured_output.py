@@ -9,11 +9,6 @@ from app.services.extraction.llm_extraction import (
     AnthropicExtractionAdapter,
     BaselineExtraction,
 )
-from app.services.reports.report_generation import (
-    AnthropicReportAdapter,
-    ReportProviderFailure,
-)
-from app.services.reports.report_provider_schema import ProviderStructuredReport
 from app.services.llm.structured_output import anthropic_json_schema
 
 
@@ -155,79 +150,6 @@ class StructuredOutputSchemaTests(unittest.IsolatedAsyncioTestCase):
             "openai/gpt-5.6-luna",
         )
         self.assertIn("output_config", client.request_payload)
-
-    async def test_report_adapter_sends_normalized_schema(self) -> None:
-        client = _CaptureAsyncClient()
-        with patch(
-            "app.services.reports.report_generation.httpx.AsyncClient",
-            return_value=client,
-        ):
-            await AnthropicReportAdapter().complete(
-                system_prompt="system",
-                input_payload={},
-                model="test-model",
-                max_output_tokens=32,
-                temperature=0.0,
-            )
-
-        assert client.request_payload is not None
-        schema = client.request_payload["output_config"]["format"]["schema"]
-        self._assert_provider_schema(schema)
-        self.assertNotIn("maxItems", str(schema))
-        self.assertEqual(
-            schema["properties"],
-            anthropic_json_schema(ProviderStructuredReport)["properties"],
-        )
-
-    async def test_report_adapter_preserves_usage_for_output_limit(self) -> None:
-        client = _CaptureAsyncClient(
-            response_json={
-                "stop_reason": "max_tokens",
-                "content": [{"type": "text", "text": "partial"}],
-                "usage": {"input_tokens": 111, "output_tokens": 32},
-            }
-        )
-        with patch(
-            "app.services.reports.report_generation.httpx.AsyncClient",
-            return_value=client,
-        ):
-            with self.assertRaises(ReportProviderFailure) as context:
-                await AnthropicReportAdapter().complete(
-                    system_prompt="system",
-                    input_payload={},
-                    model="test-model",
-                    max_output_tokens=32,
-                    temperature=0.0,
-                )
-
-        self.assertEqual(context.exception.code, "report_output_limit")
-        self.assertEqual(context.exception.input_tokens, 111)
-        self.assertEqual(context.exception.output_tokens, 32)
-
-    async def test_report_adapter_distinguishes_refusal(self) -> None:
-        client = _CaptureAsyncClient(
-            response_json={
-                "stop_reason": "refusal",
-                "content": [],
-                "usage": {"input_tokens": 23, "output_tokens": 0},
-            }
-        )
-        with patch(
-            "app.services.reports.report_generation.httpx.AsyncClient",
-            return_value=client,
-        ):
-            with self.assertRaises(ReportProviderFailure) as context:
-                await AnthropicReportAdapter().complete(
-                    system_prompt="system",
-                    input_payload={},
-                    model="test-model",
-                    max_output_tokens=32,
-                    temperature=0.0,
-                )
-
-        self.assertEqual(context.exception.code, "report_refusal")
-        self.assertEqual(context.exception.input_tokens, 23)
-        self.assertEqual(context.exception.output_tokens, 0)
 
     def _assert_provider_schema(self, schema: object) -> None:
         if isinstance(schema, dict):

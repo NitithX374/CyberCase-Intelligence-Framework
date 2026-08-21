@@ -127,15 +127,9 @@ class Settings(BaseSettings):
     chat_extraction_max_text_chars: int = 8_000
     chat_extraction_max_raw_response_chars: int = 96_000
 
-    # Persisted report generation. The report service performs one provider
-    # call per valid generation attempt and never repairs model output.
+    # Persisted report generation.
     chat_report_enabled: bool = True
-    chat_report_model: str = "openai/gpt-5.6-luna"
-    chat_report_timeout_seconds: float = 180.0
     chat_report_max_input_chars: int = 100_000
-    chat_report_max_output_tokens: int = 16_384
-    chat_report_max_raw_response_chars: int = 96_000
-    chat_report_temperature: float = 0.0
     chat_report_max_text_chars: int = 8_000
     chat_report_max_claims: int = 128
     chat_report_max_limitations: int = 48

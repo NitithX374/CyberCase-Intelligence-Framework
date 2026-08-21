@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 from app.services.llm.core_llm import CoreLlmProvider, CoreLlmTarget
 from app.services.extraction.llm_extraction import AnthropicExtractionAdapter
-from app.services.reports.report_generation import AnthropicReportAdapter
 from app.services.llm.structured_output_router import structured_output_schema
 
 
@@ -105,61 +104,6 @@ class StructuredOutputRouterTests(unittest.IsolatedAsyncioTestCase):
         schema = self._captured_schema(client)
         self._assert_all_object_properties_required(schema)
 
-    async def test_report_adapter_routes_anthropic_schema(self) -> None:
-        client = _CaptureAsyncClient()
-        with (
-            patch(
-                "app.services.reports.report_generation.resolve_core_llm_target",
-                return_value=_target("anthropic"),
-            ),
-            patch(
-                "app.services.reports.report_generation.httpx.AsyncClient",
-                return_value=client,
-            ),
-        ):
-            await AnthropicReportAdapter().complete(
-                system_prompt="system",
-                input_payload={},
-                model="feature-model",
-                max_output_tokens=32,
-                temperature=0.0,
-            )
-
-        schema = self._captured_schema(client)
-        self.assertNotEqual(
-            schema["required"],
-            list(schema["properties"].keys()),
-        )
-        self.assertIn("anyOf", schema["properties"]["claims"]["items"])
-        self._assert_schema_keys_absent(schema, {"oneOf", "discriminator"})
-
-    async def test_report_adapter_routes_openrouter_provider_claim_schema(
-        self,
-    ) -> None:
-        client = _CaptureAsyncClient()
-        with (
-            patch(
-                "app.services.reports.report_generation.resolve_core_llm_target",
-                return_value=_target("openrouter"),
-            ),
-            patch(
-                "app.services.reports.report_generation.httpx.AsyncClient",
-                return_value=client,
-            ),
-        ):
-            await AnthropicReportAdapter().complete(
-                system_prompt="system",
-                input_payload={},
-                model="feature-model",
-                max_output_tokens=32,
-                temperature=0.0,
-            )
-
-        schema = self._captured_schema(client)
-        self._assert_all_object_properties_required(schema)
-        self.assertIn("anyOf", schema["properties"]["claims"]["items"])
-        self._assert_schema_keys_absent(schema, {"oneOf", "discriminator"})
-
     def _captured_schema(self, client: _CaptureAsyncClient) -> dict[str, object]:
         assert client.request_payload is not None
         output_config = client.request_payload["output_config"]
@@ -183,20 +127,6 @@ class StructuredOutputRouterTests(unittest.IsolatedAsyncioTestCase):
         elif isinstance(value, list):
             for child in value:
                 self._assert_all_object_properties_required(child)
-
-    def _assert_schema_keys_absent(
-        self,
-        value: object,
-        forbidden: set[str],
-    ) -> None:
-        if isinstance(value, dict):
-            self.assertTrue(forbidden.isdisjoint(value))
-            for child in value.values():
-                self._assert_schema_keys_absent(child, forbidden)
-        elif isinstance(value, list):
-            for child in value:
-                self._assert_schema_keys_absent(child, forbidden)
-
 
 if __name__ == "__main__":
     unittest.main()
