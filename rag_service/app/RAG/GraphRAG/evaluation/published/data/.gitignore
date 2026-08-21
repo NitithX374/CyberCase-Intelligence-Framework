@@ -1,2 +1,6 @@
 # Fetched from HuggingFace by fetch_datasets.py - not vendored.
 *_zeroshot_test.json
+
+# Partial/exploratory runs. The runs backing a reported number are committed
+# explicitly with `git add -f`.
+runs/*.jsonl
