@@ -12,13 +12,9 @@ import {
 } from "react";
 import {
   createChatMessage,
-  createChatThread,
-  deleteChatThread,
   getApiErrorMessage,
   getChatRun,
   getChatThread,
-  listChatThreads,
-  updateChatThread,
   type PersistedChatMessage,
   type ChatMessageAction,
   type ChatThreadDetail,
@@ -52,6 +48,10 @@ import {
 import { caseUpdateForMessage, latestValidatedGaps, type CaseUpdateView } from "@/lib/case-update";
 import { mitreCandidatesForMessage } from "@/lib/mitre-candidate";
 import type { CaseStateInspectorUpdate } from "@/components/conversation/CaseStateInspector";
+import {
+  useChatThreadMutations,
+  useChatThreads,
+} from "@/hooks/use-chat-queries";
 
 const POLL_INTERVAL_MS = 1000;
 
@@ -163,7 +163,6 @@ export function ChatWorkspace() {
     setActiveViewPathname(pathname);
     setActiveView(routeView);
   }
-  const [threads, setThreads] = useState<ChatThreadRead[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [threadStatus, setThreadStatus] = useState<ThreadStatus | null>(null);
   const [messages, setMessages] = useState<PersistedChatMessage[]>([]);
@@ -176,13 +175,30 @@ export function ChatWorkspace() {
   } | null>(null);
   const [phase, setPhase] = useState<RunPhase>("idle");
   const [queryError, setQueryError] = useState<string | null>(null);
-  const [threadsError, setThreadsError] = useState<string | null>(null);
-  const [threadsLoading, setThreadsLoading] = useState(true);
-  const [creatingThread, setCreatingThread] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState<ChatThreadRead | null>(
     null,
   );
-  const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
+
+  const threadsQuery = useChatThreads();
+  const {
+    upsertThread: cacheUpsertThread,
+    createMutation,
+    updateMutation,
+    deleteMutation,
+  } = useChatThreadMutations();
+  const threads = useMemo(() => threadsQuery.data ?? [], [threadsQuery.data]);
+  const threadsLoading = threadsQuery.isLoading;
+  const creatingThread = createMutation.isPending;
+  const deletingThreadId = deleteMutation.isPending
+    ? deleteMutation.variables ?? null
+    : null;
+  const threadsError = threadsQuery.error
+    ? getApiErrorMessage(threadsQuery.error, "Saved chats could not be loaded.")
+    : createMutation.error
+      ? getApiErrorMessage(createMutation.error, "A new chat could not be created.")
+      : deleteMutation.error
+        ? getApiErrorMessage(deleteMutation.error, "The chat could not be deleted.")
+        : null;
 
   const activeThreadIdRef = useRef<string | null>(null);
   const selectionGenerationRef = useRef(0);
@@ -191,16 +207,13 @@ export function ChatWorkspace() {
   const pendingSubmissionRef = useRef<PendingSubmission | null>(null);
   const rootBootstrapDoneRef = useRef(false);
 
-  const upsertThread = useCallback((thread: ChatThreadRead) => {
-    if (deletedThreadIdsRef.current.has(thread.id)) return;
-    setThreads((current) => {
-      const next = [thread, ...current.filter((item) => item.id !== thread.id)];
-      return next.sort(
-        (left, right) =>
-          Date.parse(right.updated_at) - Date.parse(left.updated_at),
-      );
-    });
-  }, []);
+  const upsertThread = useCallback(
+    (thread: ChatThreadRead) => {
+      if (deletedThreadIdsRef.current.has(thread.id)) return;
+      cacheUpsertThread(thread);
+    },
+    [cacheUpsertThread],
+  );
 
   const isCurrentSelection = useCallback(
     (threadId: string, generation: number) =>
@@ -363,30 +376,10 @@ export function ChatWorkspace() {
   );
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    void (async () => {
-      setThreadsLoading(true);
-      setThreadsError(null);
-      try {
-        const loadedThreads = await listChatThreads(controller.signal);
-        if (controller.signal.aborted) return;
-        setThreads(loadedThreads);
-      } catch (error) {
-        if (isCanceled(controller.signal, error)) return;
-        setThreadsError(
-          getApiErrorMessage(error, "Saved chats could not be loaded."),
-        );
-      } finally {
-        if (!controller.signal.aborted) setThreadsLoading(false);
-      }
-    })();
-
     return () => {
-      controller.abort();
       pollControllerRef.current?.abort();
     };
-  }, [selectThread]);
+  }, []);
 
   useEffect(() => {
     if (routeThreadId !== null) rootBootstrapDoneRef.current = false;
@@ -437,19 +430,14 @@ export function ChatWorkspace() {
     if (creatingThread) return;
     setActiveView("chat");
     setPostAnswerAction(null);
-    setCreatingThread(true);
-    setThreadsError(null);
     try {
-      const thread = await createChatThread();
-      upsertThread(thread);
+      const thread = await createMutation.mutateAsync();
       router.push(chatPath(thread.id, "chat"));
       await selectThread(thread.id);
-    } catch (error) {
-      setThreadsError(getApiErrorMessage(error, "A new chat could not be created."));
-    } finally {
-      setCreatingThread(false);
+    } catch {
+      return;
     }
-  }, [creatingThread, router, selectThread, upsertThread]);
+  }, [creatingThread, createMutation, router, selectThread]);
 
   const pollKnownRun = useCallback(
     async (
@@ -543,8 +531,7 @@ export function ChatWorkspace() {
       let currentThread = threads.find((thread) => thread.id === threadId);
       if (!threadId) {
         try {
-          const created = await createChatThread();
-          upsertThread(created);
+          const created = await createMutation.mutateAsync();
           router.push(chatPath(created.id, "chat"));
           await selectThread(created.id);
           threadId = created.id;
@@ -637,11 +624,10 @@ export function ChatWorkspace() {
           currentThread?.title === "New chat" &&
           existingMessages.length === 0
         ) {
-          void updateChatThread(
+          void updateMutation.mutateAsync({
             threadId,
-            titleFromMessage(content),
-            controller.signal,
-          )
+            title: titleFromMessage(content),
+          })
             .then((updated) => {
               if (isCurrentSelection(threadId, generation)) upsertThread(updated);
             })
@@ -710,9 +696,6 @@ export function ChatWorkspace() {
 
     const deletingActiveThread = activeThreadIdRef.current === thread.id;
     deletedThreadIdsRef.current.add(thread.id);
-    setDeletingThreadId(thread.id);
-    setThreadsError(null);
-
     if (deletingActiveThread) {
       pollControllerRef.current?.abort();
       pollControllerRef.current = null;
@@ -726,20 +709,16 @@ export function ChatWorkspace() {
     }
 
     try {
-      await deleteChatThread(thread.id);
-    } catch (error) {
+      await deleteMutation.mutateAsync(thread.id);
+    } catch {
       deletedThreadIdsRef.current.delete(thread.id);
       setDeleteCandidate(null);
-      setDeletingThreadId(null);
-      setThreadsError(getApiErrorMessage(error, "The chat could not be deleted."));
       if (deletingActiveThread) await selectThread(thread.id);
       return;
     }
 
     const remainingThreads = threads.filter((item) => item.id !== thread.id);
-    setThreads((current) => current.filter((item) => item.id !== thread.id));
     setDeleteCandidate(null);
-    setDeletingThreadId(null);
 
     if (!deletingActiveThread) return;
 
@@ -760,6 +739,7 @@ export function ChatWorkspace() {
   }, [
     activeView,
     deleteCandidate,
+    deleteMutation,
     deletingThreadId,
     router,
     selectThread,

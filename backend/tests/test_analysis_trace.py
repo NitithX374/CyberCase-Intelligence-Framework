@@ -199,6 +199,34 @@ class AnalysisTraceValidationTests(unittest.TestCase):
             "analysis_trace_relationship_status_changed",
         )
 
+    def test_claim_cannot_merge_relationships_with_different_statuses(self) -> None:
+        case_state = _case_state()
+        case_state["relationships"] = [
+            *case_state["relationships"],
+            {
+                "relationship_id": "REL-002",
+                "subject_entity_id": "ENT-001",
+                "object_entity_id": "ENT-002",
+                "status": "reported",
+            },
+        ]
+        with self.assertRaises(AnalysisTraceProvenanceError) as raised:
+            validate_analysis_trace(
+                _provider_response(
+                    _claim(
+                        relationship_ids=["REL-001", "REL-002"],
+                    )
+                ),
+                case_state_json=case_state,
+                mitre_table=[],
+                analysis_mode="case_overview",
+            )
+
+        self.assertEqual(
+            raised.exception.code,
+            "analysis_trace_relationship_status_changed",
+        )
+
     def test_duplicate_claim_ids_are_harmless_structure_failure(self) -> None:
         with self.assertRaises(AnalysisTraceStructureError) as raised:
             validate_analysis_trace(

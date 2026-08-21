@@ -87,11 +87,10 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("TRUST HIERARCHY", system_prompt)
             self.assertIn("Do not retrieve new information", system_prompt)
             self.assertIn("ANALYSIS MODE: question_answer", system_prompt)
-            self.assertIn("Answer the supplied question directly", system_prompt)
-            self.assertIn("proportional to the specific question", system_prompt)
-            self.assertIn("Do not force the standard five-section", system_prompt)
+            self.assertIn("Answer the question directly", system_prompt)
+            self.assertIn("proportional to the question", system_prompt)
             self.assertIn("RESPONSE LANGUAGE AND VOICE", system_prompt)
-            self.assertIn("natural professional English", system_prompt)
+            self.assertIn("natural, professional English", system_prompt)
             self.assertIn(
                 '"response_language":"english"',
                 request_payload["messages"][0]["content"],
@@ -165,7 +164,7 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
             request_payload = json.loads(request.content)
             system_prompt = request_payload["system"]
             user_prompt = request_payload["messages"][0]["content"]
-            self.assertIn("natural contemporary professional Thai", system_prompt)
+            self.assertIn("natural, contemporary, professional Thai", system_prompt)
             self.assertIn('"response_language":"thai"', user_prompt)
             return httpx.Response(
                 200,
@@ -260,7 +259,19 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("TRUST HIERARCHY", system_prompt)
             self.assertIn("Do not retrieve new information", system_prompt)
             self.assertIn("ANALYSIS MODE: case_overview", system_prompt)
-            self.assertIn("five short sections in this order", system_prompt)
+            self.assertIn("five sections in this order", system_prompt)
+            self.assertIn(
+                "copy its exact status into epistemic_status",
+                system_prompt,
+            )
+            self.assertIn(
+                '"not_established" and "not_confirmed" are distinct values',
+                system_prompt,
+            )
+            self.assertIn(
+                "Split claims when referenced relationship statuses differ",
+                system_prompt,
+            )
             self.assertIn('"analysis_mode":"case_overview"', prompt)
             self.assertIn('"question":null', prompt)
             return httpx.Response(
@@ -443,6 +454,37 @@ class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(payload["context_truncated"])
         self.assertTrue(payload["case_narrative"]["truncated"])
         self.assertTrue(payload["analysis_context"]["truncated"])
+
+    def test_oversized_case_state_preserves_relationship_status_contract(self) -> None:
+        case_state = {
+            "case_summary": "case " * 1_000,
+            "relationships": [
+                {
+                    "relationship_id": "REL-001",
+                    "status": "not_established",
+                }
+            ],
+        }
+        with patch.object(settings, "chat_ask_max_input_chars", 900):
+            prompt = build_case_analysis_prompt(
+                mode="question_answer",
+                case_state_json=case_state,
+                analysis_context={"retrieved_context": "context " * 1_000},
+                question="Which relationship remains unresolved?",
+                response_language="english",
+            )
+
+        serialized = prompt.split("<case_context_json>\n", 1)[1].split(
+            "\n</case_context_json>",
+            1,
+        )[0]
+        payload = json.loads(serialized)
+        self.assertLessEqual(len(prompt), 900)
+        self.assertTrue(payload["context_truncated"])
+        self.assertEqual(
+            payload["relationship_status_contract"],
+            [{"relationship_id": "REL-001", "status": "not_established"}],
+        )
 
 
 if __name__ == "__main__":

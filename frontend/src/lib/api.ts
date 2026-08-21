@@ -138,114 +138,20 @@ export interface ChatReportRead {
   output_tokens: number | null;
 }
 
-export type ChatExtractionConfidence = "high" | "medium" | "low" | "unknown";
-export type ChatReportedStatus = "reported" | "unknown" | "not_confirmed";
-export type ChatRelationshipStatus =
-  | "reported"
-  | "suspected"
-  | "contradicted"
-  | "not_established";
-
-export interface ChatBaselineEntity {
-  entity_id: string;
-  name: string;
-  entity_type: string;
-  reported_role: string | null;
-  confidence: ChatExtractionConfidence;
-  source_message_ids: string[];
-}
-
-export interface ChatBaselineRelationship {
-  relationship_id: string;
-  subject_entity_id: string;
-  predicate: string;
-  object_entity_id: string;
-  statement: string;
-  status: ChatRelationshipStatus;
-  confidence: ChatExtractionConfidence;
-  source_message_ids: string[];
-}
-
-export interface ChatBaselineEvidence {
-  evidence_id: string;
-  title: string;
-  description: string;
-  artifact_type: string;
-  status: ChatReportedStatus;
-  confidence: ChatExtractionConfidence;
-  source_type: "user_reported";
-  source_message_ids: string[];
-}
-
-export interface ChatBaselineTimelineEvent {
-  event_id: string;
-  timestamp: string | null;
-  timestamp_text: string | null;
-  event: string;
-  actors: string[];
-  evidence_ids: string[];
-  status: ChatReportedStatus;
-  confidence: ChatExtractionConfidence;
-  source_message_ids: string[];
-}
-
-export interface ChatBaselineMissingInformation {
-  missing_id: string;
-  description: string;
-  importance: "material" | "important" | "useful" | "unknown";
-  source_message_ids: string[];
-}
-
-export interface ChatCaseState {
-  entities: ChatBaselineEntity[];
-  relationships: ChatBaselineRelationship[];
-  evidence: ChatBaselineEvidence[];
-  timeline: ChatBaselineTimelineEvent[];
-  warnings: string[];
-}
-
-export interface ChatBaselineExtraction {
-  version?: string;
-  mode?: string;
-  status: "candidate";
-  case_summary?: string;
-  entities: ChatBaselineEntity[];
-  relationships: ChatBaselineRelationship[];
-  evidence: ChatBaselineEvidence[];
-  timeline: ChatBaselineTimelineEvent[];
-  missing_information?: ChatBaselineMissingInformation[];
-  warnings: string[];
-  prompt_version: string;
-  provider: string;
-  model: string;
-  validation_status: "validated";
-  latency_ms: number;
-  input_tokens: number | null;
-  output_tokens: number | null;
-  source_message_ids: string[];
-  raw_response: string | null;
-}
-
-export interface ChatBaselineExtractionFailure {
-  version?: string;
-  mode?: string;
-  status: "failed";
-  prompt_version: string;
-  provider: string;
-  model: string;
-  validation_status: "failed";
-  latency_ms: number;
-  input_tokens: number | null;
-  output_tokens: number | null;
-  source_message_ids: string[];
-  raw_response: string | null;
-  failure_code: string;
-  failure_message: string;
-}
-
-export type ChatExtraction =
-  | ChatBaselineExtraction
-  | ChatBaselineExtractionFailure;
+export type {
+  ChatBaselineEntity,
+  ChatBaselineEvidence,
+  ChatBaselineExtraction,
+  ChatBaselineExtractionFailure,
+  ChatBaselineMissingInformation,
+  ChatBaselineRelationship,
+  ChatBaselineTimelineEvent,
+  ChatCaseState,
+  ChatExtraction,
+  ChatExtractionConfidence,
+  ChatRelationshipStatus,
+  ChatReportedStatus,
+} from "@/lib/metadata-schemas";
 
 export const listChatThreads = async (
   signal?: AbortSignal,

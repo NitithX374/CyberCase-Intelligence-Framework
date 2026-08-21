@@ -2,6 +2,8 @@
 
 ## Snapshot
 
+- 2026-08-22 [USER] Current read-only audit goal: identify libraries that reduce frontend state and redundant data-shape code without weakening CyberCase persistence, provenance, or validation boundaries.
+- 2026-08-22 [USER] Implementation goal: apply the approved frontend library reductions while keeping Axios transport, idempotent run polling, backend route boundaries, and internal dataclass ownership stable.
 - 2026-08-21 [USER] Goal: make Main Case Analysis respond naturally in the language of the user's current message.
 - 2026-08-21 [USER] Current diagnostic goal: explain two simultaneous chat runs and RAG queries in the live checkout.
 - 2026-08-21 [CODE] Current branch is `feat/language-aware-analysis-personalization`; HEAD remains `3f37eddf5ad9d0c1268752334a736d158f1edad7` and all earlier dirty work is preserved.
@@ -26,13 +28,13 @@
 
 ## Done (recent)
 
-- 2026-08-20 [CODE] Completed Branch A follow-up, stable delta IDs, Branch B Claim Inspector, and Branch C Case Update projection.
-- 2026-08-20 [CODE] Completed Branch D Analysis Trace v1 with native references and independent epistemic status.
+- 2026-08-20 [CODE] Completed Branch A-D follow-up, stable delta IDs, Claim Inspector, Case Update projection, and Analysis Trace v1.
 - 2026-08-21 [CODE] Added strict Branch E MITRE association contracts and bound-context validation.
 - 2026-08-21 [CODE] Added the candidate-only transcript panel and legacy-safe frontend projection.
 - 2026-08-21 [TOOL] Added regressions for admission, claim linkage, forbidden semantics, persistence, and UI wording.
 - 2026-08-21 [CODE] Added deterministic Thai/English Main Case Analysis personalization without another LLM call.
 - 2026-08-21 [CODE] Reverted the uncommitted parallel-RAG prototype without touching earlier or unrelated user work.
+- 2026-08-22 [CODE] Applied TanStack Query to chat thread/report remote state and Zod to persisted extraction parsing; OpenAPI type generation is reproducible without committing a large generated declaration.
 
 ## Decisions
 
@@ -45,6 +47,12 @@
 - D007 ACTIVE 2026-08-20 [USER] MITRE has one source of truth through `mitre_associations`; claims contain no MITRE IDs.
 - D008 ACTIVE 2026-08-21 [USER] MITRE associations are candidate-only external interpretation linked through claims and are never incident evidence.
 - D009 ACTIVE 2026-08-21 [CODE] Personalization adapts language and professional voice only; it never changes fact authority, epistemic status, or user identity assumptions.
+- D010 ACTIVE 2026-08-22 [USER] Keep the current RAG answer-generation path unchanged; its simplification is out of scope.
+- D011 ACTIVE 2026-08-22 [USER] Keep report generation deterministic and template-first; re-audit report dataclasses and dataflow before changing its boundaries.
+- D012 ACTIVE 2026-08-22 [CODE] Preserve historical report schemas, provider compatibility modules, and PDF version branches while removing only dead deterministic adapter plumbing.
+- D013 ACTIVE 2026-08-22 [CODE] Main Case Analysis must copy each referenced relationship's exact status; mixed-status relationship references must be split, and validation remains fail-closed.
+- D014 ACTIVE 2026-08-22 [CODE] TanStack Query owns remote chat/report cache and mutation state; explicit idempotency and run polling remain in ChatWorkspace.
+- D015 ACTIVE 2026-08-22 [CODE] OpenAPI types are generated from the live FastAPI contract on demand; the generated snapshot stays ignored to preserve the repository's modular file-size limit.
 
 ## Incident: Follow-up false proceed
 
@@ -56,13 +64,33 @@
 - 2026-08-20 [USER] Symptom: the exact Thai clarification displayed `mutateCaseState failed`.
 - 2026-08-20 [CODE] Status: corrected with closed categories, legacy normalization, and backend-owned ADD IDs; live V1 to V2 persistence passed.
 
+## Incident: Baseline extraction validation failure
+
+- 2026-08-22 [TOOL] Live chat run failed with `extraction_validation_failed`; valid JSON was logged before the failure.
+- 2026-08-22 [TOOL] Evidence: a relationship targeted `Application Shimming` without a matching entity, and other relationships targeted free-text values.
+- 2026-08-22 [CODE] Boundary: relationship endpoints are required to be entity IDs in `validate_baseline_extraction`; the pipeline stops before RAG when validation returns no Case State.
+- 2026-08-22 [USER] Extraction repair/retry behavior remains out of scope; preserve fail-closed validation.
+
+## Incident: Analysis trace relationship status mismatch
+
+- 2026-08-22 [TOOL] Live run `b295c7c1-d7b4-4e9e-9910-c4e9cd69425d` passed extraction and RAG, then failed at Main Case Analysis with `analysis_trace_relationship_status_changed`.
+- 2026-08-22 [CODE] `validate_analysis_trace` compares every claim `epistemic_status` to each referenced Case State relationship `status`; the bound Python snapshot is not rewritten between extraction and analysis.
+- 2026-08-22 [CODE] Main Case Analysis now distinguishes `not_established` from `not_confirmed`, requires exact ID-based status copying, rejects mixed-status claim references, and preserves a compact status ledger under bounded truncation.
+- 2026-08-22 [TOOL] Focused trace/prompt/input-mode tests passed 50 tests plus 8 subtests; compileall and scoped diff checks passed.
+- 2026-08-22 [TOOL] Idempotent retry was blocked earlier at `extraction_validation_failed`; exact provider claim/status payload remains UNCONFIRMED because it was not persisted.
+
 ## State (Done/Now/Next)
 
+- 2026-08-22 [TOOL] Library audit completed: `@tanstack/react-query` owns live chat/report remote state, Zod owns frontend extraction metadata validation and inferred types, and no backend dataclass replacement is recommended.
 - 2026-08-21 [CODE] Done: language-aware Main Case Analysis personalization is implemented without a migration or additional LLM call.
 - 2026-08-21 [TOOL] Reproduced the exact validator message for Group/Software IDs, names, missing IDs, and noncanonical whitespace; valid T-shaped IDs pass this layer.
 - 2026-08-21 [CODE] Now: parallel-RAG work is stopped; branch restored to `feat/language-aware-analysis-personalization`.
 - 2026-08-21 [CODE] Now: retrieval-to-analysis MITRE validation is diagnosed; no production fix has been applied.
 - 2026-08-21 [ASSUMPTION] No implementation was made because the user reported the symptom but did not explicitly request a fix.
+- 2026-08-22 [CODE] Done: status-preserving Main Case Analysis prompt guidance and bounded relationship status projection are implemented; extraction validation remains out of scope.
+- 2026-08-22 [CODE] Done: frontend chat/report server-state mutations use React Query, and extraction metadata uses Zod schemas with inferred types plus fail-closed reference checks.
+- 2026-08-22 [TOOL] Done: `generate:api-types` successfully generated the live FastAPI contract; the generated 830-line declaration is ignored rather than committed.
+- 2026-08-22 [TOOL] Now: live backend reloaded the status-preserving change; a live end-to-end success is UNCONFIRMED because the idempotent retry failed earlier during extraction validation.
 
 ## Open questions
 
@@ -97,3 +125,9 @@
 - 2026-08-21 [TOOL] `git diff --check` passed with only existing LF-to-CRLF notices.
 - 2026-08-21 [TOOL] Language-personalization focused workflow: 65 passed, 11 subtests passed.
 - 2026-08-21 [TOOL] Language-personalization full production backend: 269 passed, 30 subtests passed, 2 warnings.
+- 2026-08-22 [TOOL] Report cleanup validation: report/PDF/provider-schema/route tests passed 24 tests plus 6 subtests; structured-output compatibility tests passed 21 tests plus 3 subtests.
+- 2026-08-22 [TOOL] Relationship-status fix validation: 50 focused tests plus 8 subtests passed in `env_mitre`; compileall passed; live backend reloaded the change.
+- 2026-08-22 [TOOL] Exact failed-run retry reached extraction validation failure before Main Case Analysis, so live end-to-end success is UNCONFIRMED.
+- 2026-08-22 [TOOL] Workspace synchronization reset the first source/test patch; the intended files were re-applied, revalidated, and unrelated dirty changes were preserved.
+- 2026-08-22 [TOOL] Frontend library integration: focused extraction/chat tests 42 passed; full frontend suite 80 passed; lint and Next production build passed.
+- 2026-08-22 [TOOL] OpenAPI generation from `http://localhost:8000/openapi.json` passed with `openapi-typescript` 7.13.0; generated output was removed and ignored after validation.

@@ -1,0 +1,32 @@
+<section class="report-section">
+    <div class="section-header">
+        <h2 class="section-number-title">{{ report.i18n.sec_5_7 }}</h2>
+    </div>
+
+    <div class="sub-header">{{ report.i18n.sub_limitations }}</div>
+    <div class="limitations-box">
+        <ul>
+            {% for limitation in report.limitations %}
+            <li>{{ limitation }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="sub-header" style="margin-top: 10pt;">{{ report.i18n.sub_provenance }}</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th style="width: 30%;">{{ report.i18n.col_prov_item }}</th>
+                <th style="width: 70%;">{{ report.i18n.col_prov_value }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.provenance_rows %}
+            <tr>
+                <td><strong>{{ row.label }}</strong></td>
+                <td><span class="code-wrap">{{ row.value }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>

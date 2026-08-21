@@ -1,0 +1,37 @@
+<section class="report-section">
+    <div class="section-header">
+        <h2 class="section-number-title">{{ report.i18n.sec_5_5 }}</h2>
+    </div>
+
+    {% if report.has_mitre_mappings %}
+    <p class="section-lead-paragraph">{{ report.i18n.sub_mitre_intro }}</p>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">{{ report.i18n.col_finding }}</th>
+                <th style="width: 35%;">{{ report.i18n.col_case_support }}</th>
+                <th style="width: 25%;">{{ report.i18n.col_mitre }}</th>
+                <th style="width: 15%;">{{ report.i18n.col_mapping_status }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.mitre_rows %}
+            <tr>
+                <td><strong>{{ row.finding }}</strong></td>
+                <td>{{ row.case_evidence_support }}</td>
+                <td>
+                    <strong>{{ row.technique_id }}</strong>
+                    <div class="text-muted">{{ row.technique_name }}</div>
+                </td>
+                <td>
+                    {{ row.status_display }}
+                    <div class="text-muted">{{ report.i18n.retrieval_source }}: {{ row.source }}</div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="section-lead-paragraph">{{ report.i18n.empty_mitre }}</p>
+    {% endif %}
+</section>

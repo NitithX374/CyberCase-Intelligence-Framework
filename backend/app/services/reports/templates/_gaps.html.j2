@@ -1,0 +1,30 @@
+<section class="report-section">
+    <div class="section-header">
+        <h2 class="section-number-title">{{ report.i18n.sec_5_6 }}</h2>
+    </div>
+
+    <div class="split-container">
+        <div class="split-col split-col-left">
+            <div class="sub-header">{{ report.i18n.sub_unresolved }}</div>
+            <ul class="item-list">
+                {% for issue in report.unresolved_issues %}
+                <li>
+                    <strong>{{ issue.description }}</strong>
+                    {% if issue.reason and issue.reason != '-' %}
+                    <div class="text-muted">{{ issue.reason }}</div>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="split-col split-col-right">
+            <div class="sub-header">{{ report.i18n.sub_next_steps }}</div>
+            <ol class="item-list">
+                {% for action in report.verification_actions %}
+                <li>{{ action.action }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+</section>

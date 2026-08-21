@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="{{ report.language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.case_title }} - CyberCase Report</title>
+    <style>
+        {{ css_content }}
+        
+        @page {
+            @top-center {
+                content: "{{ report.i18n.org_header }}  |  {{ report.i18n.running_header }}";
+            }
+            @bottom-right {
+                content: "{{ report.i18n.page_label }} " counter(page) " / " counter(pages);
+            }
+        }
+    </style>
+</head>
+<body data-report-id="{{ report.report_id }}">
+    <div class="report-container">
+        {% include "_header.html.j2" %}
+        
+        {% include "_summary.html.j2" %}
+        
+        {% include "_timeline.html.j2" %}
+        
+        {% include "_evidence.html.j2" %}
+        
+        {% include "_relationships.html.j2" %}
+        
+        {% include "_analysis_attack.html.j2" %}
+        
+        {% include "_gaps.html.j2" %}
+        
+        {% include "_provenance.html.j2" %}
+        
+        <div class="footer-notice">
+            {{ report.i18n.end_of_report }}
+        </div>
+    </div>
+</body>
+</html>

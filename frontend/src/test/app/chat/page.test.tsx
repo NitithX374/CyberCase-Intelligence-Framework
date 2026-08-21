@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   afterEach,
   beforeAll,
@@ -58,6 +59,20 @@ vi.mock("@/lib/api", () => ({
   listChatThreads: vi.fn(),
   updateChatThread: vi.fn(),
 }));
+
+const testQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+  },
+});
+
+function TestChatWorkspace() {
+  return (
+    <QueryClientProvider client={testQueryClient}>
+      <ChatWorkspace />
+    </QueryClientProvider>
+  );
+}
 
 const thread: ChatThreadDetail = {
   id: "thread-1",
@@ -316,7 +331,7 @@ function makeFailedReport(code: string): ChatReportRead {
 }
 
 async function renderLoadedPage(): Promise<void> {
-  render(<ChatWorkspace />);
+  render(<TestChatWorkspace />);
   await waitFor(() =>
     expect(getChatThread).toHaveBeenCalledWith(
       thread.id,
@@ -347,6 +362,7 @@ describe("active chat route", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    testQueryClient.clear();
     navigation.pathname = "/chat";
     vi.mocked(listChatThreads).mockResolvedValue([thread]);
     vi.mocked(getChatThread).mockResolvedValue(thread);
@@ -359,7 +375,7 @@ describe("active chat route", () => {
   });
 
   it("renders the persisted follow-up question as an ordinary assistant message", async () => {
-    render(<ChatWorkspace />);
+    render(<TestChatWorkspace />);
 
     expect(
       await screen.findByText("Which affected host produced this event?"),
@@ -503,7 +519,7 @@ describe("active chat route", () => {
     };
     vi.mocked(getChatThread).mockReset().mockResolvedValue(extractedThread);
 
-    const view = render(<ChatWorkspace />);
+    const view = render(<TestChatWorkspace />);
     await waitFor(() =>
       expect(getChatThread).toHaveBeenCalledWith(
         thread.id,
@@ -522,7 +538,7 @@ describe("active chat route", () => {
     expect(screen.queryByText("Older candidate")).not.toBeInTheDocument();
 
     navigation.pathname = "/chat/thread-1/relationships";
-    view.rerender(<ChatWorkspace />);
+    view.rerender(<TestChatWorkspace />);
 
     expect(await screen.findByRole("heading", { name: "Entity relationship graph" })).toBeInTheDocument();
     expect(screen.queryByText("Latest candidate")).not.toBeInTheDocument();
@@ -695,11 +711,11 @@ describe("active chat route", () => {
 
   it("syncs a same-thread route view without reloading the thread", async () => {
     navigation.pathname = "/chat/thread-1";
-    const view = render(<ChatWorkspace />);
+    const view = render(<TestChatWorkspace />);
     await waitFor(() => expect(getChatThread).toHaveBeenCalledTimes(1));
 
     navigation.pathname = "/chat/thread-1/report";
-    view.rerender(<ChatWorkspace />);
+    view.rerender(<TestChatWorkspace />);
 
     expect(await screen.findByText("Digital-forensics report")).toBeInTheDocument();
     expect(getChatThread).toHaveBeenCalledTimes(1);
@@ -777,7 +793,7 @@ describe("active chat route", () => {
     navigation.pathname = "/chat/missing-thread/report";
     vi.mocked(getChatThread).mockRejectedValue(new Error("not found"));
 
-    render(<ChatWorkspace />);
+    render(<TestChatWorkspace />);
 
     await waitFor(() =>
       expect(getChatThread).toHaveBeenCalledWith(
