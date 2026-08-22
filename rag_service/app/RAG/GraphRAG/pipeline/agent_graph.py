@@ -572,20 +572,31 @@ class GraphRAGAgent:
                 "answer": "Cannot generate answer because the selected CORE_LLM_PROVIDER key is not configured."
             }
 
-        # ── Fast path for ACKNOWLEDGE_LIMIT ───────────────────────────────
-        # Honour it only alongside an INSUFFICIENT verdict — guard against
-        # local LLMs that output strategy=ACKNOWLEDGE_LIMIT while simultaneously
-        # returning verdict=SUFFICIENT. Reaching reasoning WITH an INSUFFICIENT
-        # verdict already means broaden is spent or unavailable
-        # (see _edge_after_evaluation), so no separate budget check is needed —
-        # and the answerability gate can legitimately fire on the first pass.
+        # ── What the evaluator judged to be missing ────────────────────────
+        # This used to short-circuit: ACKNOWLEDGE_LIMIT returned the evaluator's
+        # message as the whole answer and generation never ran. Measured on 252
+        # TRAM samples, that path fired on 40% of them and scored zero on every
+        # one - including cases where the answer was plainly derivable
+        # ("achieves persistence by using various Registry Run keys" declined as
+        # too vague, gold T1547.001).
+        #
+        # Declining is the wrong default for a prosecutor: a partial mapping
+        # they can check is more useful than a refusal they cannot. The gap now
+        # travels into the prompt instead, so the model answers to the extent
+        # the context supports and closes by naming what more it would need.
+        #
+        # PARTIAL_ANSWER's gap_warning was written into state and never read by
+        # anything; it joins the same route.
         evaluation = state.get("evaluation")
         verdict = getattr(evaluation, "verdict", "") if evaluation else ""
+        gap_note = ""
         if strategy == "ACKNOWLEDGE_LIMIT" and ack_message and verdict == VERDICT_INSUFFICIENT:
-            if verbose:
-                sep("AGENT — REASONING LLM (ACKNOWLEDGE_LIMIT)")
-                print(ack_message)
-            return {"answer": ack_message}
+            gap_note = ack_message
+        elif state.get("gap_warning"):
+            gap_note = state["gap_warning"]
+        if gap_note and verbose:
+            sep("AGENT — REASONING LLM (partial answer, gap flagged)")
+            print("  gap: " + gap_note[:160])
 
         # ── Standard reasoning ────────────────────────────────────────────
         # Single-call generation (benchmark variant C): write the final Thai
@@ -599,6 +610,7 @@ class GraphRAGAgent:
             original_query=state.get("original_query", ""),
             english_query=state.get("english_query", ""),
             respond_in_thai=single_call,
+            gap_note=gap_note,
         )
         system_prompt = (
             CrossLingualLayer.get_fast_system_prompt(respond_in_thai=True)
