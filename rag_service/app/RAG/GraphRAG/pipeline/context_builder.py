@@ -86,6 +86,7 @@ def build_generation_prompt(
     original_query: str,
     english_query: str,
     respond_in_thai: bool = True,
+    gap_note: str = "",
 ) -> str:
     """Build the final prompt for LLM generation.
 
@@ -94,6 +95,9 @@ def build_generation_prompt(
         original_query: The user's original query (may be Thai).
         english_query: The translated English query (for reference).
         respond_in_thai: Whether to respond in Thai.
+        gap_note: What the evaluator judged to be missing. The model answers
+            with whatever the context does support and closes by naming the
+            gap, instead of declining to answer at all.
 
     Returns:
         The complete user prompt for the LLM.
@@ -129,5 +133,28 @@ def build_generation_prompt(
             "Follow the four-section format from your instructions exactly.\n"
             "Cite ATT&CK IDs for every technique mentioned."
         )
+
+    if gap_note:
+        # The evaluator judged something missing. Answer anyway, to the extent
+        # the context allows, and say what would be needed to go further - a
+        # partial mapping the reader can check beats a refusal they cannot use.
+        if respond_in_thai:
+            parts.append(
+                "\nข้อมูลที่ยังขาด: " + gap_note + "\n"
+                "ให้วิเคราะห์เท่าที่ข้อมูลที่มีรองรับ — ระบุเฉพาะเทคนิคที่ Context "
+                "สนับสนุนจริง ห้ามเดาส่วนที่ไม่มีข้อมูล\n"
+                "แล้วปิดท้ายด้วยหัวข้อ '## ข้อมูลที่ต้องการเพิ่มเติม' "
+                "ระบุเป็นข้อ ๆ ว่าต้องการรายละเอียดใดเพิ่มจึงจะสรุปได้ครบถ้วน\n"
+                "ห้ามปฏิเสธที่จะตอบ"
+            )
+        else:
+            parts.append(
+                "\nKnown gap: " + gap_note + "\n"
+                "Analyse as far as the available context supports — name only techniques "
+                "the context actually evidences, and do not guess at the rest.\n"
+                "Then close with a section '## ADDITIONAL INFORMATION NEEDED' listing, "
+                "as bullet points, what further detail would be required for a complete mapping.\n"
+                "Do not decline to answer."
+            )
 
     return "\n".join(parts)

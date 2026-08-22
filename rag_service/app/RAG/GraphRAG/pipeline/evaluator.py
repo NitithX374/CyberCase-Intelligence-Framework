@@ -77,10 +77,11 @@ attacker action — e.g. it only refers to "this incident" / "the attack" withou
 describing what happened, or states only an outcome ("data leaked", "system was
 hacked") with no HOW — the verdict is INSUFFICIENT no matter how relevant the
 retrieved context looks. Topically related context can NEVER substitute for a
-missing incident description. You cannot ask the user for the missing details,
-so in this case set strategy to ACKNOWLEDGE_LIMIT and write a message stating
-that the incident description is too vague to map to ATT&CK techniques and
-naming what is needed (attack vector / attacker actions / affected systems).
+missing incident description. You cannot ask the user for the missing details, so set strategy to
+ACKNOWLEDGE_LIMIT and write a message naming exactly what is missing (attack
+vector / attacker actions / affected systems). The message is a note passed to
+the answering stage, NOT a refusal: that stage still answers with whatever the
+context supports and closes by asking for the missing detail.
 
 RULES:
 - Coverage is judged against the RETRIEVED CONTEXT only. Mark a phase
@@ -148,9 +149,11 @@ Pick exactly ONE strategy:
 3. ACKNOWLEDGE_LIMIT
    Use when: the incident description is too vague to map (answerability gate
              above), or fewer than 2 phases are covered and attempts are spent
-   Action: Tell the user what is missing — either that the description lacks
-           the detail needed, or that the knowledge base has no data on this
-           attack pattern. Write the message in the same language as the query.
+   Action: Name what is missing — either the detail the description lacks, or
+           the attack pattern the knowledge base has no data on. Write it in the
+           same language as the query. Do NOT write a refusal: the answering
+           stage maps whatever the context does support and appends this as a
+           request for further detail.
    Output: { "strategy": "ACKNOWLEDGE_LIMIT", "message": "ฐานข้อมูล MITRE ATT&CK ที่มีอยู่ไม่มีข้อมูลเพียงพอสำหรับ..." }
 
 Never use FORCE_SUFFICIENT — answering with known-incomplete context without flagging gaps misleads the analyst."""
