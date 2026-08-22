@@ -9,7 +9,7 @@ top-K cut that feeds graph expansion and the LLM context.
 from __future__ import annotations
 
 from .vector_retriever import VectorResult
-from ..config import DEVICE, FINAL_TOP_K, RERANKER_MODEL
+from ..config import DEVICE, FINAL_TOP_K, RERANKER_MAX_LENGTH, RERANKER_MODEL
 
 
 class Reranker:
@@ -17,8 +17,10 @@ class Reranker:
 
     def __init__(self, model_name: str = RERANKER_MODEL) -> None:
         from sentence_transformers import CrossEncoder
-        print(f"[RERANKER] Loading {model_name} on {DEVICE}...")
-        self.model = CrossEncoder(model_name, max_length=512, device=DEVICE)
+        print(f"[RERANKER] Loading {model_name} on {DEVICE} (max_length={RERANKER_MAX_LENGTH})...")
+        self.model = CrossEncoder(
+            model_name, max_length=RERANKER_MAX_LENGTH, device=DEVICE
+        )
         print(f"[RERANKER] Ready")
 
     def rerank(

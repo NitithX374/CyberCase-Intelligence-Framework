@@ -4,3 +4,6 @@
 # Partial/exploratory runs. The runs backing a reported number are committed
 # explicitly with `git add -f`.
 runs/*.jsonl
+
+# Regenerable from the graph; the excluded list is committed as the audit trail.
+reranker_trainset.jsonl

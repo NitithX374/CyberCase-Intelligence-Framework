@@ -245,6 +245,15 @@ ATTACK_DOMAIN_FILTER = os.getenv("ATTACK_DOMAIN_FILTER", "enterprise").strip() o
 # (mmarco-mMiniLMv2 was trained on 14 mMARCO languages, Thai not included)
 RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 
+# Cross-encoder input budget, shared by the query and the document. 512 was the
+# original value and is kept as the default so behaviour does not change
+# silently; bge-reranker-v2-m3 itself accepts up to 8192. It is overridable
+# because ~16% of technique documents exceed 2,000 characters, so at 512 the
+# tail of those documents never reaches the model - which is one candidate
+# explanation for the re-ranker scoring worse than the raw hybrid order on
+# short procedure text.
+RERANKER_MAX_LENGTH = int(os.getenv("RERANKER_MAX_LENGTH", "512"))
+
 # MITRE mapping table sent to the backend: vector hits below this rerank score
 # (sigmoid [0,1] × type weight) are dropped unless the answer cites them.
 #
