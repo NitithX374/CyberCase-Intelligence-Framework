@@ -156,6 +156,44 @@ _PROMPTS = {"rag-en": _EN_PROMPT, "rag-th": _TH_PROMPT, "llm-only": _LLM_ONLY_PR
 # ──────────────────────────────────────────────────────────────────────────────
 # Data
 # ──────────────────────────────────────────────────────────────────────────────
+_REAL_CTI: dict[str, tuple[str, str]] = {
+    # name -> (file, query field). The Thai tier is this project's own
+    # evaluation set: 100 case-file narratives hand-rewritten from published
+    # CISA advisories and CTID emulation plans, with the sources' own ATT&CK
+    # labels. It carries a parallel query_en, so the same 100 incidents can be
+    # scored in either language and the difference attributed to language alone.
+    "thai-cti": ("CTI_dataset.json", "query"),
+    "thai-cti-en": ("CTI_dataset.json", "query_en"),
+}
+
+
+def load_real_cti(name: str, vmap: VersionMap) -> tuple[list[dict], int]:
+    """Load the project's Thai case-file tier in the shape the runner expects."""
+    filename, field = _REAL_CTI[name]
+    path = Path(__file__).resolve().parents[1] / "real_cti" / "data" / filename
+    if not path.exists():
+        raise FileNotFoundError(str(path) + " missing")
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    out: list[dict] = []
+    unscoreable = 0
+    for i, row in enumerate(payload.get("samples", [])):
+        mapped, dropped = vmap.map_gold(row.get("gold_attack_ids", []))
+        if not mapped:
+            unscoreable += 1
+            continue
+        out.append(
+            {
+                "id": name + "-" + str(i).zfill(5),
+                "input": row.get(field, ""),
+                "gold_original": row.get("gold_attack_ids", []),
+                "gold": mapped,
+                "gold_dropped": dropped,
+            }
+        )
+    return out, unscoreable
+
+
 def load_dataset(name: str, vmap: VersionMap) -> tuple[list[dict], int]:
     """Load a split with gold reconciled to the current release.
 
@@ -163,6 +201,9 @@ def load_dataset(name: str, vmap: VersionMap) -> tuple[list[dict], int]:
     with no successor cannot be scored either way, so it leaves the corpus and
     is counted in the run header rather than silently zeroing recall.
     """
+    if name in _REAL_CTI:
+        return load_real_cti(name, vmap)
+
     path = DATA_DIR / (name + "_zeroshot_test.json")
     if not path.exists():
         raise FileNotFoundError(
@@ -668,7 +709,7 @@ def score_all(valid_only: bool = True) -> str:
     lines.append("")
 
     found = False
-    for dataset in BENCHMARKS:
+    for dataset in tuple(BENCHMARKS) + tuple(_REAL_CTI):
         rows_for_dataset = []
         for path in sorted(RUNS_DIR.glob(dataset + "__*.jsonl")):
             rows = list(load_done(path).values())
@@ -716,7 +757,11 @@ def score_all(valid_only: bool = True) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run/score published-baseline benchmarks")
-    parser.add_argument("--dataset", choices=BENCHMARKS, help="benchmark split to run")
+    parser.add_argument(
+        "--dataset",
+        choices=tuple(BENCHMARKS) + tuple(_REAL_CTI),
+        help="benchmark split to run",
+    )
     parser.add_argument("--arm", choices=ARMS, help="pipeline arm to run")
     parser.add_argument("--limit", type=int, default=0, help="cap samples (0 = all)")
     parser.add_argument("--top-k", type=int, default=10, help="vector top-K before rerank")
