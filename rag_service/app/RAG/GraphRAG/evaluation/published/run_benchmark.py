@@ -345,6 +345,7 @@ def run_arm(
     technique_only: bool = False,
     concurrency: int = 8,
     decompose: bool = False,
+    no_rerank: bool = False,
     model: str = "",
     disable_thinking: bool = False,
 ) -> None:
@@ -358,6 +359,8 @@ def run_arm(
     file_tag = tag
     if model:
         file_tag = (tag + "__" if tag else "") + model_slug(model)
+    if no_rerank:
+        file_tag += ("__" if not file_tag else "-") + "norerank"
     if disable_thinking:
         # A thinking run and a non-thinking run of the same model are different
         # systems; keep their scores in different files.
@@ -444,6 +447,7 @@ def run_arm(
                 top_k=top_k,
                 expand_graph=include_graph,
                 node_label_filter=labels,
+                rerank=not no_rerank,
             )
         return (
             retrieval_ids(result, include_graph, vmap),
@@ -666,6 +670,14 @@ def main() -> None:
     parser.add_argument("--include-graph", action="store_true", help="append graph neighbours")
     parser.add_argument("--tag", default="", help="suffix for the run file, e.g. a top-K variant")
     parser.add_argument(
+        "--no-rerank",
+        action="store_true",
+        help=(
+            "keep the hybrid dense+sparse ordering instead of re-scoring it with "
+            "the cross-encoder, to measure what the re-ranker contributes"
+        ),
+    )
+    parser.add_argument(
         "--disable-thinking",
         action="store_true",
         help=(
@@ -743,6 +755,7 @@ def main() -> None:
         technique_only=args.technique_only,
         concurrency=args.concurrency,
         decompose=args.decompose,
+        no_rerank=args.no_rerank,
         model=args.model,
         disable_thinking=args.disable_thinking,
     )
