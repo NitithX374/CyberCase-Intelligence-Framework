@@ -105,6 +105,12 @@ ARMS = ("agent", "retrieval", "rag-en", "rag-th", "llm-only")
 HEADLINE_ARM = "agent"
 TECHNIQUE_LABELS = {"Technique", "Subtechnique"}
 
+# Per-request cap on the LLM call, and the slightly longer wall-clock cap the
+# batch will wait for one worker. Both exist because the client library waits
+# forever by default; see _make_llm.
+REQUEST_TIMEOUT_S = 120
+WORKER_TIMEOUT_S = 180
+
 # Kept close to the upstream instruction so task framing is not a confounder;
 # only the output contract is tightened, because free-form prose would make ID
 # extraction the thing under test instead of the retrieval.
@@ -314,10 +320,18 @@ def _make_llm(model: str = "", disable_thinking: bool = False):
         temperature=LLM_TEMPERATURE,
         max_tokens=min(LLM_MAX_TOKENS, 1024),  # the output is a short ID list
     )
+
+    # ChatAnthropic defaults default_request_timeout to None, i.e. wait forever.
+    # One connection that never answers then blocks its whole batch, and because
+    # results are written per batch, nothing at all reaches disk - a run can sit
+    # at the same row count with flat CPU indefinitely. Observed exactly that at
+    # row 120 of an llm-only run. A bounded request raises instead, which the
+    # per-sample handler records as a failure and the resume path retries.
+    bind_kwargs: dict = {"timeout": REQUEST_TIMEOUT_S}
     if disable_thinking:
         print("[BENCH] thinking: disabled")
-        llm = llm.bind(thinking={"type": "disabled"})
-    return llm
+        bind_kwargs["thinking"] = {"type": "disabled"}
+    return llm.bind(**bind_kwargs)
 
 
 def run_arm(
@@ -520,19 +534,38 @@ def run_arm(
                         write(sample, ids, "")
                         n_done += 1
                 else:
-                    with ThreadPoolExecutor(max_workers=batch_size) as pool:
+                    # Deliberately not a `with` block: its __exit__ joins every
+                    # worker, which would reintroduce the unbounded wait this
+                    # timeout exists to prevent. A worker that overruns is
+                    # abandoned, its sample left for the resume pass.
+                    pool = ThreadPoolExecutor(max_workers=batch_size)
+                    try:
                         futures = {
                             pool.submit(generate_one, sample, context): sample
                             for sample, _, context in retrieved
                         }
                         results: dict[str, tuple[list[str], str]] = {}
-                        for future in as_completed(futures):
-                            sample = futures[future]
-                            try:
-                                results[sample["id"]] = future.result()
-                            except Exception as exc:  # noqa: BLE001 - resume later
-                                n_fail += 1
-                                print("  " + sample["id"] + ": LLM FAILED - " + str(exc))
+                        try:
+                            for future in as_completed(futures, timeout=WORKER_TIMEOUT_S):
+                                sample = futures[future]
+                                try:
+                                    results[sample["id"]] = future.result()
+                                except Exception as exc:  # noqa: BLE001 - resume later
+                                    n_fail += 1
+                                    print("  " + sample["id"] + ": LLM FAILED - " + str(exc))
+                        except TimeoutError:
+                            stalled = [
+                                s["id"] for f, s in futures.items()
+                                if s["id"] not in results and not f.done()
+                            ]
+                            n_fail += len(stalled)
+                            print(
+                                "  batch timed out after " + str(WORKER_TIMEOUT_S)
+                                + "s, abandoning " + str(len(stalled)) + " sample(s): "
+                                + ", ".join(stalled[:5])
+                            )
+                    finally:
+                        pool.shutdown(wait=False)
                     # Write in batch order, not completion order, so a resumed
                     # run reads the same way a serial one would.
                     for sample, _, _ in retrieved:
