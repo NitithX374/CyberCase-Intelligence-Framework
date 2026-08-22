@@ -13,8 +13,8 @@ The only pipeline serving ``POST /query``. A stateful graph that supports:
 
  The graph flow:
 
-     input → route → prepare → retrieve_quota → evaluate_context
-                   (lang detect)                      │
+     input → prepare → retrieve_quota → evaluate_context
+           (lang detect)                      │
                                         ┌─ sufficient │  insufficient
                                         ↓             ↓
                                    reasoning     broaden_search
@@ -66,7 +66,6 @@ from .evaluator import (
     EvaluationResult,
 )
 from .query_sanitizer import sanitize_retrieval_query
-from .router import QueryRouter
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -80,7 +79,6 @@ class AgentState(TypedDict, total=False):
     verbose: bool
 
     # ── Routing ───────────────────────────────────────────────────────────
-    route: str  # GENERAL_EXPLANATION | INCIDENT_ANALYSIS
 
     # ── Language ──────────────────────────────────────────────────────────
     # Nothing translates the input any more. english_query is kept only so the
@@ -167,7 +165,6 @@ class GraphRAGAgent:
         self.retriever = HybridRetriever(
             embed_model=self.embed_model, reranker=reranker
         )
-        self.router = QueryRouter()
         self.evaluator = ContextEvaluator()
         self.decomposer = QueryDecomposer()
 
@@ -401,8 +398,6 @@ class GraphRAGAgent:
         graph = StateGraph(AgentState)
 
         # ── Register nodes ────────────────────────────────────────────
-        graph.add_node("route_query", self._node_route_query)
-        graph.add_node("general_explanation", self._node_general_explanation)
         graph.add_node("prepare", self._node_prepare)
         graph.add_node("retrieve", self._node_retrieve)
         graph.add_node("evaluate_context", self._node_evaluate_context)
@@ -411,19 +406,10 @@ class GraphRAGAgent:
         graph.add_node("translate_output", self._node_translate_output)
 
         # ── Entry point ───────────────────────────────────────────────
-        graph.set_entry_point("route_query")
+        graph.set_entry_point("prepare")
 
         # ── Edges ─────────────────────────────────────────────────────
-        graph.add_conditional_edges(
-            "route_query",
-            self._edge_after_route,
-            {
-                "general": "general_explanation",
-                "incident": "prepare",
-            },
-        )
 
-        graph.add_edge("general_explanation", END)
 
         # Prepare (language detect) → Multi-Query Retrieval → Evaluation
         graph.add_edge("prepare", "retrieve")
@@ -458,56 +444,6 @@ class GraphRAGAgent:
     # ------------------------------------------------------------------
     # Node implementations
     # ------------------------------------------------------------------
-    def _node_route_query(self, state: AgentState) -> dict:
-        """Classify the query as GENERAL_EXPLANATION or INCIDENT_ANALYSIS."""
-        query = state.get("original_query", "")
-        verbose = state.get("verbose", True)
-
-        if verbose:
-            sep("AGENT — ROUTING")
-            print(f"  Input: {query}")
-
-        route = self.router.route_query(query)
-
-        if verbose:
-            print(f"  Route: {route}")
-
-        return {"route": route}
-
-    def _node_general_explanation(self, state: AgentState) -> dict:
-        """Handle general knowledge questions without retrieval."""
-        query = state.get("original_query", "")
-        verbose = state.get("verbose", True)
-
-        if not self.reasoning_llm:
-            return {"answer": "Cannot answer general explanation without an LLM."}
-
-        system_prompt = (
-            "You are a cybersecurity expert. Provide a clear, concise, "
-            "and accurate explanation for the user's query."
-        )
-        if CrossLingualLayer.should_respond_in_thai(query):
-            system_prompt += " Answer in Thai."
-
-        if verbose:
-            sep("AGENT — GENERAL EXPLANATION")
-            print("  Skipping retrieval — using direct LLM knowledge...")
-
-        response = self.reasoning_llm.invoke(
-            [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=query),
-            ]
-        )
-
-        answer = require_message_text(response, operation="general explanation")
-
-        if verbose:
-            print(answer)
-            sep()
-
-        return {"answer": answer}
-
     def _node_prepare(self, state: AgentState) -> dict:
         """Detect the response language. NO input translation.
 
@@ -722,14 +658,6 @@ class GraphRAGAgent:
     # ------------------------------------------------------------------
     # Edge routing functions
     # ------------------------------------------------------------------
-    @staticmethod
-    def _edge_after_route(state: AgentState) -> str:
-        """Route based on query classification."""
-        # TEMPORARILY DISABLED ROUTER: always go to incident analysis
-        # if state.get("route") == "GENERAL_EXPLANATION":
-        #     return "general"
-        return "incident"
-
     @staticmethod
     def _edge_after_evaluation(state: AgentState) -> str:
         """Decide next step based on context evaluation.

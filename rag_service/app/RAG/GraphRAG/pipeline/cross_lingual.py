@@ -48,18 +48,30 @@ Rules:
 Thai query: {query}"""
 
 # ──────────────────────────────────────────────────────────────────────────────
-# STAGE 2 — REASONING LLM SYSTEM PROMPT
+# GENERATION SYSTEM PROMPT
 # Role: Translate cybersecurity jargon into plain language for non-technical readers.
-# Language: English IN → English OUT only. Never produce Thai.
+#
+# The output language is a PARAMETER, not a constant. It used to be hard-coded to
+# English because generation was split in two - reason in English, then translate
+# to Thai in a separate call. That split was measured and did not help, so the
+# stages were merged (SINGLE_CALL_GENERATION, on by default) and the model now
+# writes the final Thai directly.
+#
+# The English-only rule was left behind by that merge, and a "LANGUAGE OVERRIDE
+# ... this OVERRIDES rule 1" paragraph was appended to fight it. The prompt then
+# told the model both "never produce Thai" and "write entirely in Thai", and
+# which instruction won depended on the model: gpt-5.6-luna followed the
+# override, qwen/qwen3.5-9b followed rule 1 and answered a Thai case file in
+# English. Stating the language once, in rule 1, removes the conflict.
 # ──────────────────────────────────────────────────────────────────────────────
-REASONING_SYSTEM_PROMPT = """You are a cybersecurity incident analyst specialising in MITRE ATT&CK. \
-Your task is to rewrite the provided incident context into plain, easy-to-understand English \
-for prosecutors and law enforcement officers who have no cybersecurity background — \
+_GENERATION_PROMPT_TEMPLATE = """You are a cybersecurity incident analyst specialising in MITRE ATT&CK. \
+Your task is to rewrite the provided incident context into plain, easy-to-understand \
+prose for prosecutors and law enforcement officers who have no cybersecurity background — \
 without losing any factual detail or altering the sequence of events.
 
 Core rules
 ----------
-1. OUTPUT LANGUAGE: English only. Never produce Thai — translation is handled downstream.
+1. {language_rule}
 
 2. SIMPLIFY JARGON — replace every technical term with a plain equivalent, for example:
    - "exploit a vulnerability"   → "take advantage of a security weakness"
@@ -87,7 +99,7 @@ The reader will draw their own conclusions from the plain-language description.
 
 7. NO VAGUE SUMMARIES — every statement must be specific and traceable to the source context.
 
-Output format — use EXACTLY these four section headers:
+Output format — use EXACTLY these four section headers{header_note}:
 --------------------------------------------------------
 ## INCIDENT SUMMARY
 One concise paragraph: what happened, to which system, and what was the outcome.
@@ -106,7 +118,37 @@ means in the context of this specific incident.
 - What data or systems were affected and the scope of access obtained.
 - What damage or disruption occurred as a direct result of the attack.
 --------------------------------------------------------
-Begin directly with "## INCIDENT SUMMARY". No preamble."""
+Begin directly with the first section header. No preamble."""
+
+
+_ENGLISH_RULE = (
+    "OUTPUT LANGUAGE: write the entire response in English."
+)
+
+_THAI_RULE = (
+    "OUTPUT LANGUAGE: write the entire response in Thai (ภาษาไทย). "
+    "Keep ATT&CK IDs (T1566, TA0001, …) and technique, tactic, tool and group "
+    "names in English; everything else must be Thai."
+)
+
+_THAI_HEADER_NOTE = """, translated to Thai as shown:
+  ## INCIDENT SUMMARY                   → ## สรุปเหตุการณ์
+  ## ATTACK SEQUENCE                    → ## ลำดับการโจมตี
+  ## MITRE ATT&CK TECHNIQUES IDENTIFIED → ## เทคนิคการโจมตีที่ตรวจพบ (MITRE ATT&CK)
+  ## IMPACT ASSESSMENT                  → ## ผลกระทบที่เกิดขึ้น"""
+
+
+def build_generation_prompt(respond_in_thai: bool) -> str:
+    """The generation system prompt, with the output language stated once."""
+    return _GENERATION_PROMPT_TEMPLATE.format(
+        language_rule=_THAI_RULE if respond_in_thai else _ENGLISH_RULE,
+        header_note=_THAI_HEADER_NOTE if respond_in_thai else "",
+    )
+
+
+# Kept for the two-stage path (SINGLE_CALL_GENERATION=false), which reasons in
+# English and translates afterwards.
+REASONING_SYSTEM_PROMPT = build_generation_prompt(respond_in_thai=False)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -265,19 +307,12 @@ class CrossLingualLayer:
         actually hits. Same jargon-simplification + 4-section structure as the
         reasoning stage, but the model writes the FINAL answer directly in the
         response language, folding reasoning + translation into one LLM call.
+
+        The language is set inside rule 1 rather than appended as an override,
+        so the prompt never contradicts itself. See the note above
+        _GENERATION_PROMPT_TEMPLATE for what the override used to cost.
         """
-        if not respond_in_thai:
-            return REASONING_SYSTEM_PROMPT
-        return REASONING_SYSTEM_PROMPT + (
-            "\n\nLANGUAGE OVERRIDE (fast mode): Write the ENTIRE response in Thai "
-            "(ภาษาไทย). This OVERRIDES rule 1 — there is no separate translation "
-            "stage. Keep ATT&CK IDs (T1566, TA0001, …) and technique/tactic/tool/"
-            "group names in English. Translate the four section headers to Thai:\n"
-            "  ## INCIDENT SUMMARY                   → ## สรุปเหตุการณ์\n"
-            "  ## ATTACK SEQUENCE                    → ## ลำดับการโจมตี\n"
-            "  ## MITRE ATT&CK TECHNIQUES IDENTIFIED → ## เทคนิคการโจมตีที่ตรวจพบ (MITRE ATT&CK)\n"
-            "  ## IMPACT ASSESSMENT                  → ## ผลกระทบที่เกิดขึ้น"
-        )
+        return build_generation_prompt(respond_in_thai)
 
     @staticmethod
     def get_ultrafast_system_prompt(respond_in_thai: bool) -> str:
