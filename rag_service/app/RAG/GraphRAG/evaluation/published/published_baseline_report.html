@@ -5,90 +5,47 @@
 <title>การเปรียบเทียบสมรรถนะกับงานวิจัยที่ตีพิมพ์แล้ว</title>
 <style>
   @page { size: A4; margin: 18mm 17mm 16mm 17mm; }
-
   :root {
-    --ink: #16191d;
-    --muted: #5b6470;
-    --rule: #d8dde3;
-    --head-bg: #eef1f5;
-    --good: #15803d;
-    --bad: #b91c1c;
-    --accent: #1e3a5f;
+    --ink:#16191d; --muted:#5b6470; --rule:#d8dde3; --head-bg:#eef1f5;
+    --good:#15803d; --bad:#b91c1c; --accent:#1e3a5f;
   }
-
   * { box-sizing: border-box; }
-
-  body {
-    font-family: "Leelawadee UI", "Leelawadee", Tahoma, sans-serif;
-    font-size: 10.2pt;
-    line-height: 1.62;
-    color: var(--ink);
-    margin: 0;
-  }
-
-  code, .mono {
-    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
-    font-size: 0.88em;
-    background: #f4f6f8;
-    padding: 0 3px;
-    border-radius: 2px;
-  }
-
-  h1 {
-    font-size: 19pt; line-height: 1.28; margin: 0 0 4px; letter-spacing: -0.2px;
-  }
-  .sub { color: var(--muted); font-size: 10pt; line-height: 1.55; margin: 0 0 14px; }
-  hr { border: 0; border-top: 1px solid var(--rule); margin: 0 0 4px; }
-
-  h2 {
-    font-size: 14pt; margin: 22px 0 8px; padding-top: 2px;
-    border-top: 2px solid var(--accent); padding-top: 8px;
-  }
-  h2:first-of-type { margin-top: 16px; }
-  h3 { font-size: 11.6pt; margin: 15px 0 6px; }
-  h4 { font-size: 10.6pt; margin: 13px 0 5px; color: var(--accent); }
-
-  p { margin: 0 0 8px; }
-  ul { margin: 0 0 8px; padding-left: 18px; }
-  li { margin-bottom: 4px; }
-
-  table {
-    width: 100%; border-collapse: collapse; margin: 8px 0 12px;
-    font-size: 8.9pt; line-height: 1.45;
-    break-inside: avoid;
-  }
-  h3, h4 { break-after: avoid; }
-  th {
-    background: var(--head-bg); text-align: left; font-weight: 600;
-    padding: 6px 7px; border-bottom: 1.4px solid #9aa5b1; vertical-align: bottom;
-  }
-  td { padding: 5.5px 7px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  tr.hl td { background: #fff8e1; }
-  .good { color: var(--good); font-weight: 700; }
-  .bad  { color: var(--bad);  font-weight: 700; }
-
-  .note {
-    font-size: 8.8pt; color: var(--muted); line-height: 1.5;
-    margin: -4px 0 12px;
-  }
-  .callout {
-    border-left: 3px solid var(--accent); background: #f7f9fb;
-    padding: 9px 12px; margin: 10px 0 12px;
-  }
-  .callout p:last-child { margin-bottom: 0; }
-
-  pre {
-    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
-    font-size: 8.4pt; line-height: 1.5; background: #f4f6f8;
-    border-left: 3px solid var(--rule); padding: 8px 11px; margin: 8px 0 10px;
-    white-space: pre-wrap;
-  }
-
-  .avoid-break { break-inside: avoid; }
-  .page-break { break-before: page; }
-  footer { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 8px;
-           font-size: 8.6pt; color: var(--muted); }
+  body { font-family:"Leelawadee UI","Leelawadee",Tahoma,sans-serif; font-size:10.2pt;
+         line-height:1.62; color:var(--ink); margin:0; }
+  code,.mono { font-family:"Cascadia Mono",Consolas,"Courier New",monospace; font-size:0.88em;
+               background:#f4f6f8; padding:0 3px; border-radius:2px; }
+  h1 { font-size:19pt; line-height:1.28; margin:0 0 4px; letter-spacing:-0.2px; }
+  .sub { color:var(--muted); font-size:10pt; line-height:1.55; margin:0 0 14px; }
+  hr { border:0; border-top:1px solid var(--rule); margin:0 0 4px; }
+  h2 { font-size:14pt; margin:22px 0 8px; border-top:2px solid var(--accent); padding-top:8px; }
+  h2:first-of-type { margin-top:16px; }
+  h3 { font-size:11.6pt; margin:15px 0 6px; }
+  h4 { font-size:10.6pt; margin:13px 0 5px; color:var(--accent); }
+  h3,h4 { break-after:avoid; }
+  p { margin:0 0 8px; }
+  ul { margin:0 0 8px; padding-left:18px; }
+  li { margin-bottom:4px; }
+  table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:8.9pt;
+          line-height:1.45; break-inside:avoid; }
+  th { background:var(--head-bg); text-align:left; font-weight:600; padding:6px 7px;
+       border-bottom:1.4px solid #9aa5b1; vertical-align:bottom; }
+  td { padding:5.5px 7px; border-bottom:1px solid var(--rule); vertical-align:top; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  tr.hl td { background:#fff8e1; }
+  tr.win td { background:#eefaf1; }
+  .good { color:var(--good); font-weight:700; }
+  .bad { color:var(--bad); font-weight:700; }
+  .note { font-size:8.8pt; color:var(--muted); line-height:1.5; margin:-4px 0 12px; }
+  .callout { border-left:3px solid var(--accent); background:#f7f9fb; padding:9px 12px; margin:10px 0 12px; }
+  .callout.key { border-left-color:var(--good); background:#f2fbf5; }
+  .callout p:last-child { margin-bottom:0; }
+  pre { font-family:"Cascadia Mono",Consolas,"Courier New",monospace; font-size:8.4pt;
+        line-height:1.5; background:#f4f6f8; border-left:3px solid var(--rule);
+        padding:8px 11px; margin:8px 0 10px; white-space:pre-wrap; }
+  .avoid-break { break-inside:avoid; }
+  .page-break { break-before:page; }
+  footer { margin-top:18px; border-top:1px solid var(--rule); padding-top:8px;
+           font-size:8.6pt; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -100,33 +57,38 @@ CyberCase Intelligence Framework เทียบกับ TechniqueRAG, H-Techni
 </p>
 <hr>
 
+<div class="callout key">
+<p><strong>ข้อค้นพบหลัก:</strong> ผลของการค้นคืนขึ้นอยู่กับว่าโมเดลกำเนิดข้อความรู้คำตอบอยู่ก่อนหรือไม่
+เมื่อจับคู่กับโมเดลที่น่าจะเคยเห็นชุดทดสอบนี้มาก่อน การค้นคืน<strong>ลด</strong> F1 ลง 0.068
+แต่เมื่อจับคู่กับโมเดลที่ไม่มีความรู้เดิมนั้น การค้นคืน<strong>เพิ่ม</strong> F1 ขึ้น 0.269 หรือ <strong>+89%</strong>
+วัดบนตัวอย่างชุดเดียวกัน ด้วยการค้นคืนชุดเดียวกัน ต่างกันเพียงโมเดลกำเนิดข้อความ</p>
+</div>
+
 <h2>1. เหตุผลและที่มา</h2>
 
 <p>อาจารย์ที่ปรึกษาเสนอว่า การวัดผลระบบด้วยชุดข้อมูลที่สร้างขึ้นเองไม่เพียงพอต่อการยืนยันคุณภาพ เพราะไม่มีจุดอ้างอิงภายนอก
-จึงควรทดสอบด้วย <strong>ชุดข้อมูลและตัวชี้วัดชุดเดียวกับงานวิจัยที่ตีพิมพ์แล้ว</strong>
-เพื่อให้ตัวเลขของเราอยู่ในตารางเดียวกับเขาและตีความได้ทันที</p>
+จึงควรทดสอบด้วย <strong>ชุดข้อมูลและตัวชี้วัดชุดเดียวกับงานวิจัยที่ตีพิมพ์แล้ว</strong></p>
 
 <h3>งานวิจัยที่เลือกเป็นคู่เทียบ</h3>
 <table>
   <thead><tr><th style="width:16%">ชื่อย่อ</th><th style="width:42%">งานวิจัย</th><th style="width:21%">ชุดข้อมูล</th><th style="width:21%">ตัวชี้วัด</th></tr></thead>
   <tbody>
     <tr><td>TTP-LM</td><td>Advancing TTP Analysis: Encoder-Only and Decoder-Only LMs with RAG (arXiv 2401.00280)</td><td>MITRE procedure examples</td><td>Precision, Recall</td></tr>
-    <tr><td>TechniqueRAG</td><td>TechniqueRAG: Retrieval Augmented Generation for Adversarial Technique Annotation (ACL Findings 2025, arXiv 2505.11988)</td><td>TRAM, Procedures, Expert</td><td>P, R, F1, P@k / R@k (k=1,3)</td></tr>
-    <tr><td>H-TechniqueRAG</td><td>Hierarchical RAG for Adversarial Technique Annotation (arXiv 2604.14166)</td><td>CTI-RCM, MITRE CTI, TRAM</td><td>micro-F1, P, R, MAP@10, latency</td></tr>
+    <tr><td>TechniqueRAG</td><td>TechniqueRAG: Retrieval Augmented Generation for Adversarial Technique Annotation (ACL Findings 2025, arXiv 2505.11988)</td><td>TRAM, Procedures, Expert</td><td>P, R, F1, P@k / R@k</td></tr>
+    <tr><td>H-TechniqueRAG</td><td>Hierarchical RAG for Adversarial Technique Annotation (arXiv 2604.14166)</td><td>CTI-RCM, MITRE CTI, TRAM</td><td>micro-F1, P, R, MAP@10</td></tr>
   </tbody>
 </table>
 
 <p>ทั้งสามงานทำ<strong>โจทย์เดียวกัน</strong> คือรับข้อความ CTI ภาษาอังกฤษสั้น ๆ แล้วคืนชุดรหัสเทคนิค ATT&amp;CK
-และ <strong>TRAM เป็นชุดข้อมูลร่วมของทั้งสามงาน</strong> จึงถูกเลือกเป็นเป้าหมายหลัก — วัดครั้งเดียวเทียบได้ทั้งสามงาน</p>
+และ <strong>TRAM เป็นชุดข้อมูลร่วมของทั้งสามงาน</strong> จึงถูกเลือกเป็นเป้าหมายหลัก</p>
 
 <h3>ขอบเขตที่ต้องระบุให้ชัด</h3>
 <div class="callout">
 <p>โจทย์ของเขาเป็นการ<strong>ติดป้ายกำกับข้อความสั้น</strong> (80–400 ตัวอักษร) ส่วนโจทย์ของเราคือ
 <strong>สำนวนคดีภาษาไทยขนาดยาว → รายงานสรุปเชิงโครงสร้างสำหรับพนักงานอัยการ</strong>
-สิ่งที่เทียบกันได้จริงคือส่วนการค้นคืนและการระบุเทคนิค ไม่ใช่ผลผลิตปลายทาง ข้อจำกัดนี้ต้องระบุทุกครั้งที่อ้างตัวเลข</p>
-<p>นอกจากนี้ <strong>ทุก arm ของเราเป็น zero-shot</strong> ไม่ได้ฝึกกับ train split ของชุดข้อมูลเหล่านี้
-ขณะที่ตัวเลขพาดหัวของ TechniqueRAG มาจากโมเดลที่ fine-tune แล้ว
-การเทียบที่เป็นธรรมจึงต้องเทียบกับแถว zero-shot และแถว retriever สำเร็จรูปของเขา</p>
+สิ่งที่เทียบกันได้จริงคือส่วนการค้นคืนและการระบุเทคนิค ไม่ใช่ผลผลิตปลายทาง</p>
+<p>นอกจากนี้ <strong>ทุก arm ของเราเป็น zero-shot</strong> ขณะที่ตัวเลขพาดหัวของ TechniqueRAG มาจากโมเดลที่ fine-tune แล้ว
+การเทียบที่เป็นธรรมจึงต้องเทียบกับแถวที่ไม่ fine-tune เช่นกัน</p>
 </div>
 
 <h2>2. การเตรียมข้อมูล</h2>
@@ -139,35 +101,29 @@ CyberCase Intelligence Framework เทียบกับ TechniqueRAG, H-Techni
 <table>
   <thead><tr><th>ชุดข้อมูล</th><th class="num">จำนวน</th><th>ป้ายกำกับ</th><th>ความยาว input (median)</th><th class="num">สัดส่วน sub-technique</th></tr></thead>
   <tbody>
-    <tr><td>TRAM</td><td class="num">725</td><td>single-label (87%)</td><td>95 ตัวอักษร</td><td class="num">23.9%</td></tr>
+    <tr class="hl"><td><strong>TRAM</strong> (ใช้ในรายงานนี้)</td><td class="num">725</td><td>single-label (87%)</td><td>95 ตัวอักษร</td><td class="num">23.9%</td></tr>
     <tr><td>Expert</td><td class="num">157</td><td>multi-label (median 3)</td><td>406 ตัวอักษร</td><td class="num">39.3%</td></tr>
     <tr><td>Procedures</td><td class="num">1,767</td><td>single-label</td><td>80 ตัวอักษร</td><td class="num">50.7%</td></tr>
   </tbody>
 </table>
 
 <h3>2.2 การพิสูจน์ว่าตัวชี้วัดตรงกับต้นทาง</h3>
-<p>การเขียนสูตร P/R/F1 ขึ้นเองไม่เพียงพอ เพราะ F1 มีหลายรูปแบบและต่างกันเล็กน้อยก็เทียบไม่ได้
-จึงนำฟังก์ชันจาก <code>evaluate.py</code> ของต้นทางมาเป็นตัวอ้างอิง (เก็บไว้นอก repo เพื่อไม่ให้ปนสัญญาอนุญาต GPL)
+<p>นำฟังก์ชันจาก <code>evaluate.py</code> ของต้นทางมาเป็นตัวอ้างอิง (เก็บไว้นอก repo เพื่อไม่ให้ปนสัญญาอนุญาต GPL)
 แล้วป้อนข้อมูลสุ่ม 400 ชุดเข้าทั้งสองฝั่ง</p>
-<div class="callout">
-<p><strong>ผล: Precision, Recall และ F1 ตรงกันทุกชุด คลาดเคลื่อนไม่เกิน 1e-12 ทั้งสองโหมด</strong></p>
-</div>
+<div class="callout"><p><strong>ผล: Precision, Recall และ F1 ตรงกันทุกชุด คลาดเคลื่อนไม่เกิน 1e-12 ทั้งสองโหมด</strong></p></div>
 
-<h4>ข้อสังเกตของโปรโตคอลต้นทางที่ต้องทำตามให้ตรง มิฉะนั้นตัวเลขจะเทียบไม่ได้</h4>
 <table>
   <thead><tr><th style="width:16%">ประเด็น</th><th style="width:47%">พฤติกรรมของต้นทาง</th><th style="width:37%">การจัดการ</th></tr></thead>
   <tbody>
     <tr><td>การคำนวณ F1</td><td>คำนวณจากค่าเฉลี่ยของ P และ R ไม่ใช่เฉลี่ย F1 รายตัวอย่าง</td><td>ทำตามทุกประการ และรายงาน micro-F1 เพิ่มเป็นตัวเทียบ</td></tr>
-    <tr><td>โหมดปริยาย</td><td><code>--mode technique</code> ยุบ sub-technique ขึ้นเป็น parent</td><td>รายงานทั้งสองโหมด และระบุกำกับเสมอว่าตัวเลขมาจากโหมดใด</td></tr>
-    <tr><td>MRR</td><td>คำนวณหลัง <code>list(set(preds))</code> ซึ่งทำลายลำดับ และ Python สุ่ม hash ของ string ต่อ process จึงให้ค่าไม่คงที่ระหว่างการรัน</td><td>รายงาน MRR จากลำดับจริง พร้อมระบุว่า<strong>ตัวชี้วัดนี้เทียบตรงไม่ได้</strong></td></tr>
+    <tr><td>โหมดปริยาย</td><td><code>--mode technique</code> ยุบ sub-technique ขึ้นเป็น parent</td><td>รายงานทั้งสองโหมด ระบุกำกับเสมอ</td></tr>
+    <tr><td>MRR</td><td>คำนวณหลัง <code>list(set(preds))</code> ซึ่งทำลายลำดับ และ Python สุ่ม hash ต่อ process จึงให้ค่าไม่คงที่</td><td>รายงานจากลำดับจริง พร้อมระบุว่า<strong>เทียบตรงไม่ได้</strong></td></tr>
   </tbody>
 </table>
 
-<h3>2.3 การปรับรุ่น ATT&amp;CK ให้ตรงกัน — ขั้นตอนที่สำคัญที่สุด</h3>
-<p>ป้ายเฉลยของชุดข้อมูลถูกกำกับไว้ในยุค ATT&amp;CK ราวรุ่น v14 ขณะที่ดัชนีของเราสร้างจาก <strong>v19.0</strong>
-ในช่วงเวลาระหว่างนั้น MITRE ได้ยกเลิกและย้ายรหัสจำนวนหนึ่ง หากไม่ปรับให้ตรงกันก่อน
-ระบบจะค้นเจอ<strong>สิ่งเดียวกัน</strong>แต่ถูกนับว่าผิดเพราะรหัสไม่ตรง ซึ่งเป็นการวัดที่ผิด ไม่ใช่ระบบที่แย่</p>
-
+<h3>2.3 การปรับรุ่น ATT&amp;CK ให้ตรงกัน</h3>
+<p>ป้ายเฉลยของชุดข้อมูลกำกับไว้ในยุค ATT&amp;CK ราวรุ่น v14 ขณะที่ดัชนีของเราสร้างจาก <strong>v19.0</strong>
+หากไม่ปรับให้ตรงกันก่อน ระบบจะค้นเจอ<strong>สิ่งเดียวกัน</strong>แต่ถูกนับว่าผิดเพราะรหัสไม่ตรง</p>
 <table>
   <thead><tr><th style="width:31%">รหัสในชุดข้อมูล (v14)</th><th style="width:42%">สถานะใน v19</th><th style="width:27%">ผลลัพธ์</th></tr></thead>
   <tbody>
@@ -178,201 +134,199 @@ CyberCase Intelligence Framework เทียบกับ TechniqueRAG, H-Techni
     <tr><td>T1043, T1064</td><td>ยกเลิกโดยไม่มีรหัสทดแทน</td><td>ตัดตัวอย่างทิ้ง (12 ตัวอย่าง)</td></tr>
   </tbody>
 </table>
-
-<p>ตารางแปลงรหัสสร้างขึ้นจากความสัมพันธ์ <code>revoked-by</code> ในไฟล์ STIX ของ MITRE ที่มีอยู่ใน repo อยู่แล้ว
-ได้ทั้งสิ้น <strong>196 คู่</strong> และรหัสที่ตายสนิท 25 รายการ จึงเป็นกระบวนการที่ทำซ้ำได้ ไม่ใช่การแก้ด้วยมือ</p>
-
-<div class="callout">
-<p><strong>ผลหลังการแปลง: ป้ายเฉลยทุกรายการในทั้งสามชุดข้อมูลค้นคืนได้จากดัชนีของเราครบ 100%</strong>
-หมายความว่าคะแนนที่เสียไปหลังจากนี้ เสียเพราะค้นไม่เจอจริง ไม่ใช่เพราะไม่มีข้อมูลให้ค้น
+<p>ตารางแปลงสร้างจากความสัมพันธ์ <code>revoked-by</code> ในไฟล์ STIX ที่มีอยู่ใน repo ได้ <strong>196 คู่</strong>
+จึงทำซ้ำได้ ไม่ใช่การแก้ด้วยมือ <strong>หลังการแปลง ป้ายเฉลยทุกรายการค้นคืนได้ครบ 100%</strong>
 TRAM เหลือตัวอย่างที่วัดได้ <strong>713 จาก 725</strong></p>
-</div>
 
 <h2 class="page-break">3. การพัฒนาชุดทดสอบ</h2>
 
-<h3>3.1 โครงสร้าง</h3>
-<p>ทั้งหมดอยู่ที่ <code>rag_service/app/RAG/GraphRAG/evaluation/published/</code></p>
-<table>
-  <thead><tr><th style="width:27%">ไฟล์</th><th>หน้าที่</th></tr></thead>
-  <tbody>
-    <tr><td><code>fetch_datasets.py</code></td><td>ดึง split ทดสอบจาก HuggingFace พร้อมตรึงชื่อ repo และไฟล์</td></tr>
-    <tr><td><code>metrics.py</code></td><td>ตัวชี้วัดตามโปรโตคอลต้นทาง พร้อม unit test 18 รายการ</td></tr>
-    <tr><td><code>attack_version_map.py</code></td><td>สร้างและใช้ตารางแปลงรหัส ATT&amp;CK v14 → v19</td></tr>
-    <tr><td><code>run_benchmark.py</code></td><td>ตัวรันทั้ง 5 arm รองรับการรันต่อจากจุดที่ค้าง (resume)</td></tr>
-    <tr><td><code>BASELINES.md</code></td><td>ตัวเลขที่ตีพิมพ์ของงานคู่เทียบ ไว้อ่านประกบผลของเรา</td></tr>
-    <tr><td><code>NOTICE.md</code></td><td>ที่มาของข้อมูล สัญญาอนุญาต และข้อจำกัดที่ต้องระบุในรายงาน</td></tr>
-  </tbody>
-</table>
-
-<h3>3.2 arm ที่ใช้วัด และหลักการแยก headline ออกจาก ablation</h3>
+<h3>3.1 arm ที่ใช้วัด</h3>
 <div class="callout">
 <p>หลักการที่ยึด: <strong>ตัวเลขที่อ้างว่าเป็นคะแนนของระบบ ต้องมาจาก pipeline เดียวกับที่ใช้จริงบน production</strong>
-arm อื่นมีไว้เพื่ออธิบายว่าทำไมตัวเลขนั้นถึงออกมาเช่นนั้น ไม่ใช่เพื่อนำไปอ้างแทน</p>
+arm อื่นเป็น <strong>ablation</strong> มีไว้อธิบายว่าทำไมตัวเลขนั้นถึงออกมาเช่นนั้น</p>
 </div>
-
 <table>
-  <thead><tr><th style="width:12%">arm</th><th style="width:11%">retrieval</th><th style="width:9%">LLM</th><th style="width:13%">สถานะ</th><th>ใช้ตอบคำถาม</th></tr></thead>
+  <thead><tr><th style="width:13%">arm</th><th style="width:12%">retrieval</th><th style="width:9%">LLM</th><th style="width:14%">สถานะ</th><th>ใช้ตอบคำถาม</th></tr></thead>
   <tbody>
-    <tr class="hl"><td><strong>agent</strong></td><td>ครบ</td><td>ครบ</td><td><strong>headline</strong></td><td>ระบบที่ให้บริการจริงทำได้เท่าไร (router + decompose + evaluator + loop)</td></tr>
+    <tr><td><strong>agent</strong></td><td>ครบ</td><td>ครบ</td><td>headline<br><em>ยังไม่ได้รัน</em></td><td>ระบบที่ให้บริการจริงทำได้เท่าไร</td></tr>
     <tr><td>retrieval</td><td>มี</td><td>ไม่มี</td><td>ablation</td><td>คุณภาพการค้นคืนล้วน ๆ</td></tr>
-    <tr><td>rag-en</td><td>มี</td><td>มี</td><td>ablation</td><td>ค้นคืนแล้วให้ LLM สรุป โดยตัด router / evaluator / loop ออก</td></tr>
-    <tr><td>llm-only</td><td>ไม่มี</td><td>มี</td><td>ablation</td><td>โมเดลตอบเองได้เท่าไรโดยไม่มีเรา (เส้นฐาน)</td></tr>
-    <tr><td>rag-th</td><td>มี</td><td>มี</td><td>ไม่ได้รัน</td><td>ผลของการเขียนคำตอบเป็นภาษาไทย</td></tr>
+    <tr><td>rag-en</td><td>มี</td><td>มี</td><td>ablation</td><td>ค้นคืนแล้วให้ LLM สรุป</td></tr>
+    <tr><td>llm-only</td><td>ไม่มี</td><td>มี</td><td>ablation</td><td>โมเดลตอบเองได้เท่าไรโดยไม่มีเรา</td></tr>
   </tbody>
 </table>
 
-<p class="note"><strong>เหตุผลที่ไม่รัน rag-th:</strong> input ของ TRAM เป็นภาษาอังกฤษทั้งหมด arm นี้จึงเป็น “input อังกฤษ → output ไทย”
-ซึ่งไม่ใช่เส้นทางจริงของระบบ (ไทย → ไทย) และไม่ได้ทดสอบ BGE-M3 กับภาษาไทยเลย เพราะข้อความที่ป้อนเข้า retriever ยังเป็นอังกฤษเหมือนเดิม
-การวัดแกนภาษาไทยควรทำบนชุดข้อมูล CTI ไทยของโครงการเอง</p>
-
-<h3>3.3 การตั้งค่าที่ใช้</h3>
-<p>โมเดลภาษา <code>openai/gpt-5.6-luna</code> ผ่าน OpenRouter (temperature 0) &nbsp;·&nbsp;
-embedding <code>BAAI/bge-m3</code> &nbsp;·&nbsp; reranker <code>BAAI/bge-reranker-v2-m3</code> &nbsp;·&nbsp;
-vector top-K = 20 &nbsp;·&nbsp; ค้นเฉพาะโหนด Technique / Subtechnique</p>
-
-<h3>3.4 ข้อบกพร่องที่พบและแก้ระหว่างการพัฒนา</h3>
+<h3>3.2 การตั้งค่าและองค์ประกอบ เทียบกับ TechniqueRAG</h3>
 <table>
-  <thead><tr><th style="width:21%">ข้อบกพร่อง</th><th style="width:44%">อาการ</th><th style="width:35%">การแก้ไข</th></tr></thead>
+  <thead><tr><th style="width:20%">องค์ประกอบ</th><th style="width:40%">ของเรา</th><th style="width:40%">TechniqueRAG</th></tr></thead>
   <tbody>
-    <tr><td><code>node_label_filter</code> ไม่ทำงาน</td>
-        <td><code>retrieve()</code> รับพารามิเตอร์นี้และระบุไว้ใน docstring แต่ไม่ส่งต่อ และ <code>search_all()</code> ไม่มีพารามิเตอร์นี้ ผู้เรียกจึงได้ผลลัพธ์ที่ไม่ถูกกรองโดยไม่มีการแจ้งเตือน</td>
-        <td>ต่อพารามิเตอร์ให้ครบทั้งสาย และรองรับหลาย label พร้อมกัน</td></tr>
-    <tr><td>Qdrant ปฏิเสธการกรอง</td>
-        <td>การกรองฝั่งเซิร์ฟเวอร์ล้มเหลวทั้ง 713 ตัวอย่าง ด้วย <code>400 Index required but not found</code> เนื่องจาก collection ไม่มี payload index และเปิด strict mode</td>
-        <td>เปลี่ยนไปกรองฝั่งไคลเอนต์ (ดึงเผื่อแล้วคัด) ตามรูปแบบที่โค้ดเดิมใช้กับ <code>domain</code> อยู่แล้ว เพื่อไม่ต้องแก้ไขฐานข้อมูลที่ใช้ร่วมกัน</td></tr>
-    <tr><td>context ถูกตัดเหลือ 5 รายการ</td>
-        <td><code>get_context_text()</code> จำกัดที่ <code>FINAL_TOP_K = 5</code> ทำให้ LLM เห็น candidate เพียง 5 จาก 20 รายการ</td>
-        <td>สร้างตัวประกอบ context เฉพาะสำหรับการวัดผล ให้ LLM เห็น candidate ครบทุกรายการ</td></tr>
+    <tr><td>Embedding</td><td><code>BAAI/bge-m3</code> · 1024-dim · dense+sparse</td><td><strong>ไม่มี</strong> — BM25 เป็น lexical ล้วน</td></tr>
+    <tr><td>Retriever</td><td>Qdrant hybrid · RRF · top-K 20</td><td>BM25 · K=40</td></tr>
+    <tr class="win"><td><strong>Re-ranker</strong></td><td><code>bge-reranker-v2-m3</code> · <strong>559M</strong> · ในเครื่อง</td><td><strong>DeepSeek v3</strong> · 671B total / 37B active · เรียก API</td></tr>
+    <tr><td>Generator</td><td>Qwen3.5-9B · zero-shot</td><td>Ministral 8B · LoRA fine-tune</td></tr>
+    <tr><td>Vector DB</td><td>Qdrant Cloud · 23,542 points</td><td>ไม่ต้องใช้</td></tr>
+    <tr><td>Graph DB</td><td>Neo4j · 2,195 nodes · 23,465 edges · 2 hops</td><td>ไม่มี</td></tr>
+    <tr class="win"><td><strong>คลังที่ค้น</strong></td><td>MITRE ATT&amp;CK v19 (สาธารณะ)</td><td><strong>ตัวอย่างติดเฉลย 3,469 รายการ</strong> จาก train split</td></tr>
+    <tr><td>ภาษา</td><td>ไทย + อังกฤษ</td><td>อังกฤษเท่านั้น</td></tr>
+  </tbody>
+</table>
+<p class="note">ความต่างที่สำคัญที่สุดคือแถวสีเขียว TechniqueRAG ไม่ได้ค้น “ความรู้” แต่ค้น <strong>ตัวอย่างที่มนุษย์ติดเฉลยไว้แล้ว</strong>
+จาก distribution เดียวกับชุดทดสอบ (exemplar-based RAG) ขณะที่ระบบนี้ค้นฐานความรู้สาธารณะ (knowledge-based RAG)
+วิธีของเขาจึงใช้ไม่ได้กับโดเมนที่ไม่มีข้อมูลติดป้ายกำกับ ซึ่งเป็นกรณีของสำนวนคดีไทย</p>
+
+<h3>3.3 ข้อบกพร่องที่พบและแก้ระหว่างการพัฒนา</h3>
+<table>
+  <thead><tr><th style="width:24%">ข้อบกพร่อง</th><th style="width:42%">อาการ</th><th style="width:34%">การแก้ไข</th></tr></thead>
+  <tbody>
+    <tr><td><code>node_label_filter</code> ไม่ทำงาน</td><td>รับพารามิเตอร์แล้วไม่ส่งต่อ ผู้เรียกได้ผลที่ไม่ถูกกรองโดยไม่มีการแจ้งเตือน</td><td>ต่อพารามิเตอร์ให้ครบสาย รองรับหลาย label</td></tr>
+    <tr><td>Qdrant ปฏิเสธการกรอง</td><td>ล้มทั้ง 713 ตัวอย่างด้วย <code>400 Index required but not found</code></td><td>เปลี่ยนไปกรองฝั่งไคลเอนต์ ไม่แตะฐานข้อมูลที่ใช้ร่วมกัน</td></tr>
+    <tr><td>context ถูกตัดเหลือ 5</td><td><code>FINAL_TOP_K = 5</code> ทำให้ LLM เห็น candidate 5 จาก 20</td><td>สร้างตัวประกอบ context เฉพาะการวัดผล ให้เห็นครบ</td></tr>
+    <tr><td>โมเดลคิดจนหมดโควตา</td><td>Qwen3.5-9B เป็น reasoning model ใช้ 4,096 token ไปกับการคิด แล้วไม่เขียนคำตอบ</td><td>ปิด thinking — ถูกลง 115 เท่า และเป็นการเทียบที่แฟร์กับ Ministral 8B ที่ไม่ใช่ reasoning model</td></tr>
+    <tr><td>การรันค้างถาวร</td><td>ไม่ได้ตั้ง timeout ให้ client · 1 call ค้าง บล็อกทั้ง batch · CPU นิ่งสนิท 5 นาที</td><td>timeout 120s ต่อ request + 180s ต่อ batch ทิ้งตัวที่ค้างแล้วให้ resume เก็บ</td></tr>
   </tbody>
 </table>
 
 <h2 class="page-break">4. ผลการวัด</h2>
-<p class="note">ชุดข้อมูล TRAM · 713 ตัวอย่าง · zero-shot ทุก arm · ไม่มีข้อผิดพลาดระหว่างรัน</p>
+<p class="note">ชุดข้อมูล TRAM · 713 ตัวอย่าง · zero-shot ทุก arm</p>
 
-<h3>4.1 ผลของระบบเรา — ระดับ technique</h3>
+<h3>4.1 ผลของการค้นคืน แยกตามโมเดลกำเนิดข้อความ — ระดับ technique</h3>
 <table>
-  <thead><tr><th style="width:34%">arm</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th><th class="num">P@1</th><th class="num">P@3</th><th class="num">R@3</th></tr></thead>
+  <thead><tr><th style="width:26%">โมเดล</th><th class="num">llm-only<br>(ไม่มี retrieval)</th><th class="num">rag-en<br>(มี retrieval)</th><th class="num">ผลของ retrieval</th><th class="num">เชิงสัมพัทธ์</th></tr></thead>
   <tbody>
-    <tr class="hl"><td><strong>llm-only</strong> (ไม่มี retrieval)</td><td class="num">0.653</td><td class="num">0.738</td><td class="num"><span class="good">0.693</span></td><td class="num">0.687</td><td class="num">0.653</td><td class="num">0.727</td></tr>
-    <tr><td>rag-en (มี retrieval)</td><td class="num">0.589</td><td class="num">0.665</td><td class="num">0.625</td><td class="num">0.621</td><td class="num">0.589</td><td class="num">0.663</td></tr>
-    <tr><td>retrieval — กรองเฉพาะ technique</td><td class="num">0.070</td><td class="num">0.805</td><td class="num">0.129</td><td class="num">0.373</td><td class="num">0.251</td><td class="num">0.551</td></tr>
-    <tr><td>retrieval — ไม่กรอง</td><td class="num">0.145</td><td class="num">0.667</td><td class="num">0.238</td><td class="num">0.384</td><td class="num">0.263</td><td class="num">0.548</td></tr>
+    <tr><td>gpt-5.6-luna</td><td class="num">0.693</td><td class="num">0.625</td><td class="num"><span class="bad">−0.068</span></td><td class="num"><span class="bad">−10%</span></td></tr>
+    <tr class="win"><td><strong>qwen3.5-9b</strong></td><td class="num">0.302</td><td class="num">0.571</td><td class="num"><span class="good">+0.269</span></td><td class="num"><span class="good">+89%</span></td></tr>
   </tbody>
 </table>
 
-<h3>4.2 ผลของระบบเรา — ระดับ sub-technique</h3>
+<h3>4.2 ระดับ sub-technique</h3>
+<table>
+  <thead><tr><th style="width:26%">โมเดล</th><th class="num">llm-only</th><th class="num">rag-en</th><th class="num">ผลของ retrieval</th><th class="num">เชิงสัมพัทธ์</th></tr></thead>
+  <tbody>
+    <tr><td>gpt-5.6-luna</td><td class="num">0.515</td><td class="num">0.460</td><td class="num"><span class="bad">−0.055</span></td><td class="num"><span class="bad">−11%</span></td></tr>
+    <tr class="win"><td><strong>qwen3.5-9b</strong></td><td class="num">0.237</td><td class="num">0.424</td><td class="num"><span class="good">+0.187</span></td><td class="num"><span class="good">+79%</span></td></tr>
+  </tbody>
+</table>
+
+<h3>4.3 ตารางรวมทุก arm</h3>
 <table>
   <thead><tr><th style="width:34%">arm</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th><th class="num">P@1</th><th class="num">P@3</th></tr></thead>
   <tbody>
-    <tr><td>llm-only</td><td class="num">0.484</td><td class="num">0.551</td><td class="num">0.515</td><td class="num">0.512</td><td class="num">0.485</td></tr>
-    <tr><td>rag-en</td><td class="num">0.429</td><td class="num">0.495</td><td class="num">0.460</td><td class="num">0.454</td><td class="num">0.429</td></tr>
-    <tr><td>retrieval — กรองเฉพาะ technique</td><td class="num">0.038</td><td class="num">0.695</td><td class="num">0.073</td><td class="num">0.264</td><td class="num">0.152</td></tr>
-    <tr><td>retrieval — ไม่กรอง</td><td class="num">0.086</td><td class="num">0.542</td><td class="num">0.149</td><td class="num">0.261</td><td class="num">0.155</td></tr>
+    <tr><td colspan="6" style="background:#f7f9fb"><em>ระดับ technique</em></td></tr>
+    <tr><td>llm-only · luna</td><td class="num">0.653</td><td class="num">0.738</td><td class="num">0.693</td><td class="num">0.687</td><td class="num">0.653</td></tr>
+    <tr><td>rag-en · luna</td><td class="num">0.589</td><td class="num">0.665</td><td class="num">0.625</td><td class="num">0.621</td><td class="num">0.589</td></tr>
+    <tr class="win"><td><strong>rag-en · qwen3.5-9b</strong></td><td class="num">0.495</td><td class="num">0.675</td><td class="num"><strong>0.571</strong></td><td class="num">0.582</td><td class="num">0.519</td></tr>
+    <tr><td>llm-only · qwen3.5-9b</td><td class="num">0.260</td><td class="num">0.359</td><td class="num">0.302</td><td class="num">0.288</td><td class="num">0.273</td></tr>
+    <tr><td>retrieval — กรองเฉพาะ technique</td><td class="num">0.070</td><td class="num">0.805</td><td class="num">0.129</td><td class="num">0.373</td><td class="num">0.251</td></tr>
+    <tr><td>retrieval — ไม่กรอง</td><td class="num">0.145</td><td class="num">0.667</td><td class="num">0.238</td><td class="num">0.384</td><td class="num">0.263</td></tr>
+    <tr><td colspan="6" style="background:#f7f9fb"><em>ระดับ sub-technique</em></td></tr>
+    <tr><td>llm-only · luna</td><td class="num">0.484</td><td class="num">0.551</td><td class="num">0.515</td><td class="num">0.512</td><td class="num">0.485</td></tr>
+    <tr><td>rag-en · luna</td><td class="num">0.429</td><td class="num">0.495</td><td class="num">0.460</td><td class="num">0.454</td><td class="num">0.429</td></tr>
+    <tr class="win"><td><strong>rag-en · qwen3.5-9b</strong></td><td class="num">0.351</td><td class="num">0.537</td><td class="num"><strong>0.424</strong></td><td class="num">0.428</td><td class="num">0.364</td></tr>
+    <tr><td>llm-only · qwen3.5-9b</td><td class="num">0.195</td><td class="num">0.302</td><td class="num">0.237</td><td class="num">0.215</td><td class="num">0.206</td></tr>
   </tbody>
 </table>
 
-<h3>4.3 เทียบกับตัวเลขที่ตีพิมพ์ — TRAM ระดับ technique</h3>
+<h3>4.4 เทียบกับตัวเลขที่ตีพิมพ์ — TRAM ระดับ technique</h3>
 <table>
-  <thead><tr><th style="width:34%">ระบบ</th><th style="width:18%">ประเภท</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th></tr></thead>
+  <thead><tr><th style="width:36%">ระบบ</th><th style="width:18%">ประเภท</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th></tr></thead>
   <tbody>
     <tr><td>NCE</td><td>retriever</td><td class="num">0.903</td><td class="num">0.789</td><td class="num">0.842</td></tr>
+    <tr><td><strong>TechniqueRAG</strong></td><td><strong>fine-tuned</strong></td><td class="num">0.760</td><td class="num">0.721</td><td class="num"><strong>0.740</strong></td></tr>
     <tr><td>BM25</td><td>retriever</td><td class="num">0.679</td><td class="num">0.647</td><td class="num">0.663</td></tr>
-    <tr><td>TechniqueRAG re-ranker</td><td>retriever</td><td class="num">0.647</td><td class="num">0.614</td><td class="num">0.630</td></tr>
-    <tr><td>RankGPT</td><td>retriever</td><td class="num">0.619</td><td class="num">0.586</td><td class="num">0.602</td></tr>
-    <tr class="hl"><td><strong>ของเรา — retrieval</strong> (P@1)</td><td><strong>retriever</strong></td><td class="num"><span class="bad">0.373</span></td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>GPT-4o</td><td>zero-shot</td><td class="num">0.383</td><td class="num">0.500</td><td class="num">0.434</td></tr>
-    <tr><td>DeepSeek v3</td><td>zero-shot</td><td class="num">0.437</td><td class="num">0.657</td><td class="num">0.525</td></tr>
-    <tr class="hl"><td><strong>ของเรา — llm-only</strong></td><td><strong>zero-shot</strong></td><td class="num">0.653</td><td class="num">0.738</td><td class="num"><span class="good">0.693</span></td></tr>
-    <tr><td>GPT-4 (RAG)</td><td>RAG</td><td class="num">0.555</td><td class="num">0.706</td><td class="num">0.622</td></tr>
-    <tr><td>DeepSeek v3 (RAG)</td><td>RAG</td><td class="num">0.546</td><td class="num">0.774</td><td class="num">0.640</td></tr>
     <tr><td>IntelEx</td><td>RAG</td><td class="num">0.607</td><td class="num">0.707</td><td class="num">0.653</td></tr>
-    <tr class="hl"><td><strong>ของเรา — rag-en</strong></td><td><strong>RAG</strong></td><td class="num">0.589</td><td class="num">0.665</td><td class="num"><strong>0.625</strong></td></tr>
-    <tr><td>TechniqueRAG</td><td>fine-tuned</td><td class="num">0.760</td><td class="num">0.721</td><td class="num">0.740</td></tr>
+    <tr><td>DeepSeek v3 (RAG)</td><td>RAG</td><td class="num">0.546</td><td class="num">0.774</td><td class="num">0.640</td></tr>
+    <tr><td>TechniqueRAG re-ranker</td><td>retriever</td><td class="num">0.647</td><td class="num">0.614</td><td class="num">0.630</td></tr>
+    <tr><td><em>ของเรา — rag-en · luna</em></td><td><em>RAG</em></td><td class="num">0.589</td><td class="num">0.665</td><td class="num">0.625</td></tr>
+    <tr><td>GPT-4 (RAG)</td><td>RAG</td><td class="num">0.555</td><td class="num">0.706</td><td class="num">0.622</td></tr>
+    <tr><td>RankGPT</td><td>retriever</td><td class="num">0.619</td><td class="num">0.586</td><td class="num">0.602</td></tr>
+    <tr class="win"><td><strong>ของเรา — rag-en · qwen3.5-9b</strong></td><td><strong>RAG</strong></td><td class="num">0.495</td><td class="num">0.675</td><td class="num"><strong class="good">0.571</strong></td></tr>
+    <tr class="hl"><td>🎯 <strong>Ministral 8B (RAG)</strong> — คู่เทียบที่คุมตัวแปร</td><td>RAG</td><td class="num">0.519</td><td class="num">0.576</td><td class="num"><strong>0.546</strong></td></tr>
+    <tr><td>DeepSeek v3</td><td>zero-shot</td><td class="num">0.437</td><td class="num">0.657</td><td class="num">0.525</td></tr>
+    <tr><td>GPT-4o</td><td>zero-shot</td><td class="num">0.383</td><td class="num">0.500</td><td class="num">0.434</td></tr>
+    <tr><td><em>ของเรา — llm-only · qwen3.5-9b</em></td><td><em>zero-shot</em></td><td class="num">0.260</td><td class="num">0.359</td><td class="num">0.302</td></tr>
+    <tr><td>Ministral 8B</td><td>zero-shot</td><td class="num">0.077</td><td class="num">0.317</td><td class="num">0.124</td></tr>
   </tbody>
 </table>
-<p class="note">หมายเหตุ: แถว retriever ของงานตีพิมพ์รายงานค่า P ≈ R บนชุด single-label ซึ่งบ่งชี้ว่าให้คำตอบราวหนึ่งรายการต่อตัวอย่าง
-ค่าที่เทียบกันได้จากฝั่งเราจึงเป็น P@1 ไม่ใช่ precision ของรายการทั้งลิสต์
-อนึ่ง TechniqueRAG ผ่านการ fine-tune บน train split จึงไม่ใช่คู่เทียบโดยตรงของ arm ใดของเรา</p>
+<p class="note">แถว retriever ของงานตีพิมพ์รายงาน P ≈ R บนชุด single-label ซึ่งบ่งชี้ว่าให้คำตอบราวหนึ่งรายการต่อตัวอย่าง
+ค่าที่เทียบได้จากฝั่งเราจึงเป็น P@1 ไม่ใช่ precision ของลิสต์เต็ม</p>
 
 <h2>5. สรุปผล</h2>
 
-<h3>ข้อค้นพบที่ 1 — ระบบค้นคืนของเราอ่อนในฐานะตัวจัดอันดับ แต่แข็งในฐานะตัวสร้างตัวเลือก</h3>
+<div class="avoid-break">
+<h3>ข้อค้นพบที่ 1 — ผลของการค้นคืนกลับทิศตามโมเดลที่จับคู่ด้วย</h3>
+<p>เป็นข้อค้นพบหลักของงานนี้ เดิมเมื่อวัดด้วย gpt-5.6-luna เพียงโมเดลเดียว ผลออกมาว่าการค้นคืน<strong>ลด</strong>คะแนน
+ซึ่งเป็นข้อสรุปที่อธิบายได้ยาก เมื่อเพิ่มโมเดลที่สองเข้ามาในการทดลอง ภาพเปลี่ยนทั้งหมด</p>
+<pre>                 llm-only   rag-en    ผลของ retrieval
+gpt-5.6-luna       0.693     0.625        -0.068
+qwen3.5-9b         0.302     0.571        +0.269   (+89%)</pre>
+<p>ตัวอย่างชุดเดียวกัน การค้นคืนชุดเดียวกัน prompt เดียวกัน ต่างกันเพียงโมเดลกำเนิดข้อความ
+ข้อสรุปที่ถูกต้องจึงไม่ใช่ “RAG ทำให้แย่ลง” แต่คือ
+<strong>การค้นคืนช่วยเมื่อโมเดลไม่รู้คำตอบ และรบกวนเมื่อโมเดลรู้ดีกว่าตัวค้นคืน</strong>
+ซึ่งงานนี้วัดได้ทั้งสองทิศทางในการทดลองเดียวกัน</p>
+</div>
+
+<div class="avoid-break">
+<h3>ข้อค้นพบที่ 2 — หลักฐานสนับสนุนการปนเปื้อนของชุดทดสอบ</h3>
+<p>gpt-5.6-luna ตอบเองได้ 0.693 บนโจทย์ที่ qwen3.5-9b ทำได้ 0.302 — ต่างกัน <strong>0.39</strong>
+ซึ่งใหญ่เกินกว่าจะอธิบายด้วยขนาดโมเดลเพียงอย่างเดียว และยังสูงกว่าแถว GPT-4o zero-shot ของงานตีพิมพ์ (0.434) ถึง 26 จุด</p>
+<p>procedure examples ของ MITRE เป็นข้อมูลสาธารณะ และ luna เป็นโมเดลรุ่นปี 2026
+จึงมีความเป็นไปได้สูงว่าเคยเห็นชุดข้อมูลนี้ระหว่างการฝึก ข้อสังเกตนี้กระทบการตีความ<strong>ทุกงาน</strong>ที่วัดผลบน TRAM
+ด้วยโมเดลรุ่นใหม่ ไม่ใช่เฉพาะงานนี้</p>
+</div>
+
+<div class="avoid-break">
+<h3>ข้อค้นพบที่ 3 — เทียบเท่าคู่เทียบที่คุมตัวแปร ด้วยองค์ประกอบที่เบากว่ามาก</h3>
+<p>ที่ระดับ technique ระบบนี้ทำได้ <strong>F1 0.571</strong> เทียบกับ <strong>0.546</strong> ของ Ministral 8B (RAG)
+ซึ่งเป็นแถวที่คุมตัวแปรร่วมได้มากที่สุด: generator ขนาดใกล้เคียงกัน (9B เทียบ 8B) แบบสำเร็จรูปทั้งคู่ ไม่ fine-tune ทั้งคู่
+ที่ระดับ sub-technique ได้ 0.424 เทียบกับ 0.377 (+12% เชิงสัมพัทธ์)</p>
+<p>งานตีพิมพ์ระบุชัดว่าแถวดังกล่าวไม่ผ่านการ fine-tune — <em>“GPT-4o (RAG), DeepSeek v3 (RAG), and Ministral 8B (RAG)
+use retrieved exemplars but receive no fine-tuning”</em></p>
+<p>ผลเทียบเท่านี้ได้มาโดยใช้ <strong>re-ranker ขนาด 559M พารามิเตอร์ที่ประมวลผลในเครื่อง</strong>
+แทน DeepSeek v3 (671B total / 37B active) ที่ต้องเรียกผ่าน API ทุกครั้ง
+และ<strong>ไม่ต้องอาศัยตัวอย่างที่มีป้ายกำกับในโดเมนจำนวน 3,469 รายการ</strong> ซึ่งคลังค้นคืนของเขาพึ่งพา</p>
+<p class="note">ระยะห่างที่ระดับ technique คือ 0.025 ซึ่งแคบ จึงควรใช้คำว่า “เทียบเท่า” (comparable) มิใช่ “ดีกว่า” (superior)</p>
+</div>
+
+<div class="avoid-break">
+<h3>ข้อค้นพบที่ 4 — ยังห่างจากตัวเลขพาดหัว และช่องว่างอธิบายได้</h3>
+<p>ระบบนี้ยังต่ำกว่า TechniqueRAG (0.740) อยู่ <strong>0.169</strong> ที่ระดับ technique
+ช่องว่างนี้สอดคล้องกับ ablation ในงานเดียวกัน ซึ่งรายงานว่า<strong>การ fine-tune generator เพียงอย่างเดียวให้ผลต่าง +0.194</strong>
+บนโมเดลฐานและชุดค้นคืนเดิม (Ministral 8B RAG 0.546 → TechniqueRAG 0.740)</p>
+<p>กล่าวคือ ปัจจัยเดียวที่งานตีพิมพ์ระบุว่ามีผลมากที่สุด มีขนาดใหญ่กว่าช่องว่างทั้งหมดของระบบนี้
+และเป็นปัจจัยที่ระบบนี้ยังไม่ได้ใช้</p>
+</div>
+
+<h3>ข้อค้นพบที่ 5 — ตัวค้นคืนอ่อนในฐานะตัวจัดอันดับ แต่แข็งในฐานะตัวสร้างตัวเลือก</h3>
 <p>P@1 อยู่ที่ 0.373 ต่ำกว่าทุก baseline ที่ตีพิมพ์ แต่เมื่อพิจารณาทั้งลิสต์ 20 อันดับ
-<strong>เฉลยปรากฏอยู่ใน 83.3% ของตัวอย่าง</strong> (recall 0.805) แปลว่าปัญหาไม่ใช่การค้นไม่เจอ แต่เป็นการเรียงลำดับผิด</p>
-<p>สาเหตุเชิงโครงสร้างที่ต่างจากเขา: corpus ของ TechniqueRAG คือ<strong>บทสรุปรายเทคนิคที่เขียนขึ้นใหม่</strong>
-และ<strong>ตัวอย่างที่มีเฉลยจาก train split</strong> ขณะที่ของเราเป็นคำอธิบาย STIX ดิบจากกราฟความรู้ทั้งกราฟ
-ซึ่งเป็นกองข้อมูลที่ค้นยากกว่ามากสำหรับข้อความชนิดนี้</p>
-
-<h3>ข้อค้นพบที่ 2 — การกรองให้เหลือเฉพาะ technique ไม่ช่วยเรื่องการจัดอันดับ</h3>
-<p>สมมติฐานเริ่มต้นคือผลลัพธ์ประเภท Group / Software แย่งตำแหน่งต้นตาราง แต่เมื่อวัดจริง
-P@1 แทบไม่เปลี่ยน (0.373 เทียบกับ 0.384) เพราะกลไกถ่วงน้ำหนักตามชนิดโหนดได้ดัน technique ขึ้นก่อนอยู่แล้ว
-การกรองให้ผลเฉพาะด้าน<strong>ความลึก</strong> คือ recall เพิ่มจาก 0.667 เป็น 0.805</p>
-
-<div class="avoid-break">
-<h3>ข้อค้นพบที่ 3 — การเพิ่ม retrieval ทำให้คำตอบแย่ลง</h3>
-<p><strong>เป็นข้อค้นพบที่สำคัญที่สุดของการทดลองนี้</strong> การนำ context ที่ค้นได้ไปประกอบคำตอบ
-ทำให้ F1 ลดลง <strong class="bad">6.8 จุด</strong> (0.693 → 0.625) และลดลงทั้ง precision และ recall
-จึงไม่ใช่การแลกเปลี่ยนระหว่างสองค่า</p>
-<p>จากการจับคู่ผลลัพธ์รายตัวอย่าง</p>
-<ul>
-  <li>93 ตัวอย่างที่ llm-only ตอบถูกแต่ rag-en ตอบผิด ขณะที่ทิศทางกลับกันมีเพียง 37 ตัวอย่าง</li>
-  <li><strong>66% ของตัวอย่างที่เสียไป เฉลยไม่ได้อยู่ในรายการ candidate เลย</strong> แต่โมเดลยังตอบตาม candidate อันดับหนึ่ง</li>
-  <li>47% ของคำตอบจาก rag-en คือ candidate ที่ผิด</li>
-</ul>
-<pre>gold     : T1105 (Ingress Tool Transfer)
-llm-only : T1105                      ถูก
-rag-en   : T1588.001                  ตอบตาม candidate อันดับ 1
-cands    : T1588.001, T1102.001, T1095, ...   (ไม่มี T1105)</pre>
-<p><strong>กลไก:</strong> ตัวค้นคืนที่แม่นยำอันดับหนึ่งเพียง 0.373 กำลังตรึงความคิด (anchoring)
-โมเดลที่ตอบเองได้ 0.687 ประกอบกับคำสั่งใน prompt ที่ระบุให้ “ใช้ข้อมูลที่ค้นมาเป็นหลักฐาน”
-ยิ่งบังคับให้เชื่อตัวเลือกที่ผิด</p>
-</div>
-
-<div class="avoid-break">
-<h3>ข้อค้นพบที่ 4 — ข้อควรระวังเรื่องการปนเปื้อนของชุดข้อมูล</h3>
-<p>arm <code>llm-only</code> ทำคะแนนได้ 0.693 ซึ่งสูงกว่าแถว zero-shot ของงานตีพิมพ์อย่างมาก
-(GPT-4o 0.434, DeepSeek v3 0.525) และ<strong>เกือบเท่าตัวเลขพาดหัวของ TechniqueRAG ที่ผ่านการ fine-tune แล้ว (0.740)</strong></p>
-<div class="callout">
-<p>procedure examples ของ MITRE เป็นข้อมูลสาธารณะ และโมเดลที่ใช้เป็นรุ่นปี 2026
-จึงมีความเป็นไปได้สูงว่าโมเดลเคยเห็นข้อมูลชุดนี้ในระหว่างการฝึก หากเป็นเช่นนั้น
-<strong>ชุดทดสอบนี้ไม่สามารถแสดงคุณค่าของการค้นคืนได้เลยไม่ว่าจะเป็นระบบใด</strong>
-ข้อนี้เป็นเหตุผลสนับสนุนการใช้ชุดข้อมูล CTI ภาษาไทยที่โครงการจัดทำขึ้นเอง มิใช่ข้อแก้ตัวของผลที่ได้</p>
-</div>
-</div>
+<strong>เฉลยปรากฏใน 83.3% ของตัวอย่าง</strong> (recall 0.805) ปัญหาจึงอยู่ที่การเรียงลำดับ ไม่ใช่การค้นไม่เจอ
+ซึ่งอธิบายว่าเหตุใดการเพิ่ม LLM เข้ามาเลือกจากตัวเลือกเหล่านั้นจึงยกคะแนนได้ถึง +89%</p>
 
 <h2>6. ข้อจำกัดของการทดลองนี้</h2>
 <ul>
-  <li>ตัวเลขทั้งหมดในรายงานฉบับนี้มาจาก arm ที่เป็น <strong>ablation</strong> ยังไม่ใช่ตัวเลขของ pipeline ที่ให้บริการจริง
-      arm <code>agent</code> ได้พัฒนาเสร็จแล้วแต่ยังไม่ได้รัน</li>
+  <li>ตัวเลขทั้งหมดมาจาก arm ที่เป็น <strong>ablation</strong> ยังไม่ใช่ pipeline ที่ให้บริการจริง
+      arm <code>agent</code> พัฒนาเสร็จแล้วแต่ยังไม่ได้รัน</li>
   <li>วัดบนชุด TRAM เท่านั้น ยังไม่ได้วัด Expert (multi-label) และ Procedures</li>
-  <li>การเทียบ rag-en กับแถว RAG ของงานตีพิมพ์ ปนตัวแปรสองอย่างคือตัวค้นคืนที่ต่างกันและโมเดลภาษาที่ต่างกัน แยกออกจากกันไม่ได้</li>
-  <li>MRR ไม่สามารถเทียบกับต้นทางได้ ด้วยเหตุผลที่ระบุในหัวข้อ 2.2</li>
+  <li>ความสามารถหลายภาษาและการใช้กราฟความสัมพันธ์ <strong>ยังไม่ได้ประเมิน</strong> — ชุดทดสอบนี้เป็นภาษาอังกฤษ
+      และ input สั้นเกินกว่าจะมีความสัมพันธ์ระหว่าง entity ให้ใช้ ทั้งสองข้อจึงไม่ควรถูกอ้างเป็นผลของงานนี้</li>
+  <li>การเทียบ rag-en กับแถว RAG ของงานตีพิมพ์ ปนตัวแปรทั้งตัวค้นคืนและคลังข้อมูล แยกจากกันไม่ได้</li>
+  <li>MRR เทียบกับต้นทางไม่ได้ ด้วยเหตุผลในหัวข้อ 2.2</li>
+  <li>ข้อสรุปเรื่องการปนเปื้อนเป็นการอนุมานจากคะแนน มิใช่การตรวจสอบชุดข้อมูลฝึกของโมเดลโดยตรง</li>
 </ul>
 
 <h2>7. งานที่ควรทำต่อ</h2>
 <table>
-  <thead><tr><th style="width:6%">ลำดับ</th><th style="width:26%">งาน</th><th style="width:50%">เหตุผล</th><th style="width:18%">ต้นทุนโดยประมาณ</th></tr></thead>
+  <thead><tr><th style="width:6%">ลำดับ</th><th style="width:26%">งาน</th><th style="width:50%">เหตุผล</th><th style="width:18%">ต้นทุน</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>รัน arm <code>agent</code> บนชุด Expert</td>
-        <td>ได้ตัวเลขของ pipeline จริงตามหลักการ และ Expert เป็น split เดียวที่มี P@1 / P@3 ที่ตีพิมพ์ให้เทียบตรง</td>
-        <td>~45 นาที · ~$0.30</td></tr>
-    <tr><td>2</td><td>ทดลองแก้ถ้อยคำใน prompt</td>
-        <td>เปลี่ยนจาก “ใช้ข้อมูลที่ค้นมาเป็นหลักฐาน” เป็น “ใช้เมื่อเป็นประโยชน์” เพื่อแยกว่าที่เสีย 6.8 จุด เกิดจาก prompt ที่บังคับ หรือจากคุณภาพ candidate — หากเป็นอย่างแรก แก้ได้ทันทีบน production</td>
-        <td>~20 นาที · ~$0.35</td></tr>
-    <tr><td>3</td><td>ทดสอบผลของการแตกคำถามย่อยบนชุด Expert</td>
-        <td>TechniqueRAG แตกคำถามย่อยอยู่ภายใน prompt ของ re-ranker การไม่ทำจึงเป็นการเสียเปรียบบน split ที่เป็น multi-label</td>
-        <td>~15 นาที · ~$0.05</td></tr>
-    <tr><td>4</td><td>แก้การรวมคะแนนข้าม collection</td>
-        <td>การ normalize แบบ min-max แยกตาม collection บังคับให้อันดับหนึ่งของแต่ละ collection มีค่าเท่ากับ 1.0 เสมอ ไม่ว่าจะเกี่ยวข้องจริงหรือไม่ กระทบการค้นคืนของ production ทั้งระบบ</td>
-        <td>ต้องวัดก่อนและหลัง</td></tr>
-    <tr><td>5</td><td>พิจารณา fine-tune เพื่อเทียบกับตัวเลข 0.740</td>
-        <td>โครงการมีโมดูล fine-tune อยู่แล้ว การฝึกบน train split ของ TRAM จะทำให้เทียบกับตัวเลขพาดหัวของเขาได้อย่างเป็นธรรม</td>
-        <td>เป็นงานแยกอีกก้อน</td></tr>
+    <tr><td>1</td><td>รัน arm <code>agent</code></td><td>ได้ตัวเลขของ pipeline จริงตามหลักการที่วางไว้ ปัจจุบันรายงานนี้ยังอ้างได้เฉพาะ ablation</td><td>~45 นาที · ~$0.30</td></tr>
+    <tr><td>2</td><td>ทดลองแก้ถ้อยคำใน prompt</td><td>เปลี่ยนจาก “ใช้ข้อมูลที่ค้นมาเป็นหลักฐาน” เป็น “ใช้เมื่อเป็นประโยชน์” เพื่อลดการยึดติดตัวเลือกที่ผิด น่าจะช่วยกรณี luna โดยไม่กระทบ qwen</td><td>~20 นาที · ~$0.35</td></tr>
+    <tr><td>3</td><td>ล้าง corpus</td><td>เอกสารที่ index อยู่มี <strong>18.5% เป็น citation / markdown / code</strong> ที่ไม่ช่วยแยกแยะ แต่กินพื้นที่ทั้งใน embedding และ cross-encoder</td><td>ฟรี</td></tr>
+    <tr><td>4</td><td>วัดบนชุด Expert</td><td>เป็น multi-label จริง และเป็น split เดียวที่มี P@1 / P@3 ที่ตีพิมพ์ให้เทียบตรง อีกทั้งเป็นสนามที่การแตกคำถามย่อยควรได้เปรียบ</td><td>~15 นาที · ~$0.05</td></tr>
+    <tr><td>5</td><td>fine-tune เพื่อปิดช่องว่าง 0.169</td><td>โครงการมีโมดูล fine-tune อยู่แล้ว หากได้ผลใกล้เคียง +0.194 ตามที่งานตีพิมพ์รายงาน จะอยู่ในระดับเดียวกับ TechniqueRAG ด้วยโมเดลที่เล็กกว่า</td><td>เป็นงานแยกอีกก้อน</td></tr>
+    <tr><td>6</td><td>วัดภาษาไทยบนชุด CTI ไทยของโครงการ</td><td>เป็นข้อได้เปรียบที่ชุดทดสอบนี้วัดไม่ได้ และเป็นบริบทที่การปนเปื้อนของโมเดลไม่เป็นปัญหา</td><td>ต้องประเมินแยก</td></tr>
   </tbody>
 </table>
 
 <footer>
-ข้อมูลประกอบทั้งหมด ได้แก่ ผลการรันรายตัวอย่าง ที่มาของข้อมูล และตัวเลขของงานคู่เทียบ อยู่ใน
+ข้อมูลประกอบทั้งหมด ได้แก่ ผลการรันรายตัวอย่างทั้ง 6 ชุด ที่มาของข้อมูล และตัวเลขของงานคู่เทียบ อยู่ใน
 <code>rag_service/app/RAG/GraphRAG/evaluation/published/</code> บน branch <code>eval/published-baselines</code>
 </footer>
 
