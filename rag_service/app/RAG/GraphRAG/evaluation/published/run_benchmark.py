@@ -278,6 +278,54 @@ def candidate_context(result, vmap: VersionMap, max_chars: int = 9000) -> str:
     return context
 
 
+def _override_agent_model(model: str) -> None:
+    """Point every LLM inside the agent graph at one model.
+
+    The graph does not have a single LLM. Five components build their own -
+    agent_graph (reasoning and translation), router, evaluator, decomposer and
+    the cross-lingual layer - and each passes config.LLM_MODEL, an Anthropic
+    name, into create_core_chat_model. On the OpenRouter provider that name has
+    no slash, misses the alias table, and falls through to
+    DEFAULT_OPENROUTER_MODEL. That fallback is therefore the one lever that
+    reaches all five, so it is what gets overridden.
+
+    Done here rather than by adding a model argument to five constructors: this
+    is an evaluation concern, and production should keep resolving its model
+    exactly as it does today.
+    """
+    from ... import model_registry
+
+    model_registry.DEFAULT_OPENROUTER_MODEL = model
+    print("[BENCH] agent LLM override: every component -> " + model)
+
+
+def _disable_agent_thinking(agent) -> None:
+    """Bind thinking=disabled and a request timeout onto each of the agent LLMs.
+
+    Same reasoning as _make_llm: a reasoning model spends the whole token budget
+    thinking and returns no text, and the client waits forever by default. The
+    agent holds its LLMs on five separate objects, so each is rebound in place.
+    """
+    bind_kwargs = {"timeout": REQUEST_TIMEOUT_S, "thinking": {"type": "disabled"}}
+    targets = [
+        (agent, "reasoning_llm"),
+        (agent, "translation_llm"),
+        (getattr(agent, "router", None), "llm"),
+        (getattr(agent, "evaluator", None), "llm"),
+        (getattr(agent, "decomposer", None), "llm"),
+    ]
+    bound = 0
+    for owner, attribute in targets:
+        if owner is None:
+            continue
+        llm = getattr(owner, attribute, None)
+        if llm is None:
+            continue
+        setattr(owner, attribute, llm.bind(**bind_kwargs))
+        bound += 1
+    print("[BENCH] thinking disabled on " + str(bound) + " agent LLM(s)")
+
+
 def model_slug(model: str) -> str:
     """Filename-safe short name for a model id, used to key the run file."""
     return model.split("/")[-1].replace(".", "-").replace(":", "-").lower()
@@ -385,11 +433,16 @@ def run_arm(
     if arm == "agent":
         # The served path, unmodified: router, decomposition, hybrid retrieval,
         # sufficiency evaluation and the BROADEN_SEARCH loop, exactly as
-        # POST /query drives it. No knobs - the point of this arm is that there
-        # are none.
+        # POST /query drives it. The only thing configured from here is which
+        # LLM the whole graph runs on.
+        if model:
+            _override_agent_model(model)
+
         from ...pipeline.agent_graph import GraphRAGAgent
 
         agent = GraphRAGAgent()
+        if disable_thinking:
+            _disable_agent_thinking(agent)
         print("[BENCH] agent arm: full served pipeline, sequential")
     else:
         if arm != "llm-only":
