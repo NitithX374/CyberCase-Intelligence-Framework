@@ -114,6 +114,7 @@ class HybridRetriever:
         top_k: int = VECTOR_TOP_K,
         node_label_filter: Optional[Union[str, Sequence[str]]] = None,
         expand_graph: bool = True,
+        rerank: bool = True,
     ) -> GraphRAGResult:
         """Execute the full GraphRAG retrieval pipeline.
 
@@ -127,6 +128,10 @@ class HybridRetriever:
             expand_graph: When False, skip Neo4j graph expansion and return
                 vector + rerank results only (used by --ultrafast to drop the
                 graph round-trips entirely).
+            rerank: When False, keep the hybrid dense+sparse ordering from
+                Qdrant instead of re-scoring it with the cross-encoder. This
+                exists to measure what the re-ranker contributes; leave it True
+                in production.
 
         Returns:
             GraphRAGResult with combined vector + graph context.
@@ -141,7 +146,10 @@ class HybridRetriever:
         print(f"[RETRIEVE] Vector search: {len(vector_results)} results (pre-rerank)")
 
         # ── Step 1b: Rerank ───────────────────────────────────────────────
-        vector_results = self.reranker.rerank(query, vector_results, top_k=top_k)
+        if rerank:
+            vector_results = self.reranker.rerank(query, vector_results, top_k=top_k)
+        else:
+            vector_results = vector_results[:top_k]
 
         # ── Step 1c: Re-weight by node type (techniques first) ─────────────
         vector_results = self._reweight_by_type(vector_results)
