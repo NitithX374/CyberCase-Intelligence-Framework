@@ -1,0 +1,2416 @@
+{
+  "timestamp": "2026-08-22T09:33:36.738622+00:00",
+  "model": "meta-llama/llama-3.1-8b-instruct",
+  "temperature": 0.0,
+  "total_items": 33,
+  "results": [
+    {
+      "benchmark_id": "case_01_c0_original",
+      "base_case_id": "case_01",
+      "condition": "ORIGINAL",
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_01_c1_removed",
+      "base_case_id": "case_01",
+      "condition": "REMOVED",
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "data transfer volume or evidence confirming successful payload transmission"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_01_c2_contradiction",
+      "base_case_id": "case_01",
+      "condition": "CONTRADICTION",
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_01_c3_distractor",
+      "base_case_id": "case_01",
+      "condition": "DISTRACTOR",
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S3",
+          "S4"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_01_c4_reorder",
+      "base_case_id": "case_01",
+      "condition": "REORDER",
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_02_c0_original",
+      "base_case_id": "case_02",
+      "condition": "ORIGINAL",
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "resolution of conflicting SIEM 850 MB egress log vs Firewall TCP RST 0-byte record"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_02_c1_removed",
+      "base_case_id": "case_02",
+      "condition": "REMOVED",
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2"
+        ],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_02_c2_contradiction",
+      "base_case_id": "case_02",
+      "condition": "CONTRADICTION",
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_02_c3_distractor",
+      "base_case_id": "case_02",
+      "condition": "DISTRACTOR",
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S3",
+          "S4"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "resolution of conflicting SIEM and firewall telemetry"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_03_c0_original",
+      "base_case_id": "case_03",
+      "condition": "ORIGINAL",
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_03_c1_removed",
+      "base_case_id": "case_03",
+      "condition": "REMOVED",
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "cryptographic hash or binary comparison for temp_tool.exe"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_03_c2_contradiction",
+      "base_case_id": "case_03",
+      "condition": "CONTRADICTION",
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3"
+        ],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_03_c3_distractor",
+      "base_case_id": "case_03",
+      "condition": "DISTRACTOR",
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S4"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_03_c4_reorder",
+      "base_case_id": "case_03",
+      "condition": "REORDER",
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_04_c0_original",
+      "base_case_id": "case_04",
+      "condition": "ORIGINAL",
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_04_c1_removed",
+      "base_case_id": "case_04",
+      "condition": "REMOVED",
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "evidence of persistence mechanism or artifact enabling continued access"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_04_c2_contradiction",
+      "base_case_id": "case_04",
+      "condition": "CONTRADICTION",
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_04_c3_distractor",
+      "base_case_id": "case_04",
+      "condition": "DISTRACTOR",
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3",
+          "S4"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_04_c4_reorder",
+      "base_case_id": "case_04",
+      "condition": "REORDER",
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_05_c0_original",
+      "base_case_id": "case_05",
+      "condition": "ORIGINAL",
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_05_c1_removed",
+      "base_case_id": "case_05",
+      "condition": "REMOVED",
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "evidence of lateral movement, network scans, or command executions after login"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_05_c2_contradiction",
+      "base_case_id": "case_05",
+      "condition": "CONTRADICTION",
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3"
+        ],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_05_c3_distractor",
+      "base_case_id": "case_05",
+      "condition": "DISTRACTOR",
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3",
+          "S4"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_05_c4_reorder",
+      "base_case_id": "case_05",
+      "condition": "REORDER",
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_06_c0_original",
+      "base_case_id": "case_06",
+      "condition": "ORIGINAL",
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_06_c1_removed",
+      "base_case_id": "case_06",
+      "condition": "REMOVED",
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "specific commands, tools, or behavioral evidence establishing an operational objective"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_06_c2_contradiction",
+      "base_case_id": "case_06",
+      "condition": "CONTRADICTION",
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "resolution between malicious adversary discovery vs authorized SOC audit simulation"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_06_c3_distractor",
+      "base_case_id": "case_06",
+      "condition": "DISTRACTOR",
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3",
+          "S4"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_06_c4_reorder",
+      "base_case_id": "case_06",
+      "condition": "REORDER",
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_07_c0_original",
+      "base_case_id": "case_07",
+      "condition": "ORIGINAL",
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_07_c1_removed",
+      "base_case_id": "case_07",
+      "condition": "REMOVED",
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_07_c2_contradiction",
+      "base_case_id": "case_07",
+      "condition": "CONTRADICTION",
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S2"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "resolution between command execution log and forensic absence of scheduled task registry"
+        ]
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    },
+    {
+      "benchmark_id": "case_07_c3_distractor",
+      "base_case_id": "case_07",
+      "condition": "DISTRACTOR",
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": [
+          "S1",
+          "S3",
+          "S4"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "predicted_attributes": {
+        "attributes": {
+          "answerability": "SUFFICIENT",
+          "question_type": "IMPACT",
+          "relevant_evidence_ids": [
+            "S1"
+          ],
+          "epistemic_state": "SUPPORTED",
+          "missing_information": []
+        },
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "{\"answerability\": \"SUFFICIENT\", \"question_type\": \"IMPACT\", \"relevant_evidence_ids\": [\"S1\"], \"epistemic_state\": \"SUPPORTED\", \"missing_information\": []}"
+      },
+      "attribute_first": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      },
+      "oracle_attribute": {
+        "answer": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1.",
+        "latency_ms": 5.0,
+        "usage": {
+          "prompt_tokens": 50,
+          "completion_tokens": 20,
+          "total_tokens": 70
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": null,
+        "raw_response": "[DRY RUN] Based on the context, the analytical question is supported by evidence S1."
+      }
+    }
+  ]
+}
