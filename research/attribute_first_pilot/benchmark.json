@@ -1,0 +1,768 @@
+{
+  "version": "1.0.0",
+  "description": "CyberCase Attribute-First Reasoning Pilot Benchmark",
+  "items": [
+    {
+      "id": "case_01_c0_original",
+      "base_case_id": "case_01",
+      "condition": "ORIGINAL",
+      "context_sentences": [
+        {"id": "S1", "text": "PowerShell execution was observed on endpoint WS-01."},
+        {"id": "S2", "text": "PowerShell established an outbound TCP session to IP 198.51.100.23 over port 443."},
+        {"id": "S3", "text": "Network gateway recorded 1.4 GB of data transferred outbound during the session."}
+      ],
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Conclude that data exfiltration is supported based on outbound connection and 1.4 GB data transfer.",
+        "required_points": ["outbound TCP session to 198.51.100.23", "1.4 GB transferred outbound"],
+        "forbidden_points": ["claiming no transfer occurred", "claiming transfer failed"]
+      }
+    },
+    {
+      "id": "case_01_c1_removed",
+      "base_case_id": "case_01",
+      "condition": "REMOVED",
+      "context_sentences": [
+        {"id": "S1", "text": "PowerShell execution was observed on endpoint WS-01."},
+        {"id": "S2", "text": "PowerShell connected to IP 198.51.100.23 over port 443."},
+        {"id": "S3", "text": "No network transfer metrics or egress volume logs were captured."}
+      ],
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S2", "S3"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["data transfer volume or evidence confirming successful payload transmission"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Abstain from confirming exfiltration; acknowledge connection occurred but transfer success is unestablished.",
+        "required_points": ["connection established but volume unknown", "exfiltration unestablished/unconfirmed"],
+        "forbidden_points": ["asserting data exfiltration definitely occurred", "inventing file size or exfiltrated data"]
+      }
+    },
+    {
+      "id": "case_01_c2_contradiction",
+      "base_case_id": "case_01",
+      "condition": "CONTRADICTION",
+      "context_sentences": [
+        {"id": "S1", "text": "PowerShell execution was observed on endpoint WS-01."},
+        {"id": "S2", "text": "PowerShell attempted an outbound TCP connection to IP 198.51.100.23."},
+        {"id": "S3", "text": "Perimeter firewall logs confirmed the connection to 198.51.100.23 was blocked and 0 bytes were transmitted."}
+      ],
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S2", "S3"],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State clearly that exfiltration did not occur because the firewall blocked the connection with 0 bytes transmitted.",
+        "required_points": ["firewall blocked connection", "0 bytes transmitted", "exfiltration contradicted"],
+        "forbidden_points": ["claiming data was exfiltrated", "ignoring firewall block"]
+      }
+    },
+    {
+      "id": "case_01_c3_distractor",
+      "base_case_id": "case_01",
+      "condition": "DISTRACTOR",
+      "context_sentences": [
+        {"id": "S1", "text": "PowerShell execution was observed on endpoint WS-01."},
+        {"id": "S2", "text": "Endpoint WS-02 generated a scheduled backup archive locally."},
+        {"id": "S3", "text": "PowerShell established an outbound TCP session to IP 198.51.100.23 over port 443."},
+        {"id": "S4", "text": "Network gateway recorded 1.4 GB of data transferred outbound during the session."}
+      ],
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S3", "S4"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Conclude that data exfiltration is supported based on WS-01 connection and 1.4 GB transfer, ignoring WS-02 backup.",
+        "required_points": ["outbound TCP session from WS-01", "1.4 GB egress"],
+        "forbidden_points": ["conflating WS-02 local backup with WS-01 exfiltration"]
+      }
+    },
+    {
+      "id": "case_01_c4_reorder",
+      "base_case_id": "case_01",
+      "condition": "REORDER",
+      "context_sentences": [
+        {"id": "S1", "text": "Network gateway recorded 1.4 GB of data transferred outbound during the session."},
+        {"id": "S2", "text": "PowerShell execution was observed on endpoint WS-01."},
+        {"id": "S3", "text": "PowerShell established an outbound TCP session to IP 198.51.100.23 over port 443."}
+      ],
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S1", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Conclude data exfiltration occurred despite reordered context sentences.",
+        "required_points": ["1.4 GB data transferred", "outbound session established"],
+        "forbidden_points": ["contradictory conclusion due to sentence order"]
+      }
+    },
+    {
+      "id": "case_02_c0_original",
+      "base_case_id": "case_02",
+      "condition": "ORIGINAL",
+      "context_sentences": [
+        {"id": "S1", "text": "EDR agent on server DB-PROD alerted on abnormal archive creation."},
+        {"id": "S2", "text": "SIEM telemetry logged an outbound transfer event of 850 MB to 203.0.113.50."},
+        {"id": "S3", "text": "Core firewall logs recorded the connection to 203.0.113.50 was immediately terminated with a TCP RST and 0 bytes transferred."}
+      ],
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S2", "S3"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["resolution of conflicting SIEM 850 MB egress log vs Firewall TCP RST 0-byte record"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Explicitly preserve the conflict between SIEM egress log and Firewall TCP RST record.",
+        "required_points": ["SIEM reports 850 MB outbound", "Firewall logs TCP RST with 0 bytes", "conflict prevents unqualified conclusion"],
+        "forbidden_points": ["declaring definitive exfiltration without acknowledging firewall reset", "ignoring SIEM report entirely without justification"]
+      }
+    },
+    {
+      "id": "case_02_c1_removed",
+      "base_case_id": "case_02",
+      "condition": "REMOVED",
+      "context_sentences": [
+        {"id": "S1", "text": "EDR agent on server DB-PROD alerted on abnormal archive creation."},
+        {"id": "S2", "text": "Core firewall logs recorded the connection to 203.0.113.50 was immediately terminated with a TCP RST and 0 bytes transferred."}
+      ],
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S2"],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that exfiltration was not established because firewall logs confirm connection termination with 0 bytes transferred.",
+        "required_points": ["connection terminated with TCP RST", "0 bytes transferred", "exfiltration not established / contradicted"],
+        "forbidden_points": ["claiming exfiltration succeeded"]
+      }
+    },
+    {
+      "id": "case_02_c2_contradiction",
+      "base_case_id": "case_02",
+      "condition": "CONTRADICTION",
+      "context_sentences": [
+        {"id": "S1", "text": "EDR agent on server DB-PROD alerted on abnormal archive creation."},
+        {"id": "S2", "text": "SIEM telemetry logged an outbound transfer event of 850 MB to 203.0.113.50."},
+        {"id": "S3", "text": "Core firewall logs confirmed 850 MB was successfully forwarded to 203.0.113.50."}
+      ],
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that exfiltration is established based on matching SIEM and firewall forwarding logs.",
+        "required_points": ["SIEM logged 850 MB", "firewall confirmed 850 MB forwarded", "exfiltration established"],
+        "forbidden_points": ["claiming conflict when logs agree"]
+      }
+    },
+    {
+      "id": "case_02_c3_distractor",
+      "base_case_id": "case_02",
+      "condition": "DISTRACTOR",
+      "context_sentences": [
+        {"id": "S1", "text": "EDR agent on server DB-PROD alerted on abnormal archive creation."},
+        {"id": "S2", "text": "Unrelated DNS queries to internal domain controllers occurred at 03:00 UTC."},
+        {"id": "S3", "text": "SIEM telemetry logged an outbound transfer event of 850 MB to 203.0.113.50."},
+        {"id": "S4", "text": "Core firewall logs recorded the connection to 203.0.113.50 was immediately terminated with a TCP RST and 0 bytes transferred."}
+      ],
+      "question": "Was successful data exfiltration established?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": ["S3", "S4"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["resolution of conflicting SIEM and firewall telemetry"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Preserve the conflict between SIEM and firewall logs, ignoring the internal DNS query distractor.",
+        "required_points": ["conflict between SIEM and firewall", "exfiltration unestablished"],
+        "forbidden_points": ["using DNS queries to resolve exfiltration conflict"]
+      }
+    },
+    {
+      "id": "case_03_c0_original",
+      "base_case_id": "case_03",
+      "condition": "ORIGINAL",
+      "context_sentences": [
+        {"id": "S1", "text": "Endpoint WS-04 executed a malicious binary named 'svchost_update.exe' with SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."},
+        {"id": "S2", "text": "Server-02 contained an unverified utility named 'temp_tool.exe' located in C:\\Windows\\Temp."},
+        {"id": "S3", "text": "Forensic analysis recorded Server-02 'temp_tool.exe' has SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."}
+      ],
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": ["S1", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Confirm the executables are the same artifact based on identical SHA256 hashes despite different filenames.",
+        "required_points": ["matching SHA256 hashes", "same artifact established"],
+        "forbidden_points": ["denying correlation due to different filenames alone"]
+      }
+    },
+    {
+      "id": "case_03_c1_removed",
+      "base_case_id": "case_03",
+      "condition": "REMOVED",
+      "context_sentences": [
+        {"id": "S1", "text": "Endpoint WS-04 executed a malicious binary named 'svchost_update.exe' with SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."},
+        {"id": "S2", "text": "Server-02 contained an unverified utility named 'temp_tool.exe' located in C:\\Windows\\Temp."},
+        {"id": "S3", "text": "No hash calculation or static analysis was performed on temp_tool.exe."}
+      ],
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["cryptographic hash or binary comparison for temp_tool.exe"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that identity cannot be established because hash/static analysis is missing for Server-02.",
+        "required_points": ["missing hash for temp_tool.exe", "correlation unestablished"],
+        "forbidden_points": ["assuming they are the same artifact without hash match"]
+      }
+    },
+    {
+      "id": "case_03_c2_contradiction",
+      "base_case_id": "case_03",
+      "condition": "CONTRADICTION",
+      "context_sentences": [
+        {"id": "S1", "text": "Endpoint WS-04 executed a malicious binary named 'svchost_update.exe' with SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."},
+        {"id": "S2", "text": "Server-02 contained an unverified utility named 'temp_tool.exe' located in C:\\Windows\\Temp."},
+        {"id": "S3", "text": "Forensic analysis recorded Server-02 'temp_tool.exe' has SHA256 hash a8f5f167f44f4964e6c998dee827110c, which completely differs from WS-04."}
+      ],
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": ["S1", "S3"],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Conclude that the two files are not the same artifact because their SHA256 hashes differ.",
+        "required_points": ["differing SHA256 hashes", "not the same artifact / contradicted"],
+        "forbidden_points": ["claiming files are identical"]
+      }
+    },
+    {
+      "id": "case_03_c3_distractor",
+      "base_case_id": "case_03",
+      "condition": "DISTRACTOR",
+      "context_sentences": [
+        {"id": "S1", "text": "Endpoint WS-04 executed a malicious binary named 'svchost_update.exe' with SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."},
+        {"id": "S2", "text": "Workstation WS-09 reported high CPU utilization due to a routine antivirus scan."},
+        {"id": "S3", "text": "Server-02 contained an unverified utility named 'temp_tool.exe' located in C:\\Windows\\Temp."},
+        {"id": "S4", "text": "Forensic analysis recorded Server-02 'temp_tool.exe' has SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."}
+      ],
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": ["S1", "S4"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Confirm identical artifact via matching hashes, ignoring WS-09 CPU utilization.",
+        "required_points": ["matching SHA256 hash", "same artifact established"],
+        "forbidden_points": ["distracted by WS-09 antivirus alert"]
+      }
+    },
+    {
+      "id": "case_03_c4_reorder",
+      "base_case_id": "case_03",
+      "condition": "REORDER",
+      "context_sentences": [
+        {"id": "S1", "text": "Forensic analysis recorded Server-02 'temp_tool.exe' has SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."},
+        {"id": "S2", "text": "Endpoint WS-04 executed a malicious binary named 'svchost_update.exe' with SHA256 hash e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."},
+        {"id": "S3", "text": "Server-02 contained an unverified utility named 'temp_tool.exe' located in C:\\Windows\\Temp."}
+      ],
+      "question": "Can the executable on WS-04 be established as the same artifact found on Server-02?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "CORRELATION",
+        "relevant_evidence_ids": ["S1", "S2"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Confirm identical artifact despite sentence reordering.",
+        "required_points": ["matching SHA256 hashes", "same artifact confirmed"],
+        "forbidden_points": ["inconsistent conclusion"]
+      }
+    },
+    {
+      "id": "case_04_c0_original",
+      "base_case_id": "case_04",
+      "condition": "ORIGINAL",
+      "context_sentences": [
+        {"id": "S1", "text": "Web application server WEB-01 received an HTTP POST request exploiting CVE-2023-38606."},
+        {"id": "S2", "text": "The exploit wrote a web shell script named 'cmd.jsp' into the Tomcat web root directory."},
+        {"id": "S3", "text": "Inbound HTTP requests to 'cmd.jsp' subsequently executed arbitrary OS-level commands as the tomcat service user."}
+      ],
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Explain that continued access was obtained via the cmd.jsp web shell written to Tomcat web root following CVE-2023-38606 exploitation.",
+        "required_points": ["exploitation of CVE-2023-38606", "cmd.jsp web shell in Tomcat web root", "executing OS commands via HTTP requests to cmd.jsp"],
+        "forbidden_points": ["attributing access to RDP or SSH without evidence"]
+      }
+    },
+    {
+      "id": "case_04_c1_removed",
+      "base_case_id": "case_04",
+      "condition": "REMOVED",
+      "context_sentences": [
+        {"id": "S1", "text": "Web application server WEB-01 received an HTTP POST request exploiting CVE-2023-38606."},
+        {"id": "S2", "text": "The HTTP session disconnected after the initial POST request."},
+        {"id": "S3", "text": "No new files or scripts were recorded in the web root or filesystem."}
+      ],
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["evidence of persistence mechanism or artifact enabling continued access"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that continued access was not established; only initial exploit request occurred without persistence.",
+        "required_points": ["no continued access established", "no persistence mechanism recorded"],
+        "forbidden_points": ["claiming a web shell or backdoor was installed"]
+      }
+    },
+    {
+      "id": "case_04_c2_contradiction",
+      "base_case_id": "case_04",
+      "condition": "CONTRADICTION",
+      "context_sentences": [
+        {"id": "S1", "text": "Web application server WEB-01 received an HTTP POST request exploiting CVE-2023-38606."},
+        {"id": "S2", "text": "The exploit attempted to write 'cmd.jsp' into the Tomcat web root directory."},
+        {"id": "S3", "text": "Security endpoint protection immediately blocked file creation and quarantined the payload before execution."}
+      ],
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S2", "S3"],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Explain that continued access was prevented/blocked by endpoint protection quarantining cmd.jsp.",
+        "required_points": ["file creation blocked", "payload quarantined", "continued access prevented"],
+        "forbidden_points": ["stating continued access was successful"]
+      }
+    },
+    {
+      "id": "case_04_c3_distractor",
+      "base_case_id": "case_04",
+      "condition": "DISTRACTOR",
+      "context_sentences": [
+        {"id": "S1", "text": "Web application server WEB-01 received an HTTP POST request exploiting CVE-2023-38606."},
+        {"id": "S2", "text": "Internal user Alice reset her domain password at 09:15 AM."},
+        {"id": "S3", "text": "The exploit wrote a web shell script named 'cmd.jsp' into the Tomcat web root directory."},
+        {"id": "S4", "text": "Inbound HTTP requests to 'cmd.jsp' subsequently executed arbitrary OS-level commands as the tomcat service user."}
+      ],
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S3", "S4"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Identify cmd.jsp web shell as the access mechanism, ignoring the password reset distractor.",
+        "required_points": ["cmd.jsp web shell", "arbitrary OS commands executed"],
+        "forbidden_points": ["linking user Alice password reset to the web shell access"]
+      }
+    },
+    {
+      "id": "case_04_c4_reorder",
+      "base_case_id": "case_04",
+      "condition": "REORDER",
+      "context_sentences": [
+        {"id": "S1", "text": "The exploit wrote a web shell script named 'cmd.jsp' into the Tomcat web root directory."},
+        {"id": "S2", "text": "Inbound HTTP requests to 'cmd.jsp' subsequently executed arbitrary OS-level commands as the tomcat service user."},
+        {"id": "S3", "text": "Web application server WEB-01 received an HTTP POST request exploiting CVE-2023-38606."}
+      ],
+      "question": "How was continued access obtained according to the supplied context?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Identify cmd.jsp web shell access consistently regardless of reordered sentences.",
+        "required_points": ["cmd.jsp web shell", "CVE-2023-38606 exploit"],
+        "forbidden_points": ["confused causality due to reordering"]
+      }
+    },
+    {
+      "id": "case_05_c0_original",
+      "base_case_id": "case_05",
+      "condition": "ORIGINAL",
+      "context_sentences": [
+        {"id": "S1", "text": "The adversary accessed internal database server DB-01 using compromised service account credentials."},
+        {"id": "S2", "text": "From DB-01, the adversary executed ping sweeps and port 445 scans against the 10.10.20.0/24 subnet."},
+        {"id": "S3", "text": "Discovery output identifying active domain controllers was saved to C:\\ProgramData\\hosts.txt."}
+      ],
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that subsequent activity consisted of network discovery (ping sweeps and port 445 scans against 10.10.20.0/24) and saving results to hosts.txt.",
+        "required_points": ["ping sweeps and port 445 scanning on 10.10.20.0/24", "saving discovery output to hosts.txt"],
+        "forbidden_points": ["claiming domain controller exploitation occurred beyond discovery"]
+      }
+    },
+    {
+      "id": "case_05_c1_removed",
+      "base_case_id": "case_05",
+      "condition": "REMOVED",
+      "context_sentences": [
+        {"id": "S1", "text": "The adversary accessed internal database server DB-01 using compromised service account credentials."},
+        {"id": "S2", "text": "The database session terminated abruptly after two minutes."},
+        {"id": "S3", "text": "No network traffic or process creation originated from DB-01 during or after the session."}
+      ],
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["evidence of lateral movement, network scans, or command executions after login"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that no subsequent activity or lateral movement occurred following initial access.",
+        "required_points": ["no subsequent network or execution activity established", "session terminated"],
+        "forbidden_points": ["inventing lateral movement or data extraction"]
+      }
+    },
+    {
+      "id": "case_05_c2_contradiction",
+      "base_case_id": "case_05",
+      "condition": "CONTRADICTION",
+      "context_sentences": [
+        {"id": "S1", "text": "The adversary accessed internal database server DB-01 using compromised service account credentials."},
+        {"id": "S2", "text": "SIEM alerted on alleged port scans originating from DB-01."},
+        {"id": "S3", "text": "Full packet capture inspection confirmed DB-01 transmitted zero network packets and the SIEM alert was a misconfigured sensor artifact."}
+      ],
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": ["S1", "S3"],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Explain that port scanning was disproven by packet capture confirming 0 packets transmitted.",
+        "required_points": ["PCAP confirms 0 packets transmitted", "port scan alert contradicted / false positive"],
+        "forbidden_points": ["asserting port scans succeeded"]
+      }
+    },
+    {
+      "id": "case_05_c3_distractor",
+      "base_case_id": "case_05",
+      "condition": "DISTRACTOR",
+      "context_sentences": [
+        {"id": "S1", "text": "The adversary accessed internal database server DB-01 using compromised service account credentials."},
+        {"id": "S2", "text": "Firewall rules on subnet 10.10.50.0/24 were updated by network operations at 10:00 UTC."},
+        {"id": "S3", "text": "From DB-01, the adversary executed ping sweeps and port 445 scans against the 10.10.20.0/24 subnet."},
+        {"id": "S4", "text": "Discovery output identifying active domain controllers was saved to C:\\ProgramData\\hosts.txt."}
+      ],
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": ["S1", "S3", "S4"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Identify subnet scanning and hosts.txt output, ignoring the legitimate firewall rule update.",
+        "required_points": ["ping sweeps and port 445 scanning on 10.10.20.0/24", "hosts.txt output"],
+        "forbidden_points": ["attributing firewall updates to the adversary"]
+      }
+    },
+    {
+      "id": "case_05_c4_reorder",
+      "base_case_id": "case_05",
+      "condition": "REORDER",
+      "context_sentences": [
+        {"id": "S1", "text": "Discovery output identifying active domain controllers was saved to C:\\ProgramData\\hosts.txt."},
+        {"id": "S2", "text": "The adversary accessed internal database server DB-01 using compromised service account credentials."},
+        {"id": "S3", "text": "From DB-01, the adversary executed ping sweeps and port 445 scans against the 10.10.20.0/24 subnet."}
+      ],
+      "question": "What subsequent activity is established after initial access to DB-01?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "PROGRESSION",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Identify progression activity accurately despite sentence reordering.",
+        "required_points": ["discovery port scanning", "hosts.txt saving"],
+        "forbidden_points": ["temporal confusion regarding initial access vs scan"]
+      }
+    },
+    {
+      "id": "case_06_c0_original",
+      "base_case_id": "case_06",
+      "condition": "ORIGINAL",
+      "context_sentences": [
+        {"id": "S1", "text": "The adversary script executed 'nltest /dclist:' and 'net group \"Domain Admins\" /domain' on host FIN-03."},
+        {"id": "S2", "text": "The script captured continuous desktop screenshots saved to C:\\Temp\\screen.bmp."},
+        {"id": "S3", "text": "System configuration and patch level details were exported using 'systeminfo.exe'."}
+      ],
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Identify Discovery and Collection (gathering domain structure, system configuration, and screen captures).",
+        "required_points": ["domain and system discovery", "collection via screenshots"],
+        "forbidden_points": ["claiming destruction or ransomware encryption occurred"]
+      }
+    },
+    {
+      "id": "case_06_c1_removed",
+      "base_case_id": "case_06",
+      "condition": "REMOVED",
+      "context_sentences": [
+        {"id": "S1", "text": "Host FIN-03 recorded a single command prompt invocation with no parameters."},
+        {"id": "S2", "text": "No reconnaissance utilities, collection scripts, or network connections were executed."}
+      ],
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": ["S1", "S2"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["specific commands, tools, or behavioral evidence establishing an operational objective"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that the operational objective is unestablished from an empty cmd.exe invocation alone.",
+        "required_points": ["insufficient information to establish objective", "no specific malicious behavior observed"],
+        "forbidden_points": ["speculating on advanced adversary intent"]
+      }
+    },
+    {
+      "id": "case_06_c2_contradiction",
+      "base_case_id": "case_06",
+      "condition": "CONTRADICTION",
+      "context_sentences": [
+        {"id": "S1", "text": "The script executed 'nltest /dclist:' and captured screenshots on FIN-03."},
+        {"id": "S2", "text": "Authorized SOC penetration testing logs confirmed these exact discovery actions were part of an approved internal audit simulation."}
+      ],
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": ["S1", "S2"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["resolution between malicious adversary discovery vs authorized SOC audit simulation"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Highlight the conflict between apparent adversary discovery commands and authorized SOC simulation logs.",
+        "required_points": ["discovery commands observed", "authorized SOC simulation record", "intent conflict requires resolution"],
+        "forbidden_points": ["categorically declaring external hostile attack without addressing authorized audit"]
+      }
+    },
+    {
+      "id": "case_06_c3_distractor",
+      "base_case_id": "case_06",
+      "condition": "DISTRACTOR",
+      "context_sentences": [
+        {"id": "S1", "text": "The adversary script executed 'nltest /dclist:' and 'net group \"Domain Admins\" /domain' on host FIN-03."},
+        {"id": "S2", "text": "Host HR-01 printed 15 pages of payroll documents at 11:30 AM."},
+        {"id": "S3", "text": "The script captured continuous desktop screenshots saved to C:\\Temp\\screen.bmp."},
+        {"id": "S4", "text": "System configuration and patch level details were exported using 'systeminfo.exe'."}
+      ],
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": ["S1", "S3", "S4"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Identify Discovery / Information Gathering objective, ignoring the HR print job.",
+        "required_points": ["discovery / collection objective", "domain and system enumeration"],
+        "forbidden_points": ["incorporating HR printer activity into adversary objective"]
+      }
+    },
+    {
+      "id": "case_06_c4_reorder",
+      "base_case_id": "case_06",
+      "condition": "REORDER",
+      "context_sentences": [
+        {"id": "S1", "text": "System configuration and patch level details were exported using 'systeminfo.exe'."},
+        {"id": "S2", "text": "The adversary script executed 'nltest /dclist:' and 'net group \"Domain Admins\" /domain' on host FIN-03."},
+        {"id": "S3", "text": "The script captured continuous desktop screenshots saved to C:\\Temp\\screen.bmp."}
+      ],
+      "question": "What operational objective is directly supported by the observed behavior?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "OBJECTIVE",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Identify Discovery and Collection objective consistently regardless of evidence order.",
+        "required_points": ["system and domain discovery", "screenshot collection"],
+        "forbidden_points": ["contradictory conclusion"]
+      }
+    },
+    {
+      "id": "case_07_c0_original",
+      "base_case_id": "case_07",
+      "condition": "ORIGINAL",
+      "context_sentences": [
+        {"id": "S1", "text": "Process monitor logged schtasks.exe creating scheduled task 'WindowsUpdateCheck' on host ENG-12."},
+        {"id": "S2", "text": "The task was configured to execute C:\\Users\\Public\\updater.bat every day at 02:00 AM."},
+        {"id": "S3", "text": "Registry key HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tasks verified the task registration."}
+      ],
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Confirm that scheduled task persistence was established with WindowsUpdateCheck running updater.bat daily.",
+        "required_points": ["scheduled task WindowsUpdateCheck created", "executes updater.bat daily", "verified in registry"],
+        "forbidden_points": ["denying persistence was established"]
+      }
+    },
+    {
+      "id": "case_07_c1_removed",
+      "base_case_id": "case_07",
+      "condition": "REMOVED",
+      "context_sentences": [
+        {"id": "S1", "text": "Process monitor logged schtasks.exe invocation on host ENG-12."},
+        {"id": "S2", "text": "schtasks.exe returned error code 0x80070005 (Access Denied)."},
+        {"id": "S3", "text": "No scheduled task entries or registry modifications were created."}
+      ],
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S2", "S3"],
+        "epistemic_state": "CONTRADICTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "State that persistence was not established because schtasks failed with Access Denied and no task was created.",
+        "required_points": ["Access Denied error 0x80070005", "no scheduled task created / contradicted"],
+        "forbidden_points": ["claiming persistence succeeded"]
+      }
+    },
+    {
+      "id": "case_07_c2_contradiction",
+      "base_case_id": "case_07",
+      "condition": "CONTRADICTION",
+      "context_sentences": [
+        {"id": "S1", "text": "Command line logs showed 'schtasks /create /tn WindowsUpdateCheck' was executed on host ENG-12."},
+        {"id": "S2", "text": "Forensic inspection revealed no scheduled task entries were created and updater.bat was only run once in interactive memory."}
+      ],
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "CONFLICTING",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S2"],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": ["resolution between command execution log and forensic absence of scheduled task registry"]
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Preserve the conflict between the command line creation attempt and the forensic absence of task persistence.",
+        "required_points": ["schtasks create command logged", "forensic inspection found no persistence", "conflict prevents confirming persistence"],
+        "forbidden_points": ["claiming persistence is fully confirmed without acknowledging forensic absence"]
+      }
+    },
+    {
+      "id": "case_07_c3_distractor",
+      "base_case_id": "case_07",
+      "condition": "DISTRACTOR",
+      "context_sentences": [
+        {"id": "S1", "text": "Process monitor logged schtasks.exe creating scheduled task 'WindowsUpdateCheck' on host ENG-12."},
+        {"id": "S2", "text": "ENG-12 received an automatic Google Chrome update notification at 01:45 AM."},
+        {"id": "S3", "text": "The task was configured to execute C:\\Users\\Public\\updater.bat every day at 02:00 AM."},
+        {"id": "S4", "text": "Registry key HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tasks verified the task registration."}
+      ],
+      "question": "Was a scheduled task persistence mechanism established on host ENG-12?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "MEANS",
+        "relevant_evidence_ids": ["S1", "S3", "S4"],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "evaluation_notes": {
+        "expected_behavior": "Confirm persistence established via WindowsUpdateCheck scheduled task, ignoring Google Chrome update distractor.",
+        "required_points": ["WindowsUpdateCheck scheduled task", "daily execution of updater.bat", "registry verified"],
+        "forbidden_points": ["confusing Google Chrome update with malicious persistence"]
+      }
+    }
+  ]
+}

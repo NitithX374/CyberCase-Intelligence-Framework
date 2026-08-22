@@ -1,0 +1,138 @@
+{
+  "timestamp": "2026-08-22T09:33:47.742516+00:00",
+  "model": "meta-llama/llama-3.1-8b-instruct",
+  "temperature": 0.0,
+  "total_items": 2,
+  "results": [
+    {
+      "benchmark_id": "case_01_c0_original",
+      "base_case_id": "case_01",
+      "condition": "ORIGINAL",
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "SUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "SUPPORTED",
+        "missing_information": []
+      },
+      "direct": {
+        "answer": "",
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}",
+        "raw_response": null
+      },
+      "predicted_attributes": {
+        "attributes": null,
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}",
+        "raw_response": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}"
+      },
+      "attribute_first": {
+        "answer": "",
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "Skipped generation: attribute prediction failed (OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}})",
+        "raw_response": null
+      },
+      "oracle_attribute": {
+        "answer": "",
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}",
+        "raw_response": null
+      }
+    },
+    {
+      "benchmark_id": "case_01_c1_removed",
+      "base_case_id": "case_01",
+      "condition": "REMOVED",
+      "question": "Did successful data exfiltration occur?",
+      "gold_attributes": {
+        "answerability": "INSUFFICIENT",
+        "question_type": "IMPACT",
+        "relevant_evidence_ids": [
+          "S2",
+          "S3"
+        ],
+        "epistemic_state": "UNESTABLISHED",
+        "missing_information": [
+          "data transfer volume or evidence confirming successful payload transmission"
+        ]
+      },
+      "direct": {
+        "answer": "",
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}",
+        "raw_response": null
+      },
+      "predicted_attributes": {
+        "attributes": null,
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}",
+        "raw_response": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}"
+      },
+      "attribute_first": {
+        "answer": "",
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "Skipped generation: attribute prediction failed (OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}})",
+        "raw_response": null
+      },
+      "oracle_attribute": {
+        "answer": "",
+        "latency_ms": 0.0,
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "error": "OpenRouter API error 401: {\"error\":{\"message\":\"User not found.\",\"code\":401}}",
+        "raw_response": null
+      }
+    }
+  ]
+}
