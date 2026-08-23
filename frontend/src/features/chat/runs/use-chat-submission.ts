@@ -13,8 +13,10 @@ import {
   type ActiveChatFollowUp,
 } from "@/lib/chat-followup";
 import type { RunPhase } from "@/components/common/types";
-import { isChatRequestCanceled } from "./chat-polling";
-import { pollChatRunUntilCompleted } from "./poll-chat-run";
+import {
+  isChatRequestCanceled,
+  pollChatRunUntilCompleted,
+} from "./chat-polling";
 import type { PendingChatSubmission } from "../workspace/chat-workspace-types";
 
 interface RouterLike {

@@ -35,7 +35,7 @@ class AnthropicGapAnalysis:
         *,
         original_user_content: str,
         clarification_exchanges: Sequence[ClarificationExchange],
-        case_state: Mapping[str, object] | None = None,
+        raw_evidence: str | None = None,
         analysis_answer: str | None = None,
         analysis_context: Mapping[str, object] | None = None,
         client: httpx.AsyncClient | None = None,
@@ -44,7 +44,7 @@ class AnthropicGapAnalysis:
         bounded_payload = build_bounded_context(
             original_user_content=original_user_content,
             clarification_exchanges=clarification_exchanges,
-            case_state=case_state,
+            raw_evidence=raw_evidence,
             analysis_answer=analysis_answer,
             analysis_context=analysis_context,
         )

@@ -3,7 +3,7 @@
 This file provides system architecture, rules, guidelines, and commands for AI coding assistants and developers working on the CyberCase Intelligence Framework repository.
 
 ## 🌟 Project Overview
-**CyberCase Intelligence Framework** is a chat-focused full-stack Agentic RAG application for cybersecurity incident analysis. It maps threat activity to **MITRE ATT&CK intelligence (STIX 2.1)** and supports persisted chat plus backend-owned clarification. The frontend report view is demo-only, client-side, non-persistent, and unverified; there is no backend case/report workflow. It features:
+**CyberCase Intelligence Framework** is a chat-focused full-stack Agentic RAG application for cybersecurity incident analysis. It maps threat activity to **MITRE ATT&CK intelligence (STIX 2.1)** and supports persisted chat, backend-owned clarification, raw-message evidence, and chat-scoped persisted reports. The report workflow is template-first and does not treat external knowledge as incident evidence. It features:
 - Multi-query hybrid retrieval fusing Dense Vector (Qdrant) and Graph Expansion (Neo4j).
 - Self-reflection and context-sufficiency loops using LangGraph.
 - Cross-lingual support (translating queries from Thai to English and translating reasoning back).
@@ -12,7 +12,7 @@ This file provides system architecture, rules, guidelines, and commands for AI c
 ---
 
 ## 🛠️ Tech Stack & Key Configurations
-- **Frontend**: Next.js 15 (App Router) + React 19 + Tailwind CSS 4 + TypeScript
+- **Frontend**: Next.js 16.2.10 (App Router) + React 19.2.4 + Tailwind CSS 4 + TypeScript
 - **Backend API**: FastAPI + SQLAlchemy (Async) + PostgreSQL + Alembic
 - **Agentic Pipeline**: LangGraph (State Machine) + LangChain LCEL
 - **Graph Database**: Neo4j (Enterprise/Community)
@@ -38,15 +38,13 @@ Cybercase Framework/
 ├── backend/                  # FastAPI chat persistence/orchestration API
 │   ├── app/
 │   │   ├── main.py           # FastAPI entrypoint
-│   │   ├── models/           # SQLAlchemy models (chat, case_state, rag_context, report)
+│   │   ├── models/           # SQLAlchemy models (chat, rag_context, report)
 │   │   ├── routers/          # Health and chat endpoints
 │   │   ├── schemas/          # Domain request/response schemas (chat, rag, reports)
 │   │   ├── services/         # Domain service modules:
 │   │   │   ├── case_analysis/# Grounded case overview & Q&A prompt reasoning
-│   │   │   ├── case_state/   # State mutation, validation, and retrieval projection
 │   │   │   ├── chat/         # Thread & message management + compatibility facade
 │   │   │   ├── clients/      # HTTP service clients (GraphRAG API client)
-│   │   │   ├── extraction/   # Baseline extraction & adapter execution
 │   │   │   ├── followup/     # Gap analysis & clarification policy gating
 │   │   │   ├── llm/          # LLM provider routing & model registry
 │   │   │   ├── reports/      # Markdown & PDF report generation service
@@ -61,7 +59,7 @@ Cybercase Framework/
 │       ├── evaluation/        # RAG evaluation tools
 │       ├── model_registry.py  # Central OpenRouter presets & alias resolver
 │       └── config.py          # RAG settings and model routing
-├── frontend/                 # Next.js 15 Web Application
+├── frontend/                 # Next.js 16 Web Application
 │   └── src/
 │       ├── app/chat/         # Persisted chat workspace
 │       └── components/       # Tailwind v4 reusable UI blocks
@@ -121,6 +119,7 @@ cd frontend
 npm install
 npm run dev     # Run Dev server on http://localhost:3000
 npm run lint    # ESLint checking
+npm run test    # Vitest suite
 npm run build   # Production compile
 ```
 
@@ -166,4 +165,4 @@ The `hybrid_retriever.py` queries Qdrant vectors and retrieves matching nodes fr
 
 ### Backend Route Boundary
 
-The backend exposes only `/api/v1/health` and the `/api/v1/chats` thread/message/run routes. Do not add case, report, user, upload/OCR, or standalone RAG-proxy endpoints without an explicit product decision. The frontend Report tab is not evidence that a backend report API exists.
+The backend exposes `/api/v1/health`, the `/api/v1/chats` thread/message/run routes, and chat-scoped report routes under `/api/v1/chats/{thread_id}/reports`. Do not add standalone case routes, top-level `/api/v1/reports`, user, upload/OCR, or standalone RAG-proxy endpoints without an explicit product decision. The Report workspace uses the existing persisted chat-scoped report contract and is not evidence that a standalone case/report API exists.

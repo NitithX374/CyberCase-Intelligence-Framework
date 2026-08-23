@@ -31,9 +31,6 @@ from ..config import (
     EMBED_MODEL,
     USE_FP16,
     VECTOR_TOP_K,
-    RRF_K,
-    DENSE_WEIGHT,
-    SPARSE_WEIGHT,
 )
 
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import type { PersistedChatMessage } from "@/lib/api";
-import { caseUpdateForMessage } from "@/lib/case-update";
 import { followUpGapDetailForMessage } from "@/lib/chat-followup";
 import { mitreCandidatesForMessage } from "@/lib/mitre-candidate";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
@@ -12,13 +11,11 @@ import { MitreCandidatePanel } from "./MitreCandidatePanel";
 interface ChatTranscriptProps {
   messages: PersistedChatMessage[];
   isProcessing: boolean;
-  onSelectMessageOrdinal?: (ordinal: number) => void;
 }
 
 export function ChatTranscript({
   messages,
   isProcessing,
-  onSelectMessageOrdinal,
 }: ChatTranscriptProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -50,7 +47,6 @@ export function ChatTranscript({
       {messages.map((message) => {
         const isUser = message.role === "user";
         const followUpGap = followUpGapDetailForMessage(message);
-        const caseUpdate = isUser ? null : caseUpdateForMessage(message, messages);
         const mitreCandidates = isUser ? null : mitreCandidatesForMessage(message);
         return (
           <div
@@ -80,31 +76,6 @@ export function ChatTranscript({
               ) : (
                 <>
                   <ChatMessageMarkdown content={message.content} />
-                  {caseUpdate && (
-                    <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#D8E2DA] bg-[#F7F9F7] px-3 py-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-[#E2EAE4] px-2 py-0.5 text-[11px] font-bold text-[#3E5244]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#3E5244]" />
-                          {caseUpdate.status === "updated" && caseUpdate.childVersion !== null
-                            ? `Case State V${caseUpdate.parentVersion} → V${caseUpdate.childVersion}`
-                            : `Case State V${caseUpdate.parentVersion} · Unchanged`}
-                        </span>
-                        <span className="text-[10px] font-medium text-ink-muted">
-                          {caseUpdate.added.length} added · {caseUpdate.changed.length} changed
-                        </span>
-                      </div>
-                      {onSelectMessageOrdinal && (
-                        <button
-                          type="button"
-                          onClick={() => onSelectMessageOrdinal(message.ordinal)}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline cursor-pointer"
-                        >
-                          <span>View in panel</span>
-                          <span aria-hidden="true">→</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
                   {followUpGap && <FollowUpExplanation detail={followUpGap} />}
                   {mitreCandidates && (
                     <MitreCandidatePanel candidates={mitreCandidates} />

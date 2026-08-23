@@ -10,19 +10,13 @@ from app.config import settings
 from app.services.followup.contracts import FollowUpResolution, answer_indicates_unavailable
 from app.services.followup.gap_analysis import AnthropicGapAnalysis
 from app.services.followup.policy import AnthropicFollowUpPolicy
-from app.services.followup.prompts import (
-    FOLLOWUP_POLICY_VERSION, FOLLOWUP_PROMPT_VERSION, GAP_ANALYSIS_PROMPT_VERSION, GAP_ANALYSIS_VERSION,
-)
 from app.services.followup.schemas import (
     ClarificationExchange, GapAnalysis, GapAnalysisResult, GapAnalyzer, GapItem, FollowUpDecision, FollowUpPolicy, FollowUpPolicyResult,
 )
 from app.services.followup.helpers import (
     _coerce_gap_analysis_result as coerce_gap_analysis_result,
     _coerce_policy_result as coerce_policy_result,
-    _empty_gap_analysis_trace as empty_gap_analysis_trace,
     _followup_failure_code as followup_failure_code,
-    _followup_metadata as followup_metadata,
-    _gap_analysis_trace as gap_analysis_trace,
     _gap_reason_code as gap_reason_code,
     _invoke_policy_method as invoke_policy_method,
     _normalized_question as normalized_question,
@@ -30,6 +24,7 @@ from app.services.followup.helpers import (
     _required_material_gap as required_material_gap,
     _selected_askable_gap as selected_askable_gap,
 )
+from app.services.followup.metadata import empty_gap_analysis_trace, followup_metadata, gap_analysis_trace
 
 logger = logging.getLogger("app.chat")
 
@@ -41,12 +36,10 @@ async def evaluate_followup_outcome(
     source_run_id: UUID,
     policy: FollowUpPolicy | None = None,
     gap_analyzer: GapAnalyzer | None = None,
-    case_state: Mapping[str, object] | None = None,
+    raw_evidence: str | None = None,
     analysis_answer: str | None = None,
     analysis_context: Mapping[str, object] | None = None,
 ) -> FollowUpResolution:
-    """Run Gap Analysis, then the separate post-analysis follow-up policy."""
-
     round_number = len(clarification_exchanges) + 1
     prior_exchange_count = len(clarification_exchanges)
     gap_trace = empty_gap_analysis_trace()
@@ -109,7 +102,6 @@ async def evaluate_followup_outcome(
                 retrieval_context_id=None,
                 metadata_json=metadata,
                 thread_status="awaiting_followup",
-                active_rag_session_id=None,
             ),
             metadata_json={},
         )
@@ -132,9 +124,6 @@ async def evaluate_followup_outcome(
             stop_reason="answer_unavailable",
         )
 
-    # A custom policy without a matching analyzer is retained as a compatibility
-    # seam for old in-process callers and tests. The production default always
-    # runs the provider-backed analyzer before the policy.
     compatibility_gap_analysis = gap_analyzer is None and policy is not None
     if compatibility_gap_analysis:
         gap_result = GapAnalysisResult(analysis=GapAnalysis(gaps=[]))
@@ -150,7 +139,7 @@ async def evaluate_followup_outcome(
             gap_kwargs = {
                 "original_user_content": original_user_content,
                 "clarification_exchanges": clarification_exchanges,
-                "case_state": case_state,
+                "raw_evidence": raw_evidence,
                 "analysis_answer": analysis_answer,
                 "analysis_context": analysis_context,
             }
@@ -194,7 +183,7 @@ async def evaluate_followup_outcome(
             "original_user_content": original_user_content,
             "clarification_exchanges": clarification_exchanges,
             "gap_analysis": gap_result.analysis,
-            "case_state": case_state,
+            "raw_evidence": raw_evidence,
             "analysis_answer": analysis_answer,
             "analysis_context": analysis_context,
         }

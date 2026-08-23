@@ -61,7 +61,7 @@ export function NoSavedReport() {
         No saved report for this chat
       </h2>
       <p className="mt-3 text-sm leading-6 text-ink-secondary">
-        Complete the chat and wait for the validated baseline extraction, then
+        Complete the chat and wait for a grounded analysis, then
         generate a report. Previous report attempts will remain available here
         as versioned history.
       </p>

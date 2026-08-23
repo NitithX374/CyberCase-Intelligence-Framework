@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
 
 
 DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.6-luna"

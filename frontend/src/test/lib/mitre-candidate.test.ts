@@ -22,23 +22,18 @@ function message(metadataOverrides: Record<string, unknown> = {}): PersistedChat
         },
       ],
       analysis_trace: {
-        version: "analysis_trace_v1",
+        version: "analysis_trace_v2",
         analysis_mode: "case_overview",
-        case_state_version_id: "case-state-1",
         retrieval_context_id: "retrieval-1",
+        evidence_sha256: "a".repeat(64),
         validation_status: "validated",
-        reference_membership: "validated",
-        semantic_entailment: "not_deterministically_established",
         claims: [
           {
             claim_id: "A-01",
             claim_type: "reported",
             text: "Administrative credentials were reported compromised.",
             epistemic_status: "reported",
-            entity_ids: ["ENT-001"],
-            relationship_ids: [],
-            evidence_ids: ["E-001"],
-            timeline_event_ids: [],
+            source_message_ids: ["message-user-1"],
           },
         ],
         mitre_associations: [
@@ -116,7 +111,7 @@ describe("mitreCandidatesForMessage", () => {
     ).toBeNull();
   });
 
-  it("leaves legacy messages without a trace unchanged", () => {
+  it("ignores messages without a validated v2 trace", () => {
     expect(mitreCandidatesForMessage(message({ analysis_trace: undefined }))).toBeNull();
   });
 });

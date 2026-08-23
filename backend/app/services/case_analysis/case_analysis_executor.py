@@ -9,13 +9,15 @@ from pydantic import ValidationError
 
 from app.config import settings
 from app.services.case_analysis.case_analysis_prompt_builder import (
-    AnalysisInputMode, CaseAnalysisFailure, _TASK_PROMPTS, _validate_analysis_request,
+    _validate_analysis_request,
     build_case_analysis_prompt,
 )
 from app.services.case_analysis.case_analysis_prompt_config import (
+    CaseAnalysisFailure,
     _ANALYSIS_TRACE_OUTPUT_PROMPT,
     _CASE_ANALYSIS_TRUST_PROMPT,
     _PERSONALIZED_RESPONSE_PROMPT,
+    _TASK_PROMPTS,
 )
 from app.services.case_analysis.contracts import (
     AnalysisMode, AnalysisTraceFailureMetadata, CaseAnalysisResult, ProviderCaseAnalysis,
@@ -43,11 +45,7 @@ class MainCaseAnalysisService:
         self,
         *,
         mode: AnalysisMode,
-        case_narrative: dict[str, object] | str | None = None,
-        case_evidence: dict[str, object] | str | None = None,
-        case_state_json: dict[str, object] | None = None,
-        raw_case_narrative: str | None = None,
-        analysis_input_mode: AnalysisInputMode | str | None = None,
+        raw_evidence: str,
         analysis_context: dict[str, object],
         question: str | None,
         user_message: object,
@@ -67,11 +65,7 @@ class MainCaseAnalysisService:
             ) from error
         prompt = build_case_analysis_prompt(
             mode=validated_mode,
-            case_narrative=case_narrative,
-            case_evidence=case_evidence,
-            case_state_json=case_state_json,
-            raw_case_narrative=raw_case_narrative,
-            analysis_input_mode=analysis_input_mode,
+            raw_evidence=raw_evidence,
             analysis_context=analysis_context,
             question=validated_question,
             response_language=response_language,
@@ -125,19 +119,13 @@ class MainCaseAnalysisService:
                     request_payload,
                 )
 
-        membership_state = case_state_json
-        if membership_state is None and isinstance(case_narrative, dict):
-            membership_state = case_narrative
-        if membership_state is None and isinstance(case_evidence, dict):
-            membership_state = case_evidence
-        if membership_state is None:
-            raise CaseAnalysisFailure(
-                "analysis_context_missing",
-                "Analysis Trace validation requires the bound Case State",
-            )
+        raw_source_ids = analysis_context.get("source_message_ids", [])
+        source_message_ids = {
+            value for value in raw_source_ids if isinstance(value, str)
+        } if isinstance(raw_source_ids, list) else set()
         return self._parse_response(
             response,
-            case_state_json=membership_state,
+            source_message_ids=source_message_ids,
             analysis_context=analysis_context,
             analysis_mode=validated_mode,
         )
@@ -170,7 +158,7 @@ class MainCaseAnalysisService:
     def _parse_response(
         response: httpx.Response,
         *,
-        case_state_json: Mapping[str, object],
+        source_message_ids: set[str],
         analysis_context: Mapping[str, object],
         analysis_mode: AnalysisMode,
     ) -> CaseAnalysisResult:
@@ -247,7 +235,7 @@ class MainCaseAnalysisService:
             logger.warning("Case analysis trace validation failed: %s | keys: %s", exc, list(raw_analysis.keys()) if isinstance(raw_analysis, dict) else type(raw_analysis))
             failure_code = (
                 "analysis_trace_version_unsupported"
-                if raw_analysis.get("version") != "analysis_trace_v1"
+                if raw_analysis.get("version") != "analysis_trace_v2"
                 else "analysis_trace_structure_invalid"
             )
             return CaseAnalysisResult(
@@ -260,7 +248,7 @@ class MainCaseAnalysisService:
         try:
             trace = validate_analysis_trace(
                 parsed,
-                case_state_json=case_state_json,
+                source_message_ids=source_message_ids,
                 mitre_table=analysis_context.get("mitre_table", []),
                 analysis_mode=analysis_mode,
             )

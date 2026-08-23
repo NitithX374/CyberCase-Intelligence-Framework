@@ -11,8 +11,6 @@ from app.services.reports.report_view_model_contracts import (
 )
 from app.services.reports.report_view_model_text import (
     I18N_STRINGS,
-    RELATION_TEMPLATES_EN,
-    RELATION_TEMPLATES_TH,
     _format_datetime,
     _strict_marked_fields,
 )
@@ -28,7 +26,6 @@ def build_report_view_model(
 
     lang = language if language in ("th", "en") else "th"
     i18n = I18N_STRINGS[lang]
-    rel_templates = RELATION_TEMPLATES_EN if lang == "en" else RELATION_TEMPLATES_TH
 
     structured = report.report
     sections_by_id: dict[str, ReportSection] = {}
@@ -44,14 +41,11 @@ def build_report_view_model(
     parsed_items = parse_report_items(
         sections_by_id,
         language=lang,
-        relationship_templates=rel_templates,
     )
     evidence_rows = parsed_items.evidence_rows
     indicator_rows = parsed_items.indicator_rows
     timeline_rows = parsed_items.timeline_rows
-    relationship_rows = parsed_items.relationship_rows
     has_indicators = parsed_items.has_indicators
-    has_relationships = parsed_items.has_relationships
 
     mitre_view_rows: list[MitreMappingViewRow] = []
     raw_mitre_items = []
@@ -105,7 +99,7 @@ def build_report_view_model(
                     technique_name=item[:40],
                     status_display=i18n["status_candidate"],
                     tactic="General",
-                    source="extraction",
+                    source="external_mitre_retrieval",
                     relevance="candidate",
                 )
             )
@@ -242,10 +236,11 @@ def build_report_view_model(
         ProvenanceViewRow(label="Report Version", value=f"v{report.version_number} ({report.report.report_version if report.report else 'preliminary_analysis_report_v1'})"),
         ProvenanceViewRow(label="Generated Date (UTC)", value=generated_date_str),
         ProvenanceViewRow(label="Source Snapshot Hash", value=report.source_snapshot_hash),
-        ProvenanceViewRow(label="Extraction Version", value=report.extraction_version),
+        ProvenanceViewRow(label="Retrieval Context", value=report.retrieval_context_id),
+        ProvenanceViewRow(label="Analysis Message", value=str(report.analysis_message_id)),
         ProvenanceViewRow(label="Prompt Version", value=report.prompt_version),
         ProvenanceViewRow(label="Template Provider", value=f"{report.provider} ({report.model})"),
-        ProvenanceViewRow(label="Verification Status", value="Validated against frozen case state"),
+        ProvenanceViewRow(label="Verification Status", value="Validated against frozen raw-evidence snapshot"),
     ]
 
     return ReportViewModel(
@@ -261,9 +256,6 @@ def build_report_view_model(
         evidence_rows=evidence_rows,
         has_indicators=has_indicators,
         indicator_rows=indicator_rows,
-        has_relationships=has_relationships,
-        relationship_rows=relationship_rows,
-        relationship_graph_image=None,
         has_mitre_mappings=has_mitre_mappings,
         mitre_rows=mitre_view_rows,
         unresolved_issues=unresolved_issues,

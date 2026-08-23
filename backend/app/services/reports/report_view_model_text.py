@@ -79,7 +79,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         # Subheaders & Tables
         "sub_evidence_reg": "ทะเบียนหลักฐาน (Evidence Register)",
         "sub_iocs": "ตัวบ่งชี้ความเสี่ยงทางไซเบอร์ (Indicators of Compromise / Technical Indicators)",
-        "sub_relationships": "โครงสร้างความเชื่อมโยงระหว่างผู้เกี่ยวข้อง ระบบ พฤติการณ์ และหลักฐานในคดีที่ตรวจพบ:",
         "sub_mitre_intro": "การวิเคราะห์เปรียบเทียบพฤติกรรมในเหตุการณ์กับฐานข้อมูลเทคนิคและยุทธวิธีการโจมตี MITRE ATT&CK:",
         "sub_unresolved": "ประเด็นที่ยังไม่สามารถยืนยันได้ (Unestablished / Gaps)",
         "sub_next_steps": "สิ่งที่ควรตรวจสอบเพิ่มเติม (Investigative Next Steps)",
@@ -107,7 +106,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "empty_summary": "ไม่มีข้อมูลสรุปเหตุการณ์ที่บันทึกไว้ในสแนปช็อตนี้",
         "empty_timeline": "ไม่พบข้อมูลลำดับเหตุการณ์ที่บันทึกไว้ในสแนปช็อตนี้",
         "empty_evidence": "ไม่พบรายการหลักฐานที่บันทึกไว้ในสแนปช็อตนี้",
-        "empty_relationships": "ไม่พบความสัมพันธ์เชิงโครงสร้างระหว่างองค์ประกอบที่บันทึกไว้ในสแนปช็อตนี้",
         "empty_mitre": "ไม่พบข้อมูลการ Mapping เทคนิค MITRE ATT&CK ที่บันทึกไว้ในสแนปช็อตนี้",
         "empty_gaps": "ไม่พบข้อขัดแย้งหรือประเด็นขาดหายที่ตรวจพบในสแนปช็อตนี้",
         "actor_prefix": "ผู้เกี่ยวข้อง",
@@ -137,7 +135,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         # Subheaders & Tables
         "sub_evidence_reg": "Evidence Register",
         "sub_iocs": "Technical Indicators of Compromise (IOCs)",
-        "sub_relationships": "Identified structural relationships between actors, systems, actions, and evidence:",
         "sub_mitre_intro": "Analytical mapping between observed incident behaviors and the MITRE ATT&CK knowledge base:",
         "sub_unresolved": "Unestablished Issues (Gaps)",
         "sub_next_steps": "Investigative Next Steps",
@@ -165,7 +162,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "empty_summary": "No incident summary records were persisted for this snapshot.",
         "empty_timeline": "No timeline events were persisted for this snapshot.",
         "empty_evidence": "No evidence items were persisted for this snapshot.",
-        "empty_relationships": "No structural relationships were persisted for this snapshot.",
         "empty_mitre": "No MITRE ATT&CK mapping candidates were persisted for this snapshot.",
         "empty_gaps": "No analytical gaps or contradictions were identified for this snapshot.",
         "actor_prefix": "Actors",

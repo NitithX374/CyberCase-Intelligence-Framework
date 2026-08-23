@@ -1,42 +1,28 @@
-"""Data structures and outcome mapping utilities for RAG context payloads and assistant outcomes."""
-
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, replace
 from uuid import UUID
 
-from app.config import settings
-from app.schemas.rag import QueryResponse
 from app.services.case_analysis import CASE_ANALYSIS_PROMPT_VERSION
 from app.services.case_analysis.contracts import (
     AnalysisTraceDraft,
     AnalysisTraceFailureMetadata,
 )
-from app.services.clients.rag_client import RagCallFailure
-from app.services.extraction.llm_extraction import (
-    BASELINE_EXTRACTION_PROMPT_VERSION,
-    EXTRACTION_METADATA_KEY,
-)
+from app.schemas.rag import QueryResponse
 
 
 @dataclass(frozen=True)
 class RagContextPayload:
-    """Validated retrieval data that must be committed with its case state."""
-
     retrieval_context_id: str
     context: str
     mitre_table: tuple[dict[str, object], ...]
 
     def to_analysis_context(self) -> dict[str, object]:
-        """Return a defensive snapshot for read-only Main analysis."""
-
         return {
             "retrieved_context": self.context,
             "retrieval_context_id": self.retrieval_context_id,
             "mitre_table": deepcopy(list(self.mitre_table)),
-            "previous_analysis": None,
         }
 
 
@@ -44,280 +30,158 @@ class RagContextPayload:
 class AssistantOutcome:
     content: str
     retrieval_context_id: str | None
-    metadata_json: dict[str, Any]
+    metadata_json: dict[str, object]
     thread_status: str
-    active_rag_session_id: str | None
-    validated_case_state_json: dict[str, object] | None = None
     rag_context_payload: RagContextPayload | None = None
-    case_state_delta_json: dict[str, object] | None = None
-    expected_parent_case_state_version_id: UUID | None = None
     analysis_trace_draft: AnalysisTraceDraft | None = None
     analysis_trace_failure: AnalysisTraceFailureMetadata | None = None
-    expected_analysis_case_state_version_id: UUID | None = None
+    evidence_sha256: str | None = None
+    source_message_ids: tuple[UUID, ...] = ()
 
 
 def map_rag_response(response: QueryResponse) -> dict[str, object]:
-    """Map retrieval-only wire data into bounded Main-analysis context."""
-
     return {
         "retrieved_context": response.context,
-        "retrieval_context_id": (
-            str(response.retrieval_context_id)
-            if response.retrieval_context_id is not None
-            else None
-        ),
-        "mitre_table": [
-            row.model_dump(mode="json")
-            for row in response.mitre_table
-        ],
+        "retrieval_context_id": response.retrieval_context_id,
+        "mitre_table": [row.model_dump(mode="json") for row in response.mitre_table],
         "previous_analysis": None,
     }
 
 
-def _validated_rag_context_payload(
-    response: QueryResponse,
-) -> RagContextPayload:
-    """Fail closed unless retrieval data is safe to persist before analysis."""
-
-    retrieval_context_id = response.retrieval_context_id
-    if isinstance(retrieval_context_id, str):
-        retrieval_context_id = retrieval_context_id.strip()
-    if (
-        not isinstance(retrieval_context_id, str)
-        or not retrieval_context_id
-        or len(retrieval_context_id) > 160
-        or not response.context.strip()
-    ):
-        raise RagCallFailure(
-            "rag_invalid_response",
-            "RAG service returned an invalid response",
-        )
-
+def validated_rag_context_payload(response: QueryResponse) -> RagContextPayload:
+    retrieval_id = response.retrieval_context_id
+    context = response.context
+    mitre_table = response.mitre_table
+    if not isinstance(retrieval_id, str) or not retrieval_id.strip():
+        raise ValueError("RAG response has no retrieval context identifier")
+    if not isinstance(context, str):
+        raise ValueError("RAG response context is invalid")
+    if not isinstance(mitre_table, list):
+        raise ValueError("RAG response MITRE table is invalid")
+    normalized_rows = [
+        row if isinstance(row, dict) else row.model_dump(mode="json")
+        for row in mitre_table
+    ]
     return RagContextPayload(
-        retrieval_context_id=retrieval_context_id,
-        context=response.context,
-        mitre_table=tuple(
-            row.model_dump(mode="json")
-            for row in response.mitre_table
-        ),
+        retrieval_context_id=retrieval_id.strip(),
+        context=context,
+        mitre_table=tuple(deepcopy(normalized_rows)),
     )
 
 
-def map_initial_case_analysis_response(
+_validated_rag_context_payload = validated_rag_context_payload
+
+
+def fresh_analysis_outcome(
     answer: str,
     *,
-    rag_context_payload: RagContextPayload,
-    validated_case_state_json: dict[str, object],
-    extraction_metadata: dict[str, Any],
-    followup_metadata_json: dict[str, Any],
-    analysis_input_mode: str | None = None,
-    analysis_trace_draft: AnalysisTraceDraft | None = None,
-    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None,
+    action: str,
+    rag_context: RagContextPayload,
+    evidence_sha256: str,
+    source_message_ids: tuple[UUID, ...],
+    followup_metadata: dict[str, object],
+    trace: AnalysisTraceDraft | None,
+    trace_failure: AnalysisTraceFailureMetadata | None,
 ) -> AssistantOutcome:
-    """Create the one durable initial Main analysis plus its grounding audit."""
-
-    resolved_mode = analysis_input_mode or settings.analysis_input_mode
-    metadata_json = deepcopy(followup_metadata_json)
-    metadata_json.update(
+    metadata = deepcopy(followup_metadata)
+    metadata.update(
         {
-            EXTRACTION_METADATA_KEY: deepcopy(extraction_metadata),
             "analysis_kind": "grounded_main_analysis",
-            "analysis_input_mode": resolved_mode,
-            "retrieved_context": rag_context_payload.context,
-            "mitre_table": deepcopy(list(rag_context_payload.mitre_table)),
+            "mitre_table": deepcopy(list(rag_context.mitre_table)),
+            "evidence_sha256": evidence_sha256,
+            "source_message_ids": [str(value) for value in source_message_ids],
             "chat_action": {
-                "action": "initial_analysis",
+                "action": action,
                 "route": "analysis",
-                "grounded_main_analysis": True,
-                "state_mutated": True,
-                "case_state_version_created": True,
                 "rag_invoked": True,
                 "retrieval_context_reused": False,
                 "analysis_mode": "case_overview",
-                "analysis_input_mode": resolved_mode,
                 "prompt_version": CASE_ANALYSIS_PROMPT_VERSION,
             },
         }
     )
     return AssistantOutcome(
-        content=answer,
-        retrieval_context_id=rag_context_payload.retrieval_context_id,
-        metadata_json=metadata_json,
+        content=answer.strip(),
+        retrieval_context_id=rag_context.retrieval_context_id,
+        metadata_json=metadata,
         thread_status="answered",
-        active_rag_session_id=None,
-        validated_case_state_json=validated_case_state_json,
-        rag_context_payload=rag_context_payload,
-        analysis_trace_draft=analysis_trace_draft,
-        analysis_trace_failure=analysis_trace_failure,
+        rag_context_payload=rag_context,
+        analysis_trace_draft=trace,
+        analysis_trace_failure=trace_failure,
+        evidence_sha256=evidence_sha256,
+        source_message_ids=source_message_ids,
     )
 
 
-def map_case_analysis_response(
+def question_outcome(
     answer: str,
     *,
     analysis_context: dict[str, object],
-    analysis_input_mode: str | None = None,
-    analysis_trace_draft: AnalysisTraceDraft | None = None,
-    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None,
-    expected_case_state_version_id: UUID | None = None,
+    evidence_sha256: str,
+    source_message_ids: tuple[UUID, ...],
+    trace: AnalysisTraceDraft | None,
+    trace_failure: AnalysisTraceFailureMetadata | None,
 ) -> AssistantOutcome:
-    """Persist an ASK answer while carrying forward the prior retrieval handle."""
-
-    resolved_mode = analysis_input_mode or settings.analysis_input_mode
-    retrieval_context_id = analysis_context.get("retrieval_context_id")
-    if not isinstance(retrieval_context_id, str):
-        retrieval_context_id = None
+    retrieval_id = analysis_context.get("retrieval_context_id")
+    if not isinstance(retrieval_id, str) or not retrieval_id:
+        raise ValueError("ASK requires a retrieval context identifier")
     mitre_table = analysis_context.get("mitre_table", [])
-    if not isinstance(mitre_table, list):
-        mitre_table = []
     return AssistantOutcome(
-        content=answer,
-        retrieval_context_id=retrieval_context_id,
+        content=answer.strip(),
+        retrieval_context_id=retrieval_id,
         metadata_json={
-            "mitre_table": deepcopy(mitre_table),
-            "analysis_input_mode": resolved_mode,
+            "mitre_table": deepcopy(mitre_table if isinstance(mitre_table, list) else []),
+            "evidence_sha256": evidence_sha256,
+            "source_message_ids": [str(value) for value in source_message_ids],
             "chat_action": {
                 "action": "ask",
                 "route": "analysis",
-                "state_mutated": False,
-                "case_state_version_created": False,
                 "rag_invoked": False,
                 "retrieval_context_reused": True,
                 "analysis_mode": "question_answer",
-                "analysis_input_mode": resolved_mode,
                 "prompt_version": CASE_ANALYSIS_PROMPT_VERSION,
             },
         },
         thread_status="answered",
-        active_rag_session_id=None,
-        analysis_trace_draft=analysis_trace_draft,
-        analysis_trace_failure=analysis_trace_failure,
-        expected_analysis_case_state_version_id=expected_case_state_version_id,
+        analysis_trace_draft=trace,
+        analysis_trace_failure=trace_failure,
+        evidence_sha256=evidence_sha256,
+        source_message_ids=source_message_ids,
     )
 
 
-def map_case_state_mutation_response(
-    answer: str,
+def bind_followup_question(
+    outcome: AssistantOutcome,
     *,
-    rag_context_payload: RagContextPayload,
-    merged_case_state_json: dict[str, object],
-    delta_json: dict[str, object],
-    expected_parent_case_state_version_id: UUID,
-    mutation_metadata: dict[str, Any],
-    extraction_metadata: dict[str, Any] | None = None,
-    followup_metadata_json: dict[str, Any] | None = None,
-    action: str = "add_case_info",
-    analysis_input_mode: str | None = None,
-    analysis_trace_draft: AnalysisTraceDraft | None = None,
-    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None,
+    rag_context: RagContextPayload,
+    evidence_sha256: str,
+    source_message_ids: tuple[UUID, ...],
 ) -> AssistantOutcome:
-    """Map a successful explicit mutation into an atomic child-version outcome."""
-
-    resolved_mode = analysis_input_mode or settings.analysis_input_mode
-    metadata_json: dict[str, Any] = deepcopy(followup_metadata_json or {})
-    metadata_json.update(
+    metadata = deepcopy(outcome.metadata_json)
+    metadata.update(
         {
-            "chat_mutation": deepcopy(mutation_metadata),
-            "retrieved_context": rag_context_payload.context,
-            "mitre_table": deepcopy(list(rag_context_payload.mitre_table)),
-            "case_state_delta": deepcopy(delta_json),
-            "analysis_kind": "grounded_main_analysis",
-            "analysis_input_mode": resolved_mode,
-            "chat_action": {
-                "action": action,
-                "route": "analysis",
-                "grounded_main_analysis": True,
-                "state_mutated": True,
-                "case_state_version_created": True,
-                "rag_invoked": True,
-                "retrieval_context_reused": False,
-                "analysis_mode": "case_overview",
-                "analysis_input_mode": resolved_mode,
-                "prompt_version": CASE_ANALYSIS_PROMPT_VERSION,
-            },
-        },
+            "mitre_table": deepcopy(list(rag_context.mitre_table)),
+            "evidence_sha256": evidence_sha256,
+            "source_message_ids": [str(value) for value in source_message_ids],
+        }
     )
-    if extraction_metadata is not None:
-        metadata_json[EXTRACTION_METADATA_KEY] = deepcopy(extraction_metadata)
-    return AssistantOutcome(
-        content=answer,
-        retrieval_context_id=rag_context_payload.retrieval_context_id,
-        metadata_json=metadata_json,
-        thread_status="answered",
-        active_rag_session_id=None,
-        validated_case_state_json=deepcopy(merged_case_state_json),
-        rag_context_payload=rag_context_payload,
-        case_state_delta_json=deepcopy(delta_json),
-        expected_parent_case_state_version_id=(
-            expected_parent_case_state_version_id
-        ),
-        analysis_trace_draft=analysis_trace_draft,
-        analysis_trace_failure=analysis_trace_failure,
+    return replace(
+        outcome,
+        retrieval_context_id=rag_context.retrieval_context_id,
+        metadata_json=metadata,
+        rag_context_payload=rag_context,
+        evidence_sha256=evidence_sha256,
+        source_message_ids=source_message_ids,
     )
-
-
-def map_case_state_no_change_response(
-    *,
-    mutation_metadata: dict[str, Any],
-) -> AssistantOutcome:
-    """Return a terminal, auditable response without creating a new version."""
-
-    return AssistantOutcome(
-        content=(
-            "No new supported case information was identified, so the "
-            "canonical Case State was unchanged."
-        ),
-        retrieval_context_id=None,
-        metadata_json={
-            "chat_mutation": deepcopy(mutation_metadata),
-            "chat_action": {
-                "action": "add_case_info",
-                "route": "case_update",
-                "state_mutated": False,
-                "status": "no_change",
-                "case_state_version_created": False,
-                "rag_invoked": False,
-                "retrieval_context_reused": False,
-            },
-        },
-        thread_status="answered",
-        active_rag_session_id=None,
-    )
-
-
-def build_merged_extraction_metadata(
-    case_state_json: dict[str, object],
-    *,
-    source_message_ids: list[UUID],
-    mutation_metadata: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Represent a validated delta merge using the stable extraction contract."""
-
-    mutation_metadata = mutation_metadata or {}
-    metadata: dict[str, Any] = {
-        "status": "candidate",
-        "prompt_version": BASELINE_EXTRACTION_PROMPT_VERSION,
-        "provider": mutation_metadata.get("provider"),
-        "model": mutation_metadata.get("model"),
-        "validation_status": "validated",
-        "latency_ms": mutation_metadata.get("latency_ms", 0.0),
-        "input_tokens": mutation_metadata.get("input_tokens"),
-        "output_tokens": mutation_metadata.get("output_tokens"),
-        "source_message_ids": [str(message_id) for message_id in source_message_ids],
-        "raw_response": None,
-    }
-    metadata.update(deepcopy(case_state_json))
-    return metadata
 
 
 __all__ = [
     "AssistantOutcome",
     "RagContextPayload",
     "_validated_rag_context_payload",
-    "build_merged_extraction_metadata",
-    "map_case_analysis_response",
-    "map_case_state_mutation_response",
-    "map_case_state_no_change_response",
-    "map_initial_case_analysis_response",
+    "bind_followup_question",
+    "fresh_analysis_outcome",
     "map_rag_response",
+    "question_outcome",
+    "validated_rag_context_payload",
 ]

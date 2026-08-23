@@ -123,11 +123,9 @@ function admittedMitreRows(rows: unknown[]): Map<string, string> {
     const row = asRecord(rawRow);
     const techniqueId = requiredString(row?.technique_id);
     const name = requiredString(row?.name);
-    const entityType = requiredString(row?.entity_type)?.toLowerCase();
     if (
       techniqueId?.match(/^T\d{4}(?:\.\d{3})?$/) &&
-      name &&
-      (entityType === "technique" || entityType === "subtechnique")
+      name
     ) {
       admitted.set(techniqueId, name);
     }
@@ -141,13 +139,11 @@ function isValidatedTrace(
   const analysisMode = trace?.analysis_mode;
   return Boolean(
     trace &&
-      trace.version === "analysis_trace_v1" &&
+      trace.version === "analysis_trace_v2" &&
       (analysisMode === "case_overview" || analysisMode === "question_answer") &&
-      requiredString(trace.case_state_version_id) &&
       requiredString(trace.retrieval_context_id) &&
-      trace.validation_status === "validated" &&
-      trace.reference_membership === "validated" &&
-      trace.semantic_entailment === "not_deterministically_established",
+      requiredString(trace.evidence_sha256)?.match(/^[0-9a-f]{64}$/) &&
+      trace.validation_status === "validated"
   );
 }
 

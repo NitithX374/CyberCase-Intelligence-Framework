@@ -5,7 +5,6 @@ Typed representations of STIX 2.1 objects parsed from ATT&CK data.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
 
 
 class AttackEntity(BaseModel):

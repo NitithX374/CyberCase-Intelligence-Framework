@@ -36,7 +36,6 @@ export interface ChatRun {
   id: string;
   thread_id: string;
   request_message_id: string;
-  operation: "query" | "resume";
   status: RunStatus;
   error_code: string | null;
   error_message: string | null;
@@ -51,7 +50,7 @@ export interface ChatMessageAccepted {
 
 export type ChatReportSupportType =
   | "user_reported"
-  | "extraction_candidate"
+  | "analytical_inference"
   | "general_technical_knowledge"
   | "mitre_mapping_candidate"
   | "unknown";
@@ -61,8 +60,7 @@ export interface ChatReportClaim {
   section_id: string;
   text: string;
   support_type: ChatReportSupportType;
-  evidence_ids: string[];
-  timeline_event_ids: string[];
+  source_message_ids: string[];
   mitre_technique_ids: string[];
 }
 
@@ -74,9 +72,7 @@ export interface ChatReportSection {
 }
 
 export interface ChatStructuredReport {
-  report_version:
-    | "baseline_report_v1"
-    | "preliminary_analysis_report_v1";
+  report_version: "preliminary_analysis_report_v1";
   status: "provisional_unverified";
   title: string;
   sections: ChatReportSection[];
@@ -90,8 +86,8 @@ export interface ChatReportRead {
   version_number: number;
   idempotency_key: string;
   source_snapshot_hash: string;
-  extraction_id: string;
-  extraction_version: string;
+  analysis_message_id: string;
+  retrieval_context_id: string;
   prompt_version: string;
   provider: string;
   model: string;
@@ -108,18 +104,3 @@ export interface ChatReportRead {
   input_tokens: number | null;
   output_tokens: number | null;
 }
-
-export type {
-  ChatBaselineEntity,
-  ChatBaselineEvidence,
-  ChatBaselineExtraction,
-  ChatBaselineExtractionFailure,
-  ChatBaselineMissingInformation,
-  ChatBaselineRelationship,
-  ChatBaselineTimelineEvent,
-  ChatCaseState,
-  ChatExtraction,
-  ChatExtractionConfidence,
-  ChatRelationshipStatus,
-  ChatReportedStatus,
-} from "@/lib/metadata-schemas";

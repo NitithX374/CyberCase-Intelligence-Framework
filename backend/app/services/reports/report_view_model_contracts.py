@@ -33,16 +33,6 @@ class IndicatorViewRow:
 
 
 @dataclass(frozen=True)
-class RelationshipViewRow:
-    statement: str
-    subject_name: str
-    predicate: str
-    object_name: str
-    status: str
-    confidence: str
-
-
-@dataclass(frozen=True)
 class MitreMappingViewRow:
     finding: str
     case_evidence_support: str
@@ -93,11 +83,6 @@ class ReportViewModel:
     evidence_rows: list[EvidenceViewRow] = field(default_factory=list)
     has_indicators: bool = False
     indicator_rows: list[IndicatorViewRow] = field(default_factory=list)
-
-    # 5.4 ความสัมพันธ์ของเหตุการณ์และองค์ประกอบในคดี / Relationships
-    has_relationships: bool = False
-    relationship_rows: list[RelationshipViewRow] = field(default_factory=list)
-    relationship_graph_image: str | None = None
 
     # 5.5 ผลการวิเคราะห์และ MITRE ATT&CK Mapping / Technical Analysis
     has_mitre_mappings: bool = False

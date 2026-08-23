@@ -55,7 +55,7 @@ from ..llm_provider import (
     create_core_chat_model,
     resolve_core_llm_target,
 )
-from ..retrieval.hybrid_retriever import GraphRAGResult, HybridRetriever
+from ..retrieval.hybrid_retriever import HybridRetriever
 from .context_builder import build_context, build_generation_prompt
 from .cross_lingual import CrossLingualLayer
 from .query_decomposer import QueryDecomposer

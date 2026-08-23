@@ -19,7 +19,7 @@ async def resolve_followup_outcome(
     source_run_id: UUID,
     policy: FollowUpPolicy | None = None,
     gap_analyzer: GapAnalyzer | None = None,
-    case_state: Mapping[str, object] | None = None,
+    raw_evidence: str | None = None,
     analysis_answer: str | None = None,
     analysis_context: Mapping[str, object] | None = None,
 ) -> AssistantOutcome | None:
@@ -32,7 +32,7 @@ async def resolve_followup_outcome(
         source_run_id=source_run_id,
         policy=policy,
         gap_analyzer=gap_analyzer,
-        case_state=case_state,
+        raw_evidence=raw_evidence,
         analysis_answer=analysis_answer,
         analysis_context=analysis_context,
     )

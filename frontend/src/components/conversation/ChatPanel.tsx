@@ -20,7 +20,6 @@ interface ChatPanelProps {
   onInputChange: (value: string) => void;
   onPostAnswerActionChange: (action: ChatMessageAction) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onSelectMessageOrdinal?: (ordinal: number) => void;
 }
 
 export function ChatPanel({
@@ -33,7 +32,6 @@ export function ChatPanel({
   onInputChange,
   onPostAnswerActionChange,
   onSubmit,
-  onSelectMessageOrdinal,
 }: ChatPanelProps) {
   const isProcessing = phase === "querying" || phase === "analyzing";
 
@@ -44,7 +42,6 @@ export function ChatPanel({
         <ChatTranscript
           messages={messages}
           isProcessing={isProcessing}
-          onSelectMessageOrdinal={onSelectMessageOrdinal}
         />
       </div>
 

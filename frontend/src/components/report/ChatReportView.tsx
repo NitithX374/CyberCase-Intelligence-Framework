@@ -23,7 +23,7 @@ interface ChatReportViewProps {
   threadTitle: string;
   threadStatus: ThreadStatus | null;
   hasMessages: boolean;
-  hasValidatedExtraction: boolean;
+  hasCompletedAnalysis: boolean;
   onOpenChat: () => void;
 }
 
@@ -32,7 +32,7 @@ export function ChatReportView({
   threadTitle,
   threadStatus,
   hasMessages,
-  hasValidatedExtraction,
+  hasCompletedAnalysis,
   onOpenChat,
 }: ChatReportViewProps) {
   const queryClient = useQueryClient();
@@ -100,7 +100,7 @@ export function ChatReportView({
   const canGenerate =
     Boolean(threadId) &&
     hasMessages &&
-    hasValidatedExtraction &&
+    hasCompletedAnalysis &&
     threadStatus !== "processing" &&
     threadStatus !== "awaiting_followup" &&
     threadStatus !== "failed" &&
@@ -164,7 +164,7 @@ export function ChatReportView({
             </h1>
             <p className="mt-4 text-sm leading-6 text-ink-secondary sm:text-base sm:leading-7">
               Generate a structured intelligence report from this chat&apos;s
-              case details, extracted evidence, and MITRE mapping findings.
+              accumulated user-authored evidence, the latest analysis, and admitted MITRE context.
             </p>
           </div>
           <span className="rounded-full border border-line-strong bg-surface px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink-secondary">
@@ -199,7 +199,7 @@ export function ChatReportView({
         <div className="mt-5 rounded-xl border border-line bg-surface px-4 py-3 text-sm leading-6 text-ink-secondary">
           {readinessMessage({
             hasMessages,
-            hasValidatedExtraction,
+            hasCompletedAnalysis,
             threadId,
             threadStatus,
           })}
@@ -249,12 +249,12 @@ function InlineError({ message }: { message: string }) {
 
 function readinessMessage({
   hasMessages,
-  hasValidatedExtraction,
+  hasCompletedAnalysis,
   threadId,
   threadStatus,
 }: {
   hasMessages: boolean;
-  hasValidatedExtraction: boolean;
+  hasCompletedAnalysis: boolean;
   threadId: string | null;
   threadStatus: ThreadStatus | null;
 }): string {
@@ -270,7 +270,7 @@ function readinessMessage({
   if (threadStatus === "failed") {
     return "The latest chat response failed. Resolve it before generating a report.";
   }
-  if (!hasValidatedExtraction) {
+  if (!hasCompletedAnalysis) {
     return "A validated case analysis is not available yet. Complete the chat investigation first.";
   }
   return "Ready. Generate a structured intelligence report from this case snapshot.";

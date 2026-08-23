@@ -68,7 +68,7 @@ class GapAnalysis(BaseModel):
 
 @dataclass(frozen=True)
 class GapAnalysisResult:
-    """Gap output plus provider telemetry; never a Case State mutation."""
+    """Gap output plus provider telemetry; never an evidence mutation."""
 
     analysis: GapAnalysis
     latency_ms: float | None = None
@@ -181,7 +181,7 @@ class GapAnalyzer(Protocol):
         *,
         original_user_content: str,
         clarification_exchanges: Sequence[ClarificationExchange],
-        case_state: Mapping[str, object] | None = None,
+        raw_evidence: str | None = None,
         analysis_answer: str | None = None,
         analysis_context: Mapping[str, object] | None = None,
     ) -> GapAnalysisResult: ...
@@ -194,7 +194,7 @@ class FollowUpPolicy(Protocol):
         original_user_content: str,
         clarification_exchanges: Sequence[ClarificationExchange],
         gap_analysis: GapAnalysis,
-        case_state: Mapping[str, object] | None = None,
+        raw_evidence: str | None = None,
         analysis_answer: str | None = None,
         analysis_context: Mapping[str, object] | None = None,
     ) -> FollowUpDecision: ...
