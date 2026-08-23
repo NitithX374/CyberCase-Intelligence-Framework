@@ -221,6 +221,7 @@ export function ChatWorkspaceLayout({
                   messages={messages}
                   onOpenOverview={() => onViewChange("overview")}
                   onOpenChat={() => onViewChange("chat")}
+                  onOpenMaterials={() => onViewChange("materials")}
                 />
               ) : activeWorkspaceView === "overview" ? (
                 messages.length === 0 ? (

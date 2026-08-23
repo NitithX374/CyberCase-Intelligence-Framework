@@ -12,7 +12,7 @@ describe("buildTechnicalContext", () => {
         role: "user",
         content: "พบการบุกรุกเข้าสู่ IIS Web Server โดยคนร้ายใช้ Application Shimming เพื่อฝังตัว",
         retrieval_context_id: null,
-        metadata_json: {},
+        metadata_json: { evidence_kind: "initial_case_narrative" },
         created_at: "2026-03-10T08:00:00Z",
       },
       {
@@ -71,7 +71,7 @@ describe("buildTechnicalContext", () => {
     expect(result.hasContext).toBe(true);
     expect(result.totalCount).toBe(2);
 
-    // Technique 1: T1190
+    // Technique 1: T1190 (linked through claim c1 to msg-1)
     const t1190 = result.techniques.find((t) => t.techniqueId === "T1190")!;
     expect(t1190).toBeDefined();
     expect(t1190.techniqueName).toBe("Exploit Public-Facing Application");
@@ -82,10 +82,84 @@ describe("buildTechnicalContext", () => {
     expect(t1190.caseBasisSources[0].id).toBe("msg-1");
     expect(t1190.isExternalReference).toBe(true);
 
-    // Technique 2: T1546.011
+    // Technique 2: T1546.011 (no association/claims -> zero caseBasisSources, NO fake fallback)
     const t1546 = result.techniques.find((t) => t.techniqueId === "T1546.011")!;
     expect(t1546).toBeDefined();
     expect(t1546.tactic).toContain("Persistence");
+    expect(t1546.caseBasisSources).toHaveLength(0);
+  });
+
+  it("proves unlinked MITRE techniques or associations linking to analyst_question get zero caseBasisSources", () => {
+    const messages: PersistedChatMessage[] = [
+      {
+        id: "msg-1",
+        thread_id: "thread-1",
+        ordinal: 1,
+        role: "user",
+        content: "Initial incident",
+        retrieval_context_id: null,
+        metadata_json: { evidence_kind: "initial_case_narrative" },
+        created_at: "2026-03-10T08:00:00Z",
+      },
+      {
+        id: "msg-2",
+        thread_id: "thread-1",
+        ordinal: 2,
+        role: "user",
+        content: "Did the attacker use discovery techniques?",
+        retrieval_context_id: null,
+        metadata_json: { evidence_kind: "analyst_question" },
+        created_at: "2026-03-10T08:05:00Z",
+      },
+      {
+        id: "msg-3",
+        thread_id: "thread-1",
+        ordinal: 3,
+        role: "assistant",
+        content: "Analysis...",
+        retrieval_context_id: "ret-1",
+        metadata_json: {
+          analysis_kind: "grounded_main_analysis",
+          mitre_table: [
+            {
+              technique_id: "T1018",
+              name: "Remote System Discovery",
+              tactic: "Discovery",
+              description: "Discovery description",
+              reason: "Discovery reason",
+            },
+          ],
+          analysis_trace: {
+            version: "analysis_trace_v2",
+            claims: [
+              {
+                claim_id: "c2",
+                text: "Discovery query",
+                claim_type: "event_progression",
+                epistemic_status: "reported",
+                source_message_ids: ["msg-2"],
+              },
+            ],
+            mitre_associations: [
+              {
+                association_id: "assoc-2",
+                technique_id: "T1018",
+                claim_ids: ["c2"],
+                reason: "Discovery note",
+                status: "candidate",
+                support_role: "external_knowledge",
+              },
+            ],
+          },
+        },
+        created_at: "2026-03-10T08:10:00Z",
+      },
+    ];
+
+    const result = buildTechnicalContext(messages);
+    expect(result.techniques[0].techniqueId).toBe("T1018");
+    // Since msg-2 is an analyst_question, it must NOT be included as a source
+    expect(result.techniques[0].caseBasisSources).toHaveLength(0);
   });
 
   it("returns conservative fallback when reason contains generic filler", () => {
@@ -97,7 +171,7 @@ describe("buildTechnicalContext", () => {
         role: "user",
         content: "พบพฤติกรรม...",
         retrieval_context_id: null,
-        metadata_json: {},
+        metadata_json: { evidence_kind: "initial_case_narrative" },
         created_at: "2026-03-10T08:00:00Z",
       },
       {

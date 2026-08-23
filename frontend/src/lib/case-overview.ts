@@ -1,11 +1,15 @@
 import type { PersistedChatMessage, ThreadStatus } from "@/lib/api";
+import {
+  getCaseEvidencePresentation,
+  type EvidenceSourceType,
+} from "@/lib/case-evidence";
 
 export interface SourceMessageRef {
   id: string;
   ordinal: number;
   label: string;
   excerpt: string;
-  sourceType: "case_description" | "clarification_response" | "additional_info";
+  sourceType: EvidenceSourceType;
   sourceTypeLabel: string;
   fullContent: string;
 }
@@ -176,46 +180,21 @@ function mapSourceMessageIds(
 
   for (const id of sourceIds) {
     const msg = messageMap.get(id);
-    if (msg) {
-      const isInitial = msg.ordinal === 1;
-      const isClarification =
-        msg.metadata_json?.action === "answer_followup";
-      const sourceType: SourceMessageRef["sourceType"] = isInitial
-        ? "case_description"
-        : isClarification
-          ? "clarification_response"
-          : "additional_info";
-      const sourceTypeLabel = isInitial
-        ? "Case description · รายละเอียดคดีเริ่มต้น"
-        : isClarification
-          ? "Clarification response · คำตอบชี้แจงเพิ่มเติม"
-          : "Additional case information · ข้อมูลคดีเพิ่มเติม";
-      const label = isInitial
-        ? "Case description"
-        : isClarification
-          ? "Clarification"
-          : `Evidence #${msg.ordinal}`;
+    if (!msg) continue;
 
-      refs.push({
-        id: msg.id,
-        ordinal: msg.ordinal,
-        label,
-        excerpt: msg.content.length > 120 ? `${msg.content.slice(0, 120)}…` : msg.content,
-        sourceType,
-        sourceTypeLabel,
-        fullContent: msg.content,
-      });
-    } else {
-      refs.push({
-        id,
-        ordinal: 0,
-        label: "Case evidence",
-        excerpt: "",
-        sourceType: "case_description",
-        sourceTypeLabel: "Case evidence · พยานหลักฐานในคดี",
-        fullContent: "",
-      });
-    }
+    const presentation = getCaseEvidencePresentation(msg);
+    if (!presentation) continue;
+
+    refs.push({
+      id: msg.id,
+      ordinal: msg.ordinal,
+      label: presentation.overviewSourceLabel,
+      excerpt:
+        msg.content.length > 120 ? `${msg.content.slice(0, 120)}…` : msg.content,
+      sourceType: presentation.sourceType,
+      sourceTypeLabel: presentation.sourceTypeLabel,
+      fullContent: msg.content,
+    });
   }
   return refs;
 }

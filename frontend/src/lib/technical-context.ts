@@ -1,5 +1,6 @@
 import type { PersistedChatMessage } from "@/lib/api";
 import { type SourceMessageRef } from "@/lib/case-overview";
+import { getCaseEvidencePresentation } from "@/lib/case-evidence";
 
 export interface TechnicalContextCard {
   techniqueId: string;
@@ -66,56 +67,21 @@ function mapSourceMessageIds(
 
   for (const id of sourceIds) {
     const msg = messageMap.get(id);
-    if (msg) {
-      const isInitial = msg.ordinal === 1;
-      const isClarification =
-        msg.metadata_json?.action === "answer_followup" ||
-        msg.metadata_json?.evidence_kind === "clarification_answer";
-      const sourceType: SourceMessageRef["sourceType"] = isInitial
-        ? "case_description"
-        : isClarification
-          ? "clarification_response"
-          : "additional_info";
-      const sourceTypeLabel = isInitial
-        ? "Case description · รายละเอียดคดีเริ่มต้น"
-        : isClarification
-          ? "Clarification response · คำตอบชี้แจงเพิ่มเติม"
-          : "Additional case information · ข้อมูลคดีเพิ่มเติม";
-      const label = isInitial
-        ? "Initial case description"
-        : isClarification
-          ? "Clarification response"
-          : `Evidence #${msg.ordinal}`;
+    if (!msg) continue;
 
-      refs.push({
-        id: msg.id,
-        ordinal: msg.ordinal,
-        label,
-        excerpt: msg.content.length > 120 ? `${msg.content.slice(0, 120)}…` : msg.content,
-        sourceType,
-        sourceTypeLabel,
-        fullContent: msg.content,
-      });
-    }
-  }
+    const presentation = getCaseEvidencePresentation(msg);
+    if (!presentation) continue;
 
-  // Fallback to initial case description if none mapped
-  if (refs.length === 0) {
-    const initialMsg = allMessages.find((m) => m.role === "user" && m.ordinal === 1);
-    if (initialMsg) {
-      refs.push({
-        id: initialMsg.id,
-        ordinal: initialMsg.ordinal,
-        label: "Initial case description",
-        excerpt:
-          initialMsg.content.length > 120
-            ? `${initialMsg.content.slice(0, 120)}…`
-            : initialMsg.content,
-        sourceType: "case_description",
-        sourceTypeLabel: "Case description · รายละเอียดคดีเริ่มต้น",
-        fullContent: initialMsg.content,
-      });
-    }
+    refs.push({
+      id: msg.id,
+      ordinal: msg.ordinal,
+      label: presentation.label,
+      excerpt:
+        msg.content.length > 120 ? `${msg.content.slice(0, 120)}…` : msg.content,
+      sourceType: presentation.sourceType,
+      sourceTypeLabel: presentation.sourceTypeLabel,
+      fullContent: msg.content,
+    });
   }
 
   return refs;
