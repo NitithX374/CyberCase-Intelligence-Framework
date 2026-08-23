@@ -23,7 +23,7 @@ describe("case-overview view model builder", () => {
       role: "user",
       content: "Attacker compromised public web server.",
       retrieval_context_id: null,
-      metadata_json: {},
+      metadata_json: { evidence_kind: "initial_case_narrative" },
       created_at: "2026-08-23T10:00:00Z",
     };
     const overview = buildCaseOverview([userMsg], "processing");
@@ -39,7 +39,7 @@ describe("case-overview view model builder", () => {
       role: "user",
       content: "Unauthorized activity detected on public-facing IIS server. Application shimming was observed on host WEB-01.",
       retrieval_context_id: null,
-      metadata_json: {},
+      metadata_json: { evidence_kind: "initial_case_narrative" },
       created_at: "2026-08-23T10:00:00Z",
     };
 
@@ -175,5 +175,103 @@ Direct case facts are derived strictly from case report #1.`,
     expect(overview.mitreContext[0].techniqueId).toBe("T1546.011");
     expect(overview.mitreContext[0].isExternalContext).toBe(true);
     expect(overview.mitreContext[0].caseAssociationReason).toContain("Application shimming modifies Windows");
+  });
+
+  it("fails closed: does not classify analyst_question or missing messages as evidence sources in overview", () => {
+    const userMsg1: PersistedChatMessage = {
+      id: "msg-user-1",
+      thread_id: "thread-1",
+      ordinal: 1,
+      role: "user",
+      content: "Initial incident narrative",
+      retrieval_context_id: null,
+      metadata_json: { evidence_kind: "initial_case_narrative" },
+      created_at: "2026-08-23T10:00:00Z",
+    };
+
+    const analystQuestionMsg: PersistedChatMessage = {
+      id: "msg-user-2",
+      thread_id: "thread-1",
+      ordinal: 2,
+      role: "user",
+      content: "What is the IOC for this?",
+      retrieval_context_id: null,
+      metadata_json: { evidence_kind: "analyst_question" },
+      created_at: "2026-08-23T10:05:00Z",
+    };
+
+    const clarificationAnswerMsg: PersistedChatMessage = {
+      id: "msg-user-3",
+      thread_id: "thread-1",
+      ordinal: 3,
+      role: "user",
+      content: "The host affected was SRV-PROD-01.",
+      retrieval_context_id: null,
+      metadata_json: { evidence_kind: "clarification_answer" },
+      created_at: "2026-08-23T10:10:00Z",
+    };
+
+    const assistantAnalysisMsg: PersistedChatMessage = {
+      id: "msg-asst-4",
+      thread_id: "thread-1",
+      ordinal: 4,
+      role: "assistant",
+      content: `### 1. Overall Case Picture\nIncident analysis.`,
+      retrieval_context_id: "rc-1",
+      metadata_json: {
+        analysis_kind: "grounded_main_analysis",
+        analysis_trace: {
+          version: "analysis_trace_v2",
+          validation_status: "validated",
+          analysis_mode: "case_overview",
+          retrieval_context_id: "rc-1",
+          evidence_sha256: "b".repeat(64),
+          claims: [
+            {
+              claim_id: "A-01",
+              claim_type: "reported",
+              text: "Initial incident",
+              epistemic_status: "reported",
+              source_message_ids: ["msg-user-1"],
+            },
+            {
+              claim_id: "A-02",
+              claim_type: "reported",
+              text: "Claim linking to analyst question and non-existent message",
+              epistemic_status: "reported",
+              source_message_ids: ["msg-user-2", "msg-nonexistent-99"],
+            },
+            {
+              claim_id: "A-03",
+              claim_type: "reported",
+              text: "Clarification fact",
+              epistemic_status: "reported",
+              source_message_ids: ["msg-user-3"],
+            },
+          ],
+          mitre_associations: [],
+        },
+        mitre_table: [],
+      },
+      created_at: "2026-08-23T10:15:00Z",
+    };
+
+    const overview = buildCaseOverview(
+      [userMsg1, analystQuestionMsg, clarificationAnswerMsg, assistantAnalysisMsg],
+      "answered",
+    );
+
+    // Claim A-01: valid initial description
+    expect(overview.attackStory[0].sourceMessages).toHaveLength(1);
+    expect(overview.attackStory[0].sourceMessages[0].label).toBe("Case description");
+    expect(overview.attackStory[0].sourceMessages[0].sourceType).toBe("case_description");
+
+    // Claim A-02: analyst_question and nonexistent ID must be completely excluded
+    expect(overview.attackStory[1].sourceMessages).toHaveLength(0);
+
+    // Claim A-03: clarification answer
+    expect(overview.attackStory[2].sourceMessages).toHaveLength(1);
+    expect(overview.attackStory[2].sourceMessages[0].label).toBe("Clarification");
+    expect(overview.attackStory[2].sourceMessages[0].sourceType).toBe("clarification_response");
   });
 });

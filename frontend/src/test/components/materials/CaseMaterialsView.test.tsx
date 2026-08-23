@@ -13,7 +13,7 @@ describe("CaseMaterialsView", () => {
         role: "user",
         content: "รายละเอียดสำนวนคดีเริ่มต้น...",
         retrieval_context_id: null,
-        metadata_json: {},
+        metadata_json: { evidence_kind: "initial_case_narrative" },
         created_at: "2026-03-10T08:00:00Z",
       },
       {
@@ -33,7 +33,7 @@ describe("CaseMaterialsView", () => {
         role: "user",
         content: "คำตอบชี้แจงเพิ่มเติม...",
         retrieval_context_id: null,
-        metadata_json: { action: "answer_followup" },
+        metadata_json: { evidence_kind: "clarification_answer" },
         created_at: "2026-03-10T08:05:00Z",
       },
     ];

@@ -1,9 +1,10 @@
 import type { PersistedChatMessage } from "@/lib/api";
+import {
+  getCaseEvidencePresentation,
+  type MaterialType,
+} from "@/lib/case-evidence";
 
-export type MaterialType =
-  | "initial_case_description"
-  | "clarification_response"
-  | "additional_case_info";
+export type { MaterialType };
 
 export interface CaseMaterialItem {
   id: string;
@@ -48,54 +49,26 @@ export function buildCaseMaterials(messages: PersistedChatMessage[]): CaseMateri
   const items: CaseMaterialItem[] = [];
   let materialIndex = 0;
 
-  for (let i = 0; i < userMessages.length; i++) {
-    const msg = userMessages[i];
+  for (const msg of userMessages) {
     const content = msg.content.trim();
     if (!content) continue;
 
-    const action = msg.metadata_json?.action;
-    const evidenceKind = msg.metadata_json?.evidence_kind;
-
-    // Ordinary asks are NOT case material
-    if (
-      action === "ask" &&
-      evidenceKind !== "clarification_answer" &&
-      evidenceKind !== "added_case_information"
-    ) {
-      continue;
-    }
+    const presentation = getCaseEvidencePresentation(msg);
+    if (!presentation) continue;
 
     materialIndex++;
-    const isInitial = i === 0 || evidenceKind === "initial_case_narrative";
-    const isClarification =
-      action === "answer_followup" || evidenceKind === "clarification_answer";
-
-    let type: MaterialType;
-    let typeLabel: string;
-
-    if (isInitial) {
-      type = "initial_case_description";
-      typeLabel = "Initial case description · รายละเอียดคดีเริ่มต้น";
-    } else if (isClarification) {
-      type = "clarification_response";
-      typeLabel = "Clarification response · คำตอบชี้แจงเพิ่มเติม";
-    } else {
-      type = "additional_case_info";
-      typeLabel = "Additional case information · ข้อมูลคดีเพิ่มเติม";
-    }
-
     const timestampDisplay = formatTimestamp(msg.created_at, msg.ordinal);
 
     items.push({
       id: msg.id,
       ordinal: msg.ordinal,
       itemNumber: String(materialIndex).padStart(2, "0"),
-      type,
-      typeLabel,
+      type: presentation.materialType,
+      typeLabel: presentation.materialTypeLabel,
       content,
       submittedAt: msg.created_at,
       timestampDisplay,
-      isInitial,
+      isInitial: presentation.isInitial,
     });
   }
 
@@ -105,3 +78,4 @@ export function buildCaseMaterials(messages: PersistedChatMessage[]): CaseMateri
     hasMaterials: items.length > 0,
   };
 }
+

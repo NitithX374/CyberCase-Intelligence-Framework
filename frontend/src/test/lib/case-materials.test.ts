@@ -32,7 +32,7 @@ describe("buildCaseMaterials", () => {
         role: "user",
         content: "คนร้ายใช้เทคนิคอะไรในการคงสิทธิ์?",
         retrieval_context_id: null,
-        metadata_json: { action: "ask" },
+        metadata_json: { evidence_kind: "analyst_question" },
         created_at: "2026-03-10T08:05:00Z",
       },
       {
@@ -53,7 +53,6 @@ describe("buildCaseMaterials", () => {
         content: "เวลาที่เกิดเหตุคาดว่าเป็นช่วง 02:00 น. และพบบัญชี service_admin",
         retrieval_context_id: null,
         metadata_json: {
-          action: "answer_followup",
           evidence_kind: "clarification_answer",
         },
         created_at: "2026-03-10T08:10:00Z",
@@ -66,7 +65,6 @@ describe("buildCaseMaterials", () => {
         content: "ตรวจพบไฟล์ sdbinst.exe เพิ่มเติมในไดเรกทอรี C:\\Windows",
         retrieval_context_id: null,
         metadata_json: {
-          action: "add_case_info",
           evidence_kind: "added_case_information",
         },
         created_at: "2026-03-10T08:15:00Z",
@@ -96,6 +94,95 @@ describe("buildCaseMaterials", () => {
     expect(result.items[2].itemNumber).toBe("03");
     expect(result.items[2].type).toBe("additional_case_info");
     expect(result.items[2].content).toContain("sdbinst.exe");
+  });
+
+  it("proves analyst_question is excluded and never classified as additional_case_info", () => {
+    const messages: PersistedChatMessage[] = [
+      {
+        id: "msg-1",
+        thread_id: "thread-1",
+        ordinal: 1,
+        role: "user",
+        content: "Initial incident description",
+        retrieval_context_id: null,
+        metadata_json: { evidence_kind: "initial_case_narrative" },
+        created_at: "2026-03-10T08:00:00Z",
+      },
+      {
+        id: "msg-2",
+        thread_id: "thread-1",
+        ordinal: 2,
+        role: "user",
+        content: "What is the threat actor group?",
+        retrieval_context_id: null,
+        metadata_json: { evidence_kind: "analyst_question" },
+        created_at: "2026-03-10T08:05:00Z",
+      },
+    ];
+
+    const result = buildCaseMaterials(messages);
+    expect(result.totalCount).toBe(1);
+    expect(result.items[0].id).toBe("msg-1");
+    expect(result.items.some((item) => item.id === "msg-2")).toBe(false);
+    expect(result.items.some((item) => item.type === "additional_case_info")).toBe(false);
+  });
+
+  it("fails closed: unknown or missing user metadata on follow-up messages does NOT silently become additional evidence", () => {
+    const messages: PersistedChatMessage[] = [
+      {
+        id: "msg-1",
+        thread_id: "thread-1",
+        ordinal: 1,
+        role: "user",
+        content: "Initial incident narrative",
+        retrieval_context_id: null,
+        metadata_json: { evidence_kind: "initial_case_narrative" },
+        created_at: "2026-03-10T08:00:00Z",
+      },
+      {
+        id: "msg-2",
+        thread_id: "thread-1",
+        ordinal: 2,
+        role: "user",
+        content: "Some untagged follow-up user message",
+        retrieval_context_id: null,
+        metadata_json: {},
+        created_at: "2026-03-10T08:05:00Z",
+      },
+      {
+        id: "msg-3",
+        thread_id: "thread-1",
+        ordinal: 3,
+        role: "user",
+        content: "Another message with strange metadata",
+        retrieval_context_id: null,
+        metadata_json: { unknown_key: "custom_value" },
+        created_at: "2026-03-10T08:06:00Z",
+      },
+    ];
+
+    const result = buildCaseMaterials(messages);
+    expect(result.totalCount).toBe(1);
+    expect(result.items[0].id).toBe("msg-1");
+  });
+
+  it("proves assistant messages are always excluded from case materials", () => {
+    const messages: PersistedChatMessage[] = [
+      {
+        id: "msg-1",
+        thread_id: "thread-1",
+        ordinal: 1,
+        role: "assistant",
+        content: "Assistant analysis output",
+        retrieval_context_id: "rc-1",
+        metadata_json: { evidence_kind: "initial_case_narrative" },
+        created_at: "2026-03-10T08:00:00Z",
+      },
+    ];
+
+    const result = buildCaseMaterials(messages);
+    expect(result.hasMaterials).toBe(false);
+    expect(result.items).toHaveLength(0);
   });
 
   it("returns empty when no user evidence exists", () => {

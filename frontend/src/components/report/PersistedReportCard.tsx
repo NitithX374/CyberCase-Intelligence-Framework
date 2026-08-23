@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   downloadChatReportPdf,
   type ChatReportRead,
@@ -79,24 +79,26 @@ function ReportPdfViewer({
   title: string;
 }) {
   const {
-    data: pdfUrl,
+    data: pdfBlob,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["report-pdf-url", threadId, reportId],
-    queryFn: async () => {
-      const blob = await downloadChatReportPdf(threadId, reportId);
-      if (
-        typeof window !== "undefined" &&
-        typeof window.URL?.createObjectURL === "function"
-      ) {
-        return window.URL.createObjectURL(blob);
-      }
-      return null;
-    },
+    queryKey: ["report-pdf-blob", threadId, reportId],
+    queryFn: () => downloadChatReportPdf(threadId, reportId),
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
+
+  const pdfUrl = useMemo(() => {
+    if (
+      !pdfBlob ||
+      typeof window === "undefined" ||
+      typeof window.URL?.createObjectURL !== "function"
+    ) {
+      return null;
+    }
+    return window.URL.createObjectURL(pdfBlob);
+  }, [pdfBlob]);
 
   useEffect(() => {
     return () => {
