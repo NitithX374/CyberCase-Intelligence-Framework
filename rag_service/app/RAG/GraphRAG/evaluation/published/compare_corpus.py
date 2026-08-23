@@ -35,11 +35,8 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    FieldCondition,
-    Filter,
     Fusion,
     FusionQuery,
-    MatchValue,
     Prefetch,
     SparseVector,
 )
@@ -56,6 +53,7 @@ from ...config import (
 )
 from .attack_version_map import VersionMap
 from .ingest_corpus import JINA_BATCH, JINA_MAX_TOKENS, JINA_MODEL
+from ...ingestion.stix_parser import parse_all_domains
 from .run_benchmark import load_dataset
 
 RESULTS_DIR = Path(__file__).resolve().parent / "data" / "runs"
@@ -145,31 +143,33 @@ def make_client() -> QdrantClient:
     raise SystemExit("[QDRANT] No QDRANT_URL/QDRANT_HOST configured")
 
 
-def domain_filter() -> Filter | None:
-    if not ATTACK_DOMAIN_FILTER:
-        return None
-    return Filter(
-        must=[FieldCondition(key="domain", match=MatchValue(value=ATTACK_DOMAIN_FILTER))]
-    )
+OVERFETCH = 3  # matches retrieval/vector_retriever.py
 
 
-def search(client, collection, cfg, dense, sparse, top_k, qfilter):
-    """One collection, one query. Hybrid mirrors the production prefetch+RRF."""
+def search(client, collection, cfg, dense, sparse, top_k, apply_domain):
+    """One collection, one query. Hybrid mirrors the production prefetch+RRF.
+
+    The domain filter is applied client-side after over-fetching, not pushed
+    into Qdrant. This cluster runs in strict mode with no payload index on
+    `domain`, so a server-side filter is rejected outright - the production
+    retriever over-fetches and trims for the same reason.
+    """
+    limit = top_k * OVERFETCH if apply_domain else top_k
+
     if cfg.hybrid and sparse is not None:
         indices, values = sparse
         res = client.query_points(
             collection_name=collection,
             prefetch=[
-                Prefetch(query=dense, using="dense", limit=max(top_k * 5, 50), filter=qfilter),
+                Prefetch(query=dense, using="dense", limit=max(limit * 5, 50)),
                 Prefetch(
                     query=SparseVector(indices=indices, values=values),
                     using="sparse",
-                    limit=max(top_k * 5, 50),
-                    filter=qfilter,
+                    limit=max(limit * 5, 50),
                 ),
             ],
             query=FusionQuery(fusion=Fusion.RRF),
-            limit=top_k,
+            limit=limit,
             with_payload=True,
         )
     else:
@@ -177,23 +177,37 @@ def search(client, collection, cfg, dense, sparse, top_k, qfilter):
             collection_name=collection,
             query=dense,
             using="dense",
-            limit=top_k,
-            query_filter=qfilter,
+            limit=limit,
             with_payload=True,
         )
-    return [p.payload or {} for p in res.points]
+
+    payloads = [p.payload or {} for p in res.points]
+    if apply_domain and ATTACK_DOMAIN_FILTER:
+        payloads = [p for p in payloads if p.get("domain") == ATTACK_DOMAIN_FILTER]
+    return payloads[:top_k]
 
 
-def ranked_ids(payloads: list[dict]) -> list[str]:
+def ranked_ids(payloads: list[dict], stix_to_attack: dict[str, str]) -> list[str]:
     """Retrieved ATT&CK ids in rank order, first occurrence wins.
 
     Deduplicated because a technique, one of its procedure examples and one of
     its analytics are three documents pointing at the same answer; counting them
     three times would flatter recall without retrieving anything new.
+
+    Relationship payloads only started carrying attack_id with the v2 ingest, so
+    for the v1 collections the id is resolved from the endpoint's stix_id
+    instead. Scoring v1 on a payload field it was never written with would
+    report the ranking as empty and hand v2 a win it did not earn.
     """
     seen: list[str] = []
     for p in payloads:
         aid = (p.get("attack_id") or "").strip().upper()
+        if not aid.startswith("T"):
+            for key in ("target_id", "source_id"):
+                cand = stix_to_attack.get(p.get(key, ""), "")
+                if cand.startswith("T"):
+                    aid = cand
+                    break
         if aid.startswith("T") and aid not in seen:
             seen.append(aid)
     return seen
@@ -270,7 +284,11 @@ def main() -> int:
     print(f"  {len(samples)} samples, top_k={args.top_k}, {unscoreable} unscoreable")
 
     client = make_client()
-    qfilter = domain_filter()
+    print("[MAP] Building stix_id -> attack_id from the current bundles...")
+    stix_to_attack = {
+        e.stix_id: (getattr(e, "detects_attack_id", "") or e.attack_id)
+        for e in parse_all_domains().entities
+    }
     encoders: dict[str, object] = {}
     results: dict[str, dict] = {}
 
@@ -290,9 +308,13 @@ def main() -> int:
             started = time.time()
             for i, s in enumerate(samples, 1):
                 dense, sparse = enc.encode(s["input"])
-                ent = ranked_ids(search(client, cfg.entities, cfg, dense, sparse, args.top_k, qfilter))
+                ent = ranked_ids(
+                    search(client, cfg.entities, cfg, dense, sparse, args.top_k, True),
+                    stix_to_attack,
+                )
                 rel = ranked_ids(
-                    search(client, cfg.relationships, cfg, dense, sparse, args.top_k, None)
+                    search(client, cfg.relationships, cfg, dense, sparse, args.top_k, False),
+                    stix_to_attack,
                 )
                 score.add(interleave(ent, rel), s["gold"])
                 if i % 25 == 0:
