@@ -9,18 +9,25 @@ Key design decisions:
 - Separates techniques from subtechniques via x_mitre_is_subtechnique
 - Software = union of 'tool' + 'malware' STIX types
 - Derives IN_TACTIC edges from kill_chain_phases
-- Derives HAS_COMPONENT edges from x_mitre_data_source_ref
+- Derives HAS_COMPONENT edges from x_mitre_data_source_ref (dead against
+  v17+ bundles: every x-mitre-data-source is deprecated there and
+  x_mitre_data_source_ref is gone, replaced by x_mitre_log_sources)
+- Parses x-mitre-detection-strategy and x-mitre-analytic (added in v17).
+  Without the strategy nodes every 'detects' relationship is dropped by
+  finalize_parsing, because its source endpoint resolves to nothing.
 """
 
 import json
 from pathlib import Path
 
 from ..models import (
+    Analytic,
     AttackEntity,
     AttackRelationship,
     Campaign,
     DataComponent,
     DataSource,
+    DetectionStrategy,
     Group,
     Mitigation,
     Software,
@@ -69,6 +76,7 @@ RELATIONSHIP_TYPE_MAP = {
     "subtechnique-of": "SUBTECHNIQUE_OF",
     "attributed-to": "ATTRIBUTED_TO",
     "detects": "DETECTS",
+    "analytic-of": "ANALYTIC_OF",
     "revoked-by": "REVOKED_BY",
 }
 
@@ -83,6 +91,8 @@ STIX_TYPE_TO_LABEL = {
     "x-mitre-tactic": "Tactic",
     "x-mitre-data-source": "DataSource",
     "x-mitre-data-component": "DataComponent",
+    "x-mitre-detection-strategy": "DetectionStrategy",
+    "x-mitre-analytic": "Analytic",
 }
 
 
@@ -97,8 +107,11 @@ class StixParser:
         # Lookup tables built during parsing
         self._id_to_name: dict[str, str] = {}
         self._id_to_label: dict[str, str] = {}
+        self._id_to_attack_id: dict[str, str] = {}
         self._tactic_shortname_to_id: dict[str, str] = {}
         self._data_component_to_source: dict[str, str] = {}
+        # analytic stix_id -> owning detection-strategy stix_id
+        self._analytic_to_strategy: dict[str, str] = {}
 
     def parse_folder(self, folder: Path, domain: str = "enterprise") -> None:
         """Parse STIX bundle JSON files in a folder."""
@@ -154,36 +167,42 @@ class StixParser:
                 entity = self._parse_technique(obj, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = entity.node_label
 
             elif stix_type == "intrusion-set":
                 entity = self._parse_group(obj, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = "Group"
 
             elif stix_type in ("tool", "malware"):
                 entity = self._parse_software(obj, stix_type, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = "Software"
 
             elif stix_type == "campaign":
                 entity = self._parse_campaign(obj, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = "Campaign"
 
             elif stix_type == "course-of-action":
                 entity = self._parse_mitigation(obj, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = "Mitigation"
 
             elif stix_type == "x-mitre-tactic":
                 entity = self._parse_tactic(obj, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = "Tactic"
                 self._tactic_shortname_to_id[entity.shortname] = stix_id
 
@@ -191,17 +210,35 @@ class StixParser:
                 entity = self._parse_data_source(obj, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = "DataSource"
 
             elif stix_type == "x-mitre-data-component":
                 entity = self._parse_data_component(obj, domain)
                 self.entities.append(entity)
                 self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
                 self._id_to_label[stix_id] = "DataComponent"
                 # Track data source ref for HAS_COMPONENT edges
                 ds_ref = obj.get("x_mitre_data_source_ref", "")
                 if ds_ref:
                     self._data_component_to_source[stix_id] = ds_ref
+
+            elif stix_type == "x-mitre-detection-strategy":
+                entity = self._parse_detection_strategy(obj, domain)
+                self.entities.append(entity)
+                self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
+                self._id_to_label[stix_id] = "DetectionStrategy"
+                for a_ref in entity.analytic_refs:
+                    self._analytic_to_strategy[a_ref] = stix_id
+
+            elif stix_type == "x-mitre-analytic":
+                entity = self._parse_analytic(obj, domain)
+                self.entities.append(entity)
+                self._id_to_name[stix_id] = entity.name
+                self._id_to_attack_id[stix_id] = entity.attack_id
+                self._id_to_label[stix_id] = "Analytic"
 
             elif stix_type == "relationship":
                 raw_relationships.append(obj)
@@ -212,6 +249,7 @@ class StixParser:
         # ── Derived edges ─────────────────────────────────────────────────
         self._build_tactic_edges()
         self._build_data_source_edges()
+        self._build_analytic_edges()
 
         # ── Summary ───────────────────────────────────────────────────────
         entity_counts = {}
@@ -325,6 +363,42 @@ class StixParser:
             domain=domain,
         )
 
+    def _parse_detection_strategy(self, obj: dict, domain: str) -> DetectionStrategy:
+        return DetectionStrategy(
+            stix_id=obj["id"],
+            attack_id=_get_attack_id(obj),
+            name=obj.get("name", ""),
+            description=obj.get("description", ""),
+            url=_get_url(obj),
+            domain=domain,
+            analytic_refs=obj.get("x_mitre_analytic_refs", []),
+        )
+
+    def _parse_analytic(self, obj: dict, domain: str) -> Analytic:
+        # x_mitre_log_source_references names the concrete telemetry channel
+        # ("auditd:SYSCALL", "WinEventLog:Security"). Those strings appear in
+        # incident write-ups far more often than ATT&CK prose does, so they are
+        # kept for the embedded document text.
+        channels = []
+        for ref in obj.get("x_mitre_log_source_references", []):
+            name = (ref.get("name") or "").strip()
+            channel = (ref.get("channel") or "").strip()
+            if name and channel:
+                channels.append(f"{name} ({channel})")
+            elif name:
+                channels.append(name)
+
+        return Analytic(
+            stix_id=obj["id"],
+            attack_id=_get_attack_id(obj),
+            name=obj.get("name", ""),
+            description=obj.get("description", ""),
+            url=_get_url(obj),
+            domain=domain,
+            platforms=obj.get("x_mitre_platforms", []),
+            log_sources=channels,
+        )
+
     # ──────────────────────────────────────────────────────────────────────
     # RELATIONSHIP BUILDERS
     # ──────────────────────────────────────────────────────────────────────
@@ -355,6 +429,8 @@ class StixParser:
                     target_ref=target_ref,
                     source_name=self._id_to_name.get(source_ref, ""),
                     target_name=self._id_to_name.get(target_ref, ""),
+                    source_attack_id=self._id_to_attack_id.get(source_ref, ""),
+                    target_attack_id=self._id_to_attack_id.get(target_ref, ""),
                     description=obj.get("description", ""),
                     edge_label=edge_label,
                 )
@@ -403,6 +479,54 @@ class StixParser:
                 )
             )
 
+    def _build_analytic_edges(self) -> None:
+        """Link each analytic to its detection strategy, and stamp every
+        analytic with the technique that strategy detects.
+
+        The strategy is a bare join node - it carries no description at all in
+        v19 - so an analytic retrieved on its own would otherwise have no way
+        back to an ATT&CK ID. Resolving it here means a vector hit on the
+        analytic answers with a technique, which is what the pipeline needs.
+        """
+        detects_target = {
+            r.source_ref: r.target_ref
+            for r in self.relationships
+            if r.edge_label == "DETECTS"
+        }
+        by_id = {e.stix_id: e for e in self.entities}
+
+        linked = 0
+        for a_id, s_id in self._analytic_to_strategy.items():
+            analytic = by_id.get(a_id)
+            if analytic is None or s_id not in self._id_to_name:
+                continue
+
+            self.relationships.append(
+                AttackRelationship(
+                    stix_id=f"derived--{s_id}--{a_id}",
+                    relationship_type="analytic-of",
+                    source_ref=s_id,
+                    target_ref=a_id,
+                    source_name=self._id_to_name.get(s_id, ""),
+                    target_name=self._id_to_name.get(a_id, ""),
+                    description="",
+                    edge_label="ANALYTIC_OF",
+                )
+            )
+            linked += 1
+
+            technique = by_id.get(detects_target.get(s_id, ""))
+            if technique is not None and isinstance(analytic, Analytic):
+                analytic.detects_attack_id = technique.attack_id
+                analytic.detects_name = technique.name
+
+        orphans = sum(
+            1 for e in self.entities
+            if isinstance(e, Analytic) and not e.detects_attack_id
+        )
+        if linked or orphans:
+            print(f"[PARSE] Analytics linked: {linked}, without a technique: {orphans}")
+
     # ──────────────────────────────────────────────────────────────────────
     # PUBLIC API
     # ──────────────────────────────────────────────────────────────────────
@@ -428,6 +552,9 @@ class StixParser:
         # Update lookup tables to exclude tombstoned entries
         self._id_to_name = {k: v for k, v in self._id_to_name.items() if k not in self.tombstoned_ids}
         self._id_to_label = {k: v for k, v in self._id_to_label.items() if k not in self.tombstoned_ids}
+        self._id_to_attack_id = {
+            k: v for k, v in self._id_to_attack_id.items() if k not in self.tombstoned_ids
+        }
 
         # 2. Deduplicate and filter relationships
         unique_rels = {r.stix_id: r for r in self.relationships}

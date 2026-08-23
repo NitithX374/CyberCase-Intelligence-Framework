@@ -11,7 +11,7 @@ from typing import Any, cast
 from neo4j import GraphDatabase, Query
 
 from ..config import NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER, sep
-from ..models import AttackEntity, Software, Technique
+from ..models import Analytic, AttackEntity, Software, Technique
 from .stix_parser import StixParser
 
 
@@ -43,6 +43,8 @@ class GraphLoader:
             "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Tactic) REQUIRE n.stix_id IS UNIQUE",
             "CREATE CONSTRAINT IF NOT EXISTS FOR (n:DataSource) REQUIRE n.stix_id IS UNIQUE",
             "CREATE CONSTRAINT IF NOT EXISTS FOR (n:DataComponent) REQUIRE n.stix_id IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (n:DetectionStrategy) REQUIRE n.stix_id IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Analytic) REQUIRE n.stix_id IS UNIQUE",
             "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Entity) REQUIRE n.stix_id IS UNIQUE",
         ]
         with self.driver.session() as session:
@@ -58,6 +60,7 @@ class GraphLoader:
             "CREATE INDEX IF NOT EXISTS FOR (n:Group) ON (n.name)",
             "CREATE INDEX IF NOT EXISTS FOR (n:Software) ON (n.name)",
             "CREATE INDEX IF NOT EXISTS FOR (n:Tactic) ON (n.shortname)",
+            "CREATE INDEX IF NOT EXISTS FOR (n:Analytic) ON (n.detects_attack_id)",
         ]
         with self.driver.session() as session:
             for idx in indexes:
@@ -128,6 +131,13 @@ class GraphLoader:
 
         if hasattr(entity, "platforms") and not isinstance(entity, Technique):
             props["platforms"] = getattr(entity, "platforms")
+
+        if isinstance(entity, Analytic):
+            # An analytic has no ATT&CK id of its own; graph traversals reach it
+            # from the technique it detects, so that id has to travel with it.
+            props["detects_attack_id"] = entity.detects_attack_id
+            props["detects_name"] = entity.detects_name
+            props["log_sources"] = entity.log_sources
 
         return props
 
