@@ -7,6 +7,10 @@ export type RunPhase =
   | "error";
 
 export type WorkspaceView =
+  | "intake"
+  | "overview"
+  | "materials"
+  | "technical-context"
   | "chat"
   | "report";
 
@@ -19,11 +23,20 @@ export function workspaceViewForRoute(
 }
 
 export const workspaceViewLabels: Record<WorkspaceView, string> = {
+  intake: "Intake",
+  overview: "Overview",
+  materials: "Case Materials",
+  "technical-context": "Technical Context",
   chat: "Chat",
-  report: "Report generation",
+  report: "Report",
 };
 
 export const workspaceViewDescriptions: Record<WorkspaceView, string> = {
+  intake: "Case narrative intake & initial submission",
+  overview: "Prosecutor case overview & attack story",
+  materials: "User-submitted case evidence & narrative records",
+  "technical-context": "External MITRE ATT&CK reference context",
   chat: "Interactive incident reasoning",
   report: "Provisional case analysis report",
 };
+

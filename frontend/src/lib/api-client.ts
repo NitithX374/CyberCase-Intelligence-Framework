@@ -43,7 +43,7 @@ export const listChatThreads = async (
 };
 
 export const createChatThread = async (
-  title: string = "New chat",
+  title: string = "New case",
   signal?: AbortSignal,
 ): Promise<ChatThreadRead> => {
   const response = await axios.post<ChatThreadRead>(

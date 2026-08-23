@@ -204,6 +204,88 @@ body {
     border: 0.5pt solid #e5e7eb;
 }
 
+/* Evidence Cards */
+.evidence-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8pt;
+    margin-top: 6pt;
+    margin-bottom: 10pt;
+}
+
+.evidence-card {
+    border: 0.5pt solid #d1d5db;
+    border-radius: 2pt;
+    background-color: #ffffff;
+    page-break-inside: avoid;
+}
+
+.evidence-card-header {
+    background-color: #f3f4f6;
+    border-bottom: 0.5pt solid #e5e7eb;
+    padding: 4.5pt 8pt;
+    font-size: 8.5pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.evidence-card-badge {
+    font-size: 7.5pt;
+    color: #4b5563;
+}
+
+.evidence-card-body {
+    padding: 6pt 8pt;
+    font-size: 9pt;
+    line-height: 1.45;
+    color: #111827;
+}
+
+/* MITRE ATT&CK Cards */
+.mitre-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8pt;
+    margin-top: 6pt;
+    margin-bottom: 10pt;
+}
+
+.mitre-card {
+    border: 0.5pt solid #d1d5db;
+    border-radius: 2pt;
+    background-color: #ffffff;
+    page-break-inside: avoid;
+}
+
+.mitre-card-header {
+    background-color: #f3f4f6;
+    border-bottom: 0.5pt solid #e5e7eb;
+    padding: 4.5pt 8pt;
+    font-size: 8.5pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mitre-card-tactic {
+    font-size: 7.5pt;
+    color: #4b5563;
+}
+
+.mitre-card-body {
+    padding: 6pt 8pt;
+    font-size: 9pt;
+    line-height: 1.45;
+    color: #111827;
+}
+
+.mitre-card-status {
+    margin-top: 4pt;
+    font-size: 8pt;
+    color: #4b5563;
+}
+
 /* 2-Column Split for Gaps & Next Steps */
 .split-container {
     display: table;

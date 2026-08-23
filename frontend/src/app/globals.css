@@ -3,33 +3,47 @@
 @theme {
     --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 
-    --color-primary: #272727;
-    --color-secondary: #3A3A3A;
-    --color-neutral: #67635B;
+    /* 60% — PAPER / BACKGROUND */
+    --color-paper: #F6F3EA;
+    --color-paper-raised: #FCFAF5;
+    --color-background: #F6F3EA;
+    --color-canvas: #F6F3EA;
+    --color-surface: #FCFAF5;
+    --color-sidebar: #F6F3EA;
+    --color-workspace: #F6F3EA;
 
-    --color-ivory: #F9F8F2;
-    --color-charcoal-hover: #3A3A3A;
-    --color-charcoal-pressed: #1F1F1F;
-    --color-ink: #272727;
-    --color-ink-secondary: #67635B;
-    --color-ink-muted: #858178;
-    --color-ink-disabled: #908B81;
-    --color-workspace: #F9F8F2;
-    --color-sidebar: #F3F1EA;
-    --color-line: #D8D4C8;
+    /* 30% — NEUTRAL STRUCTURE */
+    --color-ink: #262522;
+    --color-ink-secondary: #68645D;
+    --color-ink-muted: #68645D;
+    --color-ink-disabled: #858178;
+    --color-neutral: #68645D;
+    --color-stone: #E4DED2;
+    --color-border: #D5CEC1;
+    --color-line: #D5CEC1;
     --color-line-strong: #BBB6A9;
-    --color-surface-nested: #F3F1EA;
-    --color-surface-hover: #ECE9E0;
-    --color-control-disabled: #E5E1D8;
-    --color-danger: #B42318;
-    --color-canvas: #F9F8F2;
-    --color-surface: #F9F8F2;
-    --color-subdued: #ECE9E0;
-    --color-muted: #67635B;
-    --color-accent: #b91c1c;
-    --color-accent-strong: #dc2626;
+    --color-surface-nested: #E4DED2;
+    --color-surface-hover: #EBE5D9;
+    --color-subdued: #E4DED2;
+    --color-control-disabled: #E4DED2;
 
-    --color-background: #F9F8F2;
+    /* 10% — BRAND ACCENT */
+    --color-accent: #9A4438;
+    --color-accent-soft: #F2E3DE;
+    --color-accent-strong: #7F342B;
+    --color-primary: #262522;
+    --color-secondary: #3A3A3A;
+    --color-charcoal-hover: #3A3834;
+    --color-charcoal-pressed: #1A1917;
+    --color-ivory: #FCFAF5;
+
+    /* SEMANTIC ANNOTATIONS (Annotations only, never large surfaces) */
+    --color-evidence: #356C8A;
+    --color-mitre: #6654A3;
+    --color-unresolved: #A66A20;
+    --color-established: #4F725B;
+    --color-critical: #9A4438;
+    --color-danger: #9A4438;
 }
 
 :root {
@@ -48,36 +62,36 @@ body {
 }
 
 @utility card {
-    @apply border border-ink/15 bg-surface;
+    @apply border border-line bg-surface;
 }
 
 @utility btn-primary {
-    @apply bg-primary px-5 py-2.5 text-sm font-black text-ivory transition-colors duration-150 hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled motion-reduce:transition-none;
+    @apply bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors duration-150 hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled motion-reduce:transition-none;
 }
 
 @utility btn-secondary {
-    @apply border border-ink/15 bg-surface px-5 py-2.5 text-sm font-black text-ink transition-colors duration-150 hover:border-ink hover:bg-subdued/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none;
+    @apply border border-line bg-surface px-4 py-2 text-xs font-bold text-ink transition-colors duration-150 hover:border-ink hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none;
 }
 
 @utility btn-inverted {
-    @apply bg-ivory px-5 py-2.5 text-sm font-black text-primary transition-colors hover:bg-surface-hover active:bg-control-disabled;
+    @apply bg-ivory px-4 py-2 text-xs font-bold text-primary transition-colors hover:bg-surface-hover active:bg-control-disabled;
 }
 
 @utility btn-outlined {
-    @apply border border-primary/20 bg-transparent px-5 py-2.5 text-sm font-black text-primary transition-colors hover:border-primary hover:bg-primary/5 active:bg-primary/10;
+    @apply border border-line bg-transparent px-4 py-2 text-xs font-bold text-primary transition-colors hover:border-primary hover:bg-primary/5 active:bg-primary/10;
 }
 
 @utility panel {
-    @apply border border-ink/15 bg-surface;
+    @apply border border-line bg-surface;
 }
 
 @utility mono-label {
-    @apply text-[10px] font-black uppercase tracking-widest text-neutral;
+    @apply font-mono text-[10px] font-bold uppercase tracking-wider text-ink-muted;
 }
 
 ::selection {
-    background: #b91c1c;
-    color: var(--color-ivory);
+    background: #F2E3DE;
+    color: #262522;
 }
 
 :where(a, button, select):focus-visible {
@@ -90,7 +104,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
     *,
     *::before,
     *::after {

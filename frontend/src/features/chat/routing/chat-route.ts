@@ -21,14 +21,23 @@ export function chatRouteState(pathname: string): ChatRouteState {
       : null;
   const routeSegment = segments[2];
   const view: WorkspaceRouteView =
-    routeSegment === "report"
-      ? routeSegment
-      : "chat";
+    routeSegment === "intake"
+      ? "intake"
+      : routeSegment === "materials"
+        ? "materials"
+        : routeSegment === "technical-context"
+          ? "technical-context"
+          : routeSegment === "report"
+            ? "report"
+            : routeSegment === "chat"
+              ? "chat"
+              : "overview";
 
   return { threadId, view };
 }
 
 export function chatPath(threadId: string, view: WorkspaceRouteView): string {
   const basePath = `/chat/${encodeURIComponent(threadId)}`;
-  return view === "chat" ? basePath : `${basePath}/${view}`;
+  return `${basePath}/${view}`;
 }
+

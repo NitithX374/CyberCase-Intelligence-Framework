@@ -126,7 +126,7 @@ export function ChatWorkspace() {
 
     const firstThreadId = threads[0].id;
     rootBootstrapDoneRef.current = true;
-    router.replace(chatPath(firstThreadId, "chat"));
+    router.replace(chatPath(firstThreadId, "overview"));
     if (activeThreadIdRef.current !== firstThreadId) {
       void selectThread(firstThreadId);
     }
@@ -148,6 +148,12 @@ export function ChatWorkspace() {
     [activeThreadIdRef, router],
   );
 
+  const handleNavigateToSource = useCallback(() => {
+    setActiveView("chat");
+    const threadId = activeThreadIdRef.current;
+    if (threadId !== null) router.push(chatPath(threadId, "chat"));
+  }, [activeThreadIdRef, router]);
+
   const handleSelectThread = useCallback(
     async (threadId: string): Promise<void> => {
       router.push(chatPath(threadId, activeView));
@@ -158,11 +164,11 @@ export function ChatWorkspace() {
 
   const handleNewChat = useCallback(async () => {
     if (creatingThread) return;
-    setActiveView("chat");
+    setActiveView("intake");
     setPostAnswerAction(null);
     try {
       const thread = await createMutation.mutateAsync();
-      router.push(chatPath(thread.id, "chat"));
+      router.push(chatPath(thread.id, "intake"));
       await selectThread(thread.id);
     } catch {
       return;
@@ -243,6 +249,20 @@ export function ChatWorkspace() {
       displayFollowUp ?? undefined,
     );
   };
+
+  const handleSubmitCase = useCallback(
+    async ({ title, description }: { title?: string; description: string }) => {
+      const currentThreadId = activeThreadIdRef.current;
+      if (currentThreadId && title) {
+        void updateMutation.mutateAsync({ threadId: currentThreadId, title }).catch(() => undefined);
+      }
+      setActiveView("overview");
+      if (currentThreadId !== null) router.push(chatPath(currentThreadId, "overview"));
+      submitContent(description, "message");
+    },
+    [activeThreadIdRef, router, submitContent, updateMutation],
+  );
+
   const hasCompletedAnalysis = messages.some(
     (message) =>
       message.role === "assistant" &&
@@ -280,6 +300,8 @@ export function ChatWorkspace() {
       onSetDeleteCandidate={setDeleteCandidate}
       onCancelDelete={cancelDelete}
       onConfirmDelete={() => void confirmDelete()}
+      onNavigateToSource={handleNavigateToSource}
+      onSubmitCase={handleSubmitCase}
     />
   );
 }

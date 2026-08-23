@@ -1,5 +1,9 @@
 "use client";
 import Link from "next/link";
+import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
+import { CaseIntakeView } from "@/components/intake/CaseIntakeView";
+import { CaseMaterialsView } from "@/components/materials/CaseMaterialsView";
+import { TechnicalContextView } from "@/components/technical/TechnicalContextView";
 import { ChatPanel } from "@/components/conversation/ChatPanel";
 import { ChatReportView } from "@/components/report/ChatReportView";
 import { DeleteChatDialog } from "@/components/common/DeleteChatDialog";
@@ -19,6 +23,41 @@ const phaseLabels: Record<RunPhase, string> = {
   error: "Error",
 };
 import type { ChatWorkspaceLayoutProps } from "@/features/chat/workspace/chat-workspace-types";
+
+function EmptyStateCaseRequired({
+  title,
+  subtitle,
+  description,
+  onOpenIntake,
+}: {
+  title: string;
+  subtitle: string;
+  description: string;
+  onOpenIntake: () => void;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-6 text-center bg-canvas">
+      <div className="max-w-md space-y-4 rounded-xl border border-line bg-surface p-8 shadow-xs">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-surface-nested text-ink">
+          <Icon name="intake" className="h-5 w-5" />
+        </span>
+        <div className="space-y-1">
+          <h2 className="text-base font-bold text-ink">{title}</h2>
+          <p className="text-xs font-semibold text-ink-secondary">{subtitle}</p>
+          <p className="text-xs text-ink-muted leading-relaxed pt-1">{description}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenIntake}
+          className="inline-flex items-center gap-2 rounded bg-primary px-5 py-2.5 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Icon name="intake" className="h-3.5 w-3.5" />
+          <span>Go to Case Intake · เปิดสำนวนคดี</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function ChatWorkspaceLayout({
   activeThread,
@@ -49,7 +88,14 @@ export function ChatWorkspaceLayout({
   onSetDeleteCandidate,
   onCancelDelete,
   onConfirmDelete,
+  onNavigateToSource,
+  onSubmitCase,
 }: ChatWorkspaceLayoutProps) {
+  const displayThreadTitle =
+    activeThread?.title === "New chat" || !activeThread?.title
+      ? "New case"
+      : activeThread.title;
+
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-ink">
       <WorkspaceSidebar
@@ -77,13 +123,13 @@ export function ChatWorkspaceLayout({
               </Link>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-extrabold tracking-[-0.02em] sm:text-lg">
-                  {activeThread?.title ?? "New chat"}
+                  {displayThreadTitle}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-ink-secondary">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
                       phase === "error"
-                        ? "bg-[#B42318]"
+                        ? "bg-accent"
                         : phase === "querying" || phase === "analyzing"
                           ? "bg-primary motion-safe:animate-pulse"
                           : "bg-ink-muted"
@@ -104,10 +150,14 @@ export function ChatWorkspaceLayout({
                 value={activeView}
                 onChange={(event) => onViewChange(event.target.value as WorkspaceView)}
                 aria-label="Select workspace"
-                className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-ink focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
               >
+                <option value="intake">Intake</option>
+                <option value="overview">Overview</option>
+                <option value="materials">Case Materials</option>
+                <option value="technical-context">Technical Context</option>
                 <option value="chat">Chat</option>
-                <option value="report">Report generation</option>
+                <option value="report">Report</option>
               </select>
             </div>
             <div className="flex w-full items-center gap-2 md:hidden">
@@ -116,23 +166,26 @@ export function ChatWorkspaceLayout({
                 onChange={(event) => {
                   if (event.target.value) onSelectThread(event.target.value);
                 }}
-                aria-label="Select saved chat"
-                className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
+                aria-label="Select saved case"
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-ink focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
               >
-                <option value="">Select chat</option>
-                {threads.map((thread) => (
-                  <option key={thread.id} value={thread.id}>
-                    {thread.title}
-                  </option>
-                ))}
+                <option value="">Select case</option>
+                {threads.map((thread) => {
+                  const itemTitle = thread.title === "New chat" ? "New case" : thread.title;
+                  return (
+                    <option key={thread.id} value={thread.id}>
+                      {itemTitle}
+                    </option>
+                  );
+                })}
               </select>
               <button
                 type="button"
                 onClick={onNewChat}
                 disabled={creatingThread}
-                aria-label="New chat"
-                title="New chat"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink outline-none transition-colors hover:border-primary hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
+                aria-label="New case"
+                title="New case"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink outline-none transition-colors hover:border-ink hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
               >
                 <Icon name="plus" className="h-5 w-5" />
               </button>
@@ -141,9 +194,9 @@ export function ChatWorkspaceLayout({
                   type="button"
                   onClick={() => onSetDeleteCandidate(activeThread)}
                   disabled={deletingThreadId !== null}
-                  aria-label={`Delete ${activeThread.title}`}
-                  title={`Delete ${activeThread.title}`}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-secondary outline-none transition-colors hover:border-[#B42318] hover:bg-red-50 hover:text-[#B42318] focus-visible:ring-2 focus-visible:ring-[#B42318] disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
+                  aria-label={`Delete ${displayThreadTitle}`}
+                  title={`Delete ${displayThreadTitle}`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-secondary outline-none transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
                 >
                   <Icon name="trash" className="h-5 w-5" />
                 </button>
@@ -155,18 +208,74 @@ export function ChatWorkspaceLayout({
               {activeWorkspaceView !== "chat" && queryError && (
                 <div
                   role="alert"
-                  className="mx-4 mt-4 shrink-0 rounded-xl border border-[#E5B8B3] bg-[#FFF5F4] px-4 py-3 text-sm font-medium text-[#8F1D14] sm:mx-7 lg:mx-10"
+                  className="mx-4 mt-4 shrink-0 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-xs font-medium text-accent sm:mx-7 lg:mx-10"
                 >
                   {queryError}
                 </div>
               )}
-              {activeWorkspaceView === "chat" ? (
+              {activeWorkspaceView === "intake" ? (
+                <CaseIntakeView
+                  isSubmitting={phase === "querying" || phase === "analyzing"}
+                  error={queryError}
+                  onSubmitCase={onSubmitCase ?? (() => {})}
+                  messages={messages}
+                  onOpenOverview={() => onViewChange("overview")}
+                  onOpenChat={() => onViewChange("chat")}
+                />
+              ) : activeWorkspaceView === "overview" ? (
+                messages.length === 0 ? (
+                  <EmptyStateCaseRequired
+                    title="Case Overview"
+                    subtitle="ยังไม่มีข้อมูลสำนวนคดี (No Case Narrative)"
+                    description="กรุณากรอกรายละเอียดเหตุการณ์ในหน้า Case Intake เพื่อให้ CyberCase วิเคราะห์และจัดทำภาพรวมสำนวนคดี"
+                    onOpenIntake={() => onViewChange("intake")}
+                  />
+                ) : (
+                  <CaseOverviewView
+                    threadId={activeThreadId}
+                    threadTitle={displayThreadTitle}
+                    threadStatus={threadStatus ?? "idle"}
+                    messages={messages}
+                    onOpenChat={() => onViewChange("chat")}
+                    onOpenReport={() => onViewChange("report")}
+                    onOpenMaterials={() => onViewChange("materials")}
+                    onOpenTechnicalContext={() => onViewChange("technical-context")}
+                    onNavigateToSource={onNavigateToSource}
+                  />
+                )
+              ) : activeWorkspaceView === "materials" ? (
+                <CaseMaterialsView
+                  messages={messages}
+                  onOpenChat={() => onViewChange("chat")}
+                  onOpenIntake={() => onViewChange("intake")}
+                />
+              ) : activeWorkspaceView === "technical-context" ? (
+                <TechnicalContextView
+                  messages={messages}
+                  onOpenIntake={() => onViewChange("intake")}
+                  onNavigateToSource={onNavigateToSource}
+                />
+              ) : activeWorkspaceView === "chat" ? (
                 <div
                   id="workspace-chat-panel"
                   role="tabpanel"
                   aria-label="Chat"
                   className="flex min-h-0 flex-1 flex-col overflow-hidden"
                 >
+                  {messages.length === 0 && (
+                    <div className="border-b border-line bg-surface-nested/40 px-4 py-2.5 text-xs text-ink-secondary flex items-center justify-between gap-3">
+                      <p className="truncate">
+                        💡 ยังไม่ได้บันทึกรายละเอียดสำนวนคดี — แนะนำให้เริ่มที่หน้า Intake เพื่อให้ระบบเชื่อมโยง MITRE ATT&amp;CK
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => onViewChange("intake")}
+                        className="shrink-0 font-bold text-primary hover:underline text-[11px]"
+                      >
+                        เปิด Case Intake →
+                      </button>
+                    </div>
+                  )}
                   <ChatPanel
                     messages={visibleMessages}
                     input={input}
@@ -181,13 +290,14 @@ export function ChatWorkspaceLayout({
                 </div>
               ) : (
                 <ChatReportView
-                  key={`${activeThreadId ?? "new-chat"}:${messages.at(-1)?.id ?? "empty"}`}
+                  key={`${activeThreadId ?? "new-case"}:${messages.at(-1)?.id ?? "empty"}`}
                   threadId={activeThreadId}
-                  threadTitle={activeThread?.title ?? "New chat"}
+                  threadTitle={displayThreadTitle}
                   threadStatus={threadStatus}
                   hasMessages={messages.length > 0}
                   hasCompletedAnalysis={hasCompletedAnalysis}
                   onOpenChat={() => onViewChange("chat")}
+                  onOpenOverview={() => onViewChange("overview")}
                 />
               )}
             </main>

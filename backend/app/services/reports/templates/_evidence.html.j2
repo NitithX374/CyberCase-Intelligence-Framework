@@ -1,39 +1,29 @@
 <section class="report-section">
     <div class="section-header">
-        <h2 class="section-number-title">{{ report.i18n.sec_5_3 }}</h2>
+        <h2 class="section-number-title">{{ report.i18n.sec_3 }}</h2>
     </div>
 
     <div class="sub-header">{{ report.i18n.sub_evidence_reg }}</div>
     {% if report.evidence_rows %}
-    <table class="report-table">
-        <thead>
-            <tr>
-                <th style="width: 25%;">{{ report.i18n.col_item }}</th>
-                <th style="width: 18%;">{{ report.i18n.col_type }}</th>
-                <th style="width: 37%;">{{ report.i18n.col_description }}</th>
-                <th style="width: 20%;">{{ report.i18n.col_source }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in report.evidence_rows %}
-            <tr>
-                <td>
-                    <strong>{{ row.title }}</strong>
-                    <div class="text-muted">{{ row.item_id }}</div>
-                </td>
-                <td>{{ row.artifact_type }}</td>
-                <td>{{ row.description }}</td>
-                <td class="text-muted">{{ row.source_type }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="evidence-cards-container">
+        {% for row in report.evidence_rows %}
+        <div class="evidence-card">
+            <div class="evidence-card-header">
+                <strong>{{ row.title }}</strong>
+                <span class="evidence-card-badge">{{ row.artifact_type }} ({{ row.source_type }})</span>
+            </div>
+            <div class="evidence-card-body">
+                {{ row.description }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
     {% else %}
-    <p class="section-lead-paragraph">{{ report.i18n.empty_evidence }}</p>
+    <p class="section-lead-paragraph text-muted">{{ report.i18n.empty_evidence }}</p>
     {% endif %}
 
     {% if report.has_indicators %}
-    <div class="sub-header" style="margin-top: 10pt;">{{ report.i18n.sub_iocs }}</div>
+    <div class="sub-header" style="margin-top: 12pt;">{{ report.i18n.sub_iocs }}</div>
     <table class="report-table">
         <thead>
             <tr>

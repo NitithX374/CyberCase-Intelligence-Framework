@@ -1,6 +1,6 @@
 <section class="report-section">
     <div class="section-header">
-        <h2 class="section-number-title">{{ report.i18n.sec_5_2 }}</h2>
+        <h2 class="section-number-title">{{ report.i18n.sec_2 }}</h2>
     </div>
 
     {% if report.timeline_rows %}
@@ -8,9 +8,9 @@
         <thead>
             <tr>
                 <th style="width: 8%; text-align: center;">{{ report.i18n.col_order }}</th>
-                <th style="width: 22%;">{{ report.i18n.col_time }}</th>
-                <th style="width: 45%;">{{ report.i18n.col_event }}</th>
-                <th style="width: 25%;">{{ report.i18n.col_source_evidence }}</th>
+                <th style="width: 18%;">{{ report.i18n.col_time }}</th>
+                <th style="width: 48%;">{{ report.i18n.col_event }}</th>
+                <th style="width: 26%;">{{ report.i18n.col_source_evidence }}</th>
             </tr>
         </thead>
         <tbody>
@@ -30,6 +30,6 @@
         </tbody>
     </table>
     {% else %}
-    <p class="section-lead-paragraph">{{ report.i18n.empty_timeline }}</p>
+    <p class="section-lead-paragraph text-muted">{{ report.i18n.empty_timeline }}</p>
     {% endif %}
 </section>

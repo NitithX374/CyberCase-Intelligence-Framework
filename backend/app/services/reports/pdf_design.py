@@ -89,8 +89,29 @@ def build_report_styles(font_names: tuple[str, str]) -> dict[str, ParagraphStyle
     }
 
 
+import re
+
+
+def formatted_text(value: object) -> str:
+    """Format markdown text (bold, italic, code, line breaks) into safe ReportLab HTML."""
+    raw = plain_text(value)
+    # Remove markdown header artifacts
+    raw = re.sub(r"^###+\s*[^\n]+\n?", "", raw, flags=re.MULTILINE)
+    # Escape HTML special characters
+    escaped = escape(raw)
+    # Convert bold **text** -> <b>text</b>
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
+    # Convert italic *text* -> <i>text</i>
+    escaped = re.sub(r"\*([^\*]+?)\*", r"<i>\1</i>", escaped)
+    # Convert inline code `code` -> <font name="Courier" size="7.5">\1</font>
+    escaped = re.sub(r"`([^`]+?)`", r'<font name="Courier" size="7.5">\1</font>', escaped)
+    # Convert newlines to <br/>
+    escaped = escaped.replace("\n", "<br/>")
+    return escaped
+
+
 def paragraph_text(value: object) -> str:
-    return escape(plain_text(value)).replace("\n", "<br/>")
+    return formatted_text(value)
 
 
 def plain_text(value: object) -> str:
@@ -103,3 +124,4 @@ def plain_text(value: object) -> str:
         .replace("\u2014", "-")
         .replace("\u2212", "-")
     )
+

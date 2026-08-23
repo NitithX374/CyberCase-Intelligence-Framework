@@ -183,7 +183,7 @@ export function useChatSubmission({
           if (currentThread) upsertThread({ ...currentThread, status: "processing" });
           if (
             kind === "message" &&
-            currentThread?.title === "New chat" &&
+            (currentThread?.title === "New chat" || currentThread?.title === "New case") &&
             existingMessages.length === 0
           ) {
             void updateThread({

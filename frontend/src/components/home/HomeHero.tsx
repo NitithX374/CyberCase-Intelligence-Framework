@@ -40,7 +40,7 @@ export function HomeHero() {
             href="/chat"
             className="bg-primary px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-ivory transition hover:bg-charcoal-hover active:bg-charcoal-pressed"
           >
-            Start a chat
+            Start new case
           </Link>
           <a
             href="#platform"
