@@ -93,7 +93,14 @@ else:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 from .attack_version_map import BENCHMARKS, DATA_DIR, VersionMap
-from .metrics import MARKDOWN_HEADER, MODES, extract_attack_ids, score_at_k, score_corpus
+from .metrics import (
+    ATTACK_ID_RE,
+    MARKDOWN_HEADER,
+    MODES,
+    extract_attack_ids,
+    score_at_k,
+    score_corpus,
+)
 
 RUNS_DIR = DATA_DIR / "runs"
 RESULTS_PATH = Path(__file__).resolve().parent / "RESULTS.md"
@@ -284,6 +291,66 @@ def retrieval_ids(result, include_graph: bool, vmap: VersionMap) -> list[str]:
     return ids
 
 
+def load_technique_documents() -> dict:
+    """attack_id -> (name, document) for every indexed technique.
+
+    Only used by the oracle diagnostic, which needs to inject a technique the
+    retriever missed.
+    """
+    from ...config import QDRANT_API_KEY, QDRANT_COLLECTION_ENTITIES, QDRANT_URL
+    from qdrant_client import QdrantClient
+
+    client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=120)
+    out: dict = {}
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            QDRANT_COLLECTION_ENTITIES, limit=500, offset=offset,
+            with_payload=True, with_vectors=False,
+        )
+        if not points:
+            break
+        for point in points:
+            payload = point.payload or {}
+            if payload.get("node_label") in TECHNIQUE_LABELS and payload.get("attack_id"):
+                out[payload["attack_id"]] = (
+                    payload.get("name", ""),
+                    payload.get("document", ""),
+                )
+        if offset is None:
+            break
+    client.close()
+    return out
+
+
+def oracle_context(gold: list[str], base: str, docs: dict, max_chars: int = 9000) -> str:
+    """Prepend any gold technique the retriever missed, keeping the block size.
+
+    This is a CEILING measurement, not a system score. It answers one question:
+    if retrieval returned the right techniques, how much of the remaining error
+    would disappear? Whatever gap survives belongs to the generator.
+
+    Missing gold entries go at the front and the tail of the real candidate
+    block is trimmed, so the model still reads a list of roughly the same length
+    rather than a suspiciously short one.
+    """
+    present = set(ATTACK_ID_RE.findall(base))
+    missing = [g for g in gold if g not in present and g in docs]
+    if not missing:
+        return base
+
+    lines: list[str] = []
+    for i, attack_id in enumerate(missing, 1):
+        name, document = docs[attack_id]
+        text = " ".join((document or "").split())[:320]
+        lines.append("[" + str(i) + "] " + attack_id + " - " + name)
+        if text:
+            lines.append("    " + text)
+    injected = "\n".join(lines)
+    room = max(max_chars - len(injected) - 1, 0)
+    return injected + "\n" + base[:room]
+
+
 def candidate_context(result, vmap: VersionMap, max_chars: int = 9000) -> str:
     """Format every retrieved technique as a numbered candidate for the LLM.
 
@@ -435,6 +502,7 @@ def run_arm(
     concurrency: int = 8,
     decompose: bool = False,
     no_rerank: bool = False,
+    oracle: bool = False,
     model: str = "",
     disable_thinking: bool = False,
 ) -> None:
@@ -450,6 +518,8 @@ def run_arm(
         file_tag = (tag + "__" if tag else "") + model_slug(model)
     if no_rerank:
         file_tag += ("__" if not file_tag else "-") + "norerank"
+    if oracle:
+        file_tag += ("__" if not file_tag else "-") + "oracle"
     if disable_thinking:
         # A thinking run and a non-thinking run of the same model are different
         # systems; keep their scores in different files.
@@ -499,6 +569,11 @@ def run_arm(
             llm = _make_llm(model, disable_thinking)
 
     labels = tuple(TECHNIQUE_LABELS) if technique_only else None
+    oracle_docs = {}
+    if oracle:
+        oracle_docs = load_technique_documents()
+        print("[BENCH] ORACLE diagnostic: gold injected into context. "
+              "This measures a ceiling, not the system.")
 
     def run_agent(sample: dict) -> tuple[list[str], str]:
         """One full served-pipeline call. Returns (predicted ids, answer text).
@@ -543,10 +618,10 @@ def run_arm(
                 node_label_filter=labels,
                 rerank=not no_rerank,
             )
-        return (
-            retrieval_ids(result, include_graph, vmap),
-            candidate_context(result, vmap, max_chars=context_chars),
-        )
+        context = candidate_context(result, vmap, max_chars=context_chars)
+        if oracle:
+            context = oracle_context(sample["gold"], context, oracle_docs, context_chars)
+        return retrieval_ids(result, include_graph, vmap), context
 
     def generate_one(sample: dict, context: str) -> tuple[list[str], str]:
         """Concurrent half: one LLM round-trip, no shared state beyond the client."""
@@ -768,6 +843,15 @@ def main() -> None:
     parser.add_argument("--include-graph", action="store_true", help="append graph neighbours")
     parser.add_argument("--tag", default="", help="suffix for the run file, e.g. a top-K variant")
     parser.add_argument(
+        "--oracle",
+        action="store_true",
+        help=(
+            "diagnostic: inject any gold technique the retriever missed into the "
+            "context, to measure what perfect retrieval would be worth. Never a "
+            "reportable system score"
+        ),
+    )
+    parser.add_argument(
         "--no-rerank",
         action="store_true",
         help=(
@@ -854,6 +938,7 @@ def main() -> None:
         concurrency=args.concurrency,
         decompose=args.decompose,
         no_rerank=args.no_rerank,
+        oracle=args.oracle,
         model=args.model,
         disable_thinking=args.disable_thinking,
     )
