@@ -10,7 +10,7 @@ import {
 
 interface CaseIntakeViewProps {
   isSubmitting: boolean;
-  error: string | null;
+  error?: string | null;
   onSubmitCase: (data: { title?: string; description: string }) => void;
   messages?: PersistedChatMessage[];
   onOpenOverview?: () => void;
@@ -20,7 +20,6 @@ interface CaseIntakeViewProps {
 
 export function CaseIntakeView({
   isSubmitting,
-  error,
   onSubmitCase,
   messages = [],
   onOpenOverview,
@@ -156,18 +155,6 @@ export function CaseIntakeView({
         ) : (
           /* New Case Form */
           <>
-            {error && (
-              <div
-                role="alert"
-                className="rounded-lg border border-accent/30 bg-accent-soft p-4 text-xs text-accent space-y-1"
-              >
-                <p className="font-bold">ไม่สามารถวิเคราะห์คดีได้ในขณะนี้</p>
-                <p className="text-ink-secondary">
-                  ข้อมูลที่กรอกไว้ยังคงอยู่: {error}
-                </p>
-              </div>
-            )}
-
             {isSubmitting && (
               <div className="rounded border border-line bg-surface p-4 text-xs text-ink space-y-1">
                 <div className="flex items-center gap-2 font-bold text-ink">

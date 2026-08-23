@@ -96,4 +96,35 @@ describe("ChatReportView component", () => {
     expect(screen.getByText("Version 1 · Saved")).toBeInTheDocument();
     expect(screen.getByText("Case Analysis Report Alpha")).toBeInTheDocument();
   });
+
+  it("opens MeaningfulErrorModal when report generation fails", async () => {
+    vi.spyOn(api, "listChatReports").mockResolvedValue([]);
+    vi.spyOn(api, "generateChatReport").mockRejectedValue(
+      new Error("timeout of 15000ms exceeded"),
+    );
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ChatReportView
+          threadId="thread-1"
+          threadTitle="Incident Alpha"
+          threadStatus="answered"
+          hasMessages={true}
+          hasCompletedAnalysis={true}
+          onOpenChat={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    const genBtn = await screen.findByRole("button", { name: "Generate report" });
+    genBtn.click();
+
+    expect(
+      await screen.findByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/ระบบยังไม่สามารถยืนยันผลลัพธ์ได้ในขณะนี้/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/timeout of 15000ms exceeded/i)).toBeInTheDocument();
+  });
 });

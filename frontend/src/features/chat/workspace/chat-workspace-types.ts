@@ -53,4 +53,6 @@ export interface ChatWorkspaceLayoutProps {
   onConfirmDelete: () => void;
   onNavigateToSource?: (messageId: string) => void;
   onSubmitCase?: (data: { title?: string; description: string }) => void;
+  onClearQueryError?: () => void;
+  onRetryQuery?: () => void;
 }
