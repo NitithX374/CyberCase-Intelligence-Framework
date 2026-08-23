@@ -200,34 +200,6 @@ _FILE_EXT_RE = re.compile(
     re.IGNORECASE,
 )
 
-def _strict_marked_fields(
-    value: str,
-    markers: tuple[str, ...],
-    *,
-    terminal_period: bool = False,
-    leading_empty: bool = False,
-) -> tuple[str, ...] | None:
-    if any(value.count(marker) != 1 for marker in markers):
-        return None
-    fields: list[str] = []
-    remainder = value
-    for marker in markers:
-        field_part, separator, remainder = remainder.partition(marker)
-        if not separator:
-            return None
-        fields.append(field_part)
-    if terminal_period:
-        if not remainder.endswith("."):
-            return None
-        remainder = remainder[:-1]
-    fields.append(remainder)
-    if leading_empty:
-        if fields[0] != "":
-            return None
-        fields = fields[1:]
-    if not fields or any(field_item == "" for field_item in fields):
-        return None
-    return tuple(fields)
 
 
 def _format_datetime(dt: datetime | None) -> str:

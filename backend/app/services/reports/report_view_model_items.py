@@ -56,9 +56,9 @@ def _extract_timeline_from_text(
                     lines_to_parse.append(clean)
 
     source_label = (
-        "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #1)"
+        "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง"
         if language == "th"
-        else "User-Submitted Evidence (#1)"
+        else "User-Submitted Evidence"
     )
 
     for idx, item in enumerate(lines_to_parse):

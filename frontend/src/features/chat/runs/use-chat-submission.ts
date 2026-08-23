@@ -87,6 +87,7 @@ export function useChatSubmission({
       rawContent: string,
       kind: PendingChatSubmission["kind"],
       followUp?: ActiveChatFollowUp,
+      onAccepted?: () => void,
     ) => {
       if (phase === "querying" || phase === "analyzing") return;
       const content = rawContent.trim();
@@ -162,6 +163,7 @@ export function useChatSubmission({
           );
           if (!isCurrentSelection(threadId, generation)) return;
           requestAccepted = true;
+          onAccepted?.();
           const pendingAfterAccept = pendingSubmissionRef.current;
           if (
             pendingAfterAccept?.threadId === threadId &&

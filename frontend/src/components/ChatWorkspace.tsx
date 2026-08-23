@@ -256,9 +256,10 @@ export function ChatWorkspace() {
       if (currentThreadId && title) {
         void updateMutation.mutateAsync({ threadId: currentThreadId, title }).catch(() => undefined);
       }
-      setActiveView("overview");
-      if (currentThreadId !== null) router.push(chatPath(currentThreadId, "overview"));
-      submitContent(description, "message");
+      submitContent(description, "message", undefined, () => {
+        setActiveView("overview");
+        if (currentThreadId !== null) router.push(chatPath(currentThreadId, "overview"));
+      });
     },
     [activeThreadIdRef, router, submitContent, updateMutation],
   );

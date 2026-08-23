@@ -33,4 +33,5 @@ def serialize_chat_report(report: ChatReport) -> ChatReportRead:
         latency_ms=report.latency_ms,
         input_tokens=report.input_tokens,
         output_tokens=report.output_tokens,
+        source_snapshot=report.source_snapshot_json if isinstance(report.source_snapshot_json, dict) else None,
     )

@@ -29,6 +29,8 @@ class AdmittedMitreRow(BaseModel):
     technique_id: str = Field(pattern=r"^T\d{4}(?:\.\d{3})?$")
     name: str = ""
     reason: str = ""
+    tactic: str = ""
+    description: str = ""
 
 
 class ReportInputSnapshot(BaseModel):

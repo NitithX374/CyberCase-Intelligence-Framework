@@ -1,6 +1,7 @@
 import re
 
 from app.schemas.reports import ChatReportRead, ReportSection
+from app.services.reports.report_contracts import ReportInputSnapshot
 from app.services.reports.report_view_model_contracts import (
     MitreMappingViewRow,
     ProvenanceViewRow,
@@ -14,7 +15,6 @@ from app.services.reports.report_view_model_items import parse_report_items
 from app.services.reports.report_view_model_text import (
     I18N_STRINGS,
     _format_datetime,
-    _strict_marked_fields,
 )
 
 
@@ -55,16 +55,53 @@ def build_report_view_model(
     )
     evidence_rows = parsed_items.evidence_rows
     indicator_rows = parsed_items.indicator_rows
-    timeline_rows = list(parsed_items.timeline_rows)
     has_indicators = parsed_items.has_indicators
 
-    # If timeline_rows not populated from sections, populate from structured.claims
-    if not timeline_rows and structured and structured.claims:
-        source_label = (
-            "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #1)"
+    # Resolve snapshot if present
+    snapshot: ReportInputSnapshot | None = None
+    if getattr(report, "source_snapshot", None):
+        raw_snap = report.source_snapshot
+        if isinstance(raw_snap, ReportInputSnapshot):
+            snapshot = raw_snap
+        elif isinstance(raw_snap, dict):
+            try:
+                snapshot = ReportInputSnapshot.model_validate(raw_snap)
+            except Exception:
+                snapshot = None
+
+    msg_id_to_ordinal: dict[str, int] = {}
+    if snapshot:
+        for m in snapshot.source_messages:
+            msg_id_to_ordinal[str(m.message_id)] = m.ordinal
+
+    def _format_source_label(source_ids: list[str]) -> str:
+        resolved_ordinals = sorted({
+            msg_id_to_ordinal[sid]
+            for sid in source_ids
+            if sid in msg_id_to_ordinal
+        })
+        if not resolved_ordinals:
+            return (
+                "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง"
+                if lang == "th"
+                else "User-Submitted Evidence"
+            )
+        if len(resolved_ordinals) == 1:
+            return (
+                f"ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #{resolved_ordinals[0]})"
+                if lang == "th"
+                else f"User-Submitted Evidence (#{resolved_ordinals[0]})"
+            )
+        ord_str = ", ".join(f"#{ord_num}" for ord_num in resolved_ordinals)
+        return (
+            f"ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ {ord_str})"
             if lang == "th"
-            else "User-Submitted Evidence (#1)"
+            else f"User-Submitted Evidence ({ord_str})"
         )
+
+    # 1. Timeline Rows: Prefer structured.claims
+    timeline_rows: list[TimelineViewRow] = []
+    if structured and structured.claims:
         for claim in structured.claims:
             if claim.claim_id != "R-01" and claim.text:
                 clean_claim_text = _clean_markdown_text(claim.text)
@@ -74,75 +111,77 @@ def build_report_view_model(
                             order=len(timeline_rows) + 1,
                             time_display="—",
                             event=clean_claim_text,
-                            source_evidence=source_label,
+                            source_evidence=_format_source_label(claim.source_message_ids),
                             actors="-",
                             status=claim.support_type,
                         )
                     )
+    if not timeline_rows:
+        timeline_rows = list(parsed_items.timeline_rows)
 
-    # Parse MITRE rows
+    # 2. MITRE Mapping Rows: Prefer structured snapshot.mitre_rows
     mitre_view_rows: list[MitreMappingViewRow] = []
-    raw_mitre_items: list[str] = []
-    for sec_id in ("technical_analysis_mitre", "mitre_attack_mapping", "mapping_rationale"):
-        if sec_id in sections_by_id:
-            raw_mitre_items.extend(sections_by_id[sec_id].items)
-
-    seen_techniques: set[str] = set()
-    for item in raw_mitre_items:
-        m_parsed = _strict_marked_fields(
-            item,
-            (
-                " | Name: ",
-                " | Mapping status: ",
-                " | Source: ",
-                " | Relevance: ",
-                " | Score: ",
-                " | Tactic: ",
-                " | Entity type: ",
-                " | Description: ",
-            ),
-        )
-        if m_parsed is not None:
-            t_id, t_name, m_status, m_src, m_rel, m_score, m_tactic, e_type, m_desc = m_parsed
+    if snapshot and snapshot.mitre_rows:
+        seen_techniques: set[str] = set()
+        for row in snapshot.mitre_rows:
+            t_id = row.technique_id
             if t_id in seen_techniques:
                 continue
             seen_techniques.add(t_id)
-            finding_title = f"{m_tactic}: {t_name}" if m_tactic else t_name
+            t_name = row.name.strip() or t_id
+            t_tactic = row.tactic.strip() if row.tactic and row.tactic != "Adversary Tactic" else ""
+            t_reason = row.reason.strip() or (
+                "ข้อสันนิษฐานเชื่อมโยงจากฐานข้อมูล MITRE ATT&CK"
+                if lang == "th"
+                else "Analytical correlation from MITRE knowledge base"
+            )
+            finding_title = f"{t_tactic}: {t_name}" if t_tactic else t_name
             status_display = i18n["status_candidate"]
 
             mitre_view_rows.append(
                 MitreMappingViewRow(
                     finding=finding_title,
-                    case_evidence_support=(
-                        m_desc
-                        if m_desc != "No description was persisted."
-                        else ("No additional details." if lang == "en" else "ไม่มีรายละเอียดเพิ่มเติม")
-                    ),
+                    case_evidence_support=t_reason,
                     technique_id=t_id,
                     technique_name=t_name,
                     status_display=status_display,
-                    tactic=m_tactic or "General",
+                    tactic=t_tactic or ("General" if lang == "en" else "ทั่วไป"),
                     source="MITRE ATT&CK Knowledge Base",
-                    relevance=m_rel,
+                    relevance="candidate",
                 )
             )
-        elif item and not item.startswith("No ") and not item.startswith("ไม่มี"):
-            # Check pattern "Txxxx: reason" or "Txxxx Name reason"
-            m_match = re.match(r"^(T\d+(?:\.\d+)?)(?:\s*[:\-—]\s*|\s+)(.*)$", item)
+    else:
+        # Fallback to parsing sections if snapshot is not provided
+        raw_mitre_items: list[str] = []
+        for sec_id in ("technical_analysis_mitre", "mitre_attack_mapping", "mapping_rationale"):
+            if sec_id in sections_by_id:
+                raw_mitre_items.extend(sections_by_id[sec_id].items)
+
+        seen_techniques = set()
+        for item in raw_mitre_items:
+            if not item or item.startswith("No ") or item.startswith("ไม่มี"):
+                continue
+            m_match = re.match(
+                r"^(T\d+(?:\.\d+)?)\s*(?:[—:\-]\s*|\s+)(?:([^(:]+?)\s*(?:\(([^)]+)\))?\s*[:—\-]\s*)?(.*)$",
+                item,
+            )
             if m_match:
                 t_id = m_match.group(1)
                 if t_id in seen_techniques:
                     continue
                 seen_techniques.add(t_id)
-                t_rest = m_match.group(2).strip()
+                t_name = (m_match.group(2) or "").strip() or t_id
+                t_tactic = (m_match.group(3) or "").strip()
+                t_rest = (m_match.group(4) or "").strip()
+                finding_title = f"{t_tactic}: {t_name}" if t_tactic else t_name
                 mitre_view_rows.append(
                     MitreMappingViewRow(
-                        finding=f"MITRE Technique {t_id}",
+                        finding=finding_title,
                         case_evidence_support=t_rest or ("Analytical correlation from MITRE knowledge base" if lang == "en" else "ข้อสันนิษฐานเชื่อมโยงจากฐานข้อมูล MITRE ATT&CK"),
                         technique_id=t_id,
-                        technique_name=t_id,
+                        technique_name=t_name,
                         status_display=i18n["status_candidate"],
-                        tactic="General",
+                        tactic=t_tactic or ("General" if lang == "en" else "ทั่วไป"),
                         source="MITRE ATT&CK Knowledge Base",
                         relevance="candidate",
                     )
