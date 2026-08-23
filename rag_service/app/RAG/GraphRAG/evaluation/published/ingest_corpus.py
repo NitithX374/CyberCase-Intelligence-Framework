@@ -15,6 +15,7 @@ serving from mitre_entities/mitre_relationships until a swap is decided.
 Usage (from rag_service/app):
     python -m RAG.GraphRAG.evaluation.published.ingest_corpus --embedder bge
     python -m RAG.GraphRAG.evaluation.published.ingest_corpus --embedder jina
+    python -m RAG.GraphRAG.evaluation.published.ingest_corpus --embedder harrier
     python -m RAG.GraphRAG.evaluation.published.ingest_corpus --embedder jina --dry-run
 """
 
@@ -23,6 +24,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from dataclasses import dataclass, field
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -51,15 +53,60 @@ from ...ingestion.vector_loader import (
     uuid_from_stix_id,
 )
 
-JINA_MODEL = "jinaai/jina-embeddings-v5-text-small"
-JINA_DIM = 1024        # hidden_size in the published config
-JINA_MAX_TOKENS = 512  # measured on this corpus: median 110 tokens, p90 299,
-                       # max 661. 512 truncates almost nothing, while the 32768
-                       # default reserves attention memory this 4 GB card does
-                       # not have.
-JINA_BATCH = 16        # 32 peaks at 4.22 GB and thrashes: 3.3 doc/s vs 9.1
-
 UPSERT_BATCH = 256     # coarser: amortises the Qdrant Cloud round trip
+
+# Every sentence-transformers model here is capped at 512 tokens and batch 16.
+# Measured on this corpus: median 110 tokens, p90 299, max 661 - so 512
+# truncates almost nothing, while a model's 32768 default reserves attention
+# memory a 4 GB card does not have. Batch 32 peaks at 4.22 GB and spills into
+# shared system memory, which costs two thirds of the throughput (3.3 doc/s
+# against 9.1), so the ceiling here is memory rather than compute.
+ST_MAX_TOKENS = 512
+ST_BATCH = 16
+
+
+@dataclass(frozen=True)
+class STSpec:
+    """A sentence-transformers embedding backend.
+
+    Query and document prompts are part of how these models were trained, not
+    decoration. Encoding both sides the same way, or dropping the instruction a
+    model expects, handicaps it for reasons that have nothing to do with the
+    corpus - which would then be misread as the model being weak.
+    """
+
+    model_id: str
+    suffix: str
+    dim: int
+    doc_prompt: str | None = None     # prompt_name for documents, None = plain
+    query_prompt: str | None = None   # prompt_name for queries
+    encode_kwargs: dict = field(default_factory=dict)
+    dtype: str = "auto"
+
+
+SPECS = {
+    "jina": STSpec(
+        model_id="jinaai/jina-embeddings-v5-text-small",
+        suffix="jina",
+        dim=1024,
+        doc_prompt="document",
+        query_prompt="query",
+        encode_kwargs={"task": "retrieval"},  # selects the retrieval LoRA adapter
+        dtype="bfloat16",
+    ),
+    "harrier": STSpec(
+        model_id="microsoft/harrier-oss-v1-0.6b",
+        suffix="harrier",
+        dim=1024,
+        doc_prompt=None,  # documents are encoded bare; only queries are prefixed
+        query_prompt="web_search_query",
+    ),
+}
+
+# Kept for callers that imported these before the registry existed.
+JINA_MODEL = SPECS["jina"].model_id
+JINA_MAX_TOKENS = ST_MAX_TOKENS
+JINA_BATCH = ST_BATCH
 
 
 # ── backends ────────────────────────────────────────────────────────────────
@@ -84,46 +131,56 @@ class BgeBackend:
         return out["dense_vecs"].tolist(), out["lexical_weights"]
 
 
-class JinaBackend:
-    """jina-embeddings-v5-text-small: dense only, task-adapted, prompt-prefixed.
+class STBackend:
+    """Any sentence-transformers dense encoder, driven by an STSpec."""
 
-    The model ships LoRA adapters per task and separate query/document prompts;
-    both are part of how it was trained, so omitting either would handicap it
-    for reasons that have nothing to do with the corpus.
-    """
-
-    name = "jina"
-    suffix = "jina"
-    dim = JINA_DIM
     has_sparse = False
     # Fed in large chunks on purpose: sentence-transformers sorts a chunk by
     # length before batching, so padding waste collapses. Handing it 16 at a
     # time defeats that and costs most of the throughput (1.0 doc/s vs 9.1).
     chunk = 256
 
-    def __init__(self):
+    def __init__(self, spec: STSpec):
         from sentence_transformers import SentenceTransformer
-        print(f"[EMBED] Loading {JINA_MODEL}")
-        self.model = SentenceTransformer(
-            JINA_MODEL,
-            trust_remote_code=True,
-            model_kwargs={"torch_dtype": "bfloat16"},
-        )
-        self.model.max_seq_length = JINA_MAX_TOKENS
 
-    def encode_documents(self, texts: list[str]):
-        vecs = self.model.encode(
+        self.spec = spec
+        self.name = spec.suffix
+        self.suffix = spec.suffix
+        self.dim = spec.dim
+        print(f"[EMBED] Loading {spec.model_id} (dtype={spec.dtype})")
+        self.model = SentenceTransformer(
+            spec.model_id,
+            trust_remote_code=True,
+            model_kwargs={"dtype": spec.dtype},
+        )
+        self.model.max_seq_length = ST_MAX_TOKENS
+
+    def _encode(self, texts: list[str], prompt: str | None):
+        kwargs = dict(self.spec.encode_kwargs)
+        if prompt:
+            kwargs["prompt_name"] = prompt
+        return self.model.encode(
             texts,
-            prompt_name="document",
-            task="retrieval",
-            batch_size=JINA_BATCH,
+            batch_size=ST_BATCH,
             normalize_embeddings=True,
             show_progress_bar=False,
+            **kwargs,
         )
-        return vecs.tolist(), None
+
+    def encode_documents(self, texts: list[str]):
+        return self._encode(texts, self.spec.doc_prompt).tolist(), None
+
+    def encode_query(self, text: str):
+        return self._encode([text], self.spec.query_prompt)[0].tolist(), None
 
 
-BACKENDS = {"bge": BgeBackend, "jina": JinaBackend}
+def make_backend(name: str):
+    if name == "bge":
+        return BgeBackend()
+    return STBackend(SPECS[name])
+
+
+BACKENDS = ["bge", *SPECS]
 
 
 # ── qdrant ──────────────────────────────────────────────────────────────────
@@ -262,7 +319,7 @@ def relationship_rows(relationships):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--embedder", choices=sorted(BACKENDS), required=True)
+    ap.add_argument("--embedder", choices=BACKENDS, required=True)
     ap.add_argument("--suffix", default=None, help="Collection suffix (default: the backend's own)")
     ap.add_argument("--limit", type=int, default=0, help="Index only the first N of each kind")
     ap.add_argument("--entities-only", action="store_true")
@@ -297,7 +354,7 @@ def main() -> int:
                 break
         return 0
 
-    backend = BACKENDS[args.embedder]()
+    backend = make_backend(args.embedder)
     suffix = args.suffix or backend.suffix
     client = make_client()
 

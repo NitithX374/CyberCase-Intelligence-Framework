@@ -8,6 +8,7 @@ each change can be attributed on its own:
     v2-bge-hybrid   mitre_entities_v2     dense+sparse   parser change alone
     v2-bge-dense    mitre_entities_v2     dense only     control for the next row
     v2-jina-dense   mitre_entities_jina   dense only     model change alone
+    v2-harrier-dense  mitre_entities_harrier  dense only   ditto, other model
 
 jina has no lexical head, so comparing it against a hybrid arm would credit the
 model for losing sparse retrieval. v2-bge-dense exists purely so that
@@ -52,7 +53,7 @@ from ...config import (
     sep,
 )
 from .attack_version_map import VersionMap
-from .ingest_corpus import JINA_BATCH, JINA_MAX_TOKENS, JINA_MODEL
+from .ingest_corpus import SPECS, make_backend
 from ...ingestion.stix_parser import parse_all_domains
 from .run_benchmark import load_dataset
 
@@ -78,29 +79,19 @@ class BgeQuery:
         return out["dense_vecs"][0].tolist(), (indices, values)
 
 
-class JinaQuery:
-    """jina v5 with the query prompt and the retrieval adapter it was trained
-    with. Documents were indexed under prompt_name="document"; using the same
-    prompt on both sides would be measuring the wrong model."""
+class STQuery:
+    """Any sentence-transformers encoder, sharing the ingest-side definition.
 
-    def __init__(self):
-        from sentence_transformers import SentenceTransformer
-        print(f"[EMBED] Loading {JINA_MODEL}")
-        self.model = SentenceTransformer(
-            JINA_MODEL, trust_remote_code=True, model_kwargs={"torch_dtype": "bfloat16"}
-        )
-        self.model.max_seq_length = JINA_MAX_TOKENS
+    Imported from ingest_corpus rather than restated so a query can never be
+    encoded under a different prompt or sequence cap than the documents it is
+    being matched against.
+    """
+
+    def __init__(self, name: str):
+        self.backend = make_backend(name)
 
     def encode(self, query: str):
-        vec = self.model.encode(
-            [query],
-            prompt_name="query",
-            task="retrieval",
-            batch_size=JINA_BATCH,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-        )
-        return vec[0].tolist(), None
+        return self.backend.encode_query(query)
 
 
 # ── configs ─────────────────────────────────────────────────────────────────
@@ -128,6 +119,7 @@ CONFIGS = {
         Config("v2-bge-hybrid", "v2", "bge", True, "parser change"),
         Config("v2-bge-dense", "v2", "bge", False, "control for jina"),
         Config("v2-jina-dense", "jina", "jina", False, "model change"),
+        Config("v2-harrier-dense", "harrier", "harrier", False, "model change"),
     ]
 }
 
@@ -300,7 +292,9 @@ def main() -> int:
                 break
         else:
             if cfg.encoder not in encoders:
-                encoders[cfg.encoder] = BgeQuery() if cfg.encoder == "bge" else JinaQuery()
+                encoders[cfg.encoder] = (
+                    BgeQuery() if cfg.encoder == "bge" else STQuery(cfg.encoder)
+                )
             enc = encoders[cfg.encoder]
 
             print(f"\n[RUN] {name} ({cfg.note}) -> {cfg.entities}")
