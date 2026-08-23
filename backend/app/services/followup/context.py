@@ -11,7 +11,7 @@ def build_bounded_context(
     *,
     original_user_content: str,
     clarification_exchanges: Sequence[ClarificationExchange],
-    case_state: Mapping[str, object] | None = None,
+    raw_evidence: str | None = None,
     analysis_answer: str | None = None,
     analysis_context: Mapping[str, object] | None = None,
     gap_analysis: GapAnalysis | Mapping[str, object] | None = None,
@@ -103,7 +103,7 @@ def build_bounded_context(
 
     optional_values: list[tuple[str, object | None]] = [
         ("gap_analysis", gap_analysis),
-        ("case_state", case_state),
+        ("raw_evidence", raw_evidence),
         ("main_case_analysis", analysis_answer),
         ("retrieved_mitre_context", analysis_context),
     ]

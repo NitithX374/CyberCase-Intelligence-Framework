@@ -8,7 +8,6 @@ Follows the schema_design.md embedding strategy:
   - Relationships: "[Source] [REL_TYPE] [Target]: [Description]"
 """
 
-import uuid
 from typing import Optional
 
 from qdrant_client import QdrantClient

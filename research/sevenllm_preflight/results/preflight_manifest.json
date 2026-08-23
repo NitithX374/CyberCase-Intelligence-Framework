@@ -1,0 +1,1512 @@
+{
+  "dataset": {
+    "source": "https://github.com/CSJianYang/SEevenLLM",
+    "benchmark_file": "code/score/f1_rougel/test_all.jsonl",
+    "commit": "a84b86aabf2b5be35a2cbbac546511883cc5ff85",
+    "selected_categories": [
+      "Threat Analysis",
+      "Protection Strategy Research",
+      "Summary Generation",
+      "Incident Response Planning",
+      "Risk Assessment",
+      "Impact Scope"
+    ],
+    "sample_ids": [
+      "301",
+      "302",
+      "304",
+      "305",
+      "306",
+      "307",
+      "308",
+      "309",
+      "310",
+      "311",
+      "312",
+      "313",
+      "314",
+      "315",
+      "316",
+      "317",
+      "318",
+      "319",
+      "320",
+      "321",
+      "322",
+      "323",
+      "324",
+      "325",
+      "326",
+      "327",
+      "328",
+      "329",
+      "330",
+      "331",
+      "332",
+      "333",
+      "334",
+      "335",
+      "336",
+      "337",
+      "338",
+      "339",
+      "340",
+      "341",
+      "342",
+      "343",
+      "344",
+      "345",
+      "346",
+      "347",
+      "349",
+      "350",
+      "351",
+      "352",
+      "353",
+      "354",
+      "356",
+      "358",
+      "360",
+      "361",
+      "362",
+      "363",
+      "364",
+      "365",
+      "366",
+      "367",
+      "368",
+      "369",
+      "370",
+      "371",
+      "372",
+      "373",
+      "374",
+      "375",
+      "376",
+      "377",
+      "378",
+      "379",
+      "380",
+      "381",
+      "382",
+      "383",
+      "384",
+      "385",
+      "386",
+      "387",
+      "388",
+      "389",
+      "390",
+      "391",
+      "392",
+      "393",
+      "394",
+      "395",
+      "396",
+      "397",
+      "399",
+      "400",
+      "401",
+      "402",
+      "403",
+      "404",
+      "405",
+      "406",
+      "407",
+      "408",
+      "409",
+      "410",
+      "411",
+      "412",
+      "413",
+      "414",
+      "415",
+      "416",
+      "417",
+      "418",
+      "419",
+      "421",
+      "422",
+      "423",
+      "424",
+      "425",
+      "426",
+      "427",
+      "428",
+      "429",
+      "430",
+      "431",
+      "432",
+      "433",
+      "436",
+      "437",
+      "438",
+      "439",
+      "440",
+      "441",
+      "442",
+      "443",
+      "445",
+      "446",
+      "447",
+      "448",
+      "449",
+      "451",
+      "453",
+      "454",
+      "455",
+      "456",
+      "458",
+      "459",
+      "460",
+      "461",
+      "462",
+      "463",
+      "464",
+      "465",
+      "466",
+      "467",
+      "468",
+      "469",
+      "470",
+      "471",
+      "472",
+      "473",
+      "474",
+      "475",
+      "476",
+      "477",
+      "478",
+      "479",
+      "480",
+      "481",
+      "483",
+      "484",
+      "485",
+      "486",
+      "487",
+      "488",
+      "489",
+      "490",
+      "491",
+      "492",
+      "493",
+      "494",
+      "495",
+      "496",
+      "498",
+      "499",
+      "500",
+      "501",
+      "502",
+      "503",
+      "504",
+      "505",
+      "506",
+      "507",
+      "508",
+      "509",
+      "510",
+      "511",
+      "512",
+      "514",
+      "515",
+      "516",
+      "517",
+      "518",
+      "519",
+      "520",
+      "521",
+      "522",
+      "523",
+      "524",
+      "525",
+      "526",
+      "527",
+      "528",
+      "529",
+      "530",
+      "531",
+      "532",
+      "533",
+      "534",
+      "535",
+      "536",
+      "539",
+      "540",
+      "541",
+      "542",
+      "543",
+      "544",
+      "545",
+      "546",
+      "547",
+      "548",
+      "550",
+      "552",
+      "553",
+      "554",
+      "555",
+      "556",
+      "557",
+      "558",
+      "560",
+      "561",
+      "562",
+      "563",
+      "564",
+      "565",
+      "566",
+      "567",
+      "569",
+      "570",
+      "571",
+      "572",
+      "573",
+      "574",
+      "575",
+      "576",
+      "577",
+      "578",
+      "579",
+      "581",
+      "582",
+      "585",
+      "586",
+      "588",
+      "589",
+      "591",
+      "593",
+      "594",
+      "595",
+      "596",
+      "597",
+      "598",
+      "599",
+      "600",
+      "791",
+      "901",
+      "902",
+      "903",
+      "904",
+      "906",
+      "907",
+      "908",
+      "909",
+      "910",
+      "911",
+      "912",
+      "913",
+      "914",
+      "915",
+      "916",
+      "917",
+      "919",
+      "920",
+      "921",
+      "922",
+      "923",
+      "924",
+      "925",
+      "927",
+      "928",
+      "929",
+      "930",
+      "931",
+      "932",
+      "933",
+      "934",
+      "935",
+      "936",
+      "937",
+      "938",
+      "939",
+      "940",
+      "941",
+      "942",
+      "943",
+      "944",
+      "945",
+      "946",
+      "947",
+      "948",
+      "949",
+      "950",
+      "951",
+      "952",
+      "953",
+      "954",
+      "955",
+      "956",
+      "957",
+      "958",
+      "959",
+      "960",
+      "961",
+      "962",
+      "963",
+      "964",
+      "965",
+      "966",
+      "967",
+      "968",
+      "969",
+      "970",
+      "971",
+      "972",
+      "973",
+      "974",
+      "975",
+      "976",
+      "978",
+      "979",
+      "980",
+      "981",
+      "982",
+      "983",
+      "984",
+      "985",
+      "986",
+      "987",
+      "988",
+      "989",
+      "990",
+      "991",
+      "992",
+      "993",
+      "994",
+      "995",
+      "996",
+      "997",
+      "998",
+      "999",
+      "1000",
+      "1002",
+      "1003",
+      "1004",
+      "1005",
+      "1006",
+      "1007",
+      "1008",
+      "1009",
+      "1013",
+      "1015",
+      "1016",
+      "1017",
+      "1018",
+      "1019",
+      "1020",
+      "1021",
+      "1022",
+      "1023",
+      "1025",
+      "1026",
+      "1027",
+      "1028",
+      "1029",
+      "1030",
+      "1031",
+      "1032",
+      "1033",
+      "1034",
+      "1035",
+      "1036",
+      "1037",
+      "1039",
+      "1040",
+      "1041",
+      "1042",
+      "1043",
+      "1044",
+      "1046",
+      "1047",
+      "1048",
+      "1049",
+      "1050",
+      "1051",
+      "1052",
+      "1053",
+      "1054",
+      "1055",
+      "1056",
+      "1057",
+      "1059",
+      "1060",
+      "1061",
+      "1062",
+      "1063",
+      "1064",
+      "1065",
+      "1067",
+      "1068",
+      "1069",
+      "1070",
+      "1071",
+      "1072",
+      "1073",
+      "1074",
+      "1075",
+      "1077",
+      "1078",
+      "1079",
+      "1080",
+      "1081",
+      "1082",
+      "1083",
+      "1085",
+      "1086",
+      "1087",
+      "1088",
+      "1089",
+      "1090",
+      "1091",
+      "1092",
+      "1093",
+      "1094",
+      "1095",
+      "1096",
+      "1097",
+      "1098",
+      "1100",
+      "1101",
+      "1102",
+      "1103",
+      "1104",
+      "1105",
+      "1106",
+      "1107",
+      "1108",
+      "1110",
+      "1111",
+      "1112",
+      "1113",
+      "1114",
+      "1115",
+      "1116",
+      "1118",
+      "1119",
+      "1120",
+      "1121",
+      "1122",
+      "1123",
+      "1124",
+      "1125",
+      "1126",
+      "1127",
+      "1128",
+      "1129",
+      "1130",
+      "1131",
+      "1132",
+      "1133",
+      "1134",
+      "1135",
+      "1136",
+      "1137",
+      "1138",
+      "1139",
+      "1140",
+      "1141",
+      "1142",
+      "1143",
+      "1144",
+      "1145",
+      "1146",
+      "1147",
+      "1148",
+      "1149",
+      "1150",
+      "1151",
+      "1152",
+      "1153",
+      "1154",
+      "1155",
+      "1156",
+      "1157",
+      "1158",
+      "1159",
+      "1160",
+      "1161",
+      "1162",
+      "1163",
+      "1164",
+      "1165",
+      "1166",
+      "1167",
+      "1169",
+      "1170",
+      "1171",
+      "1173",
+      "1174",
+      "1175",
+      "1176",
+      "1177",
+      "1178",
+      "1179",
+      "1180",
+      "1181",
+      "1182",
+      "1183",
+      "1184",
+      "1185",
+      "1186",
+      "1187",
+      "1188",
+      "1189",
+      "1190",
+      "1191",
+      "1192",
+      "1193",
+      "1194",
+      "1195",
+      "1196",
+      "1198",
+      "1199",
+      "1201",
+      "1202",
+      "1203",
+      "1205",
+      "1206",
+      "1207",
+      "1208",
+      "1209",
+      "1210",
+      "1211",
+      "1212",
+      "1213",
+      "1215",
+      "1216",
+      "1217",
+      "1218",
+      "1220",
+      "1221",
+      "1222",
+      "1223",
+      "1224",
+      "1225",
+      "1276",
+      "1279",
+      "1280",
+      "1282",
+      "1283",
+      "1284",
+      "1285",
+      "1286",
+      "1287",
+      "1288",
+      "1289",
+      "1290",
+      "1291",
+      "1292",
+      "1293",
+      "1295",
+      "1296",
+      "1297",
+      "1298",
+      "1299",
+      "1300"
+    ],
+    "selected_count": 593,
+    "excluded_samples": []
+  },
+  "models": {
+    "B0": {
+      "status": "selected from preflight comparison; weights not loaded",
+      "recommendation": {
+        "name": "Qwen/Qwen2.5-1.5B-Instruct",
+        "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+        "tokenizer_revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+        "tokenizer_class": "Qwen2Tokenizer",
+        "tokenizer_model_max_length": 131072,
+        "parameter_count": 1543714304,
+        "parameter_count_human": "1.54B",
+        "architecture": "Qwen2ForCausalLM",
+        "context_length": 32768,
+        "generation_length": 8192,
+        "config_max_position_embeddings": 32768,
+        "checkpoint_dtype": "bfloat16",
+        "license": "Apache-2.0",
+        "precision": "float32, unquantized",
+        "chat_template": "pinned repository tokenizer chat template with an empty system message, one user message, and add_generation_prompt=True",
+        "selection_reason": "smallest candidate that is clearly a modern general instruction model, supports English and Chinese, has a public pinned checkpoint, and avoids the Qwen 3B repository license ambiguity"
+      },
+      "candidates": [
+        {
+          "name": "Qwen/Qwen2.5-1.5B-Instruct",
+          "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+          "parameter_count": 1543714304,
+          "parameter_count_human": "1.54B",
+          "architecture": "Qwen2ForCausalLM",
+          "context_length": 32768,
+          "generation_length": 8192,
+          "languages": "model card states more than 29 languages, including English and Chinese",
+          "license": "Apache-2.0",
+          "availability": "public Hugging Face safetensors; 3,087,467,144-byte checkpoint",
+          "reproducibility": "pinned commit; Transformers model card path; no quantization",
+          "cost_fairness": "recommended smallest modern general instruction baseline; larger and decoder-only versus mT5-base",
+          "selected": true
+        },
+        {
+          "name": "Qwen/Qwen2.5-3B-Instruct",
+          "revision": "aa8e72537993ba99e69dfaafa59ed015b17504d1",
+          "parameter_count": 3085938688,
+          "parameter_count_human": "3.09B",
+          "architecture": "Qwen2ForCausalLM",
+          "context_length": 32768,
+          "generation_length": 8192,
+          "languages": "model card states more than 29 languages, including English and Chinese",
+          "license": "Qwen research/other tag in current repository metadata",
+          "availability": "public Hugging Face safetensors; multi-shard checkpoint",
+          "reproducibility": "pinned commit; Transformers model card path; no quantization",
+          "cost_fairness": "stronger but materially less size-matched and less cleanly licensed for a baseline",
+          "selected": false
+        },
+        {
+          "name": "Qwen/Qwen2.5-7B-Instruct",
+          "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+          "parameter_count": 7615616512,
+          "parameter_count_human": "7.62B",
+          "architecture": "Qwen2ForCausalLM",
+          "context_length": 131072,
+          "generation_length": 8192,
+          "languages": "model card states more than 29 languages, including English and Chinese",
+          "license": "Apache-2.0",
+          "availability": "public Hugging Face safetensors; multi-shard checkpoint",
+          "reproducibility": "pinned commit; Transformers model card path; no quantization",
+          "cost_fairness": "capability ceiling candidate but substantially more memory and an unfairer size comparison",
+          "selected": false
+        },
+        {
+          "name": "bigscience/mt0-base",
+          "revision": "0c500042c1f80b6b6ec208cf73d9ee43f1dac245",
+          "parameter_count": 582401280,
+          "parameter_count_human": "0.58B",
+          "architecture": "MT5ForConditionalGeneration",
+          "context_length": "mT5-style relative attention; no serialized absolute maximum",
+          "generation_length": "not pinned in this preflight",
+          "languages": "model card lists 101 languages, including English and Chinese",
+          "license": "Apache-2.0",
+          "availability": "public Hugging Face safetensors; 2,329,638,768-byte checkpoint",
+          "reproducibility": "pinned commit; same family and tokenizer class as B1",
+          "cost_fairness": "best size and architecture control, but not a vanilla general-purpose causal instruction baseline",
+          "selected": false
+        }
+      ]
+    },
+    "B1": {
+      "name": "google/mt5-base",
+      "revision": "2eb15465c5dd7f72a8f7984306ad05ebc3dd1e1f",
+      "status": "preflight only; no weights loaded",
+      "tokenizer": {
+        "name": "google/mt5-base",
+        "revision": "2eb15465c5dd7f72a8f7984306ad05ebc3dd1e1f",
+        "sentencepiece_version": "0.2.2",
+        "transformers_version": "5.8.0",
+        "measurement_class": "transformers.models.t5.tokenization_t5.T5Tokenizer",
+        "is_fast": true,
+        "config_tokenizer_class": "T5Tokenizer",
+        "tokenizer_config_model_max_length": null,
+        "reported_model_max_length": 1000000000000000019884624838656,
+        "reported_model_max_length_source": "loaded tokenizer model_max_length; tokenizer_config omits model_max_length",
+        "tokenizer_config_name_or_path": "google/mt5-small",
+        "vocabulary_size": 250100,
+        "special_tokens": {
+          "pad": 0,
+          "eos": 1,
+          "unk": 2
+        },
+        "eos_added_to_lengths": true
+      },
+      "config": {
+        "model_type": "mt5",
+        "architectures": [
+          "MT5ForConditionalGeneration"
+        ],
+        "vocab_size": 250112,
+        "d_model": 768,
+        "d_ff": 2048,
+        "d_kv": 64,
+        "num_layers": 12,
+        "num_decoder_layers": 12,
+        "num_heads": 12,
+        "relative_attention_num_buckets": 32,
+        "max_position_embeddings": null,
+        "n_positions": null,
+        "max_length": null,
+        "is_encoder_decoder": true,
+        "pad_token_id": 0,
+        "eos_token_id": 1,
+        "decoder_start_token_id": 0,
+        "transformers_version": "4.10.0.dev0",
+        "relative_attention_max_distance": 128,
+        "relative_attention_max_distance_serialized": null,
+        "relative_attention_max_distance_source": "MT5Config default when absent from serialized config"
+      }
+    }
+  },
+  "prompt_protocol": {
+    "mT5": "task: <category>\\ninstruction: <instruction or question/options>\\ncontext: <input>; choice rows append answer:",
+    "B0": "same task, instruction, and context with only a minimal response-format instruction",
+    "excluded_fields": [
+      "thought",
+      "gold output",
+      "filename",
+      "hidden metadata"
+    ]
+  },
+  "generation_parameters": {
+    "B0": {
+      "do_sample": false,
+      "num_beams": 1,
+      "max_new_tokens": 512,
+      "temperature": null,
+      "top_p": null
+    },
+    "B1": {
+      "do_sample": false,
+      "num_beams": 1,
+      "max_new_tokens": 512
+    }
+  },
+  "tokenization_statistics": {
+    "input": {
+      "all": {
+        "count": 593,
+        "mean": 248.651,
+        "p50": 223.0,
+        "p75": 268.0,
+        "p90": 356.0,
+        "p95": 459.0,
+        "p99": 781.8,
+        "maximum": 1019,
+        "exceeding": {
+          "512": {
+            "count": 26,
+            "percentage": 4.384
+          },
+          "768": {
+            "count": 7,
+            "percentage": 1.18
+          },
+          "1024": {
+            "count": 0,
+            "percentage": 0.0
+          }
+        }
+      },
+      "category": {
+        "Impact Scope": {
+          "count": 28,
+          "mean": 199.607,
+          "p50": 201.5,
+          "p75": 240.5,
+          "p90": 267.7,
+          "p95": 288.15,
+          "p99": 346.02,
+          "maximum": 366,
+          "exceeding": {
+            "512": {
+              "count": 0,
+              "percentage": 0.0
+            },
+            "768": {
+              "count": 0,
+              "percentage": 0.0
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "Incident Response Planning": {
+          "count": 52,
+          "mean": 216.538,
+          "p50": 206.5,
+          "p75": 235.5,
+          "p90": 265.0,
+          "p95": 291.6,
+          "p99": 447.47,
+          "maximum": 449,
+          "exceeding": {
+            "512": {
+              "count": 0,
+              "percentage": 0.0
+            },
+            "768": {
+              "count": 0,
+              "percentage": 0.0
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "Protection Strategy Research": {
+          "count": 89,
+          "mean": 248.91,
+          "p50": 208.0,
+          "p75": 274.0,
+          "p90": 354.0,
+          "p95": 452.4,
+          "p99": 890.04,
+          "maximum": 949,
+          "exceeding": {
+            "512": {
+              "count": 4,
+              "percentage": 4.494
+            },
+            "768": {
+              "count": 2,
+              "percentage": 2.247
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "Risk Assessment": {
+          "count": 47,
+          "mean": 222.064,
+          "p50": 212.0,
+          "p75": 255.5,
+          "p90": 276.2,
+          "p95": 332.8,
+          "p99": 453.66,
+          "maximum": 513,
+          "exceeding": {
+            "512": {
+              "count": 1,
+              "percentage": 2.128
+            },
+            "768": {
+              "count": 0,
+              "percentage": 0.0
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "Summary Generation": {
+          "count": 61,
+          "mean": 308.967,
+          "p50": 268.0,
+          "p75": 300.0,
+          "p90": 470.0,
+          "p95": 674.0,
+          "p99": 876.2,
+          "maximum": 1019,
+          "exceeding": {
+            "512": {
+              "count": 6,
+              "percentage": 9.836
+            },
+            "768": {
+              "count": 2,
+              "percentage": 3.279
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "Threat Analysis": {
+          "count": 316,
+          "mean": 250.519,
+          "p50": 222.5,
+          "p75": 268.0,
+          "p90": 360.5,
+          "p95": 464.25,
+          "p99": 741.3,
+          "maximum": 859,
+          "exceeding": {
+            "512": {
+              "count": 15,
+              "percentage": 4.747
+            },
+            "768": {
+              "count": 3,
+              "percentage": 0.949
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        }
+      },
+      "language": {
+        "en": {
+          "count": 300,
+          "mean": 247.777,
+          "p50": 227.5,
+          "p75": 265.25,
+          "p90": 324.4,
+          "p95": 449.15,
+          "p99": 755.05,
+          "maximum": 1019,
+          "exceeding": {
+            "512": {
+              "count": 11,
+              "percentage": 3.667
+            },
+            "768": {
+              "count": 3,
+              "percentage": 1.0
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "zh": {
+          "count": 293,
+          "mean": 249.546,
+          "p50": 214.0,
+          "p75": 277.0,
+          "p90": 384.2,
+          "p95": 488.4,
+          "p99": 781.8,
+          "maximum": 882,
+          "exceeding": {
+            "512": {
+              "count": 15,
+              "percentage": 5.119
+            },
+            "768": {
+              "count": 4,
+              "percentage": 1.365
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        }
+      },
+      "format": {
+        "choice": {
+          "count": 43,
+          "mean": 223.767,
+          "p50": 178.0,
+          "p75": 250.5,
+          "p90": 342.0,
+          "p95": 456.2,
+          "p99": 700.28,
+          "maximum": 791,
+          "exceeding": {
+            "512": {
+              "count": 2,
+              "percentage": 4.651
+            },
+            "768": {
+              "count": 1,
+              "percentage": 2.326
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "extraction": {
+          "count": 1,
+          "mean": 252.0,
+          "p50": 252.0,
+          "p75": 252.0,
+          "p90": 252.0,
+          "p95": 252.0,
+          "p99": 252.0,
+          "maximum": 252,
+          "exceeding": {
+            "512": {
+              "count": 0,
+              "percentage": 0.0
+            },
+            "768": {
+              "count": 0,
+              "percentage": 0.0
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        },
+        "generation": {
+          "count": 549,
+          "mean": 250.594,
+          "p50": 224.0,
+          "p75": 269.0,
+          "p90": 356.2,
+          "p95": 459.2,
+          "p99": 768.04,
+          "maximum": 1019,
+          "exceeding": {
+            "512": {
+              "count": 24,
+              "percentage": 4.372
+            },
+            "768": {
+              "count": 6,
+              "percentage": 1.093
+            },
+            "1024": {
+              "count": 0,
+              "percentage": 0.0
+            }
+          }
+        }
+      },
+      "confirmed_practical_limit": null,
+      "confirmed_practical_limit_status": "UNCONFIRMED; mT5 config exposes relative attention rather than an absolute position limit",
+      "exceeding_confirmed_practical_limit": null
+    },
+    "output": {
+      "all": {
+        "count": 593,
+        "mean": 150.452,
+        "p50": 151.0,
+        "p75": 187.0,
+        "p90": 219.0,
+        "p95": 236.0,
+        "p99": 285.16,
+        "maximum": 416,
+        "exceeding": {}
+      },
+      "category": {
+        "Impact Scope": {
+          "count": 28,
+          "mean": 143.071,
+          "p50": 153.0,
+          "p75": 170.0,
+          "p90": 202.9,
+          "p95": 205.65,
+          "p99": 206.73,
+          "maximum": 207,
+          "exceeding": {}
+        },
+        "Incident Response Planning": {
+          "count": 52,
+          "mean": 196.115,
+          "p50": 202.5,
+          "p75": 226.75,
+          "p90": 255.9,
+          "p95": 273.4,
+          "p99": 283.47,
+          "maximum": 285,
+          "exceeding": {}
+        },
+        "Protection Strategy Research": {
+          "count": 89,
+          "mean": 173.022,
+          "p50": 186.0,
+          "p75": 209.0,
+          "p90": 248.0,
+          "p95": 272.0,
+          "p99": 297.68,
+          "maximum": 310,
+          "exceeding": {}
+        },
+        "Risk Assessment": {
+          "count": 47,
+          "mean": 161.191,
+          "p50": 165.0,
+          "p75": 191.5,
+          "p90": 225.2,
+          "p95": 249.8,
+          "p99": 349.3,
+          "maximum": 416,
+          "exceeding": {}
+        },
+        "Summary Generation": {
+          "count": 61,
+          "mean": 122.492,
+          "p50": 122.0,
+          "p75": 140.0,
+          "p90": 154.0,
+          "p95": 169.0,
+          "p99": 194.2,
+          "maximum": 196,
+          "exceeding": {}
+        },
+        "Threat Analysis": {
+          "count": 316,
+          "mean": 141.035,
+          "p50": 143.0,
+          "p75": 173.0,
+          "p90": 198.5,
+          "p95": 218.25,
+          "p99": 256.65,
+          "maximum": 309,
+          "exceeding": {}
+        }
+      },
+      "language": {
+        "en": {
+          "count": 300,
+          "mean": 169.07,
+          "p50": 179.0,
+          "p75": 205.0,
+          "p90": 235.0,
+          "p95": 258.05,
+          "p99": 296.13,
+          "maximum": 416,
+          "exceeding": {}
+        },
+        "zh": {
+          "count": 293,
+          "mean": 131.389,
+          "p50": 138.0,
+          "p75": 155.0,
+          "p90": 177.8,
+          "p95": 191.4,
+          "p99": 221.96,
+          "maximum": 272,
+          "exceeding": {}
+        }
+      },
+      "format": {
+        "choice": {
+          "count": 43,
+          "mean": 2.0,
+          "p50": 2.0,
+          "p75": 2.0,
+          "p90": 2.0,
+          "p95": 2.0,
+          "p99": 2.0,
+          "maximum": 2,
+          "exceeding": {}
+        },
+        "extraction": {
+          "count": 1,
+          "mean": 130.0,
+          "p50": 130.0,
+          "p75": 130.0,
+          "p90": 130.0,
+          "p95": 130.0,
+          "p99": 130.0,
+          "maximum": 130,
+          "exceeding": {}
+        },
+        "generation": {
+          "count": 549,
+          "mean": 162.117,
+          "p50": 155.0,
+          "p75": 190.0,
+          "p90": 220.2,
+          "p95": 238.2,
+          "p99": 286.04,
+          "maximum": 416,
+          "exceeding": {}
+        }
+      }
+    },
+    "truncation": {
+      "limit": 512,
+      "affected_count": 26,
+      "affected_percentage": 4.384,
+      "right_truncation": {
+        "preserves_prefix": true,
+        "loses_context_suffix": true,
+        "total_tokens_lost": 4708
+      },
+      "left_truncation": {
+        "preserves_prefix": false,
+        "loses_context_prefix": true,
+        "prefix_tokens_lost": 1218
+      },
+      "recommendation": "Do not truncate in this preflight; choose a pilot policy only after hardware smoke validation."
+    }
+  },
+  "format_compatibility": {
+    "dataset_validation": {
+      "dataset_row_count": 1300,
+      "selected_row_count": 593,
+      "selected_ids_unique": true,
+      "selected_id_minimum": 301,
+      "selected_id_maximum": 1300,
+      "format_counts": {
+        "choice": 43,
+        "extraction": 1,
+        "generation": 549
+      },
+      "invalid_records": []
+    },
+    "templates": {
+      "mT5": {
+        "generation": "task: <category>\\ninstruction: <instruction>\\ncontext: <input>",
+        "choice": "task: <category>\\ninstruction: <question and options exactly as provided>\\ncontext: <input>\\nanswer:",
+        "extraction": "task: <category>\\ninstruction: <instruction>\\ncontext: <input>"
+      },
+      "B0": {
+        "user_content": "same task, instruction, and context; append only the format instruction required by the row",
+        "rendering": "pinned repository chat template, empty system message, one user message, add_generation_prompt=True"
+      },
+      "excluded_fields": [
+        "thought",
+        "gold output",
+        "filename",
+        "hidden metadata"
+      ]
+    },
+    "formats": {
+      "choice": {
+        "instruction": "question and A/B/C/D option text are copied exactly",
+        "expected_output": "normalize generated text to exactly one uppercase A/B/C/D before exact match; retain raw output"
+      },
+      "extraction": {
+        "instruction": "use the supplied extraction instruction unchanged",
+        "expected_output": "preserve the requested JSON schema and do not convert freeform outputs"
+      },
+      "generation": {
+        "instruction": "use the supplied instruction unchanged",
+        "expected_output": "retain generated freeform text for reference metrics"
+      }
+    }
+  },
+  "evaluation": {
+    "generation": {
+      "primary": "ROUGE-L",
+      "official_code": [
+        "code/score/f1_rougel/gen_score_rougeL-en-path.py",
+        "code/score/f1_rougel/gen_score_rougeL-path.py"
+      ],
+      "secondary": "multilingual SBERT cosine similarity",
+      "secondary_official_code": [
+        "code/score/sbert/gen_score_sbert-en-path.py",
+        "code/score/sbert/gen_score_sbert-path.py"
+      ]
+    },
+    "choice": {
+      "primary": "exact match after strict A/B/C/D normalization",
+      "official_code": "code/score/f1_rougel/choice_sorce-path.py",
+      "aggregate": "correct_count / selected_count, grouped by model, category, language, and format"
+    },
+    "extraction": {
+      "primary": "official flattened-leaf precision, recall, and F1",
+      "official_code": [
+        "code/score/f1_rougel/ex-score-en-path.py",
+        "code/score/f1_rougel/ex-score-path.py"
+      ],
+      "sample_count": 1,
+      "schema_policy": "preserve the requested schema; do not add a new groundedness metric"
+    },
+    "gpt_score": {
+      "official_prompt": "code/score/get_score_gpt4_prompt.py",
+      "status": "secondary only if model, revision, prompt, temperature, seed, and provider are pinned and available"
+    },
+    "reporting": {
+      "dimensions": [
+        "model",
+        "category",
+        "language",
+        "format"
+      ],
+      "preserve_raw_predictions": true,
+      "no_new_groundedness_metric": true
+    }
+  },
+  "runtime": {
+    "python": "3.14.0",
+    "transformers": "5.8.0",
+    "sentencepiece": "0.2.2",
+    "weights_loaded": false,
+    "full_inference_run": false
+  },
+  "verdict": {
+    "status": "READY FOR PILOT",
+    "input_policy": "no truncation; all 593 measured inputs are retained",
+    "output_policy": "max_new_tokens=512 for both models",
+    "operational_prerequisite": "pin transformers==5.8.0 and sentencepiece==0.2.2, or pin an equivalently verified pair before execution",
+    "hard_blockers": []
+  },
+  "longest_examples": [
+    {
+      "sample_id": "1156",
+      "category": "Summary Generation",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 1019,
+      "output_tokens": 136
+    },
+    {
+      "sample_id": "903",
+      "category": "Protection Strategy Research",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 949,
+      "output_tokens": 310
+    },
+    {
+      "sample_id": "433",
+      "category": "Protection Strategy Research",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 882,
+      "output_tokens": 192
+    },
+    {
+      "sample_id": "915",
+      "category": "Threat Analysis",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 859,
+      "output_tokens": 271
+    },
+    {
+      "sample_id": "388",
+      "category": "Threat Analysis",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 836,
+      "output_tokens": 133
+    },
+    {
+      "sample_id": "1288",
+      "category": "Threat Analysis",
+      "language": "zh",
+      "format": "choice",
+      "task": "test-zh-choice",
+      "input_tokens": 791,
+      "output_tokens": 2
+    },
+    {
+      "sample_id": "340",
+      "category": "Summary Generation",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 781,
+      "output_tokens": 154
+    },
+    {
+      "sample_id": "1060",
+      "category": "Summary Generation",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 754,
+      "output_tokens": 193
+    },
+    {
+      "sample_id": "586",
+      "category": "Threat Analysis",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 750,
+      "output_tokens": 219
+    },
+    {
+      "sample_id": "424",
+      "category": "Threat Analysis",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 692,
+      "output_tokens": 167
+    },
+    {
+      "sample_id": "1125",
+      "category": "Summary Generation",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 674,
+      "output_tokens": 116
+    },
+    {
+      "sample_id": "923",
+      "category": "Protection Strategy Research",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 672,
+      "output_tokens": 268
+    },
+    {
+      "sample_id": "589",
+      "category": "Threat Analysis",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 659,
+      "output_tokens": 163
+    },
+    {
+      "sample_id": "500",
+      "category": "Threat Analysis",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 644,
+      "output_tokens": 146
+    },
+    {
+      "sample_id": "521",
+      "category": "Threat Analysis",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 638,
+      "output_tokens": 137
+    },
+    {
+      "sample_id": "1026",
+      "category": "Threat Analysis",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 631,
+      "output_tokens": 249
+    },
+    {
+      "sample_id": "335",
+      "category": "Summary Generation",
+      "language": "zh",
+      "format": "generation",
+      "task": "test-zh-gen",
+      "input_tokens": 619,
+      "output_tokens": 112
+    },
+    {
+      "sample_id": "928",
+      "category": "Protection Strategy Research",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 613,
+      "output_tokens": 275
+    },
+    {
+      "sample_id": "1119",
+      "category": "Threat Analysis",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 613,
+      "output_tokens": 309
+    },
+    {
+      "sample_id": "904",
+      "category": "Threat Analysis",
+      "language": "en",
+      "format": "generation",
+      "task": "test-en-gen",
+      "input_tokens": 606,
+      "output_tokens": 188
+    }
+  ]
+}

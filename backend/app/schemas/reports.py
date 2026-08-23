@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ReportSupportType = Literal[
     "user_reported",
-    "extraction_candidate",
+    "analytical_inference",
     "general_technical_knowledge",
     "mitre_mapping_candidate",
     "unknown",
@@ -19,18 +19,8 @@ ReportSupportType = Literal[
 ReportStatus = Literal["provisional_unverified"]
 ReportPersistenceStatus = Literal["completed", "failed"]
 ReportValidationStatus = Literal["validated", "failed"]
-ReportVersion = Literal[
-    "baseline_report_v1",
-    "preliminary_analysis_report_v1",
-]
+ReportVersion = Literal["preliminary_analysis_report_v1"]
 ReportSectionId = Literal[
-    "executive_summary",
-    "case_background_scope",
-    "evidence_findings",
-    "individuals_accounts_systems_roles",
-    "chronological_timeline",
-    "technical_analysis_mitre",
-    "conclusions_limitations_next_steps",
     "case_summary",
     "indicators_found",
     "mitre_attack_mapping",
@@ -40,13 +30,6 @@ ReportSectionId = Literal[
     "system_limitations",
 ]
 ReportHeading = Literal[
-    "Executive Summary",
-    "Case Background and Scope",
-    "Evidence Findings",
-    "Individuals, Accounts, Systems, and Reported Roles",
-    "Chronological Timeline",
-    "Technical Analysis and MITRE ATT&CK Mapping",
-    "Conclusions, Limitations, and Recommended Next Investigative Steps",
     "5.1 สรุปคดี",
     "5.2 ตัวบ่งชี้ที่พบ",
     "5.3 MITRE ATT&CK Mapping",
@@ -55,30 +38,6 @@ ReportHeading = Literal[
     "5.6 คำแนะนำเบื้องต้น",
     "5.7 ข้อจำกัดของระบบ",
 ]
-
-REPORT_SECTION_IDS: tuple[str, ...] = (
-    "executive_summary",
-    "case_background_scope",
-    "evidence_findings",
-    "individuals_accounts_systems_roles",
-    "chronological_timeline",
-    "technical_analysis_mitre",
-    "conclusions_limitations_next_steps",
-)
-
-REPORT_SECTION_HEADINGS: dict[str, str] = {
-    "executive_summary": "Executive Summary",
-    "case_background_scope": "Case Background and Scope",
-    "evidence_findings": "Evidence Findings",
-    "individuals_accounts_systems_roles": (
-        "Individuals, Accounts, Systems, and Reported Roles"
-    ),
-    "chronological_timeline": "Chronological Timeline",
-    "technical_analysis_mitre": "Technical Analysis and MITRE ATT&CK Mapping",
-    "conclusions_limitations_next_steps": (
-        "Conclusions, Limitations, and Recommended Next Investigative Steps"
-    ),
-}
 
 PRELIMINARY_REPORT_SECTION_IDS: tuple[str, ...] = (
     "case_summary",
@@ -101,12 +60,10 @@ PRELIMINARY_REPORT_SECTION_HEADINGS: dict[str, str] = {
 }
 
 REPORT_SECTION_IDS_BY_VERSION: dict[str, tuple[str, ...]] = {
-    "baseline_report_v1": REPORT_SECTION_IDS,
     "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_IDS,
 }
 
 REPORT_SECTION_HEADINGS_BY_VERSION: dict[str, dict[str, str]] = {
-    "baseline_report_v1": REPORT_SECTION_HEADINGS,
     "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_HEADINGS,
 }
 
@@ -118,8 +75,7 @@ class ReportClaim(BaseModel):
     section_id: ReportSectionId
     text: str = Field(min_length=1, max_length=4_000)
     support_type: ReportSupportType
-    evidence_ids: list[str] = Field(default_factory=list, max_length=32)
-    timeline_event_ids: list[str] = Field(default_factory=list, max_length=32)
+    source_message_ids: list[str] = Field(default_factory=list, max_length=32)
     mitre_technique_ids: list[str] = Field(default_factory=list, max_length=32)
 
 
@@ -165,8 +121,8 @@ class ChatReportRead(BaseModel):
     version_number: int
     idempotency_key: str
     source_snapshot_hash: str
-    extraction_id: UUID
-    extraction_version: str
+    analysis_message_id: UUID
+    retrieval_context_id: str
     prompt_version: str
     provider: str
     model: str
@@ -187,9 +143,7 @@ class ChatReportRead(BaseModel):
 __all__ = [
     "ChatReportCreate",
     "ChatReportRead",
-    "REPORT_SECTION_HEADINGS",
     "REPORT_SECTION_HEADINGS_BY_VERSION",
-    "REPORT_SECTION_IDS",
     "REPORT_SECTION_IDS_BY_VERSION",
     "PRELIMINARY_REPORT_SECTION_HEADINGS",
     "PRELIMINARY_REPORT_SECTION_IDS",

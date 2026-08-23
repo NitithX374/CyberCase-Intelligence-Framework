@@ -7,8 +7,7 @@ from reportlab.platypus import HRFlowable, KeepTogether, Paragraph, Spacer, Tabl
 from app.schemas.reports import ChatReportRead
 from app.services.reports.pdf_chrome import header_meta_table, table_style
 from app.services.reports.report_pdf_provenance import build_provenance_story
-from app.services.reports.pdf_styles import paragraph_text
-from app.services.reports.pdf_theme import DARK_RULE, PAGE_WIDTH, RULE
+from app.services.reports.pdf_design import DARK_RULE, PAGE_WIDTH, RULE, paragraph_text
 from app.services.reports.report_view_model import ReportViewModel
 
 
@@ -33,7 +32,6 @@ def build_formal_report_story(
     story.extend(_summary_story(view_model, styles))
     story.extend(_timeline_story(view_model, styles))
     story.extend(_evidence_story(view_model, styles))
-    story.extend(_relationship_story(view_model, styles))
     story.extend(_mitre_story(view_model, styles))
     story.extend(_gap_story(view_model, styles))
     story.extend(build_provenance_story(view_model, styles))
@@ -179,32 +177,6 @@ def _evidence_story(
     story.append(Spacer(1, 4 * mm))
     return story
 
-
-def _relationship_story(
-    view_model: ReportViewModel,
-    styles: dict[str, ParagraphStyle],
-) -> list[object]:
-    i18n = view_model.i18n
-    content: list[object] = [
-        Paragraph(paragraph_text(i18n["sec_5_4"]), styles["section_heading"]),
-        Spacer(1, 2 * mm),
-    ]
-    if view_model.has_relationships:
-        content.extend([
-            Paragraph(paragraph_text(i18n["sub_relationships"]), styles["body"]),
-            Spacer(1, 1.5 * mm),
-        ])
-        for relationship in view_model.relationship_rows:
-            content.extend([
-                Paragraph(
-                    f"• <b>{paragraph_text(relationship.statement)}</b> <font color=\"#6B7280\" size=\"7.5\">[{paragraph_text(relationship.status)} / {paragraph_text(relationship.confidence)}]</font>",
-                    styles["relationship_item"],
-                ),
-                Spacer(1, 1.5 * mm),
-            ])
-    else:
-        content.append(Paragraph(paragraph_text(i18n["empty_relationships"]), styles["body_muted"]))
-    return [KeepTogether(content), Spacer(1, 4 * mm)]
 
 def _mitre_story(
     view_model: ReportViewModel,

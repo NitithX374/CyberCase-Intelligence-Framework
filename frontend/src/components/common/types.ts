@@ -8,13 +8,7 @@ export type RunPhase =
 
 export type WorkspaceView =
   | "chat"
-  | "extraction"
-  | "relationships"
   | "report";
-
-export type EvidenceRouteView = "extraction" | "relationships";
-
-export type CaseInformationRouteView = EvidenceRouteView;
 
 export type WorkspaceRouteView = WorkspaceView;
 
@@ -26,14 +20,10 @@ export function workspaceViewForRoute(
 
 export const workspaceViewLabels: Record<WorkspaceView, string> = {
   chat: "Chat",
-  extraction: "Case details",
-  relationships: "Relationships",
   report: "Report generation",
 };
 
 export const workspaceViewDescriptions: Record<WorkspaceView, string> = {
   chat: "Interactive incident reasoning",
-  extraction: "Extracted facts & observables",
-  relationships: "Entity relationship graph",
-  report: "Digital-forensics executive report",
+  report: "Provisional case analysis report",
 };

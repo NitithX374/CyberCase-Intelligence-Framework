@@ -1,264 +1,122 @@
-from __future__ import annotations;
+from __future__ import annotations
 
-from typing import Any
-from uuid import UUID
+from datetime import datetime, timezone
 
 from app.models.chat import ChatMessage, ChatThread
 from app.models.rag_context import RagContext
-from app.schemas.rag import MitreTableRow
-from app.services.extraction.llm_extraction import (
-    EXTRACTION_METADATA_KEY,
-    build_extraction_input,
-    normalize_case_state,
-)
+from app.services.chat.raw_evidence import build_raw_evidence_snapshot
 from app.services.reports.report_contracts import (
     AdmittedMitreRow,
     ReportInputSnapshot,
     ReportSourceMessage,
 )
 from app.services.reports.report_errors import ReportGenerationConflict
-from app.services.reports.report_generation import MITRE_ID_RE
+
 
 def build_current_report_snapshot(
     thread: ChatThread,
     *,
-    current_case_state_json: dict[str, object] | None = None,
-    rag_context: RagContext | None = None,
-    case_state_version_id: UUID | None = None,
+    rag_context: RagContext,
 ) -> ReportInputSnapshot:
-    """Build the only report input admitted by the current chat state.
-
-    The server derives provenance from persisted rows. Assistant content is used
-    only to find the terminal answer and its structured metadata; it is never
-    copied into the report model input.
-    """
-
-    ordered_messages = sorted(thread.messages, key=lambda message: message.ordinal)
-    if not ordered_messages:
+    messages = sorted(list(thread.messages), key=lambda message: message.ordinal)
+    evidence = build_raw_evidence_snapshot(messages)
+    if not evidence.text:
         raise ReportGenerationConflict(
-            "report_empty_thread",
-            "Send and complete a chat message before generating a report.",
+            "report_evidence_missing",
+            "User-authored case evidence is required before generating a report.",
         )
-
-    if thread.status not in {"idle", "answered"}:
-        code_by_status = {
-            "processing": "report_chat_processing",
-            "awaiting_followup": "report_followup_pending",
-            "failed": "report_chat_failed",
-        }
+    analysis_message = _analysis_message(messages, rag_context.retrieval_context_id)
+    if analysis_message is None:
         raise ReportGenerationConflict(
-            code_by_status.get(thread.status, "report_thread_not_ready"),
-            {
-                "processing": "Wait for the chat response to finish before generating a report.",
-                "awaiting_followup": "Answer the pending clarification before generating a report.",
-                "failed": "Resolve the failed chat response before generating a report.",
-            }.get(thread.status, "The chat is not ready for report generation."),
+            "report_analysis_missing",
+            "A completed main analysis is required before generating a report.",
         )
-
-    latest_assistant = next(
-        (
-            message
-            for message in reversed(ordered_messages)
-            if message.role == "assistant"
-        ),
-        None,
-    )
-    if latest_assistant is None or not _is_terminal_assistant(latest_assistant):
-        raise ReportGenerationConflict(
-            "report_terminal_answer_missing",
-            "Complete a terminal assistant answer before generating a report.",
-        )
-
-    extraction_assistant = next(
-        (
-            message
-            for message in reversed(ordered_messages)
-            if message.role == "assistant"
-            and _is_terminal_assistant(message)
-            and isinstance(
-                _metadata_dict(message.metadata_json).get(EXTRACTION_METADATA_KEY),
-                dict,
+    source_ids = set(evidence.source_message_ids)
+    source_messages: list[ReportSourceMessage] = []
+    for message in messages:
+        if message.id not in source_ids:
+            continue
+        kind = message.metadata_json.get("evidence_kind")
+        if kind not in {
+            "initial_case_narrative",
+            "clarification_answer",
+            "added_case_information",
+        }:
+            kind = "initial_case_narrative" if not source_messages else "added_case_information"
+        source_messages.append(
+            ReportSourceMessage(
+                message_id=message.id,
+                ordinal=message.ordinal,
+                evidence_kind=kind,
+                content=message.content,
             )
-        ),
-        None,
-    )
-    if extraction_assistant is None:
-        raise ReportGenerationConflict(
-            "report_extraction_missing",
-            "A validated baseline extraction is required before generating a report.",
         )
-
-    latest_metadata = _metadata_dict(latest_assistant.metadata_json)
-    metadata = _metadata_dict(extraction_assistant.metadata_json)
-    extraction_metadata = metadata.get(EXTRACTION_METADATA_KEY)
-    if not isinstance(extraction_metadata, dict):
-        raise ReportGenerationConflict(
-            "report_extraction_missing",
-            "A validated baseline extraction is required before generating a report.",
-        )
-    if (
-        extraction_metadata.get("status") != "candidate"
-        or extraction_metadata.get("validation_status") != "validated"
-    ):
-        raise ReportGenerationConflict(
-            "report_extraction_not_validated",
-            "The latest baseline extraction is missing or failed validation.",
-        )
-
-    source_ids = _source_message_ids(extraction_metadata)
-    messages_by_id = {message.id: message for message in ordered_messages}
-    source_messages = [messages_by_id.get(message_id) for message_id in source_ids]
-    if any(message is None or message.role != "user" for message in source_messages):
-        raise ReportGenerationConflict(
-            "report_extraction_stale",
-            "The persisted extraction no longer matches the chat messages.",
-        )
-
-    root_message = source_messages[0]
-    assert root_message is not None
-    try:
-        extraction_input = build_extraction_input(
-            thread_id=thread.id,
-            messages=ordered_messages,
-            root_ordinal=root_message.ordinal,
-        )
-    except (TypeError, ValueError) as exc:
-        raise ReportGenerationConflict(
-            "report_extraction_stale",
-            "The persisted extraction no longer matches the chat messages.",
-        ) from exc
-
-    expected_source_ids = [message.message_id for message in extraction_input.messages]
-    if expected_source_ids != source_ids:
-        raise ReportGenerationConflict(
-            "report_extraction_stale",
-            "The latest extraction does not cover the current case messages.",
-        )
-
-    try:
-        extraction_payload = (
-            current_case_state_json
-            if current_case_state_json is not None
-            else extraction_metadata
-        )
-        extraction = normalize_case_state(extraction_payload)
-    except Exception as exc:
-        raise ReportGenerationConflict(
-            "report_extraction_not_validated",
-            "The latest baseline extraction is missing or failed validation.",
-        ) from exc
-
-    report_source_messages = [
-        ReportSourceMessage(
-            message_id=message.message_id,
-            ordinal=message.ordinal,
-            source_type=message.source_type,
-            content=message.content,
-        )
-        for message in extraction_input.messages
-    ]
-    mitre_value = (
-        rag_context.mitre_table
-        if rag_context is not None
-        else latest_metadata.get("mitre_table", metadata.get("mitre_table"))
-    )
-    mitre_rows = _admitted_mitre_rows(mitre_value)
-    if len(mitre_rows) > 64:
-        raise ReportGenerationConflict(
-            "report_mitre_rows_too_many",
-            "The persisted MITRE mapping contains too many rows for one report.",
-        )
-
-    extraction_id = extraction_assistant.id
-    original_version = (
-        extraction_metadata.get("version")
-        or extraction_metadata.get("prompt_version")
-        or "canonical_case_state"
-    )
+    metadata = analysis_message.metadata_json
+    trace = metadata.get("analysis_trace")
     return ReportInputSnapshot(
         thread_id=thread.id,
-        thread_title=thread.title or "New chat",
-        extraction_id=extraction_id,
-        extraction_version=str(original_version),
-        source_messages=report_source_messages,
-        extraction=extraction,
-        mitre_rows=mitre_rows,
-        metadata={
-            "extraction_prompt_version": extraction_metadata.get("prompt_version"),
-            "extraction_provider": extraction_metadata.get("provider"),
-            "extraction_model": extraction_metadata.get("model"),
-            "source_message_ids": [str(message_id) for message_id in source_ids],
-            "mitre_source_message_id": str(latest_assistant.id),
-            "case_state_version_id": (
-                str(case_state_version_id) if case_state_version_id is not None else None
-            ),
-            "retrieval_context_id": (
-                rag_context.retrieval_context_id if rag_context is not None
-                else latest_assistant.retrieval_context_id
-            ),
-        },
+        thread_title=thread.title,
+        created_at=datetime.now(timezone.utc),
+        source_messages=source_messages,
+        evidence_sha256=evidence.sha256,
+        analysis_message_id=analysis_message.id,
+        analysis_answer=analysis_message.content,
+        analysis_trace=trace if isinstance(trace, dict) else None,
+        retrieval_context_id=rag_context.retrieval_context_id,
+        mitre_rows=_mitre_rows(rag_context.mitre_table),
+        unresolved_issues=_unresolved_issues(metadata),
     )
 
-def _is_terminal_assistant(message: ChatMessage) -> bool:
-    if message.role != "assistant":
-        return False
-    if message.retrieval_context_id is not None:
-        return True
-    return "mitre_table" in _metadata_dict(message.metadata_json)
+
+def _analysis_message(
+    messages: list[ChatMessage],
+    retrieval_context_id: str,
+) -> ChatMessage | None:
+    candidates = [
+        message
+        for message in messages
+        if message.role == "assistant"
+        and message.retrieval_context_id == retrieval_context_id
+        and message.metadata_json.get("analysis_kind") == "grounded_main_analysis"
+    ]
+    return candidates[-1] if candidates else None
 
 
-def _metadata_dict(value: object) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _source_message_ids(metadata: dict[str, Any]) -> list[UUID]:
-    raw_ids = metadata.get("source_message_ids")
-    if not isinstance(raw_ids, list) or not raw_ids:
-        raise ReportGenerationConflict(
-            "report_extraction_stale",
-            "The persisted extraction has no valid source messages.",
-        )
-    source_ids: list[UUID] = []
-    for raw_id in raw_ids:
-        try:
-            source_ids.append(UUID(str(raw_id)))
-        except (TypeError, ValueError) as exc:
-            raise ReportGenerationConflict(
-                "report_extraction_stale",
-                "The persisted extraction has invalid source message IDs.",
-            ) from exc
-    if len(set(source_ids)) != len(source_ids):
-        raise ReportGenerationConflict(
-            "report_extraction_stale",
-            "The persisted extraction has duplicate source message IDs.",
-        )
-    return source_ids
-
-
-def _admitted_mitre_rows(value: object) -> list[AdmittedMitreRow]:
-    if value is None:
-        return []
+def _mitre_rows(value: object) -> list[AdmittedMitreRow]:
     if not isinstance(value, list):
-        raise ReportGenerationConflict(
-            "report_mitre_metadata_invalid",
-            "The persisted MITRE mapping is invalid.",
-        )
-
+        return []
     rows: list[AdmittedMitreRow] = []
-    seen_ids: set[str] = set()
-    for raw_row in value:
-        try:
-            row = MitreTableRow.model_validate(raw_row)
-        except Exception:
+    for raw in value:
+        if not isinstance(raw, dict):
             continue
-        if not MITRE_ID_RE.fullmatch(row.technique_id):
+        identifier = raw.get("technique_id") or raw.get("external_id") or raw.get("id")
+        if not isinstance(identifier, str) or not identifier.startswith("T"):
             continue
-        if row.technique_id in seen_ids:
-            continue
-        try:
-            admitted = AdmittedMitreRow.model_validate(row.model_dump(mode="json"))
-        except Exception:
-            continue
-        rows.append(admitted)
-        seen_ids.add(admitted.technique_id)
+        rows.append(
+            AdmittedMitreRow(
+                technique_id=identifier,
+                name=str(raw.get("name") or raw.get("technique_name") or ""),
+                reason=str(raw.get("reason") or raw.get("description") or ""),
+            )
+        )
     return rows
+
+
+def _unresolved_issues(metadata: dict[str, object]) -> list[str]:
+    followup = metadata.get("chat_followup")
+    if not isinstance(followup, dict):
+        return []
+    gap_analysis = followup.get("gap_analysis")
+    if not isinstance(gap_analysis, dict):
+        return []
+    gaps = gap_analysis.get("gaps")
+    if not isinstance(gaps, list):
+        return []
+    return [
+        str(gap.get("description"))
+        for gap in gaps
+        if isinstance(gap, dict) and gap.get("description")
+    ]
+
+
+__all__ = ["build_current_report_snapshot"]

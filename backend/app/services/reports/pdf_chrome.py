@@ -3,8 +3,17 @@ from __future__ import annotations
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, Table, TableStyle
 
-from app.services.reports.pdf_styles import paragraph_text, plain_text
-from app.services.reports.pdf_theme import DARK_RULE, INK, MUTED, PAGE_HEIGHT, PAGE_WIDTH, PANEL, RULE
+from app.services.reports.pdf_design import (
+    DARK_RULE,
+    INK,
+    MUTED,
+    PAGE_HEIGHT,
+    PAGE_WIDTH,
+    PANEL,
+    RULE,
+    paragraph_text,
+    plain_text,
+)
 from app.services.reports.report_view_model import ReportViewModel
 
 

@@ -79,16 +79,24 @@ class ChatReport(Base):
         CHAR(64),
         nullable=False,
     )
-    extraction_message_id: Mapped[uuid.UUID] = mapped_column(
+    analysis_message_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "chat_messages.id",
-            name="fk_chat_reports_extraction_message_id_chat_messages",
+            name="fk_chat_reports_analysis_message_id_chat_messages",
             ondelete="CASCADE",
         ),
         nullable=False,
     )
-    extraction_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    retrieval_context_id: Mapped[str] = mapped_column(
+        String(160),
+        ForeignKey(
+            "rag_contexts.retrieval_context_id",
+            name="fk_chat_reports_retrieval_context_id_rag_contexts",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
     prompt_version: Mapped[str] = mapped_column(String(120), nullable=False)
     provider: Mapped[str] = mapped_column(String(80), nullable=False)
     model: Mapped[str] = mapped_column(String(160), nullable=False)
@@ -129,7 +137,7 @@ class ChatReport(Base):
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     thread = relationship("ChatThread", back_populates="reports")
-    extraction_message = relationship("ChatMessage")
+    analysis_message = relationship("ChatMessage")
 
 
 __all__ = ["ChatReport"]

@@ -53,7 +53,7 @@ export function DeleteChatDialog({
         <span className="font-bold text-ink">
           {thread?.title ?? "this chat"}
         </span>
-        , its message history, and any saved extractions. This action cannot be
+        , its message history, retrieval contexts, and reports. This action cannot be
         undone.
       </p>
       <div className="mt-6 flex flex-wrap justify-end gap-3">

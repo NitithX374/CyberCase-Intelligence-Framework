@@ -7,8 +7,6 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.case_state.mutator import MUTATION_METADATA_KEY
-from app.services.extraction.llm_extraction import EXTRACTION_METADATA_KEY
 from app.models.chat import ChatRun, ChatThread
 from app.services.workflow.chat_run_locks import lock_owned_running_run, lock_run_thread
 
@@ -46,11 +44,7 @@ async def fail_run(
         request_payload = run.request_payload
         if followup_metadata_json:
             updated_payload = dict(request_payload or {})
-            for audit_key in (
-                "chat_followup",
-                EXTRACTION_METADATA_KEY,
-                MUTATION_METADATA_KEY,
-            ):
+            for audit_key in ("chat_followup",):
                 audit_value = followup_metadata_json.get(audit_key)
                 if isinstance(audit_value, dict):
                     updated_payload[audit_key] = audit_value
@@ -68,7 +62,6 @@ async def fail_run(
             and followup_round > 0
             else "failed"
         )
-        thread.active_rag_session_id = None
 
         run.status = "failed"
         run.error_code = error_code

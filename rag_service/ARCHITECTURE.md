@@ -150,7 +150,6 @@ flowchart TD
 | **Fine-tune target** | — | `Qwen/Qwen3.5-4B` → `mitre-qwen3.5:4b` (16-bit LoRA) | `finetune/ft_config.py` |
 
 > หมายเหตุ: master switch `USE_LOCAL` (env) สลับทั้ง pipeline ไป Ollama; CLI ใช้ flag `--local` (eval/finetune)
-> `download_model.py` (ใช้ตอน build Docker) ยัง pre-cache reranker ตัวเก่า `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`
 
 **Tech stack** (จาก `requirements.txt`): FastAPI + Uvicorn, Pydantic v2, `neo4j`, `qdrant-client`, `FlagEmbedding` (BGE-M3), `sentence-transformers` (reranker), LangChain (`langchain-anthropic`, `langchain-ollama`, `langgraph`), `anthropic`, `httpx`, `stix2`, RAGAS/datasets/bert-score/rouge-score (eval), torch/transformers.
 **Deploy**: `Dockerfile` (python:3.11-slim) ติดตั้ง torch CPU, pre-cache embedding model, รัน `uvicorn app.main:app --port 8001`. Neo4j + Qdrant เป็น cloud-hosted
@@ -226,11 +225,10 @@ flowchart LR
 
 ```
 rag_service/
-├── Dockerfile                       # python:3.11-slim, pre-cache embed model, uvicorn :8001
+├── Dockerfile                       # python:3.11-slim, uvicorn :8001
 ├── requirements.txt
 ├── app/
 │   ├── main.py                      # FastAPI service (3 endpoints + lifespan)
-│   ├── download_model.py            # pre-cache โมเดลตอน Docker build
 │   ├── _perf_probe.py               # เครื่องมือวัดเวลาแต่ละ node (throwaway)
 │   └── RAG/
 │       ├── __init__.py              # re-export public API
@@ -731,9 +729,6 @@ re-export `EvalSample`, `load_ground_truth`, `save_ground_truth`, `evaluate_retr
 | `run_interactive(retrieve_only, use_agent)` | โหมด interactive REPL |
 | `main()` | argparse: `--ingest/--test/--retrieve-only/--agent` |
 
-#### `download_model.py`
-`download_model()` — pre-cache BGE-M3 + reranker (`mmarco-mMiniLMv2`) ตอน Docker build
-
 #### `_perf_probe.py` — throwaway perf tool
 `_record(label, dt)` สะสมเวลา · `timed(label)` decorator factory (มี inner `deco/wrapper`) · `main()` instrument ทุก node + retrieval substep แล้วรัน query เดียววัดเวลา
 
@@ -775,4 +770,3 @@ Grounded helpers: `build_entity_context(...)` (semantic block), `build_relation_
 - **Domain filter** กรองได้เฉพาะ entity vector hits (relationships ไม่มี payload `domain`) → mobile ยังหลุดผ่าน graph center/relationship ได้บ้าง; แก้ 100% ต้อง re-ingest enterprise-only
 - **CJK guard** เป็น belt-and-suspenders เพราะ prompt Thai-only อย่างเดียวกัน code-switch ของ Haiku ไม่อยู่
 - **`_perf_probe.py`** ~~อ้าง node เดิมที่ rename แล้ว~~ → แก้แล้ว: ใช้ `_node_prepare` (เดิม `_node_translate_query`)
-- **`download_model.py`** ~~cache reranker ตัวเก่า~~ → แก้แล้ว: cache `BAAI/bge-reranker-v2-m3` ให้ตรงกับ `RERANKER_MODEL` ที่ runtime ใช้

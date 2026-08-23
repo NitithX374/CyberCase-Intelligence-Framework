@@ -22,11 +22,7 @@ import {
   activeChatFollowUpForThread,
   chatTranscriptMessages,
 } from "@/lib/chat-followup";
-import {
-  latestChatExtractionForMessages,
-} from "@/lib/chat-extraction";
 import { ChatWorkspaceLayout } from "@/components/ChatWorkspaceLayout";
-import { buildCaseUpdates } from "@/features/chat/workspace/build-case-updates";
 import {
   useChatThreadMutations,
   useChatThreads,
@@ -247,21 +243,12 @@ export function ChatWorkspace() {
       displayFollowUp ?? undefined,
     );
   };
-  const latestExtraction = latestChatExtractionForMessages(messages);
-  const hasValidatedExtraction =
-    latestExtraction?.mode === "single_pass_llm" &&
-    latestExtraction.status === "candidate" &&
-    latestExtraction.validation_status === "validated";
+  const hasCompletedAnalysis = messages.some(
+    (message) =>
+      message.role === "assistant" &&
+      message.metadata_json.analysis_kind === "grounded_main_analysis",
+  );
   const activeWorkspaceView = activeView;
-
-  const [selectedCaseUpdateOrdinal, setSelectedCaseUpdateOrdinal] = useState<
-    number | null
-  >(null);
-  const [isCaseInspectorOpen, setIsCaseInspectorOpen] = useState(true);
-
-  const caseUpdates = useMemo(() => {
-    return buildCaseUpdates(messages);
-  }, [messages]);
 
   return (
     <ChatWorkspaceLayout
@@ -280,13 +267,9 @@ export function ChatWorkspace() {
       input={input}
       postAnswerAction={postAnswerAction}
       visibleMessages={visibleMessages}
-      latestExtraction={latestExtraction}
-      hasValidatedExtraction={hasValidatedExtraction}
+      hasCompletedAnalysis={hasCompletedAnalysis}
       messages={messages}
-      caseUpdates={caseUpdates}
       deleteCandidate={deleteCandidate}
-      selectedCaseUpdateOrdinal={selectedCaseUpdateOrdinal}
-      isCaseInspectorOpen={isCaseInspectorOpen}
       onSelectThread={(threadId) => void handleSelectThread(threadId)}
       onNewChat={() => void handleNewChat()}
       onRequestDelete={setDeleteCandidate}
@@ -294,15 +277,9 @@ export function ChatWorkspace() {
       onInputChange={setInput}
       onPostAnswerActionChange={handlePostAnswerActionChange}
       onSubmit={handleSubmit}
-      onSelectMessageOrdinal={(ordinal) => {
-        setSelectedCaseUpdateOrdinal(ordinal);
-        setIsCaseInspectorOpen(true);
-      }}
       onSetDeleteCandidate={setDeleteCandidate}
       onCancelDelete={cancelDelete}
       onConfirmDelete={() => void confirmDelete()}
-      onSelectCaseUpdateOrdinal={setSelectedCaseUpdateOrdinal}
-      onSetCaseInspectorOpen={setIsCaseInspectorOpen}
     />
   );
 }

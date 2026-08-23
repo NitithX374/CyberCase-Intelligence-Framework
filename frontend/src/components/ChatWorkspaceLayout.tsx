@@ -1,9 +1,6 @@
 "use client";
 import Link from "next/link";
 import { ChatPanel } from "@/components/conversation/ChatPanel";
-import { CaseStateInspector } from "@/components/conversation/CaseStateInspector";
-import { ChatExtractionView } from "@/components/analysis/ChatExtractionView";
-import { ChatRelationshipsView } from "@/components/relationships/ChatRelationshipsView";
 import { ChatReportView } from "@/components/report/ChatReportView";
 import { DeleteChatDialog } from "@/components/common/DeleteChatDialog";
 import { Icon } from "@/components/common/icons";
@@ -21,7 +18,7 @@ const phaseLabels: Record<RunPhase, string> = {
   ready: "Complete",
   error: "Error",
 };
-import type { ChatWorkspaceLayoutProps } from "@/features/chat/workspace/chat-workspace-layout-types";
+import type { ChatWorkspaceLayoutProps } from "@/features/chat/workspace/chat-workspace-types";
 
 export function ChatWorkspaceLayout({
   activeThread,
@@ -39,13 +36,9 @@ export function ChatWorkspaceLayout({
   input,
   postAnswerAction,
   visibleMessages,
-  latestExtraction,
-  hasValidatedExtraction,
+  hasCompletedAnalysis,
   messages,
-  caseUpdates,
   deleteCandidate,
-  selectedCaseUpdateOrdinal,
-  isCaseInspectorOpen,
   onSelectThread,
   onNewChat,
   onRequestDelete,
@@ -53,12 +46,9 @@ export function ChatWorkspaceLayout({
   onInputChange,
   onPostAnswerActionChange,
   onSubmit,
-  onSelectMessageOrdinal,
   onSetDeleteCandidate,
   onCancelDelete,
   onConfirmDelete,
-  onSelectCaseUpdateOrdinal,
-  onSetCaseInspectorOpen,
 }: ChatWorkspaceLayoutProps) {
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-ink">
@@ -105,30 +95,6 @@ export function ChatWorkspaceLayout({
                 </p>
               </div>
             </div>
-            {activeWorkspaceView === "chat" && (
-              <div className="hidden md:flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onSetCaseInspectorOpen(!isCaseInspectorOpen)}
-                  aria-label={
-                    isCaseInspectorOpen
-                      ? "Hide Case State Inspector"
-                      : "Show Case State Inspector"
-                  }
-                  title="Toggle Case State Inspector"
-                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
-                    isCaseInspectorOpen
-                      ? "border-primary bg-primary text-ivory shadow-xs"
-                      : "border-line-strong bg-surface text-ink-secondary hover:border-primary hover:text-ink"
-                  }`}
-                >
-                  <Icon name="details" className="h-4 w-4" />
-                  <span>
-                    Case State {caseUpdates.length > 0 ? `(${caseUpdates.length})` : ""}
-                  </span>
-                </button>
-              </div>
-            )}
             <div className="flex w-full items-center gap-2 md:hidden">
               <label htmlFor="mobile-workspace-view" className="sr-only">
                 Select workspace
@@ -141,8 +107,6 @@ export function ChatWorkspaceLayout({
                 className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
               >
                 <option value="chat">Chat</option>
-                <option value="extraction">Case details</option>
-                <option value="relationships">Relationships</option>
                 <option value="report">Report generation</option>
               </select>
             </div>
@@ -213,19 +177,8 @@ export function ChatWorkspaceLayout({
                     onInputChange={onInputChange}
                     onPostAnswerActionChange={onPostAnswerActionChange}
                     onSubmit={onSubmit}
-                    onSelectMessageOrdinal={onSelectMessageOrdinal}
                   />
                 </div>
-              ) : activeView === "relationships" ? (
-                <ChatRelationshipsView
-                  extraction={latestExtraction}
-                  onOpenChat={() => onViewChange("chat")}
-                />
-              ) : activeWorkspaceView === "extraction" ? (
-                <ChatExtractionView
-                  extraction={latestExtraction}
-                  onOpenChat={() => onViewChange("chat")}
-                />
               ) : (
                 <ChatReportView
                   key={`${activeThreadId ?? "new-chat"}:${messages.at(-1)?.id ?? "empty"}`}
@@ -233,22 +186,13 @@ export function ChatWorkspaceLayout({
                   threadTitle={activeThread?.title ?? "New chat"}
                   threadStatus={threadStatus}
                   hasMessages={messages.length > 0}
-                  hasValidatedExtraction={hasValidatedExtraction}
+                  hasCompletedAnalysis={hasCompletedAnalysis}
                   onOpenChat={() => onViewChange("chat")}
                 />
               )}
             </main>
           </div>
         </div>
-        {activeWorkspaceView === "chat" && (
-          <CaseStateInspector
-            updates={caseUpdates}
-            selectedOrdinal={selectedCaseUpdateOrdinal}
-            onSelectOrdinal={onSelectCaseUpdateOrdinal}
-            isOpen={isCaseInspectorOpen}
-            onClose={() => onSetCaseInspectorOpen(false)}
-          />
-        )}
       </div>
       <DeleteChatDialog
         thread={deleteCandidate}

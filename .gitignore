@@ -119,6 +119,19 @@ backend/experiments/
 experiments/*
 !experiments/semantic_verification/
 !experiments/semantic_verification/**
+!experiments/context_refinement/
+!experiments/context_refinement/**
+!experiments/representation_analysis/
+!experiments/representation_analysis/**
+!experiments/ctinexus_extraction_benchmark/
+!experiments/ctinexus_extraction_benchmark/**
 experiments/semantic_verification/**/__pycache__/
 experiments/semantic_verification/**/*.pyc
+experiments/context_refinement/**/__pycache__/
+experiments/context_refinement/**/*.pyc
+experiments/representation_analysis/**/__pycache__/
+experiments/representation_analysis/**/*.pyc
+experiments/ctinexus_extraction_benchmark/**/__pycache__/
+experiments/ctinexus_extraction_benchmark/**/*.pyc
+experiments/representation_analysis/outputs/
 

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import type {
-  ChatReportRead,
-  ChatStructuredReport,
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import {
+  downloadChatReportPdf,
+  type ChatReportRead,
 } from "@/lib/api";
-import { ReportClaimInspector } from "./ReportClaimInspector";
 
 interface PersistedReportCardProps {
   report: ChatReportRead;
@@ -43,7 +43,7 @@ export function PersistedReportCard({
                 type="button"
                 onClick={onDownloadPdf}
                 disabled={isDownloading}
-                className="rounded-full border border-primary bg-primary px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed disabled:cursor-wait disabled:border-control-disabled disabled:bg-control-disabled disabled:text-ink-disabled"
+                className="rounded-full border border-primary bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed disabled:cursor-wait disabled:border-control-disabled disabled:bg-control-disabled disabled:text-ink-disabled"
               >
                 {isDownloading ? "Preparing PDF..." : "Download PDF"}
               </button>
@@ -54,130 +54,104 @@ export function PersistedReportCard({
           {report.report?.title ?? threadTitle}
         </h2>
         <p className="mt-2 text-xs text-ink-secondary">
-          Extraction {report.extraction_version} · {report.model}
+          Retrieval context {report.retrieval_context_id} · {report.model}
         </p>
       </header>
 
       {report.persistence_status === "failed" || !report.report ? (
         <ReportFailure report={report} />
       ) : (
-        <StructuredReportView report={report.report} threadId={threadId} />
+        <ReportPdfViewer
+          threadId={threadId}
+          reportId={report.report_id}
+          title={report.report.title ?? threadTitle}
+        />
       )}
     </article>
   );
 }
 
-function StructuredReportView({
-  report,
+function ReportPdfViewer({
   threadId,
+  reportId,
+  title,
 }: {
-  report: ChatStructuredReport;
   threadId: string;
+  reportId: string;
+  title: string;
 }) {
-  const [selectedClaimId, setSelectedClaimId] = useState(
-    report.claims[0]?.claim_id ?? null,
-  );
-  const selectedClaim =
-    report.claims.find((claim) => claim.claim_id === selectedClaimId) ??
-    report.claims[0] ??
-    null;
-  const selectedSection = selectedClaim
-    ? report.sections.find(
-        (section) => section.section_id === selectedClaim.section_id,
-      )
-    : null;
+  const {
+    data: pdfUrl,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["report-pdf-url", threadId, reportId],
+    queryFn: async () => {
+      const blob = await downloadChatReportPdf(threadId, reportId);
+      if (
+        typeof window !== "undefined" &&
+        typeof window.URL?.createObjectURL === "function"
+      ) {
+        return window.URL.createObjectURL(blob);
+      }
+      return null;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  useEffect(() => {
+    return () => {
+      if (
+        pdfUrl &&
+        typeof window !== "undefined" &&
+        typeof window.URL?.revokeObjectURL === "function"
+      ) {
+        window.URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  if (isLoading) {
+    return (
+      <div
+        aria-label="Loading PDF preview"
+        className="mt-6 flex h-[700px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-line-strong bg-surface-nested p-6 text-center text-ink-secondary"
+      >
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+          aria-hidden="true"
+        />
+        <p className="mt-4 text-sm font-semibold text-ink">Loading PDF report...</p>
+        <p className="mt-1 text-xs text-ink-secondary">
+          Fetching formatted document and security intelligence data.
+        </p>
+      </div>
+    );
+  }
+
+  if (error || !pdfUrl) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unable to display PDF preview.";
+    return (
+      <div className="mt-6 rounded-xl border border-[#F0B8B2] bg-[#FFF6F4] p-5 text-sm text-[#B42318]">
+        <p className="font-bold">Failed to load PDF preview</p>
+        <p className="mt-1 text-xs">{errorMessage}</p>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div
-        className={
-          selectedClaim
-            ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_270px]"
-            : undefined
-        }
-      >
-        <div className="divide-y divide-line">
-          {report.sections.map((section) => {
-            const claims = report.claims.filter(
-              (claim) => claim.section_id === section.section_id,
-            );
-            return (
-              <section key={section.section_id} className="py-6 first:pt-7 last:pb-2">
-                <h3 className="text-lg font-extrabold tracking-tight text-ink">
-                  {section.heading}
-                </h3>
-                <div className="mt-3 space-y-3 text-sm leading-6 text-ink-secondary">
-                  {section.paragraphs.map((paragraph, index) => (
-                    <p key={`${section.section_id}-paragraph-${index}`}>
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-                {section.items.length > 0 && (
-                  <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-ink">
-                    {section.items.map((item, index) => (
-                      <li key={`${section.section_id}-item-${index}`}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-                {claims.length > 0 && (
-                  <div className="mt-5 space-y-2" aria-label={`${section.heading} claims`}>
-                    {claims.map((claim) => (
-                      <button
-                        key={claim.claim_id}
-                        type="button"
-                        aria-pressed={claim.claim_id === selectedClaim?.claim_id}
-                        onClick={() => setSelectedClaimId(claim.claim_id)}
-                        className={`w-full rounded-xl border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
-                          claim.claim_id === selectedClaim?.claim_id
-                            ? "border-primary bg-surface-nested"
-                            : "border-line bg-surface hover:border-line-strong"
-                        }`}
-                      >
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-ink-secondary">
-                            {claim.claim_id}
-                          </span>
-                          <span className="rounded-full border border-line px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-ink-secondary">
-                            {claim.support_type.replaceAll("_", " ")}
-                          </span>
-                        </span>
-                        <span className="mt-2 block text-sm leading-6 text-ink">
-                          {claim.text}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
-        {selectedClaim && selectedSection && (
-          <div className="py-6 first:pt-7">
-            <ReportClaimInspector
-              claim={selectedClaim}
-              sectionHeading={selectedSection.heading}
-              reportStatus={report.status}
-              threadId={threadId}
-            />
-          </div>
-        )}
-      </div>
-      {report.report_version === "baseline_report_v1" &&
-        report.limitations.length > 0 && (
-          <div className="mt-6 border-t border-line pt-5">
-            <h3 className="text-sm font-extrabold uppercase tracking-[0.12em] text-ink-secondary">
-              Report limitations
-            </h3>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-ink-secondary">
-              {report.limitations.map((limitation, index) => (
-                <li key={`limitation-${index}`}>{limitation}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-    </>
+    <div
+      aria-label="PDF Document Viewer"
+      className="mt-6 overflow-hidden rounded-xl border border-line-strong bg-surface shadow-sm"
+    >
+      <iframe
+        src={`${pdfUrl}#toolbar=1&navpanes=0`}
+        title={`PDF Report: ${title}`}
+        className="h-[800px] w-full border-0 bg-canvas"
+      />
+    </div>
   );
 }
 

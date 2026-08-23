@@ -25,9 +25,6 @@ RunStatus = Literal[
     "failed",
 ]
 
-RunOperation = Literal["query", "resume"]
-
-
 class ChatThreadCreate(BaseModel):
     title: str = Field(
         default="New chat",
@@ -85,7 +82,6 @@ class ChatRunRead(BaseModel):
     id: UUID
     thread_id: UUID
     request_message_id: UUID
-    operation: RunOperation
     status: RunStatus
     error_code: str | None
     error_message: str | None
@@ -108,7 +104,6 @@ __all__ = [
     "ChatThreadRead",
     "ChatThreadUpdate",
     "MessageRole",
-    "RunOperation",
     "RunStatus",
     "ThreadStatus",
 ]

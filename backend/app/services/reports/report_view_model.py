@@ -4,7 +4,6 @@ from app.services.reports.report_view_model_contracts import (
     IndicatorViewRow,
     MitreMappingViewRow,
     ProvenanceViewRow,
-    RelationshipViewRow,
     ReportLanguage,
     ReportViewModel,
     TimelineViewRow,
@@ -13,8 +12,6 @@ from app.services.reports.report_view_model_contracts import (
 )
 from app.services.reports.report_view_model_text import (
     I18N_STRINGS,
-    RELATION_TEMPLATES_EN,
-    RELATION_TEMPLATES_TH,
 )
 
 __all__ = [
@@ -23,9 +20,6 @@ __all__ = [
     "IndicatorViewRow",
     "MitreMappingViewRow",
     "ProvenanceViewRow",
-    "RELATION_TEMPLATES_EN",
-    "RELATION_TEMPLATES_TH",
-    "RelationshipViewRow",
     "ReportLanguage",
     "ReportViewModel",
     "TimelineViewRow",

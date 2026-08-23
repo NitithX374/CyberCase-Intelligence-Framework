@@ -1,125 +1,76 @@
 # CyberCase Intelligence Framework
 
-CyberCase is an interactive, trust-bounded cyber incident analysis system. It converts unstructured investigator narratives and clarification answers into provenance-aware relational case representations (entities, relationships, evidence candidates, timeline events, missing facts, and explicit uncertainty) while strictly preventing external background knowledge or RAG outputs from contaminating user-reported evidence.
+CyberCase is a persisted-chat application for cybersecurity incident analysis. The accumulated raw user-authored incident messages are the authoritative case evidence. The backend combines that evidence with external MITRE ATT&CK retrieval, produces a source-traceable analysis, optionally asks a bounded clarification question, and stores a chat-scoped report.
 
-> [!NOTE]
-> **Research Scope Division**:
-> - **Primary System Scope (This Project / Core Architecture)**: Pre-RAG material-fact clarification, source-bounded trust-boundary fact extraction, relational case representation & visualization, provenance validation, backend service architecture, and empirical representation trade-off evaluation (B0 vs. D1 vs. B2).
-> - **External Knowledge Scope (Collaborator/RAG Module)**: External MITRE ATT&CK GraphRAG retrieval (`rag_service/`), hybrid Qdrant vector + Neo4j graph search, and LangGraph self-reflection.
+## Trust boundary
 
----
+- Included evidence: the initial incident message, clarification answers, and messages explicitly submitted as added case information.
+- Excluded evidence: ordinary `ask` messages, assistant text, RAG output, MITRE descriptions, and model knowledge.
+- External knowledge can support analysis and candidate MITRE mappings, but it never becomes an incident fact.
+- Reported claims carry `source_message_ids`; the persisted analysis trace also binds the exact raw-evidence SHA-256 and retrieval context.
 
-## 🌟 Key Architecture & Principles
+There is no canonical Case State, extraction layer, entity graph, relationship graph, state version, or delta workflow in the product runtime.
 
-### 1. Trust-Boundary Principle: "Analytical Knowledge ≠ Case Evidence"
-General LLM model knowledge, RAG answers, and MITRE ATT&CK descriptions are **analytical context**, not factual incident evidence. The extraction pipeline ([backend/app/services/extraction/llm_extraction.py](file:///f:/Cybercase%20Framework/backend/app/services/extraction/llm_extraction.py)) strictly restricts its input packet (`ExtractionInput`) to user-authored case messages (`user_case_statement` and `clarification_answer`), excluding RAG outputs to eliminate hallucination contamination.
+## Runtime flow
 
-### 2. Pre-RAG Material-Fact Clarification Gate
-Before invoking external knowledge retrieval, the backend clarification policy ([backend/app/services/chat/followup_policy.py](file:///f:/Cybercase%20Framework/backend/app/services/chat/followup_policy.py)) evaluates whether material case facts are missing or ambiguous. It asks up to 3 bounded, concise clarification questions in the user's language or proceeds when context is sufficient or unavailable.
+```text
+user message -> ChatRun -> raw evidence projection
+                         -> rag_service /query for initial, clarification, and add-info runs
+                         -> Main Case Analysis
+                         -> bounded follow-up decision
+                         -> assistant message + run-bound RagContext
 
-### 3. Provenance-Aware Relational Case Representation
-Unstructured text is transformed into an explicit Pydantic JSON schema (`BaselineExtraction`) containing:
-- **Entities & Entity-to-Entity Relationships**: Explicitly stated connections with status (`reported`, `suspected`, `contradicted`, `not_established`).
-- **Evidence Candidates & Timeline Events**: Incident indicators and chronological actions.
-- **Missing Information**: Identified gaps requiring further investigation.
-- **Source Message Provenance**: Every extracted item maintains direct binding to user message IDs (`source_message_ids`).
-
-### 4. Empirical Representation Study (B0 vs. D1 vs. B2)
-Evaluates intermediate case representations for incident analysis:
-- **B0**: Direct report generation (`raw case → report`)
-- **D1**: Dehing-adapted summary-first (`raw case → source-preserving text summary → report`)
-- **B2**: CyberCase relationship-first (`raw case → structured relational representation → report`)
-
----
-
-## 🛠️ Tech Stack & Model Routing
-
-- **Frontend**: Next.js 16 (App Router) + React 19 + Tailwind CSS 4 + TypeScript + D3/SVG Graph Rendering
-- **Backend**: FastAPI + SQLAlchemy (Async) + PostgreSQL + Alembic
-- **Default LLM Routing**: OpenRouter / Anthropic via `openai/gpt-5.6-luna` (configured in `backend/app/config.py`)
-- **External RAG**: FastAPI `rag_service` on port 8001 (Qdrant Dense BGE-M3 + Neo4j 2-hop Graph Expansion)
-
----
-
-## 📂 Services Architecture
-
-```
-backend/app/services/
-├── __init__.py               # Re-exports domain modules
-├── chat/                     # Chat Session Lifecycle, Thread/Message CRUD & Background Worker
-│   ├── chat_management.py
-│   ├── chat_message.py
-│   ├── chat_worker.py
-│   ├── followup_policy.py
-│   └── rag_client.py
-├── llm/                      # Core LLM Provider & Structured Output Infrastructure
-│   ├── core_llm.py
-│   ├── structured_output.py
-│   ├── structured_output_router.py
-│   └── structured_output_request_router.py
-├── extraction/               # Source-Bounded Fact & Entity/Relationship Extraction
-│   └── llm_extraction.py
-└── reports/                  # Incident Report Generation & PDF Export
-    ├── report_service.py
-    ├── report_generation.py
-    └── report_pdf.py
+ordinary ask -> reuse latest durable RagContext -> question-answer analysis
 ```
 
----
+The deterministic report workflow reads raw source messages, the latest grounded analysis, its persisted retrieval context, and admitted MITRE rows. Report generation does not call RAG again.
 
-## 🚀 Quick Start
+## Components
 
-### Docker Compose
+- `frontend/`: Next.js 16, React 19, Tailwind CSS 4, TypeScript
+- `backend/`: FastAPI, async SQLAlchemy, PostgreSQL, Alembic
+- `rag_service/`: standalone GraphRAG service backed by Qdrant and Neo4j
+
+The browser calls only the backend. Chat is currently single-user and has no authentication or per-user ownership boundary.
+
+## Persistence
+
+The demo baseline contains five application tables: `chat_threads`, `chat_messages`, `chat_runs`, `rag_contexts`, and `chat_reports`. It intentionally discards compatibility with older demo schemas and data.
+
+## API boundary
+
+All application routes use `/api/v1`: health; chat list/create/read/rename/delete; message submission; run status; and chat-scoped report create/list/read/PDF download. There are no standalone case routes, top-level report routes, upload/OCR routes, or frontend-facing RAG proxy routes.
+
+## Run
 
 ```powershell
 doppler run -- docker compose up --build
 ```
 
-Starts PostgreSQL, backend (port 8000), external RAG service (port 8001), and frontend (port 3000).
+Or run services separately:
 
-Apply PostgreSQL database migrations:
 ```powershell
+.\env_mitre\Scripts\Activate.ps1
+python install_deps.py
 cd backend
 doppler run -- python -m alembic upgrade head
+doppler run -- uvicorn app.main:app --reload
 ```
 
-### Local Development
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-1. **Activate Virtual Environment & Install Dependencies**:
-   ```powershell
-   .\env_mitre\Scripts\Activate.ps1
-   python install_deps.py
-   ```
+Open `http://localhost:3000/chat`; backend OpenAPI is at `http://localhost:8000/docs`.
 
-2. **Run Backend API**:
-   ```powershell
-   cd backend
-   doppler run -- python -m alembic upgrade head
-   doppler run -- uvicorn app.main:app --port 8000 --reload
-   ```
-
-3. **Run Frontend**:
-   ```powershell
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-4. Open `http://localhost:3000/chat`. OpenAPI documentation is available at `http://localhost:8000/docs`.
-
----
-
-## 🧪 Validation & Testing
+## Checks
 
 ```powershell
-# Backend Pytest Suite (129 tests)
-cd backend
-..\env_mitre\Scripts\python.exe -m pytest tests -q -p no:cacheprovider
-python -m alembic heads
-
-# Frontend Type-check & Production Build
+.\env_mitre\Scripts\python.exe -m pytest backend\tests -q
 cd frontend
-npm run lint
 npm run test
+npm run lint
 npm run build
 ```

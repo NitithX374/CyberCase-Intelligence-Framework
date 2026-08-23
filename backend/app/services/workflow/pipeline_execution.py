@@ -1,26 +1,22 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any
 from uuid import UUID, uuid4
 
 from app.schemas.rag import QueryResponse
 from app.services.case_analysis import CaseAnalysisFailure
-from app.services.case_state.mutator import (
-    MUTATION_METADATA_KEY,
-    CaseStateMutationFailure,
-)
+from app.services.case_analysis.contracts import CaseAnalysisResult
 from app.services.clients.rag_client import RagCallFailure
-from app.services.extraction import ExtractionModelAdapter, ExtractionStageFailure
-from app.services.followup.schemas import GapAnalyzer, FollowUpPolicy
-from app.services.workflow.outcome import AssistantOutcome
+from app.services.followup.schemas import FollowUpPolicy, GapAnalyzer
+from app.services.workflow.outcome import (
+    AssistantOutcome,
+    bind_followup_question,
+    fresh_analysis_outcome,
+    question_outcome,
+    validated_rag_context_payload,
+)
 from app.services.workflow.pipeline_dependencies import PipelineDependencies
 from app.services.workflow.pipeline_failure import record_failure
-from app.services.workflow.pipeline_helpers import log_stage
-from app.services.workflow.pipeline_initial import run_initial_stage
-from app.services.workflow.pipeline_mutation import run_mutation_stage
-from app.services.workflow.pipeline_question import run_question_stage
-from app.services.workflow.worker import ClaimedChatRun
 
 
 async def process_chat_run(
@@ -30,187 +26,134 @@ async def process_chat_run(
     gap_analyzer: GapAnalyzer | None = None,
     rag_call: Callable[[str], Awaitable[QueryResponse]] | None = None,
     ask_call: Callable[..., Awaitable[object]] | None = None,
-    extraction_adapter: ExtractionModelAdapter | None = None,
     dependencies: PipelineDependencies,
 ) -> None:
     worker_id = f"chat-run:{uuid4()}"
     async with dependencies.session_factory() as claim_db:
-        claimed_run = await dependencies.worker_type(claim_db).claim_run(
-            run_id,
-            worker_id,
-        )
-
-    if claimed_run is None:
+        claimed = await dependencies.worker_type(claim_db).claim_run(run_id, worker_id)
+    if claimed is None:
         return
-
-    log_stage(
-        "STARTING RUN",
-        run_id,
-        f"action={claimed_run.post_answer_action or 'initial_query'}",
-    )
-    followup_metadata_json: dict[str, Any] | None = None
-    rag_request = rag_call or dependencies.rag_request
-    analysis_request = ask_call or dependencies.analysis_request
-
-    def capture_mutation_metadata(metadata: dict[str, Any]) -> None:
-        nonlocal followup_metadata_json
-        followup_metadata_json = {MUTATION_METADATA_KEY: metadata}
-
     try:
-        _validate_claimed_run(claimed_run)
-        if claimed_run.post_answer_action == "add_case_info":
-            outcome, followup_metadata_json = await run_mutation_stage(
-                claimed_run,
-                policy=policy,
-                gap_analyzer=gap_analyzer,
-                rag_request=rag_request,
+        analysis_request = ask_call or dependencies.analysis_request
+        if claimed.action == "ask":
+            outcome = await _run_question(claimed, analysis_request)
+        else:
+            outcome = await _run_fresh_analysis(
+                claimed,
+                rag_request=rag_call or dependencies.rag_request,
                 analysis_request=analysis_request,
                 followup_evaluator=dependencies.followup_evaluator,
-                extraction_adapter=extraction_adapter,
-                dependencies=dependencies,
-                capture_metadata=capture_mutation_metadata,
+                policy=policy,
+                gap_analyzer=gap_analyzer,
             )
-            await _complete_run(
-                dependencies,
-                run_id,
-                worker_id,
-                outcome,
-                "RUN COMPLETED SUCCESSFULLY",
+        async with dependencies.session_factory() as completion_db:
+            await dependencies.worker_type(completion_db).complete_run(
+                run_id, worker_id, outcome
             )
-            return
-
-        if claimed_run.post_answer_action == "ask":
-            outcome = await run_question_stage(
-                claimed_run,
-                analysis_request=analysis_request,
-            )
-            await _complete_run(
-                dependencies,
-                run_id,
-                worker_id,
-                outcome,
-                "ASK COMPLETED SUCCESSFULLY",
-                stage_name="PERSISTING ASK OUTCOME",
-            )
-            return
-
-        outcome, followup_metadata_json = await run_initial_stage(
-            claimed_run,
-            policy=policy,
-            gap_analyzer=gap_analyzer,
-            rag_request=rag_request,
-            analysis_request=analysis_request,
-            followup_evaluator=dependencies.followup_evaluator,
-            extraction_adapter=extraction_adapter,
-            dependencies=dependencies,
-        )
-        await _complete_run(
-            dependencies,
-            run_id,
-            worker_id,
-            outcome,
-            "INITIAL RUN COMPLETED SUCCESSFULLY",
-        )
-    except ExtractionStageFailure as exc:
-        print(
-            f"\n[CHAT RUN {run_id}] ✖ FAILED AT EXTRACTION STAGE: "
-            f"[{exc.code}] {exc.message}\n{'=' * 70}\n",
-            flush=True,
-        )
+    except RagCallFailure as error:
+        await record_failure(dependencies, run_id, worker_id, error.code, error.message)
+    except CaseAnalysisFailure as error:
+        await record_failure(dependencies, run_id, worker_id, error.code, error.message)
+    except Exception:
         await record_failure(
             dependencies,
             run_id,
             worker_id,
-            exc.code,
-            exc.message,
-            followup_metadata_json=exc.metadata_json,
-        )
-    except RagCallFailure as exc:
-        print(
-            f"\n[CHAT RUN {run_id}] ✖ FAILED AT RAG RETRIEVAL STAGE: "
-            f"[{exc.code}] {exc.message}\n{'=' * 70}\n",
-            flush=True,
-        )
-        await record_failure(
-            dependencies,
-            run_id,
-            worker_id,
-            exc.code,
-            exc.message,
-            followup_metadata_json=followup_metadata_json,
-        )
-    except CaseStateMutationFailure as exc:
-        print(
-            f"\n[CHAT RUN {run_id}] ✖ FAILED AT MUTATION STAGE: "
-            f"[{exc.code}] {exc.message}\n{'=' * 70}\n",
-            flush=True,
-        )
-        await record_failure(
-            dependencies,
-            run_id,
-            worker_id,
-            exc.code,
-            exc.message,
-            followup_metadata_json=followup_metadata_json,
-        )
-    except CaseAnalysisFailure as exc:
-        print(
-            f"\n[CHAT RUN {run_id}] ✖ FAILED AT ANALYSIS STAGE: "
-            f"[{exc.code}] {exc.message}\n{'=' * 70}\n",
-            flush=True,
-        )
-        await record_failure(
-            dependencies,
-            run_id,
-            worker_id,
-            exc.code,
-            exc.message,
-            followup_metadata_json=followup_metadata_json,
-        )
-    except Exception as exc:
-        print(
-            f"\n[CHAT RUN {run_id}] ✖ FAILED WITH UNEXPECTED ERROR: {exc}\n"
-            f"{'=' * 70}\n",
-            flush=True,
-        )
-        await record_failure(
-            dependencies,
-            run_id,
-            worker_id,
-            "rag_processing_error",
+            "chat_processing_error",
             "Failed to process chat message",
-            followup_metadata_json=followup_metadata_json,
         )
 
 
-def _validate_claimed_run(claimed_run: ClaimedChatRun) -> None:
-    if not isinstance(claimed_run.content, str):
-        raise ValueError("Chat run request content is not a string")
-    if not isinstance(claimed_run.rag_query, str):
-        raise ValueError("Chat run RAG query is not a string")
-    if not isinstance(claimed_run.original_user_content, str):
-        raise ValueError("Chat follow-up root content is not a string")
-    if claimed_run.operation != "query":
-        raise ValueError("Chat run operation is invalid")
-
-
-async def _complete_run(
-    dependencies: PipelineDependencies,
-    run_id: UUID,
-    worker_id: str,
-    outcome: AssistantOutcome,
-    success_message: str,
+async def _run_fresh_analysis(
+    claimed,
     *,
-    stage_name: str = "PERSISTING OUTCOME & COMPLETING RUN",
-) -> None:
-    log_stage(stage_name, run_id)
-    async with dependencies.session_factory() as finalize_db:
-        await dependencies.worker_type(finalize_db).complete_run(
-            run_id,
-            worker_id,
-            outcome,
+    rag_request,
+    analysis_request,
+    followup_evaluator,
+    policy,
+    gap_analyzer,
+) -> AssistantOutcome:
+    response = await rag_request(claimed.raw_evidence)
+    rag_context = validated_rag_context_payload(response)
+    analysis_context = rag_context.to_analysis_context()
+    analysis_context["source_message_ids"] = [
+        str(value) for value in claimed.source_message_ids
+    ]
+    result = _coerce_analysis_result(
+        await analysis_request(
+            mode="case_overview",
+            raw_evidence=claimed.raw_evidence,
+            analysis_context=analysis_context,
+            question=None,
+            user_message=claimed.content,
         )
-    print(
-        f"\n[CHAT RUN {run_id}] ✔ {success_message}\n{'=' * 70}\n",
-        flush=True,
     )
+    followup = await followup_evaluator(
+        original_user_content=claimed.original_user_content,
+        clarification_exchanges=claimed.clarification_exchanges,
+        followup_root_ordinal=claimed.followup_root_ordinal,
+        source_run_id=claimed.id,
+        policy=policy,
+        gap_analyzer=gap_analyzer,
+        raw_evidence=claimed.raw_evidence,
+        analysis_answer=result.answer,
+        analysis_context=analysis_context,
+    )
+    if followup.outcome is not None:
+        return bind_followup_question(
+            followup.outcome,
+            rag_context=rag_context,
+            evidence_sha256=claimed.evidence_sha256,
+            source_message_ids=claimed.source_message_ids,
+        )
+    return fresh_analysis_outcome(
+        result.answer,
+        action=claimed.action,
+        rag_context=rag_context,
+        evidence_sha256=claimed.evidence_sha256,
+        source_message_ids=claimed.source_message_ids,
+        followup_metadata=followup.metadata_json,
+        trace=result.trace,
+        trace_failure=result.trace_failure,
+    )
+
+
+async def _run_question(claimed, analysis_request) -> AssistantOutcome:
+    if claimed.analysis_context is None:
+        raise CaseAnalysisFailure(
+            "analysis_context_missing",
+            "No completed analytical context is available for ASK",
+        )
+    context = dict(claimed.analysis_context)
+    context["source_message_ids"] = [str(value) for value in claimed.source_message_ids]
+    result = _coerce_analysis_result(
+        await analysis_request(
+            mode="question_answer",
+            raw_evidence=claimed.raw_evidence,
+            analysis_context=context,
+            question=claimed.content,
+            user_message=claimed.content,
+        )
+    )
+    return question_outcome(
+        result.answer,
+        analysis_context=context,
+        evidence_sha256=claimed.evidence_sha256,
+        source_message_ids=claimed.source_message_ids,
+        trace=result.trace,
+        trace_failure=result.trace_failure,
+    )
+
+
+def _coerce_analysis_result(value: object) -> CaseAnalysisResult:
+    if isinstance(value, CaseAnalysisResult) and value.answer.strip():
+        return value
+    if isinstance(value, str) and value.strip():
+        return CaseAnalysisResult(answer=value.strip(), trace=None)
+    raise CaseAnalysisFailure(
+        "analysis_invalid_response",
+        "The Main Case Analysis returned no answer",
+    )
+
+
+__all__ = ["process_chat_run"]

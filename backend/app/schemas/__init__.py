@@ -10,7 +10,6 @@ from app.schemas.chat import (
     ChatThreadRead,
     ChatThreadUpdate,
     MessageRole,
-    RunOperation,
     RunStatus,
     ThreadStatus,
 )
@@ -21,8 +20,6 @@ from app.schemas.rag import (
     RagQueryRequest,
 )
 from app.schemas.reports import (
-    REPORT_SECTION_HEADINGS,
-    REPORT_SECTION_IDS,
     ChatReportCreate,
     ChatReportRead,
     ReportClaim,
@@ -51,8 +48,6 @@ __all__ = [
     "MitreTableRow",
     "QueryRequest",
     "QueryResponse",
-    "REPORT_SECTION_HEADINGS",
-    "REPORT_SECTION_IDS",
     "RagQueryRequest",
     "ReportClaim",
     "ReportHeading",
@@ -62,7 +57,6 @@ __all__ = [
     "ReportStatus",
     "ReportSupportType",
     "ReportValidationStatus",
-    "RunOperation",
     "RunStatus",
     "StructuredReport",
     "ThreadStatus",

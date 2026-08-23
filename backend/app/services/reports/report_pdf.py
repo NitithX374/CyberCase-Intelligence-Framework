@@ -8,8 +8,11 @@ from reportlab.platypus import SimpleDocTemplate
 
 from app.schemas.reports import ChatReportRead
 from app.services.reports.pdf_chrome import draw_page_chrome
-from app.services.reports.pdf_fonts import register_report_fonts
-from app.services.reports.pdf_styles import build_report_styles, plain_text
+from app.services.reports.pdf_design import (
+    build_report_styles,
+    plain_text,
+    register_report_fonts,
+)
 from app.services.reports.report_pdf_story import build_formal_report_story
 from app.services.reports.report_view_model import ReportLanguage, build_report_view_model
 

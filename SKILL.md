@@ -5,13 +5,13 @@ This document defines the scope, technical stack, and conventions for AI Agents 
 
 ## 1. Project Architecture
 
-The CyberCase Intelligence Framework is a full-stack web application designed for interactive cybercrime case analysis, RAG-grounded MITRE ATT&CK knowledge retrieval, follow-up question handling, and structured investigation report generation.
+The CyberCase Intelligence Framework is a full-stack web application designed for interactive cybercrime case analysis, RAG-grounded MITRE ATT&CK knowledge retrieval, follow-up question handling, raw-message evidence, and persisted structured investigation reports.
 
 **Tech Stack:**
-*   **Frontend:** Next.js 15 (App Router, TypeScript, React). Tailwind CSS Modules.
+*   **Frontend:** Next.js 16.2.10 (App Router, TypeScript, React 19). Tailwind CSS 4.
 *   **Backend:** FastAPI (Python), running on standard Python runtime.
 *   **Database:** PostgreSQL, accessed via **SQLAlchemy** and **Alembic** for migrations.
-*   **RAG Engine:** LangChain, LlamaIndex, FAISS, SentenceTransformers, and Anthropic's Claude (Haiku).
+*   **RAG Engine:** A standalone `rag_service` exposing the backend HTTP contract; its internal retrieval and agent implementation is outside the backend application boundary.
 
 ## 2. Directory Structure & Ownership
 
@@ -30,18 +30,19 @@ The CyberCase Intelligence Framework is a full-stack web application designed fo
 ### Frontend (Next.js)
 *   **Styling:** Tailwind CSS as Primary, CSS Modules as Secondary
 *   **Aesthetics:** Prioritize high-quality, modern UI designs. Use glassmorphism, smooth animations, and dark mode themes as established in the current UI.
-*   **State:** Use React hooks. For API calls, use the functions defined in `frontend/src/lib/api.ts`.
+*   **State:** Use React hooks for local state and TanStack Query for remote chat/report state. Use the functions re-exported by `frontend/src/lib/api.ts` for API calls.
 
 ### Backend (FastAPI & SQLAlchemy)
 *   **FastAPI:** The backend follows standard FastAPI patterns with routers in `app/routers/` and models in `app/models/`.
 *   **Alembic:** Use Alembic for database migrations. Run `alembic revision --autogenerate -m "description"` to create migrations and `alembic upgrade head` to apply them.
 *   **Validation:** Use Pydantic models for request/response validation.
 *   **Configuration:** Use `backend/app/config.py`. Configuration is loaded via `pydantic-settings` from environment variables or a `.env` file.
-*   **RAG Integration:** The backend does NOT import RAG modules directly anymore. It communicates with `rag_service` via HTTP API.
+*   **RAG Integration:** The backend does not import RAG modules directly. It communicates with `rag_service` through the HTTP client in `backend/app/services/clients/`.
+*   **Reports:** Chat-scoped report routes persist deterministic template-first report versions and provide PDF export; there is no standalone report route.
 
 ### RAG Scripts
 *   **Pathing:** Scripts use `__file__` to dynamically resolve paths to `/Documents/` and index directories. Do not use hardcoded absolute paths (e.g., `C:\...`).
-*   **LLM Provider:** Anthropic Claude is the primary provider. Ensure `ANTHROPIC_API_KEY` is checked before invoking API calls.
+*   **LLM Provider:** OpenRouter/Luna is the backend default. Provider selection is explicit; do not add silent provider fallbacks.
 
 ## 4. Common Commands
 
@@ -110,7 +111,7 @@ This module provides the user-facing system and core application logic.
         *   Structured interpretation of technical actions.
 *   **Backend:**
     *   Handles API requests from the frontend.
-    *   Manages authentication and case file processing.
+    *   Manages chat persistence, clarification, raw-evidence projection, analysis, and report orchestration. Authentication and per-user ownership are not implemented.
     *   Communicates with the RAG pipeline module.
     *   Aggregates and returns processed results to the frontend.
 

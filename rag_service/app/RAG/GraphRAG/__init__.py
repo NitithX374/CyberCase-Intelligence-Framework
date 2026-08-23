@@ -6,14 +6,6 @@ Hybrid Graph + Vector DB RAG with Cross-Lingual (Thai ↔ English) support.
 
 __version__ = "2.0.0"
 
-from .config import (
-    ANTHROPIC_API_KEY,
-    LLM_MAX_TOKENS,
-    LLM_MODEL,
-    LLM_TEMPERATURE,
-    VECTOR_TOP_K,
-    sep,
-)
 from .ingestion import GraphLoader, StixParser, VectorLoader, parse_all_domains
 from .models import (
     AttackEntity,

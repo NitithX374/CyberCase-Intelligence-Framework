@@ -106,26 +106,8 @@ class Settings(BaseSettings):
     chat_ask_max_output_tokens: int = 2_048
     chat_ask_max_input_chars: int = 20_000
 
-    # Analysis input mode: "case_state" (default) or "raw_direct" (experimental ablation)
-    analysis_input_mode: Literal["case_state", "raw_direct"] = "case_state"
+    analysis_input_mode: Literal["raw_direct"] = "raw_direct"
 
-
-    # Terminal chat extraction baseline. A missing provider key produces an
-    # explicit failed extraction record rather than falling back to regex.
-    chat_extraction_enabled: bool = True
-    chat_extraction_model: str = "openai/gpt-5.6-luna"
-    chat_extraction_timeout_seconds: float = 120.0
-    chat_extraction_max_input_chars: int = 60_000
-    chat_extraction_max_output_tokens: int = 16_384
-    chat_extraction_max_facts: int = 128
-    chat_extraction_max_entities: int = 32
-    chat_extraction_max_relationships: int = 64
-    chat_extraction_max_evidence: int = 32
-    chat_extraction_max_timeline: int = 48
-    chat_extraction_max_impacts: int = 32
-    chat_extraction_max_missing_information: int = 24
-    chat_extraction_max_text_chars: int = 8_000
-    chat_extraction_max_raw_response_chars: int = 96_000
 
     # Persisted report generation.
     chat_report_enabled: bool = True

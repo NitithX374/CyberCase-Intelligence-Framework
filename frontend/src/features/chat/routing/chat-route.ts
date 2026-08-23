@@ -21,8 +21,6 @@ export function chatRouteState(pathname: string): ChatRouteState {
       : null;
   const routeSegment = segments[2];
   const view: WorkspaceRouteView =
-    routeSegment === "extraction" ||
-    routeSegment === "relationships" ||
     routeSegment === "report"
       ? routeSegment
       : "chat";

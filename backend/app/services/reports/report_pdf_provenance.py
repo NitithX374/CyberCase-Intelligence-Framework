@@ -5,8 +5,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import HRFlowable, KeepTogether, Paragraph, Spacer, Table
 
 from app.services.reports.pdf_chrome import table_style
-from app.services.reports.pdf_styles import paragraph_text
-from app.services.reports.pdf_theme import RULE
+from app.services.reports.pdf_design import RULE, paragraph_text
 from app.services.reports.report_view_model import ReportViewModel
 
 

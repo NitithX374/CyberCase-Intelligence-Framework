@@ -204,31 +204,6 @@ body {
     border: 0.5pt solid #e5e7eb;
 }
 
-/* Relationship Statements */
-.relationship-list {
-    list-style-type: none;
-    margin: 6pt 0;
-    padding: 0;
-}
-
-.relationship-item {
-    position: relative;
-    padding: 4pt 6pt 4pt 16pt;
-    margin-bottom: 4pt;
-    background-color: #f9fafb;
-    border-left: 2pt solid #4b5563;
-    font-size: 9.5pt;
-    line-height: 1.4;
-}
-
-.relationship-item::before {
-    content: "•";
-    position: absolute;
-    left: 6pt;
-    color: #4b5563;
-    font-weight: bold;
-}
-
 /* 2-Column Split for Gaps & Next Steps */
 .split-container {
     display: table;

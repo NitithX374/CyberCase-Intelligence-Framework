@@ -7,10 +7,10 @@ from app.config import settings
 from app.services.case_analysis.contracts import AnalysisMode
 from app.services.case_analysis.personalization import ResponseLanguage
 
-AnalysisInputMode = Literal["case_state", "raw_direct"]
+AnalysisInputMode = Literal["raw_direct"]
 
-DEFAULT_ANALYSIS_INPUT_MODE: AnalysisInputMode = "case_state"
-VALID_ANALYSIS_INPUT_MODES: frozenset[str] = frozenset({"case_state", "raw_direct"})
+DEFAULT_ANALYSIS_INPUT_MODE: AnalysisInputMode = "raw_direct"
+VALID_ANALYSIS_INPUT_MODES: frozenset[str] = frozenset({"raw_direct"})
 
 CASE_ANALYSIS_PROMPT_VERSION = "main_case_analysis_v3"
 logger = logging.getLogger("app.case_analysis")
@@ -20,18 +20,15 @@ _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text"})
 _ANALYSIS_TRACE_OUTPUT_PROMPT = """
 STRUCTURED OUTPUT
 
-Return a JSON object conforming to the analysis_trace_v1 schema:
-- "version": Must be exactly "analysis_trace_v1".
+Return a JSON object conforming to the analysis_trace_v2 schema:
+- "version": Must be exactly "analysis_trace_v2".
 - "answer": The complete user-facing prose response.
 - "claims": A list of claim objects. Each claim object MUST have all of the following fields:
   * "claim_id": A string formatted as "A-01", "A-02", "A-03", etc. (must match regex ^A-\\d{2,}$)
   * "claim_type": Exactly one of "reported", "analytical_inference", or "unknown"
   * "text": Concise text describing the factual claim
-  * "epistemic_status": Exactly one of "reported", "suspected", "contradicted", "not_established", "unknown", or "not_confirmed" (preserving the Case State status)
-  * "entity_ids": List of entity IDs involved (e.g. ["E-01"]) or []
-  * "relationship_ids": List of relationship IDs involved (e.g. ["R-01"]) or []
-  * "evidence_ids": List of evidence IDs involved (e.g. ["EV-01"]) or []
-  * "timeline_event_ids": List of timeline event IDs involved (e.g. ["TL-01"]) or []
+  * "epistemic_status": Exactly one of "reported", "suspected", "contradicted", "not_established", "unknown", or "not_confirmed"
+  * "source_message_ids": IDs from the supplied source_message_ids list that support the claim, or [] for unsupported analytical/unknown claims
 - "mitre_associations": A list of association objects. Each association object MUST have all of the following fields:
   * "association_id": A string formatted as "MA-01", "MA-02", etc. (must match regex ^MA-\\d{2,}$)
   * "technique_id": A valid Technique or Subtechnique ID present in the supplied mitre_table (e.g. "T1505.003", "T1190"). Do NOT put Software IDs (S-prefix) in technique_id.
@@ -41,13 +38,12 @@ Return a JSON object conforming to the analysis_trace_v1 schema:
   * "support_role": Must be exactly "external_technical_context"
 
 CRITICAL RULES:
-- Use only entity_ids, relationship_ids, evidence_ids, and timeline_event_ids present in the CASE NARRATIVE.
+- Use only source_message_ids supplied in the analysis context.
+- Every reported claim must cite at least one source_message_id.
 - Do not attach mitre_technique_ids to claims.
 - Do not use MITRE or retrieved context as incident evidence.
-- For every claim with relationship_ids, look up each referenced relationship in the CASE NARRATIVE and copy its exact status into epistemic_status.
 - "not_established" and "not_confirmed" are distinct values; never substitute one for the other.
-- claim_type is independent from epistemic_status; a reported claim can remain suspected, contradicted, or not_established.
-- A claim with multiple relationship_ids may reference only relationships with one identical status. Split claims when referenced relationship statuses differ.
+- claim_type is independent from epistemic_status.
 - Link every MITRE association to at least one emitted claim using claim_ids.
 - Do not copy incident entity, relationship, evidence, or timeline IDs into MITRE associations.
 - Do not emit confidence, probability, or mapping scores for MITRE associations.
@@ -80,7 +76,7 @@ class CaseAnalysisFailure(Exception):
 _CASE_ANALYSIS_TRUST_PROMPT = """
 You are the Main Case Analysis component of the CyberCase Intelligence Framework.
 
-Your role is to analyze a structured cybercrime case for prosecutors and law-enforcement
+Your role is to analyze raw user-authored cybercrime case evidence for prosecutors and law-enforcement
 users by combining CASE NARRATIVE with already-retrieved analytical knowledge.
 You are a read-only analytical component. You must never modify, reinterpret, or silently
 extend CASE NARRATIVE.
@@ -91,7 +87,7 @@ The supplied inputs have different authority levels:
 
 1. CASE NARRATIVE
    - CASE NARRATIVE is the authoritative source of facts about this incident.
-   - Preserve reported entities, relationships, timeline, provenance, and epistemic status if present.
+   - Preserve the wording, provenance, and uncertainty of user-authored evidence.
    - A statement, relationship, or fact marked suspected, contradicted, or not_established must never be
      strengthened into a confirmed fact.
 

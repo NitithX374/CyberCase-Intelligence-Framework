@@ -1,60 +1,46 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PersistedReportCard } from "@/components/report/PersistedReportCard";
 import type { ChatReportRead } from "@/lib/api";
+import * as api from "@/lib/api";
 
-function reportWithClaims(): ChatReportRead {
+function sampleReport(): ChatReportRead {
   return {
     report_id: "report-1",
     thread_id: "thread-1",
     version_number: 1,
     idempotency_key: "report-request-1",
     source_snapshot_hash: "snapshot-1",
-    extraction_id: "extraction-1",
-    extraction_version: "baseline_extraction_v1",
-    prompt_version: "chat_report_prompt_v1",
-    provider: "openrouter",
-    model: "openai/gpt-5.6-luna",
+    analysis_message_id: "analysis-message-1",
+    retrieval_context_id: "retrieval-1",
+    prompt_version: "deterministic_raw_evidence_report_v1",
+    provider: "deterministic",
+    model: "template",
     decoding_settings: {},
     persistence_status: "completed",
     validation_status: "validated",
     report: {
-      report_version: "baseline_report_v1",
+      report_version: "preliminary_analysis_report_v1",
       status: "provisional_unverified",
       title: "Traceable report",
       sections: [
         {
-          section_id: "evidence_findings",
-          heading: "Evidence Findings",
+          section_id: "case_summary",
+          heading: "5.1 สรุปคดี",
           paragraphs: ["Reported findings remain unverified."],
-          items: [],
-        },
-        {
-          section_id: "technical_analysis_mitre",
-          heading: "Technical Analysis and MITRE ATT&CK Mapping",
-          paragraphs: [],
           items: [],
         },
       ],
       claims: [
         {
           claim_id: "C-001",
-          section_id: "evidence_findings",
+          section_id: "case_summary",
           text: "A login event was reported.",
           support_type: "user_reported",
-          evidence_ids: ["E-010"],
-          timeline_event_ids: ["T-010"],
+          source_message_ids: ["message-1"],
           mitre_technique_ids: [],
-        },
-        {
-          claim_id: "C-002",
-          section_id: "technical_analysis_mitre",
-          text: "Valid Accounts is a candidate mapping.",
-          support_type: "mitre_mapping_candidate",
-          evidence_ids: ["E-010"],
-          timeline_event_ids: [],
-          mitre_technique_ids: ["T1078"],
         },
       ],
       limitations: ["This report is provisional and unverified."],
@@ -70,65 +56,82 @@ function reportWithClaims(): ChatReportRead {
   };
 }
 
-function renderReport(report = reportWithClaims()) {
-  render(
-    <PersistedReportCard
-      report={report}
-      threadId="thread-1"
-      threadTitle="Investigation"
-      isDownloading={false}
-      onDownloadPdf={vi.fn()}
-    />,
-  );
-}
+describe("PersistedReportCard with Real PDF Viewer", () => {
+  let queryClient: QueryClient;
 
-describe("PersistedReportCard claim inspector", () => {
-  it("shows persisted provenance and a case-evidence navigation hook", () => {
-    renderReport();
-
-    const inspector = screen.getByRole("complementary", {
-      name: "Claim inspector C-001",
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
     });
-    expect(
-      within(inspector).getByText("Evidence Findings · evidence_findings"),
-    ).toBeInTheDocument();
-    expect(within(inspector).getAllByText("user reported")).toHaveLength(2);
-    expect(within(inspector).getByText("T-010")).toBeInTheDocument();
-    expect(within(inspector).getByText("provisional unverified")).toBeInTheDocument();
-    expect(within(inspector).getByRole("link", { name: "E-010" })).toHaveAttribute(
-      "href",
-      "/chat/thread-1/extraction#case-reference-E-010",
-    );
+    if (typeof window !== "undefined") {
+      window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/test-pdf-blob");
+      window.URL.revokeObjectURL = vi.fn();
+    }
   });
 
-  it("switches the inspector to the selected claim without strengthening it", () => {
-    renderReport();
+  it("renders the real PDF viewer iframe and does not include claim inspector", async () => {
+    const fakeBlob = new Blob(["%PDF-1.4 test"], { type: "application/pdf" });
+    vi.spyOn(api, "downloadChatReportPdf").mockResolvedValue(fakeBlob);
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /C-002.*Valid Accounts is a candidate mapping/i,
-      }),
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PersistedReportCard
+          report={sampleReport()}
+          threadId="thread-1"
+          threadTitle="Investigation"
+          isDownloading={false}
+          onDownloadPdf={vi.fn()}
+        />
+      </QueryClientProvider>,
     );
 
-    const inspector = screen.getByRole("complementary", {
-      name: "Claim inspector C-002",
+    expect(screen.getByText("Version 1 · Saved")).toBeInTheDocument();
+    expect(screen.getByText("Traceable report")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download PDF" })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("PDF Document Viewer")).toBeInTheDocument();
     });
-    expect(within(inspector).getByText("T1078")).toBeInTheDocument();
-    expect(within(inspector).getAllByText("mitre mapping candidate")).toHaveLength(2);
-    expect(
-      within(inspector).getByText(/MITRE mappings remain external candidate context/i),
-    ).toBeInTheDocument();
+
+    const iframe = screen.getByTitle("PDF Report: Traceable report");
+    expect(iframe).toBeInTheDocument();
+    expect(iframe).toHaveAttribute("src", "blob:http://localhost/test-pdf-blob#toolbar=1&navpanes=0");
+
+    expect(screen.queryByText("Claim inspector")).not.toBeInTheDocument();
   });
 
-  it("keeps a legacy report without claims readable", () => {
-    const report = reportWithClaims();
-    if (!report.report) throw new Error("report fixture is required");
-    report.report = { ...report.report, claims: [] };
+  it("renders failure details when report persistence status is failed", () => {
+    const failedReport = {
+      ...sampleReport(),
+      persistence_status: "failed" as const,
+      report: null,
+      failure_message: "Validation schema mismatch occurred during report generation.",
+      failure_code: "REPORT_SYNTHESIS_FAILED",
+      validation_errors: ["Missing timeline anchor."],
+    };
 
-    renderReport(report);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PersistedReportCard
+          report={failedReport}
+          threadId="thread-1"
+          threadTitle="Investigation"
+          isDownloading={false}
+          onDownloadPdf={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
 
-    expect(screen.getByText("Reported findings remain unverified.")).toBeInTheDocument();
-    expect(screen.getByText("This report is provisional and unverified.")).toBeInTheDocument();
+    expect(screen.getByText("Report generation failed")).toBeInTheDocument();
+    expect(
+      screen.getByText("Validation schema mismatch occurred during report generation."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Failure code: REPORT_SYNTHESIS_FAILED")).toBeInTheDocument();
+    expect(screen.getByText("Missing timeline anchor.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("PDF Document Viewer")).not.toBeInTheDocument();
     expect(screen.queryByText("Claim inspector")).not.toBeInTheDocument();
   });
 });
