@@ -50,6 +50,76 @@ def uuid_from_stix_id(stix_id: str) -> str:
     return str(uuid_lib.UUID(hash_obj.hexdigest()))
 
 
+MAX_DOC_CHARS = 8000
+
+
+def build_entity_document(entity) -> str:
+    """The text that gets embedded for one entity.
+
+    Kept as a module-level function, not a method, so that an alternative
+    embedding backend indexes character-for-character the same corpus. If this
+    text differed between backends, an A/B between them would be measuring the
+    text as much as the model.
+
+    Returns "" for entities that carry nothing worth embedding (detection
+    strategies are bare join nodes - 0 of 699 have a description in v19).
+    """
+    label = entity.node_label
+
+    if label == "Analytic":
+        # An analytic on its own reads as anonymous telemetry advice
+        # ("Analytic 0110"). Naming the technique it detects gives the vector
+        # something to anchor on, and mirrors how every other document here
+        # leads with its own identity.
+        detects = getattr(entity, "detects_name", "")
+        attack_id = getattr(entity, "detects_attack_id", "")
+        head = "Detection analytic"
+        if detects:
+            head += f" for {detects}"
+            if attack_id:
+                head += f" ({attack_id})"
+        parts = [f"{head}: {entity.description}"]
+        if getattr(entity, "log_sources", None):
+            parts.append("Telemetry: " + "; ".join(entity.log_sources))
+        if getattr(entity, "platforms", None):
+            parts.append("Platforms: " + ", ".join(entity.platforms))
+        return " ".join(parts)[:MAX_DOC_CHARS]
+
+    if not entity.description:
+        return ""
+
+    text = f"{label}: {entity.name}. {entity.description}"
+
+    # Aliases are how incident write-ups actually name a group or a tool
+    # (APT29 / Cozy Bear / Midnight Blizzard). They were parsed but never
+    # reached the embedding before.
+    aliases = [a for a in getattr(entity, "aliases", []) or [] if a != entity.name]
+    if aliases:
+        text += " Also known as: " + ", ".join(aliases) + "."
+
+    tactics = getattr(entity, "tactics", None)
+    if tactics:
+        text += " Tactics: " + ", ".join(tactics) + "."
+
+    platforms = getattr(entity, "platforms", None)
+    if platforms:
+        text += " Platforms: " + ", ".join(platforms) + "."
+
+    return text[:MAX_DOC_CHARS]
+
+
+def build_relationship_document(rel) -> str:
+    """The text that gets embedded for one relationship.
+
+    Module-level for the same reason as build_entity_document: an alternative
+    embedding backend must index exactly this string.
+    """
+    if not rel.description:
+        return ""
+    text = f"{rel.source_name} {rel.edge_label} {rel.target_name}: {rel.description}"
+    return text[:MAX_DOC_CHARS]
+
+
 class VectorLoader:
     """Embeds and stores ATT&CK data in Qdrant (Hybrid)."""
 
@@ -110,21 +180,21 @@ class VectorLoader:
         metadatas = []
 
         for entity in entities:
-            if not entity.description:
+            text = build_entity_document(entity)
+            if not text:
                 continue
-
-            # Format: "[Type]: [Name]. [Description]"
-            text = f"{entity.node_label}: {entity.name}. {entity.description}"
-
-            # Truncate very long descriptions
-            text = text[:8000]
 
             ids.append(entity.stix_id)
             documents.append(text)
             metadatas.append(
                 {
                     "stix_id": entity.stix_id,
-                    "attack_id": entity.attack_id,
+                    # An analytic has no ATT&CK ID of its own; it answers with
+                    # the technique it detects, so a hit on it is usable
+                    # downstream without any special-casing at retrieval time.
+                    "attack_id": (
+                        getattr(entity, "detects_attack_id", "") or entity.attack_id
+                    ),
                     "entity_type": "Node",
                     "node_label": entity.node_label,
                     "name": entity.name,
@@ -193,15 +263,9 @@ class VectorLoader:
         metadatas = []
 
         for rel in relationships:
-            if not rel.description:
+            text = build_relationship_document(rel)
+            if not text:
                 continue
-
-            # Format: "[Source Name] [EDGE_LABEL] [Target Name]: [Description]"
-            text = (
-                f"{rel.source_name} {rel.edge_label} {rel.target_name}: "
-                f"{rel.description}"
-            )
-            text = text[:8000]
 
             ids.append(rel.stix_id)
             documents.append(text)
@@ -214,6 +278,11 @@ class VectorLoader:
                     "target_id": rel.target_ref,
                     "source_name": rel.source_name,
                     "target_name": rel.target_name,
+                    # Without these, a hit on a procedure example reaches the
+                    # LLM naming a technique but carrying no ATT&CK ID to cite.
+                    "attack_id": rel.target_attack_id or rel.source_attack_id,
+                    "source_attack_id": rel.source_attack_id,
+                    "target_attack_id": rel.target_attack_id,
                     "document": text,
                 }
             )
