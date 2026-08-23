@@ -15,15 +15,26 @@
 - 2026-08-23 [CODE] Follow-up backend package restored after all tracked files appeared as unstaged deletions; raw-evidence inputs and frontend clarification presentation are intact.
 - 2026-08-23 [USER] `rag_service/**` remains outside this architecture change.
 
+- 2026-08-24 [CODE] Implemented New Case Intake experience (`CaseIntakeView`) with optional title, required description, disabled attachment control, and direct navigation to Case Overview upon analysis.
+- 2026-08-24 [CODE] Redesigned Report Workspace (`ChatReportView`, `PersistedReportCard`, `ReportHistory`) around the PDF viewer as the primary hero content with compact version controls and removal of internal UUIDs/metadata.
+- 2026-08-24 [CODE] Removed standalone "Investigation Issues" workspace feature (deleted route `/chat/[threadId]/issues`, component hierarchy, view model, tests, and sidebar entry). Unresolved information and points for further investigation remain contained within Case Overview.
+- 2026-08-24 [CODE] Redesigned Technical Context (`TechnicalContextView`, `technical-context.ts`) from AI SaaS dashboard cards to quiet, flattened investigative reference notes:
+  - Replaced card-per-technique wrappers with simple typography separated by thin horizontal rules.
+  - Removed "techniques referenced" dashboard metric badge and "Open Chat" header action.
+  - Replaced purple trust-boundary banner with a quiet 2-line external reference notice under header.
+  - Switched from repetitive bilingual English+Thai labels to single-language Thai section headings (`ความหมายโดยย่อ`, `เหตุผลที่เกี่ยวข้องกับคดี`, `แหล่งข้อมูล`, `คำอธิบายทางเทคนิค ▾`).
+  - Ensured case-specific relevance reasoning without verbose filler text, with conservative short fallback.
+  - Extracted concise plain-language summary for primary reading flow and tucked full MITRE definitions into an expandable `คำอธิบายทางเทคนิค ▾` drawer.
+  - Replaced bright blue buttons with quiet document-annotated source references (`Source — Initial case description ↗`) preserving anchored popovers.
+  - Reduced violet usage by ~70%, reserving it strictly for tiny MITRE ID accents.
+- 2026-08-24 [TOOL] Frontend tests (18 files / 49 tests), ESLint (0 errors, 0 warnings), Next.js production build (5/5 static pages), and Backend pytest suite (65 passed) all green.
+
 ## Done (recent)
 
-- 2026-08-23 [CODE] Deleted Case State/extraction models, services, migrations, workflow stages, frontend screens, routes, schemas, and obsolete tests.
-- 2026-08-23 [CODE] Rebuilt workflow, analysis, reports, schema baseline, and active architecture documentation around raw evidence.
-- 2026-08-23 [CODE] Removed the unused `baseline_report_v1` API/schema path; only `preliminary_analysis_report_v1` remains.
-- 2026-08-23 [TOOL] Backend: 62 tests plus 2 subtests passed; `compileall` passed.
-- 2026-08-23 [TOOL] Frontend: 8 test files/23 tests passed; ESLint and Next.js production build passed after follow-up restoration.
-- 2026-08-23 [TOOL] Next.js route manifest contains only `/`, `/chat`, `/chat/[threadId]`, and `/chat/[threadId]/report`.
-- 2026-08-23 [CODE] Added a focused rendered follow-up UI regression test covering the question, gap explanation, and enabled answer composer.
+- 2026-08-24 [CODE] Deleted `frontend/src/app/chat/[threadId]/issues`, `frontend/src/components/issues`, `frontend/src/lib/investigation-issues.ts`, and associated tests.
+- 2026-08-24 [CODE] Refactored `frontend/src/lib/technical-context.ts` and `frontend/src/components/technical/TechnicalContextView.tsx`.
+- 2026-08-24 [CODE] Updated `WorkspaceSidebar.tsx`, `ChatWorkspaceLayout.tsx`, `ChatWorkspace.tsx`, `CaseOverviewView.tsx`, `EstablishedVsUnclearSection.tsx`, `InvestigationPointsSection.tsx`, and `types.ts`.
+- 2026-08-24 [CODE] Updated vitest suites `TechnicalContextView.test.tsx`, `technical-context.test.ts`, and `WorkspaceSidebar.test.tsx`.
 
 ## Decisions
 
@@ -33,46 +44,22 @@
 - D004 ACTIVE 2026-08-23 [CODE] Ask reuses the latest durable run-bound RagContext; initial, clarification, and add-info runs perform fresh RAG.
 - D005 ACTIVE 2026-08-23 [USER] Do not retain compatibility shims for the deleted Case State architecture.
 - D006 ACTIVE 2026-08-23 [CODE] Reports remain deterministic, template-first, provisional, and source-message traceable.
+- D007 ACTIVE 2026-08-23 [CODE] Overview workspace is client-side projection over persisted analysis messages, enforcing trust boundaries (Blue/Violet/Amber/Red/Green) and source traceability without backend mutation.
+- D008 ACTIVE 2026-08-24 [CODE] Standalone PDF/HTML reports use clean 1..7 standalone numbering + technical appendix, document-oriented evidence cards, and stacked MITRE cards.
+- D009 ACTIVE 2026-08-24 [CODE] Case Materials and Technical Context are pure client-side read projections over existing persisted messages and trace metadata; no new tables or backend models.
+- D010 ACTIVE 2026-08-24 [USER] Standalone Investigation Issues page is deleted; gaps and unconfirmed points remain integrated inside Overview.
 
 ## State (Done/Now/Next)
 
-- 2026-08-23 [TOOL] Done: implementation, focused cleanup, active-doc rewrite, and local backend/frontend validation.
-- 2026-08-23 [TOOL] Done: final migration-head, diff-integrity, obsolete-symbol, and production file-size audits.
-- 2026-08-23 [TOOL] Next: hand off exact changed boundaries and validation receipts; no commit or push unless requested.
-
-## Open questions
-
-- 2026-08-23 [TOOL] UNCONFIRMED: live Docker/PostgreSQL migration execution; the migration source/model contract is tested locally, but a running demo database has not yet been reset in this turn.
-- 2026-08-23 [TOOL] Existing unrelated research, experiment, dependency, Docker, and `rag_service/**` dirty changes remain user-owned and outside this cutover.
-
-## Incident: missing backend follow-up package
-
-- 2026-08-23 [USER] Symptom: follow-up appeared missing after the architecture refactor.
-- 2026-08-23 [TOOL] Evidence: all 11 tracked `backend/app/services/followup/*` files were absent and reported as unstaged deletions while frontend and workflow callers remained.
-- 2026-08-23 [CODE] Mitigation: restored the tracked package from HEAD, reapplied raw-evidence adaptations, restored modular metadata helpers, and added a rendered UI regression test.
-- 2026-08-23 [TOOL] Status: RESOLVED; focused backend tests 8 passed and focused frontend tests 7 passed.
-
-## Working set
-
-- 2026-08-23 [CODE] `backend/app/services/chat/raw_evidence.py`
-- 2026-08-23 [CODE] `backend/app/services/workflow/`
-- 2026-08-23 [CODE] `backend/app/services/case_analysis/`
-- 2026-08-23 [CODE] `backend/app/services/reports/`
-- 2026-08-23 [CODE] `backend/app/models/`
-- 2026-08-23 [CODE] `backend/alembic/baseline_versions/0001_raw_evidence_chat.py`
-- 2026-08-23 [CODE] `frontend/src/components/ChatWorkspace*`
-- 2026-08-23 [CODE] `frontend/src/features/chat/`
-- 2026-08-23 [CODE] `frontend/src/components/report/`
-- 2026-08-23 [CODE] `README.md`, `backend/README.md`, `frontend/README.md`, `docs/`
-- 2026-08-23 [USER] `rag_service/**` no-touch boundary
+- 2026-08-24 [TOOL] Done: Visual and copy refinement pass complete. Investigation Issues deleted; Technical Context redesigned to flattened, quiet investigative notes.
+- 2026-08-24 [TOOL] Next: Hand off full architectural and UX report to user.
 
 ## Receipts
 
-- 2026-08-23 [TOOL] `python -m pytest backend/tests -q --tb=short`: 62 passed, 2 subtests passed; warnings were Starlette deprecation and denied pytest cache creation.
-- 2026-08-23 [TOOL] `python -m compileall -q backend/app`: passed.
-- 2026-08-23 [TOOL] `npm run test -- --reporter=dot`: 8 files and 23 tests passed.
-- 2026-08-23 [TOOL] `npm run lint`: passed.
-- 2026-08-23 [TOOL] `npm run build`: passed, including TypeScript and static generation.
-- 2026-08-23 [TOOL] Alembic reports single head `0001_raw_evidence_chat`; offline PostgreSQL `upgrade head --sql` emitted the five-table schema and all expected foreign keys.
-- 2026-08-23 [TOOL] `git diff --check` passed; obsolete production-symbol scan returned no runtime hits except the intentional validator rejection key.
-- 2026-08-23 [TOOL] Production backend/frontend code is within 300 physical lines; larger files found only in pre-existing out-of-scope backend experiment modules.
+- 2026-08-24 [TOOL] `.\env_mitre\Scripts\pytest.exe backend/tests`: 65 passed (100%).
+- 2026-08-24 [TOOL] `npm run test -- --run`: 18 test files and 49 tests passed (100%).
+- 2026-08-24 [TOOL] `npm run lint`: passed (0 errors, 0 warnings).
+- 2026-08-24 [TOOL] `npm run build`: passed, static generation (5/5) and TypeScript compilation succeeded.
+
+
+

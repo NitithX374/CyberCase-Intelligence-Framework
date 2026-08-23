@@ -15,8 +15,9 @@ import {
   type ThreadStatus,
 } from "@/lib/api";
 import { PersistedReportCard } from "./PersistedReportCard";
-import { NoSavedReport, ReportVersionHistory } from "./ReportHistory";
+import { NoSavedReport, ReportVersionSelector } from "./ReportHistory";
 import { chatQueryKeys } from "@/lib/query-keys";
+import { Icon } from "@/components/common/icons";
 
 interface ChatReportViewProps {
   threadId: string | null;
@@ -25,6 +26,7 @@ interface ChatReportViewProps {
   hasMessages: boolean;
   hasCompletedAnalysis: boolean;
   onOpenChat: () => void;
+  onOpenOverview?: () => void;
 }
 
 export function ChatReportView({
@@ -34,17 +36,23 @@ export function ChatReportView({
   hasMessages,
   hasCompletedAnalysis,
   onOpenChat,
+  onOpenOverview,
 }: ChatReportViewProps) {
   const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+
   const reportsQuery = useQuery({
     queryKey: threadId ? chatQueryKeys.reports(threadId) : chatQueryKeys.all,
     queryFn: ({ signal }) => listChatReports(threadId!, signal),
     enabled: threadId !== null,
     retry: false,
   });
+
   const generateMutation = useMutation({
-    mutationFn: ({ threadId: targetThreadId, idempotencyKey }: {
+    mutationFn: ({
+      threadId: targetThreadId,
+      idempotencyKey,
+    }: {
       threadId: string;
       idempotencyKey?: string;
     }) => generateChatReport(targetThreadId, idempotencyKey),
@@ -59,8 +67,12 @@ export function ChatReportView({
       setSelectedReportId(report.report_id);
     },
   });
+
   const downloadMutation = useMutation({
-    mutationFn: ({ threadId: targetThreadId, report }: {
+    mutationFn: ({
+      threadId: targetThreadId,
+      report,
+    }: {
       threadId: string;
       report: ChatReportRead;
     }) => downloadChatReportPdf(targetThreadId, report.report_id),
@@ -73,23 +85,26 @@ export function ChatReportView({
   const isLoading = Boolean(threadId) && reportsQuery.isLoading;
   const isGenerating = generateMutation.isPending;
   const isDownloading = downloadMutation.isPending;
+
   const loadError = reportsQuery.error
     ? getApiErrorMessage(
-      reportsQuery.error,
-      "Could not load persisted reports for this chat thread.",
-    )
+        reportsQuery.error,
+        "Could not load persisted reports for this case.",
+      )
     : null;
+
   const generationError = generateMutation.error
     ? getApiErrorMessage(
-      generateMutation.error,
-      "Failed to generate report. Please review the case details and try again.",
-    )
+        generateMutation.error,
+        "Failed to generate report. Please review the case details and try again.",
+      )
     : null;
+
   const downloadError = downloadMutation.error
     ? getApiErrorMessage(
-      downloadMutation.error,
-      "Failed to download the PDF report. Please try again.",
-    )
+        downloadMutation.error,
+        "Failed to download the PDF report. Please try again.",
+      )
     : null;
 
   const selectedReport =
@@ -124,23 +139,25 @@ export function ChatReportView({
       <section
         id="workspace-report-panel"
         role="tabpanel"
-        aria-label="Report generation"
-        className="min-h-0 flex-1 overflow-y-auto bg-canvas px-4 py-8 sm:px-7 lg:px-10"
+        aria-label="Case report"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas p-6 sm:p-10"
       >
-        <div className="mx-auto max-w-2xl rounded-2xl border border-dashed border-line-strong bg-surface p-6 sm:p-8">
-          <h2 className="text-xl font-extrabold tracking-tight text-ink">
-            Select a saved chat
+        <div className="mx-auto max-w-lg rounded-lg border border-dashed border-line bg-surface p-8 text-center space-y-3">
+          <h2 className="text-lg font-bold text-ink">
+            Select a Case
           </h2>
-          <p className="mt-3 text-sm leading-6 text-ink-secondary">
-            Start or open a chat before generating a persistent report.
+          <p className="text-xs text-ink-secondary">
+            Open or create an investigation case before generating a report.
           </p>
-          <button
-            type="button"
-            onClick={onOpenChat}
-            className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-bold text-ivory outline-none transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            Return to Chat
-          </button>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={onOpenChat}
+              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-xs font-bold text-ivory"
+            >
+              <span>Return to Case</span>
+            </button>
+          </div>
         </div>
       </section>
     );
@@ -150,89 +167,101 @@ export function ChatReportView({
     <section
       id="workspace-report-panel"
       role="tabpanel"
-      aria-label="Report generation"
-      className="min-h-0 flex-1 overflow-y-auto bg-canvas px-4 py-8 sm:px-7 lg:px-10"
+      aria-label="Case report"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas"
     >
-      <div className="mx-auto w-full max-w-[1080px]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-3xl">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink-secondary">
-              Executive Briefing
-            </p>
-            <h1 className="mt-3 text-3xl font-extrabold tracking-[-0.035em] text-ink sm:text-4xl">
-              Digital-forensics report
-            </h1>
-            <p className="mt-4 text-sm leading-6 text-ink-secondary sm:text-base sm:leading-7">
-              Generate a structured intelligence report from this chat&apos;s
-              accumulated user-authored evidence, the latest analysis, and admitted MITRE context.
-            </p>
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-8">
+        {/* Document-Oriented Dossier Header */}
+        <header className="border-b border-line pb-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] font-bold tracking-widest text-ink-muted uppercase">
+                  CASE ANALYSIS REPORT · รายงานวิเคราะห์คดี
+                </span>
+                <span className="font-mono text-[11px] text-ink-muted">
+                  #{threadId.slice(0, 8)}
+                </span>
+              </div>
+              <h1 className="mt-1 text-xl font-bold tracking-tight text-ink sm:text-2xl">
+                Case Analysis Report
+              </h1>
+              <p className="mt-1 text-xs text-ink-secondary">
+                Provisional analytical report compiled from submitted case evidence and MITRE ATT&amp;CK threat intelligence.
+              </p>
+            </div>
+
+            {/* Version Generation & Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleGenerate()}
+                disabled={!canGenerate}
+                className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+              >
+                {isGenerating && (
+                  <span
+                    className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ivory/40 border-t-ivory"
+                    aria-hidden="true"
+                  />
+                )}
+                <span>
+                  {isGenerating
+                    ? "Generating version..."
+                    : reports.length > 0
+                      ? "Generate new version"
+                      : "Generate report"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenOverview ?? onOpenChat}
+                className="inline-flex items-center gap-1.5 rounded border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:border-ink hover:bg-surface-hover"
+              >
+                <Icon name="overview" className="h-3.5 w-3.5" />
+                <span>Case Overview</span>
+              </button>
+            </div>
           </div>
-          <span className="rounded-full border border-line-strong bg-surface px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink-secondary">
-            Provisional / Unverified
-          </span>
-        </div>
 
-        <div className="mt-7 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => void handleGenerate()}
-            disabled={!canGenerate}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-ivory outline-none transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
-          >
-            {isGenerating && (
-              <span
-                className="h-4 w-4 animate-spin rounded-full border-2 border-ivory/40 border-t-ivory"
-                aria-hidden="true"
+          {/* Versions Selector row if multiple versions exist */}
+          {reports.length > 1 && (
+            <div className="mt-3 pt-2 border-t border-line/60">
+              <ReportVersionSelector
+                reports={reports}
+                selectedReportId={selectedReport?.report_id ?? null}
+                onSelect={setSelectedReportId}
               />
-            )}
-            {isGenerating ? "Generating report..." : "Generate report"}
-          </button>
-          <button
-            type="button"
-            onClick={onOpenChat}
-            className="inline-flex min-h-11 items-center rounded-xl border border-line-strong bg-surface px-4 text-sm font-bold text-ink outline-none transition-colors hover:border-primary hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            Return to Chat
-          </button>
-        </div>
-
-        <div className="mt-5 rounded-xl border border-line bg-surface px-4 py-3 text-sm leading-6 text-ink-secondary">
-          {readinessMessage({
-            hasMessages,
-            hasCompletedAnalysis,
-            threadId,
-            threadStatus,
-          })}
-        </div>
+            </div>
+          )}
+        </header>
 
         {loadError && <InlineError message={loadError} />}
         {generationError && <InlineError message={generationError} />}
         {downloadError && <InlineError message={downloadError} />}
 
+        {/* Primary Content Hero */}
         {isLoading ? (
-          <div className="mt-8 rounded-2xl border border-line bg-surface p-6 text-center text-sm font-medium text-ink-secondary">
-            Loading saved report history...
+          <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-xs text-ink-muted">
+            <span>Loading case report data...</span>
           </div>
-        ) : reports.length > 0 ? (
-          <div className="mt-8 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <ReportVersionHistory
-              reports={reports}
-              selectedReportId={selectedReport?.report_id ?? null}
-              onSelect={setSelectedReportId}
-            />
-            {selectedReport && (
-              <PersistedReportCard
-                key={selectedReport.report_id}
-                report={selectedReport}
-                threadId={threadId}
-                threadTitle={threadTitle}
-                isDownloading={isDownloading}
-                onDownloadPdf={() => handleDownloadPdf(selectedReport)}
-              />
-            )}
-          </div>
+        ) : reports.length > 0 && selectedReport ? (
+          <PersistedReportCard
+            key={selectedReport.report_id}
+            report={selectedReport}
+            threadId={threadId}
+            threadTitle={threadTitle}
+            isDownloading={isDownloading}
+            onDownloadPdf={() => handleDownloadPdf(selectedReport)}
+          />
         ) : (
-          <NoSavedReport />
+          <NoSavedReport
+            canGenerate={canGenerate}
+            isGenerating={isGenerating}
+            onGenerate={() => void handleGenerate()}
+            onOpenOverview={onOpenOverview ?? onOpenChat}
+          />
         )}
       </div>
     </section>
@@ -241,39 +270,10 @@ export function ChatReportView({
 
 function InlineError({ message }: { message: string }) {
   return (
-    <div className="mt-5 rounded-xl border border-[#F0B8B2] bg-[#FFF6F4] px-4 py-3 text-sm leading-6 text-[#B42318]">
+    <div className="rounded border border-accent/30 bg-accent-soft px-4 py-2.5 text-xs text-accent">
       {message}
     </div>
   );
-}
-
-function readinessMessage({
-  hasMessages,
-  hasCompletedAnalysis,
-  threadId,
-  threadStatus,
-}: {
-  hasMessages: boolean;
-  hasCompletedAnalysis: boolean;
-  threadId: string | null;
-  threadStatus: ThreadStatus | null;
-}): string {
-  if (!threadId || !hasMessages) {
-    return "A chat investigation is required before a report can be generated.";
-  }
-  if (threadStatus === "processing") {
-    return "The investigation is still processing. Please wait for completion before generating a report.";
-  }
-  if (threadStatus === "awaiting_followup") {
-    return "Answer the pending clarification in Chat before generating a report.";
-  }
-  if (threadStatus === "failed") {
-    return "The latest chat response failed. Resolve it before generating a report.";
-  }
-  if (!hasCompletedAnalysis) {
-    return "A validated case analysis is not available yet. Complete the chat investigation first.";
-  }
-  return "Ready. Generate a structured intelligence report from this case snapshot.";
 }
 
 function reportRequestKey(): string | undefined {

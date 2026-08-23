@@ -1,37 +1,25 @@
 <section class="report-section">
     <div class="section-header">
-        <h2 class="section-number-title">{{ report.i18n.sec_5_5 }}</h2>
+        <h2 class="section-number-title">{{ report.i18n.sec_4 }}</h2>
     </div>
 
     {% if report.has_mitre_mappings %}
-    <p class="section-lead-paragraph">{{ report.i18n.sub_mitre_intro }}</p>
-    <table class="report-table">
-        <thead>
-            <tr>
-                <th style="width: 25%;">{{ report.i18n.col_finding }}</th>
-                <th style="width: 35%;">{{ report.i18n.col_case_support }}</th>
-                <th style="width: 25%;">{{ report.i18n.col_mitre }}</th>
-                <th style="width: 15%;">{{ report.i18n.col_mapping_status }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in report.mitre_rows %}
-            <tr>
-                <td><strong>{{ row.finding }}</strong></td>
-                <td>{{ row.case_evidence_support }}</td>
-                <td>
-                    <strong>{{ row.technique_id }}</strong>
-                    <div class="text-muted">{{ row.technique_name }}</div>
-                </td>
-                <td>
-                    {{ row.status_display }}
-                    <div class="text-muted">{{ report.i18n.retrieval_source }}: {{ row.source }}</div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <p class="section-lead-paragraph text-muted">{{ report.i18n.sub_mitre_intro }}</p>
+    <div class="mitre-cards-container">
+        {% for row in report.mitre_rows %}
+        <div class="mitre-card">
+            <div class="mitre-card-header">
+                <strong>{{ row.technique_id }} — {{ row.technique_name }}</strong>
+                <span class="mitre-card-tactic">Tactic: {{ row.tactic }}</span>
+            </div>
+            <div class="mitre-card-body">
+                <div><strong>{{ report.i18n.col_case_support }}:</strong> {{ row.case_evidence_support }}</div>
+                <div class="mitre-card-status"><strong>{{ report.i18n.col_mapping_status }}:</strong> {{ row.status_display }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
     {% else %}
-    <p class="section-lead-paragraph">{{ report.i18n.empty_mitre }}</p>
+    <p class="section-lead-paragraph text-muted">{{ report.i18n.empty_mitre }}</p>
     {% endif %}
 </section>

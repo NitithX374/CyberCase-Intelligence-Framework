@@ -29,7 +29,8 @@ describe("MitreCandidatePanel", () => {
     const candidate = screen.getByRole("article", {
       name: "T1078 MITRE candidate",
     });
-    expect(within(candidate).getByText("T1078 — Valid Accounts")).toBeInTheDocument();
+    expect(within(candidate).getByText("T1078")).toBeInTheDocument();
+    expect(within(candidate).getByText("Valid Accounts")).toBeInTheDocument();
     expect(within(candidate).getByText("A-01")).toBeInTheDocument();
     expect(within(candidate).getByText("Candidate only")).toBeInTheDocument();
     expect(

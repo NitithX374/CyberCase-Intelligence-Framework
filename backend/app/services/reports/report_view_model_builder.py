@@ -1,4 +1,4 @@
-from __future__ import annotations;
+import re
 
 from app.schemas.reports import ChatReportRead, ReportSection
 from app.services.reports.report_view_model_contracts import (
@@ -6,15 +6,26 @@ from app.services.reports.report_view_model_contracts import (
     ProvenanceViewRow,
     ReportLanguage,
     ReportViewModel,
+    TimelineViewRow,
     UnresolvedIssueViewRow,
     VerificationActionViewRow,
 )
+from app.services.reports.report_view_model_items import parse_report_items
 from app.services.reports.report_view_model_text import (
     I18N_STRINGS,
     _format_datetime,
     _strict_marked_fields,
 )
-from app.services.reports.report_view_model_items import parse_report_items
+
+
+def _clean_markdown_text(text: str) -> str:
+    # Remove markdown headings, bold markers, and clean whitespace
+    clean = re.sub(r"^###+\s*[^\n]+\n?", "", text, flags=re.MULTILINE)
+    clean = re.sub(r"\*\*(.*?)\*\*", r"\1", clean)
+    clean = re.sub(r"`([^`]+)`", r"\1", clean)
+    clean = re.sub(r"^[-*•]\s+", "", clean, flags=re.MULTILINE)
+    return clean.strip()
+
 
 def build_report_view_model(
     report: ChatReportRead,
@@ -44,15 +55,39 @@ def build_report_view_model(
     )
     evidence_rows = parsed_items.evidence_rows
     indicator_rows = parsed_items.indicator_rows
-    timeline_rows = parsed_items.timeline_rows
+    timeline_rows = list(parsed_items.timeline_rows)
     has_indicators = parsed_items.has_indicators
 
+    # If timeline_rows not populated from sections, populate from structured.claims
+    if not timeline_rows and structured and structured.claims:
+        source_label = (
+            "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #1)"
+            if lang == "th"
+            else "User-Submitted Evidence (#1)"
+        )
+        for claim in structured.claims:
+            if claim.claim_id != "R-01" and claim.text:
+                clean_claim_text = _clean_markdown_text(claim.text)
+                if clean_claim_text:
+                    timeline_rows.append(
+                        TimelineViewRow(
+                            order=len(timeline_rows) + 1,
+                            time_display="—",
+                            event=clean_claim_text,
+                            source_evidence=source_label,
+                            actors="-",
+                            status=claim.support_type,
+                        )
+                    )
+
+    # Parse MITRE rows
     mitre_view_rows: list[MitreMappingViewRow] = []
-    raw_mitre_items = []
-    for sec_id in ("technical_analysis_mitre", "mitre_attack_mapping"):
+    raw_mitre_items: list[str] = []
+    for sec_id in ("technical_analysis_mitre", "mitre_attack_mapping", "mapping_rationale"):
         if sec_id in sections_by_id:
             raw_mitre_items.extend(sections_by_id[sec_id].items)
 
+    seen_techniques: set[str] = set()
     for item in raw_mitre_items:
         m_parsed = _strict_marked_fields(
             item,
@@ -69,10 +104,11 @@ def build_report_view_model(
         )
         if m_parsed is not None:
             t_id, t_name, m_status, m_src, m_rel, m_score, m_tactic, e_type, m_desc = m_parsed
-            finding_title = f"{m_tactic}: {t_name}"
+            if t_id in seen_techniques:
+                continue
+            seen_techniques.add(t_id)
+            finding_title = f"{m_tactic}: {t_name}" if m_tactic else t_name
             status_display = i18n["status_candidate"]
-            if m_rel == "cited_in_answer" or "cited" in m_rel:
-                status_display = i18n["status_reported_analysis"]
 
             mitre_view_rows.append(
                 MitreMappingViewRow(
@@ -85,60 +121,74 @@ def build_report_view_model(
                     technique_id=t_id,
                     technique_name=t_name,
                     status_display=status_display,
-                    tactic=m_tactic,
-                    source=m_src,
+                    tactic=m_tactic or "General",
+                    source="MITRE ATT&CK Knowledge Base",
                     relevance=m_rel,
                 )
             )
-        elif "No MITRE" not in item:
-            mitre_view_rows.append(
-                MitreMappingViewRow(
-                    finding=item[:60],
-                    case_evidence_support=item,
-                    technique_id="MITRE Candidate",
-                    technique_name=item[:40],
-                    status_display=i18n["status_candidate"],
-                    tactic="General",
-                    source="external_mitre_retrieval",
-                    relevance="candidate",
+        elif item and not item.startswith("No ") and not item.startswith("ไม่มี"):
+            # Check pattern "Txxxx: reason" or "Txxxx Name reason"
+            m_match = re.match(r"^(T\d+(?:\.\d+)?)(?:\s*[:\-—]\s*|\s+)(.*)$", item)
+            if m_match:
+                t_id = m_match.group(1)
+                if t_id in seen_techniques:
+                    continue
+                seen_techniques.add(t_id)
+                t_rest = m_match.group(2).strip()
+                mitre_view_rows.append(
+                    MitreMappingViewRow(
+                        finding=f"MITRE Technique {t_id}",
+                        case_evidence_support=t_rest or ("Analytical correlation from MITRE knowledge base" if lang == "en" else "ข้อสันนิษฐานเชื่อมโยงจากฐานข้อมูล MITRE ATT&CK"),
+                        technique_id=t_id,
+                        technique_name=t_id,
+                        status_display=i18n["status_candidate"],
+                        tactic="General",
+                        source="MITRE ATT&CK Knowledge Base",
+                        relevance="candidate",
+                    )
                 )
-            )
 
     has_mitre_mappings = len(mitre_view_rows) > 0
 
+    # Summary Paragraphs (Section 1)
     summary_paragraphs: list[str] = []
-    bg_items = []
-    for sec_id in ("case_background_scope", "case_summary", "executive_summary"):
-        if sec_id in sections_by_id:
-            for p in sections_by_id[sec_id].paragraphs:
-                p_clean = p.strip()
-                if p_clean and not p_clean.startswith("Snapshot scope:") and not p_clean.startswith("This preliminary report"):
-                    summary_paragraphs.append(p_clean)
-            for item in sections_by_id[sec_id].items:
-                if "Message " in item and "): " in item:
-                    _, _, content = item.partition("): ")
-                    if content:
-                        bg_items.append(content.strip())
-                elif "Generation method:" not in item and "Ordered user" not in item:
-                    bg_items.append(item.strip())
-
-    if bg_items:
-        first_item = bg_items[0]
-        if lang == "th":
-            prefix = "มีการรายงานว่า " if not first_item.startswith("มี") and not first_item.startswith("พบ") else ""
-            summary_paragraphs.append(f"{prefix}{first_item}")
-            if len(bg_items) > 1:
-                summary_paragraphs.append(f"จากข้อมูลที่ได้รับ: {'; '.join(bg_items[1:])}")
-        else:
-            summary_paragraphs.append(f"Initial report indicates: {first_item}")
-            if len(bg_items) > 1:
-                summary_paragraphs.append(f"Subsequent reported activity: {'; '.join(bg_items[1:])}")
+    case_summary = sections_by_id.get("case_summary")
+    if case_summary and case_summary.paragraphs:
+        for p in case_summary.paragraphs:
+            cleaned = _clean_markdown_text(p)
+            if cleaned:
+                summary_paragraphs.append(cleaned)
 
     if not summary_paragraphs:
         summary_paragraphs.append(i18n["empty_summary"])
 
+    # Unresolved Issues (Section 5)
     unresolved_issues: list[UnresolvedIssueViewRow] = []
-    limitations: list[str] = []
+    evidence_to_examine = sections_by_id.get("evidence_to_examine")
+    if evidence_to_examine and evidence_to_examine.items:
+        for item in evidence_to_examine.items:
+            clean_item = _clean_markdown_text(item)
+            if (
+                clean_item
+                and not clean_item.startswith("No ")
+                and not clean_item.startswith("ไม่มี")
+                and "No explicit unresolved" not in clean_item
+            ):
+                reason = "-"
+                desc = clean_item
+                if " — " in clean_item:
+                    desc, _, reason = clean_item.partition(" — ")
+                elif " : " in clean_item:
+                    desc, _, reason = clean_item.partition(" : ")
+                unresolved_issues.append(
+                    UnresolvedIssueViewRow(
+                        description=desc.strip(),
+                        category="ประเด็นที่ยังไม่ยืนยัน" if lang == "th" else "Unconfirmed Item",
+                        reason=reason.strip() if reason != "-" else "",
+                    )
+                )
+
+    # Check limitations for warnings as backup
     if structured and structured.limitations:
         for lim in structured.limitations:
             if lim.startswith("Extraction warning: "):
@@ -146,98 +196,89 @@ def build_report_view_model(
                 unresolved_issues.append(
                     UnresolvedIssueViewRow(
                         description=warning_text,
-                        category="Warning / Gap" if lang == "en" else "ข้อสังเกต / คำเตือน",
+                        category="ข้อสังเกต / คำเตือน" if lang == "th" else "Warning / Gap",
                         reason=(
-                            "Ambiguity or inconsistency detected in reported data"
-                            if lang == "en"
-                            else "พบความคลุมเครือหรือความไม่สอดคล้องในข้อมูลที่ได้รับ"
+                            "พบความคลุมเครือหรือความไม่สอดคล้องในข้อมูลที่ได้รับ"
+                            if lang == "th"
+                            else "Ambiguity or inconsistency detected in reported data"
                         ),
                     )
                 )
-            else:
-                limitations.append(lim)
 
     if not unresolved_issues:
         unresolved_issues.append(
             UnresolvedIssueViewRow(
                 description=i18n["empty_gaps"],
-                category="Normal" if lang == "en" else "สถานะปกติ",
+                category="สถานะปกติ" if lang == "th" else "Normal",
                 reason="-",
             )
         )
 
+    # Verification Actions (Section 6: Points for Further Investigation)
     verification_actions: list[VerificationActionViewRow] = []
-    for sec_id in ("preliminary_recommendations", "conclusions_limitations_next_steps"):
-        if sec_id in sections_by_id:
-            for item in sections_by_id[sec_id].items:
-                if item and "Review every candidate" not in item:
-                    verification_actions.append(
-                        VerificationActionViewRow(order=len(verification_actions) + 1, action=item)
-                    )
+    action_order = 1
 
-    if not verification_actions:
-        if lang == "en":
-            verification_actions = [
-                VerificationActionViewRow(
-                    order=1,
-                    action="Examine original digital artifacts (e.g., server logs, PCAP, disk images) to confirm reported indicators and timestamps.",
-                ),
-                VerificationActionViewRow(
-                    order=2,
-                    action="Verify connections between involved user accounts and endpoints to determine the full scope of impact.",
-                ),
-                VerificationActionViewRow(
-                    order=3,
-                    action="Correlate observed behaviors against MITRE ATT&CK techniques to establish appropriate mitigation controls.",
-                ),
-                VerificationActionViewRow(
-                    order=4,
-                    action="Preserve forensic copies of all relevant digital evidence following standard chain-of-custody protocols.",
-                ),
-            ]
+    # Dynamically generate investigative actions from gaps
+    real_gaps = [g for g in unresolved_issues if g.description != i18n["empty_gaps"]]
+    for gap in real_gaps:
+        gap_desc = gap.description
+        if lang == "th":
+            if "ส่งออก" in gap_desc or "destination" in gap_desc.lower() or "egress" in gap_desc.lower():
+                action_text = f"ควรตรวจสอบข้อมูลบันทึกเครือข่าย (Firewall / Network Logs) เพิ่มเติมเพื่อระบุปลายทางและปริมาณข้อมูลที่เกี่ยวข้อง ({gap_desc})"
+            elif "บัญชี" in gap_desc or "account" in gap_desc.lower() or "privilege" in gap_desc.lower():
+                action_text = f"ควรตรวจสอบข้อมูลบันทึกการยืนยันตัวตน (Authentication / Audit Logs) เพิ่มเติมเพื่อระบุบัญชีผู้ใช้ที่เกี่ยวข้อง ({gap_desc})"
+            else:
+                action_text = f"ควรตรวจสอบพยานหลักฐานและบันทึกเหตุการณ์เพิ่มเติมเกี่ยวกับ: {gap_desc}"
         else:
-            verification_actions = [
-                VerificationActionViewRow(
-                    order=1,
-                    action="ตรวจพิสูจน์พยานหลักฐานต้นฉบับ (เช่น Server Logs, PCAP, Disk Image) เพื่อยืนยันตัวบ่งชี้และเวลาที่แท้จริง",
-                ),
-                VerificationActionViewRow(
-                    order=2,
-                    action="ตรวจสอบความสัมพันธ์ระหว่างบัญชีผู้ใช้และอุปกรณ์ปลายทางที่เกี่ยวข้องเพื่อยืนยันขอบเขตความเสียหาย",
-                ),
-                VerificationActionViewRow(
-                    order=3,
-                    action="เปรียบเทียบพฤติกรรมในระบบกับ MITRE ATT&CK Techniques ที่ตรวจพบเพื่อกำหนดมาตรการสกัดกั้นที่เหมาะสม",
-                ),
-                VerificationActionViewRow(
-                    order=4,
-                    action="เก็บรักษาสำเนาพยานหลักฐานดิจิทัลตามระเบียบสายการครอบครองพยานหลักฐาน (Chain of Custody)",
-                ),
-            ]
+            action_text = f"Investigate and review system/network logs regarding: {gap_desc}"
 
-    if not limitations:
-        if lang == "en":
-            limitations = [
-                "This report is a provisional, unverified preliminary analysis designed for investigative orientation.",
-                "Portions of incident details originate from user-submitted statements and have not been independently confirmed with raw evidence.",
-                "The automated analysis reflects only the snapshot data provided and does not replace a comprehensive digital forensics examination.",
-                "Associated MITRE ATT&CK techniques represent retrieval mapping candidates and require expert validation.",
-            ]
-        else:
-            limitations = [
-                "รายงานนี้เป็นรายงานสรุปผลการวิเคราะห์เบื้องต้น (Provisional / Unverified Report) สำหรับใช้เป็นแนวทางการสืบสวน",
-                "ข้อมูลเหตุการณ์บางส่วนมาจากข้อความที่ผู้ใช้หรือผู้แจ้งเหตุรายงาน และยังไม่ได้รับการตรวจสอบยืนยันกับพยานหลักฐานดิจิทัลต้นฉบับโดยตรง",
-                "ระบบประมวลผลตามสแนปช็อตข้อมูลที่ได้รับเท่านั้น ไม่สามารถทดแทนกระบวนการตรวจพิสูจน์พยานหลักฐานทางนิติวิทยาศาสตร์ดิจิทัลอย่างเป็นทางการได้",
-                "เทคนิคและยุทธวิธี MITRE ATT&CK ที่ปรากฏเป็นผลจากการจับคู่เชิงวิเคราะห์ (Candidate Mapping) ต้องอาศัยผู้เชี่ยวชาญยืนยันก่อนใช้เป็นข้อสรุปทางคดี",
-            ]
+        verification_actions.append(
+            VerificationActionViewRow(order=action_order, action=action_text)
+        )
+        action_order += 1
+
+    # Standard forensic baseline actions
+    if lang == "th":
+        baseline_actions = [
+            "ควรตรวจสอบและเก็บรักษาข้อมูลบันทึกเหตุการณ์ต้นฉบับ (Original Logs) เพื่อยืนยันความถูกต้องของเหตุการณ์",
+            "ควรตรวจสอบความเชื่อมโยงของบัญชีผู้ใช้และอุปกรณ์ปลายทางในเครือข่ายเพิ่มเติมเพื่อยืนยันขอบเขตผลกระทบ",
+            "ควรเก็บรักษาสำเนาพยานหลักฐานดิจิทัลตามระเบียบสายการครอบครองพยานหลักฐาน (Chain of Custody)",
+        ]
+    else:
+        baseline_actions = [
+            "Examine original digital artifacts (e.g., server logs, network captures) to confirm reported indicators.",
+            "Verify connections between involved user accounts and endpoints to determine full scope of impact.",
+            "Preserve forensic copies of relevant digital evidence following standard chain-of-custody protocols.",
+        ]
+
+    for base_action in baseline_actions:
+        if not any(base_action[:30] in act.action for act in verification_actions):
+            verification_actions.append(
+                VerificationActionViewRow(order=action_order, action=base_action)
+            )
+            action_order += 1
+
+    # Limitations (Section 7)
+    if lang == "th":
+        limitations = [
+            "รายงานนี้เป็นรายงานสรุปผลการวิเคราะห์เบื้องต้น (Provisional / Unverified Report) สำหรับใช้เป็นแนวทางการสืบสวน",
+            "ข้อมูลเหตุการณ์อ้างอิงจากข้อความและพยานหลักฐานที่ผู้ใช้ส่งเข้าสู่ระบบ และยังไม่ได้รับการตรวจสอบยืนยันกับพยานหลักฐานดิจิทัลต้นฉบับโดยตรง",
+            "การวิเคราะห์และการเชื่อมโยงข้อมูล MITRE ATT&CK เป็นการอนุมานทางเทคนิคภายนอก ไม่สามารถทดแทนกระบวนการตรวจพิสูจน์พยานหลักฐานทางนิติวิทยาศาสตร์ดิจิทัลอย่างเป็นทางการได้",
+        ]
+    else:
+        limitations = [
+            "This report is a provisional, unverified preliminary analysis designed for investigative orientation.",
+            "Incident details originate from user-submitted statements and have not been independently confirmed with raw evidence.",
+            "Automated MITRE ATT&CK correlation is external technical interpretation and does not replace official digital forensics examination.",
+        ]
 
     provenance_rows: list[ProvenanceViewRow] = [
         ProvenanceViewRow(label="Report ID", value=str(report.report_id)),
         ProvenanceViewRow(label="Report Version", value=f"v{report.version_number} ({report.report.report_version if report.report else 'preliminary_analysis_report_v1'})"),
         ProvenanceViewRow(label="Generated Date (UTC)", value=generated_date_str),
         ProvenanceViewRow(label="Source Snapshot Hash", value=report.source_snapshot_hash),
-        ProvenanceViewRow(label="Retrieval Context", value=report.retrieval_context_id),
-        ProvenanceViewRow(label="Analysis Message", value=str(report.analysis_message_id)),
+        ProvenanceViewRow(label="Retrieval Context ID", value=report.retrieval_context_id),
+        ProvenanceViewRow(label="Analysis Message ID", value=str(report.analysis_message_id)),
         ProvenanceViewRow(label="Prompt Version", value=report.prompt_version),
         ProvenanceViewRow(label="Template Provider", value=f"{report.provider} ({report.model})"),
         ProvenanceViewRow(label="Verification Status", value="Validated against frozen raw-evidence snapshot"),

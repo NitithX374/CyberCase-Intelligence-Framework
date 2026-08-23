@@ -51,4 +51,6 @@ export interface ChatWorkspaceLayoutProps {
   onSetDeleteCandidate: (thread: ChatThreadRead | null) => void;
   onCancelDelete: () => void;
   onConfirmDelete: () => void;
+  onNavigateToSource?: (messageId: string) => void;
+  onSubmitCase?: (data: { title?: string; description: string }) => void;
 }

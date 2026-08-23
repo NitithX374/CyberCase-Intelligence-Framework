@@ -29,15 +29,7 @@ ReportSectionId = Literal[
     "preliminary_recommendations",
     "system_limitations",
 ]
-ReportHeading = Literal[
-    "5.1 สรุปคดี",
-    "5.2 ตัวบ่งชี้ที่พบ",
-    "5.3 MITRE ATT&CK Mapping",
-    "5.4 เหตุผลของการ mapping",
-    "5.5 หลักฐานที่ควรตรวจสอบ",
-    "5.6 คำแนะนำเบื้องต้น",
-    "5.7 ข้อจำกัดของระบบ",
-]
+ReportHeading = str
 
 PRELIMINARY_REPORT_SECTION_IDS: tuple[str, ...] = (
     "case_summary",
@@ -50,13 +42,13 @@ PRELIMINARY_REPORT_SECTION_IDS: tuple[str, ...] = (
 )
 
 PRELIMINARY_REPORT_SECTION_HEADINGS: dict[str, str] = {
-    "case_summary": "5.1 สรุปคดี",
-    "indicators_found": "5.2 ตัวบ่งชี้ที่พบ",
-    "mitre_attack_mapping": "5.3 MITRE ATT&CK Mapping",
-    "mapping_rationale": "5.4 เหตุผลของการ mapping",
-    "evidence_to_examine": "5.5 หลักฐานที่ควรตรวจสอบ",
-    "preliminary_recommendations": "5.6 คำแนะนำเบื้องต้น",
-    "system_limitations": "5.7 ข้อจำกัดของระบบ",
+    "case_summary": "1. ภาพรวมเหตุการณ์",
+    "indicators_found": "2. ลำดับเหตุการณ์สำคัญและหลักฐาน",
+    "mitre_attack_mapping": "4. ข้อมูลอ้างอิง MITRE ATT&CK ที่เกี่ยวข้อง",
+    "mapping_rationale": "เหตุผลการเชื่อมโยงเชิงวิเคราะห์",
+    "evidence_to_examine": "5. ประเด็นที่ยังไม่สามารถยืนยันได้",
+    "preliminary_recommendations": "6. ประเด็นที่ควรตรวจสอบเพิ่มเติม",
+    "system_limitations": "7. ข้อจำกัดของรายงาน",
 }
 
 REPORT_SECTION_IDS_BY_VERSION: dict[str, tuple[str, ...]] = {
