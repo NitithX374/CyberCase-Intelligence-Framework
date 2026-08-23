@@ -78,9 +78,10 @@ describe("ChatWorkspace Intake submission integration", () => {
 
     fireEvent.click(submitBtn);
 
-    // Submission failed -> error should be visible, Intake stays mounted, textarea still has content
+    // Submission failed -> error modal opens with plain-language title, Intake stays mounted, textarea still has content
     await waitFor(() => {
-      expect(screen.getAllByText(/failed to submit case description/i).length).toBeGreaterThan(0);
+      expect(screen.getByText("ไม่สามารถเชื่อมต่อกับระบบได้")).toBeInTheDocument();
+      expect(screen.getByText(/failed to submit case description/i)).toBeInTheDocument();
     });
 
     expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeInTheDocument();

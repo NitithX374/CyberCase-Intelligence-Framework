@@ -1,19 +1,18 @@
-"use client";
-
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   downloadChatReportPdf,
   generateChatReport,
-  getApiErrorMessage,
   listChatReports,
   type ChatReportRead,
   type ThreadStatus,
 } from "@/lib/api";
+import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
+import { toUserFacingError, type UserFacingError } from "@/lib/user-facing-error";
 import { PersistedReportCard } from "./PersistedReportCard";
 import { NoSavedReport, ReportVersionSelector } from "./ReportHistory";
 import { chatQueryKeys } from "@/lib/query-keys";
@@ -86,26 +85,41 @@ export function ChatReportView({
   const isGenerating = generateMutation.isPending;
   const isDownloading = downloadMutation.isPending;
 
-  const loadError = reportsQuery.error
-    ? getApiErrorMessage(
-        reportsQuery.error,
-        "Could not load persisted reports for this case.",
-      )
-    : null;
+  const activeReportError: UserFacingError | null = useMemo(() => {
+    if (generateMutation.error) {
+      return toUserFacingError(generateMutation.error, {
+        actionLabel: "ลองสร้างรายงานอีกครั้ง",
+      });
+    }
+    if (downloadMutation.error) {
+      return toUserFacingError(downloadMutation.error, {
+        actionLabel: "ลองดาวน์โหลดอีกครั้ง",
+      });
+    }
+    if (reportsQuery.error) {
+      return toUserFacingError(reportsQuery.error, {
+        actionLabel: "โหลดใหม่",
+      });
+    }
+    return null;
+  }, [generateMutation.error, downloadMutation.error, reportsQuery.error]);
 
-  const generationError = generateMutation.error
-    ? getApiErrorMessage(
-        generateMutation.error,
-        "Failed to generate report. Please review the case details and try again.",
-      )
-    : null;
+  const handleClearReportError = () => {
+    generateMutation.reset();
+    downloadMutation.reset();
+  };
 
-  const downloadError = downloadMutation.error
-    ? getApiErrorMessage(
-        downloadMutation.error,
-        "Failed to download the PDF report. Please try again.",
-      )
-    : null;
+  const handleRetryReport = () => {
+    if (generateMutation.error) {
+      generateMutation.reset();
+      void handleGenerate();
+    } else if (downloadMutation.error && selectedReport) {
+      downloadMutation.reset();
+      handleDownloadPdf(selectedReport);
+    } else if (reportsQuery.error) {
+      void reportsQuery.refetch();
+    }
+  };
 
   const selectedReport =
     reports.find((report) => report.report_id === selectedReportId) ??
@@ -237,10 +251,6 @@ export function ChatReportView({
           )}
         </header>
 
-        {loadError && <InlineError message={loadError} />}
-        {generationError && <InlineError message={generationError} />}
-        {downloadError && <InlineError message={downloadError} />}
-
         {/* Primary Content Hero */}
         {isLoading ? (
           <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-xs text-ink-muted">
@@ -264,15 +274,14 @@ export function ChatReportView({
           />
         )}
       </div>
-    </section>
-  );
-}
 
-function InlineError({ message }: { message: string }) {
-  return (
-    <div className="rounded border border-accent/30 bg-accent-soft px-4 py-2.5 text-xs text-accent">
-      {message}
-    </div>
+      <MeaningfulErrorModal
+        isOpen={Boolean(activeReportError)}
+        error={activeReportError}
+        onClose={handleClearReportError}
+        onRetry={handleRetryReport}
+      />
+    </section>
   );
 }
 

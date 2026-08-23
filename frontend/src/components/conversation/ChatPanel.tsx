@@ -15,7 +15,6 @@ interface ChatPanelProps {
   input: string;
   threadStatus: ThreadStatus | null;
   phase: RunPhase;
-  error: string | null;
   postAnswerAction: ChatMessageAction | null;
   onInputChange: (value: string) => void;
   onPostAnswerActionChange: (action: ChatMessageAction) => void;
@@ -27,7 +26,6 @@ export function ChatPanel({
   input,
   threadStatus,
   phase,
-  error,
   postAnswerAction,
   onInputChange,
   onPostAnswerActionChange,
@@ -44,18 +42,6 @@ export function ChatPanel({
           isProcessing={isProcessing}
         />
       </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-          <div
-            role="alert"
-            className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800"
-          >
-            {error}
-          </div>
-        </div>
-      )}
 
       {/* Input Area */}
       <div className="shrink-0 bg-canvas px-4 pt-1 pb-3 sm:px-6 sm:pb-4">

@@ -271,6 +271,22 @@ export function ChatWorkspace() {
   );
   const activeWorkspaceView = activeView;
 
+  const handleClearQueryError = useCallback(() => {
+    setQueryError(null);
+  }, [setQueryError]);
+
+  const handleRetryQuery = useCallback(() => {
+    const pending = pendingSubmissionRef.current;
+    setQueryError(null);
+    if (pending) {
+      submitContent(
+        pending.content,
+        pending.kind,
+        pendingFollowUp?.followUp ?? undefined,
+      );
+    }
+  }, [pendingFollowUp, pendingSubmissionRef, setQueryError, submitContent]);
+
   return (
     <ChatWorkspaceLayout
       activeThread={activeThread}
@@ -303,6 +319,8 @@ export function ChatWorkspace() {
       onConfirmDelete={() => void confirmDelete()}
       onNavigateToSource={handleNavigateToSource}
       onSubmitCase={handleSubmitCase}
+      onClearQueryError={handleClearQueryError}
+      onRetryQuery={handleRetryQuery}
     />
   );
 }

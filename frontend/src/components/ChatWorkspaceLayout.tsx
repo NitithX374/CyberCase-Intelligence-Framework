@@ -7,6 +7,8 @@ import { TechnicalContextView } from "@/components/technical/TechnicalContextVie
 import { ChatPanel } from "@/components/conversation/ChatPanel";
 import { ChatReportView } from "@/components/report/ChatReportView";
 import { DeleteChatDialog } from "@/components/common/DeleteChatDialog";
+import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
+import { toUserFacingError } from "@/lib/user-facing-error";
 import { Icon } from "@/components/common/icons";
 import { WorkspaceSidebar } from "@/components/layout/WorkspaceSidebar";
 import {
@@ -90,6 +92,8 @@ export function ChatWorkspaceLayout({
   onConfirmDelete,
   onNavigateToSource,
   onSubmitCase,
+  onClearQueryError,
+  onRetryQuery,
 }: ChatWorkspaceLayoutProps) {
   const displayThreadTitle =
     activeThread?.title === "New chat" || !activeThread?.title
@@ -205,18 +209,10 @@ export function ChatWorkspaceLayout({
           </header>
           <div className="flex min-h-0 flex-1 overflow-hidden bg-canvas">
             <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-              {activeWorkspaceView !== "chat" && queryError && (
-                <div
-                  role="alert"
-                  className="mx-4 mt-4 shrink-0 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-xs font-medium text-accent sm:mx-7 lg:mx-10"
-                >
-                  {queryError}
-                </div>
-              )}
               {activeWorkspaceView === "intake" ? (
                 <CaseIntakeView
                   isSubmitting={phase === "querying" || phase === "analyzing"}
-                  error={queryError}
+                  error={null}
                   onSubmitCase={onSubmitCase ?? (() => {})}
                   messages={messages}
                   onOpenOverview={() => onViewChange("overview")}
@@ -282,7 +278,6 @@ export function ChatWorkspaceLayout({
                     input={input}
                     threadStatus={threadStatus}
                     phase={phase}
-                    error={queryError}
                     postAnswerAction={postAnswerAction}
                     onInputChange={onInputChange}
                     onPostAnswerActionChange={onPostAnswerActionChange}
@@ -310,6 +305,18 @@ export function ChatWorkspaceLayout({
         isDeleting={deletingThreadId !== null}
         onCancel={onCancelDelete}
         onConfirm={onConfirmDelete}
+      />
+      <MeaningfulErrorModal
+        isOpen={Boolean(queryError)}
+        error={
+          queryError
+            ? toUserFacingError(queryError, {
+                isUncertain: phase === "querying" || phase === "analyzing",
+              })
+            : null
+        }
+        onClose={onClearQueryError ?? (() => {})}
+        onRetry={onRetryQuery}
       />
     </div>
   );

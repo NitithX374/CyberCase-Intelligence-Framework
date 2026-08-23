@@ -34,12 +34,14 @@
 - 2026-08-24 [CODE] Repaired report timeline provenance: resolved claim source message IDs to actual ordinals (e.g. `#3`, `#1, #5`) with neutral fallback for unresolvable IDs, eliminating hardcoded `#1` lying.
 - 2026-08-24 [CODE] Fixed MITRE report contract: preserved structured technique ID, name, tactic, and rationale directly from snapshot to view-model without regex reverse-parsing degradation.
 - 2026-08-24 [CODE] Removed misleading `"N messages in record"` badge from What Happened section in Overview and cleaned up `totalMessagesCount`.
+- 2026-08-24 [CODE] Implemented user-facing Meaningful Error Modal (`MeaningfulErrorModal.tsx`, `user-facing-error.ts`) conforming strictly to `DESIGN.md`. Replaced raw inline technical error banners across workspace, intake, chat, and report views with categorized plain-language explanations (Timeout, Network, Rate Limit, Server, Validation, Unknown) while keeping technical details inside a collapsed disclosure.
 
 ## Done (recent)
 
 - 2026-08-24 [CODE] Intake draft loss on failed submission resolved with `onAccepted` callback and integration test (`ChatWorkspaceIntake.test.tsx`).
 - 2026-08-24 [CODE] Report timeline provenance and MITRE structured contract fixed with regression coverage in `test_report_view_model_and_pdf.py`.
 - 2026-08-24 [CODE] Removed `totalMessagesCount` from `WhatHappenedCard`, `CaseOverviewView`, `case-overview.ts`, and test suites.
+- 2026-08-24 [CODE] Meaningful Error Modal implemented with focus trapping, escape dismissal, safe retry/check-status actions, and test suites (`user-facing-error.test.ts`, `MeaningfulErrorModal.test.tsx`).
 
 ## Decisions
 
@@ -54,16 +56,17 @@
 - D009 ACTIVE 2026-08-24 [CODE] Case Materials and Technical Context are pure client-side read projections over existing persisted messages and trace metadata; no new tables or backend models.
 - D010 ACTIVE 2026-08-24 [USER] Standalone Investigation Issues page is deleted; gaps and unconfirmed points remain integrated inside Overview.
 - D011 ACTIVE 2026-08-24 [CODE] Single canonical classifier `frontend/src/lib/case-evidence.ts` defines evidence semantics across all frontend views.
+- D012 ACTIVE 2026-08-24 [CODE] Operation-level errors are presented via Meaningful Error Modal; raw technical error strings are strictly contained in collapsed disclosures.
 
 ## State (Done/Now/Next)
 
-- 2026-08-24 [TOOL] Done: Final correctness cleanup completed across Intake draft flow, report timeline provenance, structured MITRE contract, message-count removal, and test suites.
-- 2026-08-24 [TOOL] Next: Ready for review and merge.
+- 2026-08-24 [TOOL] Done: Frontend error presentation refined with Meaningful Error Modal and complete test coverage.
+- 2026-08-24 [TOOL] Next: Ready for user review.
 
 ## Receipts
 
-- 2026-08-24 [TOOL] `pytest backend/tests`: 66 passed (100%) in 1.94s.
-- 2026-08-24 [TOOL] `npm run test`: 20 test files and 64 tests passed (100%) in 16.35s.
+- 2026-08-24 [TOOL] `pytest backend/tests`: 66 passed (100%) in 1.99s.
+- 2026-08-24 [TOOL] `npm run test`: 22 test files and 79 tests passed (100%) in 14.14s.
 - 2026-08-24 [TOOL] `npm run lint`: passed (0 errors, 0 warnings).
 - 2026-08-24 [TOOL] `npm run build`: passed, Next.js 16.2.10 production build with TypeScript check succeeded with 0 errors.
 

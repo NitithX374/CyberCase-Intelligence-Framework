@@ -161,7 +161,7 @@ export function WorkspaceSidebar({
             Loading…
           </p>
         ) : threadsError ? (
-          <p className="mt-3 break-words px-1 text-xs leading-5 text-red-700 xl:px-2">
+          <p className="mt-3 break-words px-1 text-xs leading-5 text-accent xl:px-2">
             {threadsError}
           </p>
         ) : threads.length === 0 ? (
