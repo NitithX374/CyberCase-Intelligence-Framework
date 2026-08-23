@@ -86,10 +86,33 @@ The technique is *named* but its number is absent, so the model had to supply
 
 **This does not invalidate any earlier measurement.** Those runs measured the
 system as it actually behaved; nothing was scored incorrectly. It is a gap that
-was found, not a result that has to be withdrawn. Whether it explains the low
-precision (0.495 on TRAM) is a separate claim, and an untested one — it would
-need a count of predictions that name a technique correctly while citing the
-wrong number.
+was found, not a result that has to be withdrawn.
+
+### It does not, however, explain the low precision
+
+The obvious hypothesis was that the model names techniques correctly and then
+cites the wrong number, which would score as a false positive while the analysis
+underneath was right. Counted over the existing run files — a gold technique the
+run missed, where the technique's canonical name nevertheless appears in the
+answer text — that turns out to be a small effect:
+
+| run (sub-techniques rolled to parent) | missed | named anyway | share |
+|---|---:|---:|---:|
+| `tram__rag-en__k20-techonly` | 312 | 2 | 0.6% |
+| `tram__agent__qwen3-5-9b-nothink` | 381 | 25 | 6.6% |
+| `thai-cti__agent__luna` | 68 | 1 | 1.5% |
+| `thai-cti__agent__qwen3-5-9b-nothink` | 148 | 4 | 2.7% |
+
+The agent scores higher than the extraction arm because it writes prose, which
+names things without always citing them. But at 0.6–6.6% of misses, this is not
+what precision 0.495 is made of. The overwhelming majority of misses never name
+the technique at all — they are genuine misses, which is consistent with the
+oracle result pointing at retrieval rather than at generation.
+
+Counted without the parent rollup, the same measurement reads 6.4–14.3%, but
+that number is wrong: it books a gold `T1566` answered as `T1566.001` as a miss,
+when the scoring mode used throughout rolls exactly that up to a hit. Both
+counts are recorded here so the discrepancy is not rediscovered later.
 
 ## Finding 4 — DataSource / HAS_COMPONENT is dead against v17+
 
