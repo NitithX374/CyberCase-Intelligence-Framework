@@ -61,7 +61,8 @@ CyberCase Intelligence Framework &nbsp;·&nbsp; branch <code>eval/published-base
 
 <div class="callout key">
 <p><strong>ผลสรุปสามข้อ</strong></p>
-<p><strong>1.</strong> วัด pipeline ที่ให้บริการจริงได้เป็นครั้งแรก — บนสำนวนคดีไทย <strong>F1 0.576</strong> ด้วย generator 9B และ re-ranker 559M</p>
+<p><strong>1.</strong> วัด pipeline ที่ให้บริการจริงได้เป็นครั้งแรก — บนสำนวนคดีไทย <strong>F1 0.746</strong>
+    (<code>gpt-5.6-luna</code>) และ <strong>0.576</strong> เมื่อเปลี่ยนเป็นโมเดลเปิดขนาด 9B</p>
 <p><strong>2.</strong> ผลของแต่ละองค์ประกอบ<strong>กลับด้านตามภาระงาน</strong> การค้นคืนและ re-ranker ทำให้แย่ลงบนชุดทดสอบภายนอก
 แต่ทำให้ดีขึ้นชัดเจนบนโจทย์จริง — วัดได้ทั้งสองทิศทางในการทดลองเดียวกัน</p>
 <p><strong>3.</strong> พบและแก้ข้อบกพร่องใน production <strong>6 จุด</strong> ทั้งหมดเป็นชนิดที่ไม่ทำให้ระบบพัง จึงไม่มีใครเห็นจนกระทั่งรัน pipeline จริง</p>
@@ -94,15 +95,28 @@ CyberCase Intelligence Framework &nbsp;·&nbsp; branch <code>eval/published-base
 
 <h3>2.1 สำนวนคดีไทย — โจทย์จริงของระบบ (n=100)</h3>
 <table>
-  <thead><tr><th style="width:34%">arm</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th><th class="num">P@1</th><th class="num">P@3</th></tr></thead>
+  <thead><tr><th style="width:34%">arm</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th><th class="num">P@1</th><th class="num">ID/เรื่อง</th></tr></thead>
   <tbody>
-    <tr class="win"><td><strong>agent — pipeline ที่ให้บริการจริง</strong></td><td class="num">0.562</td><td class="num">0.591</td><td class="num"><span class="good">0.576</span></td><td class="num"><strong>0.640</strong></td><td class="num">0.582</td></tr>
-    <tr><td>retrieval + re-ranker</td><td class="num">0.120</td><td class="num">0.507</td><td class="num">0.195</td><td class="num">0.530</td><td class="num">0.375</td></tr>
-    <tr><td>retrieval ไม่ใช้ re-ranker</td><td class="num">0.120</td><td class="num">0.507</td><td class="num">0.195</td><td class="num">0.430</td><td class="num">0.333</td></tr>
+    <tr class="win"><td><strong>agent · gpt-5.6-luna</strong></td><td class="num">0.689</td><td class="num">0.813</td><td class="num"><span class="good">0.746</span></td><td class="num"><strong>0.730</strong></td><td class="num">4.8</td></tr>
+    <tr><td><strong>agent · qwen3.5-9b</strong></td><td class="num">0.562</td><td class="num">0.591</td><td class="num">0.576</td><td class="num">0.640</td><td class="num">4.2</td></tr>
+    <tr><td>retrieval + re-ranker</td><td class="num">0.120</td><td class="num">0.507</td><td class="num">0.195</td><td class="num">0.530</td><td class="num">20.0</td></tr>
+    <tr><td>retrieval ไม่ใช้ re-ranker</td><td class="num">0.120</td><td class="num">0.507</td><td class="num">0.195</td><td class="num">0.430</td><td class="num">20.0</td></tr>
   </tbody>
 </table>
 <p class="note">ชุดข้อมูล: สำนวนคดีเขียนด้วยมือจากคำเตือน CISA และแผนจำลอง CTID · ความยาวมัธยฐาน 688 ตัวอักษร · เฉลย 3 เทคนิคต่อเรื่อง ·
-โมเดล <code>qwen/qwen3.5-9b</code> · ตอบเป็นภาษาไทย 100/100</p>
+ตอบเป็นภาษาไทย 100/100 ทั้งสองโมเดล · ไม่มีข้อผิดพลาดระหว่างรัน</p>
+
+<div class="callout">
+<p><strong>การเปรียบเทียบโมเดลบน pipeline เดียวกัน</strong> — เหตุการณ์ชุดเดียวกัน 100 เรื่อง prompt เดียวกัน ต่างกันเพียงโมเดล</p>
+<p>ช่องว่าง <strong>0.170 F1</strong> ไม่ใช่ระดับที่เรียกได้ว่าเทียบเท่า โมเดลเปิด 9B ทำได้ <strong>77%</strong> ของสมรรถนะโมเดลเชิงพาณิชย์</p>
+<p>ตำแหน่งของช่องว่างบอกอะไรมากกว่าขนาด — <strong>recall ต่าง 0.222</strong> (0.813 เทียบ 0.591) ขณะที่ precision ต่างไม่ถึงครึ่งหนึ่งของนั้น
+ทั้งสองได้ context ชุดเดียวกันเป๊ะ โมเดลเล็กจึงไม่ได้ถูกจำกัดด้วยการค้นคืน แต่<strong>สกัดเทคนิคที่ถูกออกจาก context เดียวกันได้น้อยกว่า</strong>
+คอขวดอยู่ที่การอ่าน context ยาว มิใช่ที่ตัวค้นคืน</p>
+</div>
+
+<p class="note">ข้อความที่เขียนได้: <em>“บน pipeline และชุดข้อมูลเดียวกัน โมเดลเปิดขนาด 9B ทำได้ F1 0.576 เทียบกับ 0.746 ของโมเดลเชิงพาณิชย์
+คิดเป็น 77% ของสมรรถนะ โดยมีค่าใช้จ่ายด้าน output ต่ำกว่า 8 เท่า และติดตั้งภายในองค์กรได้ ซึ่งเป็นข้อกำหนดของงานที่ประมวลผลสำนวนคดี”</em>
+— เป็นข้อโต้แย้งเรื่องการแลกเปลี่ยน มิใช่เรื่องคุณภาพที่เท่ากัน</p>
 
 <h3>2.2 TRAM — ชุดทดสอบภายนอก (n=713)</h3>
 <table>
@@ -261,9 +275,10 @@ procedure example ของ MITRE เป็นข้อมูลสาธาร�
 <table>
   <thead><tr><th style="width:5%">#</th><th style="width:27%">งาน</th><th>เหตุผล</th><th style="width:15%">ต้นทุน</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>รัน agent ด้วย <code>gpt-5.6-luna</code> บนสำนวนคดีไทย</td>
-        <td>เทียบโมเดลบน pipeline และชุดข้อมูลเดียวกัน หากผลใกล้เคียง 0.576 จะยืนยันได้ว่าโมเดลเปิด 9B ให้ผลเทียบเท่าโมเดลเชิงพาณิชย์</td>
-        <td>~1 ชม. · ~$0.25</td></tr>
+    <tr><td>1</td><td>ปรับ prompt ให้โมเดลเล็กสกัดเทคนิคได้ครบขึ้น</td>
+        <td>ช่องว่างระหว่างโมเดลอยู่ที่ recall (0.591 เทียบ 0.813) บน context ชุดเดียวกัน — โมเดลเล็กมองข้ามเทคนิคที่มีอยู่ใน context
+            <br><span class="note">ต้องระวังการปรับ prompt ซ้ำ ๆ จนเข้ากับชุดทดสอบ 100 เรื่องนี้ ควรแก้ตามเหตุผลที่วินิจฉัยได้ครั้งเดียว มิใช่ค้นหาตัวแปรที่ให้คะแนนสูงสุด</span></td>
+        <td>~1 ชม. · ~$0.10</td></tr>
     <tr><td>2</td><td>ปรับปรุงตัวสร้างเวกเตอร์</td>
         <td>ช่องว่าง recall ไทย–อังกฤษ 0.126 เป็นเพดานของทั้ง pipeline · มีโมดูล <code>embed_ab</code> อยู่แล้ว</td>
         <td>ฟรี</td></tr>
