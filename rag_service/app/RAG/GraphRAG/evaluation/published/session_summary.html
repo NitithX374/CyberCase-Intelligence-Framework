@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>สรุปงานประเมินผลและปรับปรุง pipeline</title>
+<style>
+  @page { size: A4; margin: 17mm 16mm 15mm 16mm; }
+  :root {
+    --ink:#16191d; --muted:#5b6470; --rule:#d8dde3; --head-bg:#eef1f5;
+    --good:#15803d; --bad:#b91c1c; --accent:#1e3a5f; --warn:#a16207;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:"Leelawadee UI","Leelawadee",Tahoma,sans-serif; font-size:10pt;
+         line-height:1.6; color:var(--ink); margin:0; }
+  code { font-family:"Cascadia Mono",Consolas,"Courier New",monospace; font-size:0.88em;
+         background:#f4f6f8; padding:0 3px; border-radius:2px; }
+  h1 { font-size:18.5pt; line-height:1.28; margin:0 0 4px; letter-spacing:-0.2px; }
+  .sub { color:var(--muted); font-size:9.6pt; line-height:1.5; margin:0 0 12px; }
+  hr { border:0; border-top:1px solid var(--rule); margin:0 0 4px; }
+  h2 { font-size:13.5pt; margin:20px 0 8px; border-top:2px solid var(--accent); padding-top:8px; }
+  h2:first-of-type { margin-top:14px; }
+  h3 { font-size:11.2pt; margin:14px 0 6px; }
+  h3,h4 { break-after:avoid; }
+  p { margin:0 0 7px; }
+  ul { margin:0 0 7px; padding-left:17px; }
+  li { margin-bottom:3px; }
+  table { width:100%; border-collapse:collapse; margin:7px 0 11px; font-size:8.6pt;
+          line-height:1.42; break-inside:avoid; }
+  th { background:var(--head-bg); text-align:left; font-weight:600; padding:5px 6px;
+       border-bottom:1.3px solid #9aa5b1; vertical-align:bottom; }
+  td { padding:5px 6px; border-bottom:1px solid var(--rule); vertical-align:top; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  tr.hl td { background:#fff8e1; }
+  tr.win td { background:#eefaf1; }
+  tr.sec td { background:#f7f9fb; font-style:italic; color:var(--muted); }
+  .good { color:var(--good); font-weight:700; }
+  .bad { color:var(--bad); font-weight:700; }
+  .warn { color:var(--warn); font-weight:700; }
+  .note { font-size:8.5pt; color:var(--muted); line-height:1.48; margin:-3px 0 11px; }
+  .callout { border-left:3px solid var(--accent); background:#f7f9fb; padding:8px 11px; margin:9px 0 11px; }
+  .callout.key { border-left-color:var(--good); background:#f2fbf5; }
+  .callout.warn { border-left-color:var(--warn); background:#fffbeb; }
+  .callout p:last-child { margin-bottom:0; }
+  pre { font-family:"Cascadia Mono",Consolas,"Courier New",monospace; font-size:8.2pt;
+        line-height:1.48; background:#f4f6f8; border-left:3px solid var(--rule);
+        padding:7px 10px; margin:7px 0 9px; white-space:pre-wrap; }
+  .avoid-break { break-inside:avoid; }
+  .page-break { break-before:page; }
+  footer { margin-top:16px; border-top:1px solid var(--rule); padding-top:7px;
+           font-size:8.4pt; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>สรุปงานประเมินผลและปรับปรุง pipeline</h1>
+<p class="sub">
+CyberCase Intelligence Framework &nbsp;·&nbsp; branch <code>eval/published-baselines</code> &nbsp;·&nbsp; 30 commits<br>
+ขอบเขต: สร้างชุดทดสอบเทียบกับงานวิจัยที่ตีพิมพ์ · วัดผล pipeline · แก้ข้อบกพร่องที่พบระหว่างการวัด
+</p>
+<hr>
+
+<div class="callout key">
+<p><strong>ผลสรุปสามข้อ</strong></p>
+<p><strong>1.</strong> วัด pipeline ที่ให้บริการจริงได้เป็นครั้งแรก — บนสำนวนคดีไทย <strong>F1 0.576</strong> ด้วย generator 9B และ re-ranker 559M</p>
+<p><strong>2.</strong> ผลของแต่ละองค์ประกอบ<strong>กลับด้านตามภาระงาน</strong> การค้นคืนและ re-ranker ทำให้แย่ลงบนชุดทดสอบภายนอก
+แต่ทำให้ดีขึ้นชัดเจนบนโจทย์จริง — วัดได้ทั้งสองทิศทางในการทดลองเดียวกัน</p>
+<p><strong>3.</strong> พบและแก้ข้อบกพร่องใน production <strong>6 จุด</strong> ทั้งหมดเป็นชนิดที่ไม่ทำให้ระบบพัง จึงไม่มีใครเห็นจนกระทั่งรัน pipeline จริง</p>
+</div>
+
+<h2>1. สิ่งที่สร้างขึ้น</h2>
+<table>
+  <thead><tr><th style="width:30%">ส่วนประกอบ</th><th>หน้าที่</th></tr></thead>
+  <tbody>
+    <tr><td><code>fetch_datasets.py</code></td><td>ดึงชุดทดสอบของ TechniqueRAG จาก HuggingFace (TRAM 725 · Expert 157 · Procedures 1,767)</td></tr>
+    <tr><td><code>metrics.py</code></td><td>ตัวชี้วัดตามโปรโตคอลต้นทาง · unit test 18 รายการ</td></tr>
+    <tr><td><code>attack_version_map.py</code></td><td>แปลงรหัส ATT&amp;CK v14 → v19 จากความสัมพันธ์ <code>revoked-by</code> ในไฟล์ STIX</td></tr>
+    <tr><td><code>run_benchmark.py</code></td><td>ตัวรัน 5 arm · รองรับ resume · เลือกโมเดล · เลือกชุดข้อมูล</td></tr>
+    <tr><td><code>clean_corpus.py</code></td><td>สร้างดัชนีที่ล้างข้อความประกอบออก ลงคอลเลกชันแยก</td></tr>
+    <tr><td><code>build_reranker_trainset.py</code></td><td>สร้างชุดฝึก re-ranker พร้อมตัดข้อมูลที่ทับซ้อนกับชุดทดสอบ</td></tr>
+    <tr><td>ชุดทดสอบสำนวนคดีไทย</td><td>ต่อ <code>real_cti</code> 100 เรื่อง (ไทย + อังกฤษคู่ขนาน) เข้ากับ harness เดียวกัน</td></tr>
+  </tbody>
+</table>
+
+<h3>การพิสูจน์ความถูกต้องของการวัด</h3>
+<ul>
+  <li><strong>ตัวชี้วัดตรงกับต้นทาง</strong> — เทียบกับ <code>evaluate.py</code> ของ TechniqueRAG บนข้อมูลสุ่ม 400 ชุด
+      ทั้งสองโหมด P/R/F1 ตรงกันคลาดเคลื่อนไม่เกิน 1e-12</li>
+  <li><strong>ปรับรุ่น ATT&amp;CK</strong> — 196 คู่จาก <code>revoked-by</code> หลังแปลงแล้วป้ายเฉลยทุกรายการค้นคืนได้ครบ 100%</li>
+  <li><strong>ตัดข้อมูลทับซ้อน</strong> — ชุดฝึกที่เสนอ 18,383 รายการทับซ้อนกับชุดทดสอบ 1,656 รายการ (9%) ตัดออกแล้วเหลือ 15,915
+      <span class="note">เทียบข้อความตรง ๆ ตรวจไม่พบเลย เพราะชุดทดสอบตัดชื่อผู้กระทำออกจากต้นประโยค ต้องเทียบแบบบรรจุอยู่ภายในบนข้อความที่ทำให้เป็นมาตรฐานแล้ว</span></li>
+</ul>
+
+<h2>2. ตารางผลลัพธ์</h2>
+
+<h3>2.1 สำนวนคดีไทย — โจทย์จริงของระบบ (n=100)</h3>
+<table>
+  <thead><tr><th style="width:34%">arm</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th><th class="num">P@1</th><th class="num">P@3</th></tr></thead>
+  <tbody>
+    <tr class="win"><td><strong>agent — pipeline ที่ให้บริการจริง</strong></td><td class="num">0.562</td><td class="num">0.591</td><td class="num"><span class="good">0.576</span></td><td class="num"><strong>0.640</strong></td><td class="num">0.582</td></tr>
+    <tr><td>retrieval + re-ranker</td><td class="num">0.120</td><td class="num">0.507</td><td class="num">0.195</td><td class="num">0.530</td><td class="num">0.375</td></tr>
+    <tr><td>retrieval ไม่ใช้ re-ranker</td><td class="num">0.120</td><td class="num">0.507</td><td class="num">0.195</td><td class="num">0.430</td><td class="num">0.333</td></tr>
+  </tbody>
+</table>
+<p class="note">ชุดข้อมูล: สำนวนคดีเขียนด้วยมือจากคำเตือน CISA และแผนจำลอง CTID · ความยาวมัธยฐาน 688 ตัวอักษร · เฉลย 3 เทคนิคต่อเรื่อง ·
+โมเดล <code>qwen/qwen3.5-9b</code> · ตอบเป็นภาษาไทย 100/100</p>
+
+<h3>2.2 TRAM — ชุดทดสอบภายนอก (n=713)</h3>
+<table>
+  <thead><tr><th style="width:34%">arm</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th><th class="num">P@1</th><th class="num">preds</th></tr></thead>
+  <tbody>
+    <tr class="sec"><td colspan="6">โมเดล qwen/qwen3.5-9b</td></tr>
+    <tr><td>agent — pipeline จริง</td><td class="num">0.328</td><td class="num">0.568</td><td class="num">0.416</td><td class="num">0.396</td><td class="num">4.1</td></tr>
+    <tr class="win"><td><strong>rag-en</strong> (ablation)</td><td class="num">0.495</td><td class="num">0.675</td><td class="num"><span class="good">0.571</span></td><td class="num">0.582</td><td class="num">3.7</td></tr>
+    <tr><td>llm-only</td><td class="num">0.260</td><td class="num">0.359</td><td class="num">0.302</td><td class="num">0.288</td><td class="num">—</td></tr>
+    <tr class="sec"><td colspan="6">โมเดล gpt-5.6-luna</td></tr>
+    <tr><td>rag-en (ablation)</td><td class="num">0.589</td><td class="num">0.665</td><td class="num">0.625</td><td class="num">0.621</td><td class="num">1.3</td></tr>
+    <tr><td>llm-only</td><td class="num">0.653</td><td class="num">0.738</td><td class="num">0.693</td><td class="num">0.687</td><td class="num">—</td></tr>
+    <tr class="sec"><td colspan="6">การค้นคืนอย่างเดียว ไม่มี LLM</td></tr>
+    <tr><td>retrieval k=20 กรองเฉพาะ technique</td><td class="num">0.070</td><td class="num">0.805</td><td class="num">0.129</td><td class="num">0.373</td><td class="num">19.9</td></tr>
+    <tr><td>retrieval k=20 ไม่ใช้ re-ranker</td><td class="num">0.070</td><td class="num">0.805</td><td class="num">0.129</td><td class="num">0.396</td><td class="num">19.9</td></tr>
+    <tr><td>retrieval k=5</td><td class="num">0.183</td><td class="num">0.609</td><td class="num">0.282</td><td class="num">0.394</td><td class="num">4.9</td></tr>
+  </tbody>
+</table>
+
+<h3>2.3 เทียบกับตัวเลขที่ตีพิมพ์ — TRAM ระดับ technique</h3>
+<table>
+  <thead><tr><th style="width:38%">ระบบ</th><th style="width:18%">ประเภท</th><th class="num">P</th><th class="num">R</th><th class="num">F1</th></tr></thead>
+  <tbody>
+    <tr><td>NCE</td><td>retriever</td><td class="num">0.903</td><td class="num">0.789</td><td class="num">0.842</td></tr>
+    <tr><td><strong>TechniqueRAG</strong></td><td><strong>fine-tuned</strong></td><td class="num">0.760</td><td class="num">0.721</td><td class="num"><strong>0.740</strong></td></tr>
+    <tr><td>BM25</td><td>retriever</td><td class="num">0.679</td><td class="num">0.647</td><td class="num">0.663</td></tr>
+    <tr><td>IntelEx</td><td>RAG</td><td class="num">0.607</td><td class="num">0.707</td><td class="num">0.653</td></tr>
+    <tr><td>DeepSeek v3 (RAG)</td><td>RAG</td><td class="num">0.546</td><td class="num">0.774</td><td class="num">0.640</td></tr>
+    <tr><td><em>ของเรา — rag-en · luna</em></td><td><em>RAG</em></td><td class="num">0.589</td><td class="num">0.665</td><td class="num">0.625</td></tr>
+    <tr><td>GPT-4 (RAG)</td><td>RAG</td><td class="num">0.555</td><td class="num">0.706</td><td class="num">0.622</td></tr>
+    <tr class="win"><td><strong>ของเรา — rag-en · qwen3.5-9b</strong></td><td><strong>RAG</strong></td><td class="num">0.495</td><td class="num">0.675</td><td class="num"><strong class="good">0.571</strong></td></tr>
+    <tr class="hl"><td>🎯 <strong>Ministral 8B (RAG)</strong> — คู่เทียบที่คุมตัวแปร</td><td>RAG</td><td class="num">0.519</td><td class="num">0.576</td><td class="num"><strong>0.546</strong></td></tr>
+    <tr><td>DeepSeek v3</td><td>zero-shot</td><td class="num">0.437</td><td class="num">0.657</td><td class="num">0.525</td></tr>
+    <tr><td>GPT-4o</td><td>zero-shot</td><td class="num">0.383</td><td class="num">0.500</td><td class="num">0.434</td></tr>
+    <tr><td>Ministral 8B</td><td>zero-shot</td><td class="num">0.077</td><td class="num">0.317</td><td class="num">0.124</td></tr>
+  </tbody>
+</table>
+<p class="note"><strong>ข้อจำกัดที่ต้องระบุ:</strong> TechniqueRAG ผ่านการ fine-tune บน train split จึงไม่ใช่คู่เทียบโดยตรงของ arm ใด
+คู่เทียบที่คุมตัวแปรได้มากที่สุดคือ Ministral 8B (RAG) — generator ขนาดใกล้เคียง ไม่ fine-tune ทั้งคู่
+ช่องว่าง 0.169 เทียบกับตัวเลขพาดหัว สอดคล้องกับ ablation ในงานเดียวกันซึ่งระบุว่าการ fine-tune อย่างเดียวให้ผลต่าง +0.194</p>
+
+<h3>2.4 ผลของแต่ละองค์ประกอบ แยกตามภาระงาน</h3>
+<table>
+  <thead><tr><th style="width:26%">องค์ประกอบ</th><th style="width:37%">TRAM (ประโยค 95 ตัวอักษร)</th><th>สำนวนคดีไทย (688 ตัวอักษร)</th></tr></thead>
+  <tbody>
+    <tr><td>re-ranker</td><td class="num"><span class="bad">−0.023</span> P@1</td><td class="num"><span class="good">+0.100</span> P@1</td></tr>
+    <tr><td>pipeline เต็ม เทียบกับ ablation</td><td class="num"><span class="bad">−0.155</span> F1</td><td class="num"><span class="good">+0.381</span> F1</td></tr>
+    <tr><td>การค้นคืน (โมเดลที่ไม่จำคำตอบ)</td><td class="num"><span class="good">+0.269</span> F1</td><td>—</td></tr>
+    <tr><td>การค้นคืน (โมเดลที่น่าจะจำคำตอบ)</td><td class="num"><span class="bad">−0.068</span> F1</td><td>—</td></tr>
+  </tbody>
+</table>
+<div class="callout">
+<p><strong>ทุกองค์ประกอบให้ผลตรงข้ามกันเมื่อเปลี่ยนภาระงาน</strong> ระบบนี้ถูกออกแบบมาสำหรับสำนวนคดีหลายขั้นตอน
+บนชุดทดสอบที่เป็นประโยคเดียว องค์ประกอบเดียวกันกลับเป็นภาระ — เช่น agent ระบุ 4.1 เทคนิคต่อเฉลย 1.2 บน TRAM
+แต่ระบุ 4.2 ต่อเฉลย 3.0 บนสำนวนคดีไทย ซึ่งพอดีกัน</p>
+</div>
+
+<h3>2.5 การทดลองปรับปรุงการค้นคืน — ผลลบทั้งหมด</h3>
+<table>
+  <thead><tr><th style="width:32%">การทดลอง</th><th style="width:38%">สมมติฐาน</th><th class="num">ผลต่อ P@1</th></tr></thead>
+  <tbody>
+    <tr><td>กรองเหลือเฉพาะ technique</td><td>ผลลัพธ์ประเภท Group/Software แย่งตำแหน่งต้นตาราง</td><td class="num">0.384 → 0.373</td></tr>
+    <tr><td>ล้างข้อความประกอบ 18.5%</td><td>citation และลิงก์บดบังเนื้อหาจริง</td><td class="num">0.373 → 0.363</td></tr>
+    <tr><td>แก้การรวมคะแนนข้าม collection</td><td>candidate ที่ถูกต้องถูกเบียดออก</td><td class="num">0.384 → 0.388</td></tr>
+    <tr><td>ลด top-K เป็น 5</td><td>pool ใหญ่เปิดช่องให้จัดอันดับผิด</td><td class="num">0.373 → 0.394</td></tr>
+    <tr><td>ปิดตัวจัดอันดับใหม่</td><td>cross-encoder อาจไม่ช่วย</td><td class="num">0.373 → 0.396</td></tr>
+  </tbody>
+</table>
+<p class="note">ไม่มีการทดลองใดยก P@1 บน TRAM เกินระดับสัญญาณรบกวน แต่การแก้การรวมคะแนนยังคงมีคุณค่าในตัวเอง —
+candidate ที่เป็น technique เพิ่มจาก 7.9 เป็น 12.1 ต่อคำถาม และตัวอย่างที่ไม่ได้ผลลัพธ์เลยลดจาก 6 เหลือ 1
+<br><strong>และข้อสรุปว่า "ไม่ควรใช้ re-ranker" ถูกกลับด้านในภายหลังเมื่อวัดบนสำนวนคดีไทย</strong></p>
+
+<h2 class="page-break">3. ข้อบกพร่องที่พบและแก้</h2>
+<p>ทั้งหกจุดมีลักษณะร่วมกัน คือ<strong>ไม่ทำให้ระบบพัง</strong> จึงไม่ปรากฏจนกระทั่งมีการวัดผล pipeline จริง
+สี่จุดแรกเป็นผลจากการเปลี่ยนสถาปัตยกรรมแล้วเก็บของเดิมไว้โดยปิดทับแทนการรื้อ</p>
+<table>
+  <thead><tr><th style="width:22%">จุด</th><th style="width:42%">อาการ</th><th>การแก้ไข</th></tr></thead>
+  <tbody>
+    <tr><td><strong>router</strong></td>
+        <td>จำแนกประเภทคำถามทุกครั้งแล้วทิ้งผลลัพธ์ — เส้นเชื่อมถูกกำหนดตายตัวเป็นเส้นทางเดียว ทำให้เสีย LLM call ฟรีทุกคำถาม</td>
+        <td>ถอดออกจาก graph ทั้งหมด · ประหยัด 1 call ต่อคำถาม</td></tr>
+    <tr><td><strong>prompt ขัดแย้งกันเอง</strong></td>
+        <td>สั่งทั้ง “ห้ามเขียนภาษาไทย” และ “เขียนภาษาไทยทั้งหมด” ในข้อความเดียวกัน ผลขึ้นกับว่าโมเดลแก้ความขัดแย้งทางใด —
+            โมเดลใหญ่ทำถูก โมเดล 9B ตอบสำนวนคดีไทยเป็นภาษาอังกฤษ</td>
+        <td>ทำเป็นเทมเพลตที่ระบุภาษาครั้งเดียวในกฎข้อ 1 · ทดสอบแล้วได้ภาษาไทย 100/100</td></tr>
+    <tr><td><strong>ปฏิเสธที่จะตอบ</strong></td>
+        <td><code>ACKNOWLEDGE_LIMIT</code> ลัดวงจร ไม่เรียก generation เลย — เกิด 40% ของ TRAM และ<strong>ได้ศูนย์ทุกข้อ</strong>
+            รวมถึงข้อที่ตอบได้ชัด</td>
+        <td>ส่งสิ่งที่ขาดเข้า prompt แทน ตอบเท่าที่ข้อมูลรองรับแล้วปิดท้ายด้วยหัวข้อขอข้อมูลเพิ่ม · <strong>F1 +0.149</strong></td></tr>
+    <tr><td><code>node_label_filter</code></td>
+        <td>รับพารามิเตอร์แล้วไม่ส่งต่อ ผู้เรียกได้ผลลัพธ์ที่ไม่ถูกกรองโดยไม่มีการแจ้งเตือน</td>
+        <td>ต่อพารามิเตอร์ให้ครบ · กรองฝั่งไคลเอนต์เพราะ Qdrant ต้องมี payload index</td></tr>
+    <tr><td>การรวมคะแนนข้าม collection</td>
+        <td>normalize แบบ min-max แยกแต่ละ collection บังคับให้อันดับหนึ่งของแต่ละฝั่งเท่ากับ 1.0 เสมอ ไม่ว่าจะเกี่ยวข้องจริงหรือไม่</td>
+        <td>เปลี่ยนเป็นรวมด้วยอันดับพร้อมน้ำหนักที่ประกาศไว้</td></tr>
+    <tr><td>ไม่มี timeout</td>
+        <td>ไคลเอนต์ LLM รอไม่จำกัด · 1 การเรียกค้างทำให้ทั้งชุดหยุดและไม่มีอะไรถูกเขียนลงดิสก์</td>
+        <td>timeout 120 วินาทีต่อคำขอ · 180 วินาทีต่อชุด · ทิ้งตัวที่ค้างแล้วเก็บภายหลัง</td></tr>
+    <tr><td colspan="3" style="background:#f7f9fb"><em>พบเพิ่มเติมแต่ยังไม่แก้: <code>gap_warning</code> ของ PARTIAL_ANSWER เขียนลง state แล้วไม่มีใครอ่าน (แก้พร้อมข้อ 3 แล้ว) ·
+        <code>FINAL_TOP_K = 5</code> ตัด context ของ LLM เหลือหนึ่งในสี่ · <code>max_length = 512</code> ของ cross-encoder กำหนดตายตัวทั้งที่โมเดลรองรับ 8192</em></td></tr>
+  </tbody>
+</table>
+
+<h2>4. ข้อค้นพบเชิงวิธีการ</h2>
+
+<div class="avoid-break">
+<h3>4.1 ชุดทดสอบภายนอกอาจวัดคนละอย่างกับที่ระบบทำ</h3>
+<p>คลังค้นคืนของ TechniqueRAG คือ procedure example ซึ่งเป็น<strong>ข้อความชนิดเดียวกับคำถาม</strong>
+วัดการซ้อนทับคำระหว่างคำถาม TRAM กับเอกสารเป้าหมาย ได้ค่ามัธยฐาน <strong>0.43</strong> เทียบกับ <strong>0.25</strong> ของคลังนิยามเทคนิคแบบที่ระบบนี้ใช้
+และสูงกว่าใน 64% ของตัวอย่าง</p>
+<p>สถาปัตยกรรมดังกล่าว<strong>ใช้กับระบบนี้ไม่ได้โดยหลักการ</strong> เพราะคำถามเป็นภาษาไทยขณะที่ฐานความรู้เป็นภาษาอังกฤษ
+การจับคู่คำจึงเป็นไปไม่ได้ การค้นคืนแบบ dense เป็นข้อกำหนดของโจทย์ มิใช่ทางเลือกเชิงออกแบบ</p>
+</div>
+
+<div class="avoid-break">
+<h3>4.2 การจัดอันดับข้ามภาษาได้ แต่การค้นคืนยังไม่ได้</h3>
+<pre>บนเหตุการณ์ชุดเดียวกัน 100 เรื่อง ต่างกันเพียงภาษาของคำถาม
+P@1      ไทย 0.530   อังกฤษ 0.550     ต่าง 0.020
+recall   ไทย 0.507   อังกฤษ 0.633     ต่าง 0.126
+เปรียบเทียบรายตัวอย่างแบบจับคู่: 0 ต่อ 0</pre>
+<p>ไม่มีเหตุการณ์ใดเลยที่จัดอันดับถูกในภาษาหนึ่งแต่ผิดในอีกภาษาหนึ่ง
+จุดอ่อนด้านภาษาไทยจึงอยู่ที่ <code>BGE-M3</code> ซึ่งเป็นตัวสร้างเวกเตอร์ มิใช่ที่ตัวจัดอันดับใหม่
+เป็นตัวเลขความสามารถหลายภาษาชุดแรกของโครงการ และเป็นความสามารถที่งานคู่เทียบทั้งสามไม่มี</p>
+</div>
+
+<div class="avoid-break">
+<h3>4.3 ข้อควรระวังเรื่องการปนเปื้อนของชุดทดสอบ</h3>
+<p><code>gpt-5.6-luna</code> ตอบเองโดยไม่ใช้การค้นคืนได้ F1 <strong>0.693</strong> บน TRAM สูงกว่าแถว zero-shot ที่ตีพิมพ์อย่างมาก
+(GPT-4o 0.434) และสูงกว่า <code>qwen3.5-9b</code> บนโจทย์เดียวกันถึง 0.39
+procedure example ของ MITRE เป็นข้อมูลสาธารณะ จึงมีความเป็นไปได้สูงว่าโมเดลรุ่นใหม่เคยเห็นระหว่างการฝึก</p>
+<p>ข้อนี้กระทบการตีความ<strong>ทุกงาน</strong>ที่วัดผลบน TRAM ด้วยโมเดลรุ่นใหม่ ไม่ใช่เฉพาะงานนี้
+และบนสำนวนคดีไทยซึ่งเขียนขึ้นเองด้วยมือ ข้อกังวลนี้ไม่เกิดขึ้น</p>
+</div>
+
+<div class="avoid-break">
+<h3>4.4 ข้อมูลฝึกกับชุดทดสอบมาจากแหล่งเดียวกัน</h3>
+<p>กราฟของโครงการมีตัวอย่างเชิงกระบวนการ 18,383 รายการซึ่งเหมาะเป็นชุดฝึก re-ranker
+แต่ชุดทดสอบที่ตีพิมพ์ก็สร้างจาก MITRE procedure examples เช่นกัน ตรวจพบทับซ้อน <strong>1,656 รายการ</strong>
+(เฉพาะ TRAM คือ 228 จาก 725 หรือ 31.4% โดย 207 รายการมีป้ายเฉลยตรงกันด้วย)</p>
+<p>การเทียบด้วยข้อความตรง ๆ ตรวจไม่พบเลย เพราะชุดทดสอบตัดชื่อผู้กระทำออกจากต้นประโยค
+ต้องเทียบบนข้อความที่ทำให้เป็นมาตรฐานแล้วและใช้การบรรจุอยู่ภายใน รายการที่ตัดออกบันทึกไว้เป็นหลักฐานตรวจสอบย้อนกลับ</p>
+</div>
+
+<h2>5. ข้อจำกัด</h2>
+<ul>
+  <li>ชุดทดสอบภาษาไทยมี 100 ตัวอย่าง ความต่างต่ำกว่าราว 0.05 ควรถือเป็นสัญญาณรบกวน
+      ผลของตัวจัดอันดับใหม่ (+0.100) อยู่เหนือเกณฑ์นั้นสองเท่า แต่ควรยืนยันซ้ำด้วยชุดที่ใหญ่ขึ้น</li>
+  <li>วัดเฉพาะการระบุเทคนิค <strong>ยังไม่ได้วัดคุณภาพของรายงานปลายทาง</strong> ซึ่งเป็นผลผลิตจริงของระบบ</li>
+  <li>การใช้กราฟความสัมพันธ์ยังไม่ได้ประเมินแยก — ชุดทดสอบไม่มีความสัมพันธ์ระหว่าง entity ให้ใช้เพียงพอ</li>
+  <li>ยังไม่ได้วัด Expert และ Procedures · ยังไม่ได้รัน agent ด้วย <code>gpt-5.6-luna</code> เพื่อเทียบโมเดล</li>
+  <li>ข้อสรุปเรื่องการปนเปื้อนเป็นการอนุมานจากคะแนน มิใช่การตรวจสอบชุดข้อมูลฝึกของโมเดลโดยตรง</li>
+  <li>MRR เทียบกับต้นทางไม่ได้ เนื่องจากโค้ดต้นทางคำนวณหลังทำลายลำดับและให้ค่าไม่คงที่ระหว่างการรัน</li>
+</ul>
+
+<h2>6. งานที่ควรทำต่อ</h2>
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:27%">งาน</th><th>เหตุผล</th><th style="width:15%">ต้นทุน</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>รัน agent ด้วย <code>gpt-5.6-luna</code> บนสำนวนคดีไทย</td>
+        <td>เทียบโมเดลบน pipeline และชุดข้อมูลเดียวกัน หากผลใกล้เคียง 0.576 จะยืนยันได้ว่าโมเดลเปิด 9B ให้ผลเทียบเท่าโมเดลเชิงพาณิชย์</td>
+        <td>~1 ชม. · ~$0.25</td></tr>
+    <tr><td>2</td><td>ปรับปรุงตัวสร้างเวกเตอร์</td>
+        <td>ช่องว่าง recall ไทย–อังกฤษ 0.126 เป็นเพดานของทั้ง pipeline · มีโมดูล <code>embed_ab</code> อยู่แล้ว</td>
+        <td>ฟรี</td></tr>
+    <tr><td>3</td><td>ปรับจูน re-ranker</td>
+        <td>พิสูจน์แล้วว่ามีคุณค่า (+0.100 บนโจทย์จริง) จึงมีช่องให้ปรับปรุง · ชุดข้อมูล 15,915 รายการเตรียมไว้แล้ว
+            <br><span class="note">ประตูที่ต้องผ่าน: TRAM P@1 &gt; 0.396 และภาษาไทยต้องไม่ต่ำกว่า 0.530</span></td>
+        <td>ต้องใช้ GPU คลาวด์</td></tr>
+    <tr><td>4</td><td>วัดคุณภาพรายงานปลายทาง</td>
+        <td>ตัวชี้วัดปัจจุบันวัดแค่รหัสเทคนิค ไม่ได้วัดสิ่งที่ผู้ใช้อ่านจริง</td>
+        <td>ต้องออกแบบเพิ่ม</td></tr>
+    <tr><td>5</td><td>ตรวจหา dead code ที่ตกหล่นเพิ่ม</td>
+        <td>พบรูปแบบเดิมซ้ำ 4 ครั้งใน session นี้ · จุดที่น่าสงสัยต่อ: <code>chain.py</code> ที่ไม่มีใครเรียกใช้ ·
+            <code>DUAL_QUERY_RETRIEVAL</code> · <code>translate_query()</code> · เส้นทาง <code>--ultrafast</code></td>
+        <td>ฟรี</td></tr>
+  </tbody>
+</table>
+
+<footer>
+ข้อมูลประกอบทั้งหมด — ผลการรันรายตัวอย่าง ที่มาของข้อมูล ตัวเลขของงานคู่เทียบ และรายการที่ตัดออกเพราะทับซ้อน — อยู่ใน
+<code>rag_service/app/RAG/GraphRAG/evaluation/published/</code> บน branch <code>eval/published-baselines</code>
+</footer>
+
+</body>
+</html>
