@@ -151,10 +151,58 @@ Across enterprise + mobile, the indexed corpus is 4,164 entity documents and
 21,347 relationship documents, and **every relationship document now carries an
 ATT&CK ID**.
 
-## What this does not tell us
+## Measured
 
-Nothing here is a result. A larger, better-labelled corpus is a hypothesis about
-retrieval quality, not evidence of it — more documents can just as easily mean
-more competition for the same top-K slots. `compare_corpus.py` measures it, and
-it deliberately separates the corpus change from the embedding-model change so
-neither can take credit for the other.
+`compare_corpus.py`, top_k=20, no reranker, no LLM. Thai n=100, TRAM n=713.
+
+| config | Thai recall | Thai P@1 | TRAM recall | TRAM P@1 |
+|---|---:|---:|---:|---:|
+| v1-bge-hybrid — production today | 0.344 | 0.210 | 0.796 | 0.269 |
+| v2-bge-hybrid — parser change | 0.335 | 0.250 | 0.797 | 0.266 |
+| v2-bge-dense — sparse off | **0.386** | 0.250 | 0.806 | 0.278 |
+| v2-jina-dense — model change | 0.369 | 0.160 | **0.808** | **0.320** |
+
+Read as deltas, one change at a time:
+
+| change | Thai P@1 | TRAM P@1 |
+|---|---:|---:|
+| parser | +0.040 | −0.003 |
+| sparse off | 0.000 (recall +0.051) | +0.012 (recall +0.009) |
+| jina | **−0.090** | **+0.042** |
+
+### The corpus change did not move retrieval
+
+Entity documents went from 1,913 to 4,164 and recall moved by ±0.01 on both
+sets. The analytics are not adding coverage; they are competing for the same
+top-20 slots as the technique documents that were already winning. This is the
+outcome the section above warned about, and it is worth stating plainly: the
+parser work is justified as a correctness fix — 697 DETECTS edges were being
+silently dropped — not as a retrieval improvement, and it should not be written
+up as one.
+
+Whether the analytics help *generation* is a separate question this measurement
+cannot answer. Retrieval scoring only asks whether an ID was reachable; it is
+blind to whether the text under that ID is in a register the model can use.
+
+### jina is better at English and worse at Thai
+
+TRAM P@1 0.278 → 0.320 (+15%). Thai P@1 0.250 → 0.160 (−36%). Same model, same
+corpus, same topology — the only variable left is the language of the query.
+BGE-M3 was trained for multilingual retrieval in a way jina-v5-small was not.
+
+The served workload is Thai case files, so jina is not adopted. Its cc-by-nc-4.0
+licence, which would have needed resolving before any deployment, is moot.
+
+### Sparse retrieval is not paying for itself
+
+Dense-only beat hybrid on both sets: Thai recall +0.051, TRAM recall +0.009.
+Consistent in direction, six times larger on Thai — which fits sparse being
+near-useless when a Thai query meets an English corpus, and RRF then diluting a
+good dense ranking with a near-random one.
+
+This contradicts an earlier in-house measurement where sparse helped MRR by
+about 0.050. That was a different corpus and harness, so neither result
+overturns the other on its own. Before acting on this, it needs re-measuring
+**with the reranker in place and through the served graph** — every component in
+this pipeline has so far reversed sign depending on the workload, and the
+reranker specifically went −0.023 on TRAM and +0.100 on Thai.
