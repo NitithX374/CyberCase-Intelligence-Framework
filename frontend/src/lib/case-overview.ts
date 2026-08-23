@@ -79,7 +79,6 @@ export interface CaseOverviewData {
   investigationPoints: InvestigationPoint[];
   mitreContext: MitreExplainedCard[];
   analysisMessageId: string | null;
-  totalMessagesCount: number;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -225,7 +224,6 @@ export function buildCaseOverview(
       investigationPoints: [],
       mitreContext: [],
       analysisMessageId: null,
-      totalMessagesCount: messages.length,
     };
   }
 
@@ -502,7 +500,6 @@ export function buildCaseOverview(
     investigationPoints,
     mitreContext,
     analysisMessageId: analysisMessage.id,
-    totalMessagesCount: messages.length,
   };
 }
 

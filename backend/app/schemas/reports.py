@@ -130,6 +130,7 @@ class ChatReportRead(BaseModel):
     latency_ms: float | None
     input_tokens: int | None
     output_tokens: int | None
+    source_snapshot: dict[str, Any] | None = None
 
 
 __all__ = [

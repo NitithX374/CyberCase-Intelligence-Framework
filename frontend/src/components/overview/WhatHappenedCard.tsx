@@ -2,12 +2,10 @@ import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdo
 
 interface WhatHappenedCardProps {
   summary: string;
-  totalMessagesCount: number;
 }
 
 export function WhatHappenedCard({
   summary,
-  totalMessagesCount,
 }: WhatHappenedCardProps) {
   if (!summary) return null;
 
@@ -25,9 +23,6 @@ export function WhatHappenedCard({
             What Happened? <span className="text-sm font-normal text-ink-secondary">· สรุปภาพรวมเหตุการณ์</span>
           </h2>
         </div>
-        <span className="text-xs font-medium text-ink-muted">
-          {totalMessagesCount} message{totalMessagesCount === 1 ? "" : "s"} in record
-        </span>
       </div>
 
       <div className="text-sm leading-relaxed text-ink sm:text-[15px]">

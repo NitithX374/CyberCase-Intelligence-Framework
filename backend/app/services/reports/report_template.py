@@ -41,10 +41,11 @@ def _extract_progression_claims(snapshot: ReportInputSnapshot) -> list[ReportCla
     )
     for idx, c in enumerate(trace_claims):
         if isinstance(c, dict) and c.get("text"):
-            c_sources = [
-                s for s in (c.get("source_message_ids") or source_ids)
-                if s in valid_source_set
-            ] or source_ids
+            raw_sources = c.get("source_message_ids")
+            if raw_sources is not None and isinstance(raw_sources, list):
+                c_sources = [str(s) for s in raw_sources if str(s).strip()]
+            else:
+                c_sources = list(source_ids)
             claims.append(
                 ReportClaim(
                     claim_id=f"CLM-{idx+1:02d}",
@@ -106,11 +107,9 @@ def build_template_report(snapshot: ReportInputSnapshot) -> StructuredReport:
         for message in snapshot.source_messages
     ]
     mitre_items = [
-        " ".join(
-            part
-            for part in (row.technique_id, row.name, row.reason)
-            if part.strip()
-        )
+        f"{row.technique_id} — {row.name or row.technique_id}"
+        + (f" ({row.tactic})" if row.tactic else "")
+        + (f": {row.reason}" if row.reason else "")
         for row in snapshot.mitre_rows
     ]
     unresolved = snapshot.unresolved_issues or [

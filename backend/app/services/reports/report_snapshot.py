@@ -96,7 +96,9 @@ def _mitre_rows(value: object) -> list[AdmittedMitreRow]:
             AdmittedMitreRow(
                 technique_id=identifier,
                 name=str(raw.get("name") or raw.get("technique_name") or ""),
-                reason=str(raw.get("reason") or raw.get("description") or ""),
+                reason=str(raw.get("reason") or raw.get("caseAssociationReason") or ""),
+                tactic=str(raw.get("tactic") or ""),
+                description=str(raw.get("description") or ""),
             )
         )
     return rows

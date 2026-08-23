@@ -195,7 +195,6 @@ export function CaseOverviewView({
         {/* Section 1: What Happened? */}
         <WhatHappenedCard
           summary={overview.incidentSummary}
-          totalMessagesCount={overview.totalMessagesCount}
         />
 
         {/* Section 2: Attack Story & Progression */}

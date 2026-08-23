@@ -27,14 +27,19 @@
   - Extracted concise plain-language summary for primary reading flow and tucked full MITRE definitions into an expandable `คำอธิบายทางเทคนิค ▾` drawer.
   - Replaced bright blue buttons with quiet document-annotated source references (`Source — Initial case description ↗`) preserving anchored popovers.
   - Reduced violet usage by ~70%, reserving it strictly for tiny MITRE ID accents.
-- 2026-08-24 [TOOL] Frontend tests (18 files / 49 tests), ESLint (0 errors, 0 warnings), Next.js production build (5/5 static pages), and Backend pytest suite (65 passed) all green.
+- 2026-08-24 [CODE] Implemented canonical persisted evidence classifier (`frontend/src/lib/case-evidence.ts`) strictly whitelisting `initial_case_narrative`, `clarification_answer`, and `added_case_information`, while excluding `analyst_question`, assistant messages, and unknown metadata.
+- 2026-08-24 [CODE] Repaired Case Materials and Overview provenance to use canonical classifier; deleted fake Technical Context fallback that defaulted unlinked MITRE techniques to initial case description.
+- 2026-08-24 [CODE] Repaired Case Intake to display read-only intake narrative record when evidence exists, removing duplicate submission form and preserving draft text on submission failure until backend acceptance.
+- 2026-08-24 [CODE] Fixed PDF viewer in `PersistedReportCard` to cache `Blob` in React Query and manage object URL lifecycle with `useMemo` and `useEffect` revocation.
+- 2026-08-24 [CODE] Repaired report timeline provenance: resolved claim source message IDs to actual ordinals (e.g. `#3`, `#1, #5`) with neutral fallback for unresolvable IDs, eliminating hardcoded `#1` lying.
+- 2026-08-24 [CODE] Fixed MITRE report contract: preserved structured technique ID, name, tactic, and rationale directly from snapshot to view-model without regex reverse-parsing degradation.
+- 2026-08-24 [CODE] Removed misleading `"N messages in record"` badge from What Happened section in Overview and cleaned up `totalMessagesCount`.
 
 ## Done (recent)
 
-- 2026-08-24 [CODE] Deleted `frontend/src/app/chat/[threadId]/issues`, `frontend/src/components/issues`, `frontend/src/lib/investigation-issues.ts`, and associated tests.
-- 2026-08-24 [CODE] Refactored `frontend/src/lib/technical-context.ts` and `frontend/src/components/technical/TechnicalContextView.tsx`.
-- 2026-08-24 [CODE] Updated `WorkspaceSidebar.tsx`, `ChatWorkspaceLayout.tsx`, `ChatWorkspace.tsx`, `CaseOverviewView.tsx`, `EstablishedVsUnclearSection.tsx`, `InvestigationPointsSection.tsx`, and `types.ts`.
-- 2026-08-24 [CODE] Updated vitest suites `TechnicalContextView.test.tsx`, `technical-context.test.ts`, and `WorkspaceSidebar.test.tsx`.
+- 2026-08-24 [CODE] Intake draft loss on failed submission resolved with `onAccepted` callback and integration test (`ChatWorkspaceIntake.test.tsx`).
+- 2026-08-24 [CODE] Report timeline provenance and MITRE structured contract fixed with regression coverage in `test_report_view_model_and_pdf.py`.
+- 2026-08-24 [CODE] Removed `totalMessagesCount` from `WhatHappenedCard`, `CaseOverviewView`, `case-overview.ts`, and test suites.
 
 ## Decisions
 
@@ -48,18 +53,19 @@
 - D008 ACTIVE 2026-08-24 [CODE] Standalone PDF/HTML reports use clean 1..7 standalone numbering + technical appendix, document-oriented evidence cards, and stacked MITRE cards.
 - D009 ACTIVE 2026-08-24 [CODE] Case Materials and Technical Context are pure client-side read projections over existing persisted messages and trace metadata; no new tables or backend models.
 - D010 ACTIVE 2026-08-24 [USER] Standalone Investigation Issues page is deleted; gaps and unconfirmed points remain integrated inside Overview.
+- D011 ACTIVE 2026-08-24 [CODE] Single canonical classifier `frontend/src/lib/case-evidence.ts` defines evidence semantics across all frontend views.
 
 ## State (Done/Now/Next)
 
-- 2026-08-24 [TOOL] Done: Visual and copy refinement pass complete. Investigation Issues deleted; Technical Context redesigned to flattened, quiet investigative notes.
-- 2026-08-24 [TOOL] Next: Hand off full architectural and UX report to user.
+- 2026-08-24 [TOOL] Done: Final correctness cleanup completed across Intake draft flow, report timeline provenance, structured MITRE contract, message-count removal, and test suites.
+- 2026-08-24 [TOOL] Next: Ready for review and merge.
 
 ## Receipts
 
-- 2026-08-24 [TOOL] `.\env_mitre\Scripts\pytest.exe backend/tests`: 65 passed (100%).
-- 2026-08-24 [TOOL] `npm run test -- --run`: 18 test files and 49 tests passed (100%).
+- 2026-08-24 [TOOL] `pytest backend/tests`: 66 passed (100%) in 1.94s.
+- 2026-08-24 [TOOL] `npm run test`: 20 test files and 64 tests passed (100%) in 16.35s.
 - 2026-08-24 [TOOL] `npm run lint`: passed (0 errors, 0 warnings).
-- 2026-08-24 [TOOL] `npm run build`: passed, static generation (5/5) and TypeScript compilation succeeded.
+- 2026-08-24 [TOOL] `npm run build`: passed, Next.js 16.2.10 production build with TypeScript check succeeded with 0 errors.
 
 
 
