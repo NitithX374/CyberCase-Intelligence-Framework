@@ -85,7 +85,14 @@ class STSpec:
     doc_prompt: str | None = None     # prompt_name for documents, None = plain
     query_prompt: str | None = None   # prompt_name for queries
     encode_kwargs: dict = field(default_factory=dict)
-    dtype: str = "auto"
+    # Stated per model, never left to "auto". "auto" reads config.torch_dtype
+    # and silently falls back to float32 when a model does not declare one -
+    # harrier does not. On this Ampere card, with allow_tf32 off, float32 gets
+    # no tensor-core path at all: 2.8 doc/s against jina's 16.9 through the
+    # identical upload path, which reads as the model being slow rather than as
+    # a dtype mistake. Holding it fixed also keeps the arms numerically
+    # comparable to each other.
+    dtype: str = "bfloat16"
 
 
 SPECS = {
@@ -96,7 +103,6 @@ SPECS = {
         doc_prompt="document",
         query_prompt="query",
         encode_kwargs={"task": "retrieval"},  # selects the retrieval LoRA adapter
-        dtype="bfloat16",
     ),
     "harrier": STSpec(
         model_id="microsoft/harrier-oss-v1-0.6b",
