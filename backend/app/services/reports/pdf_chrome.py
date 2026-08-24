@@ -14,7 +14,7 @@ from app.services.reports.pdf_design import (
     paragraph_text,
     plain_text,
 )
-from app.services.reports.report_view_model import ReportViewModel
+from app.services.reports.report_view_model_contracts import ReportViewModel
 
 
 def header_meta_table(

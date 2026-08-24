@@ -162,7 +162,7 @@ export function WorkspaceSidebar({
           </p>
         ) : threadsError ? (
           <p className="mt-3 break-words px-1 text-xs leading-5 text-accent xl:px-2">
-            {threadsError}
+            ไม่สามารถโหลดรายการคดีได้
           </p>
         ) : threads.length === 0 ? (
           <p className="mt-3 px-1.5 text-xs leading-5 text-ink-secondary">

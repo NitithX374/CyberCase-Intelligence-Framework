@@ -1,8 +1,7 @@
-"""Bounded Main Case Analysis and OpenRouter execution."""
-
 from app.services.case_analysis.contracts import (
     ANALYSIS_TRACE_VERSION,
     AnalysisClaim,
+    AnalysisMode,
     AnalysisTrace,
     AnalysisTraceDraft,
     AnalysisTraceFailureMetadata,
@@ -12,14 +11,17 @@ from app.services.case_analysis.contracts import (
     MitreAssociation,
     ProviderCaseAnalysis,
 )
-from app.services.case_analysis.service import (
-    AnalysisMode,
-    CASE_ANALYSIS_PROMPT_VERSION,
-    CaseAnalysisFailure,
+from app.services.case_analysis.case_analysis_executor import (
     MainCaseAnalysisService,
+    request_case_analysis,
+)
+from app.services.case_analysis.case_analysis_prompt_builder import (
     build_analysis_prompt,
     build_case_analysis_prompt,
-    request_case_analysis,
+)
+from app.services.case_analysis.case_analysis_prompt_config import (
+    CASE_ANALYSIS_PROMPT_VERSION,
+    CaseAnalysisFailure,
 )
 from app.services.case_analysis.personalization import (
     ResponseLanguage,

@@ -6,10 +6,10 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.schemas.reports import ChatReportRead
-from app.services.reports.report_view_model import (
+from app.services.reports.report_view_model_builder import build_report_view_model
+from app.services.reports.report_view_model_contracts import (
     ReportLanguage,
     ReportViewModel,
-    build_report_view_model,
 )
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"

@@ -36,12 +36,20 @@
 - 2026-08-24 [CODE] Removed misleading `"N messages in record"` badge from What Happened section in Overview and cleaned up `totalMessagesCount`.
 - 2026-08-24 [CODE] Implemented user-facing Meaningful Error Modal (`MeaningfulErrorModal.tsx`, `user-facing-error.ts`) conforming strictly to `DESIGN.md`. Replaced raw inline technical error banners across workspace, intake, chat, and report views with categorized plain-language explanations (Timeout, Network, Rate Limit, Server, Validation, Unknown) while keeping technical details inside a collapsed disclosure.
 
+- 2026-08-24 [CODE] Consolidated backend report and case analysis modules (eliminated 6 redundant facade/wrapper files: `report_service.py`, `report_errors.py`, `report_serialization.py`, `report_pdf_provenance.py`, `report_view_model.py`, `case_analysis/service.py`).
+- 2026-08-24 [CODE] Consolidated frontend components (inlined `WhatHappenedCard` into `CaseOverviewView`, `ChatComposer` into `ChatPanel`, `FollowUpExplanation` into `ChatTranscript`, deleted dead `case-reference.ts`).
+- 2026-08-24 [CODE] Fixed PDF preview error handling: replaced raw inline error string with `MeaningfulErrorModal` and a quiet placeholder (`ไม่สามารถแสดงตัวอย่าง PDF ได้`). Retrying refetches the preview.
+- 2026-08-24 [CODE] Fixed Report Failure presentation: collapsed `failure_code` and raw validation errors inside `<details> Technical details ▾</details>`.
+- 2026-08-24 [CODE] Fixed Report Generation retry idempotency: preserved `pendingGenerationRef` across retries so uncertain timeouts/retries do NOT create duplicate report versions; distinct new key only on explicit "Generate new version".
+- 2026-08-24 [CODE] Sanitized sidebar `threadsError` to display safe copy `"ไม่สามารถโหลดรายการคดีได้"`.
+
 ## Done (recent)
 
 - 2026-08-24 [CODE] Intake draft loss on failed submission resolved with `onAccepted` callback and integration test (`ChatWorkspaceIntake.test.tsx`).
 - 2026-08-24 [CODE] Report timeline provenance and MITRE structured contract fixed with regression coverage in `test_report_view_model_and_pdf.py`.
 - 2026-08-24 [CODE] Removed `totalMessagesCount` from `WhatHappenedCard`, `CaseOverviewView`, `case-overview.ts`, and test suites.
 - 2026-08-24 [CODE] Meaningful Error Modal implemented with focus trapping, escape dismissal, safe retry/check-status actions, and test suites (`user-facing-error.test.ts`, `MeaningfulErrorModal.test.tsx`).
+- 2026-08-24 [CODE] Module consolidation and report correctness fixes completed (10 redundant files eliminated, 81 frontend tests + 66 backend tests green, ESLint clean, build clean).
 
 ## Decisions
 
@@ -57,16 +65,17 @@
 - D010 ACTIVE 2026-08-24 [USER] Standalone Investigation Issues page is deleted; gaps and unconfirmed points remain integrated inside Overview.
 - D011 ACTIVE 2026-08-24 [CODE] Single canonical classifier `frontend/src/lib/case-evidence.ts` defines evidence semantics across all frontend views.
 - D012 ACTIVE 2026-08-24 [CODE] Operation-level errors are presented via Meaningful Error Modal; raw technical error strings are strictly contained in collapsed disclosures.
+- D013 ACTIVE 2026-08-24 [CODE] ONE logical Generate Report operation preserves ONE idempotency key across retries; new key generated only on confirmed success or explicit new version request.
 
 ## State (Done/Now/Next)
 
-- 2026-08-24 [TOOL] Done: Frontend error presentation refined with Meaningful Error Modal and complete test coverage.
+- 2026-08-24 [TOOL] Done: Module consolidation and report correctness fixes completed and verified.
 - 2026-08-24 [TOOL] Next: Ready for user review.
 
 ## Receipts
 
-- 2026-08-24 [TOOL] `pytest backend/tests`: 66 passed (100%) in 1.99s.
-- 2026-08-24 [TOOL] `npm run test`: 22 test files and 79 tests passed (100%) in 14.14s.
+- 2026-08-24 [TOOL] `pytest backend/tests`: 66 passed (100%) in 2.62s.
+- 2026-08-24 [TOOL] `npm run test`: 22 test files and 81 tests passed (100%) in 18.54s.
 - 2026-08-24 [TOOL] `npm run lint`: passed (0 errors, 0 warnings).
 - 2026-08-24 [TOOL] `npm run build`: passed, Next.js 16.2.10 production build with TypeScript check succeeded with 0 errors.
 

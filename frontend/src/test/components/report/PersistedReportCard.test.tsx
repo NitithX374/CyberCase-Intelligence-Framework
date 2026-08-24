@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -103,7 +103,45 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
     expect(screen.queryByText("Claim inspector")).not.toBeInTheDocument();
   });
 
-  it("renders failure details when report persistence status is failed", () => {
+  it("shows MeaningfulErrorModal on PDF preview failure without raw inline error and retries preview", async () => {
+    const downloadSpy = vi
+      .spyOn(api, "downloadChatReportPdf")
+      .mockRejectedValue(new Error("timeout of 15000ms exceeded"));
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PersistedReportCard
+          report={sampleReport()}
+          threadId="thread-1"
+          threadTitle="Investigation"
+          isDownloading={false}
+          onDownloadPdf={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    // Modal appears with plain-language title
+    expect(
+      await screen.findByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/ระบบยังไม่สามารถยืนยันผลลัพธ์ได้ในขณะนี้/)).toBeInTheDocument();
+
+    // Raw technical details are in disclosure
+    expect(screen.getByText("Technical details")).toBeInTheDocument();
+    expect(screen.getByText(/timeout of 15000ms exceeded/)).toBeInTheDocument();
+
+    // Primary placeholder is quiet and non-raw
+    expect(screen.getByText("ไม่สามารถแสดงตัวอย่าง PDF ได้")).toBeInTheDocument();
+
+    // Retry invokes downloadChatReportPdf refetch
+    const retryBtn = screen.getByRole("button", { name: "โหลดตัวอย่าง PDF ใหม่" });
+    fireEvent.click(retryBtn);
+    await waitFor(() => {
+      expect(downloadSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("renders failure details with technical failure code and validation errors inside Technical details disclosure", () => {
     const failedReport = {
       ...sampleReport(),
       persistence_status: "failed" as const,
@@ -125,12 +163,16 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Report generation failed")).toBeInTheDocument();
+    expect(screen.getByText("ไม่สามารถจัดทำรายงานฉบับนี้ได้")).toBeInTheDocument();
     expect(
       screen.getByText("Validation schema mismatch occurred during report generation."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Failure code: REPORT_SYNTHESIS_FAILED")).toBeInTheDocument();
+
+    // Failure code and raw validation errors are inside details
+    expect(screen.getByText("Technical details")).toBeInTheDocument();
+    expect(screen.getByText("REPORT_SYNTHESIS_FAILED")).toBeInTheDocument();
     expect(screen.getByText("Missing timeline anchor.")).toBeInTheDocument();
+
     expect(screen.queryByLabelText("PDF Document Viewer")).not.toBeInTheDocument();
     expect(screen.queryByText("Claim inspector")).not.toBeInTheDocument();
   });

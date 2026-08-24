@@ -1,14 +1,12 @@
 from app.services.reports.report_contracts import (
     AdmittedMitreRow,
+    ReportGenerationConflict,
     ReportInputSnapshot,
+    ReportNotFound,
     ReportRunResult,
+    ReportServiceError,
     ReportSourceMessage,
     ReportValidationError,
-)
-from app.services.reports.report_errors import (
-    ReportGenerationConflict,
-    ReportNotFound,
-    ReportServiceError,
 )
 from app.services.reports.report_generation import (
     REPORT_PROMPT_VERSION,
@@ -20,18 +18,19 @@ from app.services.reports.report_html import (
     render_chat_report_html_from_view_model,
 )
 from app.services.reports.report_pdf import render_chat_report_pdf
-from app.services.reports.report_service import ChatReportService, ReportService
+from app.services.reports.report_persistence import ChatReportService
 from app.services.reports.report_template import build_template_report
 from app.services.reports.report_validation import (
     source_snapshot_hash,
     validate_structured_report,
 )
-from app.services.reports.report_view_model import (
+from app.services.reports.report_view_model_builder import build_report_view_model
+from app.services.reports.report_view_model_contracts import (
     ReportLanguage,
     ReportViewModel,
-    build_report_view_model,
 )
 
+ReportService = ChatReportService
 ReportGenerationError = ReportServiceError
 
 __all__ = [

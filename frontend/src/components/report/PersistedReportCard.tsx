@@ -1,11 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   downloadChatReportPdf,
   type ChatReportRead,
 } from "@/lib/api";
+import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
+import { toUserFacingError } from "@/lib/user-facing-error";
 
 interface PersistedReportCardProps {
   report: ChatReportRead;
@@ -78,10 +80,13 @@ function ReportPdfViewer({
   reportId: string;
   title: string;
 }) {
+  const [isModalDismissed, setIsModalDismissed] = useState(false);
+
   const {
     data: pdfBlob,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["report-pdf-blob", threadId, reportId],
     queryFn: () => downloadChatReportPdf(threadId, reportId),
@@ -112,6 +117,11 @@ function ReportPdfViewer({
     };
   }, [pdfUrl]);
 
+  const pdfUserFacingError = useMemo(() => {
+    if (!error) return null;
+    return toUserFacingError(error, { actionLabel: "โหลดตัวอย่าง PDF ใหม่" });
+  }, [error]);
+
   if (isLoading) {
     return (
       <div
@@ -131,13 +141,37 @@ function ReportPdfViewer({
   }
 
   if (error || !pdfUrl) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unable to display PDF preview.";
     return (
-      <div className="rounded border border-accent/30 bg-accent-soft p-4 text-xs text-accent">
-        <p className="font-bold">Failed to load PDF preview</p>
-        <p className="mt-0.5">{errorMessage}</p>
-      </div>
+      <>
+        <div
+          aria-label="PDF Preview Unavailable"
+          className="flex h-[400px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-center space-y-3"
+        >
+          <p className="text-xs font-semibold text-ink">ไม่สามารถแสดงตัวอย่าง PDF ได้</p>
+          <p className="text-[11px] text-ink-secondary">
+            กรุณาลองโหลดเอกสารใหม่อีกครั้ง หรือดาวน์โหลดไฟล์ PDF โดยตรง
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setIsModalDismissed(false);
+              void refetch();
+            }}
+            className="inline-flex items-center gap-1.5 rounded border border-line bg-surface px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:border-ink hover:bg-surface-hover"
+          >
+            ลองโหลดใหม่
+          </button>
+        </div>
+        <MeaningfulErrorModal
+          isOpen={!isModalDismissed && Boolean(pdfUserFacingError)}
+          error={pdfUserFacingError}
+          onClose={() => setIsModalDismissed(true)}
+          onRetry={() => {
+            setIsModalDismissed(false);
+            void refetch();
+          }}
+        />
+      </>
     );
   }
 
@@ -157,28 +191,44 @@ function ReportPdfViewer({
 
 function ReportFailure({ report }: { report: ChatReportRead }) {
   return (
-    <div className="rounded border border-accent/30 bg-accent-soft p-4 text-xs text-accent space-y-2">
-      <h3 className="text-sm font-bold">
-        Report generation failed
-      </h3>
-      <p className="text-ink-secondary">
-        {report.failure_message ?? "The backend did not produce a validated report."}
+    <div className="rounded-lg border border-line bg-surface p-5 text-xs space-y-3">
+      <div className="flex items-center gap-2 text-accent">
+        <span className="font-bold text-sm">ไม่สามารถจัดทำรายงานฉบับนี้ได้</span>
+      </div>
+      <p className="text-ink-secondary leading-relaxed">
+        {report.failure_message ?? "ระบบไม่สามารถสร้างรายงานฉบับสมบูรณ์ได้เนื่องจากข้อมูลบางส่วนไม่ผ่านเกณฑ์การตรวจสอบ"}
       </p>
-      {report.failure_code && (
-        <p className="font-mono text-[10px] font-bold uppercase">
-          Failure code: {report.failure_code}
-        </p>
-      )}
-      {report.validation_errors.length > 0 && (
-        <ul className="list-disc space-y-0.5 pl-4 text-ink-secondary">
-          {report.validation_errors.map((error, index) => (
-            <li key={`validation-error-${index}`}>{error}</li>
-          ))}
-        </ul>
-      )}
-      <p className="text-ink-muted pt-1">
-        You may generate another version once case issues are resolved.
+      <p className="text-ink-muted text-[11px]">
+        คุณสามารถเริ่มวิเคราะห์ข้อมูลเพิ่มเติมในหน้า Chat หรือสร้างรายงานฉบับใหม่เมื่อปรับปรุงข้อมูลเรียบร้อยแล้ว
       </p>
+      {(report.failure_code || report.validation_errors.length > 0) && (
+        <details className="mt-3 rounded border border-line/60 bg-surface-nested/30 px-3 py-2 text-xs">
+          <summary className="cursor-pointer font-medium text-ink-muted transition-colors hover:text-ink select-none flex items-center justify-between">
+            <span>Technical details</span>
+            <span className="text-[10px] transition-transform duration-200 group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <div className="mt-2 pt-2 border-t border-line/40 font-mono text-[11px] text-ink-secondary break-all select-text whitespace-pre-wrap space-y-1">
+            {report.failure_code && (
+              <div>
+                <span className="text-ink-muted">Failure code: </span>
+                <span>{report.failure_code}</span>
+              </div>
+            )}
+            {report.validation_errors.length > 0 && (
+              <div>
+                <div className="text-ink-muted">Validation errors:</div>
+                <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                  {report.validation_errors.map((err, i) => (
+                    <li key={`validation-error-${i}`}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
