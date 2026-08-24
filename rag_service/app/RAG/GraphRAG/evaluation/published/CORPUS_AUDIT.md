@@ -157,10 +157,16 @@ ATT&CK ID**.
 
 | config | Thai recall | Thai P@1 | TRAM recall | TRAM P@1 |
 |---|---:|---:|---:|---:|
-| v1-bge-hybrid — production today | 0.344 | 0.210 | 0.796 | 0.269 |
+| v1-bge-hybrid — production today | 0.344 | 0.220 | 0.796 | 0.272 |
 | v2-bge-hybrid — parser change | 0.335 | 0.250 | 0.797 | 0.266 |
-| v2-bge-dense — sparse off | **0.386** | 0.250 | 0.806 | 0.278 |
-| v2-jina-dense — model change | 0.369 | 0.160 | **0.808** | **0.320** |
+| v2-bge-dense — sparse off | **0.386** | **0.250** | 0.806 | 0.278 |
+| v2-jina-dense — model change | 0.369 | 0.160 | 0.808 | **0.320** |
+| v2-harrier-dense — model change | 0.355 | 0.120 | **0.816** | 0.258 |
+
+BGE-M3 has the best Thai P@1 of the three encoders and is within noise of the
+best on TRAM, so it stays. The jina and harrier rows come from separate runs;
+their collections were dropped afterwards to keep the free-tier cluster inside
+its 1 GiB, and the numbers here are the record.
 
 Read as deltas, one change at a time:
 
@@ -183,6 +189,53 @@ up as one.
 Whether the analytics help *generation* is a separate question this measurement
 cannot answer. Retrieval scoring only asks whether an ID was reachable; it is
 blind to whether the text under that ID is in a register the model can use.
+
+### harrier does not win either language
+
+microsoft/harrier-oss-v1-0.6b was tried on the reasoning that jina's Thai result
+came from its contrastive training rather than its Qwen3-0.6B backbone, and that
+harrier — same backbone, MIT licence, Thai among 94 declared languages, SOTA on
+Multilingual MTEB v2 — should therefore do better.
+
+It did worse.
+
+| against v2-bge-dense | TRAM P@1 | Thai P@1 |
+|---|---:|---:|
+| jina | +0.042 | −0.090 |
+| harrier | −0.020 | −0.130 |
+
+jina at least bought a real English gain for its Thai loss. harrier is level on
+TRAM within run-to-run noise and the worst of the three on Thai, so there is no
+workload on which it would be chosen.
+
+Both decoder-only models show the same signature: **more found, worse ordered.**
+On TRAM harrier has the best recall (0.816) and the best hit rate (0.847) of any
+arm while posting the worst P@1 and MRR. Last-token pooling on a causal model
+appears to place documents in roughly the right region without separating near
+neighbours sharply — which is exactly what P@1 measures and what a reranker
+downstream would then have to fix.
+
+That is a pattern across two models with a mechanism behind it, not a proof from
+two points. But it is enough that a third model of the same shape —
+Qwen3-Embedding-0.6B is architecturally identical — is not worth the ingest.
+
+### Run-to-run noise is about ±0.02 on the ranking metrics
+
+`v1-bge-hybrid` was scored twice, same collection and same encoder:
+
+```
+run 1   recall 0.344  P@1 0.210  MRR 0.349  hit 0.770
+run 2   recall 0.344  P@1 0.220  MRR 0.371  hit 0.770
+```
+
+The retrieved *set* is identical; only the order moves. HNSW is approximate, and
+several collections were dropped from the cluster between the two runs, so the
+segment layout differs.
+
+Any P@1 or MRR delta below roughly 0.02 is therefore not readable as a signal.
+This retracts one claim made earlier in this document: sparse-off on TRAM
+(+0.012 P@1, +0.009 recall) sits inside that band and should not be counted.
+The Thai sparse-off result (+0.051 recall) is well outside it and stands.
 
 ### jina is better at English and worse at Thai
 
