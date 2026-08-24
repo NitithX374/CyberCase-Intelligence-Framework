@@ -8,7 +8,7 @@ from app.services.reports.report_html import render_chat_report_html
 from app.services.reports.report_pdf import render_chat_report_pdf
 from app.services.reports.report_snapshot import build_current_report_snapshot
 from app.services.reports.report_template import build_template_report
-from app.services.reports.report_view_model import build_report_view_model
+from app.services.reports.report_view_model_builder import build_report_view_model
 
 
 def make_realistic_report_read() -> tuple[ChatReportRead, str]:

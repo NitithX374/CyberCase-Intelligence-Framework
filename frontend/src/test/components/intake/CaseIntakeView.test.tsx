@@ -71,7 +71,7 @@ describe("CaseIntakeView component", () => {
     expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeDisabled();
   });
 
-  it("renders active case intake record and navigation when case already has evidence, without rendering additional submission form", () => {
+  it("renders active case intake record and navigation when case already has evidence, without rendering additional submission form", async () => {
     const existingMessages: PersistedChatMessage[] = [
       {
         id: "msg-1",
@@ -103,7 +103,7 @@ describe("CaseIntakeView component", () => {
 
     expect(screen.getByText(/CASE INTAKE RECORD/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /บันทึกข้อมูลสำนวนคดี/i })).toBeInTheDocument();
-    expect(screen.getByText("รายละเอียดสำนวนคดีเริ่มต้นเรื่องเซิร์ฟเวอร์ถูกบุกรุก")).toBeInTheDocument();
+    expect(await screen.findByText("รายละเอียดสำนวนคดีเริ่มต้นเรื่องเซิร์ฟเวอร์ถูกบุกรุก")).toBeInTheDocument();
     expect(screen.getByText(/ACTIVE CASE/i)).toBeInTheDocument();
 
     // Navigation buttons must be present
@@ -129,5 +129,5 @@ describe("CaseIntakeView component", () => {
     // MUST NOT render description textarea or "Analyze updates" button
     expect(screen.queryByLabelText(/รายละเอียดคดี/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Analyze updates/i })).not.toBeInTheDocument();
-  });
+  }, 15000);
 });

@@ -3,7 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   downloadChatReportPdf,
   generateChatReport,
@@ -39,6 +39,10 @@ export function ChatReportView({
 }: ChatReportViewProps) {
   const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const pendingGenerationRef = useRef<{
+    threadId: string;
+    idempotencyKey: string;
+  } | null>(null);
 
   const reportsQuery = useQuery({
     queryKey: threadId ? chatQueryKeys.reports(threadId) : chatQueryKeys.all,
@@ -56,6 +60,7 @@ export function ChatReportView({
       idempotencyKey?: string;
     }) => generateChatReport(targetThreadId, idempotencyKey),
     onSuccess: (report, variables) => {
+      pendingGenerationRef.current = null;
       queryClient.setQueryData<ChatReportRead[]>(
         chatQueryKeys.reports(variables.threadId),
         (current) => [
@@ -88,7 +93,8 @@ export function ChatReportView({
   const activeReportError: UserFacingError | null = useMemo(() => {
     if (generateMutation.error) {
       return toUserFacingError(generateMutation.error, {
-        actionLabel: "ลองสร้างรายงานอีกครั้ง",
+        isUncertain: true,
+        actionLabel: "ลองอีกครั้ง",
       });
     }
     if (downloadMutation.error) {
@@ -112,7 +118,7 @@ export function ChatReportView({
   const handleRetryReport = () => {
     if (generateMutation.error) {
       generateMutation.reset();
-      void handleGenerate();
+      void handleGenerate({ isRetry: true });
     } else if (downloadMutation.error && selectedReport) {
       downloadMutation.reset();
       handleDownloadPdf(selectedReport);
@@ -135,11 +141,20 @@ export function ChatReportView({
     threadStatus !== "failed" &&
     !isGenerating;
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (options?: { isRetry?: boolean }) => {
     if (!threadId || !canGenerate) return;
+
+    let idempotencyKey: string;
+    if (options?.isRetry && pendingGenerationRef.current?.threadId === threadId) {
+      idempotencyKey = pendingGenerationRef.current.idempotencyKey;
+    } else {
+      idempotencyKey = reportRequestKey();
+      pendingGenerationRef.current = { threadId, idempotencyKey };
+    }
+
     await generateMutation.mutateAsync({
       threadId,
-      idempotencyKey: reportRequestKey(),
+      idempotencyKey,
     }).catch(() => undefined);
   };
 
@@ -285,7 +300,7 @@ export function ChatReportView({
   );
 }
 
-function reportRequestKey(): string | undefined {
+function reportRequestKey(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }

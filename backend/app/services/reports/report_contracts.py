@@ -49,6 +49,21 @@ class ReportInputSnapshot(BaseModel):
     unresolved_issues: list[str] = Field(default_factory=list)
 
 
+class ReportServiceError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+class ReportGenerationConflict(ReportServiceError):
+    pass
+
+
+class ReportNotFound(ReportServiceError):
+    pass
+
+
 class ReportValidationError(ValueError):
     pass
 
@@ -70,8 +85,11 @@ class ReportRunResult:
 
 __all__ = [
     "AdmittedMitreRow",
+    "ReportGenerationConflict",
     "ReportInputSnapshot",
+    "ReportNotFound",
     "ReportRunResult",
+    "ReportServiceError",
     "ReportSourceMessage",
     "ReportValidationError",
 ]

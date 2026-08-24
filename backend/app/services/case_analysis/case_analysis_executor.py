@@ -25,6 +25,7 @@ from app.services.case_analysis.contracts import (
 from app.services.case_analysis.validation import (
     AnalysisTraceProvenanceError, AnalysisTraceStructureError, detect_forbidden_provenance, validate_analysis_trace,
 )
+from app.services.llm.core_llm import resolve_core_llm_target
 from app.services.llm.structured_output_request_router import structured_output_request_options
 from app.services.llm.structured_output_router import structured_output_schema
 from app.services.case_analysis.case_analysis_response_utils import (
@@ -70,9 +71,7 @@ class MainCaseAnalysisService:
             question=validated_question,
             response_language=response_language,
         )
-        from app.services.case_analysis import service as compatibility_service
-
-        target = compatibility_service.resolve_core_llm_target(settings.chat_ask_model)
+        target = resolve_core_llm_target(settings.chat_ask_model)
         request_payload = {
             "model": target.model,
             **structured_output_request_options(
@@ -265,3 +264,25 @@ class MainCaseAnalysisService:
             logger.warning("Case analysis trace provenance error: %s (code=%s)", exc, exc.code)
             raise CaseAnalysisFailure(exc.code, str(exc)) from exc
         return CaseAnalysisResult(answer=parsed.answer, trace=trace)
+
+
+async def request_case_analysis(
+    *,
+    mode: AnalysisMode,
+    raw_evidence: str,
+    analysis_context: dict[str, object],
+    question: str | None,
+    user_message: object,
+    client: httpx.AsyncClient | None = None,
+) -> CaseAnalysisResult:
+    validated_mode, validated_question = _validate_analysis_request(mode, question)
+    return await MainCaseAnalysisService(client=client).analyze(
+        mode=validated_mode,
+        raw_evidence=raw_evidence,
+        analysis_context=analysis_context,
+        question=validated_question,
+        user_message=user_message,
+    )
+
+
+__all__ = ["MainCaseAnalysisService", "request_case_analysis"]

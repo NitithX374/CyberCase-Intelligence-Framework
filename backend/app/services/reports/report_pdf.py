@@ -14,7 +14,8 @@ from app.services.reports.pdf_design import (
     register_report_fonts,
 )
 from app.services.reports.report_pdf_story import build_formal_report_story
-from app.services.reports.report_view_model import ReportLanguage, build_report_view_model
+from app.services.reports.report_view_model_builder import build_report_view_model
+from app.services.reports.report_view_model_contracts import ReportLanguage
 
 
 def render_chat_report_pdf(

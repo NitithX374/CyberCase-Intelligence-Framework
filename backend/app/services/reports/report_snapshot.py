@@ -7,10 +7,10 @@ from app.models.rag_context import RagContext
 from app.services.chat.raw_evidence import build_raw_evidence_snapshot
 from app.services.reports.report_contracts import (
     AdmittedMitreRow,
+    ReportGenerationConflict,
     ReportInputSnapshot,
     ReportSourceMessage,
 )
-from app.services.reports.report_errors import ReportGenerationConflict
 
 
 def build_current_report_snapshot(
