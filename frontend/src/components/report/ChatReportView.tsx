@@ -118,7 +118,7 @@ export function ChatReportView({
   const handleRetryReport = () => {
     if (generateMutation.error) {
       generateMutation.reset();
-      void handleGenerate({ isRetry: true });
+      void handleGenerate();
     } else if (downloadMutation.error && selectedReport) {
       downloadMutation.reset();
       handleDownloadPdf(selectedReport);
@@ -141,12 +141,13 @@ export function ChatReportView({
     threadStatus !== "failed" &&
     !isGenerating;
 
-  const handleGenerate = async (options?: { isRetry?: boolean }) => {
+  const handleGenerate = async () => {
     if (!threadId || !canGenerate) return;
 
     let idempotencyKey: string;
-    if (options?.isRetry && pendingGenerationRef.current?.threadId === threadId) {
-      idempotencyKey = pendingGenerationRef.current.idempotencyKey;
+    const pending = pendingGenerationRef.current;
+    if (pending?.threadId === threadId) {
+      idempotencyKey = pending.idempotencyKey;
     } else {
       idempotencyKey = reportRequestKey();
       pendingGenerationRef.current = { threadId, idempotencyKey };

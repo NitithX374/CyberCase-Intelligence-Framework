@@ -205,4 +205,125 @@ describe("ChatReportView component", () => {
     const fourthCallKey = generateSpy.mock.calls[3][1];
     expect(fourthCallKey).not.toBe(firstCallKey); // MUST be a new key!
   });
+
+  it("preserves idempotency key when error modal is closed and main generate button is clicked", async () => {
+    vi.spyOn(api, "listChatReports").mockResolvedValue([]);
+    const generateSpy = vi.spyOn(api, "generateChatReport");
+
+    // 1st attempt: fails with timeout
+    generateSpy.mockRejectedValueOnce(new Error("timeout of 15000ms exceeded"));
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ChatReportView
+          threadId="thread-1"
+          threadTitle="Incident Alpha"
+          threadStatus="answered"
+          hasMessages={true}
+          hasCompletedAnalysis={true}
+          onOpenChat={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    // Initial click -> generates keyA
+    const genBtns = await screen.findAllByRole("button", { name: "Generate report" });
+    genBtns[0].click();
+
+    expect(
+      await screen.findByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" }),
+    ).toBeInTheDocument();
+
+    expect(generateSpy).toHaveBeenCalledTimes(1);
+    const keyA = generateSpy.mock.calls[0][1];
+    expect(keyA).toBeDefined();
+
+    // User closes the modal using Close action
+    const closeBtn = screen.getByRole("button", { name: "ปิด" });
+    closeBtn.click();
+
+    // Modal closes
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" }),
+      ).not.toBeInTheDocument();
+    });
+
+    // 2nd attempt: User clicks the MAIN "Generate report" button
+    const generatedReport = {
+      ...sampleReport(),
+      idempotency_key: keyA!,
+    };
+    generateSpy.mockResolvedValueOnce(generatedReport);
+
+    const mainGenBtns = screen.getAllByRole("button", { name: "Generate report" });
+    mainGenBtns[0].click();
+
+    await waitFor(() => {
+      expect(generateSpy).toHaveBeenCalledTimes(2);
+    });
+    const secondCallKey = generateSpy.mock.calls[1][1];
+    expect(secondCallKey).toBe(keyA); // MUST still be keyA!
+
+    // Confirmed success displays saved report
+    expect(await screen.findByText("Version 1 · Saved")).toBeInTheDocument();
+  });
+
+  it("does not reuse pending idempotency key across different threads", async () => {
+    vi.spyOn(api, "listChatReports").mockResolvedValue([]);
+    const generateSpy = vi.spyOn(api, "generateChatReport");
+
+    generateSpy.mockRejectedValue(new Error("timeout of 15000ms exceeded"));
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <ChatReportView
+          threadId="thread-1"
+          threadTitle="Incident 1"
+          threadStatus="answered"
+          hasMessages={true}
+          hasCompletedAnalysis={true}
+          onOpenChat={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    // Thread 1 generation attempt -> key1
+    const genBtns1 = await screen.findAllByRole("button", { name: "Generate report" });
+    genBtns1[0].click();
+
+    await waitFor(() => {
+      expect(generateSpy).toHaveBeenCalledTimes(1);
+    });
+    const keyThread1 = generateSpy.mock.calls[0][1];
+
+    // Close error modal
+    const closeBtn = await screen.findByRole("button", { name: "ปิด" });
+    closeBtn.click();
+
+    // Switch to Thread 2
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <ChatReportView
+          threadId="thread-2"
+          threadTitle="Incident 2"
+          threadStatus="answered"
+          hasMessages={true}
+          hasCompletedAnalysis={true}
+          onOpenChat={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    const genBtns2 = await screen.findAllByRole("button", { name: "Generate report" });
+    genBtns2[0].click();
+
+    await waitFor(() => {
+      expect(generateSpy).toHaveBeenCalledTimes(2);
+    });
+    const keyThread2 = generateSpy.mock.calls[1][1];
+
+    expect(keyThread2).toBeDefined();
+    expect(keyThread2).not.toBe(keyThread1); // Must NOT reuse Thread 1's key!
+  });
 });
