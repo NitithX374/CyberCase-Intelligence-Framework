@@ -49,7 +49,8 @@
 - 2026-08-24 [CODE] Report timeline provenance and MITRE structured contract fixed with regression coverage in `test_report_view_model_and_pdf.py`.
 - 2026-08-24 [CODE] Removed `totalMessagesCount` from `WhatHappenedCard`, `CaseOverviewView`, `case-overview.ts`, and test suites.
 - 2026-08-24 [CODE] Meaningful Error Modal implemented with focus trapping, escape dismissal, safe retry/check-status actions, and test suites (`user-facing-error.test.ts`, `MeaningfulErrorModal.test.tsx`).
-- 2026-08-24 [CODE] Module consolidation and report correctness fixes completed (10 redundant files eliminated, 81 frontend tests + 66 backend tests green, ESLint clean, build clean).
+- 2026-08-24 [CODE] Module consolidation and report correctness fixes completed (10 redundant files eliminated, 83 frontend tests + 66 backend tests green, ESLint clean, build clean).
+- 2026-08-24 [CODE] Surgical fix for Report Generation idempotency: decoupled key reuse from caller options/UI controls in `ChatReportView.tsx`; any unresolved generation for the current thread reuses the active key regardless of entry point (modal retry vs closing modal and clicking main button), with clean removal of `isRetry`.
 
 ## Decisions
 
@@ -69,13 +70,13 @@
 
 ## State (Done/Now/Next)
 
-- 2026-08-24 [TOOL] Done: Module consolidation and report correctness fixes completed and verified.
+- 2026-08-24 [TOOL] Done: Surgical idempotency correctness fix completed and verified across all test suites.
 - 2026-08-24 [TOOL] Next: Ready for user review.
 
 ## Receipts
 
 - 2026-08-24 [TOOL] `pytest backend/tests`: 66 passed (100%) in 2.62s.
-- 2026-08-24 [TOOL] `npm run test`: 22 test files and 81 tests passed (100%) in 18.54s.
+- 2026-08-24 [TOOL] `npm run test`: 22 test files and 83 tests passed (100%) in 28.10s.
 - 2026-08-24 [TOOL] `npm run lint`: passed (0 errors, 0 warnings).
 - 2026-08-24 [TOOL] `npm run build`: passed, Next.js 16.2.10 production build with TypeScript check succeeded with 0 errors.
 
