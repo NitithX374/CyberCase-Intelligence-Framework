@@ -54,6 +54,10 @@ from ...ingestion.vector_loader import (
 )
 
 UPSERT_BATCH = 256     # coarser: amortises the Qdrant Cloud round trip
+UPSERT_RETRIES = 9     # cloud drops connections mid-run, and so does the local
+UPSERT_MAX_WAIT = 60   # link. Capped backoff rides out ~4 minutes of downtime
+                       # (1+2+4+8+16+32+60+60+60s) instead of the ~30s that an
+                       # uncapped doubling over 6 attempts would have given.
 
 # Every sentence-transformers model here is capped at 512 tokens and batch 16.
 # Measured on this corpus: median 110 tokens, p90 299, max 661 - so 512
@@ -196,6 +200,40 @@ def make_client() -> QdrantClient:
     raise SystemExit("[QDRANT] No QDRANT_URL/QDRANT_HOST - refusing an in-memory corpus")
 
 
+def wait_for_qdrant(client: QdrantClient, budget_s: int) -> None:
+    """Block until Qdrant answers, or give up after budget_s.
+
+    Worth doing before the encoder is loaded rather than after: a dead endpoint
+    otherwise costs a GPU model load and a full parse before anyone finds out,
+    and the run dies holding a collection it has already emptied.
+    """
+    started = time.time()
+    attempt = 0
+    while True:
+        try:
+            client.get_collections()
+            if attempt:
+                print(f"[QDRANT] Reachable after {time.time() - started:.0f}s")
+            return
+        except Exception as exc:
+            waited = time.time() - started
+            if waited >= budget_s:
+                raise SystemExit(
+                    f"[QDRANT] Unreachable after {waited:.0f}s ({type(exc).__name__}). "
+                    "Check the cluster status at cloud.qdrant.io - a timeout with no "
+                    "HTTP status is the endpoint not answering at all, not an auth "
+                    "or key problem."
+                )
+            attempt += 1
+            wait = min(2 ** min(attempt, 5), UPSERT_MAX_WAIT)
+            print(
+                f"[QDRANT] Not reachable ({type(exc).__name__}); "
+                f"waited {waited:.0f}s/{budget_s}s, retrying in {wait}s",
+                flush=True,
+            )
+            time.sleep(wait)
+
+
 def init_collection(client: QdrantClient, name: str, backend) -> None:
     """Recreated from scratch so a partial earlier run leaves no stale points."""
     if client.collection_exists(name):
@@ -226,11 +264,36 @@ def embed_and_store(client, collection, backend, ids, docs, metas, label) -> int
     started = time.time()
 
     def flush():
+        """Upsert with backoff.
+
+        Qdrant Cloud drops the occasional connection mid-run - twice in one
+        30-minute ingest here, once at 83% - and the local link drops too.
+        Without a retry the whole embedding pass is thrown away for a fault
+        that usually clears on its own.
+
+        Retrying is safe to the point of being boring: point ids come from
+        uuid_from_stix_id, so re-sending a batch that did land overwrites it
+        rather than duplicating it.
+        """
         nonlocal pending, stored
-        if pending:
-            client.upsert(collection_name=collection, points=pending)
-            stored += len(pending)
-            pending = []
+        if not pending:
+            return
+        for attempt in range(UPSERT_RETRIES):
+            try:
+                client.upsert(collection_name=collection, points=pending)
+                break
+            except Exception as exc:
+                if attempt == UPSERT_RETRIES - 1:
+                    raise
+                wait = min(2 ** attempt, UPSERT_MAX_WAIT)
+                print(
+                    f"        [RETRY] upsert failed ({type(exc).__name__}), "
+                    f"retrying in {wait}s",
+                    flush=True,
+                )
+                time.sleep(wait)
+        stored += len(pending)
+        pending = []
 
     step = backend.chunk
     for i in range(0, len(docs), step):
@@ -323,6 +386,13 @@ def main() -> int:
     ap.add_argument("--suffix", default=None, help="Collection suffix (default: the backend's own)")
     ap.add_argument("--limit", type=int, default=0, help="Index only the first N of each kind")
     ap.add_argument("--entities-only", action="store_true")
+    ap.add_argument(
+        "--wait",
+        type=int,
+        default=0,
+        metavar="SECONDS",
+        help="Poll Qdrant until it answers before doing any work (0 = fail fast)",
+    )
     ap.add_argument("--dry-run", action="store_true", help="Parse and report counts, embed nothing")
     args = ap.parse_args()
 
@@ -354,9 +424,11 @@ def main() -> int:
                 break
         return 0
 
+    client = make_client()
+    wait_for_qdrant(client, args.wait)
+
     backend = make_backend(args.embedder)
     suffix = args.suffix or backend.suffix
-    client = make_client()
 
     ent_col = f"mitre_entities_{suffix}"
     rel_col = f"mitre_relationships_{suffix}"
