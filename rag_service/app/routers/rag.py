@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from fastapi import APIRouter, HTTPException, Request
+
+from RAG.LegalRAG.schema import LegalResult
 
 from RAG.GraphRAG.pipeline.mitre_table import build_mitre_table
 from routers.context_store import (
@@ -45,15 +48,42 @@ async def query_rag(request: QueryRequest, req: Request):
             rag_result=agent_response.graphrag_result,
             mitre_table=mitre_table,
         )
+        legal = await _legal_suggestions(req, request.query, mitre_table)
         return QueryResponse(
             status="completed",
             retrieval_context_id=retrieval_context_id or None,
             context=agent_response.context,
             mitre_table=mitre_table,
+            legal=legal,
         )
     except Exception as e:
         logger.exception("POST /query processing failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Statute retrieval and one extra model call, on a host that may be reranking
+# for GraphRAG at the same time. The budget is a hard ceiling rather than a
+# hope: past it the MITRE mapping is returned without statutes instead of the
+# whole request hanging.
+LEGAL_BUDGET_SECONDS = 25.0
+
+
+async def _legal_suggestions(req: Request, query: str, mitre_table) -> LegalResult:
+    """Never raises. A failure here costs the statutes and nothing else."""
+    legal_rag = getattr(req.app.state, "legal_rag", None)
+    if legal_rag is None:
+        return LegalResult(degraded="LegalRAG ไม่พร้อมใช้งาน")
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(legal_rag.query, query, mitre_table),
+            timeout=LEGAL_BUDGET_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("LegalRAG exceeded %.0fs budget", LEGAL_BUDGET_SECONDS)
+        return LegalResult(degraded="ค้นหาตัวบทใช้เวลานานเกินกำหนด")
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("LegalRAG failed: %s", exc)
+        return LegalResult(degraded=f"ค้นหาตัวบทไม่สำเร็จ: {exc}")
 
 
 @router.get(
