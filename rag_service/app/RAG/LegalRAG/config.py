@@ -54,3 +54,40 @@ def assert_writable(collection: str) -> None:
             f"[LEGAL] ปฏิเสธ: '{collection}' ไม่ใช่ collection ของ LegalRAG "
             f"(ต้องเป็น '{QDRANT_COLLECTION_LEGAL}')"
         )
+
+
+# ── Legal LLM ─────────────────────────────────────────────────────────────
+# The same provider selection GraphRAG uses, read independently. The service
+# injects its own chat model; this exists so the module can be exercised from a
+# CLI without importing GraphRAG and dragging in the embedding stack.
+CORE_LLM_PROVIDER = os.getenv("CORE_LLM_PROVIDER", "openrouter").strip().lower()
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+OPENROUTER_CYBERCASE = os.getenv("OPENROUTER_CYBERCASE", "")
+CORE_LLM_ANTHROPIC_MODEL = os.getenv("CORE_LLM_ANTHROPIC_MODEL", "claude-haiku-4-5")
+CORE_LLM_OPENROUTER_MODEL = os.getenv("CORE_LLM_OPENROUTER_MODEL", "openai/gpt-5.6-luna")
+CORE_LLM_OPENROUTER_BASE_URL = os.getenv(
+    "CORE_LLM_OPENROUTER_BASE_URL", "https://openrouter.ai/api"
+).rstrip("/")
+
+
+def create_legal_chat_model(temperature: float = 0.0, max_tokens: int = 2048):
+    """Fallback chat model for CLI use. The service passes its own instead."""
+    from langchain_anthropic import ChatAnthropic
+
+    openrouter = CORE_LLM_PROVIDER == "openrouter"
+    api_key = OPENROUTER_CYBERCASE if openrouter else ANTHROPIC_API_KEY
+    if not api_key:
+        raise RuntimeError(
+            f"CORE_LLM_PROVIDER={CORE_LLM_PROVIDER} requires "
+            + ("OPENROUTER_CYBERCASE" if openrouter else "ANTHROPIC_API_KEY")
+        )
+    kwargs: dict = {
+        "model_name": CORE_LLM_OPENROUTER_MODEL if openrouter else CORE_LLM_ANTHROPIC_MODEL,
+        "api_key": api_key,
+        "temperature": temperature,
+        "max_tokens_to_sample": max(max_tokens, 4096) if openrouter else max_tokens,
+    }
+    if openrouter:
+        kwargs["base_url"] = CORE_LLM_OPENROUTER_BASE_URL
+        kwargs["default_headers"] = {"Authorization": f"Bearer {api_key}"}
+    return ChatAnthropic(**kwargs)
