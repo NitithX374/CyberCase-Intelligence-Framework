@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import json
-import logging
-from collections.abc import Mapping
+import hashlib
 
 import httpx
-from pydantic import ValidationError
 
 from app.config import settings
 from app.services.case_analysis.case_analysis_prompt_builder import (
@@ -20,21 +17,18 @@ from app.services.case_analysis.case_analysis_prompt_config import (
     _TASK_PROMPTS,
 )
 from app.services.case_analysis.contracts import (
-    AnalysisMode, AnalysisTraceFailureMetadata, CaseAnalysisResult, ProviderCaseAnalysis,
+    AnalysisMode,
+    CaseAnalysisResult,
+    ProviderCaseAnalysisV3,
 )
-from app.services.case_analysis.validation import (
-    AnalysisTraceProvenanceError, AnalysisTraceStructureError, detect_forbidden_provenance, validate_analysis_trace,
+from app.services.case_analysis.case_analysis_response_parser import (
+    parse_case_analysis_response,
 )
+from app.services.case_analysis.personalization import resolve_response_language
 from app.services.llm.core_llm import resolve_core_llm_target
 from app.services.llm.structured_output_request_router import structured_output_request_options
 from app.services.llm.structured_output_router import structured_output_schema
-from app.services.case_analysis.case_analysis_response_utils import (
-    _extract_visible_text,
-    _log_response_shape,
-)
-from app.services.case_analysis.personalization import resolve_response_language
 
-logger = logging.getLogger("app.case_analysis")
 
 class MainCaseAnalysisService:
     """Run internal analysis without retrieval, persistence, or state mutation."""
@@ -47,7 +41,7 @@ class MainCaseAnalysisService:
         *,
         mode: AnalysisMode,
         raw_evidence: str,
-        analysis_context: dict[str, object],
+        analysis_context: dict[str, object] | None,
         question: str | None,
         user_message: object,
     ) -> CaseAnalysisResult:
@@ -93,7 +87,7 @@ class MainCaseAnalysisService:
                 "format": {
                     "type": "json_schema",
                     "schema": structured_output_schema(
-                        ProviderCaseAnalysis,
+                        ProviderCaseAnalysisV3,
                         provider=target.provider,
                     ),
                 }
@@ -118,15 +112,19 @@ class MainCaseAnalysisService:
                     request_payload,
                 )
 
-        raw_source_ids = analysis_context.get("source_message_ids", [])
+        trusted_context = analysis_context or {}
+        raw_source_ids = trusted_context.get("source_message_ids", [])
         source_message_ids = {
-            value for value in raw_source_ids if isinstance(value, str)
+            value.strip() for value in raw_source_ids if isinstance(value, str)
         } if isinstance(raw_source_ids, list) else set()
-        return self._parse_response(
+        return parse_case_analysis_response(
             response,
             source_message_ids=source_message_ids,
-            analysis_context=analysis_context,
+            analysis_context=trusted_context,
             analysis_mode=validated_mode,
+            evidence_sha256=hashlib.sha256(
+                raw_evidence.strip().encode("utf-8")
+            ).hexdigest(),
         )
 
     @staticmethod
@@ -153,124 +151,12 @@ class MainCaseAnalysisService:
                 "The post-answer analysis request failed",
             ) from exc
 
-    @staticmethod
-    def _parse_response(
-        response: httpx.Response,
-        *,
-        source_message_ids: set[str],
-        analysis_context: Mapping[str, object],
-        analysis_mode: AnalysisMode,
-    ) -> CaseAnalysisResult:
-        if not 200 <= response.status_code < 300:
-            raise CaseAnalysisFailure(
-                "analysis_provider_error",
-                "The post-answer analysis provider returned an error",
-            )
-        try:
-            response_payload = response.json()
-        except (TypeError, ValueError) as exc:
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The post-answer analysis provider response was invalid",
-            ) from exc
-        if not isinstance(response_payload, dict):
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The post-answer analysis provider response was invalid",
-            )
-        _log_response_shape(response.status_code, response_payload)
-        if isinstance(response_payload.get("error"), dict):
-            raise CaseAnalysisFailure(
-                "analysis_provider_error",
-                "The post-answer analysis provider returned an error",
-            )
-        if response_payload.get("stop_reason") in {
-            "refusal",
-            "max_tokens",
-            "length",
-            "pause_turn",
-        }:
-            raise CaseAnalysisFailure(
-                "analysis_incomplete",
-                "The post-answer analysis provider did not complete",
-            )
-        content = response_payload.get("content")
-        if content is not None and not isinstance(content, (list, str)):
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The post-answer analysis provider response was invalid",
-            )
-        raw_text = _extract_visible_text(response_payload).strip()
-        if not raw_text:
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The post-answer analysis provider returned no answer",
-            )
-        try:
-            raw_analysis = json.loads(raw_text)
-        except (TypeError, ValueError) as exc:
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The post-answer analysis provider did not return structured JSON",
-            ) from exc
-        if not isinstance(raw_analysis, dict):
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The post-answer structured analysis must be an object",
-            )
-        raw_answer = raw_analysis.get("answer")
-        if not isinstance(raw_answer, str) or not raw_answer.strip():
-            raise CaseAnalysisFailure(
-                "analysis_invalid_response",
-                "The post-answer structured analysis returned no safe prose",
-            )
-        try:
-            detect_forbidden_provenance(raw_analysis)
-        except AnalysisTraceProvenanceError as exc:
-            raise CaseAnalysisFailure(exc.code, str(exc)) from exc
-        try:
-            parsed = ProviderCaseAnalysis.model_validate(raw_analysis)
-        except ValidationError as exc:
-            logger.warning("Case analysis trace validation failed: %s | keys: %s", exc, list(raw_analysis.keys()) if isinstance(raw_analysis, dict) else type(raw_analysis))
-            failure_code = (
-                "analysis_trace_version_unsupported"
-                if raw_analysis.get("version") != "analysis_trace_v2"
-                else "analysis_trace_structure_invalid"
-            )
-            return CaseAnalysisResult(
-                answer=raw_answer.strip(),
-                trace=None,
-                trace_failure=AnalysisTraceFailureMetadata(
-                    failure_code=failure_code,
-                ),
-            )
-        try:
-            trace = validate_analysis_trace(
-                parsed,
-                source_message_ids=source_message_ids,
-                mitre_table=analysis_context.get("mitre_table", []),
-                analysis_mode=analysis_mode,
-            )
-        except AnalysisTraceStructureError as exc:
-            logger.warning("Case analysis trace structure error: %s (code=%s)", exc, exc.code)
-            return CaseAnalysisResult(
-                answer=parsed.answer,
-                trace=None,
-                trace_failure=AnalysisTraceFailureMetadata(
-                    failure_code=exc.code,
-                ),
-            )
-        except AnalysisTraceProvenanceError as exc:
-            logger.warning("Case analysis trace provenance error: %s (code=%s)", exc, exc.code)
-            raise CaseAnalysisFailure(exc.code, str(exc)) from exc
-        return CaseAnalysisResult(answer=parsed.answer, trace=trace)
-
 
 async def request_case_analysis(
     *,
     mode: AnalysisMode,
     raw_evidence: str,
-    analysis_context: dict[str, object],
+    analysis_context: dict[str, object] | None,
     question: str | None,
     user_message: object,
     client: httpx.AsyncClient | None = None,

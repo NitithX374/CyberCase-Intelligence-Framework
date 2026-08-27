@@ -321,8 +321,17 @@ export function buildCaseOverview(
     }
   }
 
-  // 2. ATTACK STORY
-  const attackStory: AttackStoryStep[] = parsedClaims.map((claim, index) => {
+  // 2. ATTACK STORY: Only include confirmed progression and reported claims (unconfirmed items go to Section 4)
+  const progressionClaims = parsedClaims.filter(
+    (claim) =>
+      claim.epistemic_status !== "suspected" &&
+      claim.epistemic_status !== "not_established" &&
+      claim.epistemic_status !== "not_confirmed" &&
+      claim.epistemic_status !== "unknown" &&
+      claim.epistemic_status !== "contradicted",
+  );
+
+  const attackStory: AttackStoryStep[] = progressionClaims.map((claim, index) => {
     // Find linked MITRE techniques
     const linkedAssocs = parsedAssociations.filter((a) =>
       a.claim_ids.includes(claim.claim_id),

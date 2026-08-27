@@ -1,0 +1,51 @@
+erDiagram
+    CHAT_THREADS ||--o{ CHAT_MESSAGES : contains
+    CHAT_THREADS ||--o{ CHAT_RUNS : owns
+    CHAT_MESSAGES ||--o{ CHAT_RUNS : requests
+    CHAT_RUNS ||--o| RAG_CONTEXTS : produces
+    CHAT_THREADS ||--o{ RAG_CONTEXTS : contains
+    CHAT_THREADS ||--o{ CHAT_REPORTS : contains
+    CHAT_MESSAGES ||--o{ CHAT_REPORTS : analysis_source
+    RAG_CONTEXTS ||--o{ CHAT_REPORTS : retrieval_source
+
+    CHAT_THREADS {
+        uuid id PK
+        string title
+        string status
+        int next_message_ordinal
+    }
+    CHAT_MESSAGES {
+        uuid id PK
+        uuid thread_id FK
+        int ordinal
+        string role
+        text content
+        json metadata_json
+    }
+    CHAT_RUNS {
+        uuid id PK
+        uuid thread_id FK
+        uuid request_message_id FK
+        string idempotency_key
+        string status
+        int attempt_count
+    }
+    RAG_CONTEXTS {
+        uuid id PK
+        uuid thread_id FK
+        uuid run_id FK
+        string retrieval_context_id UK
+        json context_payload
+        json mitre_table
+    }
+    CHAT_REPORTS {
+        uuid id PK
+        uuid thread_id FK
+        int version_number
+        string idempotency_key
+        string source_snapshot_hash
+        uuid analysis_message_id FK
+        string retrieval_context_id FK
+        json report_payload
+    }
+

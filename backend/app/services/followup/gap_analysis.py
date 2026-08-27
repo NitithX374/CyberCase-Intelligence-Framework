@@ -9,6 +9,7 @@ from collections.abc import Mapping, Sequence
 import httpx
 
 from app.config import settings
+from app.services.followup.helpers import _extract_llm_json, _extract_llm_text
 from app.services.followup.prompts import (
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_SCHEMA,
@@ -119,24 +120,22 @@ class AnthropicGapAnalysis:
         response_payload = response.json()
         if not isinstance(response_payload, dict):
             raise ValueError("Core LLM Gap Analysis response is malformed")
-        if response_payload.get("stop_reason") in {
-            "refusal",
-            "max_tokens",
-            "length",
-            "pause_turn",
-        }:
-            raise ValueError("Core LLM Gap Analysis did not complete")
-        content = response_payload.get("content")
-        if not isinstance(content, list):
-            raise ValueError("Core LLM Gap Analysis content is malformed")
-        text = "".join(
-            block.get("text", "")
-            for block in content
-            if isinstance(block, dict) and block.get("type") == "text"
-        )
-        parsed = json.loads(text)
-        if not isinstance(parsed, dict):
-            raise ValueError("Core LLM Gap Analysis output must be an object")
+        stop_reason = response_payload.get("stop_reason")
+        if stop_reason == "refusal":
+            raise ValueError("Core LLM Gap Analysis was refused by provider")
+        raw_text = _extract_llm_text(response_payload)
+        if not raw_text.strip():
+            raise ValueError(
+                f"Core LLM Gap Analysis content is malformed or empty (stop_reason={stop_reason})"
+            )
+        try:
+            parsed = _extract_llm_json(raw_text)
+        except Exception as exc:
+            if stop_reason in {"max_tokens", "length", "pause_turn"}:
+                raise ValueError(
+                    f"Core LLM Gap Analysis reached token limit before completing output (stop_reason={stop_reason})"
+                ) from exc
+            raise
         usage = response_payload.get("usage")
         usage_dict = usage if isinstance(usage, dict) else {}
         return (

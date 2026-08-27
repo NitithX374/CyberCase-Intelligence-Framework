@@ -1,0 +1,24 @@
+sequenceDiagram
+    actor U as User
+    participant F as Frontend
+    participant B as Backend Report Service
+    participant D as PostgreSQL
+    U->>F: Generate report
+    F->>B: POST /chats/{id}/reports
+    B->>D: Load thread, evidence, latest analysis and retrieval
+    B->>B: Build immutable input snapshot and hash
+    B->>D: Check idempotency key
+    alt Existing key with same snapshot
+        D-->>B: Existing report
+    else Key conflict
+        B-->>F: 409 report_idempotency_conflict
+    else New snapshot
+        B->>B: Build deterministic 7-section report
+        B->>B: Validate source and MITRE identifiers
+        B->>D: Persist next report version
+        B-->>F: Completed report
+    end
+    U->>F: Download PDF
+    F->>B: GET /reports/{report_id}/pdf
+    B-->>F: application/pdf, no-store
+

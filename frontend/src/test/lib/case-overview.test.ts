@@ -141,8 +141,8 @@ Direct case facts are derived strictly from case report #1.`,
     // 1. What Happened
     expect(overview.incidentSummary).toContain("The attacker reportedly accessed the target IIS web server");
 
-    // 2. Attack Story
-    expect(overview.attackStory).toHaveLength(3);
+    // 2. Attack Story (only confirmed/reported progression steps; suspected claim A-03 goes to unclearItems)
+    expect(overview.attackStory).toHaveLength(2);
     expect(overview.attackStory[0].stepNumber).toBe(1);
     expect(overview.attackStory[0].text).toBe("Unauthorized activity was detected on public IIS server WEB-01.");
     expect(overview.attackStory[0].claimType).toBe("reported");

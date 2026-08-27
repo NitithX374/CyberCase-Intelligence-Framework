@@ -1,4 +1,4 @@
-"""FastAPI application for the chat-only backend."""
+"""FastAPI application for chat APIs and document ingestion preview."""
 
 from contextlib import asynccontextmanager
 
@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
-from app.routers import chat, health
+from app.routers import chat, document_ingestion, health
 
 
 @asynccontextmanager
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Cybercase Framework API",
-    description="Persistent chat APIs for the Cybercase Framework project",
+    description="Persistent chat APIs and isolated document ingestion preview",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -35,6 +35,7 @@ app = FastAPI(
 # ── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(document_ingestion.router, prefix="/api/v1")
 
 # Wrap the full ASGI app so even unhandled 500 responses carry CORS headers.
 app = CORSMiddleware(

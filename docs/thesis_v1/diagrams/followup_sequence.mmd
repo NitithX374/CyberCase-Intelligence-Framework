@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor U as User
+    participant F as Frontend
+    participant B as Backend
+    participant D as PostgreSQL
+    participant W as Fresh Analysis Workflow
+    alt Assistant requested clarification
+        U->>F: Answer clarification
+        F->>B: POST message action=clarification_answer
+        B->>D: Persist authoritative user evidence
+        B->>W: Start fresh analysis
+    else User adds case information
+        U->>F: Add information
+        F->>B: POST message action=add_information
+        B->>D: Persist authoritative user evidence
+        B->>W: Start fresh analysis
+    end
+    W->>D: Load initial plus all qualifying evidence
+    W->>W: Recompute evidence SHA-256
+    Note over W: RAG and Main Analysis run again
+    W->>D: Persist new context and analysis
+    B-->>F: Updated state
+

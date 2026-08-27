@@ -37,7 +37,7 @@ _COMPOUND_QUESTION_RE = re.compile(
 class GapItem(BaseModel):
     """One incident-specific information gap found in the current analysis."""
 
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="ignore")
 
     topic: str
     status: GapStatus
@@ -46,6 +46,44 @@ class GapItem(BaseModel):
     reason: str
     priority: GapPriority
     askable: bool
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip().upper().replace(" ", "_").replace("-", "_")
+        mapping = {
+            "NOT_PROVIDED": "NOT_PROVIDED",
+            "MISSING": "NOT_PROVIDED",
+            "NOTPROVIDED": "NOT_PROVIDED",
+            "NOT_SPECIFIED": "NOT_PROVIDED",
+            "EXPLICITLY_UNKNOWN": "EXPLICITLY_UNKNOWN",
+            "UNKNOWN": "EXPLICITLY_UNKNOWN",
+            "UNAVAILABLE": "EXPLICITLY_UNKNOWN",
+            "EXPLICITLYUNKNOWN": "EXPLICITLY_UNKNOWN",
+            "AMBIGUOUS": "AMBIGUOUS",
+            "UNCLEAR": "AMBIGUOUS",
+            "CONFLICTING": "CONFLICTING",
+            "INCONSISTENT": "CONFLICTING",
+        }
+        return mapping.get(normalized, normalized)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip().lower()
+        if normalized in ("high", "medium", "low"):
+            return normalized
+        if normalized in ("critical", "urgent", "highest"):
+            return "high"
+        if normalized in ("moderate", "normal"):
+            return "medium"
+        if normalized in ("info", "minor", "lowest"):
+            return "low"
+        return normalized
 
     @field_validator("topic", "description", "affects", "reason")
     @classmethod
@@ -61,9 +99,9 @@ class GapItem(BaseModel):
 class GapAnalysis(BaseModel):
     """All relevant gaps detected for one completed Main Case Analysis."""
 
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="ignore")
 
-    gaps: list[GapItem] = Field(..., max_length=32)
+    gaps: list[GapItem] = Field(default_factory=list, max_length=32)
 
 
 @dataclass(frozen=True)
@@ -81,14 +119,26 @@ class GapAnalysisResult:
 class FollowUpDecision(BaseModel):
     """One bounded decision made from an already-computed Gap Analysis."""
 
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="ignore")
 
     decision: Literal["ask_followup", "proceed"]
     selected_gap: str | None = None
-    question: str
+    question: str = ""
     # Kept only as an in-process compatibility field for legacy custom policies.
     # The provider schema in prompts.py deliberately does not expose it.
     reason_code: FollowUpReasonCode | None = None
+
+    @field_validator("decision", mode="before")
+    @classmethod
+    def normalize_decision_mode(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        val = value.strip().lower().replace("-", "_").replace(" ", "_")
+        if val in ("ask_followup", "ask_follow_up", "ask", "followup", "ask_question"):
+            return "ask_followup"
+        if val in ("proceed", "continue", "skip", "no_followup", "none"):
+            return "proceed"
+        return val
 
     @model_validator(mode="before")
     @classmethod
@@ -108,24 +158,26 @@ class FollowUpDecision(BaseModel):
             normalized["selected_gap"] = "legacy_gap"
         return normalized
 
-    @field_validator("selected_gap")
+    @field_validator("selected_gap", mode="before")
     @classmethod
-    def validate_selected_gap(cls, value: str | None) -> str | None:
+    def validate_selected_gap(cls, value: object) -> str | None:
         if value is None:
             return None
-        value = value.strip()
-        if not value or len(value) > 240:
-            raise ValueError("selected_gap must be a concise non-empty topic")
-        return value
+        if not isinstance(value, str):
+            return str(value)
+        cleaned = value.strip()
+        if not cleaned or cleaned.lower() in ("none", "null", "n/a"):
+            return None
+        if len(cleaned) > 240:
+            return cleaned[:240]
+        return cleaned
 
     @model_validator(mode="after")
     def validate_decision(self) -> "FollowUpDecision":
         self.question = self.question.strip()
         if self.decision == "proceed":
-            if self.selected_gap is not None or self.question:
-                raise ValueError(
-                    "Proceed decisions require a null selected_gap and empty question"
-                )
+            self.selected_gap = None
+            self.question = ""
             if self.reason_code not in (
                 None,
                 "sufficient_case_context",

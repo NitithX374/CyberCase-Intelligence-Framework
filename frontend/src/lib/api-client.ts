@@ -173,6 +173,14 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     if (data && typeof data === "object" && "detail" in data) {
       const detail = (data as { detail?: unknown }).detail;
       if (typeof detail === "string" && detail.trim()) return detail.trim();
+      if (
+        detail &&
+        typeof detail === "object" &&
+        "message" in detail &&
+        typeof detail.message === "string"
+      ) {
+        return detail.message.trim();
+      }
       if (Array.isArray(detail) && detail.length > 0) {
         const first = detail[0];
         if (typeof first === "string" && first.trim()) return first.trim();
