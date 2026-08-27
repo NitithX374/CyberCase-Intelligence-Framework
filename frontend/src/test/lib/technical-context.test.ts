@@ -201,6 +201,88 @@ describe("buildTechnicalContext", () => {
     expect(result.techniques[0].whyRelevantHere).toBe("พบพฤติกรรมในข้อมูลคดีที่สอดคล้องกับเทคนิคนี้");
   });
 
+  it("filters out Tactics (TAxxxx) so they do not appear as standalone technique cards", () => {
+    const messages: PersistedChatMessage[] = [
+      {
+        id: "msg-1",
+        thread_id: "thread-1",
+        ordinal: 1,
+        role: "user",
+        content: "ข้อมูลถูกเข้ารหัส",
+        retrieval_context_id: null,
+        metadata_json: { evidence_kind: "initial_case_narrative" },
+        created_at: "2026-03-10T08:00:00Z",
+      },
+      {
+        id: "msg-2",
+        thread_id: "thread-1",
+        ordinal: 2,
+        role: "assistant",
+        content: "ผลการวิเคราะห์...",
+        retrieval_context_id: "ret-1",
+        metadata_json: {
+          analysis_kind: "grounded_main_analysis",
+          mitre_table: [
+            {
+              technique_id: "T1486",
+              name: "Data Encrypted for Impact",
+              tactic: "Impact",
+              description: "Technique description",
+              reason: "การเข้ารหัสข้อมูลสมาชิก",
+            },
+            {
+              technique_id: "TA0040",
+              name: "Impact",
+              tactic: "Enterprise Tactic",
+              description: "Tactic description",
+              reason: "",
+            },
+            {
+              technique_id: "TA0034",
+              name: "Impact",
+              tactic: "ICS Tactic",
+              description: "Tactic description",
+              reason: "",
+            },
+          ],
+          analysis_trace: {
+            version: "analysis_trace_v2",
+            claims: [
+              {
+                claim_id: "c1",
+                text: "ข้อมูลถูกเข้ารหัส",
+                claim_type: "event_progression",
+                epistemic_status: "reported",
+                source_message_ids: ["msg-1"],
+              },
+            ],
+            mitre_associations: [
+              {
+                association_id: "assoc-1",
+                technique_id: "T1486",
+                claim_ids: ["c1"],
+                reason: "การเข้ารหัสข้อมูลสมาชิกบนเครื่องแม่ข่าย",
+                status: "candidate",
+                support_role: "external_knowledge",
+              },
+            ],
+          },
+        },
+        created_at: "2026-03-10T08:01:00Z",
+      },
+    ];
+
+    const result = buildTechnicalContext(messages);
+    expect(result.hasContext).toBe(true);
+    expect(result.totalCount).toBe(1);
+    expect(result.techniques).toHaveLength(1);
+    expect(result.techniques[0].techniqueId).toBe("T1486");
+    expect(result.techniques[0].techniqueName).toBe("Data Encrypted for Impact");
+    expect(result.techniques[0].tactic).toBe("Impact");
+    // Ensure TA0040 and TA0034 were filtered out
+    expect(result.techniques.some((t) => t.techniqueId.startsWith("TA"))).toBe(false);
+  });
+
   it("returns empty when no analysis message exists", () => {
     const result = buildTechnicalContext([]);
     expect(result.hasContext).toBe(false);

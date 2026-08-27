@@ -1,5 +1,5 @@
 from app.schemas.reports import StructuredReport
-from app.services.case_analysis.contracts import ProviderCaseAnalysis
+from app.services.case_analysis.contracts import ProviderCaseAnalysis, ProviderCaseAnalysisV3
 from app.services.llm.structured_output import anthropic_json_schema
 
 
@@ -15,3 +15,13 @@ def test_analysis_trace_v2_schema_exposes_source_message_references() -> None:
     claim = schema["$defs"]["AnalysisClaim"]["properties"]
     assert "source_message_ids" in claim
     assert "entity_ids" not in claim
+
+
+def test_analysis_trace_v3_provider_schema_exposes_grounded_claim_roles() -> None:
+    schema = anthropic_json_schema(ProviderCaseAnalysisV3)
+    claim = schema["$defs"]["AnalysisClaimV3"]["properties"]
+    assert schema["properties"]["version"]["const"] == "analysis_trace_v3"
+    assert "supporting_source_message_ids" in claim
+    assert "contradicting_source_message_ids" in claim
+    assert "reasoning_summary" in claim
+    assert "gaps" not in schema["properties"]

@@ -121,7 +121,7 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
     }
   }
 
-  // Parse MITRE table items
+
   interface MitreTableRow {
     id: string;
     name: string;
@@ -140,7 +140,11 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
       const tactic = asString(row.tactic);
       const description = asString(row.description);
       const reason = asString(row.reason);
-      if (id && !seenIds.has(id)) {
+      const isTechnique =
+        id &&
+        !id.toUpperCase().startsWith("TA") &&
+        (id.toUpperCase().startsWith("T") || !id.includes("TA"));
+      if (isTechnique && !seenIds.has(id)) {
         seenIds.add(id);
         mitreRows.push({ id, name, tactic, description, reason });
       }
@@ -160,12 +164,26 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
         const s = claimSourceMap.get(cid);
         if (s) sourceIds.push(...s);
       }
-      if (techId) {
+      if (techId && !techId.toUpperCase().startsWith("TA")) {
         assocMap.set(techId, {
           reason: reason || assocMap.get(techId)?.reason || "",
           sourceIds: Array.from(new Set([...(assocMap.get(techId)?.sourceIds ?? []), ...sourceIds])),
         });
       }
+    }
+  }
+
+  // Ensure any associated techniques not in rawMitreTable are also present
+  for (const [techId, assoc] of assocMap.entries()) {
+    if (!seenIds.has(techId) && !techId.toUpperCase().startsWith("TA")) {
+      seenIds.add(techId);
+      mitreRows.push({
+        id: techId,
+        name: techId,
+        tactic: "",
+        description: "",
+        reason: assoc.reason,
+      });
     }
   }
 
@@ -189,6 +207,16 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
       isExternalReference: true,
     });
   }
+
+  // Sort: associated techniques with sources first
+  techniques.sort((a, b) => {
+    const aHasSources = a.caseBasisSources.length > 0 ? 1 : 0;
+    const bHasSources = b.caseBasisSources.length > 0 ? 1 : 0;
+    if (aHasSources !== bHasSources) return bHasSources - aHasSources;
+    const aInAssoc = assocMap.has(a.techniqueId) ? 1 : 0;
+    const bInAssoc = assocMap.has(b.techniqueId) ? 1 : 0;
+    return bInAssoc - aInAssoc;
+  });
 
   return {
     hasContext: techniques.length > 0,

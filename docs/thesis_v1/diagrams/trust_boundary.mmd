@@ -1,0 +1,25 @@
+flowchart LR
+    subgraph Authoritative[Authoritative within product workflow]
+        Initial[Initial user narrative]
+        Clarification[User clarification answer]
+        Added[Added case information]
+    end
+    Raw[Raw Evidence Snapshot and SHA-256]
+    subgraph Derived[Derived and non-authoritative]
+        Assistant[Assistant messages]
+        Ask[User ask interaction]
+        RAG[MITRE and RAG context]
+        Trace[AnalysisTrace]
+        Report[Report]
+        Preview[Document OCR preview]
+    end
+    Initial --> Raw
+    Clarification --> Raw
+    Added --> Raw
+    Raw --> Trace
+    RAG -. external context .-> Trace
+    Trace --> Report
+    Assistant -. excluded .-> Raw
+    Ask -. excluded .-> Raw
+    Preview -. not yet admitted .-> Raw
+

@@ -90,6 +90,7 @@ yarn-error.log*
 # Local generated artifacts
 /output/
 /tmp/
+/Documents/
 /chat-desktop-stitch.png
 /chat-mobile-stitch.png
 

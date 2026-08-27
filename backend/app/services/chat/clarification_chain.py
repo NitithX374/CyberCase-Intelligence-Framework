@@ -41,6 +41,8 @@ def _is_clarification_message(message: ChatMessage) -> bool:
 def _is_terminal_assistant_message(message: ChatMessage) -> bool:
     if message.role != "assistant":
         return False
+    if _is_clarification_message(message):
+        return False
     if message.retrieval_context_id is not None:
         return True
     metadata = message.metadata_json

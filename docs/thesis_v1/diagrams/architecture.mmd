@@ -1,0 +1,53 @@
+flowchart TB
+    User[Prosecutor or Investigator Persona]
+    subgraph Browser[Next.js Frontend]
+        Intake[Intake]
+        Overview[Overview and Materials]
+        Technical[Technical Context]
+        Chat[Chat]
+        ReportUI[Report]
+    end
+    subgraph Backend[FastAPI Backend]
+        ChatAPI[Chat and Report Routes]
+        Raw[Raw Evidence Builder]
+        Workflow[Run Workflow]
+        Analysis[Main Case Analysis]
+        Gap[Gap Analysis and Follow-up]
+        Reports[Deterministic Report Service]
+        Ingestion[Document Preview Route]
+    end
+    DB[(PostgreSQL)]
+    Provider[LLM Provider Abstraction]
+    subgraph RAG[GraphRAG Service]
+        Retrieve[Hybrid Retrieval]
+        Evaluate[Context Evaluation]
+    end
+    Qdrant[(Qdrant)]
+    Neo4j[(Neo4j)]
+    STIX[MITRE ATT&CK STIX 2.1]
+
+    User --> Browser
+    Browser --> ChatAPI
+    Intake --> Ingestion
+    ChatAPI --> DB
+    ChatAPI --> Workflow
+    Workflow --> Raw
+    Raw --> Analysis
+    Workflow --> RAG
+    Analysis --> Provider
+    Gap --> Provider
+    Workflow --> Gap
+    Workflow --> DB
+    Reports --> DB
+    ChatAPI --> Reports
+    Retrieve --> Qdrant
+    Retrieve --> Neo4j
+    RAG --> Workflow
+    STIX --> Qdrant
+    STIX --> Neo4j
+
+    classDef evidence fill:#fff,stroke:#111,stroke-width:3px;
+    classDef external fill:#eee,stroke:#555,stroke-dasharray:5 5;
+    class Raw evidence;
+    class RAG,Qdrant,Neo4j,STIX external;
+

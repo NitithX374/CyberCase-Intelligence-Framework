@@ -1,0 +1,33 @@
+@startuml
+left to right direction
+actor "Prosecutor / Investigator\n(persona only)" as User
+rectangle CyberCase {
+  usecase "Create case workspace" as UC1
+  usecase "Submit case narrative" as UC2
+  usecase "Review analysis" as UC3
+  usecase "Inspect source evidence" as UC4
+  usecase "Ask about analysis" as UC5
+  usecase "Add case information" as UC6
+  usecase "Answer clarification" as UC7
+  usecase "View MITRE technical context" as UC8
+  usecase "Generate and review report" as UC9
+  usecase "Download report PDF" as UC10
+  usecase "Preview document extraction" as UC11
+}
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC9
+User --> UC10
+User --> UC11
+note right of UC11
+Preview only
+Not authoritative evidence
+end note
+@enduml
+

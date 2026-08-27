@@ -73,7 +73,7 @@ export function AttackStoryTimeline({
                     </span>
                   </div>
 
-                  {/* Linked MITRE Techniques inline */}
+
                   {step.mitreTechniques.length > 0 && (
                     <div className="space-y-1 pt-0.5">
                       {step.mitreTechniques.map((tech) => (
@@ -114,11 +114,10 @@ export function AttackStoryTimeline({
                               }
                             }}
                             title={`Inspect source evidence: ${src.sourceTypeLabel}`}
-                            className={`font-medium inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs transition-all duration-150 ${
-                              isActive
-                                ? "bg-primary text-ivory font-bold shadow-xs ring-2 ring-primary/20"
-                                : "text-ink-secondary hover:text-ink hover:bg-surface-nested hover:underline focus-visible:ring-1 focus-visible:ring-primary"
-                            }`}
+                            className={`font-medium inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs transition-all duration-150 ${isActive
+                              ? "bg-primary text-ivory font-bold shadow-xs ring-2 ring-primary/20"
+                              : "text-ink-secondary hover:text-ink hover:bg-surface-nested hover:underline focus-visible:ring-1 focus-visible:ring-primary"
+                              }`}
                           >
                             <span>{src.label}</span>
                             <span className={isActive ? "text-ivory font-bold" : "text-ink-muted"}>↗</span>

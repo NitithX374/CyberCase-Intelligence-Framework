@@ -57,3 +57,173 @@ def test_followup_consumes_raw_evidence_without_case_state() -> None:
     assert result.outcome is not None
     assert result.outcome.thread_status == "awaiting_followup"
     assert result.outcome.content == "Which account was affected?"
+
+
+def test_extract_llm_json_markdown_fences() -> None:
+    from app.services.followup.helpers import _extract_llm_json
+
+    raw = "```json\n{\n  \"gaps\": [\n    {\n      \"topic\": \"Initial Vector\",\n      \"status\": \"not_provided\",\n      \"description\": \"Vector not clear\",\n      \"affects\": \"scope\",\n      \"reason\": \"needed\",\n      \"priority\": \"HIGH\",\n      \"askable\": true\n    }\n  ]\n}\n```"
+    parsed = _extract_llm_json(raw)
+    assert "gaps" in parsed
+    assert len(parsed["gaps"]) == 1
+
+    gap_item = GapItem.model_validate(parsed["gaps"][0])
+    assert gap_item.status == "NOT_PROVIDED"
+    assert gap_item.priority == "high"
+
+
+def test_extract_llm_json_surrounding_text() -> None:
+    from app.services.followup.helpers import _extract_llm_json
+
+    raw = "Here is the gap analysis:\n\n```json\n{\"gaps\": []}\n```\nHope this helps!"
+    parsed = _extract_llm_json(raw)
+    assert parsed == {"gaps": []}
+
+
+def test_extract_llm_text_and_thinking_blocks() -> None:
+    from app.services.followup.helpers import _extract_llm_text
+
+    # Anthropic payload with thinking block
+    anthropic_payload = {
+        "content": [
+            {"type": "thinking", "thinking": "Let me analyze the case..."},
+            {"type": "text", "text": "{\"gaps\": []}"},
+        ]
+    }
+    assert _extract_llm_text(anthropic_payload) == "{\"gaps\": []}"
+
+    # OpenRouter choices payload
+    openrouter_payload = {
+        "choices": [
+            {"message": {"content": "{\"decision\": \"proceed\", \"question\": \"\"}"}}
+        ]
+    }
+    assert _extract_llm_text(openrouter_payload) == "{\"decision\": \"proceed\", \"question\": \"\"}"
+
+    # Direct output_text payload
+    output_text_payload = {"output_text": "{\"decision\": \"proceed\"}"}
+    assert _extract_llm_text(output_text_payload) == "{\"decision\": \"proceed\"}"
+
+
+def test_followup_schemas_lenient_coercion() -> None:
+    # GapItem normalizes status and priority and ignores extra fields
+    item = GapItem.model_validate({
+        "topic": "attacker IP",
+        "status": "missing",
+        "description": "IP is unknown",
+        "affects": "attribution",
+        "reason": "needed",
+        "priority": "critical",
+        "askable": "true",
+        "extra_field": "should_be_ignored",
+    })
+    assert item.status == "NOT_PROVIDED"
+    assert item.priority == "high"
+    assert item.askable is True
+
+    # FollowUpDecision normalizes proceed with whitespace/non-null empty fields
+    decision = FollowUpDecision.model_validate({
+        "decision": "proceed",
+        "selected_gap": "None",
+        "question": "",
+        "extra_meta": 123,
+    })
+    assert decision.decision == "proceed"
+    assert decision.selected_gap is None
+    assert decision.question == ""
+
+
+def test_reconstruct_clarification_chain_with_bound_metadata() -> None:
+    from app.models.chat import ChatMessage
+    from app.services.chat.clarification_chain import reconstruct_clarification_chain
+
+    messages = [
+        ChatMessage(
+            id=uuid4(),
+            thread_id=uuid4(),
+            ordinal=1,
+            role="user",
+            content="ระบบตรวจพบการพยายามล็อกอินผิดปกติ",
+            metadata_json={"evidence_kind": "initial_case_narrative"},
+        ),
+        ChatMessage(
+            id=uuid4(),
+            thread_id=uuid4(),
+            ordinal=2,
+            role="assistant",
+            content="เกิดเหตุการณ์ขึ้นกับบัญชีผู้ใช้ใด?",
+            retrieval_context_id="ctx-123",
+            metadata_json={
+                "chat_followup": {
+                    "kind": "clarification",
+                    "action": "ask_followup",
+                    "root_ordinal": 1,
+                    "question": "เกิดเหตุการณ์ขึ้นกับบัญชีผู้ใช้ใด?",
+                },
+                "mitre_table": [{"technique_id": "T1110"}],
+            },
+        ),
+        ChatMessage(
+            id=uuid4(),
+            thread_id=uuid4(),
+            ordinal=3,
+            role="user",
+            content="ไม่ทราบครับ",
+            metadata_json={"evidence_kind": "clarification_answer"},
+        ),
+    ]
+
+    chain = reconstruct_clarification_chain(messages, root_ordinal=1)
+    assert chain is not None
+    assert chain.root_ordinal == 1
+    assert len(chain.exchanges) == 1
+    assert chain.exchanges[0].question == "เกิดเหตุการณ์ขึ้นกับบัญชีผู้ใช้ใด?"
+    assert chain.exchanges[0].answer == "ไม่ทราบครับ"
+
+
+def test_answer_indicates_unavailable_thai_and_english() -> None:
+    from app.services.followup.contracts import answer_indicates_unavailable
+
+    assert answer_indicates_unavailable("ไม่ทราบ") is True
+    assert answer_indicates_unavailable("ไม่ทราบครับ") is True
+    assert answer_indicates_unavailable("ยังไม่ทราบค่ะ") is True
+    assert answer_indicates_unavailable("ไม่รู้") is True
+    assert answer_indicates_unavailable("ไม่มีข้อมูล") is True
+    assert answer_indicates_unavailable("ไม่แน่ใจครับ") is True
+    assert answer_indicates_unavailable("ไม่มี") is True
+    assert answer_indicates_unavailable("don't know") is True
+    assert answer_indicates_unavailable("i dont know") is True
+    assert answer_indicates_unavailable("unavailable") is True
+    assert answer_indicates_unavailable("n/a") is True
+
+    # Real positive answers should NOT be unavailable
+    assert answer_indicates_unavailable("เป็นบัญชี admin ครับ") is False
+    assert answer_indicates_unavailable("เกิดเหตุเมื่อวาน เวลา 14.00") is False
+
+
+def test_evaluate_followup_stops_on_unavailable_answer() -> None:
+    from app.services.followup.schemas import ClarificationExchange
+
+    resolution = asyncio.run(
+        evaluate_followup_outcome(
+            original_user_content="ระบบโดนโจมตี",
+            clarification_exchanges=(
+                ClarificationExchange(
+                    question="เป้าหมายคือเครื่องไหน?",
+                    answer="ไม่ทราบครับ",
+                ),
+            ),
+            followup_root_ordinal=1,
+            source_run_id=uuid4(),
+            raw_evidence="[INITIAL CASE NARRATIVE]\nระบบโดนโจมตี\n\n[ADDED CASE INFORMATION #1]\nไม่ทราบครับ",
+            analysis_answer="ผลวิเคราะห์",
+            analysis_context={"mitre_table": []},
+            gap_analyzer=Analyzer(),
+            policy=Policy(),
+        )
+    )
+    # When answer is unavailable, followup outcome should be None (proceed with case overview, do not ask)
+    assert resolution.outcome is None
+    assert resolution.metadata_json["chat_followup"]["reason_code"] == "answer_unavailable"
+    assert resolution.metadata_json["chat_followup"]["stop_reason"] == "answer_unavailable"
+

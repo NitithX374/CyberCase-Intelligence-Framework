@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from app.services.case_analysis.contracts import (
     AnalysisMode,
     AnalysisTraceDraft,
+    AnalysisTraceV3,
     ProviderCaseAnalysis,
 )
 
@@ -64,6 +65,92 @@ def validate_analysis_trace(
     )
 
 
+def validate_analysis_trace_v3(
+    analysis: AnalysisTraceV3,
+    *,
+    source_message_ids: set[str],
+    mitre_table: object = None,
+) -> AnalysisTraceV3:
+    claim_ids = [claim.claim_id for claim in analysis.claims]
+    known_claim_ids = set(claim_ids)
+    if len(known_claim_ids) != len(claim_ids):
+        raise AnalysisTraceStructureError(
+            "analysis_trace_v3_duplicate_claim_id",
+            "Analysis claims must have unique identifiers",
+        )
+
+    for claim in analysis.claims:
+        supporting_ids = set(claim.supporting_source_message_ids)
+        contradicting_ids = set(claim.contradicting_source_message_ids)
+        if not supporting_ids.issubset(source_message_ids):
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_support_outside_evidence",
+                "A claim cites supporting evidence outside the authoritative snapshot",
+            )
+        if not contradicting_ids.issubset(source_message_ids):
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_contradiction_outside_evidence",
+                "A claim cites contradicting evidence outside the authoritative snapshot",
+            )
+        if supporting_ids & contradicting_ids:
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_conflicting_source_role",
+                "A source cannot both support and contradict the same claim",
+            )
+        if claim.claim_type == "reported" and not supporting_ids:
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_reported_claim_unbound",
+                "Reported claims must cite supporting authoritative evidence",
+            )
+        if claim.claim_type == "analytical_inference" and not supporting_ids:
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_inference_unbound",
+                "Analytical inferences must cite supporting authoritative evidence",
+            )
+        if claim.claim_type == "analytical_inference" and claim.reasoning_summary is None:
+            raise AnalysisTraceStructureError(
+                "analysis_trace_v3_inference_without_reasoning",
+                "Analytical inferences must include a concise reasoning summary",
+            )
+
+    gap_ids = [gap.gap_id for gap in analysis.gaps]
+    if len(set(gap_ids)) != len(gap_ids):
+        raise AnalysisTraceStructureError(
+            "analysis_trace_v3_duplicate_gap_id",
+            "Analysis gaps must have unique identifiers",
+        )
+    for gap in analysis.gaps:
+        if not set(gap.affected_claim_ids).issubset(known_claim_ids):
+            raise AnalysisTraceStructureError(
+                "analysis_trace_v3_gap_unknown_claim",
+                "An analysis gap references an unknown claim",
+            )
+        if gap.status == "EXPLICITLY_UNKNOWN" and gap.askable:
+            raise AnalysisTraceStructureError(
+                "analysis_trace_v3_explicit_unknown_askable",
+                "An explicitly unknown gap cannot be marked askable",
+            )
+
+    admitted_techniques = _admitted_technique_ids(mitre_table)
+    if analysis.mitre_associations and analysis.retrieval_context_id is None:
+        raise AnalysisTraceProvenanceError(
+            "analysis_trace_v3_mitre_without_retrieval",
+            "MITRE associations require a bound retrieval context",
+        )
+    for association in analysis.mitre_associations:
+        if not set(association.claim_ids).issubset(known_claim_ids):
+            raise AnalysisTraceStructureError(
+                "analysis_trace_v3_mitre_unknown_claim",
+                "A MITRE association references an unknown claim",
+            )
+        if association.technique_id not in admitted_techniques:
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_mitre_outside_context",
+                "A MITRE association is outside the bound retrieval context",
+            )
+    return analysis
+
+
 def detect_forbidden_provenance(raw_payload: object) -> None:
     forbidden = {
         "case_state_version_id",
@@ -95,7 +182,10 @@ def _admitted_technique_ids(value: object) -> set[str]:
 
 def _contains_key(value: object, forbidden: set[str]) -> bool:
     if isinstance(value, Mapping):
-        return any(key in forbidden or _contains_key(item, forbidden) for key, item in value.items())
+        return any(
+            key in forbidden or _contains_key(item, forbidden)
+            for key, item in value.items()
+        )
     if isinstance(value, list):
         return any(_contains_key(item, forbidden) for item in value)
     return False
@@ -106,4 +196,5 @@ __all__ = [
     "AnalysisTraceStructureError",
     "detect_forbidden_provenance",
     "validate_analysis_trace",
+    "validate_analysis_trace_v3",
 ]

@@ -161,9 +161,11 @@ async def evaluate_followup_outcome(
                 failure_code=failure_code,
             )
             logger.warning(
-                "Chat gap analysis failed open source_run_id=%s failure_code=%s",
+                "Chat gap analysis failed open source_run_id=%s failure_code=%s error=%s",
                 source_run_id,
                 failure_code,
+                exc,
+                exc_info=True,
             )
             return proceed_resolution(
                 reason_code="gap_analysis_failed_open",
@@ -206,9 +208,11 @@ async def evaluate_followup_outcome(
         elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
         failure_code = followup_failure_code(exc)
         logger.warning(
-            "Chat follow-up policy failed open source_run_id=%s failure_code=%s",
+            "Chat follow-up policy failed open source_run_id=%s failure_code=%s error=%s",
             source_run_id,
             failure_code,
+            exc,
+            exc_info=True,
         )
         return proceed_resolution(
             reason_code="policy_failed_open",

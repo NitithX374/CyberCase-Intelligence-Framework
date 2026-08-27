@@ -19,7 +19,7 @@ def build_case_analysis_prompt(
     *,
     mode: AnalysisMode,
     raw_evidence: str,
-    analysis_context: dict[str, object],
+    analysis_context: dict[str, object] | None,
     question: str | None,
     response_language: ResponseLanguage,
 ) -> str:
@@ -30,11 +30,13 @@ def build_case_analysis_prompt(
             "analysis_context_missing",
             "Accumulated raw case evidence is required",
         )
+    source_message_ids, external_context = _separate_analysis_context(analysis_context)
     payload = {
         "analysis_mode": validated_mode,
         "response_language": language,
         "raw_user_case_evidence": raw_evidence.strip(),
-        "external_analysis_context": deepcopy(analysis_context),
+        "authoritative_source_message_ids": source_message_ids,
+        "optional_external_context": external_context,
         "question": validated_question,
     }
     prefix = (
@@ -78,16 +80,17 @@ def _bounded_json(payload: dict[str, object], maximum: int) -> str:
     if len(serialized) <= maximum:
         return serialized
     evidence = str(payload["raw_user_case_evidence"])
-    context = _dump(payload["external_analysis_context"])
+    context = _dump(payload["optional_external_context"])
     fixed = {
         "analysis_mode": payload["analysis_mode"],
         "response_language": payload["response_language"],
+        "authoritative_source_message_ids": payload["authoritative_source_message_ids"],
         "question": payload["question"],
         "context_truncated": True,
     }
     low = 0
     high = len(evidence) + len(context)
-    best = _dump({**fixed, "raw_user_case_evidence": "", "external_analysis_context": ""})
+    best = _dump({**fixed, "raw_user_case_evidence": "", "optional_external_context": ""})
     while low <= high:
         size = (low + high) // 2
         evidence_size = min(len(evidence), (size + 1) // 2)
@@ -96,7 +99,7 @@ def _bounded_json(payload: dict[str, object], maximum: int) -> str:
             {
                 **fixed,
                 "raw_user_case_evidence": evidence[:evidence_size],
-                "external_analysis_context": context[:context_size],
+                "optional_external_context": context[:context_size],
             }
         )
         if len(candidate) <= maximum:
@@ -105,6 +108,39 @@ def _bounded_json(payload: dict[str, object], maximum: int) -> str:
         else:
             high = size - 1
     return best
+
+
+def _separate_analysis_context(
+    analysis_context: dict[str, object] | None,
+) -> tuple[list[str], dict[str, object] | None]:
+    if analysis_context is None:
+        return [], None
+    if not isinstance(analysis_context, dict):
+        raise CaseAnalysisFailure(
+            "analysis_context_invalid",
+            "External analysis context must be an object or null",
+        )
+    raw_source_ids = analysis_context.get("source_message_ids", [])
+    if not isinstance(raw_source_ids, list):
+        raise CaseAnalysisFailure(
+            "analysis_context_invalid",
+            "Authoritative source message IDs must be a list",
+        )
+    source_ids = [value.strip() for value in raw_source_ids if isinstance(value, str)]
+    if len(source_ids) != len(raw_source_ids) or any(not value for value in source_ids):
+        raise CaseAnalysisFailure(
+            "analysis_context_invalid",
+            "Authoritative source message IDs must be non-empty strings",
+        )
+    if len(set(source_ids)) != len(source_ids):
+        raise CaseAnalysisFailure(
+            "analysis_context_invalid",
+            "Authoritative source message IDs must be unique",
+        )
+    external_context = deepcopy(
+        {key: value for key, value in analysis_context.items() if key != "source_message_ids"}
+    )
+    return source_ids, external_context or None
 
 
 def _dump(value: object) -> str:

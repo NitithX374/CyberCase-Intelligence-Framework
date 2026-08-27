@@ -18,7 +18,7 @@ _STRUCTURED_OUTPUT_FEATURES = frozenset(
 )
 _OPENROUTER_OUTPUT_TOKEN_FLOORS: dict[StructuredOutputFeature, int] = {
     "case_analysis": 4_096,
-    "gap_analysis": 2_048,
+    "gap_analysis": 4_096,
     "followup": 2_048,
 }
 

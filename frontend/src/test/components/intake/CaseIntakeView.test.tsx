@@ -4,7 +4,7 @@ import { CaseIntakeView } from "@/components/intake/CaseIntakeView";
 import type { PersistedChatMessage } from "@/lib/api";
 
 describe("CaseIntakeView component", () => {
-  it("renders the new case intake screen with required description and disabled material control", () => {
+  it("renders the new case intake screen with required description and document preview", () => {
     const handleSubmit = vi.fn();
 
     render(
@@ -19,7 +19,12 @@ describe("CaseIntakeView component", () => {
     expect(screen.getByRole("heading", { name: /เริ่มวิเคราะห์คดีใหม่/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/ชื่อคดี/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeInTheDocument();
-    expect(screen.getByText(/Document upload is not available yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Document for OCR preview/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Run OCR preview/i }),
+    ).toBeDisabled();
 
     const submitBtn = screen.getByRole("button", { name: /Analyze case/i });
     expect(submitBtn).toBeDisabled();
@@ -116,6 +121,9 @@ describe("CaseIntakeView component", () => {
     expect(chatBtn).toBeInTheDocument();
     expect(materialsBtn).toBeInTheDocument();
     expect(addCaseInfoLink).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Document for OCR preview/i),
+    ).toBeInTheDocument();
 
     fireEvent.click(overviewBtn);
     expect(onOpenOverview).toHaveBeenCalled();

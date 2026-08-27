@@ -6,8 +6,8 @@ from uuid import UUID
 
 from app.services.case_analysis import CASE_ANALYSIS_PROMPT_VERSION
 from app.services.case_analysis.contracts import (
-    AnalysisTraceDraft,
-    AnalysisTraceFailureMetadata,
+    AnalysisTraceFailure,
+    ValidatedAnalysisTrace,
 )
 from app.schemas.rag import QueryResponse
 
@@ -33,8 +33,8 @@ class AssistantOutcome:
     metadata_json: dict[str, object]
     thread_status: str
     rag_context_payload: RagContextPayload | None = None
-    analysis_trace_draft: AnalysisTraceDraft | None = None
-    analysis_trace_failure: AnalysisTraceFailureMetadata | None = None
+    analysis_trace_draft: ValidatedAnalysisTrace | None = None
+    analysis_trace_failure: AnalysisTraceFailure | None = None
     evidence_sha256: str | None = None
     source_message_ids: tuple[UUID, ...] = ()
 
@@ -80,8 +80,8 @@ def fresh_analysis_outcome(
     evidence_sha256: str,
     source_message_ids: tuple[UUID, ...],
     followup_metadata: dict[str, object],
-    trace: AnalysisTraceDraft | None,
-    trace_failure: AnalysisTraceFailureMetadata | None,
+    trace: ValidatedAnalysisTrace | None,
+    trace_failure: AnalysisTraceFailure | None,
 ) -> AssistantOutcome:
     metadata = deepcopy(followup_metadata)
     metadata.update(
@@ -119,8 +119,8 @@ def question_outcome(
     analysis_context: dict[str, object],
     evidence_sha256: str,
     source_message_ids: tuple[UUID, ...],
-    trace: AnalysisTraceDraft | None,
-    trace_failure: AnalysisTraceFailureMetadata | None,
+    trace: ValidatedAnalysisTrace | None,
+    trace_failure: AnalysisTraceFailure | None,
 ) -> AssistantOutcome:
     retrieval_id = analysis_context.get("retrieval_context_id")
     if not isinstance(retrieval_id, str) or not retrieval_id:

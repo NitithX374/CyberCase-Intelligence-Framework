@@ -5,8 +5,14 @@ from uuid import uuid4
 import pytest
 
 from app.schemas.rag import MitreTableRow, QueryResponse
-from app.services.case_analysis.contracts import CaseAnalysisResult
+from app.services.case_analysis.contracts import (
+    AnalysisTraceDraft,
+    AnalysisTraceV3,
+    CaseAnalysisResult,
+)
 from app.services.followup.contracts import FollowUpResolution
+from app.services.workflow.chat_run_completion import _serialize_analysis_trace
+from app.services.workflow.outcome import AssistantOutcome
 from app.services.workflow.pipeline_execution import _run_fresh_analysis, _run_question
 
 
@@ -85,3 +91,59 @@ def test_ask_reuses_context_and_does_not_create_rag_payload() -> None:
     assert outcome.rag_context_payload is None
     assert outcome.retrieval_context_id == "ctx-existing"
     assert outcome.metadata_json["chat_action"]["rag_invoked"] is False
+
+
+def test_v3_trace_persists_without_a_retrieval_context() -> None:
+    trace = AnalysisTraceV3.model_validate(
+        {
+            "analysis_mode": "case_overview",
+            "summary": "A bicycle was reported missing.",
+            "claims": [
+                {
+                    "claim_id": "A-01",
+                    "claim_type": "reported",
+                    "text": "The owner reported a missing bicycle.",
+                    "epistemic_status": "reported",
+                    "supporting_source_message_ids": ["S1"],
+                    "contradicting_source_message_ids": [],
+                    "reasoning_summary": None,
+                }
+            ],
+            "evidence_sha256": "a" * 64,
+            "retrieval_context_id": None,
+        }
+    )
+    outcome = AssistantOutcome(
+        content="Grounded overview",
+        retrieval_context_id=None,
+        metadata_json={},
+        thread_status="answered",
+        analysis_trace_draft=trace,
+        evidence_sha256="a" * 64,
+    )
+    serialized = _serialize_analysis_trace(outcome)
+    assert serialized is not None
+    assert serialized["version"] == "analysis_trace_v3"
+    assert serialized["retrieval_context_id"] is None
+
+
+def test_v2_trace_persistence_remains_backward_compatible() -> None:
+    trace = AnalysisTraceDraft.model_validate(
+        {
+            "analysis_mode": "case_overview",
+            "claims": [],
+            "mitre_associations": [],
+        }
+    )
+    outcome = AssistantOutcome(
+        content="Legacy grounded overview",
+        retrieval_context_id="ctx-v2",
+        metadata_json={},
+        thread_status="answered",
+        analysis_trace_draft=trace,
+        evidence_sha256="b" * 64,
+    )
+    serialized = _serialize_analysis_trace(outcome)
+    assert serialized is not None
+    assert serialized["version"] == "analysis_trace_v2"
+    assert serialized["retrieval_context_id"] == "ctx-v2"

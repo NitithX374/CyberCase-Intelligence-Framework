@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "@/components/common/icons";
 import type { PersistedChatMessage } from "@/lib/api";
+import { DocumentIngestionPreview } from "@/components/intake/DocumentIngestionPreview";
 import {
   getCaseEvidenceKind,
   isCaseEvidenceMessage,
@@ -151,6 +152,7 @@ export function CaseIntakeView({
                 )}
               </div>
             </div>
+            <DocumentIngestionPreview />
           </div>
         ) : (
           /* New Case Form */
@@ -232,28 +234,7 @@ export function CaseIntakeView({
                 </div>
               </div>
 
-              {/* Optional Document Upload Area (Disabled) */}
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <label className="block text-xs font-bold text-ink">
-                    เอกสารเพิ่มเติม <span className="font-normal text-ink-muted">· ไม่บังคับ</span>
-                  </label>
-                  <span className="font-mono text-[10px] font-bold uppercase text-ink-muted">
-                    OPTIONAL
-                  </span>
-                </div>
-                <div className="flex items-start gap-3 rounded border border-dashed border-line bg-surface-nested/30 p-3.5 text-xs text-ink-muted">
-                  <Icon name="report" className="h-4 w-4 shrink-0 mt-0.5 text-ink-muted" />
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <p className="font-medium text-ink-secondary">
-                      Document upload is not available yet.
-                    </p>
-                    <p className="text-[11px] text-ink-muted">
-                      ขณะนี้สามารถคัดลอกข้อความสำคัญจากเอกสารมาใส่ในรายละเอียดคดีด้านบนได้
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <DocumentIngestionPreview />
 
               {/* Primary Action Button */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">

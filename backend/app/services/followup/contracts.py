@@ -31,20 +31,36 @@ _UNAVAILABLE_ANSWER_PHRASES = (
     "can't be determined",
     "could not be determined",
     "couldn't be determined",
+    "don't know",
+    "dont know",
+    "do not know",
     "i don't know",
     "i do not know",
     "we don't know",
     "we do not know",
+    "not sure",
+    "unsure",
+    "no idea",
+    "idk",
     "absent",
     "missing",
     "n/a",
     "ไม่ทราบ",
+    "ยังไม่ทราบ",
     "ไม่รู้",
+    "ยังไม่รู้",
     "ไม่มีข้อมูล",
+    "ไม่มีรายละเอียด",
+    "ไม่แน่ใจ",
+    "จำไม่ได้",
     "ไม่สามารถระบุได้",
     "ไม่สามารถยืนยันได้",
     "หาไม่ได้",
+    "หาไม่เจอ",
+    "ไม่พบข้อมูล",
     "ไม่พร้อมใช้งาน",
+    "ไม่ระบุ",
+    "ไม่ชัดเจน",
 )
 
 
@@ -54,7 +70,16 @@ def _answer_indicates_unavailable(answer: str) -> bool:
     if not normalized:
         return False
     normalized = normalized.strip(" .,!?:;()[]{}")
-    if normalized in {"none", "not known", "not available", "unavailable"}:
+    if normalized in {
+        "none",
+        "not known",
+        "not available",
+        "unavailable",
+        "ไม่มี",
+        "ไม่มีครับ",
+        "ไม่มีค่ะ",
+        "ไม่มีเลย",
+    }:
         return True
     if re.search(r"\bnot\s+unavailable\b", normalized):
         return False

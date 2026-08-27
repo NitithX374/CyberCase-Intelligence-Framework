@@ -25,6 +25,7 @@ def test_health_chat_and_nested_report_api_routes_are_registered() -> None:
 
     assert api_routes == {
         ("GET", "/api/v1/health"),
+        ("POST", "/api/v1/document-ingestion/preview"),
         ("GET", "/api/v1/chats"),
         ("POST", "/api/v1/chats"),
         ("GET", "/api/v1/chats/{thread_id}"),
