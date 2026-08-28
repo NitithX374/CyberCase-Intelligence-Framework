@@ -36,6 +36,7 @@ import sys
 import time
 from pathlib import Path
 
+from ..llm_reranker import LlmReranker
 from ..retriever import LegalRetriever
 from .metrics import HEADER, CaseScore, score_case, summarise
 
@@ -83,6 +84,7 @@ def run(
     with_mitre: bool,
     gold_data: dict,
     depth: int = 50,
+    llm_rerank: bool = False,
 ) -> tuple[dict[int, list[CaseScore]], float]:
     """Retrieve once to a fixed depth, then score every cut-off against it.
 
@@ -92,6 +94,11 @@ def run(
     were asked for — a property of the harness, not of the retriever.
     """
     retriever = LegalRetriever()
+    # Costs money and takes ~15 s per case, so it is opt-in. Candidates are
+    # capped separately: reranking cannot rescue a section retrieval never
+    # returned, which is the whole story of inc_auto_015.
+    reranker = LlmReranker() if llm_rerank else None
+    llm_cost = 0.0
     depth = max(depth, max(ks))
     per_k: dict[int, list[CaseScore]] = {k: [] for k in ks}
     started = time.perf_counter()
@@ -105,18 +112,29 @@ def run(
             chargeable_only=True,
             with_cited_context=False,
         )
-        ranked = [hit.citation for hit in result.hits]
+        hits = list(result.hits)
+        if reranker is not None:
+            reordered, _ = reranker.rerank(case["narrative"], hits[:20])
+            # Sections the model rejected keep their dense order behind the
+            # ones it accepted, so nothing is lost from the measurement.
+            kept = {h.citation for h in reordered}
+            hits = reordered + [h for h in hits if h.citation not in kept]
+            llm_cost += reranker.last_usage.get("cost", 0.0) or 0.0
+        ranked = [hit.citation for hit in hits]
         gold = list(case["gold"].keys())
         for k in ks:
             per_k[k].append(score_case(case["case_id"], gold, ranked, k))
 
+    if reranker is not None:
+        print(f"[LEGAL] ค่าใช้จ่าย LLM rerank รวม ${llm_cost:.5f}")
     return per_k, time.perf_counter() - started
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Evaluate LegalRAG retrieval")
     ap.add_argument("--k", default="5,10,20", help="Cut-offs, comma separated")
-    ap.add_argument("--rerank", action="store_true", help="Rerank candidates (slow)")
+    ap.add_argument("--rerank", action="store_true", help="Cross-encoder rerank (slow, local)")
+    ap.add_argument("--llm-rerank", action="store_true", help="LLM rerank on elements (paid)")
     ap.add_argument("--with-mitre", action="store_true", help="Enrich the query with ATT&CK ids")
     ap.add_argument("--depth", type=int, default=50, help="How deep to retrieve before scoring")
     ap.add_argument("--per-case", action="store_true", help="Show every case")
@@ -136,11 +154,16 @@ def main() -> None:
         return
 
     ks = sorted({int(x) for x in args.k.split(",") if x.strip()})
-    per_k, elapsed = run(ks, args.rerank, args.with_mitre, gold_data, depth=args.depth)
+    per_k, elapsed = run(
+        ks, args.rerank, args.with_mitre, gold_data, depth=args.depth,
+        llm_rerank=args.llm_rerank,
+    )
 
     setting = [f"ดึงลึก {args.depth}"]
     setting.append("rerank" if args.rerank else "ไม่ rerank")
     setting.append("มี MITRE" if args.with_mitre else "ไม่มี MITRE")
+    if args.llm_rerank:
+        setting.append("LLM rerank")
     print(f"เคส {len(gold_data['cases'])} | {' | '.join(setting)} | {elapsed:.1f}s")
     print("=" * 70)
     print(HEADER)
