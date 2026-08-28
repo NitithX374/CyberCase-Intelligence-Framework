@@ -132,6 +132,23 @@ def parse_scores(raw: str, expected: int = 0) -> list[dict]:
     return flat if len(flat) > len(rows) else rows
 
 
+def match_citation(raw: str, known: dict) -> str | None:
+    """Map whatever the model put in `citation` onto a candidate we sent.
+
+    Models mangle this field in model-specific ways. qwen3.5-9b copies it
+    exactly; gpt-5.6-luna returns the bracketed heading followed by the entire
+    section text. Both are recoverable, because the citation we sent is a
+    substring of what came back. Exact match first, then the longest candidate
+    contained in the reply, so "มาตรา ๑๖" cannot claim a row that named
+    "มาตรา ๑๖/๒".
+    """
+    text = (raw or "").strip()
+    if text in known:
+        return text
+    matches = [c for c in known if c in text]
+    return max(matches, key=len) if matches else None
+
+
 class LlmReranker:
     """Reorders dense results by legal fit. Falls back to the dense order."""
 
@@ -172,8 +189,8 @@ class LlmReranker:
         scored: list[tuple[int, int, object]] = []
         seen: set[str] = set()
         for row in rows:
-            citation = str(row.get("citation", "")).strip()
-            hit = by_citation.get(citation)
+            citation = match_citation(str(row.get("citation", "")), by_citation)
+            hit = by_citation.get(citation) if citation else None
             # A citation the model invented or mangled has no hit behind it.
             if hit is None or citation in seen:
                 continue
@@ -223,7 +240,9 @@ class LlmReranker:
                 {"role": "user", "content": build_prompt(narrative, hits)},
             ],
             "temperature": 0,
-            "max_tokens": 2048,
+            # Twenty rows of Thai reasoning overran 2048 and the reply was cut
+            # off mid-list, costing eleven of the twenty judgements.
+            "max_tokens": 4096,
             "reasoning": {"enabled": False},
         }
         request = urllib.request.Request(

@@ -114,7 +114,12 @@ def run(
         )
         hits = list(result.hits)
         if reranker is not None:
-            reordered, _ = reranker.rerank(case["narrative"], hits[:20])
+            reordered, degraded = reranker.rerank(case["narrative"], hits[:20])
+            # Printed, not swallowed. A rerank that quietly falls back to the
+            # dense order produces exactly the baseline numbers and looks like
+            # a result — which is how two model-specific failures went unnoticed.
+            if degraded:
+                print(f"[LEGAL] {case['case_id']}: {degraded}")
             # Sections the model rejected keep their dense order behind the
             # ones it accepted, so nothing is lost from the measurement.
             kept = {h.citation for h in reordered}
