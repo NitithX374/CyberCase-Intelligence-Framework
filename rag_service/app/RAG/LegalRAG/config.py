@@ -62,7 +62,15 @@ def assert_writable(collection: str) -> None:
 # CLI without importing GraphRAG and dragging in the embedding stack.
 CORE_LLM_PROVIDER = os.getenv("CORE_LLM_PROVIDER", "openrouter").strip().lower()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-OPENROUTER_CYBERCASE = os.getenv("OPENROUTER_CYBERCASE", "")
+# GraphRAG reads OPENROUTER_CYBERCASE; a plain OPENROUTER_API_KEY is accepted
+# too, because that is what is actually exported in the dev shell and a module
+# that cannot find a key it has been given is just a support ticket.
+OPENROUTER_CYBERCASE = os.getenv("OPENROUTER_CYBERCASE") or os.getenv("OPENROUTER_API_KEY", "")
+
+# Model used for reranking retrieved sections. Smaller and cheaper than the
+# reasoning model: the job is to judge whether conduct meets the elements of a
+# section already retrieved, not to write anything.
+LEGAL_RERANK_MODEL = os.getenv("LEGAL_RERANK_MODEL", "qwen/qwen3.5-9b")
 CORE_LLM_ANTHROPIC_MODEL = os.getenv("CORE_LLM_ANTHROPIC_MODEL", "claude-haiku-4-5")
 CORE_LLM_OPENROUTER_MODEL = os.getenv("CORE_LLM_OPENROUTER_MODEL", "openai/gpt-5.6-luna")
 CORE_LLM_OPENROUTER_BASE_URL = os.getenv(
@@ -70,7 +78,9 @@ CORE_LLM_OPENROUTER_BASE_URL = os.getenv(
 ).rstrip("/")
 
 
-def create_legal_chat_model(temperature: float = 0.0, max_tokens: int = 2048):
+def create_legal_chat_model(
+    temperature: float = 0.0, max_tokens: int = 2048, model: str | None = None
+):
     """Fallback chat model for CLI use. The service passes its own instead."""
     from langchain_anthropic import ChatAnthropic
 
@@ -82,7 +92,7 @@ def create_legal_chat_model(temperature: float = 0.0, max_tokens: int = 2048):
             + ("OPENROUTER_CYBERCASE" if openrouter else "ANTHROPIC_API_KEY")
         )
     kwargs: dict = {
-        "model_name": CORE_LLM_OPENROUTER_MODEL if openrouter else CORE_LLM_ANTHROPIC_MODEL,
+        "model_name": model or (CORE_LLM_OPENROUTER_MODEL if openrouter else CORE_LLM_ANTHROPIC_MODEL),
         "api_key": api_key,
         "temperature": temperature,
         "max_tokens_to_sample": max(max_tokens, 4096) if openrouter else max_tokens,
