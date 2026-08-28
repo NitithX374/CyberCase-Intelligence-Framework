@@ -36,6 +36,7 @@ import sys
 import time
 from pathlib import Path
 
+from ..decomposer import LegalDecomposer, merge_results
 from ..llm_reranker import LlmReranker
 from ..retriever import LegalRetriever
 from .metrics import HEADER, CaseScore, score_case, summarise
@@ -85,6 +86,7 @@ def run(
     gold_data: dict,
     depth: int = 50,
     llm_rerank: bool = False,
+    decompose: str = "",
 ) -> tuple[dict[int, list[CaseScore]], float]:
     """Retrieve once to a fixed depth, then score every cut-off against it.
 
@@ -98,21 +100,33 @@ def run(
     # capped separately: reranking cannot rescue a section retrieval never
     # returned, which is the whole story of inc_auto_015.
     reranker = LlmReranker() if llm_rerank else None
+    decomposer = LegalDecomposer(style=decompose) if decompose else None
     llm_cost = 0.0
     depth = max(depth, max(ks))
     per_k: dict[int, list[CaseScore]] = {k: [] for k in ks}
     started = time.perf_counter()
 
     for case in gold_data["cases"]:
-        result = retriever.query(
-            case["narrative"],
+        common = dict(
             mitre_table=_mitre_rows(case) if with_mitre else None,
-            top_k=depth,
             rerank=rerank,
             chargeable_only=True,
             with_cited_context=False,
         )
-        hits = list(result.hits)
+        if decomposer is not None:
+            clauses, degraded = decomposer.decompose(case["narrative"])
+            llm_cost += decomposer.last_usage.get("cost", 0.0) or 0.0
+            if degraded:
+                print(f"[LEGAL] {case['case_id']}: {degraded}")
+            # Each act gets its own quota, then the lists are interleaved. One
+            # act cannot crowd out the others, which is the point of splitting.
+            per_clause = [
+                list(retriever.query(clause, top_k=max(depth // len(clauses), 5), **common).hits)
+                for clause in clauses
+            ]
+            hits = merge_results(per_clause, depth)
+        else:
+            hits = list(retriever.query(case["narrative"], top_k=depth, **common).hits)
         if reranker is not None:
             reordered, degraded = reranker.rerank(case["narrative"], hits[:20])
             # Printed, not swallowed. A rerank that quietly falls back to the
@@ -130,7 +144,7 @@ def run(
         for k in ks:
             per_k[k].append(score_case(case["case_id"], gold, ranked, k))
 
-    if reranker is not None:
+    if reranker is not None or decomposer is not None:
         print(f"[LEGAL] ค่าใช้จ่าย LLM rerank รวม ${llm_cost:.5f}")
     return per_k, time.perf_counter() - started
 
@@ -140,6 +154,8 @@ def main() -> None:
     ap.add_argument("--k", default="5,10,20", help="Cut-offs, comma separated")
     ap.add_argument("--rerank", action="store_true", help="Cross-encoder rerank (slow, local)")
     ap.add_argument("--llm-rerank", action="store_true", help="LLM rerank on elements (paid)")
+    ap.add_argument("--decompose", default="", choices=["", "conduct", "legal"],
+                    help="Split the narrative into acts before retrieving (paid)")
     ap.add_argument("--with-mitre", action="store_true", help="Enrich the query with ATT&CK ids")
     ap.add_argument("--depth", type=int, default=50, help="How deep to retrieve before scoring")
     ap.add_argument("--per-case", action="store_true", help="Show every case")
@@ -161,12 +177,14 @@ def main() -> None:
     ks = sorted({int(x) for x in args.k.split(",") if x.strip()})
     per_k, elapsed = run(
         ks, args.rerank, args.with_mitre, gold_data, depth=args.depth,
-        llm_rerank=args.llm_rerank,
+        llm_rerank=args.llm_rerank, decompose=args.decompose,
     )
 
     setting = [f"ดึงลึก {args.depth}"]
     setting.append("rerank" if args.rerank else "ไม่ rerank")
     setting.append("มี MITRE" if args.with_mitre else "ไม่มี MITRE")
+    if args.decompose:
+        setting.append(f"decompose={args.decompose}")
     if args.llm_rerank:
         setting.append("LLM rerank")
     print(f"เคส {len(gold_data['cases'])} | {' | '.join(setting)} | {elapsed:.1f}s")
