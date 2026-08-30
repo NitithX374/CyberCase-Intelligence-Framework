@@ -1,8 +1,0 @@
-{
-  "T1003": "os credential dumping",
-  "T1078": "valid accounts",
-  "T1111": "multi-factor authentication interception",
-  "T1112": "modify registry",
-  "T1490": "inhibit system recovery",
-  "T1560": "archive collected data"
-}

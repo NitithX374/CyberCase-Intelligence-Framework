@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from RAG import MitreTableRow
-from RAG.LegalRAG.schema import LegalResult
+from RAG.legal_reference import LegalReferenceResult
 
 
 class QueryRequest(BaseModel):
@@ -32,11 +32,13 @@ class QueryResponse(BaseModel):
     # answer may be used internally for relevance, but never crosses this
     # response boundary.
     mitre_table: list[MitreTableRow] = Field(default_factory=list)
-    # Thai statutes the incident may fall under. A third output beside the
-    # context and the MITRE table, never a replacement for either: when
-    # LegalRAG is unavailable this arrives with no suggestions and `degraded`
-    # set, so losing a statute suggestion cannot lose the MITRE mapping.
-    legal: LegalResult = Field(default_factory=LegalResult)
+    # Thai provisions that may bear on the incident, from an external legal
+    # service. A third output beside the context and the MITRE table, never a
+    # replacement for either — and references rather than recommendations: the
+    # service reports what may be relevant, and whether it applies is the
+    # reader's judgement. Arrives empty with `degraded` set when the provider
+    # is unset or unreachable, so a lookup failure cannot cost the MITRE table.
+    legal_reference: LegalReferenceResult = Field(default_factory=LegalReferenceResult)
 
     @field_validator("retrieval_context_id", mode="before")
     @classmethod
