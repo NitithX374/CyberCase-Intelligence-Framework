@@ -9,13 +9,16 @@ judge whether a provision applies — those were removed on purpose. What it doe
 is ask a service that specialises in Thai legal text, and pass on what comes
 back with its provenance attached.
 
-**The response shape is not yet confirmed.** The endpoint and credentials have
-to be supplied (see `config.py`), and until a real response has been seen,
-`extract_provisions` reads defensively: it accepts a bare list or an object
-wrapping one under any of the usual keys, and reads each row through a table of
-likely field names. When the real contract is known this should be narrowed to
-it — a tolerant reader is right while the shape is unknown and wrong once it is,
-because it will silently accept a response that changed.
+The provider is iApp's Thai Legal Data search endpoint, which takes a Thai fact
+pattern and returns the sections it matches. Its `/ask` sibling returns a
+grounded legal answer instead; that is advice, and this field is a reference, so
+`/search` is the one used.
+
+Its documented shape — `{"results": [{"law", "section", "snippet"}]}` — is read
+first, and `law` and `section` are joined into one citation because neither is a
+reference on its own. The looser reader behind it stays as a fallback for a
+response that does not match, but a shape mismatch is reported rather than
+absorbed silently.
 
 Every failure is downward. A missing key, an unreachable host, a timeout or an
 unreadable body all produce an empty result carrying `degraded`, so that a
@@ -70,8 +73,28 @@ def _score(row: dict) -> float | None:
     return None
 
 
+def _iapp_row(row: dict) -> LegalProvision | None:
+    """Read one documented row: {"law", "section", "snippet"}.
+
+    The citation is assembled here because the provider splits it. "มาตรา 118"
+    without its act, or an act without its section, sends a reader to the wrong
+    place — so a row missing either part falls through to the loose reader
+    rather than producing half a reference.
+    """
+    law, section = str(row.get("law", "")).strip(), str(row.get("section", "")).strip()
+    if not law or not section:
+        return None
+    return LegalProvision(
+        citation=f"{law} มาตรา {section}",
+        title=law,
+        text=str(row.get("snippet") or row.get("text") or "").strip(),
+        url=str(row.get("official_url") or row.get("url") or "").strip(),
+        score=_score(row),
+    )
+
+
 def extract_provisions(payload, limit: int) -> list[LegalProvision]:
-    """Pull provisions out of a response whose shape is not yet pinned down."""
+    """Provisions from a response, documented shape first."""
     rows = payload if isinstance(payload, list) else None
     if rows is None and isinstance(payload, dict):
         for key in _LIST_KEYS:
@@ -83,6 +106,9 @@ def extract_provisions(payload, limit: int) -> list[LegalProvision]:
 
     provisions: list[LegalProvision] = []
     for row in rows[:limit]:
+        if isinstance(row, dict) and (documented := _iapp_row(row)) is not None:
+            provisions.append(documented)
+            continue
         if not isinstance(row, dict):
             # A plain list of strings is still usable as citations.
             if isinstance(row, str) and row.strip():
@@ -155,7 +181,7 @@ class ThanoyClient:
         if self.api_key:
             value = f"{THANOY_AUTH_SCHEME} {self.api_key}".strip()
             headers[THANOY_AUTH_HEADER] = value
-        body = json.dumps({THANOY_QUERY_FIELD: query, "limit": limit}).encode("utf-8")
+        body = json.dumps({THANOY_QUERY_FIELD: query, "top_k": limit}).encode("utf-8")
         request = urllib.request.Request(self.url, data=body, headers=headers)
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             self.last_status = response.status

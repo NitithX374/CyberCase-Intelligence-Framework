@@ -20,25 +20,32 @@ from __future__ import annotations
 import os
 
 # ── required ─────────────────────────────────────────────────────────────
-# Full URL of the endpoint that takes an incident description and returns
-# relevant provisions, e.g. "https://api.example.co.th/v1/search".
-THANOY_API_URL = os.getenv("THANOY_API_URL", "").strip()
+# iApp's Thai Legal Data search endpoint: a Thai fact pattern in, the sections
+# it matches out. Chosen over the `/ask` endpoint on the same service, which
+# returns a grounded legal answer — that is advice, and this field is meant to
+# be a reference. Defaulted rather than left blank because the URL is public
+# documentation, not a secret; only the key has to be supplied.
+THANOY_API_URL = os.getenv(
+    "THANOY_API_URL", "https://api.iapp.co.th/v3/store/data/thai-legal/search"
+).strip()
 
 # ── credentials ──────────────────────────────────────────────────────────
 THANOY_API_KEY = os.getenv("THANOY_API_KEY", "")
 # Header the key is sent in, and the scheme prefix. Set THANOY_AUTH_SCHEME to
 # an empty string for services that want the bare key.
-THANOY_AUTH_HEADER = os.getenv("THANOY_AUTH_HEADER", "Authorization")
-THANOY_AUTH_SCHEME = os.getenv("THANOY_AUTH_SCHEME", "Bearer")
+# iApp wants the bare key under `apikey`, not `Authorization: Bearer <key>`.
+THANOY_AUTH_HEADER = os.getenv("THANOY_AUTH_HEADER", "apikey")
+THANOY_AUTH_SCHEME = os.getenv("THANOY_AUTH_SCHEME", "")
 
 # ── request shape ────────────────────────────────────────────────────────
 # JSON key the incident text is sent under.
 THANOY_QUERY_FIELD = os.getenv("THANOY_QUERY_FIELD", "query")
-THANOY_MAX_RESULTS = int(os.getenv("THANOY_MAX_RESULTS", "8"))
+# The endpoint caps top_k at 20 and defaults to 8.
+THANOY_MAX_RESULTS = min(int(os.getenv("THANOY_MAX_RESULTS", "8")), 20)
 
 # ── budget ───────────────────────────────────────────────────────────────
 # The router applies its own ceiling as well; this one bounds the socket.
 THANOY_TIMEOUT_SECONDS = float(os.getenv("THANOY_TIMEOUT_SECONDS", "15"))
 
 # Shown to the reader as the source of the provisions.
-THANOY_PROVIDER_NAME = os.getenv("THANOY_PROVIDER_NAME", "thanoy")
+THANOY_PROVIDER_NAME = os.getenv("THANOY_PROVIDER_NAME", "iapp-thai-legal")
