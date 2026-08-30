@@ -32,49 +32,27 @@ class MitreTableRow(BaseModel):
     mitre_url: str | None = None
 
 
-class LegalSectionRef(BaseModel):
-    """One statute section quoted verbatim, mirrored from the RAG service.
-
-    The qualifiers travel with the text on purpose: a section that arrives
-    without `verified_by_human` is indistinguishable from a checked one.
-    """
+class LegalProvision(BaseModel):
+    """One provision returned by the external legal service."""
 
     model_config = ConfigDict(extra="forbid")
 
-    citation: str
-    act_label: str
-    section_number: str
-    text: str
-    hierarchy: list[str] = Field(default_factory=list)
-    verified_by_human: bool = False
-    verification: str = "current_unverified"
-    penalties_quotable: bool = True
-    effective_from: str | None = None
-    effective_note: str = ""
-    date_warning: str = ""
-    source_url: str = ""
+    citation: str = ""
+    title: str = ""
+    text: str = ""
+    url: str = ""
+    score: float | None = None
 
 
-class LegalSuggestion(BaseModel):
-    """A section an incident may fall under — a suggestion, never a finding."""
+class LegalReferenceResult(BaseModel):
+    """Provisions that may be relevant — references, not recommendations."""
 
     model_config = ConfigDict(extra="forbid")
 
-    headline: str
-    section: LegalSectionRef
-    reasoning: str = ""
-    from_techniques: list[str] = Field(default_factory=list)
-    related: list[LegalSectionRef] = Field(default_factory=list)
-
-
-class LegalResult(BaseModel):
-    """Statute suggestions, or an explanation of why there are none."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    suggestions: list[LegalSuggestion] = Field(default_factory=list)
+    provisions: list[LegalProvision] = Field(default_factory=list)
+    provider: str = ""
+    query_sent: str = ""
     degraded: str = ""
-    contains_unverified: bool = True
     disclaimer: str = ""
 
 
@@ -86,9 +64,9 @@ class QueryResponse(BaseModel):
     context: str
     mitre_table: list[MitreTableRow] = Field(default_factory=list)
     # Must stay in step with rag_service/app/schemas/rag.py: both models set
-    # extra="forbid", so a field added on one side alone turns every chat
+    # extra="forbid", so a field renamed on one side alone turns every chat
     # request into a 422 here.
-    legal: LegalResult = Field(default_factory=LegalResult)
+    legal_reference: LegalReferenceResult = Field(default_factory=LegalReferenceResult)
 
     @field_validator("retrieval_context_id", mode="before")
     @classmethod
@@ -99,9 +77,8 @@ class QueryResponse(BaseModel):
 
 
 __all__ = [
-    "LegalResult",
-    "LegalSectionRef",
-    "LegalSuggestion",
+    "LegalProvision",
+    "LegalReferenceResult",
     "MitreTableRow",
     "QueryRequest",
     "QueryResponse",

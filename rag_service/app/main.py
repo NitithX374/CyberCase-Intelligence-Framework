@@ -37,27 +37,25 @@ async def lifespan(app: FastAPI):
         app.state.rag_agent = GraphRAGAgent(embed_model=embed_model)
         print("[RAG Service] RAG modules initialized successfully.")
 
-        # LegalRAG shares the embedding model rather than loading its own — the
-        # production host runs both pipelines on CPU, where a second copy of
-        # BGE-M3 is felt. It is initialised separately and allowed to fail on
-        # its own: statute suggestions are an enhancement, and losing them must
-        # not take the MITRE mapping down with them.
-        try:
-            from RAG.LegalRAG.pipeline import LegalRAG
+        # Legal provisions come from an external service now, so there is no
+        # corpus, no model and nothing to warm up here — only a client. It is
+        # built unconditionally and reports itself unconfigured when no
+        # endpoint is set, because an unset provider is a valid deployment.
+        from RAG.legal_reference import ThanoyClient
 
-            app.state.legal_rag = LegalRAG(embed_model=embed_model)
-            app.state.legal_rag.warmup()
-            print("[RAG Service] LegalRAG ready (thai_law_sections).")
-        except Exception as legal_error:
-            print(f"[RAG Service] LegalRAG unavailable: {legal_error}")
-            app.state.legal_rag = None
+        app.state.legal_client = ThanoyClient()
+        print(
+            "[RAG Service] Legal reference: "
+            + (f"{app.state.legal_client.url}" if app.state.legal_client.configured
+               else "ไม่ได้ตั้งค่า THANOY_API_URL — ฟิลด์ legal_reference จะว่าง")
+        )
     except Exception as e:
         print(f"[RAG Service] Error initializing RAG modules: {e}")
         import traceback
 
         traceback.print_exc()
         app.state.rag_agent = None
-        app.state.legal_rag = None
+        app.state.legal_client = None
 
     yield
 
