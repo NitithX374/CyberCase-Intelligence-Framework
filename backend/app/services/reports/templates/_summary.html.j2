@@ -1,0 +1,11 @@
+<section class="report-section">
+    <div class="section-header">
+        <h2 class="section-number-title">{{ report.i18n.sec_1 }}</h2>
+    </div>
+    
+    <div class="section-content">
+        {% for paragraph in report.summary_paragraphs %}
+        <p class="prose-paragraph">{{ paragraph }}</p>
+        {% endfor %}
+    </div>
+</section>

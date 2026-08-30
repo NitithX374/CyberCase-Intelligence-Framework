@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
 
 
 DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.6-luna"
@@ -26,6 +25,13 @@ CURATED_MODEL_PRESETS: tuple[ModelPreset, ...] = (
         family="GPT",
         aliases=("luna", "gpt-luna", "gpt-5.6-luna", "default"),
         description="High-context general analysis and extraction (Default)",
+    ),
+    ModelPreset(
+        canonical_id="openai/gpt-4o-mini",
+        display_name="GPT-4o Mini",
+        family="GPT",
+        aliases=("4o-mini", "gpt-4o-mini", "mini"),
+        description="Fast, cost-efficient OpenAI model",
     ),
     ModelPreset(
         canonical_id="openai/gpt-oss-120b",
@@ -123,10 +129,10 @@ def format_model_table() -> str:
     lines.append("=" * 95)
     lines.append("Usage Examples:")
     lines.append("  python -m RAG.GraphRAG.main --model luna            (Default: openai/gpt-5.6-luna)")
+    lines.append("  python -m RAG.GraphRAG.main --model 4o-mini         (openai/gpt-4o-mini)")
     lines.append("  python -m RAG.GraphRAG.main --model oss             (openai/gpt-oss-120b)")
     lines.append("  python -m RAG.GraphRAG.main --model sonnet          (anthropic/claude-3.5-sonnet)")
     lines.append("  python -m RAG.GraphRAG.main --model haiku           (anthropic/claude-3.5-haiku)")
-    lines.append("  python -m RAG.GraphRAG.main --model luna            (openai/gpt-5.6-luna)")
     lines.append("  python -m RAG.GraphRAG.main --model 4o              (openai/gpt-4o)")
     lines.append("  python -m RAG.GraphRAG.main --model <vendor>/<id>   (Any custom OpenRouter model ID)")
     lines.append("=" * 95)

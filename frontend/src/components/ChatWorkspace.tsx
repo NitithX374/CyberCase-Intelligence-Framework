@@ -1,152 +1,38 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
 } from "react";
 import {
-  createChatMessage,
-  createChatThread,
-  deleteChatThread,
   getApiErrorMessage,
-  getChatRun,
-  getChatThread,
-  listChatThreads,
-  updateChatThread,
-  type PersistedChatMessage,
   type ChatMessageAction,
-  type ChatThreadDetail,
   type ChatThreadRead,
-  type ThreadStatus,
 } from "@/lib/api";
-import { ChatPanel } from "@/components/conversation/ChatPanel";
-import { ChatExtractionView } from "@/components/analysis/ChatExtractionView";
-import { ChatRelationshipsView } from "@/components/relationships/ChatRelationshipsView";
-import { ChatReportView } from "@/components/report/ChatReportView";
-import { ChatTimelineView } from "@/components/timeline/ChatTimelineView";
-import { DeleteChatDialog } from "@/components/common/DeleteChatDialog";
-import { Icon } from "@/components/common/icons";
-import { WorkspaceSidebar } from "@/components/layout/WorkspaceSidebar";
 import {
-  workspaceViewLabels,
-  type RunPhase,
   type WorkspaceRouteView,
   type WorkspaceView,
 } from "@/components/common/types";
 import {
   activeChatFollowUpForThread,
   chatTranscriptMessages,
-  hasCompletedAssistantOutput,
-  persistedRequestOrdinal,
-  type ActiveChatFollowUp,
 } from "@/lib/chat-followup";
+import { ChatWorkspaceLayout } from "@/components/ChatWorkspaceLayout";
 import {
-  latestChatExtractionForMessages,
-} from "@/lib/chat-extraction";
+  useChatThreadMutations,
+  useChatThreads,
+} from "@/hooks/use-chat-queries";
+import { chatPath, chatRouteState } from "@/features/chat/routing/chat-route";
+import { useChatSubmission } from "@/features/chat/runs/use-chat-submission";
+import type { PendingChatSubmission } from "@/features/chat/workspace/chat-workspace-types";
+import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
+import { useChatThreadDeletion } from "@/features/chat/workspace/use-chat-thread-deletion";
 
-const POLL_INTERVAL_MS = 1000;
-
-interface PendingSubmission {
-  threadId: string;
-  content: string;
-  key: string;
-  kind: "message" | "followup";
-  action?: ChatMessageAction;
-  lastKnownMessageOrdinal: number;
-  requestOrdinal?: number;
-}
-
-const phaseLabels: Record<RunPhase, string> = {
-  idle: "Ready",
-  querying: "Processing",
-  awaiting_followup: "Follow-up required",
-  analyzing: "Validating",
-  ready: "Complete",
-  error: "Error",
-};
-
-function phaseForThread(detail: ChatThreadDetail): RunPhase {
-  if (detail.status === "processing") return "querying";
-  if (detail.status === "awaiting_followup") return "awaiting_followup";
-  if (detail.status === "failed") return "error";
-  return detail.messages.length > 0 ? "ready" : "idle";
-}
-
-function titleFromMessage(content: string): string {
-  const normalized = content.replace(/\s+/g, " ").trim();
-  if (normalized.length <= 60) return normalized;
-  return `${normalized.slice(0, 57).trimEnd()}...`;
-}
-
-function waitForNextPoll(signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal.aborted) {
-      resolve();
-      return;
-    }
-
-    const timeoutId = window.setTimeout(resolve, POLL_INTERVAL_MS);
-    signal.addEventListener(
-      "abort",
-      () => {
-        window.clearTimeout(timeoutId);
-        resolve();
-      },
-      { once: true },
-    );
-  });
-}
-
-function isCanceled(signal: AbortSignal, error: unknown): boolean {
-  return (
-    signal.aborted ||
-    (typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "ERR_CANCELED")
-  );
-}
-
-interface ChatRouteState {
-  threadId: string | null;
-  view: WorkspaceRouteView;
-}
-
-function decodeThreadId(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
-
-function chatRouteState(pathname: string): ChatRouteState {
-  const segments = pathname.split("/").filter(Boolean);
-  const threadId =
-    segments[0] === "chat" && segments[1]
-      ? decodeThreadId(segments[1])
-      : null;
-  const routeSegment = segments[2];
-  const view: WorkspaceRouteView =
-    routeSegment === "extraction" ||
-      routeSegment === "timeline" ||
-      routeSegment === "relationships" ||
-      routeSegment === "report"
-      ? routeSegment
-      : "chat";
-
-  return { threadId, view };
-}
-
-function chatPath(threadId: string, view: WorkspaceRouteView): string {
-  const basePath = `/chat/${encodeURIComponent(threadId)}`;
-  return view === "chat" ? basePath : `${basePath}/${view}`;
-}
 
 export function ChatWorkspace() {
   const pathname = usePathname();
@@ -160,230 +46,63 @@ export function ChatWorkspace() {
     setActiveViewPathname(pathname);
     setActiveView(routeView);
   }
-  const [threads, setThreads] = useState<ChatThreadRead[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  const [threadStatus, setThreadStatus] = useState<ThreadStatus | null>(null);
-  const [messages, setMessages] = useState<PersistedChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [postAnswerAction, setPostAnswerAction] =
-    useState<ChatMessageAction | null>(null);
-  const [pendingFollowUp, setPendingFollowUp] = useState<{
-    threadId: string;
-    followUp: ActiveChatFollowUp;
-  } | null>(null);
-  const [phase, setPhase] = useState<RunPhase>("idle");
-  const [queryError, setQueryError] = useState<string | null>(null);
-  const [threadsError, setThreadsError] = useState<string | null>(null);
-  const [threadsLoading, setThreadsLoading] = useState(true);
-  const [creatingThread, setCreatingThread] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState<ChatThreadRead | null>(
     null,
   );
-  const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
 
-  const activeThreadIdRef = useRef<string | null>(null);
-  const selectionGenerationRef = useRef(0);
-  const pollControllerRef = useRef<AbortController | null>(null);
+  const threadsQuery = useChatThreads();
+  const {
+    upsertThread: cacheUpsertThread,
+    createMutation,
+    updateMutation,
+    deleteMutation,
+  } = useChatThreadMutations();
+  const threads = useMemo(() => threadsQuery.data ?? [], [threadsQuery.data]);
+  const threadsLoading = threadsQuery.isLoading;
+  const creatingThread = createMutation.isPending;
+  const deletingThreadId = deleteMutation.isPending
+    ? deleteMutation.variables ?? null
+    : null;
+  const threadsError = threadsQuery.error
+    ? getApiErrorMessage(threadsQuery.error, "Saved chats could not be loaded.")
+    : createMutation.error
+      ? getApiErrorMessage(createMutation.error, "A new chat could not be created.")
+      : deleteMutation.error
+        ? getApiErrorMessage(deleteMutation.error, "The chat could not be deleted.")
+        : null;
+
   const deletedThreadIdsRef = useRef(new Set<string>());
-  const pendingSubmissionRef = useRef<PendingSubmission | null>(null);
+  const pendingSubmissionRef = useRef<PendingChatSubmission | null>(null);
   const rootBootstrapDoneRef = useRef(false);
-
-  const upsertThread = useCallback((thread: ChatThreadRead) => {
-    if (deletedThreadIdsRef.current.has(thread.id)) return;
-    setThreads((current) => {
-      const next = [thread, ...current.filter((item) => item.id !== thread.id)];
-      return next.sort(
-        (left, right) =>
-          Date.parse(right.updated_at) - Date.parse(left.updated_at),
-      );
-    });
-  }, []);
-
-  const isCurrentSelection = useCallback(
-    (threadId: string, generation: number) =>
-      activeThreadIdRef.current === threadId &&
-      selectionGenerationRef.current === generation,
-    [],
-  );
-
-  const applyThreadDetail = useCallback(
-    (detail: ChatThreadDetail, failureMessage?: string | null) => {
-      const orderedMessages = [...detail.messages].sort(
-        (left, right) => left.ordinal - right.ordinal,
-      );
-      setMessages(orderedMessages);
-      setThreadStatus(detail.status);
-      setPhase(phaseForThread(detail));
-      upsertThread(detail);
-
-      const pending = pendingSubmissionRef.current;
-      const recoveredRequestOrdinal =
-        pending?.threadId === detail.id && pending.requestOrdinal === undefined
-          ? persistedRequestOrdinal(
-            detail,
-            pending.lastKnownMessageOrdinal,
-            pending.content,
-          )
-          : undefined;
-      if (
-        pending?.threadId === detail.id &&
-        recoveredRequestOrdinal !== undefined
-      ) {
-        pendingSubmissionRef.current = {
-          ...pending,
-          requestOrdinal: recoveredRequestOrdinal,
-        };
-      }
-      const requestOrdinal =
-        pending?.threadId === detail.id
-          ? pending.requestOrdinal ?? recoveredRequestOrdinal
-          : undefined;
-
-      if (failureMessage || detail.status === "failed") {
-        setQueryError(
-          failureMessage ||
-          "Background processing failed. Retry the saved message.",
-        );
-      } else if (
-        pending?.threadId !== detail.id ||
-        requestOrdinal !== undefined
-      ) {
-        setQueryError(null);
-      }
-
-      if (
-        pending?.threadId === detail.id &&
-        requestOrdinal !== undefined &&
-        hasCompletedAssistantOutput(detail, requestOrdinal)
-      ) {
-        pendingSubmissionRef.current = null;
-        setPendingFollowUp(null);
-        setInput("");
-        setPostAnswerAction(null);
-      }
-    },
-    [upsertThread],
-  );
-
-  const pollThreadUntilSettled = useCallback(
-    async (
-      threadId: string,
-      generation: number,
-      signal: AbortSignal,
-    ): Promise<void> => {
-      let consecutiveReadFailures = 0;
-
-      while (!signal.aborted && isCurrentSelection(threadId, generation)) {
-        await waitForNextPoll(signal);
-        if (signal.aborted || !isCurrentSelection(threadId, generation)) return;
-
-        let detail: ChatThreadDetail;
-        try {
-          detail = await getChatThread(threadId, signal);
-          consecutiveReadFailures = 0;
-        } catch (error) {
-          if (
-            isCanceled(signal, error) ||
-            !isCurrentSelection(threadId, generation)
-          ) {
-            return;
-          }
-
-          consecutiveReadFailures += 1;
-          if (consecutiveReadFailures > 1) throw error;
-          continue;
-        }
-
-        if (!isCurrentSelection(threadId, generation)) return;
-        applyThreadDetail(detail);
-        if (detail.status !== "processing") return;
-      }
-    },
-    [applyThreadDetail, isCurrentSelection],
-  );
-
-  const loadThread = useCallback(
-    async (
-      threadId: string,
-      generation: number,
-      signal: AbortSignal,
-    ): Promise<void> => {
-      try {
-        const detail = await getChatThread(threadId, signal);
-        if (!isCurrentSelection(threadId, generation)) return;
-        applyThreadDetail(detail);
-
-        if (detail.status === "processing") {
-          await pollThreadUntilSettled(threadId, generation, signal);
-        }
-      } catch (error) {
-        if (isCanceled(signal, error) || !isCurrentSelection(threadId, generation)) {
-          return;
-        }
-        setPhase("error");
-        setQueryError(getApiErrorMessage(error, "The chat could not be loaded."));
-      }
-    },
-    [applyThreadDetail, isCurrentSelection, pollThreadUntilSettled],
-  );
-
-  const selectThread = useCallback(
-    async (threadId: string): Promise<void> => {
-      pollControllerRef.current?.abort();
-      const controller = new AbortController();
-      pollControllerRef.current = controller;
-      const generation = selectionGenerationRef.current + 1;
-      selectionGenerationRef.current = generation;
-      activeThreadIdRef.current = threadId;
-
-      setActiveThreadId(threadId);
-      setPostAnswerAction(null);
-      const pending = pendingSubmissionRef.current;
-      setInput(
-        pending?.threadId === threadId && pending.kind === "followup"
-          ? pending.content
-          : "",
-      );
-      setPendingFollowUp((current) =>
-        current?.threadId === threadId ? current : null,
-      );
-      setMessages([]);
-      setThreadStatus(null);
-      setQueryError((current) =>
-        pending?.threadId === threadId ? current : null,
-      );
-      setPhase("querying");
-
-      await loadThread(threadId, generation, controller.signal);
-    },
-    [loadThread],
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    void (async () => {
-      setThreadsLoading(true);
-      setThreadsError(null);
-      try {
-        const loadedThreads = await listChatThreads(controller.signal);
-        if (controller.signal.aborted) return;
-        setThreads(loadedThreads);
-      } catch (error) {
-        if (isCanceled(controller.signal, error)) return;
-        setThreadsError(
-          getApiErrorMessage(error, "Saved chats could not be loaded."),
-        );
-      } finally {
-        if (!controller.signal.aborted) setThreadsLoading(false);
-      }
-    })();
-
-    return () => {
-      controller.abort();
-      pollControllerRef.current?.abort();
-    };
-  }, [selectThread]);
+  const {
+    activeThreadId,
+    setActiveThreadId,
+    activeThreadIdRef,
+    selectionGenerationRef,
+    pollControllerRef,
+    messages,
+    setMessages,
+    threadStatus,
+    setThreadStatus,
+    phase,
+    setPhase,
+    input,
+    setInput,
+    pendingFollowUp,
+    setPendingFollowUp,
+    postAnswerAction,
+    setPostAnswerAction,
+    queryError,
+    setQueryError,
+    upsertThread,
+    isCurrentSelection,
+    applyThreadDetail,
+    selectThread,
+  } = useChatThreadSelection({
+    cacheUpsertThread,
+    deletedThreadIdsRef,
+    pendingSubmissionRef,
+  });
 
   useEffect(() => {
     if (routeThreadId !== null) rootBootstrapDoneRef.current = false;
@@ -393,7 +112,7 @@ export function ChatWorkspace() {
     ) {
       void selectThread(routeThreadId);
     }
-  }, [routeThreadId, selectThread]);
+  }, [activeThreadIdRef, routeThreadId, selectThread]);
 
   useEffect(() => {
     if (
@@ -407,11 +126,18 @@ export function ChatWorkspace() {
 
     const firstThreadId = threads[0].id;
     rootBootstrapDoneRef.current = true;
-    router.replace(chatPath(firstThreadId, "chat"));
+    router.replace(chatPath(firstThreadId, "overview"));
     if (activeThreadIdRef.current !== firstThreadId) {
       void selectThread(firstThreadId);
     }
-  }, [routeThreadId, router, selectThread, threads, threadsLoading]);
+  }, [
+    activeThreadIdRef,
+    routeThreadId,
+    router,
+    selectThread,
+    threads,
+    threadsLoading,
+  ]);
 
   const handleViewChange = useCallback(
     (view: WorkspaceView) => {
@@ -419,8 +145,14 @@ export function ChatWorkspace() {
       const threadId = activeThreadIdRef.current;
       if (threadId !== null) router.push(chatPath(threadId, view));
     },
-    [router],
+    [activeThreadIdRef, router],
   );
+
+  const handleNavigateToSource = useCallback(() => {
+    setActiveView("chat");
+    const threadId = activeThreadIdRef.current;
+    if (threadId !== null) router.push(chatPath(threadId, "chat"));
+  }, [activeThreadIdRef, router]);
 
   const handleSelectThread = useCallback(
     async (threadId: string): Promise<void> => {
@@ -432,336 +164,67 @@ export function ChatWorkspace() {
 
   const handleNewChat = useCallback(async () => {
     if (creatingThread) return;
-    setActiveView("chat");
+    setActiveView("intake");
     setPostAnswerAction(null);
-    setCreatingThread(true);
-    setThreadsError(null);
     try {
-      const thread = await createChatThread();
-      upsertThread(thread);
-      router.push(chatPath(thread.id, "chat"));
+      const thread = await createMutation.mutateAsync();
+      router.push(chatPath(thread.id, "intake"));
       await selectThread(thread.id);
-    } catch (error) {
-      setThreadsError(getApiErrorMessage(error, "A new chat could not be created."));
-    } finally {
-      setCreatingThread(false);
-    }
-  }, [creatingThread, router, selectThread, upsertThread]);
-
-  const pollKnownRun = useCallback(
-    async (
-      threadId: string,
-      runId: string,
-      generation: number,
-      signal: AbortSignal,
-    ): Promise<ChatThreadDetail | null> => {
-      let consecutiveReadFailures = 0;
-
-      while (!signal.aborted && isCurrentSelection(threadId, generation)) {
-        await waitForNextPoll(signal);
-        if (signal.aborted || !isCurrentSelection(threadId, generation)) {
-          return null;
-        }
-
-        let detail: ChatThreadDetail;
-        try {
-          detail = await getChatThread(threadId, signal);
-          consecutiveReadFailures = 0;
-        } catch (error) {
-          if (
-            isCanceled(signal, error) ||
-            !isCurrentSelection(threadId, generation)
-          ) {
-            return null;
-          }
-
-          consecutiveReadFailures += 1;
-          if (consecutiveReadFailures > 1) throw error;
-          continue;
-        }
-
-        if (!isCurrentSelection(threadId, generation)) return null;
-
-        if (detail.status === "processing") {
-          applyThreadDetail(detail);
-          continue;
-        }
-
-        let run;
-        try {
-          run = await getChatRun(threadId, runId, signal);
-        } catch (error) {
-          if (
-            isCanceled(signal, error) ||
-            !isCurrentSelection(threadId, generation)
-          ) {
-            return null;
-          }
-          throw error;
-        }
-
-        if (!isCurrentSelection(threadId, generation)) return null;
-        if (run.status === "failed") {
-          applyThreadDetail(
-            detail,
-            run.error_message || "Background processing failed. Retry the answer.",
-          );
-          return null;
-        }
-        if (run.status === "completed") {
-          applyThreadDetail(detail);
-          return detail;
-        }
-      }
-      return null;
-    },
-    [applyThreadDetail, isCurrentSelection],
-  );
-
-  const submitContent = (
-    rawContent: string,
-    kind: PendingSubmission["kind"],
-    followUp?: ActiveChatFollowUp,
-  ) => {
-    if (phase === "querying" || phase === "analyzing") return;
-
-    const content = rawContent.trim();
-    if (!content) return;
-    const statusBeforeSubmit = threadStatus;
-    const action =
-      statusBeforeSubmit === "answered" ? postAnswerAction ?? undefined : undefined;
-    if (statusBeforeSubmit === "answered" && action === undefined) {
-      setQueryError("Choose how to use the next message before sending it.");
+    } catch {
       return;
     }
+  }, [creatingThread, createMutation, router, selectThread, setPostAnswerAction]);
 
-    void (async () => {
-      let threadId = activeThreadIdRef.current;
-      let currentThread = threads.find((thread) => thread.id === threadId);
-      if (!threadId) {
-        try {
-          const created = await createChatThread();
-          upsertThread(created);
-          router.push(chatPath(created.id, "chat"));
-          await selectThread(created.id);
-          threadId = created.id;
-          currentThread = created;
-        } catch (error) {
-          setQueryError(
-            getApiErrorMessage(error, "A chat could not be created."),
-          );
-          setPhase("error");
-          return;
-        }
-      }
-      if (kind === "followup" && !followUp) return;
+  const { submitContent } = useChatSubmission({
+    activeThreadIdRef,
+    selectionGenerationRef,
+    pollControllerRef,
+    pendingSubmissionRef,
+    messages,
+    threads,
+    phase,
+    threadStatus,
+    postAnswerAction,
+    createThread: () => createMutation.mutateAsync(),
+    updateThread: (input) => updateMutation.mutateAsync(input),
+    router,
+    chatPath,
+    selectThread,
+    isCurrentSelection,
+    applyThreadDetail,
+    upsertThread,
+    setMessages,
+    setPhase,
+    setThreadStatus,
+    setQueryError,
+    setInput,
+    setPendingFollowUp,
+    setPostAnswerAction,
+  });
 
-      const generation = selectionGenerationRef.current;
-      const controller = pollControllerRef.current;
-      if (!controller || !isCurrentSelection(threadId, generation)) return;
-
-      const existingMessages = messages;
-      const pending = pendingSubmissionRef.current;
-      const idempotencyKey =
-        pending?.threadId === threadId &&
-          pending.content === content &&
-          pending.action === action
-          ? pending.key
-          : window.crypto.randomUUID();
-      const lastKnownMessageOrdinal =
-        pending?.threadId === threadId &&
-          pending.content === content &&
-          pending.action === action
-          ? pending.lastKnownMessageOrdinal
-          : existingMessages.reduce(
-            (latestOrdinal, message) =>
-              Math.max(latestOrdinal, message.ordinal),
-            0,
-          );
-      pendingSubmissionRef.current = {
-        threadId,
-        content,
-        key: idempotencyKey,
-        kind,
-        action,
-        lastKnownMessageOrdinal,
-      };
-      if (kind === "followup" && followUp) {
-        setPendingFollowUp({ threadId, followUp });
-      }
-
-      setPhase("querying");
-      setThreadStatus("processing");
-      setQueryError(null);
-
-      let requestAccepted = false;
-      try {
-        const accepted = await createChatMessage(
-          threadId,
-          content,
-          idempotencyKey,
-          controller.signal,
-          action,
-        );
-        if (!isCurrentSelection(threadId, generation)) return;
-        requestAccepted = true;
-        const pendingAfterAccept = pendingSubmissionRef.current;
-        if (
-          pendingAfterAccept?.threadId === threadId &&
-          pendingAfterAccept.key === idempotencyKey
-        ) {
-          pendingSubmissionRef.current = {
-            ...pendingAfterAccept,
-            requestOrdinal: accepted.message.ordinal,
-          };
-        }
-
-        setMessages((current) => {
-          if (current.some((message) => message.id === accepted.message.id)) {
-            return current;
-          }
-          return [...current, accepted.message].sort(
-            (left, right) => left.ordinal - right.ordinal,
-          );
-        });
-
-        if (currentThread) {
-          upsertThread({ ...currentThread, status: "processing" });
-        }
-
-        if (
-          kind === "message" &&
-          currentThread?.title === "New chat" &&
-          existingMessages.length === 0
-        ) {
-          void updateChatThread(
-            threadId,
-            titleFromMessage(content),
-            controller.signal,
-          )
-            .then((updated) => {
-              if (isCurrentSelection(threadId, generation)) upsertThread(updated);
-            })
-            .catch(() => undefined);
-        }
-
-        const completedDetail = await pollKnownRun(
-          threadId,
-          accepted.run.id,
-          generation,
-          controller.signal,
-        );
-        if (
-          completedDetail &&
-          hasCompletedAssistantOutput(
-            completedDetail,
-            accepted.message.ordinal,
-          )
-        ) {
-          pendingSubmissionRef.current = null;
-          setPendingFollowUp(null);
-          setInput("");
-          setPostAnswerAction(null);
-        } else if (
-          completedDetail &&
-          isCurrentSelection(threadId, generation)
-        ) {
-          setQueryError(
-            "The completed run did not persist an assistant response. Retry the saved answer.",
-          );
-        }
-      } catch (error) {
-        if (
-          isCanceled(controller.signal, error) ||
-          !isCurrentSelection(threadId, generation)
-        ) {
-          return;
-        }
-
-        if (kind === "followup") {
-          setThreadStatus("awaiting_followup");
-          setPhase("awaiting_followup");
-        } else {
-          setThreadStatus(statusBeforeSubmit);
-          setPhase("error");
-        }
-        setQueryError(
-          getApiErrorMessage(
-            error,
-            requestAccepted
-              ? "The run status could not be confirmed. Retry the saved message."
-              : "The message could not be submitted.",
-          ),
-        );
-      }
-    })();
-  };
-
-  const handleCancelDelete = useCallback(() => {
-    if (deletingThreadId === null) setDeleteCandidate(null);
-  }, [deletingThreadId]);
-
-  const handleConfirmDelete = useCallback(async () => {
-    const thread = deleteCandidate;
-    if (!thread || deletingThreadId !== null) return;
-
-    const deletingActiveThread = activeThreadIdRef.current === thread.id;
-    deletedThreadIdsRef.current.add(thread.id);
-    setDeletingThreadId(thread.id);
-    setThreadsError(null);
-
-    if (deletingActiveThread) {
-      pollControllerRef.current?.abort();
-      pollControllerRef.current = null;
-      selectionGenerationRef.current += 1;
-      activeThreadIdRef.current = null;
-      if (pendingSubmissionRef.current?.threadId === thread.id) {
-        pendingSubmissionRef.current = null;
-        setPendingFollowUp(null);
-      }
-      setPostAnswerAction(null);
-    }
-
-    try {
-      await deleteChatThread(thread.id);
-    } catch (error) {
-      deletedThreadIdsRef.current.delete(thread.id);
-      setDeleteCandidate(null);
-      setDeletingThreadId(null);
-      setThreadsError(getApiErrorMessage(error, "The chat could not be deleted."));
-      if (deletingActiveThread) await selectThread(thread.id);
-      return;
-    }
-
-    const remainingThreads = threads.filter((item) => item.id !== thread.id);
-    setThreads((current) => current.filter((item) => item.id !== thread.id));
-    setDeleteCandidate(null);
-    setDeletingThreadId(null);
-
-    if (!deletingActiveThread) return;
-
-    setActiveThreadId(null);
-    setMessages([]);
-    setInput("");
-    setThreadStatus(null);
-    setQueryError(null);
-    setPhase("idle");
-    setPostAnswerAction(null);
-
-    if (remainingThreads[0]) {
-      router.replace(chatPath(remainingThreads[0].id, activeView));
-      await selectThread(remainingThreads[0].id);
-    } else {
-      router.replace("/chat");
-    }
-  }, [
-    activeView,
+  const { cancelDelete, confirmDelete } = useChatThreadDeletion({
     deleteCandidate,
     deletingThreadId,
+    activeThreadIdRef,
+    pollControllerRef,
+    selectionGenerationRef,
+    pendingSubmissionRef,
+    deletedThreadIdsRef,
+    activeView,
+    threads,
+    deleteThread: (threadId) => deleteMutation.mutateAsync(threadId),
     router,
     selectThread,
-    threads,
-  ]);
+    setDeleteCandidate,
+    setActiveThreadId,
+    setPendingFollowUp,
+    setPostAnswerAction,
+    setMessages,
+    setInput,
+    setThreadStatus,
+    setQueryError,
+    setPhase,
+  });
 
   const activeThread =
     threads.find((thread) => thread.id === activeThreadId) ?? null;
@@ -776,7 +239,7 @@ export function ChatWorkspace() {
     (action: ChatMessageAction) => {
       if (threadStatus === "answered") setPostAnswerAction(action);
     },
-    [threadStatus],
+    [setPostAnswerAction, threadStatus],
   );
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -786,181 +249,78 @@ export function ChatWorkspace() {
       displayFollowUp ?? undefined,
     );
   };
-  const latestExtraction = latestChatExtractionForMessages(messages);
-  const hasValidatedExtraction =
-    latestExtraction?.mode === "single_pass_llm" &&
-    latestExtraction.status === "candidate" &&
-    latestExtraction.validation_status === "validated";
+
+  const handleSubmitCase = useCallback(
+    async ({ title, description }: { title?: string; description: string }) => {
+      const currentThreadId = activeThreadIdRef.current;
+      if (currentThreadId && title) {
+        void updateMutation.mutateAsync({ threadId: currentThreadId, title }).catch(() => undefined);
+      }
+      submitContent(description, "message", undefined, () => {
+        setActiveView("overview");
+        if (currentThreadId !== null) router.push(chatPath(currentThreadId, "overview"));
+      });
+    },
+    [activeThreadIdRef, router, submitContent, updateMutation],
+  );
+
+  const hasCompletedAnalysis = messages.some(
+    (message) =>
+      message.role === "assistant" &&
+      message.metadata_json.analysis_kind === "grounded_main_analysis",
+  );
   const activeWorkspaceView = activeView;
+
+  const handleClearQueryError = useCallback(() => {
+    setQueryError(null);
+  }, [setQueryError]);
+
+  const handleRetryQuery = useCallback(() => {
+    const pending = pendingSubmissionRef.current;
+    setQueryError(null);
+    if (pending) {
+      submitContent(
+        pending.content,
+        pending.kind,
+        pendingFollowUp?.followUp ?? undefined,
+      );
+    }
+  }, [pendingFollowUp, pendingSubmissionRef, setQueryError, submitContent]);
+
   return (
-    <div className="flex h-dvh overflow-hidden bg-canvas text-ink">
-      <WorkspaceSidebar
-        threads={threads}
-        activeThreadId={activeThreadId}
-        threadsLoading={threadsLoading}
-        threadsError={threadsError}
-        onSelectThread={(threadId) => void handleSelectThread(threadId)}
-        onNewChat={() => void handleNewChat()}
-        onRequestDelete={setDeleteCandidate}
-        deletingThreadId={deletingThreadId}
-        activeView={activeView}
-        onViewChange={handleViewChange}
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex min-h-[76px] shrink-0 flex-wrap items-center gap-3 border-b border-line bg-canvas px-3 py-3 sm:px-5 md:min-h-[72px] md:flex-nowrap md:px-7">
-          <div className="flex min-w-0 w-full items-center gap-3 md:flex-1">
-            <Link
-              href="/"
-              aria-label="CyberCase home"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary text-sm font-extrabold text-ivory outline-none transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
-            >
-              C
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-extrabold tracking-[-0.02em] sm:text-lg">
-                {activeThread?.title ?? "New chat"}
-              </p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-ink-secondary">
-                <span className={`h-1.5 w-1.5 rounded-full ${phase === "error" ? "bg-[#B42318]" : phase === "querying" || phase === "analyzing" ? "bg-primary motion-safe:animate-pulse" : "bg-ink-muted"}`} />
-                <span>{workspaceViewLabels[activeView]}</span>
-                <span aria-hidden="true">·</span>
-                <span>{phaseLabels[phase]}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex w-full items-center gap-2 md:hidden">
-            <label htmlFor="mobile-workspace-view" className="sr-only">
-              Select workspace
-            </label>
-            <select
-              id="mobile-workspace-view"
-              value={activeView}
-              onChange={(event) =>
-                handleViewChange(event.target.value as WorkspaceView)
-              }
-              aria-label="Select workspace"
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
-            >
-              <option value="chat">Chat</option>
-              <option value="extraction">Case details</option>
-              <option value="timeline">Timeline</option>
-              <option value="relationships">Relationships</option>
-              <option value="report">Report generation</option>
-            </select>
-          </div>
-
-          <div className="flex w-full items-center gap-2 md:hidden">
-            <select
-              value={activeThreadId ?? ""}
-              onChange={(event) => {
-                if (event.target.value) {
-                  void handleSelectThread(event.target.value);
-                }
-              }}
-              aria-label="Select saved chat"
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm font-semibold text-ink outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary disabled:bg-control-disabled disabled:text-ink-disabled"
-            >
-              <option value="">Select chat</option>
-              {threads.map((thread) => (
-                <option key={thread.id} value={thread.id}>
-                  {thread.title}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={() => void handleNewChat()}
-              disabled={creatingThread}
-              aria-label="New chat"
-              title="New chat"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink outline-none transition-colors hover:border-primary hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-            </button>
-
-            {activeThread && (
-              <button
-                type="button"
-                onClick={() => setDeleteCandidate(activeThread)}
-                disabled={deletingThreadId !== null}
-                aria-label={`Delete ${activeThread.title}`}
-                title={`Delete ${activeThread.title}`}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-secondary outline-none transition-colors hover:border-[#B42318] hover:bg-red-50 hover:text-[#B42318] focus-visible:ring-2 focus-visible:ring-[#B42318] disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
-              >
-                <Icon name="trash" className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="flex min-h-0 flex-1 overflow-hidden bg-canvas">
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            {activeWorkspaceView !== "chat" && queryError && (
-              <div
-                role="alert"
-                className="mx-4 mt-4 shrink-0 rounded-xl border border-[#E5B8B3] bg-[#FFF5F4] px-4 py-3 text-sm font-medium text-[#8F1D14] sm:mx-7 lg:mx-10"
-              >
-                {queryError}
-              </div>
-            )}
-            {activeWorkspaceView === "chat" ? (
-              <div
-                id="workspace-chat-panel"
-                role="tabpanel"
-                aria-label="Chat"
-                className="flex min-h-0 flex-1 flex-col overflow-hidden"
-              >
-                <ChatPanel
-                  messages={visibleMessages}
-                  input={input}
-                  threadStatus={threadStatus}
-                  phase={phase}
-                  error={queryError}
-                  postAnswerAction={postAnswerAction}
-                  onInputChange={setInput}
-                  onPostAnswerActionChange={handlePostAnswerActionChange}
-                  onSubmit={handleSubmit}
-                />
-              </div>
-            ) : activeView === "timeline" ? (
-              <ChatTimelineView
-                extraction={latestExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
-            ) : activeView === "relationships" ? (
-              <ChatRelationshipsView
-                extraction={latestExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
-            ) : activeWorkspaceView === "extraction" ? (
-              <ChatExtractionView
-                extraction={latestExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
-            ) : (
-              <ChatReportView
-                key={`${activeThreadId ?? "new-chat"}:${messages.at(-1)?.id ?? "empty"}`}
-                threadId={activeThreadId}
-                threadTitle={activeThread?.title ?? "New chat"}
-                threadStatus={threadStatus}
-                hasMessages={messages.length > 0}
-                hasValidatedExtraction={hasValidatedExtraction}
-                onOpenChat={() => handleViewChange("chat")}
-              />
-            )}
-          </main>
-
-        </div>
-      </div>
-      <DeleteChatDialog
-        thread={deleteCandidate}
-        isDeleting={deletingThreadId !== null}
-        onCancel={handleCancelDelete}
-        onConfirm={() => void handleConfirmDelete()}
-      />
-    </div>
+    <ChatWorkspaceLayout
+      activeThread={activeThread}
+      activeThreadId={activeThreadId}
+      activeView={activeView}
+      activeWorkspaceView={activeWorkspaceView}
+      threads={threads}
+      threadsLoading={threadsLoading}
+      threadsError={threadsError}
+      creatingThread={creatingThread}
+      deletingThreadId={deletingThreadId}
+      phase={phase}
+      threadStatus={threadStatus}
+      queryError={queryError}
+      input={input}
+      postAnswerAction={postAnswerAction}
+      visibleMessages={visibleMessages}
+      hasCompletedAnalysis={hasCompletedAnalysis}
+      messages={messages}
+      deleteCandidate={deleteCandidate}
+      onSelectThread={(threadId) => void handleSelectThread(threadId)}
+      onNewChat={() => void handleNewChat()}
+      onRequestDelete={setDeleteCandidate}
+      onViewChange={handleViewChange}
+      onInputChange={setInput}
+      onPostAnswerActionChange={handlePostAnswerActionChange}
+      onSubmit={handleSubmit}
+      onSetDeleteCandidate={setDeleteCandidate}
+      onCancelDelete={cancelDelete}
+      onConfirmDelete={() => void confirmDelete()}
+      onNavigateToSource={handleNavigateToSource}
+      onSubmitCase={handleSubmitCase}
+      onClearQueryError={handleClearQueryError}
+      onRetryQuery={handleRetryQuery}
+    />
   );
 }

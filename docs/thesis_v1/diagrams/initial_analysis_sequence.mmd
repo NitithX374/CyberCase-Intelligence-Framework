@@ -1,0 +1,25 @@
+sequenceDiagram
+    actor U as User
+    participant F as Frontend
+    participant B as Backend
+    participant D as PostgreSQL
+    participant R as RAG Service
+    participant L as LLM Provider
+    U->>F: Submit initial narrative
+    F->>B: POST /chats/{id}/messages
+    B->>D: Persist message and queued run
+    B-->>F: 202 Accepted
+    B->>D: Acquire run lease
+    B->>D: Load qualifying user messages
+    B->>B: Build raw evidence and SHA-256
+    B->>R: POST /query(raw evidence)
+    R-->>B: Retrieval context and MITRE table
+    B->>L: Main analysis structured request
+    L-->>B: Prose and provider v3 structure
+    B->>B: Bind IDs and validate provenance
+    B->>L: Gap analysis and follow-up policy
+    L-->>B: Ask one question or proceed
+    B->>D: Persist context, assistant message, run outcome
+    F->>B: Poll run/thread
+    B-->>F: Current persisted state
+

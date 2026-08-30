@@ -1,0 +1,21 @@
+<div class="document-header">
+    <div class="header-org">{{ report.i18n.org_header }}</div>
+    <div class="header-title">{{ report.i18n.doc_title }}</div>
+    
+    <div class="header-meta-grid">
+        <div class="header-meta-row">
+            <div class="header-meta-label">{{ report.i18n.lbl_case_title }}</div>
+            <div class="header-meta-value"><strong>{{ report.case_title }}</strong></div>
+        </div>
+        <div class="header-meta-row">
+            <div class="header-meta-label">{{ report.i18n.lbl_generated_date }}</div>
+            <div class="header-meta-value">{{ report.generated_date }}</div>
+        </div>
+        <div class="header-meta-row">
+            <div class="header-meta-label">{{ report.i18n.lbl_report_status }}</div>
+            <div class="header-meta-value">
+                <span class="status-badge-unverified">{{ report.report_status }}</span>
+            </div>
+        </div>
+    </div>
+</div>

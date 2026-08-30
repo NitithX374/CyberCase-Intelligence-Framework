@@ -7,15 +7,12 @@ export type RunPhase =
   | "error";
 
 export type WorkspaceView =
+  | "intake"
+  | "overview"
+  | "materials"
+  | "technical-context"
   | "chat"
-  | "extraction"
-  | "timeline"
-  | "relationships"
   | "report";
-
-export type EvidenceRouteView = "extraction" | "timeline" | "relationships";
-
-export type CaseInformationRouteView = EvidenceRouteView;
 
 export type WorkspaceRouteView = WorkspaceView;
 
@@ -26,17 +23,20 @@ export function workspaceViewForRoute(
 }
 
 export const workspaceViewLabels: Record<WorkspaceView, string> = {
+  intake: "Intake",
+  overview: "Overview",
+  materials: "Case Materials",
+  "technical-context": "Technical Context",
   chat: "Chat",
-  extraction: "Case details",
-  timeline: "Timeline",
-  relationships: "Relationships",
-  report: "Report generation",
+  report: "Report",
 };
 
 export const workspaceViewDescriptions: Record<WorkspaceView, string> = {
+  intake: "Case narrative intake & initial submission",
+  overview: "Prosecutor case overview & attack story",
+  materials: "User-submitted case evidence & narrative records",
+  "technical-context": "External MITRE ATT&CK reference context",
   chat: "Interactive incident reasoning",
-  extraction: "Extracted facts & observables",
-  timeline: "Chronological event sequence",
-  relationships: "Entity relationship graph",
-  report: "Digital-forensics executive report",
+  report: "Provisional case analysis report",
 };
+

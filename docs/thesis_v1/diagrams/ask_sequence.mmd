@@ -1,0 +1,17 @@
+sequenceDiagram
+    actor U as User
+    participant F as Frontend
+    participant B as Backend
+    participant D as PostgreSQL
+    participant L as LLM Provider
+    U->>F: Ask about current analysis
+    F->>B: POST message action=ask
+    B->>D: Persist ask message and run
+    B->>D: Load latest validated analysis context
+    Note over B: No fresh RAG call
+    B->>L: question_answer request with reused context
+    L-->>B: Answer and structured output
+    B->>B: Validate bindings
+    B->>D: Persist assistant response and completed run
+    B-->>F: Updated thread
+

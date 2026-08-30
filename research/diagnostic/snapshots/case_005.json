@@ -1,0 +1,216 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-005",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "medium",
+        "entity_id": "person-005-vendor",
+        "entity_type": "person",
+        "name": "Omar Haddad",
+        "reported_role": "vendor contact",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "account-005-vendor",
+        "entity_type": "user_account",
+        "name": "vendor.ops",
+        "reported_role": "vendor sender account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "mail-005",
+        "entity_type": "email",
+        "name": "renewal-notice-05.eml",
+        "reported_role": "message received by finance",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "mailbox-005-finance",
+        "entity_type": "mailbox",
+        "name": "finance@northbridge.example",
+        "reported_role": "recipient mailbox",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "account-005-finance",
+        "entity_type": "user_account",
+        "name": "finance.shared",
+        "reported_role": "shared finance account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "archive-005",
+        "entity_type": "archive",
+        "name": "renewal_terms.zip",
+        "reported_role": "message attachment",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "server-005",
+        "entity_type": "file_server",
+        "name": "FS-05",
+        "reported_role": "file storage destination",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "mail_header",
+        "confidence": "medium",
+        "description": "The mail header identifies vendor.ops as the sending account and finance@northbridge.example as the destination.",
+        "evidence_id": "evidence-005-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Mail header record"
+      },
+      {
+        "artifact_type": "file_system_record",
+        "confidence": "medium",
+        "description": "A file-system record shows renewal_terms.zip saved to FS-05 after the message arrived.",
+        "evidence_id": "evidence-005-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Attachment save record"
+      },
+      {
+        "artifact_type": "contact_record",
+        "confidence": "medium",
+        "description": "Omar Haddad is the listed vendor contact, but the preliminary record does not establish that he personally sent the message.",
+        "evidence_id": "evidence-005-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Vendor contact statement"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "medium",
+        "object_entity_id": "mail-005",
+        "predicate": "sent",
+        "relationship_id": "rel-005-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "statement": "The vendor.ops account sent renewal-notice-05.eml.",
+        "status": "reported",
+        "subject_entity_id": "account-005-vendor"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "mailbox-005-finance",
+        "predicate": "delivered_to",
+        "relationship_id": "rel-005-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "statement": "renewal-notice-05.eml was delivered to finance@northbridge.example.",
+        "status": "reported",
+        "subject_entity_id": "mail-005"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "archive-005",
+        "predicate": "contained",
+        "relationship_id": "rel-005-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "statement": "renewal-notice-05.eml contained renewal_terms.zip.",
+        "status": "reported",
+        "subject_entity_id": "mail-005"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "server-005",
+        "predicate": "stored_on",
+        "relationship_id": "rel-005-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "statement": "renewal_terms.zip was stored on file server FS-05.",
+        "status": "reported",
+        "subject_entity_id": "archive-005"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "account-005-vendor",
+          "mail-005"
+        ],
+        "confidence": "medium",
+        "event": "vendor.ops sent renewal-notice-05.eml to the finance mailbox.",
+        "event_id": "event-005-01",
+        "evidence_ids": [
+          "evidence-005-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-15T07:50:00Z",
+        "timestamp_text": "07:50 UTC"
+      },
+      {
+        "actors": [
+          "archive-005",
+          "server-005"
+        ],
+        "confidence": "medium",
+        "event": "renewal_terms.zip was saved on FS-05.",
+        "event_id": "event-005-02",
+        "evidence_ids": [
+          "evidence-005-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-15T08:02:00Z",
+        "timestamp_text": "08:02 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3616,
+    "production_projection_sha256": "10f36d8b02b680b89bafd0d478ffa14233f7a67ba21c2d3c68daf0218e0eb6c1",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

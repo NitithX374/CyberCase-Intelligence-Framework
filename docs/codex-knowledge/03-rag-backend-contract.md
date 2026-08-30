@@ -3,7 +3,7 @@
 ## RAG HTTP response
 
 `rag_service/app/schemas/rag.py` and
-`backend/app/schemas/chat/rag.py` define the response boundary:
+`backend/app/schemas/rag.py` define the response boundary:
 
 ```json
 {
@@ -28,9 +28,10 @@ agent can decompose, retrieve, rerank, evaluate, broaden, retrieve again, and
 then reason/translate. The final RAG answer is discarded at the HTTP boundary;
 Main Case Analysis is the backend's user-facing analysis stage.
 
-The retrieval stack includes Qdrant dense/sparse search, a cross-encoder
-reranker (`BAAI/bge-reranker-v2-m3` by current configuration), and Neo4j graph
-expansion. The actual pipeline code is authoritative if configuration changes.
+The retrieval stack is owned by `rag_service` and includes vector search,
+reranking, and Neo4j graph expansion. The actual RAG pipeline code and model
+configuration are authoritative if that service changes; this note documents
+the backend contract only.
 
 Relevant paths:
 
@@ -54,8 +55,8 @@ wire-contract change requiring focused tests.
 `rag_service/app/routers/context_store.py` stores retrieval snapshots in
 process-local `app.state` with a one-hour TTL. That cache is not durable and is
 not sufficient as the backend's only grounding store. The backend persists the
-actual context and MITRE table in `rag_contexts`, linked to the Case State
-version, so ASK can reuse the exact grounding snapshot after the RAG cache is
+actual context and MITRE table in `rag_contexts`, linked to the completing run,
+so ASK can reuse the exact grounding snapshot after the RAG cache is
 gone.
 
 ## Do not regress

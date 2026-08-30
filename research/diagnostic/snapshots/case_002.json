@@ -1,0 +1,244 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-002",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "person-002-lina",
+        "entity_type": "person",
+        "name": "Lina Chen",
+        "reported_role": "mailbox user",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "account-002-lina",
+        "entity_type": "user_account",
+        "name": "lchen",
+        "reported_role": "corporate mail account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "mailbox-002",
+        "entity_type": "mailbox",
+        "name": "lchen@northbridge.example",
+        "reported_role": "recipient mailbox",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "email-002",
+        "entity_type": "email",
+        "name": "invoice-8841.eml",
+        "reported_role": "message sent to the mailbox",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "attachment-002",
+        "entity_type": "document",
+        "name": "invoice_8841.xlsm",
+        "reported_role": "email attachment",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "rule-002",
+        "entity_type": "mail_rule",
+        "name": "external-forwarding-rule-02",
+        "reported_role": "mailbox forwarding rule",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "mailbox-002-external",
+        "entity_type": "mailbox",
+        "name": "archive@outside.example",
+        "reported_role": "external forwarding destination",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "mail_audit_log",
+        "confidence": "high",
+        "description": "The mailbox audit shows external-forwarding-rule-02 active on lchen@northbridge.example at 09:05 UTC.",
+        "evidence_id": "evidence-002-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Mailbox audit record"
+      },
+      {
+        "artifact_type": "interview_statement",
+        "confidence": "high",
+        "description": "Lina Chen stated during the preliminary interview that she did not create the forwarding rule.",
+        "evidence_id": "evidence-002-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "User interview statement"
+      },
+      {
+        "artifact_type": "message_record",
+        "confidence": "high",
+        "description": "The mail system records invoice-8841.eml and its invoice_8841.xlsm attachment arriving in the mailbox before the rule alert.",
+        "evidence_id": "evidence-002-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Message and attachment record"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "account-002-lina",
+        "predicate": "owns_account",
+        "relationship_id": "rel-002-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "statement": "Lina Chen is listed as the owner of account lchen.",
+        "status": "reported",
+        "subject_entity_id": "person-002-lina"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "email-002",
+        "predicate": "received_email",
+        "relationship_id": "rel-002-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "statement": "Account lchen received invoice-8841.eml in its mailbox.",
+        "status": "reported",
+        "subject_entity_id": "account-002-lina"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "attachment-002",
+        "predicate": "contained",
+        "relationship_id": "rel-002-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "statement": "invoice-8841.eml contained invoice_8841.xlsm.",
+        "status": "reported",
+        "subject_entity_id": "email-002"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "mailbox-002-external",
+        "predicate": "forwarded_to",
+        "relationship_id": "rel-002-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "statement": "The observed mailbox rule forwarded messages to archive@outside.example.",
+        "status": "reported",
+        "subject_entity_id": "rule-002"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "rule-002",
+        "predicate": "did_not_create",
+        "relationship_id": "rel-002-05",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "statement": "Lina Chen stated that she did not create external-forwarding-rule-02.",
+        "status": "reported",
+        "subject_entity_id": "person-002-lina"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "email-002",
+          "attachment-002"
+        ],
+        "confidence": "high",
+        "event": "invoice-8841.eml containing invoice_8841.xlsm arrived in the lchen mailbox.",
+        "event_id": "event-002-01",
+        "evidence_ids": [
+          "evidence-002-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-12T08:44:00Z",
+        "timestamp_text": "08:44 UTC"
+      },
+      {
+        "actors": [
+          "rule-002"
+        ],
+        "confidence": "high",
+        "event": "The external forwarding rule was observed active.",
+        "event_id": "event-002-02",
+        "evidence_ids": [
+          "evidence-002-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-12T09:05:00Z",
+        "timestamp_text": "09:05 UTC"
+      },
+      {
+        "actors": [
+          "person-002-lina"
+        ],
+        "confidence": "high",
+        "event": "Lina Chen stated that she did not create the forwarding rule.",
+        "event_id": "event-002-03",
+        "evidence_ids": [
+          "evidence-002-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000002"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-12T09:30:00Z",
+        "timestamp_text": "09:30 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 4179,
+    "production_projection_sha256": "30bd402a40d8f2e6e4d07d3211cf5d5512cffc7662493fb8f2038ee09fa7d5aa",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

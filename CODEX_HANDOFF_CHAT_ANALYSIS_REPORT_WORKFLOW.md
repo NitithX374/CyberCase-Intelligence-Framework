@@ -1,6 +1,11 @@
 # CyberCase Chat, Analysis, and Report Workflow Handoff
 
-Generated: 2026-07-18 (Asia/Taipei)
+> Historical snapshot generated on 2026-07-18 (Asia/Taipei). This handoff is
+> retained for provenance, but its branch names, commit IDs, route inventory,
+> and implementation paths are not current. Read
+> `docs/codex-knowledge/README.md` and `docs/codex-knowledge/04-worktree-and-doc-status.md`
+> first. As of 2026-08-22, `main` and `origin/main` are at
+> `c87ce59eda119d79bacf27d152a2c5966b488983`.
 
 This document is a continuation handoff for another Codex chat. It summarizes the current repository state, decisions already made, work completed, unfinished issues, and the proposed implementation order.
 

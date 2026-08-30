@@ -1,0 +1,232 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-001",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "person-001-elena",
+        "entity_type": "person",
+        "name": "Elena Ruiz",
+        "reported_role": "employee and listed account owner",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "account-001-elena",
+        "entity_type": "user_account",
+        "name": "eruiz",
+        "reported_role": "corporate user account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "device-001-ws17",
+        "entity_type": "workstation",
+        "name": "WS-17",
+        "reported_role": "employee workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "account-001-backup",
+        "entity_type": "service_account",
+        "name": "svc-backup",
+        "reported_role": "service account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "ip-001",
+        "entity_type": "ip_address",
+        "name": "203.0.113.77",
+        "reported_role": "reported remote source",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "tool-001-support",
+        "entity_type": "executable",
+        "name": "RemoteAssist.exe",
+        "reported_role": "remote-support tool",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "archive-001",
+        "entity_type": "archive",
+        "name": "finance_2026-05.zip",
+        "reported_role": "archive found on workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "process_telemetry",
+        "confidence": "high",
+        "description": "Endpoint telemetry records RemoteAssist.exe running on WS-17 at 08:12 UTC.",
+        "evidence_id": "evidence-001-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Remote support process event"
+      },
+      {
+        "artifact_type": "file_system_record",
+        "confidence": "medium",
+        "description": "A file-system record shows finance_2026-05.zip created on WS-17 at 08:18 UTC.",
+        "evidence_id": "evidence-001-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Archive creation record"
+      },
+      {
+        "artifact_type": "authentication_alert",
+        "confidence": "low",
+        "description": "A monitoring alert suggests a svc-backup authentication from 203.0.113.77 at 08:27 UTC, but the event is not yet confirmed.",
+        "evidence_id": "evidence-001-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "source_type": "user_reported",
+        "status": "not_confirmed",
+        "title": "Authentication alert"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "account-001-elena",
+        "predicate": "owns_account",
+        "relationship_id": "rel-001-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "statement": "Elena Ruiz is listed as the owner of account eruiz.",
+        "status": "reported",
+        "subject_entity_id": "person-001-elena"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "device-001-ws17",
+        "predicate": "executed_on",
+        "relationship_id": "rel-001-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "statement": "RemoteAssist.exe was observed executing on WS-17.",
+        "status": "reported",
+        "subject_entity_id": "tool-001-support"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "device-001-ws17",
+        "predicate": "created_on",
+        "relationship_id": "rel-001-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "statement": "The finance archive was created on WS-17.",
+        "status": "reported",
+        "subject_entity_id": "archive-001"
+      },
+      {
+        "confidence": "low",
+        "object_entity_id": "ip-001",
+        "predicate": "authenticated_from",
+        "relationship_id": "rel-001-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "statement": "The svc-backup account may have authenticated from 203.0.113.77.",
+        "status": "suspected",
+        "subject_entity_id": "account-001-backup"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "tool-001-support"
+        ],
+        "confidence": "high",
+        "event": "RemoteAssist.exe was observed running on WS-17.",
+        "event_id": "event-001-01",
+        "evidence_ids": [
+          "evidence-001-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-11T08:12:00Z",
+        "timestamp_text": "08:12 UTC"
+      },
+      {
+        "actors": [
+          "archive-001"
+        ],
+        "confidence": "medium",
+        "event": "finance_2026-05.zip was created on WS-17.",
+        "event_id": "event-001-02",
+        "evidence_ids": [
+          "evidence-001-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-11T08:18:00Z",
+        "timestamp_text": "08:18 UTC"
+      },
+      {
+        "actors": [
+          "account-001-backup",
+          "ip-001"
+        ],
+        "confidence": "low",
+        "event": "A possible svc-backup authentication from 203.0.113.77 was flagged.",
+        "event_id": "event-001-03",
+        "evidence_ids": [
+          "evidence-001-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000001"
+        ],
+        "status": "not_confirmed",
+        "timestamp": "2026-05-11T08:27:00Z",
+        "timestamp_text": "08:27 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3862,
+    "production_projection_sha256": "e070bfeab35b4229b023e28853dbe28304666321cf9dbdd34ce2c669270443fc",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

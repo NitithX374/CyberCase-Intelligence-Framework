@@ -1,5 +1,5 @@
 # Dockerfile for CyberCase Framework RAG Service
-FROM python:3.11-slim
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
 WORKDIR /app
 
@@ -17,17 +17,10 @@ COPY requirements-ml.txt ./requirements-ml.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements-ml.txt
 
-# 2. Download and cache models (Requires ML deps)
-# Keep this helper in the same build path so the model-download cache remains
-# reusable; the allowlisted runtime copy below never includes it in the final image.
-COPY app/download_model.py /app/download_model.py
-RUN python /app/download_model.py && rm /app/download_model.py
-
-# 3. Install remaining API dependencies
+# 2. Install remaining API dependencies
 COPY requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
-
 
 # Copy the allowlisted RAG service runtime code
 COPY app/main.py ./app/main.py

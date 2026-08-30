@@ -122,11 +122,10 @@ graph LR
 
 ```
 rag_service/
-├── Dockerfile                  # Build image: python:3.11-slim + ดาวน์โหลด BGE-M3 ล่วงหน้า
+├── Dockerfile                  # Build image: python:3.11-slim
 ├── requirements.txt            # Dependencies ทั้งหมด
 └── app/
     ├── main.py                 # ★ FastAPI service (entrypoint, port 8001)
-    ├── download_model.py       # ดาวน์โหลด/แคช embedding model (ใช้ตอน build Docker)
     ├── _perf_probe.py          # เครื่องมือวัดเวลาแต่ละ node (throwaway)
     └── RAG/
         ├── __init__.py         # Re-export สิ่งที่ service ต้องใช้
@@ -647,7 +646,6 @@ FastAPI service จุดเข้าออกของ RAG (port `8001`)
 > Path เหล่านี้คือของ `rag_service` เอง ส่วน report endpoints อยู่ฝั่ง Backend แล้วและไม่ได้ proxy มาที่ RAG Service
 
 **ไฟล์ประกอบอื่น:**
-- **`download_model.py`** — สคริปต์ดาวน์โหลด/แคช BGE-M3 ล่วงหน้า (รันตอน build Docker เพื่อไม่ต้องโหลดตอน runtime)
 - **`_perf_probe.py`** — เครื่องมือวัดเวลาแต่ละ node (throwaway)
 
 ---

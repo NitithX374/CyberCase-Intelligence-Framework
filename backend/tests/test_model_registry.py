@@ -20,6 +20,9 @@ def test_default_model():
 @pytest.mark.parametrize(
     ("alias", "expected_canonical_id"),
     [
+        ("4o-mini", "openai/gpt-4o-mini"),
+        ("gpt-4o-mini", "openai/gpt-4o-mini"),
+        ("mini", "openai/gpt-4o-mini"),
         ("luna", "openai/gpt-5.6-luna"),
         ("gpt-luna", "openai/gpt-5.6-luna"),
         ("gpt-5.6-luna", "openai/gpt-5.6-luna"),

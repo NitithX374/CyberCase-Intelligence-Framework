@@ -8,20 +8,18 @@ from app.services.llm.core_llm import CoreLlmProvider
 
 
 StructuredOutputFeature = Literal[
+    "case_analysis",
     "gap_analysis",
     "followup",
-    "extraction",
-    "report",
 ]
 
 _STRUCTURED_OUTPUT_FEATURES = frozenset(
-    {"gap_analysis", "followup", "extraction", "report"}
+    {"case_analysis", "gap_analysis", "followup"}
 )
 _OPENROUTER_OUTPUT_TOKEN_FLOORS: dict[StructuredOutputFeature, int] = {
-    "gap_analysis": 2_048,
+    "case_analysis": 4_096,
+    "gap_analysis": 4_096,
     "followup": 2_048,
-    "extraction": 16_384,
-    "report": 16_384,
 }
 
 

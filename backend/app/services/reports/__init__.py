@@ -1,58 +1,60 @@
-"""Incident Report Generation & PDF Export."""
-
-from app.services.reports.report_generation import (
+from app.services.reports.report_contracts import (
     AdmittedMitreRow,
-    AnthropicReportAdapter,
+    ReportGenerationConflict,
     ReportInputSnapshot,
-    ReportModelAdapter,
-    ReportModelResponse,
-    ReportProviderFailure,
+    ReportNotFound,
     ReportRunResult,
+    ReportServiceError,
     ReportSourceMessage,
     ReportValidationError,
+)
+from app.services.reports.report_generation import (
+    REPORT_PROMPT_VERSION,
     run_report_generation,
+)
+from app.services.reports.report_html import (
+    get_report_css,
+    render_chat_report_html,
+    render_chat_report_html_from_view_model,
+)
+from app.services.reports.report_pdf import render_chat_report_pdf
+from app.services.reports.report_persistence import ChatReportService
+from app.services.reports.report_template import build_template_report
+from app.services.reports.report_validation import (
     source_snapshot_hash,
     validate_structured_report,
 )
-from app.services.reports.report_pdf import render_chat_report_pdf
-from app.services.reports.report_prompt import REPORT_SYSTEM_PROMPT
-from app.services.reports.report_provider_schema import (
-    ProviderStructuredReport,
-    provider_report_to_structured_report,
-)
-from app.services.reports.report_service import (
-    ChatReportService,
-    ReportGenerationConflict,
-    ReportNotFound,
-    ReportService,
+from app.services.reports.report_view_model_builder import build_report_view_model
+from app.services.reports.report_view_model_contracts import (
+    ReportLanguage,
+    ReportViewModel,
 )
 
-ReportGenerationError = ReportProviderFailure
-generate_report_payload = run_report_generation
-build_report_pdf_bytes = render_chat_report_pdf
+ReportService = ChatReportService
+ReportGenerationError = ReportServiceError
 
 __all__ = [
     "AdmittedMitreRow",
-    "AnthropicReportAdapter",
+    "ChatReportService",
+    "REPORT_PROMPT_VERSION",
+    "ReportGenerationConflict",
+    "ReportGenerationError",
     "ReportInputSnapshot",
-    "ReportModelAdapter",
-    "ReportModelResponse",
-    "ReportProviderFailure",
+    "ReportLanguage",
+    "ReportNotFound",
     "ReportRunResult",
+    "ReportService",
+    "ReportServiceError",
     "ReportSourceMessage",
     "ReportValidationError",
-    "ReportGenerationError",
-    "generate_report_payload",
+    "ReportViewModel",
+    "build_report_view_model",
+    "build_template_report",
+    "get_report_css",
+    "render_chat_report_html",
+    "render_chat_report_html_from_view_model",
+    "render_chat_report_pdf",
     "run_report_generation",
     "source_snapshot_hash",
     "validate_structured_report",
-    "build_report_pdf_bytes",
-    "render_chat_report_pdf",
-    "REPORT_SYSTEM_PROMPT",
-    "ProviderStructuredReport",
-    "provider_report_to_structured_report",
-    "ReportService",
-    "ChatReportService",
-    "ReportGenerationConflict",
-    "ReportNotFound",
 ]
