@@ -1,5 +1,21 @@
 """Backend domain services."""
 
-from app.services import chat, extraction, llm, reports
+from app.services import (
+    case_analysis,
+    chat,
+    clients,
+    followup,
+    llm,
+    reports,
+    workflow,
+)
 
-__all__ = ["chat", "extraction", "llm", "reports"]
+__all__ = [
+    "case_analysis",
+    "chat",
+    "clients",
+    "followup",
+    "llm",
+    "reports",
+    "workflow",
+]

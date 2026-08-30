@@ -23,14 +23,21 @@ CURATED_MODEL_PRESETS: tuple[ModelPreset, ...] = (
         display_name="GPT 5.6 Luna",
         family="GPT",
         aliases=("luna", "gpt-luna", "gpt-5.6-luna", "default"),
-        description="High-context general analysis and extraction (Default)",
+        description="High-context general analysis (Default)",
+    ),
+    ModelPreset(
+        canonical_id="openai/gpt-4o-mini",
+        display_name="GPT-4o Mini",
+        family="GPT",
+        aliases=("4o-mini", "gpt-4o-mini", "mini"),
+        description="Fast, cost-efficient OpenAI model",
     ),
     ModelPreset(
         canonical_id="openai/gpt-oss-120b",
         display_name="GPT-OSS 120B",
         family="GPT-OSS",
         aliases=("oss", "gpt-oss", "gpt-oss-120b", "oss-120b"),
-        description="Open-weight 120B reasoning and structured extraction model",
+        description="Open-weight 120B reasoning model",
     ),
     ModelPreset(
         canonical_id="anthropic/claude-3.5-sonnet",
@@ -44,7 +51,7 @@ CURATED_MODEL_PRESETS: tuple[ModelPreset, ...] = (
         display_name="Claude 3.5 Haiku",
         family="Claude",
         aliases=("haiku", "claude-haiku", "claude-3.5-haiku", "haiku-3.5"),
-        description="Fast, token-efficient extraction and evaluation",
+        description="Fast, token-efficient analysis and evaluation",
     ),
     ModelPreset(
         canonical_id="openai/gpt-4o",
@@ -117,10 +124,10 @@ def format_model_table() -> str:
     lines.append("=" * 95)
     lines.append("Usage Examples:")
     lines.append("  python -m RAG.GraphRAG.main --model luna            (Default: openai/gpt-5.6-luna)")
+    lines.append("  python -m RAG.GraphRAG.main --model 4o-mini         (openai/gpt-4o-mini)")
     lines.append("  python -m RAG.GraphRAG.main --model oss             (openai/gpt-oss-120b)")
     lines.append("  python -m RAG.GraphRAG.main --model sonnet          (anthropic/claude-3.5-sonnet)")
     lines.append("  python -m RAG.GraphRAG.main --model haiku           (anthropic/claude-3.5-haiku)")
-    lines.append("  python -m RAG.GraphRAG.main --model luna            (openai/gpt-5.6-luna)")
     lines.append("  python -m RAG.GraphRAG.main --model 4o              (openai/gpt-4o)")
     lines.append("  python -m RAG.GraphRAG.main --model <vendor>/<id>   (Any custom OpenRouter model ID)")
     lines.append("=" * 95)

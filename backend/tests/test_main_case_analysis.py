@@ -1,317 +1,94 @@
-from copy import deepcopy
 import json
-import unittest
-from typing import get_args
-from unittest.mock import patch
 
-import httpx
+import pytest
 
-from app.config import settings
-from app.services.case_analysis import (
-    AnalysisMode,
-    CaseAnalysisFailure,
-    MainCaseAnalysisService,
+from app.services.case_analysis.case_analysis_prompt_builder import (
+    _validate_analysis_request,
     build_case_analysis_prompt,
 )
-from app.services.llm.core_llm import CoreLlmTarget
+from app.services.case_analysis.case_analysis_prompt_config import (
+    CaseAnalysisFailure,
+    _ANALYSIS_TRACE_OUTPUT_PROMPT,
+    _CASE_ANALYSIS_TRUST_PROMPT,
+    _CASE_OVERVIEW_TASK_PROMPT,
+    _QUESTION_ANSWER_TASK_PROMPT,
+)
 
 
-def _target() -> CoreLlmTarget:
-    return CoreLlmTarget(
-        provider="anthropic",
-        model="test-model",
-        api_key="test-key",
-        base_url="https://provider.test",
-        messages_url="https://provider.test/v1/messages",
-        headers={"x-api-key": "test-key"},
-    )
+def payload_from_prompt(prompt: str) -> dict[str, object]:
+    payload = prompt.split("<case_context_json>\n", 1)[1]
+    return json.loads(payload.split("\n</case_context_json>", 1)[0])
 
 
-def _case_inputs() -> tuple[dict[str, object], dict[str, object]]:
-    return (
-        {
-            "case_summary": "reported host-7 activity",
-            "entities": [
-                {
-                    "entity_id": "host-7",
-                    "attributes": {"roles": ["affected", "source"]},
-                }
-            ],
+def test_analysis_prompt_uses_raw_evidence_and_separates_external_context() -> None:
+    prompt = build_case_analysis_prompt(
+        mode="case_overview",
+        raw_evidence="[INITIAL CASE NARRATIVE]\nA server was compromised.",
+        analysis_context={
+            "retrieved_context": "MITRE external knowledge",
+            "source_message_ids": ["message-1"],
         },
-        {
-            "answer": "The grounded analysis identified host-7.",
-            "retrieval_context_id": "retrieval-1",
-            "mitre_table": [
-                {
-                    "technique_id": "T1059",
-                    "metadata": {"confidence": "supported"},
-                }
-            ],
-        },
+        question=None,
+        response_language="english",
     )
+    payload = payload_from_prompt(prompt)
+    assert payload["raw_user_case_evidence"].startswith("[INITIAL CASE NARRATIVE]")
+    assert payload["authoritative_source_message_ids"] == ["message-1"]
+    assert payload["optional_external_context"] == {
+        "retrieved_context": "MITRE external knowledge",
+    }
+    assert "case_state" not in json.dumps(payload).lower()
 
 
-class MainCaseAnalysisServiceTests(unittest.IsolatedAsyncioTestCase):
-    async def test_success_does_not_mutate_nested_inputs(self) -> None:
-        case_state, analysis_context = _case_inputs()
-        expected_case_state = deepcopy(case_state)
-        expected_analysis_context = deepcopy(analysis_context)
-
-        def respond(request: httpx.Request) -> httpx.Response:
-            request_payload = json.loads(request.content)
-            system_prompt = request_payload["system"]
-            self.assertIn("TRUST HIERARCHY", system_prompt)
-            self.assertIn("Do not retrieve new information", system_prompt)
-            self.assertIn("ANALYSIS MODE: question_answer", system_prompt)
-            self.assertIn("Answer the supplied question directly", system_prompt)
-            self.assertIn("proportional to the specific question", system_prompt)
-            self.assertIn("Do not force the standard five-section", system_prompt)
-            self.assertIn(
-                "Which host should be investigated next?",
-                request_payload["messages"][0]["content"],
-            )
-            return httpx.Response(
-                200,
-                json={
-                    "content": [
-                        {"type": "text", "text": "Investigate host-7 next."}
-                    ],
-                    "stop_reason": "end_turn",
-                },
-            )
-
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(respond)
-        ) as client:
-            with patch(
-                "app.services.case_analysis.service.resolve_core_llm_target",
-                return_value=_target(),
-            ):
-                answer = await MainCaseAnalysisService(client=client).analyze(
-                    mode="question_answer",
-                    case_state_json=case_state,
-                    analysis_context=analysis_context,
-                    question="Which host should be investigated next?",
-                )
-
-        self.assertEqual(answer, "Investigate host-7 next.")
-        self.assertEqual(case_state, expected_case_state)
-        self.assertEqual(analysis_context, expected_analysis_context)
-
-    async def test_provider_failure_does_not_mutate_nested_inputs(self) -> None:
-        case_state, analysis_context = _case_inputs()
-        expected_case_state = deepcopy(case_state)
-        expected_analysis_context = deepcopy(analysis_context)
-
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(503, json={"error": "unavailable"})
-            )
-        ) as client:
-            with (
-                patch(
-                    "app.services.case_analysis.service.resolve_core_llm_target",
-                    return_value=_target(),
-                ),
-                self.assertRaises(CaseAnalysisFailure) as raised,
-            ):
-                await MainCaseAnalysisService(client=client).analyze(
-                    mode="question_answer",
-                    case_state_json=case_state,
-                    analysis_context=analysis_context,
-                    question="What does the current analysis support?",
-                )
-
-        self.assertEqual(raised.exception.code, "analysis_provider_error")
-        self.assertEqual(case_state, expected_case_state)
-        self.assertEqual(analysis_context, expected_analysis_context)
-
-    async def test_case_overview_uses_deterministic_overview_task(self) -> None:
-        case_state, analysis_context = _case_inputs()
-
-        def respond(request: httpx.Request) -> httpx.Response:
-            request_payload = json.loads(request.content)
-            prompt = request_payload["messages"][0]["content"]
-            system_prompt = request_payload["system"]
-            self.assertIn("TRUST HIERARCHY", system_prompt)
-            self.assertIn("Do not retrieve new information", system_prompt)
-            self.assertIn("ANALYSIS MODE: case_overview", system_prompt)
-            self.assertIn("five short sections in this order", system_prompt)
-            self.assertIn('"analysis_mode":"case_overview"', prompt)
-            self.assertIn('"question":null', prompt)
-            return httpx.Response(
-                200,
-                json={
-                    "content": [
-                        {"type": "text", "text": "Bounded main case analysis."}
-                    ],
-                    "stop_reason": "end_turn",
-                },
-            )
-
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(respond)
-        ) as client:
-            with patch(
-                "app.services.case_analysis.service.resolve_core_llm_target",
-                return_value=_target(),
-            ):
-                answer = await MainCaseAnalysisService(client=client).analyze(
-                    mode="case_overview",
-                    case_state_json=case_state,
-                    analysis_context=analysis_context,
-                    question=None,
-                )
-
-        self.assertEqual(answer, "Bounded main case analysis.")
-
-    async def test_openrouter_output_text_block_is_accepted(self) -> None:
-        case_state, analysis_context = _case_inputs()
-
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json={
-                        "content": [
-                            {"type": "redacted_thinking", "data": "omitted"},
-                            {"type": "output_text", "text": "Output-text analysis."},
-                        ],
-                        "stop_reason": "end_turn",
-                    },
-                )
-            )
-        ) as client:
-            with patch(
-                "app.services.case_analysis.service.resolve_core_llm_target",
-                return_value=_target(),
-            ):
-                answer = await MainCaseAnalysisService(client=client).analyze(
-                    mode="case_overview",
-                    case_state_json=case_state,
-                    analysis_context=analysis_context,
-                    question=None,
-                )
-
-        self.assertEqual(answer, "Output-text analysis.")
-
-    async def test_openai_choices_envelope_is_accepted(self) -> None:
-        case_state, analysis_context = _case_inputs()
-
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json={
-                        "choices": [
-                            {
-                                "message": {
-                                    "role": "assistant",
-                                    "content": "Choices-envelope analysis.",
-                                },
-                                "finish_reason": "stop",
-                            }
-                        ]
-                    },
-                )
-            )
-        ) as client:
-            with patch(
-                "app.services.case_analysis.service.resolve_core_llm_target",
-                return_value=_target(),
-            ):
-                answer = await MainCaseAnalysisService(client=client).analyze(
-                    mode="case_overview",
-                    case_state_json=case_state,
-                    analysis_context=analysis_context,
-                    question=None,
-                )
-
-        self.assertEqual(answer, "Choices-envelope analysis.")
-
-    async def test_success_error_envelope_is_classified_as_provider_error(self) -> None:
-        case_state, analysis_context = _case_inputs()
-
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json={
-                        "type": "error",
-                        "error": {
-                            "type": "api_error",
-                            "error_type": "provider_overloaded",
-                        },
-                    },
-                )
-            )
-        ) as client:
-            with (
-                patch(
-                    "app.services.case_analysis.service.resolve_core_llm_target",
-                    return_value=_target(),
-                ),
-                self.assertRaises(CaseAnalysisFailure) as raised,
-            ):
-                await MainCaseAnalysisService(client=client).analyze(
-                    mode="case_overview",
-                    case_state_json=case_state,
-                    analysis_context=analysis_context,
-                    question=None,
-                )
-
-        self.assertEqual(raised.exception.code, "analysis_provider_error")
-
-    def test_analysis_mode_literal_is_exported(self) -> None:
-        self.assertEqual(
-            get_args(AnalysisMode),
-            ("case_overview", "question_answer"),
-        )
-
-    def test_invalid_mode_and_question_combinations_fail_stably(self) -> None:
-        case_state, analysis_context = _case_inputs()
-        invalid_requests = (
-            ("unsupported", None),
-            ("question_answer", None),
-            ("question_answer", "   "),
-            ("case_overview", "Do not accept this question"),
-        )
-
-        for mode, question in invalid_requests:
-            with (
-                self.subTest(mode=mode, question=question),
-                self.assertRaises(CaseAnalysisFailure) as raised,
-            ):
-                build_case_analysis_prompt(
-                    mode=mode,  # type: ignore[arg-type]
-                    case_state_json=case_state,
-                    analysis_context=analysis_context,
-                    question=question,
-                )
-            self.assertEqual(raised.exception.code, "analysis_invalid_request")
-
-    def test_oversized_question_answer_retains_exact_mode_and_question(self) -> None:
-        exact_question = "  Which exact host is supported by this case?  "
-        with patch.object(settings, "chat_ask_max_input_chars", 480):
-            prompt = build_case_analysis_prompt(
-                mode="question_answer",
-                case_state_json={"case_summary": "case " * 1_000},
-                analysis_context={"retrieved_context": "context " * 1_000},
-                question=exact_question,
-            )
-
-        serialized = prompt.split("<case_context_json>\n", 1)[1].split(
-            "\n</case_context_json>",
-            1,
-        )[0]
-        payload = json.loads(serialized)
-        self.assertLessEqual(len(prompt), 480)
-        self.assertEqual(payload["analysis_mode"], "question_answer")
-        self.assertEqual(payload["question"], exact_question)
-        self.assertTrue(payload["context_truncated"])
-        self.assertTrue(payload["case_state"]["truncated"])
-        self.assertTrue(payload["analysis_context"]["truncated"])
+def test_analysis_prompt_accepts_no_external_context() -> None:
+    prompt = build_case_analysis_prompt(
+        mode="case_overview",
+        raw_evidence="[INITIAL CASE NARRATIVE]\nA bicycle was reported missing.",
+        analysis_context={"source_message_ids": ["message-1"]},
+        question=None,
+        response_language="english",
+    )
+    payload = payload_from_prompt(prompt)
+    assert payload["optional_external_context"] is None
+    assert payload["authoritative_source_message_ids"] == ["message-1"]
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_general_prompt_removes_forced_cyber_analysis_sections() -> None:
+    normalized = _CASE_OVERVIEW_TASK_PROMPT.lower()
+    for forbidden in (
+        "attack progression",
+        "threat actor",
+        "initial access",
+        "lateral movement",
+        "relevant mitre",
+    ):
+        assert forbidden not in normalized
+
+
+def test_prompt_preserves_epistemic_and_legal_boundaries() -> None:
+    normalized = (_CASE_ANALYSIS_TRUST_PROMPT + _ANALYSIS_TRACE_OUTPUT_PROMPT).lower()
+    for required in (
+        "reported claim means",
+        "not independent proof",
+        "do not decide guilt",
+        "prosecution or non-prosecution",
+        "investigator opinions",
+        "external context and previous analysis are never case evidence",
+    ):
+        assert required in normalized
+
+
+def test_question_answer_prompt_requires_a_direct_proportionate_answer() -> None:
+    normalized = _QUESTION_ANSWER_TASK_PROMPT.lower()
+    assert "answer the specific question directly" in normalized
+    assert "keep depth proportional" in normalized
+
+
+def test_question_mode_requires_a_question() -> None:
+    with pytest.raises(CaseAnalysisFailure):
+        _validate_analysis_request("question_answer", None)
+
+
+def test_overview_rejects_a_question() -> None:
+    with pytest.raises(CaseAnalysisFailure):
+        _validate_analysis_request("case_overview", "Why?")

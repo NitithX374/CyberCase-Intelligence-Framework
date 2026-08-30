@@ -52,7 +52,7 @@ integration: verify backend/frontend loop resume
 |---|---|---|
 | **Eval dataset ซ้ำ/ไม่ใช้** (เป้าใหญ่ ~10MB) | `evaluation/eval_dataset_0x01.json`, `eval_dataset_unused.json`, `eval_dataset_generated.json`, `Thai_dataset.json`, `Thai_dataset_08.json` | หลายอันซ้ำ/ชื่อบอก unused; เช็คว่า eval_runner/benchmark ชี้ไฟล์ไหนจริง |
 | **Eval harness เก่า** | `evaluation/crosslingual_benchmark.py` | น่าจะถูกแทนด้วย `crosslingual_generation_benchmark.py` — grep ยืนยัน (พบ ref 1 ไฟล์) |
-| **App scratch/utility** | `app/_perf_probe.py`, `app/test_agent_flow.py`, `app/verify_ingest.py`, `app/download_model.py` | utility รันครั้งเดียว — เช็คว่ายังจำเป็นไหม |
+| **App scratch/utility** | `app/_perf_probe.py`, `app/test_agent_flow.py`, `app/verify_ingest.py` | utility รันครั้งเดียว — เช็คว่ายังจำเป็นไหม |
 | **Docs build byproducts** | `docs/_ARCHITECTURE.html`, `docs/_ARCHITECTURE_v2.html` | สร้างจาก `_build_pdf.py` ทุกครั้ง → ควร **gitignore** ไม่ใช่ track |
 | **Docs เก่า/ซ้ำ** | `docs/RAG_Module.md/.pdf`, `docs/DUAL_QUERY_UPGRADE.md` | RAG_Module ถูกแทนด้วย ARCHITECTURE; เช็คว่ายังอ้างถึงไหม |
 | **Root result dumps** | `results.md`, `results_haiku.md`, `results_thai08.md`, `latency_benchmark_2026-07-03.md` | ผลรันเก่า — ย้ายเข้า `evaluation/results/` หรือลบ |

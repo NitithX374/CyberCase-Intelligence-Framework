@@ -15,6 +15,20 @@ export interface ActiveChatFollowUp {
   rootOrdinal: number;
 }
 
+export interface ChatFollowUpGapDetail {
+  topic: string;
+  status:
+    | "NOT_PROVIDED"
+    | "EXPLICITLY_UNKNOWN"
+    | "AMBIGUOUS"
+    | "CONFLICTING";
+  description: string;
+  affects: string;
+  reason: string;
+  priority: "high" | "medium" | "low";
+  askable: boolean;
+}
+
 interface FollowUpMetadata {
   rootOrdinal: number;
   round: number;
@@ -44,6 +58,62 @@ function followUpMetadata(
   return {
     rootOrdinal: value.root_ordinal,
     round: value.round,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isGapStatus(
+  value: unknown,
+): value is ChatFollowUpGapDetail["status"] {
+  return (
+    value === "NOT_PROVIDED" ||
+    value === "EXPLICITLY_UNKNOWN" ||
+    value === "AMBIGUOUS" ||
+    value === "CONFLICTING"
+  );
+}
+
+function isGapPriority(
+  value: unknown,
+): value is ChatFollowUpGapDetail["priority"] {
+  return value === "high" || value === "medium" || value === "low";
+}
+
+export function followUpGapDetailForMessage(
+  message: PersistedChatMessage,
+): ChatFollowUpGapDetail | null {
+  const followUp = message.metadata_json.chat_followup;
+  if (!isRecord(followUp) || followUp.kind !== "clarification") return null;
+
+  const detail = followUp.selected_gap_detail;
+  if (
+    !isRecord(detail) ||
+    !isNonEmptyString(detail.topic) ||
+    !isNonEmptyString(detail.description) ||
+    !isNonEmptyString(detail.affects) ||
+    !isNonEmptyString(detail.reason) ||
+    !isGapStatus(detail.status) ||
+    !isGapPriority(detail.priority) ||
+    typeof detail.askable !== "boolean"
+  ) {
+    return null;
+  }
+
+  return {
+    topic: detail.topic,
+    status: detail.status,
+    description: detail.description,
+    affects: detail.affects,
+    reason: detail.reason,
+    priority: detail.priority,
+    askable: detail.askable,
   };
 }
 

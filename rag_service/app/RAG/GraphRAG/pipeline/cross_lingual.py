@@ -28,7 +28,7 @@ from ..config import (
     LOCAL_LLM_MODEL,
     OLLAMA_BASE_URL,
 )
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage
 from ..llm_content import LlmContentError, require_message_text
 from ..llm_provider import CoreLlmConfigurationError, create_core_chat_model
 

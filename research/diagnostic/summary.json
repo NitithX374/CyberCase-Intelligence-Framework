@@ -1,0 +1,111 @@
+{
+  "analysis_failures": 0,
+  "analysis_successes": 12,
+  "case_count": 12,
+  "claims_with_judge_a_result": 570,
+  "coverage": {
+    "ADDRESSED_INCORRECTLY": 0,
+    "ADDRESSED_SUPPORTED": 48,
+    "OMITTED": 1,
+    "evaluation_errors": 0,
+    "total_intended_observations": 49
+  },
+  "experiment_mode": "NO_RAG_FIXED_EMPTY_CONTEXT",
+  "generated_at_utc": "2026-08-18T13:09:31.813490+00:00",
+  "issue_counts": {
+    "ATTRIBUTION_OVERCLAIM": 2,
+    "CAUSAL_OVERCLAIM": 0,
+    "CERTAINTY_STRENGTHENING": 3,
+    "OTHER": 0,
+    "POLARITY_NEGATION_ERROR": 1,
+    "ROLE_RELATION_DISTORTION": 0,
+    "SOURCE_ROLE_CONTAMINATION": 0,
+    "UNSUPPORTED_TECHNICAL_INTERPRETATION": 7
+  },
+  "judge_agreement": {
+    "comparable_claims": 570,
+    "issue_tag_set_agreement": 556,
+    "issue_tag_set_agreement_rate": 0.9754385964912281,
+    "issue_tag_set_disagreement": 14,
+    "shared_issue_tag_counts": {
+      "ATTRIBUTION_OVERCLAIM": 2,
+      "CAUSAL_OVERCLAIM": 0,
+      "CERTAINTY_STRENGTHENING": 2,
+      "OTHER": 0,
+      "POLARITY_NEGATION_ERROR": 0,
+      "ROLE_RELATION_DISTORTION": 0,
+      "SOURCE_ROLE_CONTAMINATION": 0,
+      "UNSUPPORTED_TECHNICAL_INTERPRETATION": 2
+    },
+    "support_status_agreement": 551,
+    "support_status_agreement_rate": 0.9666666666666667,
+    "support_status_disagreement": 19
+  },
+  "judge_b_issue_counts": {
+    "ATTRIBUTION_OVERCLAIM": 2,
+    "CAUSAL_OVERCLAIM": 0,
+    "CERTAINTY_STRENGTHENING": 7,
+    "OTHER": 1,
+    "POLARITY_NEGATION_ERROR": 0,
+    "ROLE_RELATION_DISTORTION": 2,
+    "SOURCE_ROLE_CONTAMINATION": 0,
+    "UNSUPPORTED_TECHNICAL_INTERPRETATION": 2
+  },
+  "judge_b_support_status": {
+    "CONTRADICTED": {
+      "count": 1,
+      "percentage_of_audited_claims": 0.0017543859649122807
+    },
+    "SUPPORTED": {
+      "count": 540,
+      "percentage_of_audited_claims": 0.9473684210526315
+    },
+    "UNCLEAR": {
+      "count": 17,
+      "percentage_of_audited_claims": 0.02982456140350877
+    },
+    "UNSUPPORTED": {
+      "count": 12,
+      "percentage_of_audited_claims": 0.021052631578947368
+    }
+  },
+  "models": {
+    "claim_extractor": "openai/gpt-5.6-luna",
+    "judge_a": "openai/gpt-5.6-luna",
+    "judge_b": "openai/gpt-5.6-luna",
+    "main_case_analysis": "openai/gpt-5.6-luna"
+  },
+  "research_direction_diagnostic": {
+    "basis": "Direction uses issue tags shared by both independent audits; shared signals are sparse and require human inspection. The shared epistemic-tag count is 4; the judge-A factual-failure rate is 2.8%; the coverage-failure rate is 2.0%.",
+    "direction": "E_NO_CLEAR_INTERVENTION_YET",
+    "floor_effect_warning": "This is a no-RAG pilot. It cannot establish a floor effect for the RAG-grounded Main Case Analysis flow, and source-role contamination is not meaningfully testable with an empty context.",
+    "signal_strength": "weak_preliminary"
+  },
+  "retrieval_status": "skipped_by_user",
+  "second_judge": {
+    "audit_record_count": 570,
+    "limitation": "Judge B is an independent repeat using the same Luna model; it is not a model-diverse second opinion.",
+    "model_diverse": false,
+    "requested": true,
+    "status": "completed"
+  },
+  "support_status": {
+    "CONTRADICTED": {
+      "count": 1,
+      "percentage_of_audited_claims": 0.0017543859649122807
+    },
+    "SUPPORTED": {
+      "count": 535,
+      "percentage_of_audited_claims": 0.9385964912280702
+    },
+    "UNCLEAR": {
+      "count": 19,
+      "percentage_of_audited_claims": 0.03333333333333333
+    },
+    "UNSUPPORTED": {
+      "count": 15,
+      "percentage_of_audited_claims": 0.02631578947368421
+    }
+  },
+  "total_atomic_claims": 570
+}

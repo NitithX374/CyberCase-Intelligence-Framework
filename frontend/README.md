@@ -1,26 +1,29 @@
-This is the [Next.js](https://nextjs.org) frontend for the CyberCase Intelligence Framework RAG platform. It connects to the FastAPI backend.
+# CyberCase Frontend
 
-## Getting Started
+The Next.js frontend provides two persisted workspaces: Chat and Report. The deleted Case State inspector, extraction view, and relationship graph are not product routes.
 
-First, ensure the backend is running at `http://localhost:8000`.
+The browser calls the FastAPI backend through `src/lib/api.ts` and never calls `rag_service` directly. TanStack Query owns server-state loading and polling; the backend remains authoritative for messages, run status, analysis, and reports.
 
-Then, run the development server:
+## Routes
 
-```bash
+- `/chat`: create or select a chat
+- `/chat/[threadId]`: persisted conversation and run polling
+- `/chat/[threadId]/report`: report generation, history, preview, and PDF download
+
+Unknown former workspace suffixes resolve to the Chat view rather than exposing compatibility screens.
+
+## Analysis presentation
+
+Assistant analysis metadata uses `analysis_trace_v2`. MITRE candidates render only when the trace is validated, binds a retrieval context and raw-evidence hash, links valid analysis claims, and references techniques admitted by the persisted MITRE table.
+
+## Commands
+
+```powershell
+npm install
 npm run dev
+npm run test
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
-
-## Backend
-This frontend communicates with the FastAPI backend located in the `/backend` directory. Ensure you have configured the environment variables in `.env.local`.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
+With the backend running, `npm run generate:api-types` regenerates the ignored OpenAPI declaration.

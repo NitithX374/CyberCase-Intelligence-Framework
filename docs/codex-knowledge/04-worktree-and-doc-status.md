@@ -1,37 +1,29 @@
 # Worktree and Markdown Status
 
-Snapshot date: 2026-08-13. This note is a diagnostic snapshot, not a promise
+Snapshot date: 2026-08-22. This note is a diagnostic snapshot, not a promise
 that the worktree is clean.
 
 ## Markdown files
 
 The tracked Markdown status observed at snapshot time:
 
-- `README.md` is modified (`M`). Its current diff removes the deleted demo
-  extraction file from the service tree. Preserve this user change.
-- The experiment output
-  `experiments/report_architecture_b0_b1_b2/outputs/20260807T145601Z_2f1a3210/repeatability_summary.md`
-  is untracked.
-- No repository `.codex` or `knowledge` directory existed before this note.
-- Existing architecture/integration documents under `docs/` and
-  `rag_service/docs/` are historical/current mixed documentation. Check source
-  and tests before relying on endpoint or pipeline claims.
-- There is a known route-documentation conflict: `backend/app/routers/chat.py`
-  currently implements chat-scoped report endpoints (and the route-surface
-  tests cover them), while `AGENTS.md`,
-  `backend/README.md`, and parts of the older integration notes describe the
-  report view as client-only/no backend report lifecycle. The standalone
-  top-level `/api/v1/reports` route remains absent. Treat the live router and
-  tests as the current implementation until the product/documentation conflict
-  is explicitly resolved.
+- `main` and `origin/main` resolve to
+  `c87ce59eda119d79bacf27d152a2c5966b488983` after the approved refactor.
+- The user-owned dirty change is `backend/requirements.txt`; pre-existing
+  dirty files remain under `rag_service/**`.
+- This documentation pass updates active root, backend, frontend, integration,
+  and `docs/codex-knowledge/` notes without editing `rag_service/**`.
+- `backend/app/routers/chat.py` implements chat-scoped report generation,
+  listing, retrieval, and PDF endpoints. The standalone top-level
+  `/api/v1/reports` route remains absent.
+- Research plans, experiment outputs, deliverables, and the dated handoff are
+  historical evidence and should not be rewritten as current runtime guides.
 
 ## Broader dirty worktree
 
-The worktree also contains active changes in backend models, migrations,
-schemas, chat orchestration, extraction, frontend chat components, RAG
-pipeline/router code, tests, and experiment directories. These changes belong
-to the ongoing workspace and must not be reset or silently folded into a docs
-cleanup.
+The worktree also contains pre-existing `rag_service/**` changes and the
+user-owned backend requirements change. These changes belong to the workspace
+and must not be reset or silently folded into a docs cleanup.
 
 ## Safe documentation workflow
 

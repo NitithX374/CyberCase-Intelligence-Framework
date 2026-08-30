@@ -43,6 +43,13 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       RAG_SERVICE_URL: http://rag-service:8001
+      DOCUMENT_RECOGNIZER: ${DOCUMENT_RECOGNIZER:-typhoon}
+      TYPHOON_OCR_API_KEY: ${TYPHOON_OCR_API_KEY:-${TYPHOON_API_KEY:-}}
+      TYPHOON_API_KEY: ${TYPHOON_API_KEY:-${TYPHOON_OCR_API_KEY:-}}
+      TYPHOON_OCR_BASE_URL: ${TYPHOON_OCR_BASE_URL:-https://api.opentyphoon.ai/v1}
+      TYPHOON_OCR_MODEL: ${TYPHOON_OCR_MODEL:-typhoon-ocr}
+      DOCUMENT_MIXED_REGION_POLICY: ${DOCUMENT_MIXED_REGION_POLICY:-unified}
+      DOCUMENT_UNKNOWN_REGION_POLICY: ${DOCUMENT_UNKNOWN_REGION_POLICY:-unified}
     ports:
       - "8000:8000"
     volumes:
@@ -61,6 +68,13 @@ services:
       dockerfile: Dockerfile
     container_name: cybercase-rag-service
     restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
     environment:
       CORE_LLM_PROVIDER: ${CORE_LLM_PROVIDER:-openrouter}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
@@ -72,12 +86,14 @@ services:
       QDRANT_API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required}
       TYPHOON_API_KEY: ${TYPHOON_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      HF_HUB_OFFLINE: 1
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_HOME: /app/model_cache
     ports:
       - "8001:8001"
     volumes:
       - ./rag_service/app:/app/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+      - ${USERPROFILE}/.cache/huggingface:/app/model_cache
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001
 
   # ── Next.js Frontend ────────────────────────────────────────────────────────
   frontend:

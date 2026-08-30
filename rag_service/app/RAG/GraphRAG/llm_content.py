@@ -23,7 +23,7 @@ def require_message_text(message: BaseMessage, *, operation: str) -> str:
         extracted_parts = []
         for block in content:
             if isinstance(block, dict) and block.get("type") == "text":
-                extracted_parts.append(block.get("text", ""))
+                extracted_parts.append(block.get("text") or "")
             elif isinstance(block, str):
                 extracted_parts.append(block)
         joined = "".join(extracted_parts).strip()

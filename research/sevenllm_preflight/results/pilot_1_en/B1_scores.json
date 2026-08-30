@@ -1,0 +1,4114 @@
+{
+  "generation": {
+    "count": 277,
+    "rouge_l_mean": 0.053484,
+    "by_category": {
+      "Impact Scope": 0.050157,
+      "Incident Response Planning": 0.041937,
+      "Protection Strategy Research": 0.048963,
+      "Risk Assessment": 0.043838,
+      "Summary Generation": 0.069561,
+      "Threat Analysis": 0.056229
+    },
+    "records": [
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "901",
+        "rouge_l": 0.02352941108373704
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "902",
+        "rouge_l": 0.045977010210067414
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "903",
+        "rouge_l": 0.07633587685099937
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "904",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "906",
+        "rouge_l": 0.046511627020010826
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "907",
+        "rouge_l": 0.09090908901285588
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "908",
+        "rouge_l": 0.02222222097777785
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "909",
+        "rouge_l": 0.06976744056246621
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "910",
+        "rouge_l": 0.09900989970002941
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "911",
+        "rouge_l": 0.04705882242214536
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "912",
+        "rouge_l": 0.0235294108678201
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "913",
+        "rouge_l": 0.07894736674861498
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "914",
+        "rouge_l": 0.043478259841682444
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "915",
+        "rouge_l": 0.03124999939453126
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "916",
+        "rouge_l": 0.05940593947652193
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "917",
+        "rouge_l": 0.049180326933620004
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "919",
+        "rouge_l": 0.04545454418388433
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "920",
+        "rouge_l": 0.0645161280147994
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "921",
+        "rouge_l": 0.07843137144175319
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "922",
+        "rouge_l": 0.027027025766983258
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "923",
+        "rouge_l": 0.06666666571666667
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "924",
+        "rouge_l": 0.059999999050000016
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "925",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "927",
+        "rouge_l": 0.028985506154169335
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "928",
+        "rouge_l": 0.015873015258251473
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "929",
+        "rouge_l": 0.08602150416926813
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "930",
+        "rouge_l": 0.06818181671745871
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "931",
+        "rouge_l": 0.0235294108678201
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "932",
+        "rouge_l": 0.06976744036506224
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "933",
+        "rouge_l": 0.048192770166932804
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "934",
+        "rouge_l": 0.036363634142148896
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "935",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "936",
+        "rouge_l": 0.05405405256391531
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "937",
+        "rouge_l": 0.03883495070977473
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "938",
+        "rouge_l": 0.06451612782518212
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "939",
+        "rouge_l": 0.03361344472847964
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "940",
+        "rouge_l": 0.06122448901291129
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "941",
+        "rouge_l": 0.08888888745432101
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "942",
+        "rouge_l": 0.061224488469387786
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "943",
+        "rouge_l": 0.06818181671745871
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "944",
+        "rouge_l": 0.042553190110909966
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "945",
+        "rouge_l": 0.07999999894272
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "946",
+        "rouge_l": 0.0631578937396122
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "947",
+        "rouge_l": 0.10389610245909936
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "948",
+        "rouge_l": 0.06521739008506619
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "949",
+        "rouge_l": 0.02173912960302461
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "950",
+        "rouge_l": 0.048192770166932804
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "951",
+        "rouge_l": 0.08108107959094232
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "952",
+        "rouge_l": 0.09090908901285588
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "953",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "954",
+        "rouge_l": 0.02739725899793588
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "955",
+        "rouge_l": 0.08823529275519032
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "956",
+        "rouge_l": 0.023809522902494367
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "957",
+        "rouge_l": 0.06818181691115703
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "958",
+        "rouge_l": 0.09999999861250002
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "959",
+        "rouge_l": 0.03448275733650421
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "960",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "961",
+        "rouge_l": 0.08108107959094232
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "962",
+        "rouge_l": 0.024390242546103585
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "963",
+        "rouge_l": 0.04494381896730214
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "964",
+        "rouge_l": 0.017699114361343908
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "965",
+        "rouge_l": 0.058823527802768207
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "966",
+        "rouge_l": 0.05714285534285719
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "967",
+        "rouge_l": 0.06451612820904151
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "968",
+        "rouge_l": 0.07058823418685123
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "969",
+        "rouge_l": 0.046511627020010826
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "970",
+        "rouge_l": 0.15999999830755557
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "971",
+        "rouge_l": 0.0919540219051394
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "972",
+        "rouge_l": 0.05309734428694495
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "973",
+        "rouge_l": 0.049999999050000014
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "974",
+        "rouge_l": 0.022727271859504163
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "975",
+        "rouge_l": 0.09836065396398819
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "976",
+        "rouge_l": 0.06521739027646505
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "978",
+        "rouge_l": 0.05405405319373428
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "979",
+        "rouge_l": 0.047058822848442906
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "980",
+        "rouge_l": 0.022222220787654415
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "981",
+        "rouge_l": 0.06451612728407914
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "982",
+        "rouge_l": 0.02666666497422233
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "983",
+        "rouge_l": 0.044444443395061754
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "984",
+        "rouge_l": 0.015999999380480027
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "985",
+        "rouge_l": 0.052631578270237005
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "986",
+        "rouge_l": 0.07894736696675902
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "987",
+        "rouge_l": 0.03703703632373115
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "988",
+        "rouge_l": 0.040816325562265755
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "989",
+        "rouge_l": 0.17647058638840832
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "990",
+        "rouge_l": 0.024390242974420023
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "991",
+        "rouge_l": 0.0210526305817175
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "992",
+        "rouge_l": 0.043956043115565765
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "993",
+        "rouge_l": 0.04040403962860934
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "994",
+        "rouge_l": 0.019999998872000067
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "995",
+        "rouge_l": 0.020618555910298684
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "996",
+        "rouge_l": 0.02531645451049517
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "997",
+        "rouge_l": 0.05504587085262184
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "998",
+        "rouge_l": 0.07999999852800002
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "999",
+        "rouge_l": 0.045977010616990374
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1000",
+        "rouge_l": 0.08695652033317582
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1002",
+        "rouge_l": 0.043478259281663566
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1003",
+        "rouge_l": 0.03846153737426038
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1004",
+        "rouge_l": 0.041666665679253506
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1005",
+        "rouge_l": 0.017391303676370536
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1006",
+        "rouge_l": 0.024999998200000127
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1007",
+        "rouge_l": 0.023809522689909348
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1008",
+        "rouge_l": 0.04301075167071341
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1009",
+        "rouge_l": 0.021276594929832533
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1013",
+        "rouge_l": 0.042553190482118634
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1015",
+        "rouge_l": 0.0707964591714308
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1016",
+        "rouge_l": 0.08080807949392921
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1017",
+        "rouge_l": 0.04040403944495462
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1018",
+        "rouge_l": 0.02941176359861596
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1019",
+        "rouge_l": 0.06666666513888891
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1020",
+        "rouge_l": 0.016393442143241076
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1021",
+        "rouge_l": 0.05405405327611396
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1022",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1023",
+        "rouge_l": 0.07017543775777163
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1025",
+        "rouge_l": 0.09374999830078128
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1026",
+        "rouge_l": 0.03571428486128828
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1027",
+        "rouge_l": 0.126984125260771
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1028",
+        "rouge_l": 0.13559321799482912
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1029",
+        "rouge_l": 0.07999999852800002
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1030",
+        "rouge_l": 0.04123711224147097
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1031",
+        "rouge_l": 0.07547169704521182
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1032",
+        "rouge_l": 0.1095890395871646
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1033",
+        "rouge_l": 0.10256409996055234
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1034",
+        "rouge_l": 0.04687499910644532
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1035",
+        "rouge_l": 0.041666665494791706
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1036",
+        "rouge_l": 0.12631578810858723
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1037",
+        "rouge_l": 0.06153846051952665
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1039",
+        "rouge_l": 0.0674157292766065
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1040",
+        "rouge_l": 0.024096384409928923
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1041",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1042",
+        "rouge_l": 0.10526315671135734
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1043",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1044",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1046",
+        "rouge_l": 0.06779660890548694
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1047",
+        "rouge_l": 0.023255812858301837
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1048",
+        "rouge_l": 0.07547169704521182
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1049",
+        "rouge_l": 0.05063290957218401
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1050",
+        "rouge_l": 0.021276594737437805
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1051",
+        "rouge_l": 0.017857142168367375
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1052",
+        "rouge_l": 0.08988763919202121
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1053",
+        "rouge_l": 0.08791208668035264
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1054",
+        "rouge_l": 0.10256410114398423
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1055",
+        "rouge_l": 0.025974024537021502
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1056",
+        "rouge_l": 0.07017543671283476
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1057",
+        "rouge_l": 0.07547169704521182
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1059",
+        "rouge_l": 0.08333333180555559
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1060",
+        "rouge_l": 0.04166666531467018
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1061",
+        "rouge_l": 0.03999999887200004
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1062",
+        "rouge_l": 0.07499999861250002
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1063",
+        "rouge_l": 0.08888888764444446
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1064",
+        "rouge_l": 0.044444443595061736
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1065",
+        "rouge_l": 0.030769229093491217
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1067",
+        "rouge_l": 0.10204081482715537
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1068",
+        "rouge_l": 0.08695652051984878
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1069",
+        "rouge_l": 0.03030302840679534
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1070",
+        "rouge_l": 0.028169012775243075
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1071",
+        "rouge_l": 0.048780487175622986
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1072",
+        "rouge_l": 0.04878048624330761
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1073",
+        "rouge_l": 0.0824742258263365
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1074",
+        "rouge_l": 0.022727271859504163
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1075",
+        "rouge_l": 0.023255812858301837
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1077",
+        "rouge_l": 0.0350877174145892
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1078",
+        "rouge_l": 0.04999999890138891
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1079",
+        "rouge_l": 0.06315789337174517
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1080",
+        "rouge_l": 0.06818181671745871
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1081",
+        "rouge_l": 0.07017543644198222
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1082",
+        "rouge_l": 0.07407407291571408
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1083",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1085",
+        "rouge_l": 0.15384615168757396
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1086",
+        "rouge_l": 0.10989010865837459
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1087",
+        "rouge_l": 0.02666666565688893
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1088",
+        "rouge_l": 0.0235294108678201
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1089",
+        "rouge_l": 0.1034482740071344
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1090",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1091",
+        "rouge_l": 0.03921568552095348
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1092",
+        "rouge_l": 0.04878048665972638
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1093",
+        "rouge_l": 0.0210526307722992
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1094",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1095",
+        "rouge_l": 0.043478259841682444
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1096",
+        "rouge_l": 0.01724137848543405
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1097",
+        "rouge_l": 0.1470588214532872
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1098",
+        "rouge_l": 0.06666666542222224
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1100",
+        "rouge_l": 0.030769229349112494
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1101",
+        "rouge_l": 0.11214953116953448
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1102",
+        "rouge_l": 0.050420166813078204
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1103",
+        "rouge_l": 0.06382978603893166
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1104",
+        "rouge_l": 0.01941747498161941
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1105",
+        "rouge_l": 0.033898304589198514
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1106",
+        "rouge_l": 0.03225806330905312
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1107",
+        "rouge_l": 0.051724136950059466
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1108",
+        "rouge_l": 0.07017543775777163
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1110",
+        "rouge_l": 0.06896551595719384
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1111",
+        "rouge_l": 0.04395604253592565
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1112",
+        "rouge_l": 0.05128205030900725
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1113",
+        "rouge_l": 0.04761904671201815
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1114",
+        "rouge_l": 0.02631578847645433
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1115",
+        "rouge_l": 0.0347826080241966
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1116",
+        "rouge_l": 0.21739130176748583
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1118",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1119",
+        "rouge_l": 0.04799999908608001
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1120",
+        "rouge_l": 0.04999999840312505
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1121",
+        "rouge_l": 0.021276594929832533
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1122",
+        "rouge_l": 0.06557376955657084
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1123",
+        "rouge_l": 0.07476635391737271
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1124",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1125",
+        "rouge_l": 0.03174603055681536
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1126",
+        "rouge_l": 0.05660377235137062
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1127",
+        "rouge_l": 0.07317073014574663
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1128",
+        "rouge_l": 0.0645161280147994
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1129",
+        "rouge_l": 0.08219177931319198
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1130",
+        "rouge_l": 0.0631578937396122
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1131",
+        "rouge_l": 0.10714285522959184
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1132",
+        "rouge_l": 0.025641024007232185
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1133",
+        "rouge_l": 0.01941747498161941
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1134",
+        "rouge_l": 0.01333333281422224
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1135",
+        "rouge_l": 0.04597701041088654
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1136",
+        "rouge_l": 0.021276594929832533
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1137",
+        "rouge_l": 0.0545454535140496
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1138",
+        "rouge_l": 0.025974024989036972
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1139",
+        "rouge_l": 0.04545454438274796
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1140",
+        "rouge_l": 0.03883495070977473
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1141",
+        "rouge_l": 0.07843137127066514
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1142",
+        "rouge_l": 0.019047618492517022
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1143",
+        "rouge_l": 0.07999999875555558
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1144",
+        "rouge_l": 0.02739725876524685
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1145",
+        "rouge_l": 0.04081632593710954
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1146",
+        "rouge_l": 0.07058823418685123
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1147",
+        "rouge_l": 0.09803921457900809
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1148",
+        "rouge_l": 0.019999999232000028
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1149",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1150",
+        "rouge_l": 0.022988504462941015
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1151",
+        "rouge_l": 0.036363635332231435
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1152",
+        "rouge_l": 0.04761904609126989
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1153",
+        "rouge_l": 0.03669724683107485
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1154",
+        "rouge_l": 0.0606060594674013
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1155",
+        "rouge_l": 0.0270270260043828
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1156",
+        "rouge_l": 0.0540540530314098
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1157",
+        "rouge_l": 0.07894736674861498
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1158",
+        "rouge_l": 0.07999999852800002
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1159",
+        "rouge_l": 0.14285714123086735
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1160",
+        "rouge_l": 0.04379561987106399
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1161",
+        "rouge_l": 0.04040403962860934
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1162",
+        "rouge_l": 0.0277777767283951
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1163",
+        "rouge_l": 0.06249999847222226
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1164",
+        "rouge_l": 0.09999999820000001
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1165",
+        "rouge_l": 0.07228915570910147
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1166",
+        "rouge_l": 0.09999999861250002
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1167",
+        "rouge_l": 0.03174603083900229
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1169",
+        "rouge_l": 0.0289855056584752
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1170",
+        "rouge_l": 0.04040403944495462
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1171",
+        "rouge_l": 0.10416666531467014
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1173",
+        "rouge_l": 0.05607476529653246
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1174",
+        "rouge_l": 0.02985074583092003
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1175",
+        "rouge_l": 0.04040403962860934
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1176",
+        "rouge_l": 0.059999998698000025
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1177",
+        "rouge_l": 0.022471908854942626
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1178",
+        "rouge_l": 0.022222221577777798
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1179",
+        "rouge_l": 0.04878048709994052
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1180",
+        "rouge_l": 0.07476635408157918
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1181",
+        "rouge_l": 0.05607476529653246
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1182",
+        "rouge_l": 0.019999999050000043
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1183",
+        "rouge_l": 0.13513513342220598
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "id": "1184",
+        "rouge_l": 0.05263157749307483
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1185",
+        "rouge_l": 0.07894736696675902
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1186",
+        "rouge_l": 0.043956043115565765
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1187",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "id": "1188",
+        "rouge_l": 0.025641024007232185
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1189",
+        "rouge_l": 0.05263157749307483
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1190",
+        "rouge_l": 0.14285714040816327
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1191",
+        "rouge_l": 0.0689655163641168
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1192",
+        "rouge_l": 0.022727271859504163
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "id": "1193",
+        "rouge_l": 0.0588235279661669
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "id": "1194",
+        "rouge_l": 0.08695652015122875
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "id": "1195",
+        "rouge_l": 0.0
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1196",
+        "rouge_l": 0.044943819366241644
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1198",
+        "rouge_l": 0.07407407291571408
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "id": "1199",
+        "rouge_l": 0.024999998828125057
+      }
+    ],
+    "sbert_mean": 0.303397,
+    "sbert_by_category": {
+      "Impact Scope": 0.28315,
+      "Incident Response Planning": 0.266802,
+      "Protection Strategy Research": 0.298585,
+      "Risk Assessment": 0.269599,
+      "Summary Generation": 0.284233,
+      "Threat Analysis": 0.356911
+    },
+    "sbert_records": [
+      {
+        "id": "901",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.19551712274551392
+      },
+      {
+        "id": "902",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.26092249155044556
+      },
+      {
+        "id": "903",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.24923689663410187
+      },
+      {
+        "id": "904",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.07435222715139389
+      },
+      {
+        "id": "906",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3551231324672699
+      },
+      {
+        "id": "907",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.37740325927734375
+      },
+      {
+        "id": "908",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.17641723155975342
+      },
+      {
+        "id": "909",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.38569340109825134
+      },
+      {
+        "id": "910",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3459489047527313
+      },
+      {
+        "id": "911",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3795052766799927
+      },
+      {
+        "id": "912",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3495054841041565
+      },
+      {
+        "id": "913",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.26909756660461426
+      },
+      {
+        "id": "914",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5313641428947449
+      },
+      {
+        "id": "915",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2504137456417084
+      },
+      {
+        "id": "916",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.31822291016578674
+      },
+      {
+        "id": "917",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4247858226299286
+      },
+      {
+        "id": "919",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.46102556586265564
+      },
+      {
+        "id": "920",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3977876305580139
+      },
+      {
+        "id": "921",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2206217646598816
+      },
+      {
+        "id": "922",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3683983385562897
+      },
+      {
+        "id": "923",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.37851619720458984
+      },
+      {
+        "id": "924",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.24504117667675018
+      },
+      {
+        "id": "925",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1458178609609604
+      },
+      {
+        "id": "927",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.17799139022827148
+      },
+      {
+        "id": "928",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.30177706480026245
+      },
+      {
+        "id": "929",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.40693551301956177
+      },
+      {
+        "id": "930",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.16690769791603088
+      },
+      {
+        "id": "931",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.09005355834960938
+      },
+      {
+        "id": "932",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.41784462332725525
+      },
+      {
+        "id": "933",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3577548861503601
+      },
+      {
+        "id": "934",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2347535938024521
+      },
+      {
+        "id": "935",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.11622931808233261
+      },
+      {
+        "id": "936",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5506871938705444
+      },
+      {
+        "id": "937",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.18879489600658417
+      },
+      {
+        "id": "938",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3466767966747284
+      },
+      {
+        "id": "939",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2688979506492615
+      },
+      {
+        "id": "940",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.36024734377861023
+      },
+      {
+        "id": "941",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4252348840236664
+      },
+      {
+        "id": "942",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1701643317937851
+      },
+      {
+        "id": "943",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.26547762751579285
+      },
+      {
+        "id": "944",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.15321360528469086
+      },
+      {
+        "id": "945",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.18041960895061493
+      },
+      {
+        "id": "946",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.34774309396743774
+      },
+      {
+        "id": "947",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.34348201751708984
+      },
+      {
+        "id": "948",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.32825103402137756
+      },
+      {
+        "id": "949",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1411912441253662
+      },
+      {
+        "id": "950",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3155989646911621
+      },
+      {
+        "id": "951",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.32202839851379395
+      },
+      {
+        "id": "952",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.06536255776882172
+      },
+      {
+        "id": "953",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.07769285142421722
+      },
+      {
+        "id": "954",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.24769428372383118
+      },
+      {
+        "id": "955",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4298679232597351
+      },
+      {
+        "id": "956",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1903340369462967
+      },
+      {
+        "id": "957",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3160826861858368
+      },
+      {
+        "id": "958",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3300061821937561
+      },
+      {
+        "id": "959",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.13918885588645935
+      },
+      {
+        "id": "960",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.14787450432777405
+      },
+      {
+        "id": "961",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4307404160499573
+      },
+      {
+        "id": "962",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4228842854499817
+      },
+      {
+        "id": "963",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.44719475507736206
+      },
+      {
+        "id": "964",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.10152391344308853
+      },
+      {
+        "id": "965",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3663763105869293
+      },
+      {
+        "id": "966",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.33948370814323425
+      },
+      {
+        "id": "967",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.413126677274704
+      },
+      {
+        "id": "968",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.39567089080810547
+      },
+      {
+        "id": "969",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2252141237258911
+      },
+      {
+        "id": "970",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4057655930519104
+      },
+      {
+        "id": "971",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.31850406527519226
+      },
+      {
+        "id": "972",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4119653105735779
+      },
+      {
+        "id": "973",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4523899257183075
+      },
+      {
+        "id": "974",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.08037069439888
+      },
+      {
+        "id": "975",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.14700525999069214
+      },
+      {
+        "id": "976",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.39872294664382935
+      },
+      {
+        "id": "978",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.31745973229408264
+      },
+      {
+        "id": "979",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.31436288356781006
+      },
+      {
+        "id": "980",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.16067993640899658
+      },
+      {
+        "id": "981",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.39119991660118103
+      },
+      {
+        "id": "982",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2102915346622467
+      },
+      {
+        "id": "983",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1548985242843628
+      },
+      {
+        "id": "984",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3252347707748413
+      },
+      {
+        "id": "985",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.46812283992767334
+      },
+      {
+        "id": "986",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3124048411846161
+      },
+      {
+        "id": "987",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.282928466796875
+      },
+      {
+        "id": "988",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.22968271374702454
+      },
+      {
+        "id": "989",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2811920642852783
+      },
+      {
+        "id": "990",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.30747541785240173
+      },
+      {
+        "id": "991",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3807624578475952
+      },
+      {
+        "id": "992",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.493502140045166
+      },
+      {
+        "id": "993",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.47482749819755554
+      },
+      {
+        "id": "994",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2377445250749588
+      },
+      {
+        "id": "995",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.09495057910680771
+      },
+      {
+        "id": "996",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.31055110692977905
+      },
+      {
+        "id": "997",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2132582664489746
+      },
+      {
+        "id": "998",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.44989511370658875
+      },
+      {
+        "id": "999",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3465447425842285
+      },
+      {
+        "id": "1000",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.35174599289894104
+      },
+      {
+        "id": "1002",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1641993522644043
+      },
+      {
+        "id": "1003",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4223605990409851
+      },
+      {
+        "id": "1004",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3729856312274933
+      },
+      {
+        "id": "1005",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.11010236293077469
+      },
+      {
+        "id": "1006",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4701150357723236
+      },
+      {
+        "id": "1007",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.059581905603408813
+      },
+      {
+        "id": "1008",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4208690822124481
+      },
+      {
+        "id": "1009",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3059730529785156
+      },
+      {
+        "id": "1013",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4391805827617645
+      },
+      {
+        "id": "1015",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.22167395055294037
+      },
+      {
+        "id": "1016",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2766444981098175
+      },
+      {
+        "id": "1017",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.08782108873128891
+      },
+      {
+        "id": "1018",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3922441005706787
+      },
+      {
+        "id": "1019",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.44185757637023926
+      },
+      {
+        "id": "1020",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.25609007477760315
+      },
+      {
+        "id": "1021",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.40224748849868774
+      },
+      {
+        "id": "1022",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.17909835278987885
+      },
+      {
+        "id": "1023",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2997395992279053
+      },
+      {
+        "id": "1025",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3504047393798828
+      },
+      {
+        "id": "1026",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.33883339166641235
+      },
+      {
+        "id": "1027",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4094204902648926
+      },
+      {
+        "id": "1028",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5420718193054199
+      },
+      {
+        "id": "1029",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.315791517496109
+      },
+      {
+        "id": "1030",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.34020212292671204
+      },
+      {
+        "id": "1031",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3305918574333191
+      },
+      {
+        "id": "1032",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5069968700408936
+      },
+      {
+        "id": "1033",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.19470803439617157
+      },
+      {
+        "id": "1034",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4421354830265045
+      },
+      {
+        "id": "1035",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2477388232946396
+      },
+      {
+        "id": "1036",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3594815135002136
+      },
+      {
+        "id": "1037",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.27627626061439514
+      },
+      {
+        "id": "1039",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.49238988757133484
+      },
+      {
+        "id": "1040",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.07946526259183884
+      },
+      {
+        "id": "1041",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.169682115316391
+      },
+      {
+        "id": "1042",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3513067066669464
+      },
+      {
+        "id": "1043",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.056469276547431946
+      },
+      {
+        "id": "1044",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2929677963256836
+      },
+      {
+        "id": "1046",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5000621676445007
+      },
+      {
+        "id": "1047",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.06062700226902962
+      },
+      {
+        "id": "1048",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4667518734931946
+      },
+      {
+        "id": "1049",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.36594194173812866
+      },
+      {
+        "id": "1050",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.32966718077659607
+      },
+      {
+        "id": "1051",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.06669869273900986
+      },
+      {
+        "id": "1052",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4735404849052429
+      },
+      {
+        "id": "1053",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3797128200531006
+      },
+      {
+        "id": "1054",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.39332884550094604
+      },
+      {
+        "id": "1055",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3615013062953949
+      },
+      {
+        "id": "1056",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.24157986044883728
+      },
+      {
+        "id": "1057",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.46979546546936035
+      },
+      {
+        "id": "1059",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4553864896297455
+      },
+      {
+        "id": "1060",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3032534718513489
+      },
+      {
+        "id": "1061",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.11186051368713379
+      },
+      {
+        "id": "1062",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.22819171845912933
+      },
+      {
+        "id": "1063",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.26101842522621155
+      },
+      {
+        "id": "1064",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.22276511788368225
+      },
+      {
+        "id": "1065",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.37757620215415955
+      },
+      {
+        "id": "1067",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.6004005074501038
+      },
+      {
+        "id": "1068",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.551143229007721
+      },
+      {
+        "id": "1069",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.28109005093574524
+      },
+      {
+        "id": "1070",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.019193995743989944
+      },
+      {
+        "id": "1071",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5043942332267761
+      },
+      {
+        "id": "1072",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3333471417427063
+      },
+      {
+        "id": "1073",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2888784110546112
+      },
+      {
+        "id": "1074",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.12358851730823517
+      },
+      {
+        "id": "1075",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3626624643802643
+      },
+      {
+        "id": "1077",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.07826206088066101
+      },
+      {
+        "id": "1078",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.20373253524303436
+      },
+      {
+        "id": "1079",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.574023962020874
+      },
+      {
+        "id": "1080",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.31467270851135254
+      },
+      {
+        "id": "1081",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1083943247795105
+      },
+      {
+        "id": "1082",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4647098481655121
+      },
+      {
+        "id": "1083",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.07489980757236481
+      },
+      {
+        "id": "1085",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4382726848125458
+      },
+      {
+        "id": "1086",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.25547799468040466
+      },
+      {
+        "id": "1087",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3888600766658783
+      },
+      {
+        "id": "1088",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.43872764706611633
+      },
+      {
+        "id": "1089",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.21477866172790527
+      },
+      {
+        "id": "1090",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.12957638502120972
+      },
+      {
+        "id": "1091",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.11515849828720093
+      },
+      {
+        "id": "1092",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.37064316868782043
+      },
+      {
+        "id": "1093",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.12221446633338928
+      },
+      {
+        "id": "1094",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2992875277996063
+      },
+      {
+        "id": "1095",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.057899754494428635
+      },
+      {
+        "id": "1096",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.21459802985191345
+      },
+      {
+        "id": "1097",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5493913888931274
+      },
+      {
+        "id": "1098",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.21263018250465393
+      },
+      {
+        "id": "1100",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5361610054969788
+      },
+      {
+        "id": "1101",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4965460002422333
+      },
+      {
+        "id": "1102",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.21330946683883667
+      },
+      {
+        "id": "1103",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3395801782608032
+      },
+      {
+        "id": "1104",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.09288801997900009
+      },
+      {
+        "id": "1105",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3121236562728882
+      },
+      {
+        "id": "1106",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1309918463230133
+      },
+      {
+        "id": "1107",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3268625736236572
+      },
+      {
+        "id": "1108",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.18292485177516937
+      },
+      {
+        "id": "1110",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.16045211255550385
+      },
+      {
+        "id": "1111",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2182135134935379
+      },
+      {
+        "id": "1112",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.37103018164634705
+      },
+      {
+        "id": "1113",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.11840683221817017
+      },
+      {
+        "id": "1114",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3336722254753113
+      },
+      {
+        "id": "1115",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4897868037223816
+      },
+      {
+        "id": "1116",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4797593057155609
+      },
+      {
+        "id": "1118",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3685152530670166
+      },
+      {
+        "id": "1119",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.26395004987716675
+      },
+      {
+        "id": "1120",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.33804816007614136
+      },
+      {
+        "id": "1121",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.39148420095443726
+      },
+      {
+        "id": "1122",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.28624391555786133
+      },
+      {
+        "id": "1123",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.43116769194602966
+      },
+      {
+        "id": "1124",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5288414359092712
+      },
+      {
+        "id": "1125",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1588430404663086
+      },
+      {
+        "id": "1126",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2677561342716217
+      },
+      {
+        "id": "1127",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.19695913791656494
+      },
+      {
+        "id": "1128",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3748912513256073
+      },
+      {
+        "id": "1129",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2944123148918152
+      },
+      {
+        "id": "1130",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3972671627998352
+      },
+      {
+        "id": "1131",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.47197291254997253
+      },
+      {
+        "id": "1132",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.18530520796775818
+      },
+      {
+        "id": "1133",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.042769767343997955
+      },
+      {
+        "id": "1134",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4644845128059387
+      },
+      {
+        "id": "1135",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3458196520805359
+      },
+      {
+        "id": "1136",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.12525208294391632
+      },
+      {
+        "id": "1137",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2885255813598633
+      },
+      {
+        "id": "1138",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.042846426367759705
+      },
+      {
+        "id": "1139",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5590230226516724
+      },
+      {
+        "id": "1140",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.06477145850658417
+      },
+      {
+        "id": "1141",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.30274516344070435
+      },
+      {
+        "id": "1142",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4144037663936615
+      },
+      {
+        "id": "1143",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3019781708717346
+      },
+      {
+        "id": "1144",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.45556139945983887
+      },
+      {
+        "id": "1145",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.37842679023742676
+      },
+      {
+        "id": "1146",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.36514532566070557
+      },
+      {
+        "id": "1147",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5096520781517029
+      },
+      {
+        "id": "1148",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2931821942329407
+      },
+      {
+        "id": "1149",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.11417438089847565
+      },
+      {
+        "id": "1150",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.26828694343566895
+      },
+      {
+        "id": "1151",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2581871449947357
+      },
+      {
+        "id": "1152",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3278459310531616
+      },
+      {
+        "id": "1153",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.23386278748512268
+      },
+      {
+        "id": "1154",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2914983332157135
+      },
+      {
+        "id": "1155",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.15016397833824158
+      },
+      {
+        "id": "1156",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.20778581500053406
+      },
+      {
+        "id": "1157",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.461076021194458
+      },
+      {
+        "id": "1158",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.32725200057029724
+      },
+      {
+        "id": "1159",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.27804872393608093
+      },
+      {
+        "id": "1160",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.46112409234046936
+      },
+      {
+        "id": "1161",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3237943649291992
+      },
+      {
+        "id": "1162",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3556305766105652
+      },
+      {
+        "id": "1163",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3529913127422333
+      },
+      {
+        "id": "1164",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.1577587127685547
+      },
+      {
+        "id": "1165",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2796050012111664
+      },
+      {
+        "id": "1166",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3934503197669983
+      },
+      {
+        "id": "1167",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2645404040813446
+      },
+      {
+        "id": "1169",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.30766770243644714
+      },
+      {
+        "id": "1170",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.15622752904891968
+      },
+      {
+        "id": "1171",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.42004555463790894
+      },
+      {
+        "id": "1173",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.31686899065971375
+      },
+      {
+        "id": "1174",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4361382722854614
+      },
+      {
+        "id": "1175",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3460730314254761
+      },
+      {
+        "id": "1176",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.43482261896133423
+      },
+      {
+        "id": "1177",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.08574893325567245
+      },
+      {
+        "id": "1178",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.41048377752304077
+      },
+      {
+        "id": "1179",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.479471355676651
+      },
+      {
+        "id": "1180",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.2738710343837738
+      },
+      {
+        "id": "1181",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.33158522844314575
+      },
+      {
+        "id": "1182",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.48888999223709106
+      },
+      {
+        "id": "1183",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.40569061040878296
+      },
+      {
+        "id": "1184",
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.00038955314084887505
+      },
+      {
+        "id": "1185",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.201318621635437
+      },
+      {
+        "id": "1186",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.32181525230407715
+      },
+      {
+        "id": "1187",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.257692813873291
+      },
+      {
+        "id": "1188",
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.26400718092918396
+      },
+      {
+        "id": "1189",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3193003833293915
+      },
+      {
+        "id": "1190",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.08285976201295853
+      },
+      {
+        "id": "1191",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.3964386582374573
+      },
+      {
+        "id": "1192",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.136923149228096
+      },
+      {
+        "id": "1193",
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.38617467880249023
+      },
+      {
+        "id": "1194",
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.14666271209716797
+      },
+      {
+        "id": "1195",
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.47905075550079346
+      },
+      {
+        "id": "1196",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.21114881336688995
+      },
+      {
+        "id": "1198",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.5279433727264404
+      },
+      {
+        "id": "1199",
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "generation",
+        "sbert": 0.4658582806587219
+      }
+    ]
+  },
+  "choice": {
+    "count": 22,
+    "correct": 0,
+    "accuracy": 0.0,
+    "by_category": {
+      "Impact Scope": 0.0,
+      "Incident Response Planning": 0.0,
+      "Protection Strategy Research": 0.0,
+      "Risk Assessment": 0.0,
+      "Summary Generation": 0.0,
+      "Threat Analysis": 0.0
+    },
+    "records": [
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "choice",
+        "id": "1201",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1202",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1203",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1205",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "choice",
+        "id": "1206",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "choice",
+        "id": "1207",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "choice",
+        "id": "1208",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1209",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "choice",
+        "id": "1210",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1211",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1212",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Risk Assessment",
+        "language": "en",
+        "format": "choice",
+        "id": "1213",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1215",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "choice",
+        "id": "1216",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1217",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Incident Response Planning",
+        "language": "en",
+        "format": "choice",
+        "id": "1218",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1220",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1221",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Threat Analysis",
+        "language": "en",
+        "format": "choice",
+        "id": "1222",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Summary Generation",
+        "language": "en",
+        "format": "choice",
+        "id": "1223",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Impact Scope",
+        "language": "en",
+        "format": "choice",
+        "id": "1224",
+        "correct": 0,
+        "normalized": null
+      },
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "choice",
+        "id": "1225",
+        "correct": 0,
+        "normalized": null
+      }
+    ]
+  },
+  "extraction": {
+    "count": 1,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "records": [
+      {
+        "category": "Protection Strategy Research",
+        "language": "en",
+        "format": "extraction",
+        "id": "791",
+        "json_parse_success": false,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    ]
+  }
+}

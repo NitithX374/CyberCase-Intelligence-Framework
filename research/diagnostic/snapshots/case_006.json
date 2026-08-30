@@ -1,0 +1,206 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-006",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "person-006-nina",
+        "entity_type": "person",
+        "name": "Nina Alvarez",
+        "reported_role": "employee",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "account-006-nina",
+        "entity_type": "user_account",
+        "name": "nalvarez",
+        "reported_role": "corporate account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "browser-006",
+        "entity_type": "browser_session",
+        "name": "Browser session 06",
+        "reported_role": "employee browser session",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "page-006-fake",
+        "entity_type": "web_page",
+        "name": "portal-login-check.example",
+        "reported_role": "page visually resembling the portal",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "portal-006-real",
+        "entity_type": "web_service",
+        "name": "Northbridge employee portal",
+        "reported_role": "legitimate corporate portal",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "ip-006",
+        "entity_type": "ip_address",
+        "name": "203.0.113.106",
+        "reported_role": "page hosting address",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "browser_history",
+        "confidence": "medium",
+        "description": "Browser history records a visit from Browser session 06 to portal-login-check.example.",
+        "evidence_id": "evidence-006-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Browser history entry"
+      },
+      {
+        "artifact_type": "interview_statement",
+        "confidence": "medium",
+        "description": "Nina Alvarez said the page looked like the Northbridge employee portal and that she entered credentials before receiving an error.",
+        "evidence_id": "evidence-006-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "User interview about page appearance"
+      },
+      {
+        "artifact_type": "investigation_note",
+        "confidence": "medium",
+        "description": "The preliminary materials contain no server-side record showing that the page received, stored, or transmitted the entered credentials.",
+        "evidence_id": "evidence-006-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Unavailable server-side confirmation"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "account-006-nina",
+        "predicate": "owns_account",
+        "relationship_id": "rel-006-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "statement": "Nina Alvarez is listed as the owner of account nalvarez.",
+        "status": "reported",
+        "subject_entity_id": "person-006-nina"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "page-006-fake",
+        "predicate": "visited",
+        "relationship_id": "rel-006-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "statement": "Browser session 06 visited portal-login-check.example.",
+        "status": "reported",
+        "subject_entity_id": "browser-006"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "portal-006-real",
+        "predicate": "resembled",
+        "relationship_id": "rel-006-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "statement": "The page was described by Nina Alvarez as visually resembling the Northbridge employee portal.",
+        "status": "reported",
+        "subject_entity_id": "page-006-fake"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "page-006-fake",
+        "predicate": "submitted_credentials_to",
+        "relationship_id": "rel-006-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "statement": "Nina Alvarez reported entering her username and password into the page; receipt or transmission of those credentials by the page is not established.",
+        "status": "reported",
+        "subject_entity_id": "account-006-nina"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "browser-006",
+          "page-006-fake"
+        ],
+        "confidence": "medium",
+        "event": "Browser session 06 visited portal-login-check.example.",
+        "event_id": "event-006-01",
+        "evidence_ids": [
+          "evidence-006-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-16T11:03:00Z",
+        "timestamp_text": "11:03 UTC"
+      },
+      {
+        "actors": [
+          "person-006-nina",
+          "account-006-nina"
+        ],
+        "confidence": "medium",
+        "event": "Nina Alvarez reported entering credentials and receiving an error page.",
+        "event_id": "event-006-02",
+        "evidence_ids": [
+          "evidence-006-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000006"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-16T11:04:00Z",
+        "timestamp_text": "11:04 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3772,
+    "production_projection_sha256": "24e75adeb5983ae9e77cdaf83ff65d946bc3fc72d424fec97320a22e4e6b4590",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

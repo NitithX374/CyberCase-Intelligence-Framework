@@ -1,0 +1,388 @@
+{
+  "pilot": "Pilot-1",
+  "language": "en",
+  "sample_count": 10,
+  "chinese_inference": false,
+  "models": {
+    "B0": {
+      "identity": {
+        "condition": "B0",
+        "provider": "openrouter",
+        "requested_model": "meta-llama/llama-3.1-8b-instruct",
+        "returned_models": [
+          "meta-llama/llama-3.1-8b-instruct"
+        ],
+        "generation_config": {
+          "temperature": 0,
+          "top_p": 1,
+          "max_tokens": 512
+        }
+      },
+      "generation": {
+        "count": 9,
+        "rouge_l_mean": 0.304225,
+        "by_category": {
+          "Impact Scope": 0.56051,
+          "Protection Strategy Research": 0.218731,
+          "Risk Assessment": 0.155556,
+          "Summary Generation": 0.382992,
+          "Threat Analysis": 0.299893
+        },
+        "records": [
+          {
+            "category": "Impact Scope",
+            "language": "en",
+            "format": "generation",
+            "id": "901",
+            "rouge_l": 0.560509549150067
+          },
+          {
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "id": "902",
+            "rouge_l": 0.3108108058555515
+          },
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "id": "903",
+            "rouge_l": 0.24299064946419396
+          },
+          {
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "id": "904",
+            "rouge_l": 0.3283582040325735
+          },
+          {
+            "category": "Risk Assessment",
+            "language": "en",
+            "format": "generation",
+            "id": "906",
+            "rouge_l": 0.1555555505950619
+          },
+          {
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "id": "907",
+            "rouge_l": 0.45517240896646854
+          },
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "id": "908",
+            "rouge_l": 0.23255813477382378
+          },
+          {
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "id": "909",
+            "rouge_l": 0.27142856653061226
+          },
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "id": "910",
+            "rouge_l": 0.1806451570647243
+          }
+        ],
+        "sbert_mean": 0.672821,
+        "sbert_by_category": {
+          "Impact Scope": 0.809965,
+          "Protection Strategy Research": 0.674617,
+          "Risk Assessment": 0.532869,
+          "Summary Generation": 0.706784,
+          "Threat Analysis": 0.637569
+        },
+        "sbert_records": [
+          {
+            "id": "901",
+            "category": "Impact Scope",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.8099653124809265
+          },
+          {
+            "id": "902",
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.6517364978790283
+          },
+          {
+            "id": "903",
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.6940804123878479
+          },
+          {
+            "id": "904",
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.7175819277763367
+          },
+          {
+            "id": "906",
+            "category": "Risk Assessment",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.5328688025474548
+          },
+          {
+            "id": "907",
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.7618319392204285
+          },
+          {
+            "id": "908",
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.6581443548202515
+          },
+          {
+            "id": "909",
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.5575563907623291
+          },
+          {
+            "id": "910",
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.6716257929801941
+          }
+        ]
+      },
+      "choice": {
+        "count": 0,
+        "correct": 0,
+        "accuracy": 0.0,
+        "by_category": {},
+        "records": []
+      },
+      "extraction": {
+        "count": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "records": [
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "extraction",
+            "id": "791",
+            "json_parse_success": true,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        ]
+      }
+    },
+    "B1": {
+      "identity": {
+        "condition": "B1",
+        "model": "google/mt5-base",
+        "model_revision": "2eb15465c5dd7f72a8f7984306ad05ebc3dd1e1f",
+        "generation_config": {
+          "do_sample": false,
+          "num_beams": 1,
+          "max_new_tokens": 512
+        }
+      },
+      "generation": {
+        "count": 9,
+        "rouge_l_mean": 0.052696,
+        "by_category": {
+          "Impact Scope": 0.023529,
+          "Protection Strategy Research": 0.065856,
+          "Risk Assessment": 0.046512,
+          "Summary Generation": 0.068443,
+          "Threat Analysis": 0.034884
+        },
+        "records": [
+          {
+            "category": "Impact Scope",
+            "language": "en",
+            "format": "generation",
+            "id": "901",
+            "rouge_l": 0.02352941108373704
+          },
+          {
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "id": "902",
+            "rouge_l": 0.045977010210067414
+          },
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "id": "903",
+            "rouge_l": 0.07633587685099937
+          },
+          {
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "id": "904",
+            "rouge_l": 0.0
+          },
+          {
+            "category": "Risk Assessment",
+            "language": "en",
+            "format": "generation",
+            "id": "906",
+            "rouge_l": 0.046511627020010826
+          },
+          {
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "id": "907",
+            "rouge_l": 0.09090908901285588
+          },
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "id": "908",
+            "rouge_l": 0.02222222097777785
+          },
+          {
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "id": "909",
+            "rouge_l": 0.06976744056246621
+          },
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "id": "910",
+            "rouge_l": 0.09900989970002941
+          }
+        ],
+        "sbert_mean": 0.268957,
+        "sbert_by_category": {
+          "Impact Scope": 0.195517,
+          "Protection Strategy Research": 0.257201,
+          "Risk Assessment": 0.355123,
+          "Summary Generation": 0.319163,
+          "Threat Analysis": 0.230023
+        },
+        "sbert_records": [
+          {
+            "id": "901",
+            "category": "Impact Scope",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.19551710784435272
+          },
+          {
+            "id": "902",
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.2609224319458008
+          },
+          {
+            "id": "903",
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.24923695623874664
+          },
+          {
+            "id": "904",
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.07435224205255508
+          },
+          {
+            "id": "906",
+            "category": "Risk Assessment",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.3551231026649475
+          },
+          {
+            "id": "907",
+            "category": "Summary Generation",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.37740325927734375
+          },
+          {
+            "id": "908",
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.17641723155975342
+          },
+          {
+            "id": "909",
+            "category": "Threat Analysis",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.3856933116912842
+          },
+          {
+            "id": "910",
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "generation",
+            "sbert": 0.3459489345550537
+          }
+        ]
+      },
+      "choice": {
+        "count": 0,
+        "correct": 0,
+        "accuracy": 0.0,
+        "by_category": {},
+        "records": []
+      },
+      "extraction": {
+        "count": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "records": [
+          {
+            "category": "Protection Strategy Research",
+            "language": "en",
+            "format": "extraction",
+            "id": "791",
+            "json_parse_success": false,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        ]
+      }
+    }
+  },
+  "official_primary_metrics": {
+    "generation": "ROUGE-L",
+    "choice": "exact match after A-D normalization",
+    "extraction": "flattened-leaf precision/recall/F1"
+  }
+}

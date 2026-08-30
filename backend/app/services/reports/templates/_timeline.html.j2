@@ -1,0 +1,35 @@
+<section class="report-section">
+    <div class="section-header">
+        <h2 class="section-number-title">{{ report.i18n.sec_2 }}</h2>
+    </div>
+
+    {% if report.timeline_rows %}
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th style="width: 8%; text-align: center;">{{ report.i18n.col_order }}</th>
+                <th style="width: 18%;">{{ report.i18n.col_time }}</th>
+                <th style="width: 48%;">{{ report.i18n.col_event }}</th>
+                <th style="width: 26%;">{{ report.i18n.col_source_evidence }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.timeline_rows %}
+            <tr>
+                <td class="text-center">{{ row.order }}</td>
+                <td class="col-nowrap"><strong>{{ row.time_display }}</strong></td>
+                <td>
+                    {{ row.event }}
+                    {% if row.actors and row.actors != '-' %}
+                    <div class="text-muted">{{ report.i18n.actor_prefix }}: {{ row.actors }}</div>
+                    {% endif %}
+                </td>
+                <td class="text-muted">{{ row.source_evidence }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="section-lead-paragraph text-muted">{{ report.i18n.empty_timeline }}</p>
+    {% endif %}
+</section>

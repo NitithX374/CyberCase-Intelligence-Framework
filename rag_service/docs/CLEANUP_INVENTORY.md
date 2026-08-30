@@ -270,7 +270,6 @@ tell me to leave them entirely.
 - `mitre_table.py` — live, consumed by `backend/app/services/reports/report_service.py:496`.
 - `context_store.py`, `RetrievalContextSnapshot`, `/retrieval-contexts/{id}` — live.
 - `INGEST_HISTORICAL`, `RRF_K`, `DENSE_WEIGHT`, `SPARSE_WEIGHT`, `ATTACK_DOMAIN_FILTER` — live.
-- `app/download_model.py` — used by `Dockerfile:24`.
 - `docs/_build_pdf.py` — a doc tool, not service code; harmless.
 - Per your instruction, untouched: `MITRE_TABLE_SCORE_THRESHOLD`, `_TYPE_WEIGHTS`
   and node-type handling in `hybrid_retriever.py`, `retrieve_multi_quota()`.

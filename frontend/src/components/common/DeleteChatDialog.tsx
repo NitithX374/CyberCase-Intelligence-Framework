@@ -40,29 +40,29 @@ export function DeleteChatDialog({
         event.preventDefault();
         if (!isDeleting) onCancel();
       }}
-      className="m-auto max-w-md rounded-2xl border border-line bg-surface p-6 text-ink shadow-[0_20px_50px_rgba(39,39,39,0.18)] backdrop:bg-primary/35 backdrop:backdrop-blur-[1px]"
+      className="m-auto max-w-md rounded-lg border border-line bg-surface p-6 text-ink shadow-xl shadow-black/10 backdrop:bg-primary/35 backdrop:backdrop-blur-[1px]"
     >
-      <h2 id="delete-chat-title" className="text-lg font-extrabold tracking-tight">
-        Delete this chat?
+      <h2 id="delete-chat-title" className="text-base font-bold tracking-tight">
+        Delete this case?
       </h2>
       <p
         id="delete-chat-description"
-        className="mt-3 text-sm leading-6 text-ink-secondary"
+        className="mt-2 text-xs leading-relaxed text-ink-secondary"
       >
         This will permanently remove{" "}
         <span className="font-bold text-ink">
-          {thread?.title ?? "this chat"}
+          {thread?.title ?? "this case"}
         </span>
-        , its message history, and any saved extractions. This action cannot be
+        , its message history, retrieval contexts, and reports. This action cannot be
         undone.
       </p>
-      <div className="mt-6 flex flex-wrap justify-end gap-3">
+      <div className="mt-5 flex flex-wrap justify-end gap-2.5">
         <button
           ref={cancelButtonRef}
           type="button"
           disabled={isDeleting}
           onClick={onCancel}
-          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-line-strong bg-surface px-4 text-sm font-bold text-ink outline-none transition-colors hover:border-primary hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+          className="inline-flex min-h-8.5 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-xs font-bold text-ink outline-none transition-colors hover:border-ink hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
         >
           Cancel
         </button>
@@ -70,9 +70,9 @@ export function DeleteChatDialog({
           type="button"
           disabled={isDeleting}
           onClick={onConfirm}
-          className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#B42318] px-4 text-sm font-bold text-ivory outline-none transition-colors hover:bg-[#912018] focus-visible:ring-2 focus-visible:ring-[#B42318] focus-visible:ring-offset-2 disabled:cursor-wait disabled:bg-[#FECDCA] disabled:text-ink-disabled"
+          className="inline-flex min-h-8.5 items-center justify-center rounded-lg bg-accent px-3.5 text-xs font-bold text-ivory outline-none transition-colors hover:bg-accent-strong focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:bg-stone disabled:text-ink-disabled"
         >
-          {isDeleting ? "Deleting..." : "Delete"}
+          {isDeleting ? "Deleting..." : "Delete case"}
         </button>
       </div>
     </dialog>

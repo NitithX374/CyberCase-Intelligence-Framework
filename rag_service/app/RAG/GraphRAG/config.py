@@ -216,6 +216,17 @@ LOCAL_EVAL_MODEL = os.getenv("LOCAL_EVAL_MODEL", "gemma3:4b")
 LOCAL_NUM_CTX = int(os.getenv("LOCAL_NUM_CTX", "8192"))
 
 # ──────────────────────────────────────────────────────────────────────────────
+# SERVICE CONCURRENCY
+# ──────────────────────────────────────────────────────────────────────────────
+# GraphRAGAgent.query() is synchronous and long-running, so POST /query runs it
+# in a worker thread instead of on the event loop (see routers/rag.py). This is
+# the cap on how many of those pipelines may run at once: sessions beyond it
+# queue rather than thrashing CPU (BGE-M3 embed + rerank run on CPU in prod) or
+# opening unbounded Neo4j/Qdrant/LLM connections. Requests are not rejected when
+# the cap is reached — they simply wait their turn.
+MAX_CONCURRENT_QUERIES = max(1, int(os.getenv("RAG_MAX_CONCURRENT_QUERIES", "4")))
+
+# ──────────────────────────────────────────────────────────────────────────────
 # RETRIEVAL
 # ──────────────────────────────────────────────────────────────────────────────
 VECTOR_TOP_K = 10  # Initial vector retrieval count

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** is a chat-focused full-stack RAG application that analyzes cybersecurity incidents using MITRE ATT&CK intelligence. It features an agentic pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English), and self-reflection loops. Persistent interactive clarification lives in the backend chat workflow; the RAG service itself never pauses. The frontend Report tab is a demo-only, client-side, non-persistent, unverified view, not a backend report workflow.
+**CyberCase Intelligence Framework** is a chat-focused full-stack RAG application that analyzes cybersecurity incidents using MITRE ATT&CK intelligence. It features an agentic pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English), and self-reflection loops. Persistent interactive clarification lives in the backend chat workflow; the RAG service itself never pauses. The Report tab uses the backend's chat-scoped persisted report workflow, which is deterministic and template-first.
 
 ## Service Layout
 
@@ -87,7 +87,7 @@ Neo4j and Qdrant are cloud-hosted — no local containers for them.
 ## Architecture
 
 ### High-Level Stack
-- **Frontend**: Next.js 15 + React 19 + Tailwind CSS 4
+- **Frontend**: Next.js 16.2.10 + React 19.2.4 + Tailwind CSS 4
 - **Backend API**: FastAPI + SQLAlchemy (async) + PostgreSQL — owns chat threads/messages/runs, background work, and clarification policy; calls the RAG service via HTTPX
 - **RAG Engine**: LangGraph for orchestration (the agentic state machine) plus LangChain for the LLM and message abstractions (`langchain_core.messages`, `langchain_anthropic.ChatAnthropic`), hosted in `rag_service`. LangGraph is a separate library, not part of LangChain. No LCEL — the LCEL chain is evaluation-only (`pipeline/chain.py`)
 - **Vector DB**: Qdrant (BGE-M3 embeddings, 1024-dim, FP16)
@@ -134,14 +134,18 @@ The pipeline never pauses for user input.
 
 ### API Endpoints
 
-Backend (`backend/app/routers/`, prefix `/api/v1`) exposes only the health and persistent-chat boundary:
+Backend (`backend/app/routers/`, prefix `/api/v1`) exposes the health, persistent-chat, and chat-scoped report boundary:
 - `GET /api/v1/health` — backend and database health
 - `GET`, `POST /api/v1/chats` — list or create chat threads
 - `GET`, `PATCH`, `DELETE /api/v1/chats/{thread_id}` — read, rename, or permanently delete one thread
 - `POST /api/v1/chats/{thread_id}/messages` — persist a user message and enqueue a background run (`202`)
 - `GET /api/v1/chats/{thread_id}/runs/{run_id}` — inspect a known run's status/error
+- `POST /api/v1/chats/{thread_id}/reports` — generate and persist a report version
+- `GET /api/v1/chats/{thread_id}/reports` — list report versions
+- `GET /api/v1/chats/{thread_id}/reports/{report_id}` — read a report version
+- `GET /api/v1/chats/{thread_id}/reports/{report_id}/pdf` — download a report PDF
 
-There are no backend case, report, user, upload/OCR, or standalone RAG-proxy routes. Chat is currently single-user and has no authentication or ownership boundary.
+There are no standalone backend case routes, top-level `/api/v1/reports`, user, upload/OCR, or standalone RAG-proxy routes. Chat is currently single-user and has no authentication or ownership boundary.
 
 RAG service (`rag_service/app/main.py`, port 8001, no prefix): `GET /health`, `POST /query`, `GET /retrieval-contexts/{context_id}`.
 
@@ -160,7 +164,7 @@ RAG service (`rag_service/app/main.py`, port 8001, no prefix): `GET /health`, `P
 
 The backend owns bounded clarification in `backend/app/services/chat/`. A user answer is stored as a normal chat message. The backend reconstructs the active clarification chain from ordered persisted messages and issues another RAG `POST /query` containing the original incident plus accumulated question/answer context. The chat path never calls RAG `/resume`, and the frontend never calls `rag_service` directly.
 
-The frontend may derive an extraction and seven-section report from the selected persisted thread. The report is assembled in the browser, is not separately persisted, and must remain visibly demo-only and unverified unless a new backend contract is explicitly approved.
+The frontend loads and generates reports through the chat-scoped report endpoints. The backend builds a deterministic template-first report from persisted source snapshots, stores report versions, and exposes PDF export. The report is an analysis artifact, not an independent fact-verification system.
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim, FP16)
 - **Reranker**: `BAAI/bge-reranker-v2-m3` (multilingual incl. Thai)
@@ -174,7 +178,7 @@ The frontend may derive an extraction and seven-section report from the selected
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
-- Backend runtime and online migrations read `POSTGRES_*`; chat also reads `RAG_SERVICE_URL` and `ANTHROPIC_API_KEY`
+- Backend runtime and online migrations read `POSTGRES_*`; chat also reads `RAG_SERVICE_URL`, `CORE_LLM_PROVIDER`, and the selected provider credentials. The default core model is OpenRouter `openai/gpt-5.6-luna`
 - RAG service reads `ANTHROPIC_API_KEY`, `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, `OPENROUTER_API_KEY`
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`
 

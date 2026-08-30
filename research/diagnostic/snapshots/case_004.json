@@ -1,0 +1,183 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-004",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "device-004",
+        "entity_type": "workstation",
+        "name": "FIN-WS-04",
+        "reported_role": "finance workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "alert-004",
+        "entity_type": "security_alert",
+        "name": "EDR-ALERT-004",
+        "reported_role": "endpoint detection alert",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "script-004",
+        "entity_type": "script",
+        "name": "update-check.ps1",
+        "reported_role": "script named in the alert",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "account-004",
+        "entity_type": "user_account",
+        "name": "finance-user-04",
+        "reported_role": "logged-in account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ]
+      },
+      {
+        "confidence": "low",
+        "entity_id": "process-004",
+        "entity_type": "process",
+        "name": "powershell.exe",
+        "reported_role": "possible execution process",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "endpoint_alert",
+        "confidence": "high",
+        "description": "EDR-ALERT-004 names update-check.ps1 and FIN-WS-04 but does not contain a process-start event.",
+        "evidence_id": "evidence-004-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "EDR alert record"
+      },
+      {
+        "artifact_type": "process_telemetry",
+        "confidence": "medium",
+        "description": "The preliminary telemetry review found no confirmed powershell.exe process start for update-check.ps1 in the available window.",
+        "evidence_id": "evidence-004-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Process telemetry review"
+      },
+      {
+        "artifact_type": "session_record",
+        "confidence": "medium",
+        "description": "The account session record places finance-user-04 on FIN-WS-04 during the alert window.",
+        "evidence_id": "evidence-004-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Logged-on session record"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "device-004",
+        "predicate": "detected_on",
+        "relationship_id": "rel-004-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "statement": "EDR-ALERT-004 was raised for FIN-WS-04.",
+        "status": "reported",
+        "subject_entity_id": "alert-004"
+      },
+      {
+        "confidence": "low",
+        "object_entity_id": "device-004",
+        "predicate": "executed_on",
+        "relationship_id": "rel-004-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "statement": "No evidence was found that update-check.ps1 executed on FIN-WS-04.",
+        "status": "not_established",
+        "subject_entity_id": "script-004"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "device-004",
+        "predicate": "logged_on",
+        "relationship_id": "rel-004-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "statement": "Account finance-user-04 was logged on to FIN-WS-04 during the alert window.",
+        "status": "reported",
+        "subject_entity_id": "account-004"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "alert-004"
+        ],
+        "confidence": "high",
+        "event": "EDR-ALERT-004 was raised for FIN-WS-04.",
+        "event_id": "event-004-01",
+        "evidence_ids": [
+          "evidence-004-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-14T10:02:00Z",
+        "timestamp_text": "10:02 UTC"
+      },
+      {
+        "actors": [
+          "script-004",
+          "device-004"
+        ],
+        "confidence": "medium",
+        "event": "The preliminary process review found no confirmed execution of update-check.ps1.",
+        "event_id": "event-004-02",
+        "evidence_ids": [
+          "evidence-004-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000004"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-14T10:30:00Z",
+        "timestamp_text": "10:30 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3082,
+    "production_projection_sha256": "550b342c573d95a125828bb73e3ed930011c0c91d9c0c1b753b919854288fd44",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

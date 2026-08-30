@@ -1,0 +1,231 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-011",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "high",
+        "entity_id": "account-011-service",
+        "entity_type": "service_account",
+        "name": "reporting.svc",
+        "reported_role": "database reporting account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "person-011-dba",
+        "entity_type": "person",
+        "name": "Samuel Okafor",
+        "reported_role": "database administrator",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "database-011",
+        "entity_type": "database",
+        "name": "CustomerDB",
+        "reported_role": "customer database",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "job-011",
+        "entity_type": "scheduled_job",
+        "name": "monthly-report-11",
+        "reported_role": "database export job",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "file-011",
+        "entity_type": "export_file",
+        "name": "customer_extract_11.csv",
+        "reported_role": "job output",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "server-011",
+        "entity_type": "server",
+        "name": "DB-SRV-11",
+        "reported_role": "database server",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "usb-011",
+        "entity_type": "removable_media",
+        "name": "USB-11-RED",
+        "reported_role": "removable drive",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "database_audit_log",
+        "confidence": "high",
+        "description": "CustomerDB audit logs show reporting.svc querying the customer tables for monthly-report-11.",
+        "evidence_id": "evidence-011-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Database audit record"
+      },
+      {
+        "artifact_type": "job_output",
+        "confidence": "high",
+        "description": "The reporting job produced customer_extract_11.csv on DB-SRV-11 at 17:00 UTC.",
+        "evidence_id": "evidence-011-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Export job output"
+      },
+      {
+        "artifact_type": "device_mount_log",
+        "confidence": "medium",
+        "description": "USB-11-RED was mounted on DB-SRV-11 at 17:12 UTC; the record does not show a file copy.",
+        "evidence_id": "evidence-011-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Removable-media mount record"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "high",
+        "object_entity_id": "database-011",
+        "predicate": "queried",
+        "relationship_id": "rel-011-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "statement": "The reporting.svc account queried CustomerDB as part of the reporting job.",
+        "status": "reported",
+        "subject_entity_id": "account-011-service"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "file-011",
+        "predicate": "produced",
+        "relationship_id": "rel-011-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "statement": "The monthly-report-11 job produced customer_extract_11.csv.",
+        "status": "reported",
+        "subject_entity_id": "job-011"
+      },
+      {
+        "confidence": "high",
+        "object_entity_id": "server-011",
+        "predicate": "ran_on",
+        "relationship_id": "rel-011-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "statement": "The monthly-report-11 job ran on DB-SRV-11.",
+        "status": "reported",
+        "subject_entity_id": "job-011"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "server-011",
+        "predicate": "mounted_on",
+        "relationship_id": "rel-011-04",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "statement": "USB-11-RED was mounted on DB-SRV-11 after the export job completed.",
+        "status": "reported",
+        "subject_entity_id": "usb-011"
+      },
+      {
+        "confidence": "low",
+        "object_entity_id": "usb-011",
+        "predicate": "copied_to",
+        "relationship_id": "rel-011-05",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "statement": "No evidence in the supplied materials establishes that customer_extract_11.csv was copied to USB-11-RED.",
+        "status": "not_established",
+        "subject_entity_id": "file-011"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "job-011",
+          "account-011-service",
+          "database-011",
+          "file-011"
+        ],
+        "confidence": "high",
+        "event": "monthly-report-11 queried CustomerDB and produced customer_extract_11.csv.",
+        "event_id": "event-011-01",
+        "evidence_ids": [
+          "evidence-011-01",
+          "evidence-011-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-21T17:00:00Z",
+        "timestamp_text": "17:00 UTC"
+      },
+      {
+        "actors": [
+          "usb-011",
+          "server-011"
+        ],
+        "confidence": "medium",
+        "event": "USB-11-RED was mounted on DB-SRV-11.",
+        "event_id": "event-011-02",
+        "evidence_ids": [
+          "evidence-011-03"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000011"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-21T17:12:00Z",
+        "timestamp_text": "17:12 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3847,
+    "production_projection_sha256": "dfa2d5b5c32868809b1a43003d178b658e02e99e0186214b6c7f52157d27960c",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

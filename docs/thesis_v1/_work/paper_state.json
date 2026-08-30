@@ -1,0 +1,25 @@
+{
+  "project": "CyberCase Intelligence Framework Bachelor Thesis",
+  "version": "1",
+  "language": "th",
+  "format": "markdown",
+  "status": "draft_complete_pending_review",
+  "repository_snapshot": {
+    "branch": "main",
+    "head": "cdb66972dce7a9e475f3fbfd1ad7c04c9d511160",
+    "origin_main_equal": true,
+    "working_tree_dirty": true,
+    "observed_at": "2026-08-27"
+  },
+  "truth_boundary": "Current working tree, including uncommitted user-owned Analysis v3 and document-ingestion work, is described separately from committed baseline and proposals.",
+  "build": {
+    "required": false,
+    "reason": "Version 1 is Markdown only; DOCX and PDF were explicitly excluded."
+  },
+  "evaluation": {
+    "backend": "147 passed, 2 subtests passed, 2 warnings",
+    "frontend": "23 files and 88 tests passed",
+    "eslint": "passed",
+    "live_end_to_end": "not run"
+  }
+}

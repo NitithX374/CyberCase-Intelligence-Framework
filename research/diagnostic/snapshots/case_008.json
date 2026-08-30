@@ -1,0 +1,183 @@
+{
+  "analysis_context": {
+    "mitre_table": [],
+    "previous_analysis": null,
+    "retrieval_context_id": null,
+    "retrieved_context": ""
+  },
+  "case_id": "case-008",
+  "case_state": {
+    "entities": [
+      {
+        "confidence": "medium",
+        "entity_id": "person-008-analyst",
+        "entity_type": "person",
+        "name": "R. Singh",
+        "reported_role": "incident responder",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "account-008",
+        "entity_type": "user_account",
+        "name": "helpdesk.admin",
+        "reported_role": "privileged helpdesk account",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ]
+      },
+      {
+        "confidence": "high",
+        "entity_id": "device-008",
+        "entity_type": "workstation",
+        "name": "HD-08",
+        "reported_role": "helpdesk workstation",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "tool-008",
+        "entity_type": "remote_access_tool",
+        "name": "RemoteShell-08",
+        "reported_role": "remote administration utility",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "entity_id": "ip-008",
+        "entity_type": "ip_address",
+        "name": "198.51.100.108",
+        "reported_role": "reported connection source",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ]
+      },
+      {
+        "confidence": "low",
+        "entity_id": "actor-008-northstar",
+        "entity_type": "threat_actor",
+        "name": "Northstar",
+        "reported_role": "actor named in responder comparison",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "artifact_type": "remote_access_log",
+        "confidence": "medium",
+        "description": "The workstation log records helpdesk.admin using RemoteShell-08 from 198.51.100.108.",
+        "evidence_id": "evidence-008-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Remote administration log"
+      },
+      {
+        "artifact_type": "analyst_note",
+        "confidence": "low",
+        "description": "A responder compared the sequence and tool use with public reporting about Northstar but explicitly recorded that attribution was not established.",
+        "evidence_id": "evidence-008-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ],
+        "source_type": "user_reported",
+        "status": "reported",
+        "title": "Responder comparison note"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": "medium",
+        "object_entity_id": "tool-008",
+        "predicate": "used_remote_tool",
+        "relationship_id": "rel-008-01",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ],
+        "statement": "The helpdesk.admin account was used with RemoteShell-08 on HD-08.",
+        "status": "reported",
+        "subject_entity_id": "account-008"
+      },
+      {
+        "confidence": "medium",
+        "object_entity_id": "ip-008",
+        "predicate": "connected_from",
+        "relationship_id": "rel-008-02",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ],
+        "statement": "RemoteShell-08 recorded a connection from 198.51.100.108.",
+        "status": "reported",
+        "subject_entity_id": "tool-008"
+      },
+      {
+        "confidence": "low",
+        "object_entity_id": "actor-008-northstar",
+        "predicate": "compared_activity_to",
+        "relationship_id": "rel-008-03",
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ],
+        "statement": "R. Singh wrote that the observed activity resembles reporting associated with Northstar; attribution was not established.",
+        "status": "reported",
+        "subject_entity_id": "person-008-analyst"
+      }
+    ],
+    "timeline": [
+      {
+        "actors": [
+          "account-008",
+          "tool-008",
+          "ip-008"
+        ],
+        "confidence": "medium",
+        "event": "RemoteShell-08 was used with helpdesk.admin on HD-08 from 198.51.100.108.",
+        "event_id": "event-008-01",
+        "evidence_ids": [
+          "evidence-008-01"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-18T16:40:00Z",
+        "timestamp_text": "16:40 UTC"
+      },
+      {
+        "actors": [
+          "person-008-analyst",
+          "actor-008-northstar"
+        ],
+        "confidence": "low",
+        "event": "R. Singh recorded a comparison with Northstar reporting and noted that attribution was not established.",
+        "event_id": "event-008-02",
+        "evidence_ids": [
+          "evidence-008-02"
+        ],
+        "source_message_ids": [
+          "00000000-0000-4000-8000-000000000008"
+        ],
+        "status": "reported",
+        "timestamp": "2026-05-18T18:10:00Z",
+        "timestamp_text": "18:10 UTC"
+      }
+    ],
+    "warnings": []
+  },
+  "retrieval_metadata": {
+    "production_projection_chars": 3169,
+    "production_projection_sha256": "63c0420fcb33192ccf65069df2e3a3185a76c74257ce5e8b0b2e50148895872d",
+    "reason": "RAG intentionally omitted for the first pilot",
+    "status": "skipped_by_user"
+  }
+}

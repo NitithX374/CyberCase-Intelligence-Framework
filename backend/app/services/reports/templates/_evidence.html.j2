@@ -1,0 +1,46 @@
+<section class="report-section">
+    <div class="section-header">
+        <h2 class="section-number-title">{{ report.i18n.sec_3 }}</h2>
+    </div>
+
+    <div class="sub-header">{{ report.i18n.sub_evidence_reg }}</div>
+    {% if report.evidence_rows %}
+    <div class="evidence-cards-container">
+        {% for row in report.evidence_rows %}
+        <div class="evidence-card">
+            <div class="evidence-card-header">
+                <strong>{{ row.title }}</strong>
+                <span class="evidence-card-badge">{{ row.artifact_type }} ({{ row.source_type }})</span>
+            </div>
+            <div class="evidence-card-body">
+                {{ row.description }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="section-lead-paragraph text-muted">{{ report.i18n.empty_evidence }}</p>
+    {% endif %}
+
+    {% if report.has_indicators %}
+    <div class="sub-header" style="margin-top: 12pt;">{{ report.i18n.sub_iocs }}</div>
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">{{ report.i18n.col_ioc_type }}</th>
+                <th style="width: 45%;">{{ report.i18n.col_ioc_value }}</th>
+                <th style="width: 30%;">{{ report.i18n.col_ioc_note }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ioc in report.indicator_rows %}
+            <tr>
+                <td><strong>{{ ioc.indicator_type }}</strong></td>
+                <td><span class="code-wrap">{{ ioc.value }}</span></td>
+                <td class="text-muted">{{ ioc.note }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
