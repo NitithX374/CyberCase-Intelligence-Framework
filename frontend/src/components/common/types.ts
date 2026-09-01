@@ -33,7 +33,7 @@ export const workspaceViewLabels: Record<WorkspaceView, string> = {
 
 export const workspaceViewDescriptions: Record<WorkspaceView, string> = {
   intake: "Case narrative intake & initial submission",
-  overview: "Prosecutor case overview & attack story",
+  overview: "Evidence-bound case summary, findings, and open questions",
   materials: "User-submitted case evidence & narrative records",
   "technical-context": "External MITRE ATT&CK reference context",
   chat: "Interactive incident reasoning",

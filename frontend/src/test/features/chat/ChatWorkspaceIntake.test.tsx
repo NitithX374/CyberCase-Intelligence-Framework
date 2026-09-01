@@ -36,19 +36,18 @@ describe("ChatWorkspace Intake submission integration", () => {
   it("preserves draft narrative and keeps Intake mounted when message submission fails", async () => {
     const threadId = "thread-test-123";
     mockPathname = `/chat/${threadId}/intake`;
-    const initialThread: api.PersistedChatThread = {
+    const initialThread: api.ChatThreadRead = {
       id: threadId,
       title: "New case",
-      status: "ready",
+      status: "idle",
       created_at: "2026-08-24T06:00:00Z",
       updated_at: "2026-08-24T06:00:00Z",
     };
 
     vi.spyOn(api, "listChatThreads").mockResolvedValue([initialThread]);
     vi.spyOn(api, "getChatThread").mockResolvedValue({
-      thread: initialThread,
+      ...initialThread,
       messages: [],
-      runs: [],
     });
     vi.spyOn(api, "updateChatThread").mockResolvedValue(initialThread);
     vi.spyOn(api, "listChatReports").mockResolvedValue([]);
@@ -58,11 +57,10 @@ describe("ChatWorkspace Intake submission integration", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <ChatWorkspace initialThreadId={threadId} initialView="intake" />
+        <ChatWorkspace />
       </QueryClientProvider>,
     );
 
-    // Wait for thread to load and Intake form to be visible
     await waitFor(() => {
       expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeInTheDocument();
     });
@@ -78,7 +76,6 @@ describe("ChatWorkspace Intake submission integration", () => {
 
     fireEvent.click(submitBtn);
 
-    // Submission failed -> error modal opens with plain-language title, Intake stays mounted, textarea still has content
     await waitFor(() => {
       expect(screen.getByText("ไม่สามารถเชื่อมต่อกับระบบได้")).toBeInTheDocument();
       expect(screen.getByText(/failed to submit case description/i)).toBeInTheDocument();
@@ -89,7 +86,6 @@ describe("ChatWorkspace Intake submission integration", () => {
       "PowerShell connected to 198.51.100.23 and downloaded payload.",
     );
     expect(titleInput.value).toBe("IIS Intrusion Case");
-    // Ensure Overview was NOT navigated to
     expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining("overview"));
     expect(screen.queryByLabelText("Case Overview")).not.toBeInTheDocument();
   });
@@ -97,19 +93,18 @@ describe("ChatWorkspace Intake submission integration", () => {
   it("navigates to Overview when initial case message submission is accepted", async () => {
     const threadId = "thread-test-456";
     mockPathname = `/chat/${threadId}/intake`;
-    const initialThread: api.PersistedChatThread = {
+    const initialThread: api.ChatThreadRead = {
       id: threadId,
       title: "New case",
-      status: "ready",
+      status: "idle",
       created_at: "2026-08-24T06:00:00Z",
       updated_at: "2026-08-24T06:00:00Z",
     };
 
     vi.spyOn(api, "listChatThreads").mockResolvedValue([initialThread]);
-    vi.spyOn(api, "getChatThread").mockResolvedValue({
-      thread: initialThread,
+    const getChatThreadSpy = vi.spyOn(api, "getChatThread").mockResolvedValueOnce({
+      ...initialThread,
       messages: [],
-      runs: [],
     });
     vi.spyOn(api, "updateChatThread").mockResolvedValue(initialThread);
     vi.spyOn(api, "listChatReports").mockResolvedValue([]);
@@ -125,19 +120,22 @@ describe("ChatWorkspace Intake submission integration", () => {
       created_at: "2026-08-24T06:00:00Z",
     };
 
-    const createdRun: api.PersistedChatRun = {
+    const createdRun: api.ChatRun = {
       id: "run-101",
       thread_id: threadId,
+      request_message_id: createdMessage.id,
       status: "running",
-      request_message_ordinal: 1,
-      attempt_count: 1,
-      lease_expires_at: null,
-      recovery_count: 0,
-      failure_reason: null,
+      error_code: null,
+      error_message: null,
       created_at: "2026-08-24T06:00:00Z",
       updated_at: "2026-08-24T06:00:00Z",
-      completed_at: null,
     };
+
+    getChatThreadSpy.mockResolvedValue({
+      ...initialThread,
+      status: "answered",
+      messages: [createdMessage],
+    });
 
     vi.spyOn(api, "createChatMessage").mockResolvedValue({
       message: createdMessage,
@@ -145,14 +143,12 @@ describe("ChatWorkspace Intake submission integration", () => {
     });
 
     vi.spyOn(api, "getChatRun").mockResolvedValue({
-      run: { ...createdRun, status: "completed" },
-      thread: { ...initialThread, status: "answered" },
-      messages: [createdMessage],
+      ...createdRun,
+      status: "completed",
     });
-
     render(
       <QueryClientProvider client={queryClient}>
-        <ChatWorkspace initialThreadId={threadId} initialView="intake" />
+        <ChatWorkspace />
       </QueryClientProvider>,
     );
 
@@ -169,7 +165,6 @@ describe("ChatWorkspace Intake submission integration", () => {
 
     fireEvent.click(submitBtn);
 
-    // Submission accepted -> onAccepted triggers navigation to Overview
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(`/chat/${threadId}/overview`);
     });

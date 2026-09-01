@@ -5,12 +5,23 @@ from uuid import uuid4
 import pytest
 
 from app.schemas.rag import MitreTableRow, QueryResponse
+from app.services.case_analysis.mitre_applicability_contracts import (
+    MitreApplicabilityRecord,
+)
+from app.services.chat.raw_evidence import RawEvidenceSource
 from app.services.case_analysis.contracts import (
     AnalysisTraceDraft,
     AnalysisTraceV3,
     CaseAnalysisResult,
 )
 from app.services.followup.contracts import FollowUpResolution
+from app.services.followup.decision import evaluate_followup_outcome
+from app.services.followup.schemas import (
+    FollowUpDecision,
+    GapAnalysis,
+    GapAnalysisResult,
+    GapItem,
+)
 from app.services.workflow.chat_run_completion import _serialize_analysis_trace
 from app.services.workflow.outcome import AssistantOutcome
 from app.services.workflow.pipeline_execution import _run_fresh_analysis, _run_question
@@ -25,6 +36,8 @@ def claimed(action: str):
         raw_evidence="[INITIAL CASE NARRATIVE]\nInitial\n\n[ADDED CASE INFORMATION #1]\nNew",
         evidence_sha256="a" * 64,
         source_message_ids=(source_id,),
+        evidence_sources=(RawEvidenceSource(message_id=source_id, content="Initial"),),
+        document_source_context=(),
         original_user_content="Initial",
         clarification_exchanges=(),
         followup_root_ordinal=1,
@@ -36,8 +49,19 @@ def claimed(action: str):
     )
 
 
+async def retrieve_gate(**kwargs):
+    source = kwargs["evidence_sources"][0]
+    return MitreApplicabilityRecord(
+        decision="RETRIEVE",
+        source_message_ids=[str(source.message_id)],
+        trigger_text=[source.content],
+    )
+
+
 @pytest.mark.parametrize("action", ["initial_analysis", "add_case_info"])
-def test_initial_and_added_information_run_fresh_rag_on_raw_evidence(action: str) -> None:
+def test_initial_and_added_information_run_fresh_rag_on_raw_evidence(
+    action: str,
+) -> None:
     value = claimed(action)
     calls: list[str] = []
 
@@ -66,14 +90,17 @@ def test_initial_and_added_information_run_fresh_rag_on_raw_evidence(action: str
         assert kwargs["raw_evidence"] == value.raw_evidence
         return FollowUpResolution(outcome=None, metadata_json={"chat_followup": {}})
 
-    outcome = asyncio.run(_run_fresh_analysis(
-        value,
-        rag_request=rag_request,
-        analysis_request=analysis_request,
-        followup_evaluator=followup_evaluator,
-        policy=None,
-        gap_analyzer=None,
-    ))
+    outcome = asyncio.run(
+        _run_fresh_analysis(
+            value,
+            rag_request=rag_request,
+            analysis_request=analysis_request,
+            followup_evaluator=followup_evaluator,
+            policy=None,
+            gap_analyzer=None,
+            applicability_gate=retrieve_gate,
+        )
+    )
     assert calls == [value.raw_evidence]
     assert outcome.rag_context_payload is not None
     assert outcome.metadata_json["chat_action"]["rag_invoked"] is True
@@ -147,3 +174,99 @@ def test_v2_trace_persistence_remains_backward_compatible() -> None:
     assert serialized is not None
     assert serialized["version"] == "analysis_trace_v2"
     assert serialized["retrieval_context_id"] == "ctx-v2"
+
+
+def test_fresh_pipeline_uses_one_analysis_and_one_gap_result_for_both_surfaces() -> (
+    None
+):
+    value = claimed("initial_analysis")
+    analysis_calls = 0
+    gap_calls = 0
+
+    async def rag_request(query: str):
+        return QueryResponse(
+            status="completed",
+            retrieval_context_id="ctx-canonical",
+            context="Relevant external context",
+            mitre_table=[],
+        )
+
+    async def analysis_request(**kwargs):
+        nonlocal analysis_calls
+        analysis_calls += 1
+        return CaseAnalysisResult(
+            answer="The property association remains provisional.",
+            trace=AnalysisTraceV3.model_validate(
+                {
+                    "analysis_mode": "case_overview",
+                    "summary": "A property association is under review.",
+                    "claims": [
+                        {
+                            "claim_id": "A-01",
+                            "claim_type": "reported",
+                            "text": "The suspect may possess the missing property.",
+                            "epistemic_status": "reported",
+                            "supporting_source_message_ids": [
+                                str(value.source_message_ids[0])
+                            ],
+                            "contradicting_source_message_ids": [],
+                            "reasoning_summary": None,
+                        }
+                    ],
+                    "gaps": [],
+                    "mitre_associations": [],
+                    "evidence_sha256": value.evidence_sha256,
+                    "retrieval_context_id": "ctx-canonical",
+                }
+            ),
+        )
+
+    class CountingGapAnalyzer:
+        async def analyze(self, **kwargs):
+            nonlocal gap_calls
+            gap_calls += 1
+            assert kwargs["analysis_claims"][0]["claim_id"] == "A-01"
+            return GapAnalysisResult(
+                analysis=GapAnalysis(
+                    gaps=[
+                        GapItem(
+                            topic="Property identity",
+                            status="AMBIGUOUS",
+                            description="The object has not been independently identified.",
+                            affects="A-01 — suspect possession of the missing property",
+                            reason="Identification constrains the property association.",
+                            priority="medium",
+                            askable=True,
+                        )
+                    ]
+                )
+            )
+
+    class AskPolicy:
+        async def decide(self, **kwargs):
+            return FollowUpDecision(
+                decision="ask_followup",
+                selected_gap="Property identity",
+                question="Can you identify the property shown in the footage?",
+            )
+
+    outcome = asyncio.run(
+        _run_fresh_analysis(
+            value,
+            rag_request=rag_request,
+            analysis_request=analysis_request,
+            followup_evaluator=evaluate_followup_outcome,
+            policy=AskPolicy(),
+            gap_analyzer=CountingGapAnalyzer(),
+            applicability_gate=retrieve_gate,
+        )
+    )
+
+    assert analysis_calls == 1
+    assert gap_calls == 1
+    assert outcome.thread_status == "awaiting_followup"
+    assert outcome.analysis_trace_draft is not None
+    assert outcome.analysis_trace_draft.gaps[0].affected_claim_ids == ["A-01"]
+    legacy_gaps = outcome.metadata_json["chat_followup"]["gap_analysis"]["gaps"]
+    assert legacy_gaps[0]["status"] == "AMBIGUOUS"
+    assert legacy_gaps[0]["affects"].startswith("A-01")

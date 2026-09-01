@@ -14,8 +14,9 @@ from reportlab.pdfbase.ttfonts import TTFont
 INK = colors.HexColor("#111827")
 MUTED = colors.HexColor("#4B5563")
 RULE = colors.HexColor("#E5E7EB")
-DARK_RULE = colors.HexColor("#111827")
-PANEL = colors.HexColor("#F3F4F6")
+DARK_RULE = colors.HexColor("#243B53")
+ACCENT = colors.HexColor("#243B53")
+PANEL = colors.HexColor("#EAF0F6")
 PAGE_WIDTH, PAGE_HEIGHT = A4
 
 
@@ -69,14 +70,14 @@ def build_report_styles(font_names: tuple[str, str]) -> dict[str, ParagraphStyle
     regular, bold = font_names
     base = getSampleStyleSheet()
     return {
-        "eyebrow": ParagraphStyle("ReportEyebrow", parent=base["Normal"], fontName=bold, fontSize=8, leading=10, textColor=MUTED, textTransform="uppercase"),
-        "doc_title": ParagraphStyle("ReportDocTitle", parent=base["Normal"], fontName=bold, fontSize=14, leading=18, textColor=INK),
-        "section_heading": ParagraphStyle("ReportSectionHeading", parent=base["Normal"], fontName=bold, fontSize=10.5, leading=14, textColor=INK, keepWithNext=True),
+        "eyebrow": ParagraphStyle("ReportEyebrow", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=10, textColor=MUTED, textTransform="uppercase", spaceAfter=1),
+        "doc_title": ParagraphStyle("ReportDocTitle", parent=base["Normal"], fontName=bold, fontSize=17, leading=22, textColor=ACCENT),
+        "section_heading": ParagraphStyle("ReportSectionHeading", parent=base["Normal"], fontName=bold, fontSize=10.5, leading=14, textColor=ACCENT, backColor=PANEL, borderColor=RULE, borderWidth=0.4, borderPadding=(1.5, 5, 1.5, 5), keepWithNext=True),
         "subheading": ParagraphStyle("ReportSubheading", parent=base["Normal"], fontName=bold, fontSize=8.5, leading=11.5, textColor=INK, keepWithNext=True),
         "meta_label": ParagraphStyle("ReportMetaLabel", parent=base["Normal"], fontName=bold, fontSize=8, leading=10.5, textColor=MUTED),
         "meta_value": ParagraphStyle("ReportMetaValue", parent=base["Normal"], fontName=regular, fontSize=8, leading=10.5, textColor=INK),
-        "body": ParagraphStyle("ReportBody", parent=base["Normal"], fontName=regular, fontSize=8, leading=11.5, textColor=INK),
-        "body_indent": ParagraphStyle("ReportBodyIndent", parent=base["Normal"], fontName=regular, fontSize=8, leading=11.5, textColor=INK, firstLineIndent=14),
+        "body": ParagraphStyle("ReportBody", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12.2, textColor=INK),
+        "body_indent": ParagraphStyle("ReportBodyIndent", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12.2, textColor=INK, firstLineIndent=14),
         "body_small": ParagraphStyle("ReportBodySmall", parent=base["Normal"], fontName=regular, fontSize=7.5, leading=10, textColor=INK),
         "body_muted": ParagraphStyle("ReportBodyMuted", parent=base["Normal"], fontName=regular, fontSize=8, leading=11, textColor=MUTED),
         "table_header": ParagraphStyle("ReportTableHeader", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=9.5, textColor=INK),

@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "CyberCase Framework - Chat Workspace",
   description:
-    "A persistent chat workspace for context-led cybersecurity incident analysis and guided follow-up.",
+    "An evidence-bound workspace for case summarization, analysis, and guided follow-up.",
 };
 
 export default function RootLayout({

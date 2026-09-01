@@ -5,6 +5,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.services.case_analysis.source_citation_contracts import (
+    AnalysisEvidenceCitation,
+)
+
 
 ANALYSIS_TRACE_VERSION = "analysis_trace_v2"
 ANALYSIS_TRACE_V3_VERSION = "analysis_trace_v3"
@@ -25,6 +29,8 @@ GapStatus = Literal[
     "CONFLICTING",
 ]
 GapPriority = Literal["high", "medium", "low"]
+PROVIDER_CLAIM_IDS = tuple(f"A-{index:02d}" for index in range(1, 65))
+ProviderClaimId = Literal[*PROVIDER_CLAIM_IDS]
 
 
 class AnalysisClaim(BaseModel):
@@ -45,7 +51,9 @@ class AnalysisClaim(BaseModel):
     @classmethod
     def unique_source_ids(cls, value: list[str]) -> list[str]:
         normalized = [item.strip() for item in value]
-        if any(not item for item in normalized) or len(set(normalized)) != len(normalized):
+        if any(not item for item in normalized) or len(set(normalized)) != len(
+            normalized
+        ):
             raise ValueError("source message IDs must be non-empty and unique")
         return normalized
 
@@ -68,8 +76,18 @@ class AnalysisClaimV3(BaseModel):
     claim_type: ClaimType
     text: str = Field(min_length=1, max_length=4_000)
     epistemic_status: EpistemicStatus
-    supporting_source_message_ids: list[str] = Field(default_factory=list, max_length=64)
-    contradicting_source_message_ids: list[str] = Field(default_factory=list, max_length=64)
+    supporting_source_message_ids: list[str] = Field(
+        default_factory=list, max_length=64
+    )
+    contradicting_source_message_ids: list[str] = Field(
+        default_factory=list, max_length=64
+    )
+    supporting_citations: list[AnalysisEvidenceCitation] = Field(
+        default_factory=list, max_length=64
+    )
+    contradicting_citations: list[AnalysisEvidenceCitation] = Field(
+        default_factory=list, max_length=64
+    )
     reasoning_summary: str | None = Field(default=None, min_length=1, max_length=1_000)
 
     @field_validator("text", "reasoning_summary")
@@ -82,11 +100,15 @@ class AnalysisClaimV3(BaseModel):
             raise ValueError("text values must be non-empty")
         return normalized
 
-    @field_validator("supporting_source_message_ids", "contradicting_source_message_ids")
+    @field_validator(
+        "supporting_source_message_ids", "contradicting_source_message_ids"
+    )
     @classmethod
     def unique_evidence_source_ids(cls, value: list[str]) -> list[str]:
         normalized = [item.strip() for item in value]
-        if any(not item for item in normalized) or len(set(normalized)) != len(normalized):
+        if any(not item for item in normalized) or len(set(normalized)) != len(
+            normalized
+        ):
             raise ValueError("source message IDs must be non-empty and unique")
         return normalized
 
@@ -115,7 +137,9 @@ class AnalysisGapV3(BaseModel):
     @classmethod
     def unique_affected_claim_ids(cls, value: list[str]) -> list[str]:
         normalized = [item.strip() for item in value]
-        if any(not item for item in normalized) or len(set(normalized)) != len(normalized):
+        if any(not item for item in normalized) or len(set(normalized)) != len(
+            normalized
+        ):
             raise ValueError("affected claim IDs must be non-empty and unique")
         return normalized
 
@@ -129,7 +153,9 @@ class AnalysisTraceV3(BaseModel):
     summary: str = Field(min_length=1, max_length=24_000)
     claims: list[AnalysisClaimV3] = Field(max_length=64)
     gaps: list[AnalysisGapV3] = Field(default_factory=list, max_length=64)
-    mitre_associations: list[MitreAssociation] = Field(default_factory=list, max_length=64)
+    mitre_associations: list[MitreAssociation] = Field(
+        default_factory=list, max_length=64
+    )
     evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
 
@@ -142,14 +168,25 @@ class AnalysisTraceV3(BaseModel):
         return normalized
 
 
+class ProviderAnalysisClaimV3(AnalysisClaimV3):
+    claim_id: ProviderClaimId
+
+
+class ProviderMitreAssociation(MitreAssociation):
+    claim_ids: list[ProviderClaimId] = Field(min_length=1, max_length=64)
+
+
 class ProviderCaseAnalysisV3(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: Literal["analysis_trace_v3"]
     answer: str = Field(min_length=1, max_length=24_000)
     summary: str = Field(min_length=1, max_length=24_000)
-    claims: list[AnalysisClaimV3] = Field(max_length=64)
-    mitre_associations: list[MitreAssociation] = Field(default_factory=list, max_length=64)
+    claims: list[ProviderAnalysisClaimV3] = Field(max_length=64)
+    mitre_associations: list[ProviderMitreAssociation] = Field(
+        default_factory=list,
+        max_length=64,
+    )
 
 
 class ProviderCaseAnalysis(BaseModel):
@@ -222,7 +259,11 @@ __all__ = [
     "GapPriority",
     "GapStatus",
     "MitreAssociation",
+    "PROVIDER_CLAIM_IDS",
+    "ProviderAnalysisClaimV3",
     "ProviderCaseAnalysis",
     "ProviderCaseAnalysisV3",
+    "ProviderClaimId",
+    "ProviderMitreAssociation",
     "ValidatedAnalysisTrace",
 ]

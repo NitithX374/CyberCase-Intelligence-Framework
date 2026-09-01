@@ -17,6 +17,8 @@ import { PersistedReportCard } from "./PersistedReportCard";
 import { NoSavedReport, ReportVersionSelector } from "./ReportHistory";
 import { chatQueryKeys } from "@/lib/query-keys";
 import { Icon } from "@/components/common/icons";
+import { ReportEmptyState } from "./ReportEmptyState";
+import { StatusPill } from "@/components/common/StatusPill";
 
 interface ChatReportViewProps {
   threadId: string | null;
@@ -165,32 +167,7 @@ export function ChatReportView({
   };
 
   if (!threadId) {
-    return (
-      <section
-        id="workspace-report-panel"
-        role="tabpanel"
-        aria-label="Case report"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas p-6 sm:p-10"
-      >
-        <div className="mx-auto max-w-lg rounded-lg border border-dashed border-line bg-surface p-8 text-center space-y-3">
-          <h2 className="text-lg font-bold text-ink">
-            Select a Case
-          </h2>
-          <p className="text-xs text-ink-secondary">
-            Open or create an investigation case before generating a report.
-          </p>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={onOpenChat}
-              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-xs font-bold text-ivory"
-            >
-              <span>Return to Case</span>
-            </button>
-          </div>
-        </div>
-      </section>
-    );
+    return <ReportEmptyState onReturn={onOpenChat} />;
   }
 
   return (
@@ -201,33 +178,25 @@ export function ChatReportView({
       className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas"
     >
       <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-8">
-        {/* Document-Oriented Dossier Header */}
-        <header className="border-b border-line pb-4">
+        <header className="border-b border-line pb-5">
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] font-bold tracking-widest text-ink-muted uppercase">
-                  CASE ANALYSIS REPORT · รายงานวิเคราะห์คดี
-                </span>
-                <span className="font-mono text-[11px] text-ink-muted">
-                  #{threadId.slice(0, 8)}
-                </span>
-              </div>
-              <h1 className="mt-1 text-xl font-bold tracking-tight text-ink sm:text-2xl">
+              <p className="section-eyebrow">CASE ANALYSIS REPORT · รายงานวิเคราะห์คดี</p>
+              <h1 className="mt-1 text-2xl font-extrabold tracking-[-0.035em] text-ink sm:text-3xl">
                 Case Analysis Report
               </h1>
-              <p className="mt-1 text-xs text-ink-secondary">
-                Provisional analytical report compiled from submitted case evidence and MITRE ATT&amp;CK threat intelligence.
+              <p className="mt-2 max-w-2xl text-xs leading-relaxed text-ink-secondary">
+                Provisional analytical report compiled from submitted case material and optional external technical context when applicable.
               </p>
             </div>
 
-            {/* Version Generation & Actions */}
             <div className="flex flex-wrap items-center gap-2">
+              <StatusPill>Provisional</StatusPill>
               <button
                 type="button"
                 onClick={() => void handleGenerate()}
                 disabled={!canGenerate}
-                className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+                className="btn-primary inline-flex items-center gap-2 rounded-lg"
               >
                 {isGenerating && (
                   <span
@@ -247,7 +216,7 @@ export function ChatReportView({
               <button
                 type="button"
                 onClick={onOpenOverview ?? onOpenChat}
-                className="inline-flex items-center gap-1.5 rounded border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:border-ink hover:bg-surface-hover"
+                className="btn-secondary inline-flex items-center gap-1.5 rounded-lg"
               >
                 <Icon name="overview" className="h-3.5 w-3.5" />
                 <span>Case Overview</span>
@@ -255,7 +224,6 @@ export function ChatReportView({
             </div>
           </div>
 
-          {/* Versions Selector row if multiple versions exist */}
           {reports.length > 1 && (
             <div className="mt-3 pt-2 border-t border-line/60">
               <ReportVersionSelector
@@ -267,7 +235,6 @@ export function ChatReportView({
           )}
         </header>
 
-        {/* Primary Content Hero */}
         {isLoading ? (
           <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-xs text-ink-muted">
             <span>Loading case report data...</span>

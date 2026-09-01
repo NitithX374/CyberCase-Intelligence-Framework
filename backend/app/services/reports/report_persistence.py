@@ -83,7 +83,8 @@ class ChatReportService:
             idempotency_key = request.idempotency_key or snapshot_hash
             existing = await self._existing_report(thread_id, idempotency_key)
             if existing is not None:
-                if existing.source_snapshot_hash != snapshot_hash:
+                existing_snapshot_hash = source_snapshot_hash(existing.source_snapshot_json)
+                if existing_snapshot_hash != snapshot_hash:
                     raise ReportGenerationConflict(
                         "report_idempotency_conflict",
                         "The idempotency key belongs to another report snapshot.",
@@ -172,7 +173,7 @@ class ChatReportService:
             raise ReportNotFound("chat_thread_not_found", "Chat thread not found")
         return thread
 
-    async def _latest_rag_context(self, thread_id: UUID) -> RagContext:
+    async def _latest_rag_context(self, thread_id: UUID) -> RagContext | None:
         result = await self.db.execute(
             select(RagContext)
             .join(ChatRun, ChatRun.id == RagContext.run_id)
@@ -180,13 +181,7 @@ class ChatReportService:
             .order_by(ChatRun.created_at.desc())
             .limit(1)
         )
-        context = result.scalar_one_or_none()
-        if context is None:
-            raise ReportGenerationConflict(
-                "report_context_missing",
-                "A completed retrieval context is required before generating a report.",
-            )
-        return context
+        return result.scalar_one_or_none()
 
     async def _existing_report(self, thread_id: UUID, key: str) -> ChatReport | None:
         result = await self.db.execute(

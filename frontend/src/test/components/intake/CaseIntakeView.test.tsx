@@ -1,9 +1,19 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CaseIntakeView } from "@/components/intake/CaseIntakeView";
 import type { PersistedChatMessage } from "@/lib/api";
+import {
+  resetDocumentIngestionState,
+  setDocumentIngestionFile,
+  setDocumentIngestionResult,
+} from "@/lib/document-ingestion-store";
+import type { IngestedDocumentPreview } from "@/lib/document-ingestion";
 
 describe("CaseIntakeView component", () => {
+  beforeEach(() => {
+    resetDocumentIngestionState();
+  });
+
   it("renders the new case intake screen with required description and document preview", () => {
     const handleSubmit = vi.fn();
 
@@ -74,6 +84,83 @@ describe("CaseIntakeView component", () => {
     expect(screen.getAllByText(/กำลังวิเคราะห์ข้อมูลคดี/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText(/ชื่อคดี/i)).toBeDisabled();
     expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeDisabled();
+  });
+
+  it("fills an editable narrative and submits document quality metadata", () => {
+    const result: IngestedDocumentPreview = {
+      document_id: "DOC-OCR-1",
+      filename: "statement.pdf",
+      media_type: "application/pdf",
+      extraction_method: "document_recognition",
+      mode: "unified",
+      pages: [
+        {
+          page_number: 1,
+          merged_text: "OCR merged narrative",
+          routing_summary: {
+            native: 0,
+            unified: 1,
+            ocr: 0,
+            htr: 0,
+            mixed: 0,
+            unknown: 0,
+          },
+          regions: [
+            {
+              region_id: "DOC-OCR-1-P001-R001",
+              page_number: 1,
+              bbox: null,
+              region_type: "unknown",
+              recognition_method: "unified",
+              recognizer: "typhoon-ocr",
+              text: "OCR merged narrative",
+              confidence: null,
+              verification_status: "machine_read",
+              content_role: "transcribed_text",
+              contains_handwriting: null,
+              candidates: [],
+              selected_candidate_index: null,
+              generated_contents: [],
+              warning: null,
+            },
+          ],
+        },
+      ],
+      full_text: "OCR merged narrative",
+      warnings: [],
+    };
+    const handleSubmit = vi.fn();
+    setDocumentIngestionFile(
+      new File(["pdf"], "statement.pdf", { type: "application/pdf" }),
+    );
+    setDocumentIngestionResult(result);
+    render(
+      <CaseIntakeView
+        isSubmitting={false}
+        error={null}
+        onSubmitCase={handleSubmit}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Use merged text as case narrative/i }),
+    );
+    const narrative = screen.getByLabelText(/รายละเอียดคดี/i);
+    expect(narrative).toHaveValue("OCR merged narrative");
+    expect(screen.getByText(/did not report confidence/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Analyze case/i }));
+
+    expect(handleSubmit).toHaveBeenCalledWith({
+      title: undefined,
+      description: "OCR merged narrative",
+      documentSources: [
+        expect.objectContaining({
+          document_id: "DOC-OCR-1",
+          confidence_status: "not_reported",
+          verification_status: "machine_read",
+        }),
+      ],
+    });
   });
 
   it("renders active case intake record and navigation when case already has evidence, without rendering additional submission form", async () => {

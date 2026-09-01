@@ -1,5 +1,12 @@
 """Gap Analysis and Follow-Up / Clarification Policy Package."""
 
+from app.services.followup.claim_transport import (
+    GAP_ANALYSIS_CLAIM_LIMIT,
+    GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS,
+    GapAnalysisClaim,
+    build_gap_analysis_claim_transport,
+)
+
 from app.services.followup.gap_analysis import (
     AnthropicGapAnalysis,
     GAP_ANALYSIS_PROMPT_VERSION,
@@ -55,10 +62,13 @@ __all__ = [
     "FollowUpReasonCode",
     "FollowUpResolution",
     "GAP_ANALYSIS_PROMPT_VERSION",
+    "GAP_ANALYSIS_CLAIM_LIMIT",
+    "GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS",
     "GAP_ANALYSIS_SCHEMA",
     "GAP_ANALYSIS_SYSTEM",
     "GAP_ANALYSIS_VERSION",
     "GapAnalysis",
+    "GapAnalysisClaim",
     "GapAnalysisResult",
     "GapAnalyzer",
     "GapItem",
@@ -67,6 +77,7 @@ __all__ = [
     "_mark_followup_rag_invoked",
     "_mark_followup_rag_invoked_metadata",
     "build_bounded_context",
+    "build_gap_analysis_claim_transport",
     "build_clarified_query",
     "evaluate_followup_outcome",
     "resolve_followup_outcome",

@@ -132,7 +132,10 @@ def test_valid_unknown_not_established_claim() -> None:
     ("field_name", "expected_code"),
     [
         ("supporting_source_message_ids", "analysis_trace_v3_support_outside_evidence"),
-        ("contradicting_source_message_ids", "analysis_trace_v3_contradiction_outside_evidence"),
+        (
+            "contradicting_source_message_ids",
+            "analysis_trace_v3_contradiction_outside_evidence",
+        ),
     ],
 )
 def test_claim_source_outside_evidence_snapshot_is_rejected(
@@ -204,10 +207,17 @@ def test_duplicate_gap_id_is_rejected() -> None:
 
 
 def test_gap_referencing_nonexistent_claim_is_rejected() -> None:
-    trace = build_trace(gaps=[analysis_gap(status="AMBIGUOUS", affected_claim_ids=["A-99"])])
+    trace = build_trace(
+        gaps=[analysis_gap(status="AMBIGUOUS", affected_claim_ids=["A-99"])]
+    )
     with pytest.raises(AnalysisTraceStructureError) as raised:
         validate_analysis_trace_v3(trace, source_message_ids={"message-1"})
     assert raised.value.code == "analysis_trace_v3_gap_unknown_claim"
+
+
+def test_duplicate_affected_claim_id_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        build_trace(gaps=[analysis_gap(affected_claim_ids=["A-01", "A-01"])])
 
 
 def test_explicitly_unknown_case_level_gap_parses_correctly() -> None:

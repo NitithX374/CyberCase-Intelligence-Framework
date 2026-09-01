@@ -7,6 +7,47 @@ export type ThreadStatus =
 
 export type ChatMessageAction = "ask" | "add_case_info";
 
+export type DocumentExtractionMethod =
+  | "native_pdf"
+  | "native_docx"
+  | "document_recognition"
+  | "hybrid";
+
+export type DocumentVerificationStatus =
+  | "native"
+  | "machine_read"
+  | "needs_review";
+
+export type DocumentConfidenceStatus =
+  | "reported"
+  | "not_reported"
+  | "not_applicable";
+
+export interface CaseNarrativeDocumentPageSpan {
+  page_number: number;
+  start_offset: number;
+  end_offset: number;
+  text_sha256: string;
+}
+
+export interface CaseNarrativeDocumentSource {
+  document_id: string;
+  filename: string;
+  extraction_method: DocumentExtractionMethod;
+  page_count: number;
+  verification_status: DocumentVerificationStatus;
+  confidence_status: DocumentConfidenceStatus;
+  minimum_confidence: number | null;
+  warnings: string[];
+  page_spans: CaseNarrativeDocumentPageSpan[];
+}
+
+export interface CaseIntakeSubmission {
+  title?: string;
+  description: string;
+  documentSources?: CaseNarrativeDocumentSource[];
+}
+
 export type RunStatus = "queued" | "running" | "completed" | "failed";
 
 export interface ChatThreadRead {
@@ -87,7 +128,7 @@ export interface ChatReportRead {
   idempotency_key: string;
   source_snapshot_hash: string;
   analysis_message_id: string;
-  retrieval_context_id: string;
+  retrieval_context_id: string | null;
   prompt_version: string;
   provider: string;
   model: string;

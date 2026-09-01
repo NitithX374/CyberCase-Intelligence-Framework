@@ -81,6 +81,12 @@ function mapSourceMessageIds(
       sourceType: presentation.sourceType,
       sourceTypeLabel: presentation.sourceTypeLabel,
       fullContent: msg.content,
+      displayContent: msg.content.length > 640
+        ? `${msg.content.slice(0, 640)}…`
+        : msg.content,
+      exactQuote: null,
+      filename: null,
+      pageNumbers: [],
     });
   }
 

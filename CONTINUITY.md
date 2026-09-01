@@ -2,41 +2,40 @@
 
 ## Snapshot
 
-- 2026-08-23 [USER] Demo uses raw user-authored initial, clarification-answer, and add-information messages as authoritative evidence; ordinary asks and all assistant/RAG text are excluded.
-- 2026-08-23 [CODE] Fresh evidence invokes RAG, asks reuse the latest completed run-bound RagContext, and `analysis_trace_v2` binds source messages, evidence hash, retrieval context, and candidate-only MITRE associations.
-- 2026-08-23 [CODE] Persistence is limited to chat threads/messages/runs, RagContexts, and chat reports; report generation remains deterministic and source-traceable.
-- 2026-08-23 [USER] `rag_service/**` remains outside backend architecture changes.
-- 2026-08-24 [CODE] Intake, Overview, Technical Context, Report Workspace, provenance, PDF viewing, safe error presentation, report idempotency, and module consolidation were completed and verified.
-- 2026-08-24 [CODE] Frontend evidence semantics are centralized in `frontend/src/lib/case-evidence.ts`; standalone Investigation Issues remains removed.
-- 2026-08-25 [USER] Goal: add a focused, deletable document-ingestion prototype for PDF, DOCX, PNG, and JPEG without persistence, analysis, MITRE, or RAG changes.
-- 2026-08-25 [CODE] Added `/api/v1/document-ingestion/preview`, provider-neutral page/block contracts, deterministic content-hash document IDs, and page-traceable block IDs.
-- 2026-08-25 [CODE] DOCX and usable PDF pages use native extraction; weak PDF pages and images use the configured Typhoon recognizer; mixed PDFs are supported per page.
-- 2026-08-25 [TOOL] Focused ingestion/API tests, full backend suite, formatting, lint, and dependency checks pass; Docker build is UNCONFIRMED because Docker Desktop is not running.
-- 2026-08-25 [USER] Requested `Downloads\งานอัยการ` be copied into project `Documents` and a PDF longer than three pages be ingested with results returned.
-- 2026-08-25 [TOOL] Copied 324 files totaling 1,925,335,135 bytes to `Documents\งานอัยการ`; source/destination file counts and byte totals match.
-- 2026-08-25 [TOOL] Live-ingested four-page `ลำดับ06 เอกสารผู้กล่าวหา.pdf`; all pages used Typhoon recognition and produced 37 validated blocks / 1,127 characters in the saved JSON result.
-- 2026-08-25 [USER] Requested the root `Documents` directory be ignored by Git; `/Documents/` now excludes new dossier material while six pre-existing tracked PDFs remain tracked.
-- 2026-08-25 [TOOL] Independent visual verification of all four source pages found all 24 core numeric/transaction fields correct, but sender-name abbreviation errors on 3/4 pages, one page-3 heading error, and unreliable handwritten-annotation capture.
-- 2026-08-25 [USER] Supersedes the whole-page recognition target with a region-aware prototype: segment mixed pages, route printed regions to OCR and handwritten regions to HTR, then merge with page/region provenance; analysis, RAG, MITRE, gaps, and `rag_service/**` remain out of scope.
-- 2026-08-25 [CODE] Region-aware ingestion is implemented with Google Enterprise Document OCR line/style segmentation, Typhoon printed OCR, Google/review-required HTR, deterministic routing, crop recognition, reading-order merge, region provenance, and unified/routed comparison modes.
-- 2026-08-25 [CODE] Typhoon `<figure>` descriptions are excluded from transcription and retained only as non-authoritative generated content; handwriting and mixed regions remain review-required.
-- 2026-08-25 [TOOL] Google Document AI's current official processor matrix explicitly marks Thai-script handwriting as `Not Supported`; the implemented Google HTR selection is invalid and must not be represented as Thai HTR.
-- 2026-08-25 [TOOL] SUPERSEDES the earlier no-model finding: Hugging Face hosts Thai-handwriting checkpoints including `waritkan/thai-ocr-model` and `sivakorn-su/typhoon-ocr-7b-thai-handwriting-lora-v1`; neither is yet benchmarked on CyberCase legal documents.
-- 2026-08-25 [USER] Requested the OCR/HTR document-ingestion prototype be implemented in the current website.
-- 2026-08-26 [CODE] Intake exposes preview-only PDF/DOCX/PNG/JPEG upload with routed/unified selection; HTR is disabled directly without an env setting, handwriting is `needs_review` without transcription/provider calls, and printed OCR remains active.
-- 2026-08-26 [USER] New goal: redesign the LLM Analysis Module as a general, evidence-grounded case-review system; the first task is a read-only repository assessment and must not implement code.
-- 2026-08-26 [TOOL] Current assessment: fresh analysis and reports are hard-bound to RAG context; claims and gaps are split across `analysis_trace_v2` and follow-up metadata; the primary Overview remains cyber/MITRE-specific.
-- 2026-08-26 [CODE] Phase 1-3 is complete: Main Case Analysis now uses the domain-neutral validated `analysis_trace_v3` runtime with optional external/MITRE context while explicit v2 reading remains intact.
+- 2026-09-02 [CODE] Formal report projection now uses the explicit analysis chronology with real date/time labels, source-linked findings instead of raw narrative dumps, domain-neutral verification actions, and an optional MITRE section.
+- 2026-09-02 [TOOL] Supersedes the report runtime incident: Alembic `0002_optional_report_context` is applied, no-MITRE reports persist with null retrieval context, identical idempotent retries return the existing report, and long evidence now exports as a page-splittable PDF.
+- 2026-09-01 [CODE] Report creation no longer applies the custom source/MITRE binding validation gate; typed report construction and snapshot guards remain.
+- 2026-09-01 [CODE] Report creation now requires raw evidence plus completed General Case Summarization, while MITRE/RAG context is optional and persisted as a nullable technical augmentation.
+- 2026-09-01 [CODE] Page-aware evidence citations keep the reviewed full narrative authoritative while Overview/Chat show validated exact quotes, document pages when available, and narrative-only labels without fabricated pages.
+- 2026-09-01 [CODE] Gap Analysis prompt v4 is domain-neutral: case-specific wording replaces incident/cyber role wording, and MITRE explanation no longer affects general gap priority; MITRE trust-boundary exclusions remain.
+- 2026-09-01 [TOOL] Production LLM-prompt audit found the Main Case Analysis prompt domain-neutral with explicit anti-cyber-bias guards; one low-severity Follow-up Gap Analysis rubric still gives `MITRE explanation` material-priority weight.
+- 2026-09-01 [USER] Approved implementation of the revised UI plan; current authorization is P0 contract/trust repair only.
+- 2026-09-01 [USER] Supersedes the prior scope note: the focused frontend UI/UX redesign is authorized; APIs, backend behavior, and `rag_service/**` remain unchanged.
+- 2026-09-01 [CODE] Overview now reads validated canonical v3 summaries, claims, supporting/contradicting sources, reasoning, gaps, and optional MITRE state directly; legacy markdown parsing is isolated to the v2 adapter.
+- 2026-09-01 [CODE] Synthetic chronology and “established” claims were removed; the UI now presents case summary, status-labelled findings, open questions, and conditional external cyber reference.
+- 2026-09-01 [TOOL] Frontend typecheck, lint, 92/92 tests, production build, and desktop/mobile rendered QA pass.
+- 2026-08-31 [USER] Requested reviewed OCR `merged_text` injection into the case narrative while preserving General Case Summarization as core, conditional MITRE augmentation, a single-document baseline, future `1 Case -> N Documents`, and HTR as out of scope.
+- 2026-08-31 [CODE] Intake now converts one ingestion result into an editable narrative draft and submits list-shaped document provenance/quality metadata only after the user reviews and submits the case.
+- 2026-08-31 [CODE] Raw evidence text/hash remains message-content-only; OCR confidence/warnings travel separately to Main Analysis and the conservative MITRE applicability gate.
+- 2026-08-31 [TOOL] Full regression passes: frontend 90/90 and backend 259/259 plus 2 subtests; scoped ESLint and Python compileall pass.
+- 2026-08-31 [USER] Requested every file in the four-file developer-handover set as PDF.
+- 2026-08-31 [TOOL] Four polished A4 PDFs now cover the handover narrative, exhaustive symbol index, Python generator, and TypeScript extractor; all 124 rendered pages passed structural and visual QA.
+- 2026-08-31 [USER] Requested a full senior-developer handover explaining the live architecture, file purposes, and every first-party source function for incoming developers.
+- 2026-08-31 [CODE] Developer handover now documents the current dirty `main` checkout at `58f2302`; a reproducible syntax-tree index covers runtime, tests, migrations, research, and tooling.
+- 2026-08-30 [USER] General Case Summarization remains the core behavior; clarification improves but never blocks the initial grounded summary.
+- 2026-08-30 [CODE] Phases 1-4.3 remain complete: validated canonical `case_overview` v3 traces bind current evidence, claims, one Gap Analysis result, optional RAG, and provider-constrained `A-01`..`A-64` IDs.
+- 2026-08-30 [CODE] Phase 5 stateful adaptive clarification is complete for new v3 turns and selects only from the latest validated in-memory canonical trace for the fresh evidence snapshot.
+- 2026-08-30 [CODE] Raw user content and evidence-hash semantics are unchanged; assistant questions, ASK messages, prior analysis, RAG, and MITRE remain non-authoritative.
 
 ## Done (recent)
 
-- 2026-08-25 [CODE] Completed isolated document ingestion service, preview API, Typhoon adapter, native PDF/DOCX parsing, rendering, provenance, evaluation utility, documentation, and tests.
-- 2026-08-25 [TOOL] Completed first real dossier ingestion and saved the page/block-traceable structured result under `Documents\งานอัยการ\Ingestion Results`.
-- 2026-08-25 [CODE] Added root-only `/Documents/` ignore rule; verified the copied dossier/result no longer appears in Git status.
-- 2026-08-25 [TOOL] Completed page-by-page rendered-PDF comparison against Typhoon output; temporary page renders were removed after inspection.
-- 2026-08-26 [CODE] Disabled HTR routing and removed its env/config requirement while retaining handwriting provenance, manual-review warnings, and the no-analysis/no-persistence boundary.
-- 2026-08-26 [CODE] Added v3 claim support/contradiction provenance, gaps, optional retrieval context and MITRE context, explicit v2/v3 reading, and five-domain characterization plus validator tests.
-- 2026-08-26 [CODE] Generalized Main Case Analysis, switched provider/runtime output to v3, kept gaps empty, added optional external context and trusted backend bindings, and preserved direct question-answer behavior.
+- 2026-09-02 [CODE] Reworked the report PDF into a formal three-page case-review document with a seven-row dated timeline, compact claim/source table, conditional technical context, general-case follow-up actions, and a dedicated traceability appendix.
+- 2026-09-01 [CODE] Implemented exact-quote evidence citations, validated document page spans, narrative-only source highlighting, Overview/Chat citation chips, and a responsive source inspector without an additional model call.
+- 2026-09-02 [CODE] Completed the optional-MITRE report cutover: nullable retrieval migration, stable snapshot idempotency, page-splittable evidence PDF rendering, and generic/no-RAG regression coverage.
+- 2026-09-01 [CODE] Removed residual cyber coupling from the general Gap Analysis system/user prompts, bumped the prompt version to v4, and added prompt-boundary regression assertions.
+- 2026-09-01 [CODE] Implemented revised-plan P0 plus the focused workflow-first frontend redesign: canonical v3 overview projection, honest evidence labels, grouped navigation, progressive disclosure, traceable sources, and modular sub-300-line production UI files.
+- 2026-08-31 [CODE] Completed the reviewed single-document OCR-to-case-narrative handoff, uncertainty provenance, conditional-MITRE quality context, modular workspace actions, and regression coverage without DB migration or `rag_service/**` edits.
+- 2026-08-31 [CODE] Added the senior-engineer handover narrative, exhaustive file/function index, and sub-300-line Python/TypeScript index generators under `docs/developer-handover/`.
 
 ## Decisions
 
@@ -66,47 +65,77 @@
 - D024 ACTIVE 2026-08-26 [CODE] `analysis_trace_v3` is a sibling to v2; compatibility reads each persisted version into its native model without fabricating v3 gaps, contradiction, reasoning, or other semantics.
 - D025 ACTIVE 2026-08-26 [USER] Phase 3 changes only Main Case Analysis and necessary v3 persistence compatibility; Gap/Follow-up, frontend, reports, database, OCR/HTR, Legal RAG, and `rag_service/**` remain out of scope.
 - D026 ACTIVE 2026-08-26 [CODE] The provider emits answer, summary, grounded claims, and optional MITRE candidates; the backend binds evidence hash, optional retrieval ID, empty Phase-3 gaps, and validation status before persistence.
+- D027 ACTIVE 2026-08-28 [USER] New v3 analyses use `analysis_trace_v3.gaps` as the canonical analytical gap state while legacy follow-up metadata remains operational; Main Analysis does not generate gaps and Stateful Follow-up remains deferred.
+- D028 ACTIVE 2026-08-28 [USER] Only validated `case_overview` v3 traces are canonical case state; `question_answer` traces remain response-scoped with strict local referential integrity, and unavailable/inapplicable RAG degrades to null retrieval plus empty MITRE context.
+- D029 ACTIVE 2026-08-28 [USER] `mitre_applicability_v1` is the sole pre-retrieval applicability gate: fixed Thai/English ICL, precision over recall, uncertain/invalid/provider-failed output becomes SKIP, RETRIEVE requires current authoritative source IDs plus exact attributed spans, and only admitted RAG may support MITRE associations.
+- D030 ACTIVE 2026-08-29 [CODE] Provider-facing Main v3 claim IDs and MITRE claim references use the supported finite enum `A-01` through `A-64`; local validation remains fail-closed, and only validated `case_overview` traces may supply canonical gaps.
+- D031 ACTIVE 2026-08-30 [USER] Phase 5 uses existing message/run JSON metadata and local normalized gap-topic keys; no Case State, follow-up tables, migrations, embeddings, or additional provider stage.
+- D032 ACTIVE 2026-08-30 [CODE] Direct clarification is one attempt per normalized topic per chain; a fresh canonical trace may remove the old gap, preserve it exhausted, or expose a genuinely distinct next gap.
+- D033 ACTIVE 2026-08-31 [USER] Current intake supports one reviewed document-derived narrative, but the handoff contract is list-shaped for future `1 Case -> N Documents`; extraction never auto-persists evidence, OCR quality is non-evidence context, MITRE remains conditional, and HTR stays disabled.
+- D034 ACTIVE 2026-09-01 [CODE] Overview v3 uses structured trace fields only; v2 markdown parsing is isolated, reported material is never labelled confirmed, claim order is not chronology, and MITRE renders only for applicable/unavailable technical-context states.
+- D035 ACTIVE 2026-09-01 [CODE] Frontend review flow prioritizes Intake, Overview, Materials, and Report; Chat and Technical Context remain secondary tools, and unavailable people, timeline, or procedural-status data is never synthesized.
+- D036 ACTIVE 2026-09-01 [USER] Report creation must not be blocked by the custom source/MITRE binding validator; typed report and snapshot contracts remain active.
+- D037 ACTIVE 2026-09-01 [USER] General Case Summarization is the report prerequisite; MITRE ATT&CK retrieval is conditional knowledge augmentation, not a report-generation prerequisite, and its report binding is nullable.
+- D038 ACTIVE 2026-09-01 [USER] Traceability supports plain and document-derived narratives; page labels require validated exact quote/page binding, while edited or legacy document text uses reviewed-narrative attribution without inventing a page.
+- D039 ACTIVE 2026-09-02 [CODE] Report chronology comes only from the explicit analysis timeline section; claim order is not chronology, raw narrative text is not a presentation section, and MITRE remains conditional external context.
 
 ## State (Done/Now/Next)
 
-- 2026-08-26 [CODE] Done: Implemented only Phase 3 general Main Case Analysis with optional external context, v3 output/validation, direct QA behavior, and v2/v3 persistence compatibility.
-- 2026-08-26 [TOOL] Now: Focused Phase 3 tests and the full backend suite pass; frontend/report readers remain v2-shaped and were intentionally not changed under this phase boundary.
-- 2026-08-26 [USER] Next: Stop before Phase 4 canonical Gap Assembly or Stateful Follow-up and await explicit authorization.
+- 2026-09-02 [TOOL] Done: rebuilt the backend and regenerated the live report as `output/pdf/CyberCase-Report-v1-Formal.pdf`; all three rendered pages passed visual QA and timeline/markdown/HTML content assertions.
+- 2026-09-02 [TOOL] Done: rebuilt/recreated the backend, applied `0002_optional_report_context`, verified the live nullable column and healthy API, replayed the original no-MITRE report successfully, and exported its PDF with HTTP 200.
+- 2026-09-01 [CODE] Done: Evidence pinpointing is implemented for new v3 analyses; existing analyses remain readable and use message-level source previews until regenerated with exact citations.
+- 2026-09-01 [CODE] Done: Report generation accepts generic structured claims without invoking `validate_structured_report`, and a completed general analysis can produce a report without MITRE/RAG context.
+- 2026-09-01 [TOOL] Done: Domain-neutral Gap Analysis prompt cleanup passes 57 focused general-case, gap-transport, and stateful-clarification tests plus compileall.
+- 2026-09-01 [TOOL] Done: Read-only prompt audit covered all production backend model calls, the served/legacy MITRE GraphRAG prompts, the Typhoon-generated OCR boundary, and isolated research/evaluation prompt families; no code changed.
+- 2026-09-01 [CODE] Done: P0 contract/trust repair is implemented and verified; the known v3 Overview recognition defect is closed.
+- 2026-09-01 [CODE] Superseded: P1 workflow/navigation redesign is implemented in the frontend; no backend or `rag_service/**` scope was added.
+- 2026-08-31 [CODE] Done: Reviewed OCR merged text can populate and submit the initial case narrative with bounded source-quality metadata; no Case=File model or schema migration was introduced.
+- 2026-09-01 [TOOL] Done: Final frontend TypeScript, ESLint, Vitest, and Next.js production-build checks pass; live provider-backed OCR was not invoked in this turn.
+- 2026-08-31 [USER] Next: Optionally run one real printed-document smoke through configured Typhoon credentials and evaluate OCR semantic-error impact against a human transcript.
+- 2026-08-31 [TOOL] Done: The requested four-file handover PDF export is complete and visually verified; no application behavior changed.
+- 2026-08-31 [CODE] Done: Complete developer handover suite created for the current checkout; application behavior was documented but not changed.
+- 2026-08-30 [CODE] Done: Phase 5 backend semantics and tests are implemented without Phase 6 or forbidden-scope changes.
+- 2026-08-30 [TOOL] Open: semantic identity-topic reformulation can still bypass exhaustion; this P0 frontend change does not alter backend clarification normalization.
 
 ## Working set
 
-- 2026-08-26 [CODE] `backend/app/services/case_analysis/**`
-- 2026-08-26 [CODE] `backend/app/services/workflow/outcome.py`
-- 2026-08-26 [CODE] `backend/app/services/workflow/chat_run_completion.py`
-- 2026-08-26 [CODE] `backend/tests/test_main_case_analysis.py`
-- 2026-08-26 [CODE] `backend/tests/test_general_case_analysis.py`
-- 2026-08-26 [CODE] `backend/tests/test_analysis_trace_v3.py`
-- 2026-08-26 [CODE] `backend/tests/test_analysis_trace_cross_domain.py`
-- 2026-08-26 [CODE] `backend/tests/test_structured_output.py`
-- 2026-08-26 [CODE] `backend/tests/test_chat_raw_pipeline.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/report_analysis_projection.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/report_finding_projection.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/report_view_model_builder.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/report_pdf_story.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/report_pdf_evidence_story.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/pdf_design.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/pdf_chrome.py`
+- 2026-09-02 [CODE] `backend/app/services/reports/report_view_model_text.py`
+- 2026-09-02 [CODE] `backend/tests/test_report_view_model_and_pdf.py`
+- 2026-09-02 [TOOL] `output/pdf/CyberCase-Report-v1-Formal.pdf`
 
 ## Receipts
 
-- 2026-08-25 [TOOL] `git check-ignore -v` confirms `/Documents/` ignores the ingestion result; scoped Git status shows only `.gitignore` modified and six existing Documents files remain tracked.
-- 2026-08-25 [TOOL] Visual comparison receipt: dates/times, both masked accounts, transaction IDs, amounts, and fees matched on 4/4 pages; handwritten notes were not reliably preserved.
-- 2026-08-25 [TOOL] Region-aware focused suite: 26 passed; full backend suite: 99 passed plus 2 subtests, with one pre-existing Starlette deprecation warning.
-- 2026-08-25 [TOOL] Ruff check/format, Python compileall, and scoped git diff check passed; repository-wide diff check remains blocked by an unrelated pre-existing EOF blank line in `backend/tests/test_chat_followup_policy.py`.
-- 2026-08-25 [TOOL] `google-cloud-documentai==3.15.0` and `typhoon-ocr==0.4.1` import from `env_mitre`; `pip check` reports no broken requirements.
-- 2026-08-25 [TOOL] Docker build remains UNCONFIRMED because the Docker Desktop Linux engine pipe is unavailable.
-- 2026-08-25 [TOOL] Official Google Document AI HTML row for Thai contains `compare-no` with `aria-label="Not Supported"` in the handwriting column; Cloud Vision's supported handwriting scripts also omit `Thai`.
-- 2026-08-25 [TOOL] Primary-source literature review found ICDAR 2019 block-level Thai archive HTR, MIWAI 2021 BEST2019 HTR, ICEAST 2020 multilingual multi-task HTR, CycleAugment 2022 historical Thai word HTR, and KMUTNB 2024 province-name HTR; public searches found papers/datasets but no author-published inference package with pretrained Thai legal-handwriting weights.
-- 2026-08-25 [TOOL] Website implementation validation: focused frontend 7/7, full frontend 87/87, and full backend 99/99 plus 2 subtests passed.
-- 2026-08-25 [TOOL] ESLint, Ruff check/format, Python compileall, scoped diff check, and Next.js 16.2.10 production build all passed.
-- 2026-08-25 [TOOL] Dependency audit found only undeclared `PIL`; after adding `Pillow>=11.0.0`, all declared backend imports load, focused ingestion tests pass 23/23, and `pip check` reports no broken requirements.
-- 2026-08-25 [TOOL] Hugging Face audit: `waritkan/thai-ocr-model` provides a 1.38 GB TrOCR checkpoint plus Thai SentencePiece tokenizer and reports CER 0.488% without a documented legal-domain benchmark; the Typhoon 7B Thai-handwriting LoRA reports CER 13.36% and exact match 45.26% on 559 CPE-OPH samples while warning of train/test text overlap.
-- 2026-08-26 [TOOL] HTR-disabled validation: focused ingestion 27/27, focused frontend 7/7, full backend 100/100 plus 2 subtests, full frontend 87/87, ESLint, Ruff, and Next.js production build passed.
-- 2026-08-26 [TOOL] HTR env-removal validation: no HTR env/config identifiers remain, focused backend/API/route tests pass 15/15, Ruff and scoped diff check pass, and `rag_service/**` remains untouched.
-- 2026-08-26 [TOOL] Assessment baseline: `main...origin/main`; dirty worktree contains existing document-ingestion/HTR work and was preserved without code changes.
-- 2026-08-26 [TOOL] Live code trace confirms raw-evidence reconstruction excludes analyst asks/assistant text, `analysis_trace_v2` persists in assistant JSONB metadata, follow-up gaps persist separately, and report generation requires a completed `RagContext`.
-- 2026-08-26 [TOOL] Phase 1-2 focused suite passes 25/25; full backend suite passes 123/123 plus 2 subtests; Python compileall and scoped diff checks pass.
-- 2026-08-26 [TOOL] Repository-wide diff check remains blocked only by the pre-existing trailing blank line in dirty `backend/tests/test_chat_followup_policy.py`; no new scoped whitespace errors exist.
-- 2026-08-26 [TOOL] Phase 3 focused suite passes 57/57; full backend suite passes 147/147 plus 2 subtests; Python compileall and scoped diff/whitespace checks pass.
-- 2026-08-26 [TOOL] Scope audit confirms no Phase 3 edits under `rag_service/**`, frontend, reports, follow-up, or Alembic; their existing dirty worktree changes were preserved.
+- 2026-09-02 [TOOL] Formal-report validation passes: 280 backend tests plus 2 subtests, focused report tests 5/5, backend image rebuild/recreate, health and live PDF HTTP 200, seven expected timeline dates, no rendered Markdown headings or raw HTML, all touched production files below 300 lines, and three-page full-resolution visual QA.
+- 2026-09-02 [TOOL] Report repair verified after final image recreation: Alembic head `0002_optional_report_context`, health OK, original idempotent no-MITRE report `596d67b7-c5ed-4cd7-aa61-5e144882116a` completed/validated with null retrieval context, PDF HTTP 200 with `%PDF` signature and 75,707 bytes; full backend passes 280 tests plus 2 subtests.
+- 2026-09-02 [TOOL] First migration attempt safely rolled back when the 38-character revision exceeded Alembic's `VARCHAR(32)`; revision was shortened to 28 characters and a regression assertion now enforces the limit.
+- 2026-09-01 [TOOL] Evidence pinpointing validation passes: backend 278 tests plus 2 subtests, frontend 95 tests, TypeScript, ESLint, production build, scoped diff check, sub-300-line production files, desktop/mobile visual QA, and no browser console errors; `rag_service/**` is unchanged.
+- 2026-09-01 [TOOL] Report generation regression: 7 focused report tests pass in `env_mitre`; targeted diff check passes; custom validation no longer runs during generation.
+- 2026-09-01 [TOOL] Optional-RAG report validation: 14 focused backend report/schema/migration tests pass, 267 other backend tests pass when excluding the unrelated dirty canonical-analysis fixture, 9 report frontend tests pass, ESLint passes, Alembic head is `0002_optional_report_retrieval_context`, and no `rag_service/**` files changed; full-suite failures remain outside this change in dirty intake/overview fixtures and that canonical fixture.
+- 2026-09-01 [TOOL] Prompt cleanup validation: 57/57 focused backend tests pass, follow-up compileall passes, scoped diff whitespace check passes, all touched files remain below 300 lines, and `rag_service/**` is unchanged.
+- 2026-09-01 [TOOL] AUDIT BASELINE, superseded for Follow-up by prompt v4: Main Analysis forbids cyber assumptions and MITRE retrieval is gated; the audit found cyber role/priority wording in Gap Analysis, while RAG prompts remain intentionally MITRE-only and direct RAG `/query` has no independent applicability gate.
+- 2026-09-01 [TOOL] P0 validation passes: `tsc --noEmit`, ESLint, Vitest 24 files/92 tests, and Next.js production build.
+- 2026-09-01 [TOOL] Desktop 1440x900 and mobile 390x844 rendered QA passed on the live mounted frontend; source-evidence popover was also verified on mobile.
+- 2026-09-01 [TOOL] Scoped P0 diff whitespace check passes and `rag_service/**` remains untouched; repository-wide diff check still reports the pre-existing blank EOF in `backend/tests/test_general_case_analysis.py`.
+- 2026-09-01 [TOOL] All 17 existing source paths named by the revised P0/P1 working set resolve; the one unresolved path is explicitly marked as the proposed new `ClarificationActionCard.tsx`.
+- 2026-08-31 [TOOL] OCR narrative regression covers editable merged-text injection, missing-confidence disclosure, one-document request validation, provenance separation from evidence text/hash, prompt transport, MITRE gate transport, and idempotency compatibility.
+- 2026-08-31 [TOOL] Frontend full Vitest passes 23 files/90 tests; backend full Pytest passes 259 tests plus 2 subtests with one Starlette deprecation warning; scoped ESLint and compileall pass.
+- 2026-08-31 [TOOL] `tsc --noEmit` remains red only on existing stale test fixtures (`ChatPanelFollowUp` and `ChatWorkspaceIntake`); Ruff and Black are not installed in the active backend environment.
+- 2026-08-31 [TOOL] PDF outputs contain 17, 99, 5, and 3 A4 pages respectively; Pypdf found no empty pages and pdfplumber found no rendered characters outside page bounds.
+- 2026-08-31 [TOOL] Poppler rendered all 124 pages to PNG; contact sheets plus full-resolution cover, body, table, code, middle, and final-page inspection found no clipping, overlap, black boxes, or unreadable layout.
+- 2026-08-31 [TOOL] Generated index covers 436 first-party source files and 2,305 named Python/TypeScript/JavaScript symbols; all 436 file links resolve.
+- 2026-08-31 [TOOL] Handover generator compiles, TypeScript extractor passes `node --check`, docs contain no trailing whitespace, and live backend OpenAPI confirms all documented `/api/v1` routes including the isolated ingestion preview.
+- 2026-09-01 [TOOL] Focused UI redesign rendered QA passes at desktop and mobile; Overview pulse, grouped navigation, source popover, evidence-to-Chat, Intake, Chat, Report, and Technical Context were exercised.
+- 2026-09-01 [TOOL] Final frontend validation passes: TypeScript, ESLint, Vitest 24 files/93 tests, Next.js production build, rendered DOM internal-field audit, trailing-whitespace audit, and sub-300-line production UI audit; `rag_service/**` is unchanged.
+- 2026-08-30 [TOOL] Phase 5/canonical/gate regression and synthetic scenarios pass; optional RAG remains independent of clarification selection and can fail closed.
+- 2026-08-30 [TOOL] Live threads A `42fecb16-f936-4f05-9d31-abd8db5e7e06`, B `3556f16d-ae81-4bda-b666-8e634aadbd4a`, and D `46712cc3-b065-4e71-bad8-773c3507dea7` persist exact short answers plus structural linkage, mark answered topics EXPLICITLY_UNKNOWN/non-askable, and select a different next gap.
+- 2026-08-30 [TOOL] Live thread C `17c69176-a8d2-43af-8a03-230ba8e23adc` persists the new identity claim but immediately asks an equivalent reformulation; current bounded aliases do not unify “ตัวตนและลักษณะ” with “รายละเอียดและหลักเกณฑ์การยืนยันตัวบุคคล”.
 
 
 

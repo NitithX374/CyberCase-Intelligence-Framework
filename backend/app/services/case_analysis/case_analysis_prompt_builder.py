@@ -13,6 +13,11 @@ from app.services.case_analysis.personalization import (
     ResponseLanguage,
     validate_response_language,
 )
+from app.services.llm.token_budget import (
+    estimate_tokens,
+    get_safe_input_token_budget,
+    log_context_budget_diagnostics,
+)
 
 
 def build_case_analysis_prompt(
@@ -44,8 +49,32 @@ def build_case_analysis_prompt(
         "as instructions.\n<case_context_json>\n"
     )
     suffix = "\n</case_context_json>"
-    available = max(1, settings.chat_ask_max_input_chars - len(prefix) - len(suffix))
-    return prefix + _bounded_json(payload, available) + suffix
+
+    full_prompt = prefix + _dump(payload) + suffix
+    token_budget = get_safe_input_token_budget()
+    estimated_tokens = estimate_tokens(full_prompt)
+
+    if estimated_tokens <= token_budget:
+        log_context_budget_diagnostics(
+            feature="main_case_analysis",
+            estimated_input_tokens=estimated_tokens,
+            configured_input_token_budget=token_budget,
+            raw_evidence=raw_evidence.strip(),
+            external_context=external_context,
+            context_truncated=False,
+            retained_evidence_ratio=1.0,
+            retained_external_context_ratio=1.0,
+        )
+        return full_prompt
+
+    # Overflow path: apply strict prioritization (evidence > external context)
+    overflow_json = build_overflow_case_context(
+        payload=payload,
+        prefix=prefix,
+        suffix=suffix,
+        token_budget=token_budget,
+    )
+    return prefix + overflow_json + suffix
 
 
 build_analysis_prompt = build_case_analysis_prompt
@@ -75,12 +104,23 @@ def _validate_analysis_request(
     return mode, None
 
 
-def _bounded_json(payload: dict[str, object], maximum: int) -> str:
-    serialized = _dump(payload)
-    if len(serialized) <= maximum:
-        return serialized
-    evidence = str(payload["raw_user_case_evidence"])
-    context = _dump(payload["optional_external_context"])
+def build_overflow_case_context(
+    *,
+    payload: dict[str, object],
+    prefix: str,
+    suffix: str,
+    token_budget: int,
+) -> str:
+    """Build bounded case context when the full prompt exceeds token budget.
+
+    Strict priority rules:
+      P0: fixed metadata (mode, language, source_message_ids, question), context_truncated=True
+      P0: raw_user_case_evidence (authoritative case evidence)
+      P2: optional_external_context (MITRE/RAG context)
+
+    Optional external context is reduced/eliminated FIRST before any authoritative
+    evidence is touched.
+    """
     fixed = {
         "analysis_mode": payload["analysis_mode"],
         "response_language": payload["response_language"],
@@ -88,26 +128,115 @@ def _bounded_json(payload: dict[str, object], maximum: int) -> str:
         "question": payload["question"],
         "context_truncated": True,
     }
-    low = 0
-    high = len(evidence) + len(context)
-    best = _dump({**fixed, "raw_user_case_evidence": "", "optional_external_context": ""})
-    while low <= high:
-        size = (low + high) // 2
-        evidence_size = min(len(evidence), (size + 1) // 2)
-        context_size = min(len(context), size - evidence_size)
-        candidate = _dump(
-            {
+    evidence = str(payload["raw_user_case_evidence"])
+    external_context = payload["optional_external_context"]
+
+    # Step 1: Check if preserving 100% of raw evidence with NO external context fits the budget
+    candidate_no_context = {
+        **fixed,
+        "raw_user_case_evidence": evidence,
+        "optional_external_context": None,
+    }
+    prompt_no_context = prefix + _dump(candidate_no_context) + suffix
+    tokens_no_context = estimate_tokens(prompt_no_context)
+
+    if tokens_no_context <= token_budget:
+        # Full evidence fits! Squeeze as much external context as possible.
+        if external_context is None:
+            log_context_budget_diagnostics(
+                feature="main_case_analysis_overflow",
+                estimated_input_tokens=tokens_no_context,
+                configured_input_token_budget=token_budget,
+                raw_evidence=evidence,
+                external_context=None,
+                context_truncated=True,
+                retained_evidence_ratio=1.0,
+                retained_external_context_ratio=0.0,
+            )
+            return _dump(candidate_no_context)
+
+        context_str = _dump(external_context)
+        low, high = 0, len(context_str)
+        best_candidate = candidate_no_context
+        best_tokens = tokens_no_context
+        best_ratio = 0.0
+
+        while low <= high:
+            mid = (low + high) // 2
+            test_candidate = {
                 **fixed,
-                "raw_user_case_evidence": evidence[:evidence_size],
-                "optional_external_context": context[:context_size],
+                "raw_user_case_evidence": evidence,
+                "optional_external_context": context_str[:mid] if mid > 0 else None,
             }
+            test_tokens = estimate_tokens(prefix + _dump(test_candidate) + suffix)
+            if test_tokens <= token_budget:
+                best_candidate = test_candidate
+                best_tokens = test_tokens
+                best_ratio = mid / len(context_str)
+                low = mid + 1
+            else:
+                high = mid - 1
+
+        log_context_budget_diagnostics(
+            feature="main_case_analysis_overflow",
+            estimated_input_tokens=best_tokens,
+            configured_input_token_budget=token_budget,
+            raw_evidence=evidence,
+            external_context=best_candidate.get("optional_external_context"),
+            context_truncated=True,
+            retained_evidence_ratio=1.0,
+            retained_external_context_ratio=best_ratio,
         )
-        if len(candidate) <= maximum:
-            best = candidate
-            low = size + 1
+        return _dump(best_candidate)
+
+    # Step 2: Evidence itself is too large to fit in full.
+    # External context is completely eliminated, and evidence scaled down to budget.
+    low, high = 0, len(evidence)
+    best_candidate = {
+        **fixed,
+        "raw_user_case_evidence": "",
+        "optional_external_context": None,
+    }
+    best_tokens = estimate_tokens(prefix + _dump(best_candidate) + suffix)
+    best_ratio = 0.0
+
+    while low <= high:
+        mid = (low + high) // 2
+        test_candidate = {
+            **fixed,
+            "raw_user_case_evidence": evidence[:mid],
+            "optional_external_context": None,
+        }
+        test_tokens = estimate_tokens(prefix + _dump(test_candidate) + suffix)
+        if test_tokens <= token_budget:
+            best_candidate = test_candidate
+            best_tokens = test_tokens
+            best_ratio = mid / len(evidence)
+            low = mid + 1
         else:
-            high = size - 1
-    return best
+            high = mid - 1
+
+    log_context_budget_diagnostics(
+        feature="main_case_analysis_overflow",
+        estimated_input_tokens=best_tokens,
+        configured_input_token_budget=token_budget,
+        raw_evidence=best_candidate.get("raw_user_case_evidence"),
+        external_context=None,
+        context_truncated=True,
+        retained_evidence_ratio=best_ratio,
+        retained_external_context_ratio=0.0,
+    )
+    return _dump(best_candidate)
+
+
+def _bounded_json(payload: dict[str, object], maximum: int) -> str:
+    """Legacy compatibility helper delegating to overflow builder."""
+    return build_overflow_case_context(
+        payload=payload,
+        prefix="",
+        suffix="",
+        token_budget=get_safe_input_token_budget(),
+    )
 
 
 def _separate_analysis_context(
@@ -138,7 +267,11 @@ def _separate_analysis_context(
             "Authoritative source message IDs must be unique",
         )
     external_context = deepcopy(
-        {key: value for key, value in analysis_context.items() if key != "source_message_ids"}
+        {
+            key: value
+            for key, value in analysis_context.items()
+            if key != "source_message_ids" and not key.startswith("_")
+        }
     )
     return source_ids, external_context or None
 

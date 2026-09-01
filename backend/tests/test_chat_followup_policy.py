@@ -1,8 +1,6 @@
 import asyncio
 from uuid import uuid4
 
-import pytest
-
 from app.services.followup.decision import evaluate_followup_outcome
 from app.services.followup.schemas import (
     FollowUpDecision,
@@ -43,26 +41,65 @@ class Policy:
 
 
 def test_followup_consumes_raw_evidence_without_case_state() -> None:
-    result = asyncio.run(evaluate_followup_outcome(
-        original_user_content="Initial",
-        clarification_exchanges=(),
-        followup_root_ordinal=1,
-        source_run_id=uuid4(),
-        raw_evidence="raw evidence",
-        analysis_answer="analysis",
-        analysis_context={"mitre_table": []},
-        gap_analyzer=Analyzer(),
-        policy=Policy(),
-    ))
+    result = asyncio.run(
+        evaluate_followup_outcome(
+            original_user_content="Initial",
+            clarification_exchanges=(),
+            followup_root_ordinal=1,
+            source_run_id=uuid4(),
+            raw_evidence="raw evidence",
+            analysis_answer="analysis",
+            analysis_context={"mitre_table": []},
+            gap_analyzer=Analyzer(),
+            policy=Policy(),
+        )
+    )
     assert result.outcome is not None
     assert result.outcome.thread_status == "awaiting_followup"
     assert result.outcome.content == "Which account was affected?"
+    gap_trace = result.outcome.metadata_json["chat_followup"]["gap_analysis"]
+    assert gap_trace["status"] == "completed"
+    assert gap_trace["gaps"] == [
+        {
+            "topic": "affected account",
+            "status": "NOT_PROVIDED",
+            "description": "The affected account is missing",
+            "affects": "scope",
+            "reason": "It defines the target",
+            "priority": "high",
+            "askable": True,
+        }
+    ]
+
+
+def test_gap_analysis_contract_uses_free_text_affects_and_preserves_unknown() -> None:
+    gap = GapItem.model_validate(
+        {
+            "topic": "incident time",
+            "status": "EXPLICITLY_UNKNOWN",
+            "description": "The investigator explicitly does not know the time.",
+            "affects": "the current event sequence",
+            "reason": "Timing constrains the sequence analysis.",
+            "priority": "medium",
+            "askable": False,
+        }
+    )
+
+    assert gap.model_dump(mode="json") == {
+        "topic": "incident time",
+        "status": "EXPLICITLY_UNKNOWN",
+        "description": "The investigator explicitly does not know the time.",
+        "affects": "the current event sequence",
+        "reason": "Timing constrains the sequence analysis.",
+        "priority": "medium",
+        "askable": False,
+    }
 
 
 def test_extract_llm_json_markdown_fences() -> None:
     from app.services.followup.helpers import _extract_llm_json
 
-    raw = "```json\n{\n  \"gaps\": [\n    {\n      \"topic\": \"Initial Vector\",\n      \"status\": \"not_provided\",\n      \"description\": \"Vector not clear\",\n      \"affects\": \"scope\",\n      \"reason\": \"needed\",\n      \"priority\": \"HIGH\",\n      \"askable\": true\n    }\n  ]\n}\n```"
+    raw = '```json\n{\n  "gaps": [\n    {\n      "topic": "Initial Vector",\n      "status": "not_provided",\n      "description": "Vector not clear",\n      "affects": "scope",\n      "reason": "needed",\n      "priority": "HIGH",\n      "askable": true\n    }\n  ]\n}\n```'
     parsed = _extract_llm_json(raw)
     assert "gaps" in parsed
     assert len(parsed["gaps"]) == 1
@@ -75,7 +112,7 @@ def test_extract_llm_json_markdown_fences() -> None:
 def test_extract_llm_json_surrounding_text() -> None:
     from app.services.followup.helpers import _extract_llm_json
 
-    raw = "Here is the gap analysis:\n\n```json\n{\"gaps\": []}\n```\nHope this helps!"
+    raw = 'Here is the gap analysis:\n\n```json\n{"gaps": []}\n```\nHope this helps!'
     parsed = _extract_llm_json(raw)
     assert parsed == {"gaps": []}
 
@@ -87,47 +124,52 @@ def test_extract_llm_text_and_thinking_blocks() -> None:
     anthropic_payload = {
         "content": [
             {"type": "thinking", "thinking": "Let me analyze the case..."},
-            {"type": "text", "text": "{\"gaps\": []}"},
+            {"type": "text", "text": '{"gaps": []}'},
         ]
     }
-    assert _extract_llm_text(anthropic_payload) == "{\"gaps\": []}"
+    assert _extract_llm_text(anthropic_payload) == '{"gaps": []}'
 
     # OpenRouter choices payload
     openrouter_payload = {
-        "choices": [
-            {"message": {"content": "{\"decision\": \"proceed\", \"question\": \"\"}"}}
-        ]
+        "choices": [{"message": {"content": '{"decision": "proceed", "question": ""}'}}]
     }
-    assert _extract_llm_text(openrouter_payload) == "{\"decision\": \"proceed\", \"question\": \"\"}"
+    assert (
+        _extract_llm_text(openrouter_payload)
+        == '{"decision": "proceed", "question": ""}'
+    )
 
     # Direct output_text payload
-    output_text_payload = {"output_text": "{\"decision\": \"proceed\"}"}
-    assert _extract_llm_text(output_text_payload) == "{\"decision\": \"proceed\"}"
+    output_text_payload = {"output_text": '{"decision": "proceed"}'}
+    assert _extract_llm_text(output_text_payload) == '{"decision": "proceed"}'
 
 
 def test_followup_schemas_lenient_coercion() -> None:
     # GapItem normalizes status and priority and ignores extra fields
-    item = GapItem.model_validate({
-        "topic": "attacker IP",
-        "status": "missing",
-        "description": "IP is unknown",
-        "affects": "attribution",
-        "reason": "needed",
-        "priority": "critical",
-        "askable": "true",
-        "extra_field": "should_be_ignored",
-    })
+    item = GapItem.model_validate(
+        {
+            "topic": "attacker IP",
+            "status": "missing",
+            "description": "IP is unknown",
+            "affects": "attribution",
+            "reason": "needed",
+            "priority": "critical",
+            "askable": "true",
+            "extra_field": "should_be_ignored",
+        }
+    )
     assert item.status == "NOT_PROVIDED"
     assert item.priority == "high"
     assert item.askable is True
 
     # FollowUpDecision normalizes proceed with whitespace/non-null empty fields
-    decision = FollowUpDecision.model_validate({
-        "decision": "proceed",
-        "selected_gap": "None",
-        "question": "",
-        "extra_meta": 123,
-    })
+    decision = FollowUpDecision.model_validate(
+        {
+            "decision": "proceed",
+            "selected_gap": "None",
+            "question": "",
+            "extra_meta": 123,
+        }
+    )
     assert decision.decision == "proceed"
     assert decision.selected_gap is None
     assert decision.question == ""
@@ -201,8 +243,26 @@ def test_answer_indicates_unavailable_thai_and_english() -> None:
     assert answer_indicates_unavailable("เกิดเหตุเมื่อวาน เวลา 14.00") is False
 
 
-def test_evaluate_followup_stops_on_unavailable_answer() -> None:
+def test_evaluate_followup_proceeds_when_only_gap_is_explicitly_unknown() -> None:
     from app.services.followup.schemas import ClarificationExchange
+
+    class UnknownAnalyzer:
+        async def analyze(self, **kwargs):
+            return GapAnalysisResult(
+                analysis=GapAnalysis(
+                    gaps=[
+                        GapItem(
+                            topic="incident time",
+                            status="EXPLICITLY_UNKNOWN",
+                            description="The investigator does not know the time.",
+                            affects="A-01 — current event sequence",
+                            reason="The timing cannot currently be established.",
+                            priority="high",
+                            askable=True,
+                        )
+                    ]
+                )
+            )
 
     resolution = asyncio.run(
         evaluate_followup_outcome(
@@ -218,12 +278,19 @@ def test_evaluate_followup_stops_on_unavailable_answer() -> None:
             raw_evidence="[INITIAL CASE NARRATIVE]\nระบบโดนโจมตี\n\n[ADDED CASE INFORMATION #1]\nไม่ทราบครับ",
             analysis_answer="ผลวิเคราะห์",
             analysis_context={"mitre_table": []},
-            gap_analyzer=Analyzer(),
+            gap_analyzer=UnknownAnalyzer(),
             policy=Policy(),
         )
     )
-    # When answer is unavailable, followup outcome should be None (proceed with case overview, do not ask)
     assert resolution.outcome is None
-    assert resolution.metadata_json["chat_followup"]["reason_code"] == "answer_unavailable"
-    assert resolution.metadata_json["chat_followup"]["stop_reason"] == "answer_unavailable"
-
+    assert (
+        resolution.metadata_json["chat_followup"]["reason_code"]
+        == "unresolved_gaps_recorded"
+    )
+    assert (
+        resolution.metadata_json["chat_followup"]["stop_reason"]
+        == "no_eligible_canonical_gap"
+    )
+    assert resolution.gap_analysis is not None
+    assert resolution.gap_analysis.gaps[0].status == "EXPLICITLY_UNKNOWN"
+    assert resolution.gap_analysis.gaps[0].askable is False

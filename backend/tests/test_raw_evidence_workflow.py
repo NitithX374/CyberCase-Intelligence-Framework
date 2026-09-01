@@ -25,6 +25,11 @@ def test_raw_evidence_is_chronological_and_excludes_questions() -> None:
     added = message(7, "A new log was found", "added_case_information")
     snapshot = build_raw_evidence_snapshot([added, question, initial, clarification])
     assert snapshot.source_message_ids == (initial.id, clarification.id, added.id)
+    assert [(source.message_id, source.content) for source in snapshot.sources] == [
+        (initial.id, "Initial narrative"),
+        (clarification.id, "The IP was 192.0.2.4"),
+        (added.id, "A new log was found"),
+    ]
     assert "[INITIAL CASE NARRATIVE]\nInitial narrative" in snapshot.text
     assert "[CLARIFICATION ANSWER #1]" in snapshot.text
     assert "[ADDED CASE INFORMATION #1]" in snapshot.text

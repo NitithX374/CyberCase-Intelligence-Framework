@@ -32,7 +32,9 @@ def test_rag_context_is_bound_one_to_one_to_chat_run() -> None:
 
 
 def test_report_uses_analysis_and_retrieval_bindings() -> None:
-    columns = set(Base.metadata.tables["chat_reports"].c.keys())
+    table = Base.metadata.tables["chat_reports"]
+    columns = set(table.c.keys())
     assert {"analysis_message_id", "retrieval_context_id"}.issubset(columns)
+    assert table.c["retrieval_context_id"].nullable
     assert "extraction_message_id" not in columns
     assert "extraction_version" not in columns

@@ -112,6 +112,20 @@ def build_template_report(snapshot: ReportInputSnapshot) -> StructuredReport:
         + (f": {row.reason}" if row.reason else "")
         for row in snapshot.mitre_rows
     ]
+    mapping_rationale_items = [
+        f"{row.technique_id}: {row.reason or 'ข้อสันนิษฐานเชิงวิเคราะห์จากฐานข้อมูล MITRE ATT&CK'}"
+        for row in snapshot.mitre_rows
+    ]
+    if snapshot.retrieval_context_id is None:
+        mitre_items = [
+            "ไม่มีการเรียกใช้ MITRE ATT&CK เนื่องจากไม่พบบริบทด้าน Technical/Cybersecurity ที่เกี่ยวข้อง"
+        ]
+        mapping_rationale_items = [
+            "MITRE ATT&CK เป็น knowledge augmentation แบบมีเงื่อนไข และไม่ได้ใช้กับกรณีนี้"
+        ]
+    elif not mitre_items:
+        mitre_items = ["ไม่พบรายการเทคนิค MITRE ATT&CK ที่ยอมรับเข้าสู่รายงาน"]
+        mapping_rationale_items = ["ไม่พบการเชื่อมโยง MITRE ATT&CK ที่ยอมรับเข้าสู่รายงาน"]
     unresolved = snapshot.unresolved_issues or [
         "ไม่พบข้อขัดแย้งหรือประเด็นขาดหายที่ตรวจพบในสแนปช็อตนี้"
     ]
@@ -131,15 +145,12 @@ def build_template_report(snapshot: ReportInputSnapshot) -> StructuredReport:
         ReportSection(
             section_id="mitre_attack_mapping",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["mitre_attack_mapping"],
-            items=mitre_items or ["ไม่มีรายการเทคนิค MITRE ATT&CK ที่ตรวจพบ"],
+            items=mitre_items,
         ),
         ReportSection(
             section_id="mapping_rationale",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["mapping_rationale"],
-            items=[
-                f"{row.technique_id}: {row.reason or 'ข้อสันนิษฐานเชิงวิเคราะห์จากฐานข้อมูล MITRE ATT&CK'}"
-                for row in snapshot.mitre_rows
-            ] or ["ไม่มีเหตุผลการเชื่อมโยง"],
+            items=mapping_rationale_items,
         ),
         ReportSection(
             section_id="evidence_to_examine",
@@ -159,7 +170,7 @@ def build_template_report(snapshot: ReportInputSnapshot) -> StructuredReport:
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["system_limitations"],
             items=[
                 "รายงานนี้เป็นรายงานสรุปผลการวิเคราะห์เบื้องต้น (Provisional / Unverified)",
-                "ข้อมูลเหตุการณ์อ้างอิงจากข้อความที่ผู้ใช้ส่งเข้าสู่ระบบ การวิเคราะห์และข้อมูล MITRE ATT&CK เป็นการอนุมานทางเทคนิคภายนอก ไม่ใช่พยานหลักฐานยืนยันว่าเหตุการณ์เกิดขึ้นจริง",
+                "ข้อมูลเหตุการณ์อ้างอิงจากข้อความที่ผู้ใช้ส่งเข้าสู่ระบบ และ MITRE ATT&CK หากมีการเรียกใช้ เป็นการอนุมานทางเทคนิคภายนอก ไม่ใช่พยานหลักฐานยืนยันว่าเหตุการณ์เกิดขึ้นจริง",
                 f"Evidence snapshot SHA-256: {snapshot.evidence_sha256}",
             ],
         ),

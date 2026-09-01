@@ -40,12 +40,13 @@ def header_meta_table(
     ]
     table = Table(data, colWidths=(35 * mm, width - 35 * mm))
     table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), PANEL),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING", (0, 0), (-1, -1), 1.5 * mm),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5 * mm),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("LINEBELOW", (0, 0), (-1, -1), 0.4, RULE),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2 * mm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+        ("GRID", (0, 0), (-1, -1), 0.4, RULE),
     ]))
     return table
 
@@ -83,9 +84,10 @@ def draw_page_chrome(
     canvas.line(document.leftMargin, 12 * mm, PAGE_WIDTH - document.rightMargin, 12 * mm)
     canvas.setFont(bold, 7)
     canvas.setFillColor(MUTED)
-    canvas.drawString(document.leftMargin, PAGE_HEIGHT - 10 * mm, "CYBERCASE INTELLIGENCE FRAMEWORK")
+    canvas.drawString(document.leftMargin, PAGE_HEIGHT - 10 * mm, "CYBERCASE | CASE REVIEW")
     canvas.drawRightString(PAGE_WIDTH - document.rightMargin, PAGE_HEIGHT - 10 * mm, plain_text(i18n["running_header"]))
     canvas.setFont(regular, 6.5)
-    canvas.drawString(document.leftMargin, 8 * mm, f"Report ID: {report_id}")
+    report_id_label = "เลขที่รายงาน" if view_model.language == "th" else "Report ID"
+    canvas.drawString(document.leftMargin, 8 * mm, f"{plain_text(report_id_label)}: {report_id}")
     canvas.drawRightString(PAGE_WIDTH - document.rightMargin, 8 * mm, f"{plain_text(i18n['page_label'])} {document.page}")
     canvas.restoreState()

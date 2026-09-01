@@ -3,6 +3,7 @@ import axios from "axios";
 import type {
   ChatMessageAccepted,
   ChatMessageAction,
+  CaseNarrativeDocumentSource,
   ChatReportRead,
   ChatRun,
   ChatThreadDetail,
@@ -93,6 +94,7 @@ export const createChatMessage = async (
   idempotencyKey: string,
   signal?: AbortSignal,
   action?: ChatMessageAction,
+  documentSources?: CaseNarrativeDocumentSource[],
 ): Promise<ChatMessageAccepted> => {
   const response = await axios.post<ChatMessageAccepted>(
     `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/messages`,
@@ -100,6 +102,9 @@ export const createChatMessage = async (
       content,
       idempotency_key: idempotencyKey,
       ...(action ? { action } : {}),
+      ...(documentSources?.length
+        ? { document_sources: documentSources }
+        : {}),
     },
     { signal },
   );

@@ -114,7 +114,7 @@ class ChatReportRead(BaseModel):
     idempotency_key: str
     source_snapshot_hash: str
     analysis_message_id: UUID
-    retrieval_context_id: str
+    retrieval_context_id: str | None
     prompt_version: str
     provider: str
     model: str

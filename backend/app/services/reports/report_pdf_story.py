@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import HRFlowable, KeepTogether, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import HRFlowable, KeepTogether, PageBreak, Paragraph, Spacer, Table, TableStyle
 
 from app.schemas.reports import ChatReportRead
 from app.services.reports.pdf_chrome import header_meta_table, table_style
@@ -13,6 +13,7 @@ from app.services.reports.pdf_design import (
     RULE,
     paragraph_text,
 )
+from app.services.reports.report_pdf_evidence_story import build_evidence_story
 from app.services.reports.report_view_model_contracts import ReportViewModel
 
 
@@ -36,7 +37,7 @@ def build_formal_report_story(
     ]
     story.extend(_summary_story(view_model, styles))
     story.extend(_timeline_story(view_model, styles))
-    story.extend(_evidence_story(view_model, styles, content_width))
+    story.extend(build_evidence_story(view_model, styles))
     story.extend(_mitre_story(view_model, styles, content_width))
     story.extend(_gap_story(view_model, styles))
     story.extend(_next_steps_story(view_model, styles))
@@ -92,76 +93,9 @@ def _timeline_story(
             Paragraph(event_text, styles["table_cell"]),
             Paragraph(paragraph_text(row.source_evidence), styles["table_cell_small"]),
         ])
-    table = Table(table_data, colWidths=(12 * mm, 26 * mm, 92 * mm, 48 * mm), repeatRows=1)
+    table = Table(table_data, colWidths=(10 * mm, 39 * mm, 91 * mm, 38 * mm), repeatRows=1)
     table.setStyle(table_style())
     story.append(table)
-    story.append(Spacer(1, 4 * mm))
-    return story
-
-
-def _evidence_story(
-    view_model: ReportViewModel,
-    styles: dict[str, ParagraphStyle],
-    content_width: float,
-) -> list[object]:
-    i18n = view_model.i18n
-    story: list[object] = [
-        Paragraph(paragraph_text(i18n.get("sec_3", i18n["sec_5_3"])), styles["section_heading"]),
-        Spacer(1, 2 * mm),
-        Paragraph(f"<b>{paragraph_text(i18n['sub_evidence_reg'])}</b>", styles["subheading"]),
-        Spacer(1, 2 * mm),
-    ]
-    if view_model.evidence_rows:
-        for evidence in view_model.evidence_rows:
-            card_content = [
-                [
-                    Paragraph(
-                        f"<b>{paragraph_text(evidence.title)}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
-                        f"<font color=\"#4B5563\" size=\"7.5\">{paragraph_text(evidence.artifact_type)} ({paragraph_text(evidence.source_type)})</font>",
-                        styles["table_header"],
-                    )
-                ],
-                [
-                    Paragraph(paragraph_text(evidence.description), styles["body"])
-                ],
-            ]
-            card_table = Table(card_content, colWidths=[content_width])
-            card_table.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), PANEL),
-                ("TOPPADDING", (0, 0), (-1, 0), 1.5 * mm),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 1.5 * mm),
-                ("LEFTPADDING", (0, 0), (-1, -1), 2.5 * mm),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 2.5 * mm),
-                ("TOPPADDING", (0, 1), (-1, 1), 2.5 * mm),
-                ("BOTTOMPADDING", (0, 1), (-1, 1), 2.5 * mm),
-                ("BOX", (0, 0), (-1, -1), 0.5, RULE),
-                ("LINEBELOW", (0, 0), (-1, 0), 0.5, RULE),
-            ]))
-            story.append(KeepTogether([card_table, Spacer(1, 2.5 * mm)]))
-    else:
-        story.append(Paragraph(paragraph_text(i18n["empty_evidence"]), styles["body_muted"]))
-
-    if view_model.has_indicators:
-        story.extend([
-            Spacer(1, 2 * mm),
-            Paragraph(f"<b>{paragraph_text(i18n['sub_iocs'])}</b>", styles["subheading"]),
-            Spacer(1, 1.5 * mm),
-        ])
-        table_data = [[
-            Paragraph(f"<b>{paragraph_text(i18n['col_ioc_type'])}</b>", styles["table_header"]),
-            Paragraph(f"<b>{paragraph_text(i18n['col_ioc_value'])}</b>", styles["table_header"]),
-            Paragraph(f"<b>{paragraph_text(i18n['col_ioc_note'])}</b>", styles["table_header"]),
-        ]]
-        for indicator in view_model.indicator_rows:
-            table_data.append([
-                Paragraph(f"<b>{paragraph_text(indicator.indicator_type)}</b>", styles["table_cell_small"]),
-                Paragraph(f"<font name=\"Courier\" size=\"7.5\">{paragraph_text(indicator.value)}</font>", styles["table_cell_code"]),
-                Paragraph(paragraph_text(indicator.note), styles["table_cell_small"]),
-            ])
-        table = Table(table_data, colWidths=(36 * mm, 82 * mm, 60 * mm), repeatRows=1)
-        table.setStyle(table_style())
-        story.append(table)
-
     story.append(Spacer(1, 4 * mm))
     return story
 
@@ -234,7 +168,7 @@ def _gap_story(
         content.extend([Paragraph(issue_text, styles["body"]), Spacer(1, 1.5 * mm)])
 
     content.append(Spacer(1, 4 * mm))
-    return [KeepTogether(content)]
+    return content
 
 
 def _next_steps_story(
@@ -255,7 +189,7 @@ def _next_steps_story(
         ])
 
     content.append(Spacer(1, 4 * mm))
-    return [KeepTogether(content)]
+    return content
 
 
 def build_provenance_story(
@@ -274,6 +208,7 @@ def build_provenance_story(
         ])
     content.extend([
         Spacer(1, 4 * mm),
+        PageBreak(),
         Paragraph(f"<b>{paragraph_text(i18n['sub_provenance'])}</b>", styles["subheading"]),
         Spacer(1, 2 * mm),
     ])
@@ -284,7 +219,7 @@ def build_provenance_story(
     for row in view_model.provenance_rows:
         table_data.append([
             Paragraph(f"<b>{paragraph_text(row.label)}</b>", styles["table_cell_small"]),
-            Paragraph(f"<font name=\"Courier\" size=\"7.5\">{paragraph_text(row.value)}</font>", styles["table_cell_code"]),
+            Paragraph(paragraph_text(row.value), styles["table_cell_small"]),
         ])
     table = Table(table_data, colWidths=(52 * mm, 126 * mm), repeatRows=1)
     table.setStyle(table_style())
@@ -295,7 +230,7 @@ def build_provenance_story(
         Spacer(1, 3 * mm),
         Paragraph(paragraph_text(i18n["end_of_report"]), styles["end_note"]),
     ])
-    return [KeepTogether(content)]
+    return content
 
 
 __all__ = ["build_formal_report_story", "build_provenance_story"]

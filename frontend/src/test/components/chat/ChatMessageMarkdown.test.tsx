@@ -135,10 +135,7 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
       "bg-primary",
       "text-ivory",
     );
-    expect(boldElement.closest(".rounded-2xl")).toHaveClass(
-      "bg-surface",
-      "text-ink",
-    );
+    expect(boldElement.closest("article")).toHaveClass("border-b", "border-line");
   });
 
   it("expands the exact persisted follow-up explanation", () => {
@@ -186,6 +183,6 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
     expect(
       screen.getByText("The account used for VM access remains unresolved."),
     ).toBeInTheDocument();
-    expect(screen.getByText("high")).toBeInTheDocument();
+    expect(screen.getByText("Needs clarification")).toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { HighlightedEvidenceText } from "@/components/evidence/HighlightedEvidenceText";
 import type { SourceMessageRef } from "@/lib/case-overview";
 import { Icon } from "@/components/common/icons";
 
@@ -25,7 +26,6 @@ export function SourceEvidencePopover({
     isMobile: boolean;
   } | null>(null);
 
-  // Calculate anchored position with flip logic
   useEffect(() => {
     if (!anchorElement) return;
 
@@ -41,18 +41,14 @@ export function SourceEvidencePopover({
       const popoverHeight = Math.min(window.innerHeight * 0.65, 480);
       const margin = 12;
 
-      // Default: placement to the right of anchor
       let left = anchorRect.right + margin;
-      // If overflowing right viewport, flip to left of anchor
       if (left + popoverWidth > window.innerWidth - 16) {
         left = anchorRect.left - popoverWidth - margin;
       }
-      // If still overflowing left edge, clamp
       if (left < 16) {
         left = Math.max(16, window.innerWidth - popoverWidth - 16);
       }
 
-      // Vertical placement (align with anchor top, clamp inside viewport)
       let top = anchorRect.top - 8;
       if (top + popoverHeight > window.innerHeight - 16) {
         top = window.innerHeight - popoverHeight - 16;
@@ -74,7 +70,6 @@ export function SourceEvidencePopover({
     };
   }, [anchorElement]);
 
-  // Click outside & Escape key listeners
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -100,16 +95,15 @@ export function SourceEvidencePopover({
     };
   }, [anchorElement, onClose]);
 
-  // Focus trap / auto-focus popover on mount
   useEffect(() => {
     popoverRef.current?.focus();
-  }, []);
+    return () => anchorElement?.focus();
+  }, [anchorElement]);
 
   if (typeof document === "undefined" || !coords) return null;
 
   const content = (
     <>
-      {/* Mobile Backdrop */}
       {coords.isMobile && (
         <div
           className="fixed inset-0 z-40 bg-charcoal/30 backdrop-blur-[2px] transition-opacity"
@@ -138,7 +132,6 @@ export function SourceEvidencePopover({
             : "fixed w-[420px] max-w-[calc(100vw-32px)] max-h-[65vh]"
         } border-l-[3px] border-l-[#356C8A]`}
       >
-        {/* Header */}
         <header className="flex items-start justify-between gap-3 border-b border-line px-4 py-3 bg-surface-nested/20">
           <div className="space-y-0.5 min-w-0 flex-1">
             <span className="font-mono text-[9.5px] font-bold tracking-widest text-[#356C8A] uppercase">
@@ -158,16 +151,27 @@ export function SourceEvidencePopover({
           </button>
         </header>
 
-        {/* Message Content Body */}
         <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+          {sourceRef.pageNumbers.length > 0 && (
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+              Cited document page{sourceRef.pageNumbers.length === 1 ? "" : "s"}
+            </p>
+          )}
           <div className="rounded border border-line/60 bg-canvas/60 p-3">
             <p className="whitespace-pre-wrap text-xs leading-relaxed text-ink font-normal select-text">
-              {sourceRef.fullContent || sourceRef.excerpt || "(No text content)"}
+              <HighlightedEvidenceText
+                content={sourceRef.displayContent || sourceRef.excerpt || "(No text content)"}
+                exactQuote={sourceRef.exactQuote}
+              />
             </p>
           </div>
+          {sourceRef.exactQuote && (
+            <p className="text-[10px] leading-relaxed text-ink-muted">
+              Highlighted text is the exact passage validated against the submitted case material.
+            </p>
+          )}
         </div>
 
-        {/* Footer Actions */}
         {onNavigateToSource && (
           <footer className="flex items-center justify-between border-t border-line/70 px-4 py-2 bg-surface-nested/10 text-[11px]">
             <span className="text-ink-muted">

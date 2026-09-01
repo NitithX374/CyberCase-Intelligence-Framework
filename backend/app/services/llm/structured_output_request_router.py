@@ -11,15 +11,17 @@ StructuredOutputFeature = Literal[
     "case_analysis",
     "gap_analysis",
     "followup",
+    "mitre_applicability",
 ]
 
 _STRUCTURED_OUTPUT_FEATURES = frozenset(
-    {"case_analysis", "gap_analysis", "followup"}
+    {"case_analysis", "gap_analysis", "followup", "mitre_applicability"}
 )
 _OPENROUTER_OUTPUT_TOKEN_FLOORS: dict[StructuredOutputFeature, int] = {
-    "case_analysis": 4_096,
+    "case_analysis": 16_384,
     "gap_analysis": 4_096,
     "followup": 2_048,
+    "mitre_applicability": 1_024,
 }
 
 
@@ -42,12 +44,15 @@ def structured_output_request_options(
         return options
 
     if provider == "openrouter":
-        return {
+        options = {
             "max_tokens": max(
                 configured_max_tokens,
                 _OPENROUTER_OUTPUT_TOKEN_FLOORS[feature],
             )
         }
+        if temperature is not None:
+            options["temperature"] = temperature
+        return options
 
     raise ValueError(f"Unsupported core LLM provider: {provider!r}")
 

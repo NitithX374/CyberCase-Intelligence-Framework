@@ -2,17 +2,25 @@
 
 import { useState, type FormEvent } from "react";
 import { Icon } from "@/components/common/icons";
-import type { PersistedChatMessage } from "@/lib/api";
+import { StatusPill } from "@/components/common/StatusPill";
+import type {
+  CaseIntakeSubmission,
+  PersistedChatMessage,
+} from "@/lib/api";
 import { DocumentIngestionPreview } from "@/components/intake/DocumentIngestionPreview";
+import { CaseNarrativeSourceNotice } from "@/components/intake/CaseNarrativeSourceNotice";
 import {
-  getCaseEvidenceKind,
-  isCaseEvidenceMessage,
-} from "@/lib/case-evidence";
+  bindCaseNarrativeDocumentSource,
+  type CaseNarrativeDraft,
+} from "@/lib/case-narrative-document";
+import { getCaseEvidenceKind, isCaseEvidenceMessage } from "@/lib/case-evidence";
 
 interface CaseIntakeViewProps {
+  caseKey?: string;
+  threadId?: string | null;
   isSubmitting: boolean;
   error?: string | null;
-  onSubmitCase: (data: { title?: string; description: string }) => void;
+  onSubmitCase: (data: CaseIntakeSubmission) => void;
   messages?: PersistedChatMessage[];
   onOpenOverview?: () => void;
   onOpenChat?: () => void;
@@ -20,6 +28,8 @@ interface CaseIntakeViewProps {
 }
 
 export function CaseIntakeView({
+  caseKey,
+  threadId,
   isSubmitting,
   onSubmitCase,
   messages = [],
@@ -27,13 +37,15 @@ export function CaseIntakeView({
   onOpenChat,
   onOpenMaterials,
 }: CaseIntakeViewProps) {
+  const effectiveCaseKey =
+    (caseKey ?? threadId ?? messages[0]?.thread_id ?? "draft").trim() || "draft";
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-
+  const [documentDraft, setDocumentDraft] = useState<CaseNarrativeDraft | null>(null);
   const hasExistingEvidence = messages.some(isCaseEvidenceMessage);
   const initialEvidenceMessage =
-    messages.find((m) => getCaseEvidenceKind(m) === "initial_case_narrative") ??
-    messages.find((m) => m.role === "user");
+    messages.find((message) => getCaseEvidenceKind(message) === "initial_case_narrative") ??
+    messages.find((message) => message.role === "user");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,7 +54,16 @@ export function CaseIntakeView({
     onSubmitCase({
       title: title.trim() || undefined,
       description: trimmed,
+      documentSources: documentDraft
+        ? [bindCaseNarrativeDocumentSource(documentDraft, trimmed)]
+        : undefined,
     });
+  };
+
+  const useDocumentNarrative = (draft: CaseNarrativeDraft) => {
+    setDescription(draft.text);
+    setDocumentDraft(draft);
+    requestAnimationFrame(() => document.getElementById("case-description-input")?.focus());
   };
 
   return (
@@ -52,215 +73,208 @@ export function CaseIntakeView({
       aria-label="New Case Intake"
       className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas"
     >
-      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 sm:px-8">
-        {/* Editorial Header */}
-        <header className="border-b border-line pb-4 space-y-1">
-          <span className="font-mono text-[10px] font-bold tracking-widest text-ink-muted uppercase">
-            {hasExistingEvidence ? "CASE INTAKE RECORD" : "NEW INVESTIGATION"}
-          </span>
-          <h1 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
-            {hasExistingEvidence ? "บันทึกข้อมูลสำนวนคดี" : "เริ่มวิเคราะห์คดีใหม่"}
-          </h1>
-          <p className="text-xs leading-relaxed text-ink-secondary sm:text-sm">
-            {hasExistingEvidence
-              ? "สำนวนคดีนี้มีข้อมูลนำเข้าเริ่มต้นแล้ว คุณสามารถดูภาพรวมคดี สนทนาสอบถาม หรือเพิ่มรายละเอียดหลักฐานเพิ่มเติมได้ในหน้าแชท"
-              : "นำรายละเอียดจากสำนวนหรือข้อมูลเหตุการณ์ที่มีอยู่ในขณะนี้ มาให้ CyberCase ช่วยจัดภาพรวม อธิบายพฤติกรรมทางเทคนิค และเชื่อมโยงกับ MITRE ATT&CK"}
-          </p>
+      <div className="mx-auto w-full max-w-5xl space-y-7 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
+        <header className="flex flex-wrap items-start justify-between gap-5 border-b border-line pb-5">
+          <div className="min-w-0 max-w-2xl">
+            <p className="section-eyebrow">
+              {hasExistingEvidence ? "CASE INTAKE RECORD" : "NEW INVESTIGATION"}
+            </p>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-[-0.035em] text-ink sm:text-3xl">
+              {hasExistingEvidence ? "บันทึกข้อมูลสำนวนคดี" : "เริ่มวิเคราะห์คดีใหม่"}
+            </h1>
+            <p className="mt-2 text-xs leading-relaxed text-ink-secondary sm:text-sm">
+              {hasExistingEvidence
+                ? "สำนวนคดีนี้มีข้อมูลนำเข้าเริ่มต้นแล้ว คุณสามารถดูภาพรวมคดี สนทนาสอบถาม หรือเพิ่มรายละเอียดหลักฐานเพิ่มเติมได้ในหน้าแชท"
+                : "เริ่มจากข้อมูลที่ผู้ใช้ส่งมา CyberCase จะจัดทำสรุป ข้อค้นพบ และประเด็นที่ยังต้องตรวจสอบ โดยจะเสริมบริบททางเทคนิคเฉพาะเมื่อเกี่ยวข้อง"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-ivory">1</span>
+            <span>Material → Analysis</span>
+          </div>
         </header>
 
-        {/* Existing Case Record (when case already has evidence) */}
         {hasExistingEvidence ? (
-          <div className="space-y-6">
-            <div className="rounded-lg border border-line bg-surface p-5 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-3">
-                <span className="font-mono text-[10.5px] font-bold uppercase tracking-wider text-ink-secondary">
-                  Submitted Case Narrative · รายละเอียดเริ่มต้น
-                </span>
-                <span className="rounded bg-surface-nested px-2 py-0.5 font-mono text-[10px] font-bold text-ink-muted">
-                  ACTIVE CASE
-                </span>
-              </div>
-              {initialEvidenceMessage ? (
-                <div className="space-y-2">
-                  <p className="text-xs leading-relaxed text-ink whitespace-pre-wrap bg-canvas/60 rounded-md p-4 border border-line/40 select-text">
-                    {initialEvidenceMessage.content}
-                  </p>
-                  <p className="text-[11px] text-ink-muted">
-                    บันทึกเมื่อ: {new Date(initialEvidenceMessage.created_at).toLocaleString("th-TH")}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-xs text-ink-muted italic">
-                  ไม่มีบันทึกข้อความเริ่มต้น
-                </p>
-              )}
-
-              {/* Navigation Actions */}
-              <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-line/60">
-                {onOpenOverview && (
-                  <button
-                    type="button"
-                    onClick={onOpenOverview}
-                    className="inline-flex items-center gap-1.5 rounded bg-primary px-3.5 py-1.5 text-xs font-bold text-ivory hover:bg-charcoal-hover active:bg-charcoal-pressed transition-colors"
-                  >
-                    <Icon name="overview" className="h-3.5 w-3.5" />
-                    <span>View Case Overview · ดูภาพรวมคดี</span>
-                  </button>
-                )}
-                {onOpenChat && (
-                  <button
-                    type="button"
-                    onClick={onOpenChat}
-                    className="inline-flex items-center gap-1.5 rounded border border-line bg-surface px-3.5 py-1.5 text-xs font-bold text-ink hover:bg-surface-hover transition-colors"
-                  >
-                    <Icon name="chat" className="h-3.5 w-3.5" />
-                    <span>Ask in Chat · ถาม-ตอบในแชท</span>
-                  </button>
-                )}
-                {onOpenMaterials && (
-                  <button
-                    type="button"
-                    onClick={onOpenMaterials}
-                    className="inline-flex items-center gap-1.5 rounded border border-line bg-surface px-3.5 py-1.5 text-xs font-bold text-ink hover:bg-surface-hover transition-colors"
-                  >
-                    <Icon name="materials" className="h-3.5 w-3.5" />
-                    <span>Case Materials · รายการข้อมูล</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Quiet guidance for adding additional information */}
-            <div className="rounded-lg border border-line/70 bg-surface-nested/40 p-4 text-xs text-ink-secondary space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-bold text-ink text-xs">
-                    ต้องการเพิ่มพยานหลักฐานหรือข้อมูลใหม่ในคดี?
-                  </p>
-                  <p className="text-[11.5px] text-ink-muted mt-0.5">
-                    สามารถส่งข้อมูลเพิ่มเติมผ่านหน้าแชทโดยเลือกตัวเลือก &ldquo;Add case information&rdquo; เพื่อให้ระบบผนวกเข้ากับสำนวนและวิเคราะห์ใหม่
-                  </p>
-                </div>
-                {onOpenChat && (
-                  <button
-                    type="button"
-                    onClick={onOpenChat}
-                    className="shrink-0 inline-flex items-center gap-1 rounded border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:text-primary hover:border-primary transition-colors"
-                  >
-                    <span>Add case information in Chat →</span>
-                  </button>
-                )}
-              </div>
-            </div>
-            <DocumentIngestionPreview />
-          </div>
+          <ExistingCaseRecord
+            message={initialEvidenceMessage}
+            onOpenOverview={onOpenOverview}
+            onOpenChat={onOpenChat}
+            onOpenMaterials={onOpenMaterials}
+          />
         ) : (
-          /* New Case Form */
           <>
             {isSubmitting && (
-              <div className="rounded border border-line bg-surface p-4 text-xs text-ink space-y-1">
-                <div className="flex items-center gap-2 font-bold text-ink">
-                  <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-pulse" />
-                  <span>กำลังวิเคราะห์ข้อมูลคดี...</span>
+              <div className="flex items-start gap-3 rounded-xl border border-evidence/25 bg-evidence/5 p-4 text-xs text-ink" role="status">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-evidence motion-safe:animate-pulse motion-reduce:animate-none" />
+                <div>
+                  <p className="font-bold">กำลังวิเคราะห์ข้อมูลคดี...</p>
+                  <p className="mt-1 text-ink-secondary">กำลังจัดทำสรุประดับคดี ข้อค้นพบ และประเด็นที่ยังต้องตรวจสอบ</p>
                 </div>
-                <p className="text-ink-secondary pl-4">
-                  กำลังจัดภาพรวมเหตุการณ์และค้นหาข้อมูล MITRE ATT&amp;CK ที่เกี่ยวข้อง
-                </p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Optional Title */}
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <label
-                    htmlFor="case-title-input"
-                    className="block text-xs font-bold text-ink"
-                  >
-                    ชื่อคดี <span className="font-normal text-ink-muted">· ไม่บังคับ</span>
-                  </label>
-                  <span className="font-mono text-[10px] font-bold uppercase text-ink-muted">
-                    OPTIONAL
-                  </span>
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
+              <form onSubmit={handleSubmit} className="workspace-card space-y-6 p-5 sm:p-7">
+                <div>
+                  <StatusPill tone="evidence">Primary case material</StatusPill>
+                  <h2 className="mt-2 text-lg font-extrabold tracking-tight text-ink">Describe what happened</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-secondary">
+                    ส่งรายละเอียดตามที่ปรากฏในสำนวนหรือเอกสารต้นฉบับ ระบบจะใช้ข้อความนี้เป็นฐานของ Case Overview
+                  </p>
                 </div>
-                <input
-                  id="case-title-input"
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="เช่น การเข้าถึงระบบบริษัทโดยไม่ได้รับอนุญาต"
-                  disabled={isSubmitting}
-                  className="w-full rounded border border-line bg-surface px-3.5 py-2 text-sm text-ink placeholder:text-ink-muted outline-none transition-colors focus:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:bg-surface-nested"
-                />
-              </div>
 
-              {/* Case Description — Primary Control */}
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <label
-                    htmlFor="case-description-input"
-                    className="block text-xs font-bold uppercase tracking-wider text-ink"
-                  >
-                    รายละเอียดคดี <span className="text-red-700">*</span>
-                  </label>
-                  <span className="font-mono text-[10px] font-bold uppercase text-red-700">
-                    REQUIRED
-                  </span>
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <label htmlFor="case-title-input" className="text-xs font-bold text-ink">
+                      ชื่อคดี <span className="font-normal text-ink-muted">· ไม่บังคับ</span>
+                    </label>
+                    <span className="section-eyebrow">Optional</span>
+                  </div>
+                  <input
+                    id="case-title-input"
+                    type="text"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="เช่น การเข้าถึงระบบบริษัทโดยไม่ได้รับอนุญาต"
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg border border-line bg-canvas px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted outline-none transition-colors focus:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:bg-surface-nested"
+                  />
                 </div>
-                <p className="text-xs text-ink-secondary leading-relaxed">
-                  วางรายละเอียดจากสำนวน หรืออธิบายเหตุการณ์ที่ต้องการวิเคราะห์ สามารถใช้ข้อความและศัพท์ทางเทคนิคจากเอกสารต้นฉบับได้ CyberCase จะช่วยอธิบายให้อยู่ในรูปแบบที่อ่านง่าย
-                </p>
-                <textarea
-                  id="case-description-input"
-                  rows={11}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="เช่น เมื่อวันที่ 12 พฤษภาคม 2566 ตรวจพบการเข้าถึงเซิร์ฟเวอร์ IIS โดยไม่ได้รับอนุญาต มีการรันสคริปต์ผ่าน PowerShell และสร้าง Scheduled task ชื่อ Updater.exe เพื่อฝังตัวในระบบ..."
-                  required
-                  disabled={isSubmitting}
-                  className="w-full min-h-[200px] rounded border border-line bg-surface p-3.5 text-sm leading-relaxed text-ink placeholder:text-ink-muted outline-none transition-colors focus:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:bg-surface-nested"
-                />
 
-                {/* Input Guidance */}
-                <div className="rounded border border-line/60 bg-surface-nested/30 p-3 text-xs text-ink-secondary space-y-1.5">
-                  <p className="font-bold text-ink text-[11.5px]">ข้อมูลที่ใส่ได้ เช่น</p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-ink-secondary list-disc list-inside">
-                    <li>ลำดับเหตุการณ์ที่ปรากฏในสำนวน</li>
-                    <li>ระบบ เครื่อง หรือบัญชีที่เกี่ยวข้อง</li>
-                    <li>พฤติกรรมทางเทคนิคที่ตรวจพบ</li>
-                    <li>ผลกระทบที่มีการรายงาน</li>
-                    <li className="sm:col-span-2">สิ่งที่ผู้สอบสวนยังไม่แน่ใจ</li>
-                  </ul>
-                </div>
-              </div>
-
-              <DocumentIngestionPreview />
-
-              {/* Primary Action Button */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-                <p className="text-[11px] text-ink-muted">
-                  Evidence is grounded directly into the Case Overview dossier.
-                </p>
-                <button
-                  type="submit"
-                  disabled={!description.trim() || isSubmitting}
-                  className="inline-flex min-h-10 items-center gap-2 rounded bg-primary px-6 py-2.5 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled shadow-xs"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span
-                        className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ivory/30 border-t-ivory"
-                        aria-hidden="true"
-                      />
-                      <span>กำลังวิเคราะห์ข้อมูลคดี...</span>
-                    </>
-                  ) : (
-                    <span>วิเคราะห์คดี · Analyze case</span>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <label htmlFor="case-description-input" className="text-xs font-bold text-ink">
+                      รายละเอียดคดี <span className="text-accent">*</span>
+                    </label>
+                    <span className="section-eyebrow text-accent">Required</span>
+                  </div>
+                  <textarea
+                    id="case-description-input"
+                    rows={13}
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder="เช่น เมื่อวันที่ 12 พฤษภาคม 2566 ตรวจพบการเข้าถึงเซิร์ฟเวอร์ IIS โดยไม่ได้รับอนุญาต มีการรันสคริปต์ผ่าน PowerShell และสร้าง Scheduled task ชื่อ Updater.exe เพื่อฝังตัวในระบบ..."
+                    required
+                    disabled={isSubmitting}
+                    className="min-h-[250px] w-full resize-y rounded-lg border border-line bg-canvas p-4 text-sm leading-relaxed text-ink placeholder:text-ink-muted outline-none transition-colors focus:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:bg-surface-nested"
+                  />
+                  {documentDraft && (
+                    <CaseNarrativeSourceNotice
+                      source={documentDraft.source}
+                      onRemove={() => setDocumentDraft(null)}
+                    />
                   )}
-                </button>
-              </div>
-            </form>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                  <p className="max-w-sm text-[11px] leading-relaxed text-ink-muted">
+                    ผู้ใช้เป็นผู้กำหนดว่าข้อมูลใดควรเป็นส่วนหนึ่งของสำนวน
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={!description.trim() || isSubmitting}
+                    className="btn-primary inline-flex min-h-10 items-center gap-2 rounded-lg px-5"
+                  >
+                    {isSubmitting && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ivory/30 border-t-ivory" />}
+                    <span>{isSubmitting ? "กำลังวิเคราะห์ข้อมูลคดี..." : "วิเคราะห์คดี · Analyze case"}</span>
+                  </button>
+                </div>
+              </form>
+
+              <IntakeGuidance />
+            </div>
+
+            <DocumentIngestionPreview
+              caseKey={effectiveCaseKey}
+              onUseAsNarrative={useDocumentNarrative}
+            />
           </>
+        )}
+
+        {hasExistingEvidence && <DocumentIngestionPreview caseKey={effectiveCaseKey} />}
+      </div>
+    </div>
+  );
+}
+
+function IntakeGuidance() {
+  return (
+    <aside className="workspace-card p-4 sm:p-5">
+      <p className="section-eyebrow">WHAT TO INCLUDE</p>
+      <h2 className="mt-1 text-sm font-extrabold tracking-tight text-ink">Start with the record</h2>
+      <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
+        ข้อมูลไม่จำเป็นต้องสมบูรณ์ ระบบจะแยกสิ่งที่รายงานออกจากข้อสรุปและสิ่งที่ยังไม่แน่นอน
+      </p>
+      <ul className="mt-4 space-y-2 border-t border-line pt-4 text-[11px] leading-relaxed text-ink-secondary">
+        <li>ลำดับเหตุการณ์หรือช่วงเวลาที่ทราบ</li>
+        <li>บุคคล ระบบ เครื่อง หรือบัญชีที่เกี่ยวข้อง</li>
+        <li>พฤติกรรมหรือผลกระทบที่มีการรายงาน</li>
+        <li>สิ่งที่ผู้สอบสวนยังไม่แน่ใจ</li>
+      </ul>
+    </aside>
+  );
+}
+
+function ExistingCaseRecord({
+  message,
+  onOpenOverview,
+  onOpenChat,
+  onOpenMaterials,
+}: {
+  message?: PersistedChatMessage;
+  onOpenOverview?: () => void;
+  onOpenChat?: () => void;
+  onOpenMaterials?: () => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <section className="workspace-card p-5 sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+          <div>
+            <p className="section-eyebrow">SUBMITTED CASE NARRATIVE</p>
+            <h2 className="mt-1 text-lg font-extrabold tracking-tight text-ink">ข้อมูลตั้งต้นของคดี</h2>
+          </div>
+          <StatusPill tone="positive">Active case</StatusPill>
+        </div>
+        {message ? (
+          <div className="pt-5">
+            <p className="whitespace-pre-wrap border-l-2 border-evidence/40 pl-4 text-sm leading-relaxed text-ink select-text">
+              {message.content}
+            </p>
+            <p className="mt-3 text-[11px] text-ink-muted">
+              บันทึกเมื่อ: {new Date(message.created_at).toLocaleString("th-TH")}
+            </p>
+          </div>
+        ) : (
+          <p className="pt-5 text-xs italic text-ink-muted">ไม่มีบันทึกข้อความเริ่มต้น</p>
+        )}
+        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+          {onOpenOverview && (
+            <button type="button" onClick={onOpenOverview} className="btn-primary inline-flex items-center gap-1.5 rounded-lg">
+              <Icon name="overview" className="h-3.5 w-3.5" />
+              View Case Overview · ดูภาพรวมคดี
+            </button>
+          )}
+          {onOpenChat && (
+            <button type="button" onClick={onOpenChat} className="btn-secondary inline-flex items-center gap-1.5 rounded-lg">
+              <Icon name="chat" className="h-3.5 w-3.5" />
+              Ask in Chat · ถาม-ตอบในแชท
+            </button>
+          )}
+          {onOpenMaterials && (
+            <button type="button" onClick={onOpenMaterials} className="btn-secondary inline-flex items-center gap-1.5 rounded-lg">
+              <Icon name="materials" className="h-3.5 w-3.5" />
+              Case Materials · รายการข้อมูล
+            </button>
+          )}
+        </div>
+      </section>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface-nested/35 p-4 text-xs text-ink-secondary">
+        <p>ต้องการเพิ่มข้อมูลใหม่หรือไม่? เลือก “Add case information” ในหน้าแชทเพื่อผนวกข้อมูลเข้ากับสำนวน</p>
+        {onOpenChat && (
+          <button type="button" onClick={onOpenChat} className="font-bold text-ink hover:text-accent hover:underline">
+            Add case information in Chat →
+          </button>
         )}
       </div>
     </div>

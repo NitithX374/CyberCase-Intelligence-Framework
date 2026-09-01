@@ -11,6 +11,10 @@ const mockSourceRef: SourceMessageRef = {
   sourceType: "case_description",
   sourceTypeLabel: "Case description · รายละเอียดคดีเริ่มต้น",
   fullContent: "On May 12, 2023, an unauthorized user executed PowerShell script Updater.exe via scheduled task.",
+  displayContent: "On May 12, 2023, an unauthorized user executed PowerShell script Updater.exe via scheduled task.",
+  exactQuote: "an unauthorized user executed PowerShell script Updater.exe",
+  filename: "incident-report.pdf",
+  pageNumbers: [4],
 };
 
 describe("SourceEvidencePopover component", () => {
@@ -28,11 +32,11 @@ describe("SourceEvidencePopover component", () => {
 
     expect(screen.getByText(/SOURCE FROM CASE/i)).toBeInTheDocument();
     expect(screen.getByText("Case description · รายละเอียดคดีเริ่มต้น")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "On May 12, 2023, an unauthorized user executed PowerShell script Updater.exe via scheduled task.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "On May 12, 2023, an unauthorized user executed PowerShell script Updater.exe via scheduled task.",
+    );
+    expect(screen.getByText("an unauthorized user executed PowerShell script Updater.exe").tagName).toBe("MARK");
+    expect(screen.getByText(/Cited document page/i)).toBeInTheDocument();
 
     // Does NOT leak internal IDs
     expect(screen.queryByText("msg-1")).not.toBeInTheDocument();
