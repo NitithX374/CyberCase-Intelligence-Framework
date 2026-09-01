@@ -11,6 +11,10 @@ from app.models.chat import ChatMessage, ChatRun
 from app.models.rag_context import RagContext
 from app.services.chat.clarification_chain import reconstruct_clarification_chain
 from app.services.chat.raw_evidence import build_raw_evidence_snapshot
+from app.services.case_analysis.state_selector import (
+    CanonicalCaseAnalysisState,
+    select_latest_canonical_case_overview,
+)
 from app.services.workflow.chat_run_contracts import ClaimedChatRun, RUN_LEASE_DURATION
 
 
@@ -63,7 +67,20 @@ async def claim_run(
             root_ordinal = chain.root_ordinal
         analysis_context = None
         if action == "ask":
-            analysis_context = await _latest_analysis_context(db, run)
+            canonical_state = select_latest_canonical_case_overview(
+                history,
+                evidence_sha256=evidence.sha256,
+                source_message_ids={
+                    str(value) for value in evidence.source_message_ids
+                },
+            )
+            analysis_context = await _analysis_context_for_state(
+                db,
+                run,
+                canonical_state,
+            )
+            if canonical_state is None:
+                analysis_context = await _latest_legacy_analysis_context(db, run)
             if analysis_context is None:
                 await _fail_missing_context(run, now)
                 return None
@@ -82,6 +99,8 @@ async def claim_run(
             raw_evidence=evidence.text,
             evidence_sha256=evidence.sha256,
             source_message_ids=evidence.source_message_ids,
+            evidence_sources=evidence.sources,
+            document_source_context=evidence.document_source_context,
             original_user_content=original_user_content,
             clarification_exchanges=clarification_exchanges,
             followup_root_ordinal=root_ordinal,
@@ -89,7 +108,31 @@ async def claim_run(
         )
 
 
-async def _latest_analysis_context(
+async def _analysis_context_for_state(
+    db: AsyncSession,
+    current_run: ChatRun,
+    state: CanonicalCaseAnalysisState | None,
+) -> dict[str, object] | None:
+    if state is None:
+        return None
+    retrieval_context_id = state.trace.retrieval_context_id
+    if retrieval_context_id is None:
+        return {
+            "mitre_table": [],
+            "previous_analysis": state.message.content,
+        }
+    context = await db.get(RagContext, retrieval_context_id)
+    if context is None or context.thread_id != current_run.thread_id:
+        return None
+    return {
+        "retrieved_context": context.context,
+        "retrieval_context_id": context.retrieval_context_id,
+        "mitre_table": deepcopy(context.mitre_table),
+        "previous_analysis": state.message.content,
+    }
+
+
+async def _latest_legacy_analysis_context(
     db: AsyncSession,
     current_run: ChatRun,
 ) -> dict[str, object] | None:
@@ -127,11 +170,15 @@ async def _latest_analysis_context(
 
 
 async def _fail_missing_request(run: ChatRun, now: datetime) -> None:
-    await _mark_claim_failure(run, now, "chat_request_missing", "Request message is missing")
+    await _mark_claim_failure(
+        run, now, "chat_request_missing", "Request message is missing"
+    )
 
 
 async def _fail_missing_evidence(run: ChatRun, now: datetime) -> None:
-    await _mark_claim_failure(run, now, "case_evidence_missing", "Raw case evidence is missing")
+    await _mark_claim_failure(
+        run, now, "case_evidence_missing", "Raw case evidence is missing"
+    )
 
 
 async def _fail_missing_context(run: ChatRun, now: datetime) -> None:

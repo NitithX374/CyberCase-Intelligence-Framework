@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -10,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.schemas.chat import ChatMessageCreate
 from app.services.chat.clarification_chain import reconstruct_clarification_chain
+from app.services.chat.document_provenance import validated_document_source_payloads
+from app.services.followup.stateful import clarification_answer_context
 
 
 async def create_message_and_run(
@@ -25,31 +28,48 @@ async def create_message_and_run(
             return existing
         await _ensure_no_active_run(db, thread_id)
         action, evidence_kind = _resolve_action(thread, request.action)
+        if request.document_sources and evidence_kind == "analyst_question":
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                "Document sources can only accompany case evidence",
+            )
         ordinal = thread.next_message_ordinal
-        root_ordinal, followup_round = await _followup_position(
+        root_ordinal, followup_round, clarification_context = await _followup_position(
             db, thread, request.content, ordinal
         )
+        message_metadata: dict[str, object] = {"evidence_kind": evidence_kind}
+        document_sources = validated_document_source_payloads(
+            request.content,
+            request.document_sources,
+        )
+        if document_sources:
+            message_metadata["document_sources"] = document_sources
+        if clarification_context is not None:
+            message_metadata["clarification_context"] = clarification_context
         message = ChatMessage(
             thread_id=thread.id,
             ordinal=ordinal,
             content=request.content,
             role="user",
-            metadata_json={"evidence_kind": evidence_kind},
+            metadata_json=message_metadata,
         )
         db.add(message)
         await db.flush()
+        run_request_payload: dict[str, object] = {
+            "content": request.content,
+            "action": action,
+            "followup_root_ordinal": root_ordinal,
+            "followup_round": followup_round,
+            "clarification_answer": evidence_kind == "clarification_answer",
+        }
+        if document_sources:
+            run_request_payload["document_sources"] = document_sources
         run = ChatRun(
             thread_id=thread.id,
             request_message_id=message.id,
             idempotency_key=request.idempotency_key,
             request_fingerprint=request_fingerprint,
-            request_payload={
-                "content": request.content,
-                "action": action,
-                "followup_root_ordinal": root_ordinal,
-                "followup_round": followup_round,
-                "clarification_answer": evidence_kind == "clarification_answer",
-            },
+            request_payload=run_request_payload,
         )
         db.add(run)
         thread.next_message_ordinal += 1
@@ -62,6 +82,14 @@ async def create_message_and_run(
 
 def _fingerprint(request: ChatMessageCreate) -> str:
     source = f"{request.content}\x00{request.action or ''}"
+    if request.document_sources:
+        serialized_sources = json.dumps(
+            [value.model_dump(mode="json") for value in request.document_sources],
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        source = f"{source}\x00{serialized_sources}"
     return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
@@ -148,9 +176,9 @@ async def _followup_position(
     thread: ChatThread,
     pending_answer: str,
     ordinal: int,
-) -> tuple[int, int]:
+) -> tuple[int, int, dict[str, str] | None]:
     if thread.status != "awaiting_followup":
-        return ordinal, 0
+        return ordinal, 0, None
     result = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.thread_id == thread.id)
@@ -160,8 +188,18 @@ async def _followup_position(
         list(result.scalars().all()), pending_answer=pending_answer
     )
     if chain is None:
-        return ordinal, 0
-    return chain.root_ordinal, len(chain.exchanges)
+        return ordinal, 0, None
+    context = chain.pending_context
+    if context is None:
+        return chain.root_ordinal, len(chain.exchanges), None
+    question_message_id = context.get("question_message_id")
+    if question_message_id is None:
+        return chain.root_ordinal, len(chain.exchanges), None
+    return (
+        chain.root_ordinal,
+        len(chain.exchanges),
+        clarification_answer_context(question_message_id, context),
+    )
 
 
 __all__ = ["create_message_and_run"]

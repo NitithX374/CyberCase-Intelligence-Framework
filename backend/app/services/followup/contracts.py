@@ -6,7 +6,9 @@ import unicodedata
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from app.services.followup.schemas import GapAnalysis
     from app.services.workflow.outcome import AssistantOutcome
+
 
 @dataclass(frozen=True)
 class FollowUpResolution:
@@ -14,6 +16,7 @@ class FollowUpResolution:
 
     outcome: AssistantOutcome | None
     metadata_json: dict[str, Any]
+    gap_analysis: GapAnalysis | None = None
 
 
 _UNAVAILABLE_ANSWER_PHRASES = (

@@ -34,8 +34,9 @@ def source_snapshot_hash(snapshot: ReportInputSnapshot | dict[str, object]) -> s
     payload = (
         snapshot.model_dump(mode="json")
         if isinstance(snapshot, ReportInputSnapshot)
-        else snapshot
+        else dict(snapshot)
     )
+    payload.pop("created_at", None)
     serialized = json.dumps(
         payload,
         ensure_ascii=False,

@@ -88,14 +88,14 @@ class ChatReport(Base):
         ),
         nullable=False,
     )
-    retrieval_context_id: Mapped[str] = mapped_column(
+    retrieval_context_id: Mapped[str | None] = mapped_column(
         String(160),
         ForeignKey(
             "rag_contexts.retrieval_context_id",
             name="fk_chat_reports_retrieval_context_id_rag_contexts",
             ondelete="CASCADE",
         ),
-        nullable=False,
+        nullable=True,
     )
     prompt_version: Mapped[str] = mapped_column(String(120), nullable=False)
     provider: Mapped[str] = mapped_column(String(80), nullable=False)

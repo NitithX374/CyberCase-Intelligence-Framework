@@ -158,7 +158,11 @@ def test_missing_information_remains_not_established() -> None:
 @pytest.mark.parametrize("invalid_source", ["assistant-message", "retrieval-context-1"])
 def test_non_authoritative_sources_are_rejected(invalid_source: str) -> None:
     payload = provider_payload(
-        [reported_claim("A generated source asserted an event.", supporting=[invalid_source])]
+        [
+            reported_claim(
+                "A generated source asserted an event.", supporting=[invalid_source]
+            )
+        ]
     )
     with pytest.raises(CaseAnalysisFailure) as raised:
         parse(
@@ -193,27 +197,8 @@ def test_cyber_case_accepts_bound_optional_mitre_context() -> None:
     assert result.trace.mitre_associations[0].status == "candidate_only"
 
 
-@pytest.mark.parametrize(
-    ("context", "expected_code"),
-    [
-        (
-            {"mitre_table": [{"technique_id": "T1059.001"}]},
-            "analysis_trace_v3_mitre_without_retrieval",
-        ),
-        (
-            {
-                "retrieval_context_id": "ctx-cyber",
-                "mitre_table": [{"technique_id": "T1190"}],
-            },
-            "analysis_trace_v3_mitre_outside_context",
-        ),
-    ],
-)
-def test_mitre_association_requires_bound_admitted_context(
-    context: dict[str, object],
-    expected_code: str,
-) -> None:
-    association = {
+def mitre_association() -> dict[str, object]:
+    return {
         "association_id": "MA-01",
         "technique_id": "T1059.001",
         "claim_ids": ["A-01"],
@@ -221,13 +206,36 @@ def test_mitre_association_requires_bound_admitted_context(
         "status": "candidate_only",
         "support_role": "external_technical_context",
     }
+
+
+def test_mitre_association_is_removed_without_admitted_rag() -> None:
     payload = provider_payload(
         [reported_claim("The administrator reported PowerShell activity.")],
-        associations=[association],
+        associations=[mitre_association()],
+    )
+    result = parse(
+        payload,
+        context={"mitre_table": [{"technique_id": "T1059.001"}]},
+    )
+    assert result.trace is not None
+    assert result.trace.retrieval_context_id is None
+    assert result.trace.mitre_associations == []
+
+
+def test_mitre_association_outside_admitted_context_is_rejected() -> None:
+    payload = provider_payload(
+        [reported_claim("The administrator reported PowerShell activity.")],
+        associations=[mitre_association()],
     )
     with pytest.raises(CaseAnalysisFailure) as raised:
-        parse(payload, context=context)
-    assert raised.value.code == expected_code
+        parse(
+            payload,
+            context={
+                "retrieval_context_id": "ctx-cyber",
+                "mitre_table": [{"technique_id": "T1190"}],
+            },
+        )
+    assert raised.value.code == "analysis_trace_v3_mitre_outside_context"
 
 
 def test_question_answer_mode_returns_direct_answer_with_v3_trace() -> None:
@@ -261,7 +269,9 @@ def test_service_requests_v3_schema_with_optional_external_context(monkeypatch) 
         async def post(self, url, *, headers, json):
             captured.update(json)
             return response_for(
-                provider_payload([reported_claim("The owner reported a missing bicycle.")])
+                provider_payload(
+                    [reported_claim("The owner reported a missing bicycle.")]
+                )
             )
 
     monkeypatch.setattr(
@@ -284,5 +294,79 @@ def test_service_requests_v3_schema_with_optional_external_context(monkeypatch) 
     )
     schema = captured["output_config"]["format"]["schema"]
     assert schema["properties"]["version"]["const"] == "analysis_trace_v3"
+    assert (
+        'claim_id must be exactly "A-01", "A-02", through "A-64"' in captured["system"]
+    )
     assert result.trace is not None
     assert result.trace.retrieval_context_id is None
+
+
+def test_claim_id_normalization_handles_variants() -> None:
+    payload = {
+        "version": "analysis_trace_v3",
+        "answer": "Grounded answer.",
+        "summary": "Grounded summary.",
+        "claims": [
+            {
+                "claim_id": "claim-1",
+                "claim_type": "reported",
+                "text": "First reported claim.",
+                "epistemic_status": "reported",
+                "supporting_source_message_ids": ["S1"],
+                "contradicting_source_message_ids": [],
+                "reasoning_summary": None,
+            },
+            {
+                "claim_id": "claim-2",
+                "claim_type": "reported",
+                "text": "Second reported claim.",
+                "epistemic_status": "reported",
+                "supporting_source_message_ids": ["S1"],
+                "contradicting_source_message_ids": [],
+                "reasoning_summary": None,
+            },
+        ],
+        "mitre_associations": [
+            {
+                "association_id": "assoc-1",
+                "technique_id": "T1059.001",
+                "claim_ids": ["claim-2"],
+                "reason": "Technical context.",
+                "status": "candidate_only",
+                "support_role": "external_technical_context",
+            }
+        ],
+    }
+    result = parse(
+        payload,
+        sources={"S1"},
+        context={
+            "retrieval_context_id": "ctx-1",
+            "mitre_table": [{"technique_id": "T1059.001"}],
+        },
+    )
+    assert result.trace is not None
+    assert result.trace.claims[0].claim_id == "A-01"
+    assert result.trace.claims[1].claim_id == "A-02"
+    assert result.trace.mitre_associations[0].association_id == "MA-01"
+    assert result.trace.mitre_associations[0].claim_ids == ["A-02"]
+
+
+def test_parse_strips_trailing_ocr_boilerplate() -> None:
+    raw_answer = (
+        "## ภาพรวมคดี\n"
+        "สรุปสาระสำคัญของคดี\n\n"
+        "## ข้อสังเกตหรือข้อมูลที่ยังไม่แน่นอน\n"
+        "- มีความไม่แน่นอนบางประการ\n"
+        "- เอกสารต้นทางใช้การรู้จำเอกสารจากภาพ และไม่ได้รายงานค่าความเชื่อมั่น..."
+    )
+    payload = provider_payload(
+        [reported_claim("The complainant reported an issue.")],
+        answer=raw_answer,
+    )
+    result = parse(payload)
+    assert "เอกสารต้นทางใช้การรู้จำเอกสารจากภาพ" not in result.answer
+    assert "ไม่ได้รายงานค่าความเชื่อมั่น" not in result.answer
+    assert result.answer.endswith("- มีความไม่แน่นอนบางประการ")
+
+

@@ -53,7 +53,6 @@ describe("ChatPanel follow-up", () => {
         input="host-7"
         threadStatus="awaiting_followup"
         phase="awaiting_followup"
-        error={null}
         postAnswerAction={null}
         onInputChange={onInputChange}
         onPostAnswerActionChange={vi.fn()}

@@ -31,7 +31,7 @@ def render_chat_report_pdf(
     font_names = register_report_fonts()
     styles = build_report_styles(font_names)
     buffer = BytesIO()
-    doc_title = plain_text(report.report.title) if report.report.title else plain_text(view_model.case_title)
+    doc_title = plain_text(view_model.case_title)
     document = SimpleDocTemplate(
         buffer,
         pagesize=A4,
@@ -41,7 +41,7 @@ def render_chat_report_pdf(
         bottomMargin=16 * mm,
         title=doc_title,
         author="CyberCase Intelligence Framework",
-        subject="Formal Provisional Incident Analysis Report",
+        subject="Formal Preliminary Case Analysis Report",
     )
     story = build_formal_report_story(view_model, report=report, styles=styles)
     document.build(

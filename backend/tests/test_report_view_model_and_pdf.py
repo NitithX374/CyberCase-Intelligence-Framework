@@ -1,5 +1,8 @@
 from datetime import datetime, timezone
+from io import BytesIO
 from uuid import uuid4
+
+from pypdf import PdfReader
 
 from app.models.chat import ChatMessage, ChatThread
 from app.models.rag_context import RagContext
@@ -36,9 +39,9 @@ def make_realistic_report_read() -> tuple[ChatReportRead, str]:
 จากการตรวจสอบข้อมูลสำนวนคดี พบว่าคนร้ายได้ทำการโจมตีเจาะระบบเซิร์ฟเวอร์ WEB-01 ผ่านช่องโหว่บน IIS Web Application โดยมีพฤติกรรมฝังตัวผ่าน Application Shimming
 
 ### 2. Key Sequence and Relationships (ลำดับเหตุการณ์และความสัมพันธ์สำคัญ)
-- คนร้ายเจาะเข้าสู่ระบบ WEB-01 ผ่านช่องโหว่ IIS Web Server
-- คนร้ายติดตั้ง Application Shim ฐานข้อมูล SDB เพื่อคงสิทธิ์การเข้าถึง (Persistence)
-- ตรวจพบการสื่อสารออกไปยัง IP ปลายทาง 198.51.100.23
+- 12 มกราคม 2568 เวลา 09.30 น. - คนร้ายเจาะเข้าสู่ระบบ WEB-01 ผ่านช่องโหว่ IIS Web Server
+- 12 มกราคม 2568 เวลา 10.15 น. - คนร้ายติดตั้ง Application Shim ฐานข้อมูล SDB เพื่อคงสิทธิ์การเข้าถึง (Persistence)
+- 12 มกราคม 2568 ช่วงบ่าย - ตรวจพบการสื่อสารออกไปยัง IP ปลายทาง 198.51.100.23
 
 ### 3. Relevant MITRE ATT&CK Context
 พบเทคนิค T1546.011 (Application Shimming) สอดคล้องกับการคงสิทธิ์""",
@@ -46,7 +49,14 @@ def make_realistic_report_read() -> tuple[ChatReportRead, str]:
             metadata_json={
                 "analysis_kind": "grounded_main_analysis",
                 "analysis_trace": {
-                    "version": "analysis_trace_v2",
+                    "version": "analysis_trace_v3",
+                    "summary": """## ภาพรวมคดี
+จากการตรวจสอบข้อมูลสำนวนคดี พบว่าคนร้ายได้ทำการโจมตีเจาะระบบเซิร์ฟเวอร์ WEB-01 ผ่านช่องโหว่บน IIS Web Application โดยมีพฤติกรรมฝังตัวผ่าน Application Shimming
+
+## ลำดับเหตุการณ์สำคัญ
+- 12 มกราคม 2568 เวลา 09.30 น. - คนร้ายเจาะเข้าสู่ระบบ WEB-01 ผ่านช่องโหว่ IIS Web Server
+- 12 มกราคม 2568 เวลา 10.15 น. - คนร้ายติดตั้ง Application Shim ฐานข้อมูล SDB เพื่อคงสิทธิ์การเข้าถึง
+- 12 มกราคม 2568 ช่วงบ่าย - ตรวจพบการสื่อสารออกไปยัง IP ปลายทาง 198.51.100.23""",
                     "claims": [
                         {"claim_id": "c1", "text": "คนร้ายเจาะเข้าสู่ระบบ WEB-01 ผ่านช่องโหว่ IIS Web Server", "claim_type": "event_progression", "epistemic_status": "reported", "source_message_ids": [str(source_id)]},
                         {"claim_id": "c2", "text": "คนร้ายติดตั้ง Application Shim เพื่อคงสิทธิ์", "claim_type": "event_progression", "epistemic_status": "reported", "source_message_ids": [str(source_id)]},
@@ -124,7 +134,8 @@ def test_view_model_extracts_timeline_and_gaps_without_contradictions():
     assert len(view_model.timeline_rows) >= 2
     assert "เจาะเข้าสู่ระบบ WEB-01" in view_model.timeline_rows[0].event
     assert "Application Shim" in view_model.timeline_rows[1].event
-    assert view_model.timeline_rows[0].source_evidence == "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #1)"
+    assert view_model.timeline_rows[0].time_display == "12 มกราคม 2568 เวลา 09.30 น."
+    assert view_model.timeline_rows[0].source_evidence == "ข้อความ #1"
 
     # 3. Gaps extracted properly (NO "ไม่พบข้อขัดแย้ง...")
     assert len(view_model.unresolved_issues) >= 1
@@ -133,7 +144,7 @@ def test_view_model_extracts_timeline_and_gaps_without_contradictions():
 
     # 4. Dynamic Next steps
     assert len(view_model.verification_actions) >= 1
-    assert any("Firewall" in act.action or "ส่งออก" in act.action for act in view_model.verification_actions)
+    assert any("เอกสาร" in act.action or "ต้นทาง" in act.action for act in view_model.verification_actions)
 
     # 5. MITRE Mapping with clean structured fields (NOT degraded to technique_id or "General")
     assert len(view_model.mitre_rows) >= 1
@@ -145,13 +156,13 @@ def test_view_model_extracts_timeline_and_gaps_without_contradictions():
     assert "external_mitre_retrieval" not in view_model.mitre_rows[0].source
 
     # 6. Evidence and IOCs
-    assert len(view_model.evidence_rows) == 1
+    assert len(view_model.evidence_rows) == 2
     assert view_model.has_indicators is True
     assert any(ioc.value == "198.51.100.23" for ioc in view_model.indicator_rows)
     assert any(ioc.value == "sdbinst.exe" for ioc in view_model.indicator_rows)
 
 
-def test_report_view_model_timeline_provenance_multi_source_and_fallback():
+def test_report_view_model_finding_provenance_multi_source_and_fallback():
     thread_id = uuid4()
     msg1_id = uuid4()
     msg3_id = uuid4()
@@ -205,21 +216,18 @@ def test_report_view_model_timeline_provenance_multi_source_and_fallback():
 
     # 1. Thai View Model
     vm_th = build_report_view_model(report_read, thread_title=thread.title, language="th")
-    assert len(vm_th.timeline_rows) == 3
-    # Claim 1: single source msg-3
-    assert vm_th.timeline_rows[0].source_evidence == "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #3)"
-    # Claim 2: multi source msg-1 and msg-5
-    assert vm_th.timeline_rows[1].source_evidence == "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #1, #5)"
-    # Claim 3: unresolvable source -> neutral fallback, NEVER #1
-    assert vm_th.timeline_rows[2].source_evidence == "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง"
-    assert "#1" not in vm_th.timeline_rows[2].source_evidence
+    assert vm_th.timeline_rows == []
+    assert vm_th.evidence_rows[0].source_type == "ข้อความ #3"
+    assert vm_th.evidence_rows[1].source_type == "ข้อความ #1, #5"
+    assert vm_th.evidence_rows[2].source_type == "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง"
+    assert "#1" not in vm_th.evidence_rows[2].source_type
 
     # 2. English View Model
     vm_en = build_report_view_model(report_read, thread_title=thread.title, language="en")
-    assert vm_en.timeline_rows[0].source_evidence == "User-Submitted Evidence (#3)"
-    assert vm_en.timeline_rows[1].source_evidence == "User-Submitted Evidence (#1, #5)"
-    assert vm_en.timeline_rows[2].source_evidence == "User-Submitted Evidence"
-    assert "(#" not in vm_en.timeline_rows[2].source_evidence
+    assert vm_en.evidence_rows[0].source_type == "Message #3"
+    assert vm_en.evidence_rows[1].source_type == "Message #1, #5"
+    assert vm_en.evidence_rows[2].source_type == "User-submitted case material"
+    assert "#1" not in vm_en.evidence_rows[2].source_type
 
 
 def test_pdf_generation_produces_valid_pdf_bytes():
@@ -229,19 +237,37 @@ def test_pdf_generation_produces_valid_pdf_bytes():
     assert len(pdf_bytes) > 1000
 
 
+def test_pdf_generation_splits_long_evidence_across_pages():
+    report_read, title = make_realistic_report_read()
+    source_snapshot = dict(report_read.source_snapshot or {})
+    trace = dict(source_snapshot["analysis_trace"])
+    claims = list(trace["claims"])
+    claims[0] = {**claims[0], "text": "รายละเอียดข้อเท็จจริงจากเอกสารฉบับยาว " * 800}
+    trace["claims"] = claims
+    source_snapshot["analysis_trace"] = trace
+    long_report = report_read.model_copy(
+        update={"source_snapshot": source_snapshot}
+    )
+
+    pdf_bytes = render_chat_report_pdf(long_report, thread_title=title, language="th")
+
+    assert pdf_bytes.startswith(b"%PDF")
+    assert len(PdfReader(BytesIO(pdf_bytes)).pages) > 1
+
+
 def test_html_rendering_contains_standalone_sections():
     report_read, title = make_realistic_report_read()
     html = render_chat_report_html(report_read, thread_title=title, language="th")
 
     # Verify standalone 1..7 sections
-    assert "1. ภาพรวมเหตุการณ์" in html
+    assert "1. บทสรุปคดี" in html
     assert "2. ลำดับเหตุการณ์สำคัญ" in html
-    assert "3. ข้อเท็จจริงและหลักฐานสำคัญ" in html
-    assert "4. ข้อมูลอ้างอิง MITRE ATT&CK ที่เกี่ยวข้อง" in html
-    assert "5. ประเด็นที่ยังไม่สามารถยืนยันได้" in html
-    assert "6. ประเด็นที่ควรตรวจสอบเพิ่มเติม" in html
-    assert "7. ข้อจำกัดของรายงาน" in html
-    assert "ภาคผนวก: ข้อมูลตรวจสอบย้อนกลับทางเทคนิค" in html
+    assert "3. ข้อเท็จจริงที่รายงานและแหล่งอ้างอิง" in html
+    assert "4. บริบททางเทคนิคภายนอก (ถ้ามี)" in html
+    assert "5. ประเด็นที่ต้องยืนยันเพิ่มเติม" in html
+    assert "6. แนวทางตรวจสอบเพิ่มเติม" in html
+    assert "7. ขอบเขตและข้อจำกัด" in html
+    assert "ภาคผนวก: ข้อมูลตรวจสอบย้อนกลับของรายงาน" in html
 
     # Verify absence of legacy section numbering in headings
     assert "5.1 สรุปคดี" not in html

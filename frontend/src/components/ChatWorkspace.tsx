@@ -7,11 +7,9 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
 } from "react";
 import {
   getApiErrorMessage,
-  type ChatMessageAction,
   type ChatThreadRead,
 } from "@/lib/api";
 import {
@@ -32,7 +30,7 @@ import { useChatSubmission } from "@/features/chat/runs/use-chat-submission";
 import type { PendingChatSubmission } from "@/features/chat/workspace/chat-workspace-types";
 import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
 import { useChatThreadDeletion } from "@/features/chat/workspace/use-chat-thread-deletion";
-
+import { useWorkspaceSubmissionActions } from "@/features/chat/workspace/use-workspace-submission-actions";
 
 export function ChatWorkspace() {
   const pathname = usePathname();
@@ -235,64 +233,38 @@ export function ChatWorkspace() {
       ? pendingFollowUp.followUp
       : null);
   const visibleMessages = chatTranscriptMessages(messages);
-  const handlePostAnswerActionChange = useCallback(
-    (action: ChatMessageAction) => {
-      if (threadStatus === "answered") setPostAnswerAction(action);
-    },
-    [setPostAnswerAction, threadStatus],
-  );
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    submitContent(
-      input,
-      displayFollowUp ? "followup" : "message",
-      displayFollowUp ?? undefined,
-    );
-  };
-
-  const handleSubmitCase = useCallback(
-    async ({ title, description }: { title?: string; description: string }) => {
-      const currentThreadId = activeThreadIdRef.current;
-      if (currentThreadId && title) {
-        void updateMutation.mutateAsync({ threadId: currentThreadId, title }).catch(() => undefined);
-      }
-      submitContent(description, "message", undefined, () => {
-        setActiveView("overview");
-        if (currentThreadId !== null) router.push(chatPath(currentThreadId, "overview"));
-      });
-    },
-    [activeThreadIdRef, router, submitContent, updateMutation],
-  );
-
   const hasCompletedAnalysis = messages.some(
     (message) =>
       message.role === "assistant" &&
       message.metadata_json.analysis_kind === "grounded_main_analysis",
   );
-  const activeWorkspaceView = activeView;
-
-  const handleClearQueryError = useCallback(() => {
-    setQueryError(null);
-  }, [setQueryError]);
-
-  const handleRetryQuery = useCallback(() => {
-    const pending = pendingSubmissionRef.current;
-    setQueryError(null);
-    if (pending) {
-      submitContent(
-        pending.content,
-        pending.kind,
-        pendingFollowUp?.followUp ?? undefined,
-      );
-    }
-  }, [pendingFollowUp, pendingSubmissionRef, setQueryError, submitContent]);
+  const {
+    changePostAnswerAction: handlePostAnswerActionChange,
+    clearQueryError: handleClearQueryError,
+    retryQuery: handleRetryQuery,
+    submitCase: handleSubmitCase,
+    submitMessage: handleSubmit,
+  } = useWorkspaceSubmissionActions({
+    activeThreadIdRef,
+    pendingSubmissionRef,
+    pendingFollowUp,
+    displayFollowUp,
+    input,
+    threadStatus,
+    router,
+    submitContent,
+    updateTitle: updateMutation.mutateAsync,
+    setActiveView,
+    setPostAnswerAction,
+    setQueryError,
+  });
 
   return (
     <ChatWorkspaceLayout
       activeThread={activeThread}
       activeThreadId={activeThreadId}
       activeView={activeView}
-      activeWorkspaceView={activeWorkspaceView}
+      activeWorkspaceView={activeView}
       threads={threads}
       threadsLoading={threadsLoading}
       threadsError={threadsError}

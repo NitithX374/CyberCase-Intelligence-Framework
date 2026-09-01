@@ -2,9 +2,16 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 from app.config import settings
 from app.services.followup.schemas import ClarificationExchange, GapAnalysis
+from app.services.llm.token_budget import (
+    estimate_json_tokens,
+    estimate_tokens,
+    get_safe_input_token_budget,
+    log_context_budget_diagnostics,
+)
 
 
 def build_bounded_context(
@@ -16,114 +23,171 @@ def build_bounded_context(
     analysis_context: Mapping[str, object] | None = None,
     gap_analysis: GapAnalysis | Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    original = _bounded(
-        original_user_content,
-        settings.chat_followup_policy_max_user_chars,
-    )
+    """Build the context payload for Gap Analysis and Follow-up Policy.
+
+    Preserves 100% of authoritative case evidence and clarification history
+    whenever the full payload fits within the safe model token budget (~100k tokens).
+    """
     exchanges = [
         {
-            "question": _bounded(
-                exchange.question,
-                settings.chat_followup_question_max_chars,
-            ),
-            "answer": _bounded(
-                exchange.answer,
-                settings.chat_followup_policy_max_user_chars,
-            ),
+            "workflow_context": {
+                key: value
+                for key, value in {
+                    "requested_gap_id": exchange.gap_id,
+                    "requested_gap_topic": exchange.gap_topic,
+                    "requested_gap_key": exchange.gap_key,
+                    "question_evidence_sha256": exchange.evidence_sha256,
+                    "question_message_id": exchange.question_message_id,
+                }.items()
+                if value is not None
+            },
+            "assistant_question": exchange.question,
+            "user_answer": exchange.answer,
         }
         for exchange in clarification_exchanges
+        if exchange.question or exchange.answer
     ]
 
-    def content_size() -> int:
-        return len(original) + sum(
-            len(str(exchange["question"])) + len(str(exchange["answer"]))
-            for exchange in exchanges
-        )
+    normalized_gap_analysis: Any = None
+    if isinstance(gap_analysis, GapAnalysis):
+        normalized_gap_analysis = gap_analysis.model_dump(mode="json")
+    elif gap_analysis is not None:
+        normalized_gap_analysis = gap_analysis
 
-    maximum = max(1, settings.chat_followup_combined_query_max_chars)
-    gap_analysis_reserve = (
-        min(4_096, max(1, maximum // 3))
-        if gap_analysis is not None
-        else 0
-    )
-    base_maximum = max(1, maximum - gap_analysis_reserve)
-    exchanges = [
-        exchange
-        for exchange in exchanges
-        if exchange["question"] or exchange["answer"]
-    ]
-    while content_size() > base_maximum and len(exchanges) > 1:
-        overflow = content_size() - base_maximum
-        exchange = exchanges[0]
-        exchange_answer = str(exchange["answer"])
-        shortened_answer = exchange_answer[
-            : max(0, len(exchange_answer) - overflow)
-        ]
-        if not shortened_answer:
-            exchanges.pop(0)
-            continue
-        exchange["answer"] = shortened_answer
-
-    if exchanges:
-        overflow = content_size() - base_maximum
-        if overflow > 0:
-            newest_question = str(exchanges[-1]["question"])
-            exchanges[-1]["question"] = newest_question[
-                : max(0, len(newest_question) - overflow)
-            ]
-
-    overflow = content_size() - base_maximum
-    if overflow > 0:
-        removable = max(0, len(original) - 1)
-        remove_count = min(overflow, removable)
-        original = original[: len(original) - remove_count]
-
-    if exchanges:
-        overflow = content_size() - base_maximum
-        if overflow > 0:
-            newest_answer = str(exchanges[-1]["answer"])
-            removable = max(0, len(newest_answer) - 1)
-            remove_count = min(overflow, removable)
-            exchanges[-1]["answer"] = newest_answer[
-                : len(newest_answer) - remove_count
-            ]
-
-    exchanges = [
-        exchange
-        for exchange in exchanges
-        if exchange["question"] or exchange["answer"]
-    ]
     payload: dict[str, object] = {
-        "original_user_content": original,
+        "original_user_content": original_user_content,
         "clarification_exchanges": exchanges,
     }
+    if normalized_gap_analysis is not None:
+        payload["gap_analysis"] = normalized_gap_analysis
+    if raw_evidence is not None:
+        payload["raw_evidence"] = raw_evidence
+    if analysis_answer is not None:
+        payload["main_case_analysis"] = analysis_answer
+    if analysis_context is not None:
+        payload["retrieved_mitre_context"] = dict(analysis_context)
 
-    if isinstance(gap_analysis, GapAnalysis):
-        gap_analysis = gap_analysis.model_dump(mode="json")
+    token_budget = get_safe_input_token_budget()
+    estimated_tokens = estimate_json_tokens(payload)
 
-    optional_values: list[tuple[str, object | None]] = [
-        ("gap_analysis", gap_analysis),
-        ("raw_evidence", raw_evidence),
-        ("main_case_analysis", analysis_answer),
-        ("retrieved_mitre_context", analysis_context),
-    ]
-    present_count = sum(value is not None for _, value in optional_values)
-    maximum = max(1, settings.chat_followup_combined_query_max_chars)
-    for key, value in optional_values:
-        if value is None:
-            continue
-        current_size = len(json.dumps(payload, ensure_ascii=False, default=str))
-        remaining = max(1, maximum - current_size)
-        if key == "gap_analysis":
-            budget = min(4_096, remaining)
+    if estimated_tokens <= token_budget:
+        log_context_budget_diagnostics(
+            feature="followup_bounded_context",
+            estimated_input_tokens=estimated_tokens,
+            configured_input_token_budget=token_budget,
+            raw_evidence=raw_evidence or original_user_content,
+            external_context=analysis_context,
+            context_truncated=False,
+            retained_evidence_ratio=1.0,
+            retained_external_context_ratio=1.0,
+        )
+        return payload
+
+    # Overflow path: apply prioritized reduction
+    return _build_overflow_followup_context(
+        original_user_content=original_user_content,
+        exchanges=exchanges,
+        raw_evidence=raw_evidence,
+        gap_analysis=normalized_gap_analysis,
+        analysis_answer=analysis_answer,
+        analysis_context=analysis_context,
+        token_budget=token_budget,
+    )
+
+
+def _build_overflow_followup_context(
+    *,
+    original_user_content: str,
+    exchanges: list[dict[str, object]],
+    raw_evidence: str | None,
+    gap_analysis: Any,
+    analysis_answer: str | None,
+    analysis_context: Mapping[str, object] | None,
+    token_budget: int,
+) -> dict[str, object]:
+    """Reduce optional context before authoritative evidence during overflow."""
+    base_payload: dict[str, object] = {
+        "original_user_content": original_user_content,
+        "clarification_exchanges": exchanges,
+        "context_truncated": True,
+    }
+    if gap_analysis is not None:
+        base_payload["gap_analysis"] = gap_analysis
+    if raw_evidence is not None:
+        base_payload["raw_evidence"] = raw_evidence
+
+    # Attempt 1: Full evidence + gap analysis + main_case_analysis (no external MITRE context)
+    candidate = dict(base_payload)
+    if analysis_answer is not None:
+        candidate["main_case_analysis"] = analysis_answer
+
+    if estimate_json_tokens(candidate) <= token_budget:
+        # Full evidence fits! Squeeze as much retrieved MITRE context as possible.
+        if analysis_context:
+            context_dict = dict(analysis_context)
+            candidate["retrieved_mitre_context"] = _bounded_mapping(
+                context_dict,
+                limit=max(100, (token_budget - estimate_json_tokens(candidate)) * 4),
+            )
+        log_context_budget_diagnostics(
+            feature="followup_bounded_context_overflow",
+            estimated_input_tokens=estimate_json_tokens(candidate),
+            configured_input_token_budget=token_budget,
+            raw_evidence=raw_evidence or original_user_content,
+            external_context=candidate.get("retrieved_mitre_context"),
+            context_truncated=True,
+            retained_evidence_ratio=1.0,
+            retained_external_context_ratio=0.5,
+        )
+        return candidate
+
+    # Attempt 2: Full evidence + gap analysis (no analysis_answer, no external context)
+    if estimate_json_tokens(base_payload) <= token_budget:
+        log_context_budget_diagnostics(
+            feature="followup_bounded_context_overflow",
+            estimated_input_tokens=estimate_json_tokens(base_payload),
+            configured_input_token_budget=token_budget,
+            raw_evidence=raw_evidence or original_user_content,
+            external_context=None,
+            context_truncated=True,
+            retained_evidence_ratio=1.0,
+            retained_external_context_ratio=0.0,
+        )
+        return base_payload
+
+    # Attempt 3: Evidence itself must be reduced (last resort)
+    evidence_text = raw_evidence or original_user_content
+    low, high = 0, len(evidence_text)
+    best_candidate = dict(base_payload)
+    if raw_evidence is not None:
+        best_candidate["raw_evidence"] = ""
+    else:
+        best_candidate["original_user_content"] = ""
+
+    while low <= high:
+        mid = (low + high) // 2
+        test = dict(base_payload)
+        if raw_evidence is not None:
+            test["raw_evidence"] = evidence_text[:mid]
         else:
-            budget = max(1, remaining // max(1, present_count))
-        if isinstance(value, Mapping):
-            payload[key] = _bounded_mapping(value, budget)
+            test["original_user_content"] = evidence_text[:mid]
+        if estimate_json_tokens(test) <= token_budget:
+            best_candidate = test
+            low = mid + 1
         else:
-            payload[key] = _bounded(str(value), budget)
-        present_count -= 1
-    return payload
+            high = mid - 1
+
+    log_context_budget_diagnostics(
+        feature="followup_bounded_context_overflow",
+        estimated_input_tokens=estimate_json_tokens(best_candidate),
+        configured_input_token_budget=token_budget,
+        raw_evidence=str(best_candidate.get("raw_evidence") or best_candidate.get("original_user_content")),
+        external_context=None,
+        context_truncated=True,
+        retained_evidence_ratio=len(str(best_candidate.get("raw_evidence") or best_candidate.get("original_user_content"))) / max(1, len(evidence_text)),
+        retained_external_context_ratio=0.0,
+    )
+    return best_candidate
 
 
 def _bounded(value: str, limit: int) -> str:

@@ -1,6 +1,10 @@
 from app.schemas.reports import StructuredReport
-from app.services.case_analysis.contracts import ProviderCaseAnalysis, ProviderCaseAnalysisV3
+from app.services.case_analysis.contracts import (
+    ProviderCaseAnalysis,
+    ProviderCaseAnalysisV3,
+)
 from app.services.llm.structured_output import anthropic_json_schema
+from app.services.llm.structured_output_router import structured_output_schema
 
 
 def test_report_schema_is_provider_compatible() -> None:
@@ -18,10 +22,14 @@ def test_analysis_trace_v2_schema_exposes_source_message_references() -> None:
 
 
 def test_analysis_trace_v3_provider_schema_exposes_grounded_claim_roles() -> None:
-    schema = anthropic_json_schema(ProviderCaseAnalysisV3)
-    claim = schema["$defs"]["AnalysisClaimV3"]["properties"]
-    assert schema["properties"]["version"]["const"] == "analysis_trace_v3"
-    assert "supporting_source_message_ids" in claim
-    assert "contradicting_source_message_ids" in claim
-    assert "reasoning_summary" in claim
-    assert "gaps" not in schema["properties"]
+    for provider in ("anthropic", "openrouter"):
+        schema = structured_output_schema(ProviderCaseAnalysisV3, provider=provider)
+        claim_reference = schema["properties"]["claims"]["items"]["$ref"]
+        claim_name = claim_reference.rsplit("/", 1)[-1]
+        claim = schema["$defs"][claim_name]["properties"]
+        assert schema["properties"]["version"]["const"] == "analysis_trace_v3"
+        assert claim["claim_id"]["enum"] == [f"A-{index:02d}" for index in range(1, 65)]
+        assert "supporting_source_message_ids" in claim
+        assert "contradicting_source_message_ids" in claim
+        assert "reasoning_summary" in claim
+        assert "gaps" not in schema["properties"]

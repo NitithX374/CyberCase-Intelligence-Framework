@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { PersistedChatMessage, ThreadStatus } from "@/lib/api";
-import { buildCaseOverview, type SourceMessageRef } from "@/lib/case-overview";
-import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
-import { AttackStoryTimeline } from "./AttackStoryTimeline";
-import { EstablishedVsUnclearSection } from "./EstablishedVsUnclearSection";
-import { MitreExplainedSimply } from "./MitreExplainedSimply";
-import { InvestigationPointsSection } from "./InvestigationPointsSection";
-import { SourceEvidencePopover } from "./SourceEvidencePopover";
 import { Icon } from "@/components/common/icons";
+import type { PersistedChatMessage, ThreadStatus } from "@/lib/api";
+import { buildCaseMaterials } from "@/lib/case-materials";
+import { buildCaseOverview, type SourceMessageRef } from "@/lib/case-overview";
+import { CaseOverviewHeader } from "./CaseOverviewHeader";
+import { CaseFindingsSection } from "./CaseFindingsSection";
+import { CasePulse } from "./CasePulse";
+import { MitreExplainedSimply } from "./MitreExplainedSimply";
+import { OpenQuestionsSection } from "./OpenQuestionsSection";
+import { OverviewSummarySection } from "./OverviewSummarySection";
+import { SourceEvidencePopover } from "./SourceEvidencePopover";
 
 interface CaseOverviewViewProps {
   threadId: string | null;
@@ -18,6 +20,7 @@ interface CaseOverviewViewProps {
   messages: PersistedChatMessage[];
   onOpenChat: () => void;
   onOpenReport: () => void;
+  onOpenIntake?: () => void;
   onOpenMaterials?: () => void;
   onOpenTechnicalContext?: () => void;
   onNavigateToSource?: (messageId: string) => void;
@@ -30,6 +33,7 @@ export function CaseOverviewView({
   messages,
   onOpenChat,
   onOpenReport,
+  onOpenIntake,
   onOpenMaterials,
   onOpenTechnicalContext,
   onNavigateToSource,
@@ -39,112 +43,65 @@ export function CaseOverviewView({
     anchorElement: HTMLElement;
     sourceKey: string;
   } | null>(null);
-
   const overview = useMemo(
     () => buildCaseOverview(messages, threadStatus),
     [messages, threadStatus],
   );
+  const materialCount = useMemo(
+    () => buildCaseMaterials(messages).totalCount,
+    [messages],
+  );
+
+  if (!threadId || messages.length === 0) {
+    return (
+      <OverviewState
+        eyebrow="CASE OVERVIEW"
+        title="No Case Material Yet"
+        description="Add the first case narrative or document in Intake. CyberCase will create an evidence-bound summary before any optional technical enrichment."
+        actionLabel="Open Intake"
+        onAction={onOpenIntake ?? onOpenChat}
+        actionIcon="intake"
+      />
+    );
+  }
+
+  if (!overview.hasAnalysis && overview.isProcessing) {
+    return (
+      <OverviewState
+        title="Analyzing Case Material…"
+        description="CyberCase is building the case summary, findings, and open questions from the submitted material."
+        actionLabel="View Progress"
+        onAction={onOpenChat}
+        processing
+      />
+    );
+  }
+
+  if (!overview.hasAnalysis) {
+    return (
+      <OverviewState
+        eyebrow="CASE OVERVIEW"
+        title="Analysis Required"
+        description="This case has material but no completed case-level analysis yet. Return to Intake to run the analysis."
+        actionLabel="Open Intake"
+        onAction={onOpenIntake ?? onOpenChat}
+        actionIcon="intake"
+      />
+    );
+  }
 
   const handleSelectSource = (
     sourceRef: SourceMessageRef,
-    anchorEl: HTMLElement,
+    anchorElement: HTMLElement,
     sourceKey: string,
   ) => {
-    setActiveSourcePopover((prev) =>
-      prev?.sourceKey === sourceKey
+    setActiveSourcePopover((current) =>
+      current?.sourceKey === sourceKey
         ? null
-        : { sourceRef, anchorElement: anchorEl, sourceKey },
+        : { sourceRef, anchorElement, sourceKey },
     );
   };
 
-  // 1. Empty Thread / No case selected
-  if (!threadId || messages.length === 0) {
-    return (
-      <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-6 text-center sm:p-10">
-        <div className="mx-auto max-w-md space-y-3">
-          <p className="font-mono text-xs font-bold tracking-wider text-ink-muted uppercase">
-            PROSECUTOR CASE OVERVIEW
-          </p>
-          <h2 className="text-base font-bold text-ink sm:text-lg">
-            No Case Activity Yet
-          </h2>
-          <p className="text-xs leading-relaxed text-ink-secondary">
-            Provide incident details, timeline notes, or system logs in the Chat workspace. CyberCase will generate a prosecutor-oriented case overview and attack story.
-          </p>
-          <div className="pt-3">
-            <button
-              type="button"
-              onClick={onOpenChat}
-              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed"
-            >
-              <Icon name="chat" className="h-3.5 w-3.5" />
-              <span>Go to Chat Workspace</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Processing State
-  if (!overview.hasAnalysis && overview.isProcessing) {
-    return (
-      <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-6 text-center sm:p-10">
-        <div className="mx-auto max-w-md space-y-3">
-          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-line text-ink">
-            <span className="h-2.5 w-2.5 rounded-full bg-ink motion-safe:animate-ping" />
-          </div>
-          <h2 className="text-base font-bold text-ink sm:text-lg">
-            Analyzing Case Evidence…
-          </h2>
-          <p className="text-xs leading-relaxed text-ink-secondary">
-            Grounded case analysis and MITRE ATT&amp;CK intelligence correlation are currently running.
-          </p>
-          <div className="pt-3">
-            <button
-              type="button"
-              onClick={onOpenChat}
-              className="inline-flex items-center gap-2 rounded border border-line bg-surface px-4 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-surface-hover"
-            >
-              <Icon name="chat" className="h-3.5 w-3.5" />
-              <span>View Chat Progress</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. Unanalysed Thread State
-  if (!overview.hasAnalysis) {
-    return (
-      <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-6 text-center sm:p-10">
-        <div className="mx-auto max-w-md space-y-3">
-          <p className="font-mono text-xs font-bold tracking-wider text-ink-muted uppercase">
-            PROSECUTOR CASE OVERVIEW
-          </p>
-          <h2 className="text-base font-bold text-ink sm:text-lg">
-            Analysis Required
-          </h2>
-          <p className="text-xs leading-relaxed text-ink-secondary">
-            No completed analysis is available for this chat yet. Open the Chat workspace to analyze the incident evidence and produce the Case Overview.
-          </p>
-          <div className="pt-3">
-            <button
-              type="button"
-              onClick={onOpenChat}
-              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed"
-            >
-              <Icon name="chat" className="h-3.5 w-3.5" />
-              <span>Open Chat</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 4. Full Analyzed Dossier Overview
   return (
     <div
       id="workspace-overview-panel"
@@ -152,108 +109,59 @@ export function CaseOverviewView({
       aria-label="Case Overview"
       className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas"
     >
-      <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-6 sm:px-8 lg:px-10">
-        {/* Executive Dossier Header */}
-        <header className="border-b border-line pb-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] font-bold tracking-widest text-ink-muted uppercase">
-                  Prosecutor Case Overview · Case Brief
-                </span>
-                <span className="font-mono text-[11px] text-ink-muted">
-                  #{threadId.slice(0, 8)}
-                </span>
-              </div>
-              <h1 className="mt-1 text-xl font-bold tracking-tight text-ink sm:text-2xl">
-                {threadTitle}
-              </h1>
-            </div>
-
-            {/* Restrained Action Links */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenChat}
-                className="inline-flex items-center gap-1.5 rounded border border-line bg-surface px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:border-ink hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                <Icon name="chat" className="h-3.5 w-3.5" />
-                <span>Ask about this case</span>
-              </button>
-              <button
-                type="button"
-                onClick={onOpenReport}
-                className="inline-flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                <Icon name="report" className="h-3.5 w-3.5" />
-                <span>View Report</span>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Section 1: What Happened? */}
-        <WhatHappenedCard
-          summary={overview.incidentSummary}
-        />
-
-        {/* Section 2: Attack Story & Progression */}
-        <AttackStoryTimeline
-          steps={overview.attackStory}
-          onNavigateToSource={onNavigateToSource}
-          onSelectSource={handleSelectSource}
-          activeSourceKey={activeSourcePopover?.sourceKey ?? null}
-        />
-
-        {/* Sections 3 & 4: What is Established? & What Remains Unclear? */}
-        <EstablishedVsUnclearSection
-          establishedFacts={overview.establishedFacts}
-          unclearItems={overview.unclearItems}
-          onNavigateToSource={onNavigateToSource}
-          onSelectSource={handleSelectSource}
-          activeSourceKey={activeSourcePopover?.sourceKey ?? null}
+      <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
+        <CaseOverviewHeader
+          threadTitle={threadTitle}
+          threadStatus={threadStatus}
+          onOpenChat={onOpenChat}
+          onOpenReport={onOpenReport}
           onOpenMaterials={onOpenMaterials}
         />
 
-        {/* Section 5: MITRE ATT&CK Context */}
-        <MitreExplainedSimply
-          techniques={overview.mitreContext}
-          onOpenTechnicalContext={onOpenTechnicalContext}
+        <CasePulse
+          messages={messages}
+          findingCount={overview.findings.length}
+          openQuestionCount={overview.gaps.length}
+          hasAnalysis={overview.hasAnalysis}
         />
 
-        {/* Section 6: Points for Further Investigation */}
-        <InvestigationPointsSection
-          points={overview.investigationPoints}
-        />
-
-        {/* Quiet Dossier Footer */}
-        <footer className="border-t border-line pt-4 text-xs text-ink-muted">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>
-              CyberCase Intelligence Framework · Analytical Dossier
-            </span>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={onOpenChat}
-                className="font-bold text-ink hover:underline"
-              >
-                Ask about this case in Chat ↗
-              </button>
-              <span>·</span>
-              <button
-                type="button"
-                onClick={onOpenReport}
-                className="font-bold text-ink hover:underline"
-              >
-                Generate / View Report ↗
-              </button>
-            </div>
+        <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_19rem]">
+          <div className="min-w-0 space-y-10">
+            <OverviewSummarySection summary={overview.incidentSummary} />
+            <CaseFindingsSection
+              findings={overview.findings}
+              onNavigateToSource={onNavigateToSource}
+              onSelectSource={handleSelectSource}
+              activeSourceKey={activeSourcePopover?.sourceKey ?? null}
+            />
           </div>
+
+          <aside className="min-w-0 space-y-5 xl:sticky xl:top-5">
+            <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
+            <TraceabilityCard
+              materialCount={materialCount}
+              onOpenMaterials={onOpenMaterials}
+            />
+            <MitreExplainedSimply
+              techniques={overview.mitreContext}
+              status={overview.technicalContextStatus}
+              onOpenTechnicalContext={onOpenTechnicalContext}
+            />
+          </aside>
+        </div>
+
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-xs text-ink-muted">
+          <span>Case sources and analytical inferences remain visibly separated.</span>
+          <button
+            type="button"
+            onClick={onOpenReport}
+            className="font-bold text-ink transition-colors hover:text-accent hover:underline"
+          >
+            Generate / View Report ↗
+          </button>
         </footer>
       </div>
 
-      {/* Lightweight Anchored Source Evidence Popover */}
       {activeSourcePopover && (
         <SourceEvidencePopover
           sourceRef={activeSourcePopover.sourceRef}
@@ -266,28 +174,84 @@ export function CaseOverviewView({
   );
 }
 
-function WhatHappenedCard({ summary }: { summary: string }) {
-  if (!summary) return null;
-
+function TraceabilityCard({
+  materialCount,
+  onOpenMaterials,
+}: {
+  materialCount: number;
+  onOpenMaterials?: () => void;
+}) {
   return (
-    <section aria-labelledby="overview-what-happened-heading" className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2.5">
-        <div>
-          <span className="font-mono text-[10px] font-bold tracking-wider text-ink-muted uppercase">
-            01 / SUMMARY
-          </span>
-          <h2
-            id="overview-what-happened-heading"
-            className="text-base font-bold tracking-tight text-ink sm:text-lg"
+    <section className="workspace-card p-4 sm:p-5">
+      <p className="section-eyebrow">TRACEABILITY</p>
+      <h2 className="mt-1 text-sm font-extrabold tracking-tight text-ink">
+        Sources stay inspectable
+      </h2>
+      <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
+        Findings link back to the submitted case material. External technical context is kept separate from the case record.
+      </p>
+      <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+        <span className="text-[11px] text-ink-muted">
+          {materialCount} submitted source{materialCount === 1 ? "" : "s"}
+        </span>
+        {onOpenMaterials && (
+          <button
+            type="button"
+            onClick={onOpenMaterials}
+            className="text-[11px] font-bold text-ink transition-colors hover:text-accent hover:underline"
           >
-            What Happened? <span className="text-sm font-normal text-ink-secondary">· สรุปภาพรวมเหตุการณ์</span>
-          </h2>
-        </div>
-      </div>
-
-      <div className="text-sm leading-relaxed text-ink sm:text-[15px]">
-        <ChatMessageMarkdown content={summary} />
+            View sources →
+          </button>
+        )}
       </div>
     </section>
+  );
+}
+
+interface OverviewStateProps {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+  actionIcon?: "chat" | "intake";
+  processing?: boolean;
+}
+
+function OverviewState({
+  eyebrow,
+  title,
+  description,
+  actionLabel,
+  onAction,
+  actionIcon,
+  processing,
+}: OverviewStateProps) {
+  return (
+    <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-6 text-center sm:p-10">
+      <div className="workspace-card max-w-md space-y-3 p-8">
+        {processing ? (
+          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-evidence/10 text-evidence">
+            <span className="h-2.5 w-2.5 rounded-full bg-evidence motion-safe:animate-ping motion-reduce:animate-none" />
+          </div>
+        ) : eyebrow ? (
+          <p className="section-eyebrow">{eyebrow}</p>
+        ) : null}
+        <h2 className="text-base font-extrabold tracking-tight text-ink sm:text-lg">
+          {title}
+        </h2>
+        <p className="text-xs leading-relaxed text-ink-secondary">{description}</p>
+        <div className="pt-3">
+          <button
+            type="button"
+            onClick={onAction}
+            className="btn-primary inline-flex items-center gap-2 rounded-lg"
+          >
+            {actionIcon && <Icon name={actionIcon} className="h-3.5 w-3.5" />}
+            {actionLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

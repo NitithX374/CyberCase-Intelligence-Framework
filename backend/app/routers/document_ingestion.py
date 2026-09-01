@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile, status
 
 from app.config import settings
 from app.services.document_ingestion import (
@@ -91,6 +91,9 @@ async def preview_document_ingestion(
     file: UploadFile = File(...),
     mode: IngestionMode = Query(default=IngestionMode.UNIFIED),
     segmentation: bool | None = Query(default=None),
+    case_key: str | None = Query(default=None),
+    x_idempotency_key: str | None = Header(default=None, alias="X-Idempotency-Key"),
+    x_case_key: str | None = Header(default=None, alias="X-Case-Key"),
 ) -> IngestedDocument:
     content = await _read_limited(file, settings.document_ingestion_max_bytes)
     selected_mode = mode

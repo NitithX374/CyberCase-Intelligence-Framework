@@ -1,232 +1,185 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PersistedChatMessage } from "@/lib/api";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
 
-describe("CaseOverviewView component", () => {
-  it("renders empty state when no messages are provided", () => {
-    const handleOpenChat = vi.fn();
-    const handleOpenReport = vi.fn();
+function sourceMessage(id: string, ordinal: number, content: string): PersistedChatMessage {
+  return {
+    id,
+    thread_id: "thread-1",
+    ordinal,
+    role: "user",
+    content,
+    retrieval_context_id: null,
+    metadata_json: {
+      evidence_kind: ordinal === 1 ? "initial_case_narrative" : "clarification_answer",
+    },
+    created_at: `2026-08-23T10:0${ordinal}:00Z`,
+  };
+}
 
-    render(
-      <CaseOverviewView
-        threadId="thread-1"
-        threadTitle="Test Investigation"
-        threadStatus="idle"
-        messages={[]}
-        onOpenChat={handleOpenChat}
-        onOpenReport={handleOpenReport}
-      />,
-    );
-
-    expect(screen.getByText(/No Case Activity Yet/i)).toBeInTheDocument();
-    const btn = screen.getByRole("button", { name: /Go to Chat Workspace/i });
-    fireEvent.click(btn);
-    expect(handleOpenChat).toHaveBeenCalledTimes(1);
-  });
-
-  it("renders unanalysed state when messages exist but analysis is not complete", () => {
-    const handleOpenChat = vi.fn();
-    const handleOpenReport = vi.fn();
-    const userMsg: PersistedChatMessage = {
-      id: "msg-1",
-      thread_id: "thread-1",
-      ordinal: 1,
-      role: "user",
-      content: "Security incident reported.",
-      retrieval_context_id: null,
-      metadata_json: {},
-      created_at: "2026-08-23T10:00:00Z",
-    };
-
-    render(
-      <CaseOverviewView
-        threadId="thread-1"
-        threadTitle="Test Incident"
-        threadStatus="idle"
-        messages={[userMsg]}
-        onOpenChat={handleOpenChat}
-        onOpenReport={handleOpenReport}
-      />,
-    );
-
-    expect(screen.getByText(/Analysis Required/i)).toBeInTheDocument();
-    const btn = screen.getByRole("button", { name: /Open Chat/i });
-    fireEvent.click(btn);
-    expect(handleOpenChat).toHaveBeenCalledTimes(1);
-  });
-
-  it("renders full prosecutor overview with all 6 sections and interactive actions", () => {
-    const handleOpenChat = vi.fn();
-    const handleOpenReport = vi.fn();
-    const handleNavigateToSource = vi.fn();
-
-    const userMsg: PersistedChatMessage = {
-      id: "msg-1",
-      thread_id: "thread-1",
-      ordinal: 1,
-      role: "user",
-      content: "Public IIS server compromised. Malicious scheduled task created.",
-      retrieval_context_id: null,
-      metadata_json: {},
-      created_at: "2026-08-23T10:00:00Z",
-    };
-
-    const assistantMsg: PersistedChatMessage = {
-      id: "msg-2",
-      thread_id: "thread-1",
-      ordinal: 2,
-      role: "assistant",
-      content: `### 1. Overall Case Picture (ภาพรวมคดี)
-The attacker compromised the public web server and created scheduled tasks to maintain unauthorized persistence.
-
-### 2. Key Sequence and Relationships
-1. Access gained to IIS server.
-2. Scheduled task deployed.
-
-### 3. Relevant MITRE ATT&CK Context
-Technique T1053.005 Scheduled Task.
-
-### 4. Unresolved or Conflicting Information
-Whether credentials were stolen from LSASS remains unconfirmed.
-
-### 5. Analytical Boundary
-Boundary observations.`,
-      retrieval_context_id: "rc-1",
-      metadata_json: {
-        analysis_kind: "grounded_main_analysis",
-        analysis_trace: {
-          version: "analysis_trace_v2",
-          validation_status: "validated",
-          analysis_mode: "case_overview",
-          retrieval_context_id: "rc-1",
-          evidence_sha256: "b".repeat(64),
-          claims: [
-            {
-              claim_id: "A-01",
-              claim_type: "reported",
-              text: "Public IIS server was compromised.",
-              epistemic_status: "reported",
-              source_message_ids: ["msg-1"],
-            },
-            {
-              claim_id: "A-02",
-              claim_type: "reported",
-              text: "Malicious scheduled task was created.",
-              epistemic_status: "reported",
-              source_message_ids: ["msg-1"],
-            },
-          ],
-          mitre_associations: [
-            {
-              association_id: "MA-01",
-              technique_id: "T1053.005",
-              claim_ids: ["A-02"],
-              reason: "Scheduled Task was configured for automatic task execution.",
-              status: "candidate_only",
-              support_role: "external_technical_context",
-            },
-          ],
-        },
-        mitre_table: [
+function analysisMessage(cyber = true): PersistedChatMessage {
+  return {
+    id: "analysis-1",
+    thread_id: "thread-1",
+    ordinal: 3,
+    role: "assistant",
+    content: "Rendered narrative is separate from the structured trace.",
+    retrieval_context_id: cyber ? "context-1" : null,
+    metadata_json: {
+      analysis_kind: "grounded_main_analysis",
+      analysis_state_scope: "canonical_case_overview",
+      analysis_trace: {
+        version: "analysis_trace_v3",
+        validation_status: "validated",
+        analysis_mode: "case_overview",
+        summary: "The case material contains conflicting recipient information.",
+        claims: [
           {
-            technique_id: "T1053.005",
-            name: "Scheduled Task",
-            description: "Adversaries may abuse the Windows Task Scheduler to execute programs at system startup or on a scheduled basis.",
-            tactic: "Execution",
+            claim_id: "A-01",
+            claim_type: "reported",
+            text: "The reporting party named Account A.",
+            epistemic_status: "contradicted",
+            supporting_source_message_ids: ["source-1"],
+            contradicting_source_message_ids: ["source-2"],
+            reasoning_summary: null,
+          },
+          {
+            claim_id: "A-02",
+            claim_type: "analytical_inference",
+            text: "The recipient identity is not established.",
+            epistemic_status: "not_established",
+            supporting_source_message_ids: ["source-1", "source-2"],
+            contradicting_source_message_ids: [],
+            reasoning_summary: "The submitted sources identify different accounts.",
           },
         ],
-        chat_followup: {
-          gap_analysis: {
-            gaps: [
-              {
-                topic: "Privilege Escalation Vector",
-                status: "NOT_PROVIDED",
-                description: "Method used to elevate privileges was not documented.",
-                affects: "Determining full impact",
-                reason: "System audit logs missing.",
-                priority: "medium",
-                askable: true,
-              },
-            ],
+        gaps: [
+          {
+            gap_id: "G-01",
+            topic: "Recipient identity",
+            status: "CONFLICTING",
+            description: "Current sources name different recipient accounts.",
+            affected_claim_ids: ["A-01", "A-02"],
+            reason: "No current source resolves the discrepancy.",
+            priority: "high",
+            askable: true,
           },
-        },
+        ],
+        mitre_associations: cyber
+          ? [{
+              association_id: "MA-01",
+              technique_id: "T1566.002",
+              claim_ids: ["A-02"],
+              reason: "The submitted material mentions a suspicious link.",
+              status: "candidate_only",
+              support_role: "external_technical_context",
+            }]
+          : [],
+        evidence_sha256: "b".repeat(64),
+        retrieval_context_id: cyber ? "context-1" : null,
       },
-      created_at: "2026-08-23T10:01:00Z",
-    };
+      mitre_applicability: { decision: cyber ? "RETRIEVE" : "SKIP" },
+      rag_attempt: { status: cyber ? "used" : "no_applicable_context" },
+      mitre_table: cyber
+        ? [{
+            technique_id: "T1566.002",
+            name: "Spearphishing Link",
+            description: "A link may be used to gain access.",
+          }]
+        : [],
+    },
+    created_at: "2026-08-23T10:03:00Z",
+  };
+}
 
+describe("CaseOverviewView", () => {
+  it("renders a domain-neutral empty state", () => {
+    const openChat = vi.fn();
     render(
       <CaseOverviewView
         threadId="thread-1"
-        threadTitle="Cyber Incident Report Alpha"
+        threadTitle="Test Case"
+        threadStatus="idle"
+        messages={[]}
+        onOpenChat={openChat}
+        onOpenReport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("No Case Material Yet")).toBeInTheDocument();
+    expect(screen.queryByText(/prosecutor|attack story/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open Intake" }));
+    expect(openChat).toHaveBeenCalledOnce();
+  });
+
+  it("renders truthful findings, separated sources, gaps, and optional cyber context", () => {
+    const openChat = vi.fn();
+    const openReport = vi.fn();
+    const navigateToSource = vi.fn();
+    const messages = [
+      sourceMessage("source-1", 1, "The reporting party named Account A."),
+      sourceMessage("source-2", 2, "The bank record names Account B."),
+      analysisMessage(),
+    ];
+    render(
+      <CaseOverviewView
+        threadId="thread-1"
+        threadTitle="Transfer Review"
         threadStatus="answered"
-        messages={[userMsg, assistantMsg]}
-        onOpenChat={handleOpenChat}
-        onOpenReport={handleOpenReport}
-        onNavigateToSource={handleNavigateToSource}
+        messages={messages}
+        onOpenChat={openChat}
+        onOpenReport={openReport}
+        onNavigateToSource={navigateToSource}
       />,
     );
 
-    // Header checks
-    expect(screen.getByText(/Prosecutor Case Overview/i)).toBeInTheDocument();
-    expect(screen.getByText("Cyber Incident Report Alpha")).toBeInTheDocument();
+    expect(screen.getByText("Transfer Review")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Case at a glance" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /What the Case Currently Says/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Case Findings/i })).toBeInTheDocument();
+    expect(screen.getByText("Conflicting evidence")).toBeInTheDocument();
+    expect(screen.getByText("Analytical inference")).toBeInTheDocument();
+    expect(screen.getByText(/does not independently verify it/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Supporting case sources/i)).toHaveLength(2);
+    expect(screen.getByText(/Conflicting case sources/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Open Questions/i })).toBeInTheDocument();
+    expect(screen.getByText("Needs clarification")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clarify in Chat" })).toBeInTheDocument();
+    expect(screen.queryByText("A-01", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText("G-01", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText("high", { exact: true })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /External Cyber Reference/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Spearphishing Link/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("heading", { name: /Attack Story/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /What is Established/i })).not.toBeInTheDocument();
 
-    // Section 1: What Happened
-    expect(screen.getByRole("heading", { name: /What Happened\?/i })).toBeInTheDocument();
-    expect(screen.getByText(/The attacker compromised the public web server/i)).toBeInTheDocument();
+    const sourceButtons = screen.getAllByRole("button", { name: /Case narrative/i });
+    fireEvent.click(sourceButtons[0]);
+    expect(screen.getByRole("dialog", { name: /Source Evidence/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /View in Chat/i }));
+    expect(navigateToSource).toHaveBeenCalledWith("source-1");
+    fireEvent.click(screen.getByRole("button", { name: "Ask about this case" }));
+    expect(openChat).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "View Report" }));
+    expect(openReport).toHaveBeenCalledOnce();
+  });
 
-    // Section 2: Attack Story & Progression
-    expect(screen.getByRole("heading", { name: /Attack Story & Progression/i })).toBeInTheDocument();
-    expect(screen.getAllByText("Public IIS server was compromised.").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Malicious scheduled task was created.").length).toBeGreaterThanOrEqual(1);
-
-    // Section 3: What is Established?
-    expect(screen.getByRole("heading", { name: /What is Established\?/i })).toBeInTheDocument();
-
-    // Section 4: What Remains Unclear?
-    expect(screen.getByRole("heading", { name: /What Remains Unclear\?/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/Method used to elevate privileges was not documented/i).length).toBeGreaterThanOrEqual(1);
-
-    // Section 5: Relevant MITRE ATT&CK Context
-    expect(screen.getByRole("heading", { name: /Relevant MITRE ATT&CK Context Explained/i })).toBeInTheDocument();
-    expect(screen.getAllByText("Scheduled Task").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Trust Boundary Notice/i)).toBeInTheDocument();
-
-    // Section 6: Points for Further Investigation
-    expect(screen.getByRole("heading", { name: /Points for Further Investigation/i })).toBeInTheDocument();
-
-    // Interactive CTAs
-    const askButtons = screen.getAllByRole("button", { name: /Ask about this case/i });
-    expect(askButtons.length).toBeGreaterThanOrEqual(1);
-    fireEvent.click(askButtons[0]);
-    expect(handleOpenChat).toHaveBeenCalled();
-
-    const reportButtons = screen.getAllByRole("button", { name: /View Report|Generate \/ View Report/i });
-    expect(reportButtons.length).toBeGreaterThanOrEqual(1);
-    fireEvent.click(reportButtons[0]);
-    expect(handleOpenReport).toHaveBeenCalled();
-
-    // Source popover interaction
-    const sourceBtns = screen.getAllByRole("button", { name: /Case description/i });
-    expect(sourceBtns.length).toBeGreaterThanOrEqual(2);
-    expect(sourceBtns[0]).toHaveAttribute("aria-expanded", "false");
-    expect(sourceBtns[1]).toHaveAttribute("aria-expanded", "false");
-
-    // Clicking first button activates ONLY first button
-    fireEvent.click(sourceBtns[0]);
-    expect(sourceBtns[0]).toHaveAttribute("aria-expanded", "true");
-    expect(sourceBtns[1]).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText(/SOURCE FROM CASE/i)).toBeInTheDocument();
-    expect(screen.getByText("Case description · รายละเอียดคดีเริ่มต้น")).toBeInTheDocument();
-    expect(screen.getByText(/Public IIS server compromised. Malicious scheduled task created./i)).toBeInTheDocument();
-
-    // Clicking second button switches active state to ONLY second button
-    fireEvent.click(sourceBtns[1]);
-    expect(sourceBtns[0]).toHaveAttribute("aria-expanded", "false");
-    expect(sourceBtns[1]).toHaveAttribute("aria-expanded", "true");
-
-    const viewInChatBtn = screen.getByRole("button", { name: /View in Chat/i });
-    fireEvent.click(viewInChatBtn);
-    expect(handleNavigateToSource).toHaveBeenCalledWith("msg-1");
+  it("does not render MITRE labels for a non-cyber case", () => {
+    render(
+      <CaseOverviewView
+        threadId="thread-1"
+        threadTitle="General Case"
+        threadStatus="answered"
+        messages={[
+          sourceMessage("source-1", 1, "Statement A"),
+          sourceMessage("source-2", 2, "Statement B"),
+          analysisMessage(false),
+        ]}
+        onOpenChat={vi.fn()}
+        onOpenReport={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/MITRE ATT&CK/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /External Cyber Reference/i })).not.toBeInTheDocument();
   });
 });

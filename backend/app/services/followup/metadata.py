@@ -76,11 +76,14 @@ def followup_metadata(
     selected_gap: str | None = None,
     selected_gap_detail: dict[str, Any] | None = None,
     requested_selected_gap: str | None = None,
+    followup_context: dict[str, str] | None = None,
     gap_analysis: dict[str, Any] | None = None,
     rag_skipped: bool = True,
     rag_invoked: bool = False,
 ) -> dict[str, Any]:
-    target = resolve_core_llm_target(settings.chat_followup_policy_model, require_key=False)
+    target = resolve_core_llm_target(
+        settings.chat_followup_policy_model, require_key=False
+    )
     return {
         "chat_followup": {
             "kind": "clarification" if action == "ask_followup" else "decision",
@@ -96,6 +99,7 @@ def followup_metadata(
             "selected_gap": selected_gap,
             "selected_gap_detail": deepcopy(selected_gap_detail),
             "requested_selected_gap": requested_selected_gap,
+            "followup_context": deepcopy(followup_context),
             "reason_code": reason_code,
             "source_run_id": str(source_run_id),
             "root_ordinal": followup_root_ordinal,

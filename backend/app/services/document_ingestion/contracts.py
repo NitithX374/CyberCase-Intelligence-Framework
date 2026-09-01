@@ -1,6 +1,7 @@
+import hashlib
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class IngestionMode(StrEnum):
@@ -120,6 +121,11 @@ class DocumentPage(BaseModel):
     blocks: list[DocumentBlock] = Field(default_factory=list)
     full_text: str = ""
     layout_markdown: str | None = None
+
+    @computed_field
+    @property
+    def text_sha256(self) -> str:
+        return hashlib.sha256(self.merged_text.strip().encode("utf-8")).hexdigest()
 
 
 class IngestedDocument(BaseModel):

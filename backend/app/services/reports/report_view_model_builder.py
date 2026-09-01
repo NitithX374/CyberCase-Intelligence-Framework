@@ -1,13 +1,21 @@
 import re
 
 from app.schemas.reports import ChatReportRead, ReportSection
+from app.services.reports.report_analysis_projection import (
+    formal_case_title,
+    project_summary_paragraphs,
+    project_timeline_rows,
+)
 from app.services.reports.report_contracts import ReportInputSnapshot
+from app.services.reports.report_finding_projection import (
+    project_finding_rows,
+    project_unresolved_issues,
+)
 from app.services.reports.report_view_model_contracts import (
     MitreMappingViewRow,
     ProvenanceViewRow,
     ReportLanguage,
     ReportViewModel,
-    TimelineViewRow,
     UnresolvedIssueViewRow,
     VerificationActionViewRow,
 )
@@ -33,8 +41,6 @@ def build_report_view_model(
     thread_title: str = "CyberCase Investigation",
     language: ReportLanguage = "th",
 ) -> ReportViewModel:
-    """Deterministically transform persisted ChatReportRead into ReportViewModel."""
-
     lang = language if language in ("th", "en") else "th"
     i18n = I18N_STRINGS[lang]
 
@@ -44,7 +50,8 @@ def build_report_view_model(
         for sec in structured.sections:
             sections_by_id[sec.section_id] = sec
 
-    title = structured.title if structured and structured.title.strip() else thread_title
+    title_source = structured.title if structured and structured.title.strip() else thread_title
+    title = formal_case_title(title_source)
     report_status_display = i18n["status_provisional"]
     generated_date_str = _format_datetime(report.created_at)
     version_label_str = f"Version {report.version_number}"
@@ -53,11 +60,9 @@ def build_report_view_model(
         sections_by_id,
         language=lang,
     )
-    evidence_rows = parsed_items.evidence_rows
     indicator_rows = parsed_items.indicator_rows
     has_indicators = parsed_items.has_indicators
 
-    # Resolve snapshot if present
     snapshot: ReportInputSnapshot | None = None
     if getattr(report, "source_snapshot", None):
         raw_snap = report.source_snapshot
@@ -69,57 +74,11 @@ def build_report_view_model(
             except Exception:
                 snapshot = None
 
-    msg_id_to_ordinal: dict[str, int] = {}
-    if snapshot:
-        for m in snapshot.source_messages:
-            msg_id_to_ordinal[str(m.message_id)] = m.ordinal
-
-    def _format_source_label(source_ids: list[str]) -> str:
-        resolved_ordinals = sorted({
-            msg_id_to_ordinal[sid]
-            for sid in source_ids
-            if sid in msg_id_to_ordinal
-        })
-        if not resolved_ordinals:
-            return (
-                "ข้อมูลจากสำนวนที่ผู้ใช้ส่ง"
-                if lang == "th"
-                else "User-Submitted Evidence"
-            )
-        if len(resolved_ordinals) == 1:
-            return (
-                f"ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ #{resolved_ordinals[0]})"
-                if lang == "th"
-                else f"User-Submitted Evidence (#{resolved_ordinals[0]})"
-            )
-        ord_str = ", ".join(f"#{ord_num}" for ord_num in resolved_ordinals)
-        return (
-            f"ข้อมูลจากสำนวนที่ผู้ใช้ส่ง (ข้อความ {ord_str})"
-            if lang == "th"
-            else f"User-Submitted Evidence ({ord_str})"
-        )
-
-    # 1. Timeline Rows: Prefer structured.claims
-    timeline_rows: list[TimelineViewRow] = []
-    if structured and structured.claims:
-        for claim in structured.claims:
-            if claim.claim_id != "R-01" and claim.text:
-                clean_claim_text = _clean_markdown_text(claim.text)
-                if clean_claim_text:
-                    timeline_rows.append(
-                        TimelineViewRow(
-                            order=len(timeline_rows) + 1,
-                            time_display="—",
-                            event=clean_claim_text,
-                            source_evidence=_format_source_label(claim.source_message_ids),
-                            actors="-",
-                            status=claim.support_type,
-                        )
-                    )
+    evidence_rows = project_finding_rows(structured, snapshot, language=lang)
+    timeline_rows = project_timeline_rows(structured, snapshot, language=lang)
     if not timeline_rows:
-        timeline_rows = list(parsed_items.timeline_rows)
+        timeline_rows = parsed_items.timeline_rows
 
-    # 2. MITRE Mapping Rows: Prefer structured snapshot.mitre_rows
     mitre_view_rows: list[MitreMappingViewRow] = []
     if snapshot and snapshot.mitre_rows:
         seen_techniques: set[str] = set()
@@ -151,7 +110,6 @@ def build_report_view_model(
                 )
             )
     else:
-        # Fallback to parsing sections if snapshot is not provided
         raw_mitre_items: list[str] = []
         for sec_id in ("technical_analysis_mitre", "mitre_attack_mapping", "mapping_rationale"):
             if sec_id in sections_by_id:
@@ -189,22 +147,13 @@ def build_report_view_model(
 
     has_mitre_mappings = len(mitre_view_rows) > 0
 
-    # Summary Paragraphs (Section 1)
-    summary_paragraphs: list[str] = []
-    case_summary = sections_by_id.get("case_summary")
-    if case_summary and case_summary.paragraphs:
-        for p in case_summary.paragraphs:
-            cleaned = _clean_markdown_text(p)
-            if cleaned:
-                summary_paragraphs.append(cleaned)
-
+    summary_paragraphs = project_summary_paragraphs(structured, snapshot, language=lang)
     if not summary_paragraphs:
         summary_paragraphs.append(i18n["empty_summary"])
 
-    # Unresolved Issues (Section 5)
-    unresolved_issues: list[UnresolvedIssueViewRow] = []
+    unresolved_issues = project_unresolved_issues(snapshot, language=lang)
     evidence_to_examine = sections_by_id.get("evidence_to_examine")
-    if evidence_to_examine and evidence_to_examine.items:
+    if not unresolved_issues and evidence_to_examine and evidence_to_examine.items:
         for item in evidence_to_examine.items:
             clean_item = _clean_markdown_text(item)
             if (
@@ -227,7 +176,6 @@ def build_report_view_model(
                     )
                 )
 
-    # Check limitations for warnings as backup
     if structured and structured.limitations:
         for lim in structured.limitations:
             if lim.startswith("Extraction warning: "):
@@ -253,41 +201,32 @@ def build_report_view_model(
             )
         )
 
-    # Verification Actions (Section 6: Points for Further Investigation)
     verification_actions: list[VerificationActionViewRow] = []
     action_order = 1
 
-    # Dynamically generate investigative actions from gaps
     real_gaps = [g for g in unresolved_issues if g.description != i18n["empty_gaps"]]
     for gap in real_gaps:
-        gap_desc = gap.description
-        if lang == "th":
-            if "ส่งออก" in gap_desc or "destination" in gap_desc.lower() or "egress" in gap_desc.lower():
-                action_text = f"ควรตรวจสอบข้อมูลบันทึกเครือข่าย (Firewall / Network Logs) เพิ่มเติมเพื่อระบุปลายทางและปริมาณข้อมูลที่เกี่ยวข้อง ({gap_desc})"
-            elif "บัญชี" in gap_desc or "account" in gap_desc.lower() or "privilege" in gap_desc.lower():
-                action_text = f"ควรตรวจสอบข้อมูลบันทึกการยืนยันตัวตน (Authentication / Audit Logs) เพิ่มเติมเพื่อระบุบัญชีผู้ใช้ที่เกี่ยวข้อง ({gap_desc})"
-            else:
-                action_text = f"ควรตรวจสอบพยานหลักฐานและบันทึกเหตุการณ์เพิ่มเติมเกี่ยวกับ: {gap_desc}"
-        else:
-            action_text = f"Investigate and review system/network logs regarding: {gap_desc}"
-
+        action_text = (
+            f"ควรตรวจสอบเอกสาร พยานบุคคล หรือข้อมูลต้นทางเพิ่มเติมเพื่อยืนยันประเด็น: {gap.description}"
+            if lang == "th"
+            else f"Review source records, witness accounts, or other primary material to verify: {gap.description}"
+        )
         verification_actions.append(
             VerificationActionViewRow(order=action_order, action=action_text)
         )
         action_order += 1
 
-    # Standard forensic baseline actions
     if lang == "th":
         baseline_actions = [
-            "ควรตรวจสอบและเก็บรักษาข้อมูลบันทึกเหตุการณ์ต้นฉบับ (Original Logs) เพื่อยืนยันความถูกต้องของเหตุการณ์",
-            "ควรตรวจสอบความเชื่อมโยงของบัญชีผู้ใช้และอุปกรณ์ปลายทางในเครือข่ายเพิ่มเติมเพื่อยืนยันขอบเขตผลกระทบ",
-            "ควรเก็บรักษาสำเนาพยานหลักฐานดิจิทัลตามระเบียบสายการครอบครองพยานหลักฐาน (Chain of Custody)",
+            "ตรวจสอบวันเวลา จำนวนเงิน บุคคล สถานที่ และเลขอ้างอิงกับเอกสารต้นฉบับหรือข้อมูลจากหน่วยงานที่เกี่ยวข้อง",
+            "ตรวจสอบความสอดคล้องระหว่างคำให้การ เอกสาร และลำดับเหตุการณ์ก่อนใช้ประกอบข้อสรุป",
+            "เก็บรักษาเอกสารและข้อมูลต้นทางพร้อมบันทึกที่มาเพื่อให้ตรวจสอบย้อนกลับได้",
         ]
     else:
         baseline_actions = [
-            "Examine original digital artifacts (e.g., server logs, network captures) to confirm reported indicators.",
-            "Verify connections between involved user accounts and endpoints to determine full scope of impact.",
-            "Preserve forensic copies of relevant digital evidence following standard chain-of-custody protocols.",
+            "Verify dates, amounts, persons, locations, and reference numbers against original records or relevant authorities.",
+            "Reconcile statements, documents, and chronology before relying on them in a conclusion.",
+            "Preserve source records with provenance sufficient for later review.",
         ]
 
     for base_action in baseline_actions:
@@ -297,30 +236,45 @@ def build_report_view_model(
             )
             action_order += 1
 
-    # Limitations (Section 7)
     if lang == "th":
         limitations = [
-            "รายงานนี้เป็นรายงานสรุปผลการวิเคราะห์เบื้องต้น (Provisional / Unverified Report) สำหรับใช้เป็นแนวทางการสืบสวน",
-            "ข้อมูลเหตุการณ์อ้างอิงจากข้อความและพยานหลักฐานที่ผู้ใช้ส่งเข้าสู่ระบบ และยังไม่ได้รับการตรวจสอบยืนยันกับพยานหลักฐานดิจิทัลต้นฉบับโดยตรง",
-            "การวิเคราะห์และการเชื่อมโยงข้อมูล MITRE ATT&CK เป็นการอนุมานทางเทคนิคภายนอก ไม่สามารถทดแทนกระบวนการตรวจพิสูจน์พยานหลักฐานทางนิติวิทยาศาสตร์ดิจิทัลอย่างเป็นทางการได้",
+            "รายงานนี้เป็นสรุปผลการวิเคราะห์เบื้องต้นสำหรับการทบทวนและการสืบสวนเพิ่มเติม",
+            "ข้อมูลอ้างอิงจากเนื้อหาที่ผู้ใช้ส่งเข้าสู่ระบบและยังไม่ได้รับการยืนยันโดยอิสระกับเอกสารหรือพยานหลักฐานต้นฉบับ",
+            "สถานะและข้อสังเกตในรายงานเป็นผลการวิเคราะห์ ไม่ใช่ข้อวินิจฉัยทางกฎหมายหรือคำพิพากษา",
         ]
     else:
         limitations = [
-            "This report is a provisional, unverified preliminary analysis designed for investigative orientation.",
-            "Incident details originate from user-submitted statements and have not been independently confirmed with raw evidence.",
-            "Automated MITRE ATT&CK correlation is external technical interpretation and does not replace official digital forensics examination.",
+            "This report is a preliminary analytical summary for review and further investigation.",
+            "Information originates from user-submitted material and has not been independently verified against primary records or evidence.",
+            "Analytical statuses and observations are not legal findings or judicial determinations.",
         ]
+    if has_mitre_mappings:
+        limitations.append(
+            "MITRE ATT&CK เป็นบริบททางเทคนิคภายนอกและไม่ใช่หลักฐานยืนยันข้อเท็จจริงในคดี"
+            if lang == "th"
+            else "MITRE ATT&CK is external technical context and does not prove case facts."
+        )
 
     provenance_rows: list[ProvenanceViewRow] = [
         ProvenanceViewRow(label="Report ID", value=str(report.report_id)),
         ProvenanceViewRow(label="Report Version", value=f"v{report.version_number} ({report.report.report_version if report.report else 'preliminary_analysis_report_v1'})"),
         ProvenanceViewRow(label="Generated Date (UTC)", value=generated_date_str),
         ProvenanceViewRow(label="Source Snapshot Hash", value=report.source_snapshot_hash),
-        ProvenanceViewRow(label="Retrieval Context ID", value=report.retrieval_context_id),
+        ProvenanceViewRow(
+            label="Retrieval Context ID",
+            value=report.retrieval_context_id or ("ไม่เกี่ยวข้อง" if lang == "th" else "Not applicable"),
+        ),
         ProvenanceViewRow(label="Analysis Message ID", value=str(report.analysis_message_id)),
         ProvenanceViewRow(label="Prompt Version", value=report.prompt_version),
         ProvenanceViewRow(label="Template Provider", value=f"{report.provider} ({report.model})"),
-        ProvenanceViewRow(label="Verification Status", value="Validated against frozen raw-evidence snapshot"),
+        ProvenanceViewRow(
+            label="Verification Status",
+            value=(
+                "ตรวจสอบโครงสร้างและการอ้างอิงกับ snapshot แล้ว; ไม่ใช่การยืนยันข้อเท็จจริง"
+                if lang == "th"
+                else "Structure and references validated against the snapshot; facts not independently verified"
+            ),
+        ),
     ]
 
     return ReportViewModel(

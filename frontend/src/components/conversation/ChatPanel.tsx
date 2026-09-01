@@ -6,6 +6,7 @@ import type {
 } from "@/lib/api";
 import type { RunPhase } from "@/components/common/types";
 import { Icon } from "@/components/common/icons";
+import { StatusPill } from "@/components/common/StatusPill";
 import { ChatTranscript } from "./ChatTranscript";
 
 interface ChatPanelProps {
@@ -33,44 +34,33 @@ export function ChatPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-canvas">
-      {/* Transcript Scroll Area */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <ChatTranscript
-          messages={messages}
-          isProcessing={isProcessing}
-        />
+        <ChatTranscript messages={messages} isProcessing={isProcessing} />
       </div>
 
-      {/* Input Area */}
-      <div className="shrink-0 bg-canvas px-4 pt-1 pb-3 sm:px-6 sm:pb-4">
-        <div className="mx-auto w-full max-w-3xl">
+      <div className="shrink-0 border-t border-line bg-surface px-4 pb-4 pt-3 sm:px-7 sm:pb-5">
+        <div className="mx-auto w-full max-w-4xl">
           {threadStatus === "answered" && (
-            <div className="mb-2 flex items-center gap-1.5 px-1">
-              <span className="text-[10px] font-bold text-ink-secondary">
-                Next action:
+            <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+                Your next note
               </span>
-              <button
-                type="button"
+              <ActionChoice
+                label="Ask question"
+                selected={postAnswerAction === "ask"}
                 onClick={() => onPostAnswerActionChange("ask")}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all cursor-pointer ${
-                  postAnswerAction === "ask"
-                    ? "border-primary bg-primary text-ivory shadow-sm"
-                    : "border-line-strong bg-surface text-ink-secondary hover:border-primary hover:bg-surface-hover"
-                }`}
-              >
-                Ask question
-              </button>
-              <button
-                type="button"
+              />
+              <ActionChoice
+                label="Add case info"
+                selected={postAnswerAction === "add_case_info"}
                 onClick={() => onPostAnswerActionChange("add_case_info")}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-all cursor-pointer ${
-                  postAnswerAction === "add_case_info"
-                    ? "border-primary bg-primary text-ivory shadow-sm"
-                    : "border-line-strong bg-surface text-ink-secondary hover:border-primary hover:bg-surface-hover"
-                }`}
-              >
-                Add case info
-              </button>
+              />
+            </div>
+          )}
+          {threadStatus === "awaiting_followup" && (
+            <div className="mb-3 flex items-center gap-2 px-1 text-[11px] text-ink-secondary">
+              <StatusPill tone="attention">Needs clarification</StatusPill>
+              <span>Answer the focused question above to continue the case review.</span>
             </div>
           )}
           <ChatComposer
@@ -79,12 +69,36 @@ export function ChatPanel({
             onInputChange={onInputChange}
             onSubmit={onSubmit}
           />
-          <p className="mt-1.5 text-center text-[9.5px] text-ink-muted">
-            CyberCase maps security events to MITRE ATT&amp;CK intelligence.
+          <p className="mt-2 text-center text-[10px] leading-relaxed text-ink-muted">
+            Questions stay separate from submitted case evidence unless you choose “Add case info.”
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+function ActionChoice({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-[11px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
+        selected
+          ? "border-primary bg-primary text-ivory"
+          : "border-line-strong bg-canvas text-ink-secondary hover:border-primary hover:bg-surface-hover"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -108,7 +122,7 @@ function ChatComposer({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 22), 160)}px`;
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 24), 160)}px`;
   }, [input]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -120,7 +134,7 @@ function ChatComposer({
 
   return (
     <form ref={formRef} onSubmit={onSubmit} className="relative w-full">
-      <div className="relative flex items-center gap-2 rounded-2xl border border-line-strong bg-surface py-1.5 pl-3.5 pr-1.5 shadow-[0_1px_4px_rgba(39,39,39,0.05)] transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+      <div className="relative flex items-center gap-2 rounded-2xl border border-line-strong bg-canvas py-2 pl-4 pr-2 shadow-[0_1px_3px_rgba(39,39,39,0.04)] transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
         <label htmlFor="chat-composer-input" className="sr-only">
           Chat message
         </label>
@@ -132,15 +146,14 @@ function ChatComposer({
           disabled={isSubmitting}
           onKeyDown={handleKeyDown}
           onChange={(event) => onInputChange(event.target.value)}
-          placeholder="Message CyberCase or paste incident logs..."
-          className="max-h-[160px] min-h-[22px] flex-1 resize-none border-none bg-transparent py-0.5 text-xs sm:text-sm leading-snug text-ink outline-none shadow-none placeholder:text-ink-muted focus:border-none focus:outline-none focus:ring-0 focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 disabled:text-ink-disabled"
+          placeholder="Ask about this case or add case information…"
+          className="max-h-[160px] min-h-6 flex-1 resize-none border-none bg-transparent py-0.5 text-xs leading-snug text-ink outline-none shadow-none placeholder:text-ink-muted focus:border-none focus:outline-none focus:ring-0 focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 disabled:text-ink-disabled sm:text-sm"
         />
-
         <button
           type="submit"
           disabled={isSubmitting || !input.trim()}
           aria-label="Send message"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary text-ivory outline-none transition-all hover:scale-105 hover:bg-charcoal-hover active:scale-95 active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled disabled:hover:scale-100"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-ivory outline-none transition-[background-color,transform] hover:bg-charcoal-hover active:scale-95 active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled disabled:hover:scale-100"
         >
           <Icon name="send" className="h-3.5 w-3.5" />
         </button>

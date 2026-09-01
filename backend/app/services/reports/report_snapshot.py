@@ -16,7 +16,7 @@ from app.services.reports.report_contracts import (
 def build_current_report_snapshot(
     thread: ChatThread,
     *,
-    rag_context: RagContext,
+    rag_context: RagContext | None = None,
 ) -> ReportInputSnapshot:
     messages = sorted(list(thread.messages), key=lambda message: message.ordinal)
     evidence = build_raw_evidence_snapshot(messages)
@@ -25,7 +25,7 @@ def build_current_report_snapshot(
             "report_evidence_missing",
             "User-authored case evidence is required before generating a report.",
         )
-    analysis_message = _analysis_message(messages, rag_context.retrieval_context_id)
+    analysis_message = _analysis_message(messages)
     if analysis_message is None:
         raise ReportGenerationConflict(
             "report_analysis_missing",
@@ -53,6 +53,7 @@ def build_current_report_snapshot(
         )
     metadata = analysis_message.metadata_json
     trace = metadata.get("analysis_trace")
+    active_rag_context = _active_rag_context(analysis_message, rag_context)
     return ReportInputSnapshot(
         thread_id=thread.id,
         thread_title=thread.title,
@@ -62,24 +63,35 @@ def build_current_report_snapshot(
         analysis_message_id=analysis_message.id,
         analysis_answer=analysis_message.content,
         analysis_trace=trace if isinstance(trace, dict) else None,
-        retrieval_context_id=rag_context.retrieval_context_id,
-        mitre_rows=_mitre_rows(rag_context.mitre_table),
+        retrieval_context_id=(
+            active_rag_context.retrieval_context_id if active_rag_context else None
+        ),
+        mitre_rows=_mitre_rows(active_rag_context.mitre_table if active_rag_context else []),
         unresolved_issues=_unresolved_issues(metadata),
     )
 
 
 def _analysis_message(
     messages: list[ChatMessage],
-    retrieval_context_id: str,
 ) -> ChatMessage | None:
     candidates = [
         message
         for message in messages
         if message.role == "assistant"
-        and message.retrieval_context_id == retrieval_context_id
         and message.metadata_json.get("analysis_kind") == "grounded_main_analysis"
     ]
     return candidates[-1] if candidates else None
+
+
+def _active_rag_context(
+    analysis_message: ChatMessage,
+    rag_context: RagContext | None,
+) -> RagContext | None:
+    if rag_context is None:
+        return None
+    if analysis_message.retrieval_context_id != rag_context.retrieval_context_id:
+        return None
+    return rag_context
 
 
 def _mitre_rows(value: object) -> list[AdmittedMitreRow]:

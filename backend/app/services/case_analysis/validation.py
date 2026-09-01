@@ -112,6 +112,20 @@ def validate_analysis_trace_v3(
                 "analysis_trace_v3_inference_without_reasoning",
                 "Analytical inferences must include a concise reasoning summary",
             )
+        if not {
+            citation.source_message_id for citation in claim.supporting_citations
+        }.issubset(supporting_ids):
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_citation_outside_support",
+                "A supporting citation must reference a supporting source",
+            )
+        if not {
+            citation.source_message_id for citation in claim.contradicting_citations
+        }.issubset(contradicting_ids):
+            raise AnalysisTraceProvenanceError(
+                "analysis_trace_v3_citation_outside_contradiction",
+                "A contradicting citation must reference a contradicting source",
+            )
 
     gap_ids = [gap.gap_id for gap in analysis.gaps]
     if len(set(gap_ids)) != len(gap_ids):

@@ -4,15 +4,26 @@ import { useRef } from "react";
 import { Icon } from "@/components/common/icons";
 import { getApiErrorMessage } from "@/lib/api";
 import {
+  generateOcrIdempotencyKey,
   previewDocumentIngestion,
   type DocumentIngestionMode,
 } from "@/lib/document-ingestion";
 import { useDocumentIngestion } from "@/lib/document-ingestion-store";
 import { DocumentIngestionResult } from "./DocumentIngestionResult";
+import type { CaseNarrativeDraft } from "@/lib/case-narrative-document";
+import { StatusPill } from "@/components/common/StatusPill";
 
 const ACCEPTED_TYPES = ".pdf,.docx,.png,.jpg,.jpeg";
 
-export function DocumentIngestionPreview() {
+interface DocumentIngestionPreviewProps {
+  caseKey?: string;
+  onUseAsNarrative?: (draft: CaseNarrativeDraft) => void;
+}
+
+export function DocumentIngestionPreview({
+  caseKey = "draft",
+  onUseAsNarrative,
+}: DocumentIngestionPreviewProps = {}) {
   const {
     file,
     fileName,
@@ -20,13 +31,14 @@ export function DocumentIngestionPreview() {
     isProcessing,
     result,
     error,
+    idempotencyKey,
     setFile,
     setMode,
     setIsProcessing,
     setResult,
     setError,
     reset,
-  } = useDocumentIngestion();
+  } = useDocumentIngestion(caseKey);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -36,7 +48,14 @@ export function DocumentIngestionPreview() {
     setError(null);
     setResult(null);
     try {
-      setResult(await previewDocumentIngestion(file, mode));
+      const activeIdempotencyKey =
+        idempotencyKey ?? generateOcrIdempotencyKey(caseKey, file, mode);
+      setResult(
+        await previewDocumentIngestion(file, mode, {
+          caseKey,
+          idempotencyKey: activeIdempotencyKey,
+        }),
+      );
     } catch (requestError) {
       setError(
         getApiErrorMessage(requestError, "Document recognition could not be completed."),
@@ -54,21 +73,23 @@ export function DocumentIngestionPreview() {
   };
 
   return (
-    <section className="space-y-3 rounded-lg border border-line bg-surface p-4 shadow-xs">
+    <section className="workspace-card space-y-4 p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <Icon name="report" className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" />
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-nested text-ink-secondary">
+          <Icon name="intake" className="h-4 w-4" />
+        </span>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xs font-bold text-ink">
-              Document OCR preview · ทดลองอ่านเอกสาร
-            </h2>
-            <span className="font-mono text-[10px] font-bold text-ink-muted">
-              NO CASE CREATED
-            </span>
+            <div>
+              <p className="section-eyebrow">DOCUMENT SOURCE</p>
+              <h2 className="mt-1 text-sm font-extrabold tracking-tight text-ink">
+                Document OCR preview · ทดลองอ่านเอกสาร
+              </h2>
+            </div>
+            <StatusPill>Preview only</StatusPill>
           </div>
-          <p className="text-[11px] leading-relaxed text-ink-secondary">
-            Typhoon reads the full page. Region classification and HTR are currently
-            disabled, so handwriting still requires manual review.
+          <p className="text-xs leading-relaxed text-ink-secondary">
+            Single-document baseline for digital text, text-layer PDFs, and printed OCR. HTR is disabled, so handwriting requires manual review.
           </p>
         </div>
       </div>
@@ -95,7 +116,7 @@ export function DocumentIngestionPreview() {
             onChange={(event) => {
               setFile(event.target.files?.[0] ?? null);
             }}
-            className="block w-full rounded border border-line bg-canvas px-2.5 py-2 text-[11px] text-ink file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-ivory disabled:opacity-60"
+            className="block w-full rounded-lg border border-line bg-canvas px-2.5 py-2 text-[11px] text-ink file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-ivory disabled:opacity-60"
           />
         </div>
         <div className="space-y-1">
@@ -107,7 +128,7 @@ export function DocumentIngestionPreview() {
             value={mode}
             disabled={isProcessing}
             onChange={(event) => setMode(event.target.value as DocumentIngestionMode)}
-            className="block w-full rounded border border-line bg-canvas px-2.5 py-2 text-[11px] text-ink"
+            className="block w-full rounded-lg border border-line bg-canvas px-2.5 py-2 text-[11px] text-ink outline-none focus-visible:ring-1 focus-visible:ring-primary"
           >
             <option value="unified">Unified whole-page OCR</option>
             <option value="routed">Routed contract (classification disabled)</option>
@@ -115,9 +136,9 @@ export function DocumentIngestionPreview() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <p className="text-[10px] text-ink-muted">
-          Preview output is untrusted and is not sent to case analysis, RAG, or MITRE.
+          Preview output remains untrusted until you review it and submit the case narrative.
         </p>
         <div className="flex items-center gap-2">
           {(file || result || error || fileName) && (
@@ -125,7 +146,7 @@ export function DocumentIngestionPreview() {
               type="button"
               disabled={isProcessing}
               onClick={handleClear}
-              className="inline-flex min-h-9 items-center rounded border border-line bg-surface px-3 py-2 text-[11px] font-semibold text-ink-secondary hover:bg-surface-hover hover:text-ink disabled:opacity-50"
+            className="btn-secondary inline-flex min-h-9 items-center rounded-lg"
             >
               Clear preview
             </button>
@@ -134,7 +155,7 @@ export function DocumentIngestionPreview() {
             type="button"
             disabled={!file || isProcessing}
             onClick={() => void processDocument()}
-            className="inline-flex min-h-9 items-center rounded bg-primary px-4 py-2 text-[11px] font-bold text-ivory hover:bg-charcoal-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+            className="btn-primary inline-flex min-h-9 items-center rounded-lg"
           >
             {isProcessing ? "Processing document…" : "Run OCR preview"}
           </button>
@@ -142,11 +163,16 @@ export function DocumentIngestionPreview() {
       </div>
 
       {error && (
-        <div role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-xs text-red-900">
+        <div role="alert" className="rounded-xl border border-critical/30 bg-critical/5 p-3 text-xs text-critical">
           {error}
         </div>
       )}
-      {result && <DocumentIngestionResult result={result} />}
+      {result && (
+        <DocumentIngestionResult
+          result={result}
+          onUseAsNarrative={onUseAsNarrative}
+        />
+      )}
     </section>
   );
 }

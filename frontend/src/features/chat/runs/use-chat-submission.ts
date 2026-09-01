@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import {
   createChatMessage,
   getApiErrorMessage,
+  type CaseNarrativeDocumentSource,
   type ChatMessageAction,
   type ChatThreadDetail,
   type ChatThreadRead,
@@ -88,6 +89,7 @@ export function useChatSubmission({
       kind: PendingChatSubmission["kind"],
       followUp?: ActiveChatFollowUp,
       onAccepted?: () => void,
+      documentSources?: CaseNarrativeDocumentSource[],
     ) => {
       if (phase === "querying" || phase === "analyzing") return;
       const content = rawContent.trim();
@@ -127,7 +129,9 @@ export function useChatSubmission({
         const samePending =
           pending?.threadId === threadId &&
           pending.content === content &&
-          pending.action === action;
+          pending.action === action &&
+          JSON.stringify(pending.documentSources ?? []) ===
+            JSON.stringify(documentSources ?? []);
         const idempotencyKey = samePending
           ? pending.key
           : window.crypto.randomUUID();
@@ -144,6 +148,7 @@ export function useChatSubmission({
           key: idempotencyKey,
           kind,
           action,
+          documentSources,
           lastKnownMessageOrdinal,
         };
         if (kind === "followup" && followUp) {
@@ -160,6 +165,7 @@ export function useChatSubmission({
             idempotencyKey,
             controller.signal,
             action,
+            documentSources,
           );
           if (!isCurrentSelection(threadId, generation)) return;
           requestAccepted = true;

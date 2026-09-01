@@ -85,3 +85,27 @@ def _log_response_shape(status_code: int, payload: Mapping[str, object]) -> None
         payload.get("stop_reason"),
         usage_keys,
     )
+
+
+def _strip_trailing_ocr_boilerplate(text: str) -> str:
+    """Strip default trailing OCR metadata disclaimers emitted by provider."""
+    if not text:
+        return text
+    lines = text.rstrip().split("\n")
+    while lines:
+        last_line = lines[-1].strip()
+        if not last_line:
+            lines.pop()
+            continue
+        cleaned = last_line.lstrip("*-# \t").rstrip(".*- \t")
+        if (
+            "เอกสารต้นทางใช้การรู้จำเอกสารจากภาพ" in cleaned
+            or ("รู้จำเอกสารจากภาพ" in cleaned and "ความเชื่อมั่น" in cleaned)
+            or ("OCR" in cleaned and "ไม่ได้รายงานค่าความเชื่อมั่น" in cleaned)
+            or ("การรู้จำเอกสาร" in cleaned and "ไม่ได้รายงานค่าความเชื่อมั่น" in cleaned)
+        ):
+            lines.pop()
+        else:
+            break
+    return "\n".join(lines).strip()
+

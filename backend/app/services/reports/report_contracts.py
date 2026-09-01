@@ -44,7 +44,7 @@ class ReportInputSnapshot(BaseModel):
     analysis_message_id: UUID
     analysis_answer: str = Field(min_length=1)
     analysis_trace: dict[str, object] | None = None
-    retrieval_context_id: str = Field(min_length=1, max_length=160)
+    retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
     mitre_rows: list[AdmittedMitreRow] = Field(default_factory=list)
     unresolved_issues: list[str] = Field(default_factory=list)
 

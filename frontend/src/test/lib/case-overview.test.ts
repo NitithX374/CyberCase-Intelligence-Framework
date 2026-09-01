@@ -2,276 +2,240 @@ import { describe, expect, it } from "vitest";
 import type { PersistedChatMessage } from "@/lib/api";
 import { buildCaseOverview } from "@/lib/case-overview";
 
+function message(
+  id: string,
+  ordinal: number,
+  role: "user" | "assistant",
+  content: string,
+  metadata_json: Record<string, unknown>,
+): PersistedChatMessage {
+  return {
+    id,
+    thread_id: "thread-1",
+    ordinal,
+    role,
+    content,
+    retrieval_context_id: null,
+    metadata_json,
+    created_at: `2026-08-23T10:0${ordinal}:00Z`,
+  };
+}
+
+function v3Trace(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    version: "analysis_trace_v3",
+    validation_status: "validated",
+    analysis_mode: "case_overview",
+    summary: "The submitted material reports an event that remains under review.",
+    claims: [],
+    gaps: [],
+    mitre_associations: [],
+    evidence_sha256: "a".repeat(64),
+    retrieval_context_id: null,
+    ...overrides,
+  };
+}
+
 describe("case-overview view model builder", () => {
-  it("returns empty overview data when no messages exist", () => {
+  it("returns an empty domain model when no analysis exists", () => {
     const overview = buildCaseOverview([], "idle");
-    expect(overview.hasAnalysis).toBe(false);
-    expect(overview.isProcessing).toBe(false);
-    expect(overview.incidentSummary).toBe("");
-    expect(overview.attackStory).toEqual([]);
-    expect(overview.establishedFacts).toEqual([]);
-    expect(overview.unclearItems).toEqual([]);
-    expect(overview.investigationPoints).toEqual([]);
-    expect(overview.mitreContext).toEqual([]);
+    expect(overview).toMatchObject({
+      hasAnalysis: false,
+      isProcessing: false,
+      incidentSummary: "",
+      findings: [],
+      gaps: [],
+      mitreContext: [],
+      technicalContextStatus: "hidden",
+      contractVersion: null,
+    });
   });
 
-  it("handles processing state when analysis is running", () => {
-    const userMsg: PersistedChatMessage = {
-      id: "msg-user-1",
-      thread_id: "thread-1",
-      ordinal: 1,
-      role: "user",
-      content: "Attacker compromised public web server.",
-      retrieval_context_id: null,
-      metadata_json: { evidence_kind: "initial_case_narrative" },
-      created_at: "2026-08-23T10:00:00Z",
-    };
-    const overview = buildCaseOverview([userMsg], "processing");
-    expect(overview.hasAnalysis).toBe(false);
-    expect(overview.isProcessing).toBe(true);
-  });
-
-  it("extracts complete prosecutor case overview from validated analysis message", () => {
-    const userMsg1: PersistedChatMessage = {
-      id: "msg-user-1",
-      thread_id: "thread-1",
-      ordinal: 1,
-      role: "user",
-      content: "Unauthorized activity detected on public-facing IIS server. Application shimming was observed on host WEB-01.",
-      retrieval_context_id: null,
-      metadata_json: { evidence_kind: "initial_case_narrative" },
-      created_at: "2026-08-23T10:00:00Z",
-    };
-
-    const assistantAnalysisMsg: PersistedChatMessage = {
-      id: "msg-asst-2",
-      thread_id: "thread-1",
-      ordinal: 2,
-      role: "assistant",
-      content: `### 1. Overall Case Picture (ภาพรวมคดี)
-The attacker reportedly accessed the target IIS web server and deployed persistence mechanisms using Application Shimming.
-
-### 2. Key Sequence and Relationships (ลำดับเหตุการณ์และความสัมพันธ์สำคัญ)
-- Initial unauthorized execution occurred on WEB-01.
-- Application Shimming was established to retain access across reboots.
-
-### 3. Relevant MITRE ATT&CK Context
-Technique T1546.011 was correlated with the shimming activity.
-
-### 4. Unresolved or Conflicting Information
-Whether exfiltration occurred to external IPs remains unconfirmed.
-
-### 5. Analytical Boundary
-Direct case facts are derived strictly from case report #1.`,
-      retrieval_context_id: "rc-1",
-      metadata_json: {
+  it("projects validated v3 summary, evidence roles, gaps, and optional MITRE context directly", () => {
+    const supportingContent =
+      "The reporting party stated that Account A received the transfer.";
+    const supporting = message(
+      "source-support",
+      1,
+      "user",
+      supportingContent,
+      {
+        evidence_kind: "initial_case_narrative",
+        document_sources: [{
+          document_id: "DOC-1",
+          filename: "statement.pdf",
+          page_spans: [{
+            page_number: 2,
+            start_offset: 0,
+            end_offset: supportingContent.length,
+            text_sha256: "a".repeat(64),
+          }],
+        }],
+      },
+    );
+    const conflicting = message(
+      "source-conflict",
+      2,
+      "user",
+      "The bank record identifies Account B as the recipient.",
+      { evidence_kind: "clarification_answer" },
+    );
+    const analysis = message(
+      "analysis-v3",
+      3,
+      "assistant",
+      "### 1. This legacy markdown must not become the v3 summary",
+      {
         analysis_kind: "grounded_main_analysis",
-        analysis_trace: {
-          version: "analysis_trace_v2",
-          validation_status: "validated",
-          analysis_mode: "case_overview",
-          retrieval_context_id: "rc-1",
-          evidence_sha256: "a".repeat(64),
+        analysis_state_scope: "canonical_case_overview",
+        analysis_trace: v3Trace({
+          summary: "Case-level summary from the validated trace.",
           claims: [
             {
               claim_id: "A-01",
               claim_type: "reported",
-              text: "Unauthorized activity was detected on public IIS server WEB-01.",
-              epistemic_status: "reported",
-              source_message_ids: ["msg-user-1"],
+              text: "The reporting party identified Account A as the recipient.",
+              epistemic_status: "contradicted",
+              supporting_source_message_ids: ["source-support"],
+              contradicting_source_message_ids: ["source-conflict"],
+              supporting_citations: [{
+                source_message_id: "source-support",
+                exact_quote: "Account A received the transfer",
+                document_id: "DOC-1",
+                filename: "statement.pdf",
+                page_numbers: [2],
+              }],
+              contradicting_citations: [],
+              reasoning_summary: null,
             },
             {
               claim_id: "A-02",
-              claim_type: "reported",
-              text: "Application Shimming was configured on WEB-01.",
-              epistemic_status: "reported",
-              source_message_ids: ["msg-user-1"],
-            },
-            {
-              claim_id: "A-03",
               claim_type: "analytical_inference",
-              text: "Data exfiltration destination remains unconfirmed.",
-              epistemic_status: "suspected",
-              source_message_ids: [],
+              text: "The recipient identity requires reconciliation.",
+              epistemic_status: "not_established",
+              supporting_source_message_ids: ["source-support", "source-conflict"],
+              contradicting_source_message_ids: [],
+              reasoning_summary: "The two submitted sources name different recipient accounts.",
+            },
+          ],
+          gaps: [
+            {
+              gap_id: "G-01",
+              topic: "Recipient identity",
+              status: "CONFLICTING",
+              description: "Submitted sources name different recipient accounts.",
+              affected_claim_ids: ["A-01", "A-02"],
+              reason: "The conflict cannot be resolved from current material.",
+              priority: "high",
+              askable: true,
             },
           ],
           mitre_associations: [
             {
               association_id: "MA-01",
-              technique_id: "T1546.011",
+              technique_id: "T1566.002",
               claim_ids: ["A-02"],
-              reason: "Application shimming modifies Windows compatibility database to execute malicious code on startup.",
+              reason: "A submitted message describes a suspicious link.",
               status: "candidate_only",
               support_role: "external_technical_context",
             },
           ],
-        },
+        }),
         mitre_table: [
           {
-            technique_id: "T1546.011",
-            name: "Application Shimming",
-            description: "Adversaries may establish persistence or escalate privileges by abusing Microsoft Application Compatibility shims.",
-            tactic: "Persistence",
+            technique_id: "T1566.002",
+            name: "Spearphishing Link",
+            description: "A link may be used to gain access.",
           },
         ],
-        chat_followup: {
-          gap_analysis: {
-            gaps: [
-              {
-                topic: "Exfiltration Destination",
-                status: "NOT_PROVIDED",
-                description: "Outbound network destinations and data volumes were not provided.",
-                affects: "Assessing data breach scope",
-                reason: "Firewall egress logs are missing.",
-                priority: "high",
-                askable: true,
-              },
-            ],
-          },
-        },
+        mitre_applicability: { decision: "RETRIEVE" },
+        rag_attempt: { status: "used" },
       },
-      created_at: "2026-08-23T10:01:00Z",
-    };
+    );
 
-    const overview = buildCaseOverview([userMsg1, assistantAnalysisMsg], "answered");
-
-    expect(overview.hasAnalysis).toBe(true);
-    expect(overview.analysisMessageId).toBe("msg-asst-2");
-
-    // 1. What Happened
-    expect(overview.incidentSummary).toContain("The attacker reportedly accessed the target IIS web server");
-
-    // 2. Attack Story (only confirmed/reported progression steps; suspected claim A-03 goes to unclearItems)
-    expect(overview.attackStory).toHaveLength(2);
-    expect(overview.attackStory[0].stepNumber).toBe(1);
-    expect(overview.attackStory[0].text).toBe("Unauthorized activity was detected on public IIS server WEB-01.");
-    expect(overview.attackStory[0].claimType).toBe("reported");
-    expect(overview.attackStory[0].sourceMessages).toHaveLength(1);
-    expect(overview.attackStory[0].sourceMessages[0].label).toBe("Case description");
-    expect(overview.attackStory[0].sourceMessages[0].sourceType).toBe("case_description");
-    expect(overview.attackStory[0].sourceMessages[0].fullContent).toContain("Unauthorized activity detected on public-facing IIS server");
-
-    expect(overview.attackStory[1].stepNumber).toBe(2);
-    expect(overview.attackStory[1].mitreTechniques).toHaveLength(1);
-    expect(overview.attackStory[1].mitreTechniques[0].techniqueId).toBe("T1546.011");
-    expect(overview.attackStory[1].mitreTechniques[0].techniqueName).toBe("Application Shimming");
-
-    // 3. Established Facts
-    expect(overview.establishedFacts).toHaveLength(2);
-    expect(overview.establishedFacts[0].text).toContain("Unauthorized activity was detected");
-    expect(overview.establishedFacts[1].text).toContain("Application Shimming");
-
-    // 4. Unclear Items
-    expect(overview.unclearItems.length).toBeGreaterThanOrEqual(1);
-    expect(overview.unclearItems.some((u) => u.description.includes("Outbound network destinations"))).toBe(true);
-
-    // 5. Points for Further Investigation
-    expect(overview.investigationPoints.length).toBeGreaterThanOrEqual(1);
-    expect(overview.investigationPoints[0].priority).toBe("high");
-    expect(overview.investigationPoints[0].rationale).toContain("Assessing data breach scope");
-
-    // 6. MITRE Explained Simply
-    expect(overview.mitreContext).toHaveLength(1);
-    expect(overview.mitreContext[0].techniqueId).toBe("T1546.011");
-    expect(overview.mitreContext[0].isExternalContext).toBe(true);
-    expect(overview.mitreContext[0].caseAssociationReason).toContain("Application shimming modifies Windows");
+    const overview = buildCaseOverview([supporting, conflicting, analysis], "answered");
+    expect(overview.contractVersion).toBe("v3");
+    expect(overview.incidentSummary).toBe("Case-level summary from the validated trace.");
+    expect(overview.findings).toHaveLength(2);
+    expect(overview.findings[0].supportingSources[0].id).toBe("source-support");
+    expect(overview.findings[0].supportingSources[0]).toMatchObject({
+      label: "statement.pdf · p. 2",
+      exactQuote: "Account A received the transfer",
+      pageNumbers: [2],
+    });
+    expect(overview.findings[0].contradictingSources[0].id).toBe("source-conflict");
+    expect(overview.findings[1].reasoningSummary).toContain("different recipient accounts");
+    expect(overview.gaps[0]).toMatchObject({
+      id: "G-01",
+      status: "CONFLICTING",
+      affectedClaimIds: ["A-01", "A-02"],
+      askable: true,
+    });
+    expect(overview.technicalContextStatus).toBe("available");
+    expect(overview.mitreContext[0].techniqueId).toBe("T1566.002");
   });
 
-  it("fails closed: does not classify analyst_question or missing messages as evidence sources in overview", () => {
-    const userMsg1: PersistedChatMessage = {
-      id: "msg-user-1",
-      thread_id: "thread-1",
-      ordinal: 1,
-      role: "user",
-      content: "Initial incident narrative",
-      retrieval_context_id: null,
-      metadata_json: { evidence_kind: "initial_case_narrative" },
-      created_at: "2026-08-23T10:00:00Z",
-    };
+  it("hides MITRE context when applicability explicitly skips a non-cyber case", () => {
+    const analysis = message("analysis-v3", 2, "assistant", "Rendered answer", {
+      analysis_state_scope: "canonical_case_overview",
+      analysis_trace: v3Trace(),
+      mitre_applicability: { decision: "SKIP" },
+      rag_attempt: { status: "no_applicable_context" },
+      mitre_table: [],
+    });
+    const overview = buildCaseOverview([analysis], "answered");
+    expect(overview.hasAnalysis).toBe(true);
+    expect(overview.technicalContextStatus).toBe("hidden");
+    expect(overview.mitreContext).toEqual([]);
+  });
 
-    const analystQuestionMsg: PersistedChatMessage = {
-      id: "msg-user-2",
-      thread_id: "thread-1",
-      ordinal: 2,
-      role: "user",
-      content: "What is the IOC for this?",
-      retrieval_context_id: null,
-      metadata_json: { evidence_kind: "analyst_question" },
-      created_at: "2026-08-23T10:05:00Z",
-    };
+  it("keeps the canonical overview when a later question-answer trace exists", () => {
+    const canonical = message("overview", 1, "assistant", "Overview answer", {
+      analysis_state_scope: "canonical_case_overview",
+      analysis_trace: v3Trace({ summary: "Canonical summary" }),
+    });
+    const answer = message("answer", 2, "assistant", "Question answer", {
+      analysis_state_scope: "response_scoped",
+      canonical_case_state: false,
+      analysis_trace: v3Trace({
+        analysis_mode: "question_answer",
+        summary: "Response-scoped summary",
+      }),
+    });
+    const overview = buildCaseOverview([canonical, answer], "answered");
+    expect(overview.analysisMessageId).toBe("overview");
+    expect(overview.incidentSummary).toBe("Canonical summary");
+  });
 
-    const clarificationAnswerMsg: PersistedChatMessage = {
-      id: "msg-user-3",
-      thread_id: "thread-1",
-      ordinal: 3,
-      role: "user",
-      content: "The host affected was SRV-PROD-01.",
-      retrieval_context_id: null,
-      metadata_json: { evidence_kind: "clarification_answer" },
-      created_at: "2026-08-23T10:10:00Z",
-    };
-
-    const assistantAnalysisMsg: PersistedChatMessage = {
-      id: "msg-asst-4",
-      thread_id: "thread-1",
-      ordinal: 4,
-      role: "assistant",
-      content: `### 1. Overall Case Picture\nIncident analysis.`,
-      retrieval_context_id: "rc-1",
-      metadata_json: {
+  it("keeps markdown parsing isolated to validated legacy v2 messages", () => {
+    const source = message("source", 1, "user", "A witness reported a cash transfer.", {
+      evidence_kind: "initial_case_narrative",
+    });
+    const legacy = message(
+      "legacy",
+      2,
+      "assistant",
+      "### 1. Overall Case Picture\nA witness reported a cash transfer.\n\n### 2. Detail\nMore text.",
+      {
         analysis_kind: "grounded_main_analysis",
         analysis_trace: {
           version: "analysis_trace_v2",
           validation_status: "validated",
           analysis_mode: "case_overview",
-          retrieval_context_id: "rc-1",
-          evidence_sha256: "b".repeat(64),
-          claims: [
-            {
-              claim_id: "A-01",
-              claim_type: "reported",
-              text: "Initial incident",
-              epistemic_status: "reported",
-              source_message_ids: ["msg-user-1"],
-            },
-            {
-              claim_id: "A-02",
-              claim_type: "reported",
-              text: "Claim linking to analyst question and non-existent message",
-              epistemic_status: "reported",
-              source_message_ids: ["msg-user-2", "msg-nonexistent-99"],
-            },
-            {
-              claim_id: "A-03",
-              claim_type: "reported",
-              text: "Clarification fact",
-              epistemic_status: "reported",
-              source_message_ids: ["msg-user-3"],
-            },
-          ],
+          claims: [{
+            claim_id: "A-01",
+            claim_type: "reported",
+            text: "A witness reported a cash transfer.",
+            epistemic_status: "reported",
+            source_message_ids: ["source"],
+          }],
           mitre_associations: [],
         },
-        mitre_table: [],
       },
-      created_at: "2026-08-23T10:15:00Z",
-    };
-
-    const overview = buildCaseOverview(
-      [userMsg1, analystQuestionMsg, clarificationAnswerMsg, assistantAnalysisMsg],
-      "answered",
     );
-
-    // Claim A-01: valid initial description
-    expect(overview.attackStory[0].sourceMessages).toHaveLength(1);
-    expect(overview.attackStory[0].sourceMessages[0].label).toBe("Case description");
-    expect(overview.attackStory[0].sourceMessages[0].sourceType).toBe("case_description");
-
-    // Claim A-02: analyst_question and nonexistent ID must be completely excluded
-    expect(overview.attackStory[1].sourceMessages).toHaveLength(0);
-
-    // Claim A-03: clarification answer
-    expect(overview.attackStory[2].sourceMessages).toHaveLength(1);
-    expect(overview.attackStory[2].sourceMessages[0].label).toBe("Clarification");
-    expect(overview.attackStory[2].sourceMessages[0].sourceType).toBe("clarification_response");
+    const overview = buildCaseOverview([source, legacy], "answered");
+    expect(overview.contractVersion).toBe("legacy");
+    expect(overview.incidentSummary).toBe("A witness reported a cash transfer.");
+    expect(overview.findings[0].supportingSources[0].id).toBe("source");
   });
 });

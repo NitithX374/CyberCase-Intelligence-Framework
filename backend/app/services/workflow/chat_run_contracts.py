@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from uuid import UUID
 
+from app.services.chat.raw_evidence import RawEvidenceSource
 from app.services.followup.schemas import ClarificationExchange
 
 
@@ -20,6 +21,8 @@ class ClaimedChatRun:
     raw_evidence: str
     evidence_sha256: str
     source_message_ids: tuple[UUID, ...]
+    evidence_sources: tuple[RawEvidenceSource, ...]
+    document_source_context: tuple[dict[str, object], ...]
     original_user_content: str
     clarification_exchanges: tuple[ClarificationExchange, ...]
     followup_root_ordinal: int

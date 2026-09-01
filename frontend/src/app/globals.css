@@ -9,7 +9,7 @@
     --color-background: #F6F3EA;
     --color-canvas: #F6F3EA;
     --color-surface: #FCFAF5;
-    --color-sidebar: #F6F3EA;
+    --color-sidebar: #EEEAE0;
     --color-workspace: #F6F3EA;
 
     /* 30% — NEUTRAL STRUCTURE */
@@ -61,6 +61,11 @@ body {
     color: var(--foreground);
 }
 
+* {
+    scrollbar-color: var(--color-line-strong) transparent;
+    scrollbar-width: thin;
+}
+
 @utility card {
     @apply border border-line bg-surface;
 }
@@ -83,6 +88,14 @@ body {
 
 @utility panel {
     @apply border border-line bg-surface;
+}
+
+@utility workspace-card {
+    @apply rounded-2xl border border-line bg-surface shadow-[0_1px_3px_rgba(39,39,39,0.04)];
+}
+
+@utility section-eyebrow {
+    @apply font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink-muted;
 }
 
 @utility mono-label {

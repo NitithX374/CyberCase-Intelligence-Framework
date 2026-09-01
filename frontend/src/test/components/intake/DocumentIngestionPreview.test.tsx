@@ -70,11 +70,11 @@ describe("DocumentIngestionPreview", () => {
     vi.restoreAllMocks();
   });
 
-  it("uploads a document in unified mode by default", async () => {
+  it("uploads a document in unified mode by default with idempotency key", async () => {
     const preview = vi
       .spyOn(ingestionApi, "previewDocumentIngestion")
       .mockResolvedValue(routedResult);
-    render(<DocumentIngestionPreview />);
+    render(<DocumentIngestionPreview caseKey="case-001" />);
     const file = new File(["pdf"], "case.pdf", { type: "application/pdf" });
 
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
@@ -82,7 +82,16 @@ describe("DocumentIngestionPreview", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
 
-    await waitFor(() => expect(preview).toHaveBeenCalledWith(file, "unified"));
+    await waitFor(() =>
+      expect(preview).toHaveBeenCalledWith(
+        file,
+        "unified",
+        expect.objectContaining({
+          caseKey: "case-001",
+          idempotencyKey: expect.stringContaining("case-001:case.pdf"),
+        }),
+      ),
+    );
     expect(await screen.findByText("DOC-TEST-P001-R001")).toBeInTheDocument();
     expect(screen.getByText("DOC-TEST-P001-R002")).toBeInTheDocument();
     expect(screen.getByText(/typhoon-ocr/i)).toBeInTheDocument();
@@ -91,7 +100,7 @@ describe("DocumentIngestionPreview", () => {
 
   it("preserves upload state and preview results across component unmount and remount", async () => {
     vi.spyOn(ingestionApi, "previewDocumentIngestion").mockResolvedValue(routedResult);
-    const { unmount } = render(<DocumentIngestionPreview />);
+    const { unmount } = render(<DocumentIngestionPreview caseKey="case-persist" />);
     const file = new File(["pdf"], "case.pdf", { type: "application/pdf" });
 
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
@@ -105,7 +114,7 @@ describe("DocumentIngestionPreview", () => {
     unmount();
 
     // Simulate returning to the intake tab
-    render(<DocumentIngestionPreview />);
+    render(<DocumentIngestionPreview caseKey="case-persist" />);
 
     // Result and clear button are still rendered immediately without needing to re-upload
     expect(screen.getByText("DOC-TEST-P001-R001")).toBeInTheDocument();
@@ -116,11 +125,40 @@ describe("DocumentIngestionPreview", () => {
     expect(screen.queryByText("DOC-TEST-P001-R001")).not.toBeInTheDocument();
   });
 
+  it("isolates OCR state and results across multiple cases using case keys", async () => {
+    vi.spyOn(ingestionApi, "previewDocumentIngestion").mockResolvedValue(routedResult);
+
+    // Case A
+    const { unmount: unmountCaseA } = render(
+      <DocumentIngestionPreview caseKey="case-A" />,
+    );
+    const fileA = new File(["pdf-A"], "caseA.pdf", { type: "application/pdf" });
+
+    fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
+      target: { files: [fileA] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
+    expect(await screen.findByText("DOC-TEST-P001-R001")).toBeInTheDocument();
+    unmountCaseA();
+
+    // Switch to Case B (which has no OCR preview yet)
+    const { unmount: unmountCaseB } = render(
+      <DocumentIngestionPreview caseKey="case-B" />,
+    );
+    expect(screen.queryByText("DOC-TEST-P001-R001")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Restored: caseA.pdf/i)).not.toBeInTheDocument();
+    unmountCaseB();
+
+    // Switch back to Case A (restores Case A's OCR result)
+    render(<DocumentIngestionPreview caseKey="case-A" />);
+    expect(screen.getByText("DOC-TEST-P001-R001")).toBeInTheDocument();
+  });
+
   it("keeps the routed contract available for future comparison", async () => {
     const preview = vi
       .spyOn(ingestionApi, "previewDocumentIngestion")
       .mockResolvedValue(routedResult);
-    render(<DocumentIngestionPreview />);
+    render(<DocumentIngestionPreview caseKey="case-routed" />);
     const file = new File(["image"], "page.png", { type: "image/png" });
 
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
@@ -131,14 +169,55 @@ describe("DocumentIngestionPreview", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
 
-    await waitFor(() => expect(preview).toHaveBeenCalledWith(file, "routed"));
+    await waitFor(() =>
+      expect(preview).toHaveBeenCalledWith(
+        file,
+        "routed",
+        expect.objectContaining({
+          caseKey: "case-routed",
+          idempotencyKey: expect.stringContaining("case-routed:page.png"),
+        }),
+      ),
+    );
+  });
+
+  it("hands reviewed merged text to the case narrative draft callback", async () => {
+    vi.spyOn(ingestionApi, "previewDocumentIngestion").mockResolvedValue(routedResult);
+    const onUseAsNarrative = vi.fn();
+    render(
+      <DocumentIngestionPreview
+        caseKey="case-draft"
+        onUseAsNarrative={onUseAsNarrative}
+      />,
+    );
+    const file = new File(["pdf"], "case.pdf", { type: "application/pdf" });
+
+    fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /Use merged text as case narrative/i,
+      }),
+    );
+
+    expect(onUseAsNarrative).toHaveBeenCalledWith({
+      text: "ข้อความพิมพ์",
+      pages: [],
+      source: expect.objectContaining({
+        document_id: "DOC-TEST",
+        confidence_status: "not_reported",
+        verification_status: "needs_review",
+      }),
+    });
   });
 
   it("shows a controlled provider error", async () => {
     vi.spyOn(ingestionApi, "previewDocumentIngestion").mockRejectedValue(
       new Error("OCR provider is unavailable."),
     );
-    render(<DocumentIngestionPreview />);
+    render(<DocumentIngestionPreview caseKey="case-err" />);
     const file = new File(["image"], "page.jpg", { type: "image/jpeg" });
 
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {

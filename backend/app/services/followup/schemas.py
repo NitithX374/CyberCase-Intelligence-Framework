@@ -95,6 +95,12 @@ class GapItem(BaseModel):
             raise ValueError("Gap text fields are too long")
         return value
 
+    @model_validator(mode="after")
+    def explicitly_unknown_is_not_askable(self) -> "GapItem":
+        if self.status == "EXPLICITLY_UNKNOWN":
+            self.askable = False
+        return self
+
 
 class GapAnalysis(BaseModel):
     """All relevant gaps detected for one completed Main Case Analysis."""
@@ -225,6 +231,12 @@ class FollowUpPolicyResult:
 class ClarificationExchange:
     question: str
     answer: str
+    gap_id: str | None = None
+    gap_topic: str | None = None
+    gap_key: str | None = None
+    evidence_sha256: str | None = None
+    question_message_id: str | None = None
+    answer_message_id: str | None = None
 
 
 class GapAnalyzer(Protocol):
@@ -236,6 +248,7 @@ class GapAnalyzer(Protocol):
         raw_evidence: str | None = None,
         analysis_answer: str | None = None,
         analysis_context: Mapping[str, object] | None = None,
+        analysis_claims: Sequence[Mapping[str, object]] | None = None,
     ) -> GapAnalysisResult: ...
 
 

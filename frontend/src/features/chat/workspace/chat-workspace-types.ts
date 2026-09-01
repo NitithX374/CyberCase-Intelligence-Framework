@@ -7,6 +7,8 @@ import type {
 } from "@/components/common/types";
 import type {
   ChatMessageAction,
+  CaseIntakeSubmission,
+  CaseNarrativeDocumentSource,
   ChatThreadRead,
   PersistedChatMessage,
   ThreadStatus,
@@ -18,6 +20,7 @@ export interface PendingChatSubmission {
   key: string;
   kind: "message" | "followup";
   action?: ChatMessageAction;
+  documentSources?: CaseNarrativeDocumentSource[];
   lastKnownMessageOrdinal: number;
   requestOrdinal?: number;
 }
@@ -52,7 +55,7 @@ export interface ChatWorkspaceLayoutProps {
   onCancelDelete: () => void;
   onConfirmDelete: () => void;
   onNavigateToSource?: (messageId: string) => void;
-  onSubmitCase?: (data: { title?: string; description: string }) => void;
+  onSubmitCase?: (data: CaseIntakeSubmission) => void;
   onClearQueryError?: () => void;
   onRetryQuery?: () => void;
 }
