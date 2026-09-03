@@ -1,10 +1,7 @@
 import { Icon } from "@/components/common/icons";
-import { ThreadStatusPill } from "@/components/common/ThreadStatusPill";
-import type { ThreadStatus } from "@/lib/api";
 
 interface CaseOverviewHeaderProps {
   threadTitle: string;
-  threadStatus: ThreadStatus;
   onOpenChat: () => void;
   onOpenReport: () => void;
   onOpenMaterials?: () => void;
@@ -12,27 +9,15 @@ interface CaseOverviewHeaderProps {
 
 export function CaseOverviewHeader({
   threadTitle,
-  threadStatus,
   onOpenChat,
   onOpenReport,
   onOpenMaterials,
 }: CaseOverviewHeaderProps) {
   return (
     <header className="border-b border-line pb-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="section-eyebrow">CASE FILE / OVERVIEW</p>
-          <h1 className="mt-1 max-w-3xl text-2xl font-extrabold tracking-[-0.035em] text-ink sm:text-3xl">
-            {threadTitle}
-          </h1>
-          <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
-            Evidence-bound case review with source traceability and clearly separated analytical context.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ThreadStatusPill status={threadStatus} />
-        </div>
-      </div>
+      <h1 className="max-w-3xl break-words text-2xl font-extrabold tracking-[-0.035em] text-ink sm:text-3xl">
+        {threadTitle}
+      </h1>
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <button
           type="button"

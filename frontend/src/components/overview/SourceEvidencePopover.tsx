@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HighlightedEvidenceText } from "@/components/evidence/HighlightedEvidenceText";
 import type { SourceMessageRef } from "@/lib/case-overview";
+import { formatEvidenceCitationText, formatPageReference } from "@/lib/evidence-citation";
 import { Icon } from "@/components/common/icons";
 
 interface SourceEvidencePopoverProps {
@@ -11,6 +12,7 @@ interface SourceEvidencePopoverProps {
   anchorElement: HTMLElement | null;
   onClose: () => void;
   onNavigateToSource?: (messageId: string) => void;
+  citationRole?: "supporting" | "conflicting";
 }
 
 export function SourceEvidencePopover({
@@ -18,13 +20,19 @@ export function SourceEvidencePopover({
   anchorElement,
   onClose,
   onNavigateToSource,
+  citationRole,
 }: SourceEvidencePopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
   const [coords, setCoords] = useState<{
     top: number;
     left: number;
     isMobile: boolean;
   } | null>(null);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!anchorElement) return;
@@ -74,7 +82,7 @@ export function SourceEvidencePopover({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -83,7 +91,7 @@ export function SourceEvidencePopover({
       if (!target) return;
       if (popoverRef.current?.contains(target)) return;
       if (anchorElement?.contains(target)) return;
-      onClose();
+      onCloseRef.current();
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -102,6 +110,21 @@ export function SourceEvidencePopover({
 
   if (typeof document === "undefined" || !coords) return null;
 
+  const sourceTitle = sourceRef.filename ?? sourceRef.sourceTypeLabel;
+  const citationText = sourceRef.pageNumbers.length > 0
+    ? formatPageReference(sourceRef.pageNumbers)
+    : formatEvidenceCitationText(sourceRef);
+  const evidenceHasHighlight = sourceRef.evidencePages.some((page) => (
+    page.exactQuote !== null && page.text.includes(page.exactQuote)
+  )) || (
+    sourceRef.exactQuote !== null && sourceRef.displayContent.includes(sourceRef.exactQuote)
+  );
+  const roleText = citationRole === "conflicting"
+    ? "Conflicting case source"
+    : citationRole === "supporting"
+      ? "Supporting case source"
+      : "Case source";
+
   const content = (
     <>
       {coords.isMobile && (
@@ -116,7 +139,7 @@ export function SourceEvidencePopover({
         ref={popoverRef}
         role="dialog"
         aria-modal={coords.isMobile}
-        aria-label={`Source Evidence: ${sourceRef.sourceTypeLabel}`}
+        aria-label={`Source Evidence: ${sourceTitle}`}
         tabIndex={-1}
         style={
           coords.isMobile
@@ -138,8 +161,11 @@ export function SourceEvidencePopover({
               SOURCE FROM CASE · พยานหลักฐานในสำนวน
             </span>
             <h3 className="text-xs font-bold text-ink truncate">
-              {sourceRef.sourceTypeLabel}
+              {sourceTitle}
             </h3>
+            <p className="text-[10px] font-medium text-ink-secondary">
+              {roleText} · {citationText}
+            </p>
           </div>
           <button
             type="button"
@@ -152,22 +178,35 @@ export function SourceEvidencePopover({
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
-          {sourceRef.pageNumbers.length > 0 && (
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
-              Cited document page{sourceRef.pageNumbers.length === 1 ? "" : "s"}
-            </p>
+          {sourceRef.evidencePages.length > 0 ? (
+            <div className="space-y-3">
+              {sourceRef.evidencePages.map((page) => (
+                <section key={page.pageNumber} className="rounded border border-line/60 bg-canvas/60 p-3">
+                  <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+                    Page {page.pageNumber}
+                  </h4>
+                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-ink font-normal select-text">
+                    <HighlightedEvidenceText
+                      content={page.text || "(No text content)"}
+                      exactQuote={page.exactQuote}
+                    />
+                  </p>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded border border-line/60 bg-canvas/60 p-3">
+              <p className="whitespace-pre-wrap text-xs leading-relaxed text-ink font-normal select-text">
+                <HighlightedEvidenceText
+                  content={sourceRef.displayContent || sourceRef.excerpt || "(No text content)"}
+                  exactQuote={sourceRef.exactQuote}
+                />
+              </p>
+            </div>
           )}
-          <div className="rounded border border-line/60 bg-canvas/60 p-3">
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-ink font-normal select-text">
-              <HighlightedEvidenceText
-                content={sourceRef.displayContent || sourceRef.excerpt || "(No text content)"}
-                exactQuote={sourceRef.exactQuote}
-              />
-            </p>
-          </div>
-          {sourceRef.exactQuote && (
+          {sourceRef.exactQuote && !evidenceHasHighlight && (
             <p className="text-[10px] leading-relaxed text-ink-muted">
-              Highlighted text is the exact passage validated against the submitted case material.
+              The cited passage could not be highlighted in the available source text.
             </p>
           )}
         </div>

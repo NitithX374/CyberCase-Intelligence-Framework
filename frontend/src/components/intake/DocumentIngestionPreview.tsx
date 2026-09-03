@@ -11,7 +11,6 @@ import {
 import { useDocumentIngestion } from "@/lib/document-ingestion-store";
 import { DocumentIngestionResult } from "./DocumentIngestionResult";
 import type { CaseNarrativeDraft } from "@/lib/case-narrative-document";
-import { StatusPill } from "@/components/common/StatusPill";
 
 const ACCEPTED_TYPES = ".pdf,.docx,.png,.jpg,.jpeg";
 
@@ -86,10 +85,9 @@ export function DocumentIngestionPreview({
                 Document OCR preview · ทดลองอ่านเอกสาร
               </h2>
             </div>
-            <StatusPill>Preview only</StatusPill>
           </div>
           <p className="text-xs leading-relaxed text-ink-secondary">
-            Single-document baseline for digital text, text-layer PDFs, and printed OCR. HTR is disabled, so handwriting requires manual review.
+            Extract text from one document. Handwritten content requires manual transcription.
           </p>
         </div>
       </div>
@@ -138,7 +136,7 @@ export function DocumentIngestionPreview({
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <p className="text-[10px] text-ink-muted">
-          Preview output remains untrusted until you review it and submit the case narrative.
+          Review the extracted text before adding it to the case.
         </p>
         <div className="flex items-center gap-2">
           {(file || result || error || fileName) && (

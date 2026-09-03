@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PersistedChatMessage } from "@/lib/api";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
+import { sha256Hex } from "@/lib/sha256";
 
 function sourceMessage(id: string, ordinal: number, content: string): PersistedChatMessage {
   return {
@@ -134,14 +135,14 @@ describe("CaseOverviewView", () => {
     );
 
     expect(screen.getByText("Transfer Review")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Case at a glance" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /What the Case Currently Says/i })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Case at a glance" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Case Summary/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Case Findings/i })).toBeInTheDocument();
     expect(screen.getByText("Conflicting evidence")).toBeInTheDocument();
     expect(screen.getByText("Analytical inference")).toBeInTheDocument();
-    expect(screen.getByText(/does not independently verify it/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Supporting case sources/i)).toHaveLength(2);
-    expect(screen.getByText(/Conflicting case sources/i)).toBeInTheDocument();
+    expect(screen.queryByText(/does not independently verify it/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText("Sources:")).toHaveLength(2);
+    expect(screen.getByText("Conflicting sources:")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Open Questions/i })).toBeInTheDocument();
     expect(screen.getByText("Needs clarification")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Clarify in Chat" })).toBeInTheDocument();
@@ -181,5 +182,60 @@ describe("CaseOverviewView", () => {
     );
     expect(screen.queryByText(/MITRE ATT&CK/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /External Cyber Reference/i })).not.toBeInTheDocument();
+  });
+
+  it("puts a validated page citation directly below its finding", () => {
+    const content = "Page 4: received 52,000 baht.";
+    const source = sourceMessage("source-1", 1, content);
+    source.metadata_json.document_sources = [{
+      document_id: "DOC-1",
+      filename: "statement.pdf",
+      page_count: 4,
+      page_spans: [{
+        page_number: 4,
+        start_offset: 0,
+        end_offset: content.length,
+        text_sha256: sha256Hex(content),
+      }],
+    }];
+    const analysis = analysisMessage(false);
+    analysis.metadata_json.analysis_trace = {
+      ...(analysis.metadata_json.analysis_trace as Record<string, unknown>),
+      claims: [{
+        claim_id: "A-01",
+        claim_type: "reported",
+        text: "The submitted material reports a receipt.",
+        epistemic_status: "reported",
+        supporting_source_message_ids: ["source-1"],
+        contradicting_source_message_ids: [],
+        supporting_citations: [{
+          source_message_id: "source-1",
+          exact_quote: "received 52,000 baht",
+          document_id: "DOC-1",
+          filename: "statement.pdf",
+          page_numbers: [4],
+        }],
+        contradicting_citations: [],
+        reasoning_summary: null,
+      }],
+    };
+
+    render(
+      <CaseOverviewView
+        threadId="thread-1"
+        threadTitle="Receipt Review"
+        threadStatus="answered"
+        messages={[source, analysis]}
+        onOpenChat={vi.fn()}
+        onOpenReport={vi.fn()}
+      />,
+    );
+
+    const pageCitations = screen.getAllByRole("button", { name: "p. 4" });
+    expect(pageCitations).toHaveLength(1);
+    expect(screen.queryByText("Reported in case material")).not.toBeInTheDocument();
+    fireEvent.click(pageCitations[0]);
+    expect(screen.getByRole("dialog")).toHaveTextContent("Page 4");
+    expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
   });
 });

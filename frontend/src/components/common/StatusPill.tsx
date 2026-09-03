@@ -15,12 +15,12 @@ interface StatusPillProps {
 }
 
 const toneClasses: Record<StatusPillTone, string> = {
-  neutral: "border-line bg-surface-nested text-ink-secondary",
-  positive: "border-established/30 bg-established/10 text-established",
-  attention: "border-unresolved/30 bg-unresolved/10 text-unresolved",
-  critical: "border-critical/30 bg-critical/10 text-critical",
-  external: "border-mitre/25 bg-mitre/10 text-mitre",
-  evidence: "border-evidence/25 bg-evidence/10 text-evidence",
+  neutral: "text-ink-secondary",
+  positive: "text-established",
+  attention: "text-unresolved",
+  critical: "text-critical",
+  external: "text-mitre",
+  evidence: "text-evidence",
 };
 
 export function StatusPill({
@@ -30,7 +30,7 @@ export function StatusPill({
 }: StatusPillProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold leading-4 ${toneClasses[tone]} ${className}`}
+      className={`inline-flex items-center text-[11px] font-medium leading-4 ${toneClasses[tone]} ${className}`}
     >
       {children}
     </span>

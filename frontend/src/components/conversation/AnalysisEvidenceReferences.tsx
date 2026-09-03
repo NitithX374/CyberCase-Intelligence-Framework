@@ -5,6 +5,7 @@ import type { PersistedChatMessage } from "@/lib/api";
 import type { SourceMessageRef } from "@/lib/case-overview";
 import { sourceReferencesForAnalysisMessage } from "@/lib/analysis-citations";
 import { SourceEvidencePopover } from "@/components/overview/SourceEvidencePopover";
+import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip";
 
 interface AnalysisEvidenceReferencesProps {
   analysisMessage: PersistedChatMessage;
@@ -20,6 +21,7 @@ export function AnalysisEvidenceReferences({
     key: string;
     source: SourceMessageRef;
     anchor: HTMLElement;
+    role: "supporting" | "conflicting";
   } | null>(null);
   if (references.length === 0) return null;
 
@@ -33,26 +35,18 @@ export function AnalysisEvidenceReferences({
           const key = `${reference.role}-${reference.source.id}-${index}`;
           const isActive = active?.key === key;
           return (
-            <button
+            <EvidenceCitationChip
               key={key}
-              type="button"
-              aria-expanded={isActive}
-              onClick={(event) => setActive((current) =>
-                current?.key === key
+              sourceRef={reference.source}
+              sourceKey={key}
+              isActive={isActive}
+              citationRole={reference.role}
+              onSelect={(source, anchor, sourceKey) => setActive((current) =>
+                current?.key === sourceKey
                   ? null
-                  : { key, source: reference.source, anchor: event.currentTarget }
+                  : { key: sourceKey, source, anchor, role: reference.role }
               )}
-              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
-                isActive
-                  ? "border-primary bg-primary text-ivory"
-                  : reference.role === "conflicting"
-                    ? "border-unresolved/35 bg-unresolved/8 text-unresolved"
-                    : "border-line bg-surface text-ink-secondary hover:border-ink"
-              }`}
-            >
-              {reference.role === "conflicting" ? "Conflict · " : ""}
-              {reference.source.label}
-            </button>
+            />
           );
         })}
       </div>
@@ -61,6 +55,7 @@ export function AnalysisEvidenceReferences({
           sourceRef={active.source}
           anchorElement={active.anchor}
           onClose={() => setActive(null)}
+          citationRole={active.role}
         />
       )}
     </div>

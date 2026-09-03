@@ -3,11 +3,9 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/common/icons";
 import type { PersistedChatMessage, ThreadStatus } from "@/lib/api";
-import { buildCaseMaterials } from "@/lib/case-materials";
 import { buildCaseOverview, type SourceMessageRef } from "@/lib/case-overview";
 import { CaseOverviewHeader } from "./CaseOverviewHeader";
 import { CaseFindingsSection } from "./CaseFindingsSection";
-import { CasePulse } from "./CasePulse";
 import { MitreExplainedSimply } from "./MitreExplainedSimply";
 import { OpenQuestionsSection } from "./OpenQuestionsSection";
 import { OverviewSummarySection } from "./OverviewSummarySection";
@@ -42,14 +40,11 @@ export function CaseOverviewView({
     sourceRef: SourceMessageRef;
     anchorElement: HTMLElement;
     sourceKey: string;
+    citationRole?: "supporting" | "conflicting";
   } | null>(null);
   const overview = useMemo(
     () => buildCaseOverview(messages, threadStatus),
     [messages, threadStatus],
-  );
-  const materialCount = useMemo(
-    () => buildCaseMaterials(messages).totalCount,
-    [messages],
   );
 
   if (!threadId || messages.length === 0) {
@@ -57,7 +52,7 @@ export function CaseOverviewView({
       <OverviewState
         eyebrow="CASE OVERVIEW"
         title="No Case Material Yet"
-        description="Add the first case narrative or document in Intake. CyberCase will create an evidence-bound summary before any optional technical enrichment."
+        description="Add a case narrative or document in Intake to begin."
         actionLabel="Open Intake"
         onAction={onOpenIntake ?? onOpenChat}
         actionIcon="intake"
@@ -94,11 +89,12 @@ export function CaseOverviewView({
     sourceRef: SourceMessageRef,
     anchorElement: HTMLElement,
     sourceKey: string,
+    citationRole?: "supporting" | "conflicting",
   ) => {
     setActiveSourcePopover((current) =>
       current?.sourceKey === sourceKey
         ? null
-        : { sourceRef, anchorElement, sourceKey },
+        : { sourceRef, anchorElement, sourceKey, citationRole },
     );
   };
 
@@ -112,17 +108,9 @@ export function CaseOverviewView({
       <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
         <CaseOverviewHeader
           threadTitle={threadTitle}
-          threadStatus={threadStatus}
           onOpenChat={onOpenChat}
           onOpenReport={onOpenReport}
           onOpenMaterials={onOpenMaterials}
-        />
-
-        <CasePulse
-          messages={messages}
-          findingCount={overview.findings.length}
-          openQuestionCount={overview.gaps.length}
-          hasAnalysis={overview.hasAnalysis}
         />
 
         <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_19rem]">
@@ -138,10 +126,6 @@ export function CaseOverviewView({
 
           <aside className="min-w-0 space-y-5 xl:sticky xl:top-5">
             <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
-            <TraceabilityCard
-              materialCount={materialCount}
-              onOpenMaterials={onOpenMaterials}
-            />
             <MitreExplainedSimply
               techniques={overview.mitreContext}
               status={overview.technicalContextStatus}
@@ -149,17 +133,6 @@ export function CaseOverviewView({
             />
           </aside>
         </div>
-
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-xs text-ink-muted">
-          <span>Case sources and analytical inferences remain visibly separated.</span>
-          <button
-            type="button"
-            onClick={onOpenReport}
-            className="font-bold text-ink transition-colors hover:text-accent hover:underline"
-          >
-            Generate / View Report ↗
-          </button>
-        </footer>
       </div>
 
       {activeSourcePopover && (
@@ -168,43 +141,10 @@ export function CaseOverviewView({
           anchorElement={activeSourcePopover.anchorElement}
           onClose={() => setActiveSourcePopover(null)}
           onNavigateToSource={onNavigateToSource}
+          citationRole={activeSourcePopover.citationRole}
         />
       )}
     </div>
-  );
-}
-
-function TraceabilityCard({
-  materialCount,
-  onOpenMaterials,
-}: {
-  materialCount: number;
-  onOpenMaterials?: () => void;
-}) {
-  return (
-    <section className="workspace-card p-4 sm:p-5">
-      <p className="section-eyebrow">TRACEABILITY</p>
-      <h2 className="mt-1 text-sm font-extrabold tracking-tight text-ink">
-        Sources stay inspectable
-      </h2>
-      <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
-        Findings link back to the submitted case material. External technical context is kept separate from the case record.
-      </p>
-      <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
-        <span className="text-[11px] text-ink-muted">
-          {materialCount} submitted source{materialCount === 1 ? "" : "s"}
-        </span>
-        {onOpenMaterials && (
-          <button
-            type="button"
-            onClick={onOpenMaterials}
-            className="text-[11px] font-bold text-ink transition-colors hover:text-accent hover:underline"
-          >
-            View sources →
-          </button>
-        )}
-      </div>
-    </section>
   );
 }
 

@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { Icon } from "@/components/common/icons";
-import { StatusPill } from "@/components/common/StatusPill";
 import type {
   CaseIntakeSubmission,
   PersistedChatMessage,
@@ -116,7 +115,6 @@ export function CaseIntakeView({
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
               <form onSubmit={handleSubmit} className="workspace-card space-y-6 p-5 sm:p-7">
                 <div>
-                  <StatusPill tone="evidence">Primary case material</StatusPill>
                   <h2 className="mt-2 text-lg font-extrabold tracking-tight text-ink">Describe what happened</h2>
                   <p className="mt-1 text-xs leading-relaxed text-ink-secondary">
                     ส่งรายละเอียดตามที่ปรากฏในสำนวนหรือเอกสารต้นฉบับ ระบบจะใช้ข้อความนี้เป็นฐานของ Case Overview
@@ -234,7 +232,6 @@ function ExistingCaseRecord({
             <p className="section-eyebrow">SUBMITTED CASE NARRATIVE</p>
             <h2 className="mt-1 text-lg font-extrabold tracking-tight text-ink">ข้อมูลตั้งต้นของคดี</h2>
           </div>
-          <StatusPill tone="positive">Active case</StatusPill>
         </div>
         {message ? (
           <div className="pt-5">
