@@ -85,8 +85,10 @@ function mapSourceMessageIds(
         ? `${msg.content.slice(0, 640)}…`
         : msg.content,
       exactQuote: null,
+      documentId: null,
       filename: null,
       pageNumbers: [],
+      evidencePages: [],
     });
   }
 

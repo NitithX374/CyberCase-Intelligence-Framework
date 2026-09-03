@@ -30,8 +30,16 @@ export interface SourceMessageRef {
   fullContent: string;
   displayContent: string;
   exactQuote: string | null;
+  documentId: string | null;
   filename: string | null;
   pageNumbers: number[];
+  evidencePages: EvidencePage[];
+}
+
+export interface EvidencePage {
+  pageNumber: number;
+  text: string;
+  exactQuote: string | null;
 }
 
 export interface AnalysisEvidenceCitation {

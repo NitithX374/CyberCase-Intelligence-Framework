@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PersistedChatMessage } from "@/lib/api";
 import { buildCaseOverview } from "@/lib/case-overview";
+import { sha256Hex } from "@/lib/sha256";
 
 function message(
   id: string,
@@ -68,7 +69,7 @@ describe("case-overview view model builder", () => {
             page_number: 2,
             start_offset: 0,
             end_offset: supportingContent.length,
-            text_sha256: "a".repeat(64),
+            text_sha256: sha256Hex(supportingContent),
           }],
         }],
       },

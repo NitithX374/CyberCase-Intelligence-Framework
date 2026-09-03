@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 interface WorkspaceSectionHeaderProps {
-  eyebrow: string;
+  eyebrow?: string;
   title: ReactNode;
   description?: ReactNode;
   headingId?: string;
@@ -18,7 +18,7 @@ export function WorkspaceSectionHeader({
   return (
     <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-3">
       <div className="min-w-0">
-        <p className="section-eyebrow">{eyebrow}</p>
+        {eyebrow && <p className="section-eyebrow">{eyebrow}</p>}
         <h2
           id={headingId}
           className="mt-1 text-lg font-extrabold tracking-[-0.025em] text-ink sm:text-xl"

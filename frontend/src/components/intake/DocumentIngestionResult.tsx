@@ -121,7 +121,6 @@ export function DocumentIngestionResult({
           <p className="text-sm font-extrabold text-ink">{result.filename}</p>
           <p className="mt-1 text-[10px] text-ink-muted">{result.pages.length} page(s) · Review before use</p>
         </div>
-        <StatusPill>Preview only</StatusPill>
       </div>
 
       {result.warnings.length > 0 && (

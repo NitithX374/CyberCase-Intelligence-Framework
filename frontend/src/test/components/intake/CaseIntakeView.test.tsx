@@ -196,7 +196,7 @@ describe("CaseIntakeView component", () => {
     expect(screen.getByText(/CASE INTAKE RECORD/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /บันทึกข้อมูลสำนวนคดี/i })).toBeInTheDocument();
     expect(await screen.findByText("รายละเอียดสำนวนคดีเริ่มต้นเรื่องเซิร์ฟเวอร์ถูกบุกรุก")).toBeInTheDocument();
-    expect(screen.getByText(/ACTIVE CASE/i)).toBeInTheDocument();
+    expect(screen.queryByText(/ACTIVE CASE/i)).not.toBeInTheDocument();
 
     // Navigation buttons must be present
     const overviewBtn = screen.getByRole("button", { name: /View Case Overview/i });

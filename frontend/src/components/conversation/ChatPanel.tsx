@@ -6,7 +6,6 @@ import type {
 } from "@/lib/api";
 import type { RunPhase } from "@/components/common/types";
 import { Icon } from "@/components/common/icons";
-import { StatusPill } from "@/components/common/StatusPill";
 import { ChatTranscript } from "./ChatTranscript";
 
 interface ChatPanelProps {
@@ -59,8 +58,7 @@ export function ChatPanel({
           )}
           {threadStatus === "awaiting_followup" && (
             <div className="mb-3 flex items-center gap-2 px-1 text-[11px] text-ink-secondary">
-              <StatusPill tone="attention">Needs clarification</StatusPill>
-              <span>Answer the focused question above to continue the case review.</span>
+              <span>Answer the question above to continue.</span>
             </div>
           )}
           <ChatComposer
@@ -91,7 +89,8 @@ function ActionChoice({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-[11px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
+      aria-pressed={selected}
+      className={`rounded-md border px-3 py-1 text-[11px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
         selected
           ? "border-primary bg-primary text-ivory"
           : "border-line-strong bg-canvas text-ink-secondary hover:border-primary hover:bg-surface-hover"

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { PersistedChatMessage } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
-import { StatusPill } from "@/components/common/StatusPill";
 import { SourceEvidencePopover } from "@/components/overview/SourceEvidencePopover";
 import type { SourceMessageRef } from "@/lib/case-overview";
 import { buildTechnicalContext, type TechnicalContextCard } from "@/lib/technical-context";
@@ -29,7 +28,7 @@ function TechnicalItem({
     <article id={`mitre-${item.techniqueId}`} className="space-y-4 py-6 first:pt-2 last:pb-2">
       <div>
         <div className="flex flex-wrap items-baseline gap-2.5">
-          <span className="rounded-full border border-mitre/25 bg-mitre/10 px-2 py-0.5 font-mono text-[10px] font-bold text-mitre">
+          <span className="font-mono text-[11px] text-mitre">
             {item.techniqueId}
           </span>
           <h2 className="text-sm font-extrabold text-ink">{item.techniqueName}</h2>
@@ -61,10 +60,10 @@ function TechnicalItem({
                 type="button"
                 onClick={(event) => onSelectSource(source, event.currentTarget, buttonKey)}
                 aria-haspopup="dialog"
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                className={`inline-flex max-w-full items-center gap-1 rounded-sm py-1 text-[11px] font-medium underline decoration-current/40 underline-offset-4 transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
                   isActive
-                    ? "border-primary bg-primary text-ivory"
-                    : "border-line bg-surface text-ink-secondary hover:border-ink hover:text-ink"
+                    ? "text-ink decoration-current"
+                    : "text-ink-secondary hover:text-ink hover:decoration-current"
                 }`}
               >
                 Source — {source.label} <span aria-hidden="true">↗</span>
@@ -131,7 +130,6 @@ export function TechnicalContextView({
           <p className="section-eyebrow">OPTIONAL TECHNICAL CONTEXT</p>
           <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl font-extrabold tracking-[-0.035em] text-ink sm:text-3xl">MITRE ATT&amp;CK Context</h1>
-            <StatusPill tone="external">External reference</StatusPill>
           </div>
           <p className="mt-2 text-xs font-bold text-ink-secondary">External technical reference · not case evidence</p>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-muted">

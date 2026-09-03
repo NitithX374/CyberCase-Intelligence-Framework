@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 interface HighlightedEvidenceTextProps {
   content: string;
   exactQuote: string | null;
@@ -10,18 +12,22 @@ export function HighlightedEvidenceText({
   if (!exactQuote) {
     return <>{content}</>;
   }
-  const quoteStart = content.indexOf(exactQuote);
-  if (quoteStart < 0) {
+  const segments = content.split(exactQuote);
+  if (segments.length === 1) {
     return <>{content}</>;
   }
-  const quoteEnd = quoteStart + exactQuote.length;
   return (
     <>
-      {content.slice(0, quoteStart)}
-      <mark className="rounded-sm bg-[#F4D58D]/75 px-0.5 text-inherit ring-1 ring-[#B98218]/20">
-        {content.slice(quoteStart, quoteEnd)}
-      </mark>
-      {content.slice(quoteEnd)}
+      {segments.map((segment, index) => (
+        <Fragment key={index}>
+          {segment}
+          {index < segments.length - 1 && (
+            <mark className="rounded-sm bg-[#F4D58D]/75 px-0.5 text-inherit ring-1 ring-[#B98218]/20">
+              {exactQuote}
+            </mark>
+          )}
+        </Fragment>
+      ))}
     </>
   );
 }
