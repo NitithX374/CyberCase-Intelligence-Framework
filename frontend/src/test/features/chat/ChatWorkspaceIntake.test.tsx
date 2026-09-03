@@ -62,11 +62,11 @@ describe("ChatWorkspace Intake submission integration", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
     });
 
-    const descInput = screen.getByLabelText(/รายละเอียดคดี/i) as HTMLTextAreaElement;
-    const titleInput = screen.getByLabelText(/ชื่อคดี/i) as HTMLInputElement;
+    const descInput = screen.getByLabelText(/Case narrative/i) as HTMLTextAreaElement;
+    const titleInput = screen.getByLabelText(/Case title/i) as HTMLInputElement;
     const submitBtn = screen.getByRole("button", { name: /Analyze case/i });
 
     fireEvent.change(titleInput, { target: { value: "IIS Intrusion Case" } });
@@ -81,7 +81,7 @@ describe("ChatWorkspace Intake submission integration", () => {
       expect(screen.getByText(/failed to submit case description/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
     expect(descInput.value).toBe(
       "PowerShell connected to 198.51.100.23 and downloaded payload.",
     );
@@ -153,10 +153,10 @@ describe("ChatWorkspace Intake submission integration", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
     });
 
-    const descInput = screen.getByLabelText(/รายละเอียดคดี/i) as HTMLTextAreaElement;
+    const descInput = screen.getByLabelText(/Case narrative/i) as HTMLTextAreaElement;
     const submitBtn = screen.getByRole("button", { name: /Analyze case/i });
 
     fireEvent.change(descInput, {

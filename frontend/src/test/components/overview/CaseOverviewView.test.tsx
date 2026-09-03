@@ -1,98 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { PersistedChatMessage } from "@/lib/api";
+import { sourceMessage, analysisMessage } from "./overview-fixtures";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
 import { sha256Hex } from "@/lib/sha256";
+import { mockNativeDialog } from "./mock-native-dialog";
 
-function sourceMessage(id: string, ordinal: number, content: string): PersistedChatMessage {
-  return {
-    id,
-    thread_id: "thread-1",
-    ordinal,
-    role: "user",
-    content,
-    retrieval_context_id: null,
-    metadata_json: {
-      evidence_kind: ordinal === 1 ? "initial_case_narrative" : "clarification_answer",
-    },
-    created_at: `2026-08-23T10:0${ordinal}:00Z`,
-  };
-}
-
-function analysisMessage(cyber = true): PersistedChatMessage {
-  return {
-    id: "analysis-1",
-    thread_id: "thread-1",
-    ordinal: 3,
-    role: "assistant",
-    content: "Rendered narrative is separate from the structured trace.",
-    retrieval_context_id: cyber ? "context-1" : null,
-    metadata_json: {
-      analysis_kind: "grounded_main_analysis",
-      analysis_state_scope: "canonical_case_overview",
-      analysis_trace: {
-        version: "analysis_trace_v3",
-        validation_status: "validated",
-        analysis_mode: "case_overview",
-        summary: "The case material contains conflicting recipient information.",
-        claims: [
-          {
-            claim_id: "A-01",
-            claim_type: "reported",
-            text: "The reporting party named Account A.",
-            epistemic_status: "contradicted",
-            supporting_source_message_ids: ["source-1"],
-            contradicting_source_message_ids: ["source-2"],
-            reasoning_summary: null,
-          },
-          {
-            claim_id: "A-02",
-            claim_type: "analytical_inference",
-            text: "The recipient identity is not established.",
-            epistemic_status: "not_established",
-            supporting_source_message_ids: ["source-1", "source-2"],
-            contradicting_source_message_ids: [],
-            reasoning_summary: "The submitted sources identify different accounts.",
-          },
-        ],
-        gaps: [
-          {
-            gap_id: "G-01",
-            topic: "Recipient identity",
-            status: "CONFLICTING",
-            description: "Current sources name different recipient accounts.",
-            affected_claim_ids: ["A-01", "A-02"],
-            reason: "No current source resolves the discrepancy.",
-            priority: "high",
-            askable: true,
-          },
-        ],
-        mitre_associations: cyber
-          ? [{
-              association_id: "MA-01",
-              technique_id: "T1566.002",
-              claim_ids: ["A-02"],
-              reason: "The submitted material mentions a suspicious link.",
-              status: "candidate_only",
-              support_role: "external_technical_context",
-            }]
-          : [],
-        evidence_sha256: "b".repeat(64),
-        retrieval_context_id: cyber ? "context-1" : null,
-      },
-      mitre_applicability: { decision: cyber ? "RETRIEVE" : "SKIP" },
-      rag_attempt: { status: cyber ? "used" : "no_applicable_context" },
-      mitre_table: cyber
-        ? [{
-            technique_id: "T1566.002",
-            name: "Spearphishing Link",
-            description: "A link may be used to gain access.",
-          }]
-        : [],
-    },
-    created_at: "2026-08-23T10:03:00Z",
-  };
-}
+mockNativeDialog();
 
 describe("CaseOverviewView", () => {
   it("renders a domain-neutral empty state", () => {
@@ -136,16 +49,16 @@ describe("CaseOverviewView", () => {
 
     expect(screen.getByText("Transfer Review")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Case at a glance" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Case Summary/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Executive Summary/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Case Findings/i })).toBeInTheDocument();
-    expect(screen.getByText("Conflicting evidence")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^Contradicted/ })).toBeInTheDocument();
     expect(screen.getByText("Analytical inference")).toBeInTheDocument();
     expect(screen.queryByText(/does not independently verify it/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText("Sources:")).toHaveLength(2);
-    expect(screen.getByText("Conflicting sources:")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^Source ·/ })).toHaveLength(3);
+    expect(screen.getByRole("button", { name: /^Conflicting source ·/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Open Questions/i })).toBeInTheDocument();
-    expect(screen.getByText("Needs clarification")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Clarify in Chat" })).toBeInTheDocument();
+    expect(screen.getByText(/Needs clarification/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Clarify in Chat/ })).toBeInTheDocument();
     expect(screen.queryByText("A-01", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByText("G-01", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByText("high", { exact: true })).not.toBeInTheDocument();
@@ -231,11 +144,29 @@ describe("CaseOverviewView", () => {
       />,
     );
 
-    const pageCitations = screen.getAllByRole("button", { name: "p. 4" });
+    const pageCitations = screen.getAllByRole("button", { name: "Source · statement.pdf · p. 4" });
     expect(pageCitations).toHaveLength(1);
     expect(screen.queryByText("Reported in case material")).not.toBeInTheDocument();
     fireEvent.click(pageCitations[0]);
     expect(screen.getByRole("dialog")).toHaveTextContent("Page 4");
     expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
+    expect(screen.getByRole("dialog").querySelector("mark")).toHaveTextContent("received 52,000 baht");
+    fireEvent.click(screen.getByRole("button", { name: "Close source evidence" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(pageCitations[0]).toHaveFocus();
+  });
+
+  it("closes narrative inspection on native dialog cancel without inventing a document page", () => {
+    render(<CaseOverviewView threadId="thread-1" threadTitle="Narrative review" threadStatus="answered"
+      messages={[sourceMessage("source-1", 1, "Original statement"), analysisMessage(false)]}
+      onOpenChat={vi.fn()} onOpenReport={vi.fn()} />);
+    const sourceButton = screen.getAllByRole("button", { name: "Source · Case narrative" })[0];
+    fireEvent.click(sourceButton);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("Original statement");
+    expect(dialog).not.toHaveTextContent(/Page \d|\.pdf/);
+    fireEvent(dialog, new Event("cancel", { bubbles: false, cancelable: true }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(sourceButton).toHaveFocus();
   });
 });

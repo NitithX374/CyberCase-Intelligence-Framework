@@ -1,95 +1,39 @@
 import type { CaseGap } from "@/lib/case-overview";
-import { StatusPill, type StatusPillTone } from "@/components/common/StatusPill";
-import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
-import { Icon } from "@/components/common/icons";
 
-interface OpenQuestionsSectionProps {
+const gapLabels: Record<CaseGap["status"], string> = {
+  NOT_PROVIDED: "Not provided", EXPLICITLY_UNKNOWN: "Explicitly unknown",
+  AMBIGUOUS: "Ambiguous", CONFLICTING: "Conflicting information",
+};
+
+export function OpenQuestionsSection({ gaps, onOpenChat }: {
   gaps: CaseGap[];
   onOpenChat?: () => void;
-}
-
-export function OpenQuestionsSection({
-  gaps,
-  onOpenChat,
-}: OpenQuestionsSectionProps) {
+}) {
   return (
-    <section
-      aria-labelledby="overview-open-questions-heading"
-      className="workspace-card p-4 sm:p-5"
-    >
-      <WorkspaceSectionHeader
-        headingId="overview-open-questions-heading"
-        title={
-          <>
-            Open Questions
-            <span className="ml-2 text-sm font-normal text-ink-secondary">
-              · ประเด็นที่ยังต้องตรวจสอบ
-            </span>
-          </>
-        }
-        aside={gaps.length > 0 && <span className="text-xs text-ink-muted">{gaps.length}</span>}
-      />
-
+    <section aria-labelledby="overview-open-questions-heading" className="order-4 min-w-0 border-t border-line pt-4 lg:order-2">
+      <h2 id="overview-open-questions-heading" className="flex items-baseline gap-2 text-sm font-semibold text-ink">
+        Open Questions {gaps.length > 0 && <span className="text-xs font-normal text-ink-muted">{gaps.length}</span>}
+      </h2>
       {gaps.length === 0 ? (
-        <p className="pt-4 text-xs leading-relaxed text-ink-secondary">
-          No open questions recorded.
-        </p>
+        <p className="pt-2 text-xs leading-5 text-ink-secondary">No open questions recorded.</p>
       ) : (
-        <div className="divide-y divide-line pt-1">
+        <div className="divide-y divide-line">
           {gaps.map((gap) => (
-            <GapCard key={gap.id} gap={gap} />
+            <article key={gap.id} className="space-y-2 py-4 last:pb-1">
+              <p className="text-[11px] text-ink-muted">{gapLabels[gap.status]}{gap.askable && " · Needs clarification"}</p>
+              <h3 className="text-sm font-semibold leading-6 text-ink">{gap.topic}</h3>
+              <p className="text-xs leading-6 text-ink-secondary">{gap.description}</p>
+              {gap.reason && <p className="text-xs leading-6 text-ink-secondary"><span className="font-medium">Why it matters: </span>{gap.reason}</p>}
+            </article>
           ))}
         </div>
       )}
       {gaps.some((gap) => gap.askable) && onOpenChat && (
-        <button
-          type="button"
-          onClick={onOpenChat}
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-ink transition-colors hover:text-accent hover:underline focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          Clarify in Chat
-          <span aria-hidden="true">→</span>
+        <button type="button" onClick={onOpenChat}
+          className="mt-3 min-h-9 text-xs font-semibold underline decoration-line-strong underline-offset-4 hover:decoration-ink focus-visible:ring-2 focus-visible:ring-primary">
+          Clarify in Chat <span aria-hidden="true">→</span>
         </button>
       )}
     </section>
   );
-}
-
-function GapCard({ gap }: { gap: CaseGap }) {
-  const presentation = gapPresentation(gap);
-
-  return (
-    <article className="py-4 last:pb-1">
-      <StatusPill tone={presentation.tone}>{presentation.label}</StatusPill>
-      <h3 className="mt-2 text-sm font-bold leading-snug text-ink">{gap.topic}</h3>
-      <p className="mt-1.5 text-xs leading-relaxed text-ink-secondary">{gap.description}</p>
-
-      {gap.reason && (
-        <details className="group mt-3 border-t border-line/70 pt-2.5">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-bold text-ink outline-none marker:hidden focus-visible:ring-2 focus-visible:ring-primary">
-            <span>Details</span>
-            <Icon
-              name="chevron"
-              className="h-3 w-3 text-ink-muted transition-transform duration-150 group-open:rotate-180"
-            />
-          </summary>
-          <p className="pt-2 text-[11px] leading-relaxed text-ink-secondary">{gap.reason}</p>
-        </details>
-      )}
-    </article>
-  );
-}
-
-function gapPresentation(gap: CaseGap): {
-  label: string;
-  tone: StatusPillTone;
-} {
-  if (gap.askable) return { label: "Needs clarification", tone: "attention" };
-  if (gap.status === "CONFLICTING") {
-    return { label: "Conflicting evidence", tone: "attention" };
-  }
-  if (gap.status === "EXPLICITLY_UNKNOWN") {
-    return { label: "Known limitation", tone: "neutral" };
-  }
-  return { label: "Needs verification", tone: "neutral" };
 }

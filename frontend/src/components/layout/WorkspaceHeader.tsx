@@ -68,7 +68,7 @@ export function WorkspaceHeader({
           <p className="truncate text-sm font-extrabold tracking-[-0.02em] text-ink sm:mt-0.5 sm:text-base">
             {displayThreadTitle}
           </p>
-          <div className="mt-1 flex items-center gap-2 text-[10px] font-medium text-ink-secondary">
+          {activeView !== "intake" && <div className="mt-1 flex items-center gap-2 text-[10px] font-medium text-ink-secondary">
             <span
               className={`h-1.5 w-1.5 rounded-full ${
                 phase === "error"
@@ -82,7 +82,7 @@ export function WorkspaceHeader({
               aria-hidden="true"
             />
             <span>{currentPhase.label}</span>
-          </div>
+          </div>}
         </div>
       </div>
 

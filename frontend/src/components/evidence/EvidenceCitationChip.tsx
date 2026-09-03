@@ -7,6 +7,7 @@ interface EvidenceCitationChipProps {
   sourceRef: SourceMessageRef;
   sourceKey: string;
   isActive: boolean;
+  showDocumentName?: boolean;
   citationRole?: "supporting" | "conflicting";
   onSelect?: (
     sourceRef: SourceMessageRef,
@@ -21,6 +22,7 @@ export function EvidenceCitationChip({
   sourceRef,
   sourceKey,
   isActive,
+  showDocumentName = false,
   citationRole,
   onSelect,
   onNavigateToSource,
@@ -29,15 +31,16 @@ export function EvidenceCitationChip({
   const title = sourceRef.filename
     ? `${sourceRef.filename} · ${citationText}`
     : sourceRef.sourceTypeLabel;
+  const contextualText = sourceRef.filename ? `${sourceRef.filename} · ${citationText}`
+    : sourceRef.sourceType === "case_description" ? citationText : `${citationText} #${sourceRef.ordinal}`;
+  const label = showDocumentName
+    ? `${citationRole === "conflicting" ? "Conflicting source" : "Source"} · ${contextualText}`
+    : citationRole === "conflicting" ? `Conflict · ${citationText}` : citationText;
 
   return (
     <button
       type="button"
-      aria-label={
-        citationRole === "conflicting"
-          ? `Conflict · ${citationText}`
-          : citationText
-      }
+      aria-label={label}
       aria-expanded={isActive}
       aria-haspopup="dialog"
       title={title}
@@ -56,8 +59,7 @@ export function EvidenceCitationChip({
             : "text-ink-secondary hover:text-ink hover:decoration-current"
       }`}
     >
-      {citationRole === "conflicting" && <span>Conflict · </span>}
-      <span className="min-w-0 break-words">{citationText}</span>
+      <span className="min-w-0 text-left [overflow-wrap:anywhere]">{label}</span>
       <span aria-hidden="true">↗</span>
     </button>
   );

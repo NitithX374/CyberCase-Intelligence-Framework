@@ -6,7 +6,6 @@ import { getApiErrorMessage } from "@/lib/api";
 import {
   generateOcrIdempotencyKey,
   previewDocumentIngestion,
-  type DocumentIngestionMode,
 } from "@/lib/document-ingestion";
 import { useDocumentIngestion } from "@/lib/document-ingestion-store";
 import { DocumentIngestionResult } from "./DocumentIngestionResult";
@@ -16,11 +15,15 @@ const ACCEPTED_TYPES = ".pdf,.docx,.png,.jpg,.jpeg";
 
 interface DocumentIngestionPreviewProps {
   caseKey?: string;
+  disabled?: boolean;
+  showResult?: boolean;
   onUseAsNarrative?: (draft: CaseNarrativeDraft) => void;
 }
 
 export function DocumentIngestionPreview({
   caseKey = "draft",
+  disabled = false,
+  showResult = true,
   onUseAsNarrative,
 }: DocumentIngestionPreviewProps = {}) {
   const {
@@ -32,7 +35,6 @@ export function DocumentIngestionPreview({
     error,
     idempotencyKey,
     setFile,
-    setMode,
     setIsProcessing,
     setResult,
     setError,
@@ -42,7 +44,7 @@ export function DocumentIngestionPreview({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processDocument = async () => {
-    if (!file || isProcessing) return;
+    if (!file || isProcessing || disabled) return;
     setIsProcessing(true);
     setError(null);
     setResult(null);
@@ -72,105 +74,68 @@ export function DocumentIngestionPreview({
   };
 
   return (
-    <section className="workspace-card space-y-4 p-5 sm:p-6">
-      <div className="flex items-start gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-nested text-ink-secondary">
+    <div aria-label="Document attachment" className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          id="document-ingestion-file"
+          ref={fileInputRef}
+          aria-label="Document for OCR preview"
+          type="file"
+          accept={ACCEPTED_TYPES}
+          disabled={isProcessing || disabled}
+          onChange={(event) => {
+            const selectedFile = event.target.files?.[0];
+            if (selectedFile) setFile(selectedFile);
+          }}
+          className="hidden"
+        />
+        <button
+          type="button"
+          disabled={isProcessing || disabled}
+          onClick={() => fileInputRef.current?.click()}
+          className="inline-flex min-h-9 items-center gap-2 rounded-md px-2 text-xs font-medium text-ink outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+        >
           <Icon name="intake" className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="section-eyebrow">DOCUMENT SOURCE</p>
-              <h2 className="mt-1 text-sm font-extrabold tracking-tight text-ink">
-                Document OCR preview · ทดลองอ่านเอกสาร
-              </h2>
-            </div>
-          </div>
-          <p className="text-xs leading-relaxed text-ink-secondary">
-            Extract text from one document. Handwritten content requires manual transcription.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <label htmlFor="document-ingestion-file" className="text-[11px] font-bold text-ink">
-              PDF, DOCX, PNG, or JPEG
-            </label>
-            {fileName && !file && (
-              <span className="font-mono text-[10px] text-ink-muted">
-                Restored: {fileName}
-              </span>
-            )}
-          </div>
-          <input
-            id="document-ingestion-file"
-            ref={fileInputRef}
-            aria-label="Document for OCR preview"
-            type="file"
-            accept={ACCEPTED_TYPES}
-            disabled={isProcessing}
-            onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
-            }}
-            className="block w-full rounded-lg border border-line bg-canvas px-2.5 py-2 text-[11px] text-ink file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-ivory disabled:opacity-60"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="document-ingestion-mode" className="text-[11px] font-bold text-ink">
-            Recognition mode
-          </label>
-          <select
-            id="document-ingestion-mode"
-            value={mode}
-            disabled={isProcessing}
-            onChange={(event) => setMode(event.target.value as DocumentIngestionMode)}
-            className="block w-full rounded-lg border border-line bg-canvas px-2.5 py-2 text-[11px] text-ink outline-none focus-visible:ring-1 focus-visible:ring-primary"
-          >
-            <option value="unified">Unified whole-page OCR</option>
-            <option value="routed">Routed contract (classification disabled)</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-        <p className="text-[10px] text-ink-muted">
-          Review the extracted text before adding it to the case.
-        </p>
-        <div className="flex items-center gap-2">
+          {fileName ? "Replace material" : "Add material"}
+        </button>
+        <div className="flex flex-wrap items-center gap-2">
           {(file || result || error || fileName) && (
             <button
               type="button"
-              disabled={isProcessing}
+              disabled={isProcessing || disabled}
               onClick={handleClear}
-            className="btn-secondary inline-flex min-h-9 items-center rounded-lg"
+              className="min-h-9 rounded-md px-2 text-xs text-ink-secondary hover:text-ink focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
             >
               Clear preview
             </button>
           )}
           <button
             type="button"
-            disabled={!file || isProcessing}
+            disabled={!file || isProcessing || disabled}
             onClick={() => void processDocument()}
-            className="btn-primary inline-flex min-h-9 items-center rounded-lg"
+            className="btn-secondary inline-flex min-h-9 items-center rounded-md disabled:cursor-not-allowed disabled:border-line disabled:text-ink-disabled"
           >
-            {isProcessing ? "Processing document…" : "Run OCR preview"}
+            {isProcessing ? "Extracting text…" : error ? "Retry extraction" : "Extract text"}
           </button>
         </div>
       </div>
 
+      <p className="text-[11px] text-ink-muted">PDF, DOCX, PNG, JPEG · One document at a time</p>
+
       {error && (
-        <div role="alert" className="rounded-xl border border-critical/30 bg-critical/5 p-3 text-xs text-critical">
-          {error}
+        <div role="alert" className="border-l-2 border-critical pl-3 text-xs text-ink">
+          <p>Text extraction failed. Retry or choose another document.</p>
+          <details className="mt-2 text-ink-muted"><summary className="cursor-pointer">Error details</summary><p className="mt-2 break-words">{error}</p></details>
         </div>
       )}
-      {result && (
-        <DocumentIngestionResult
-          result={result}
-          onUseAsNarrative={onUseAsNarrative}
-        />
+      {showResult && result && (
+        <div className="pt-4">
+          <DocumentIngestionResult
+            result={result}
+            onUseAsNarrative={disabled ? undefined : onUseAsNarrative}
+          />
+        </div>
       )}
-    </section>
+    </div>
   );
 }

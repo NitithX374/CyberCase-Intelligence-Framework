@@ -17,11 +17,12 @@ def _validated_source_payload(
     source: CaseNarrativeDocumentSource,
 ) -> dict[str, object]:
     payload = source.model_dump(mode="json")
-    payload["page_spans"] = [
-        span.model_dump(mode="json")
-        for span in source.page_spans
-        if _span_matches(content, span.start_offset, span.end_offset, span.text_sha256)
-    ]
+    valid_spans: list[dict[str, object]] = []
+    for span in source.page_spans:
+        if not _span_matches(content, span.start_offset, span.end_offset, span.text_sha256):
+            break
+        valid_spans.append(span.model_dump(mode="json"))
+    payload["page_spans"] = valid_spans
     return payload
 
 
