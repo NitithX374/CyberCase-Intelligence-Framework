@@ -2,14 +2,17 @@
 
 ## Snapshot
 
+- 2026-09-03 [USER] Goal: commit and push the current Intake, Overview, OCR-settings removal and citation-provenance changes to main.
+- 2026-09-03 [TOOL] Now: origin/main and local main match at 93c5ae1; current 44-file scope reviewed. Frontend 126-test suite, final 17 focused tests, TypeScript, lint, build and browser QA passed. Next: finish backend citation validation, commit and push. No open questions.
+
 - 2026-09-02 [CODE] Formal report projection now uses the explicit analysis chronology with real date/time labels, source-linked findings instead of raw narrative dumps, domain-neutral verification actions, and an optional MITRE section.
 - 2026-09-02 [TOOL] Supersedes the report runtime incident: Alembic `0002_optional_report_context` is applied, no-MITRE reports persist with null retrieval context, identical idempotent retries return the existing report, and long evidence now exports as a page-splittable PDF.
 - 2026-09-01 [CODE] Report creation no longer applies the custom source/MITRE binding validation gate; typed report construction and snapshot guards remain.
 - 2026-09-01 [CODE] Report creation now requires raw evidence plus completed General Case Summarization, while MITRE/RAG context is optional and persisted as a nullable technical augmentation.
-- 2026-09-01 [CODE] Page-aware evidence citations keep the reviewed full narrative authoritative while Overview/Chat show validated exact quotes, document pages when available, and narrative-only labels without fabricated pages.
+- 2026-09-02 [CODE] Page-Aware Highlighted Evidence Citations V1 now admits only backend-bound literal quotes and validated document page spans, renders page-first Overview/Chat chips, opens page-specific highlighted context, and degrades edited/ambiguous/stale provenance to narrative-only attribution without new model calls.
 - 2026-09-01 [CODE] Gap Analysis prompt v4 is domain-neutral: case-specific wording replaces incident/cyber role wording, and MITRE explanation no longer affects general gap priority; MITRE trust-boundary exclusions remain.
 - 2026-09-01 [TOOL] Production LLM-prompt audit found the Main Case Analysis prompt domain-neutral with explicit anti-cyber-bias guards; one low-severity Follow-up Gap Analysis rubric still gives `MITRE explanation` material-priority weight.
-- 2026-09-01 [USER] Approved implementation of the revised UI plan; current authorization is P0 contract/trust repair only.
+- 2026-09-01 [USER] Historical P0 contract/trust repair authorization was superseded by the focused redesign and the 2026-09-03 UI cleanup.
 - 2026-09-01 [USER] Supersedes the prior scope note: the focused frontend UI/UX redesign is authorized; APIs, backend behavior, and `rag_service/**` remain unchanged.
 - 2026-09-01 [CODE] Overview now reads validated canonical v3 summaries, claims, supporting/contradicting sources, reasoning, gaps, and optional MITRE state directly; legacy markdown parsing is isolated to the v2 adapter.
 - 2026-09-01 [CODE] Synthetic chronology and “established” claims were removed; the UI now presents case summary, status-labelled findings, open questions, and conditional external cyber reference.
@@ -18,10 +21,6 @@
 - 2026-08-31 [CODE] Intake now converts one ingestion result into an editable narrative draft and submits list-shaped document provenance/quality metadata only after the user reviews and submits the case.
 - 2026-08-31 [CODE] Raw evidence text/hash remains message-content-only; OCR confidence/warnings travel separately to Main Analysis and the conservative MITRE applicability gate.
 - 2026-08-31 [TOOL] Full regression passes: frontend 90/90 and backend 259/259 plus 2 subtests; scoped ESLint and Python compileall pass.
-- 2026-08-31 [USER] Requested every file in the four-file developer-handover set as PDF.
-- 2026-08-31 [TOOL] Four polished A4 PDFs now cover the handover narrative, exhaustive symbol index, Python generator, and TypeScript extractor; all 124 rendered pages passed structural and visual QA.
-- 2026-08-31 [USER] Requested a full senior-developer handover explaining the live architecture, file purposes, and every first-party source function for incoming developers.
-- 2026-08-31 [CODE] Developer handover now documents the current dirty `main` checkout at `58f2302`; a reproducible syntax-tree index covers runtime, tests, migrations, research, and tooling.
 - 2026-08-30 [USER] General Case Summarization remains the core behavior; clarification improves but never blocks the initial grounded summary.
 - 2026-08-30 [CODE] Phases 1-4.3 remain complete: validated canonical `case_overview` v3 traces bind current evidence, claims, one Gap Analysis result, optional RAG, and provider-constrained `A-01`..`A-64` IDs.
 - 2026-08-30 [CODE] Phase 5 stateful adaptive clarification is complete for new v3 turns and selects only from the latest validated in-memory canonical trace for the fresh evidence snapshot.
@@ -29,13 +28,14 @@
 
 ## Done (recent)
 
+- 2026-09-03 [CODE] Overview preserves the original summary, groups real claim/status fields with uncertainty first, collapses only long reported/inference groups, and opens filename/page citations in a responsive native drawer at the exact highlighted passage. Real analysis/material metadata and compact questions replace heavy side cards; source ordinals distinguish separate clarification links.
+
+- 2026-09-03 [CODE] Superseded inline intake layout with a preparation workspace: material controls at top/right, explicit lifecycle status, bounded readable/raw text with full modal reader, real findings/evidence/gap counts, English controls and a persistent primary footer. Original source content/provenance and one-document extraction remain intact.
+- 2026-09-03 [CODE] Removed decorative badges, repeated disclaimers, duplicate finding citations, Overview summary cards/actions, repeated clarification actions, and OCR preview badges; kept source highlighting and plain-text uncertainty labels.
 - 2026-09-02 [CODE] Reworked the report PDF into a formal three-page case-review document with a seven-row dated timeline, compact claim/source table, conditional technical context, general-case follow-up actions, and a dedicated traceability appendix.
-- 2026-09-01 [CODE] Implemented exact-quote evidence citations, validated document page spans, narrative-only source highlighting, Overview/Chat citation chips, and a responsive source inspector without an additional model call.
+- 2026-09-02 [CODE] Implemented exact-quote evidence citations, validated document page spans, narrative-only source highlighting, Overview/Chat citation chips, and a responsive page-specific source inspector without an additional model call; original PDF viewing remains V2.
 - 2026-09-02 [CODE] Completed the optional-MITRE report cutover: nullable retrieval migration, stable snapshot idempotency, page-splittable evidence PDF rendering, and generic/no-RAG regression coverage.
 - 2026-09-01 [CODE] Removed residual cyber coupling from the general Gap Analysis system/user prompts, bumped the prompt version to v4, and added prompt-boundary regression assertions.
-- 2026-09-01 [CODE] Implemented revised-plan P0 plus the focused workflow-first frontend redesign: canonical v3 overview projection, honest evidence labels, grouped navigation, progressive disclosure, traceable sources, and modular sub-300-line production UI files.
-- 2026-08-31 [CODE] Completed the reviewed single-document OCR-to-case-narrative handoff, uncertainty provenance, conditional-MITRE quality context, modular workspace actions, and regression coverage without DB migration or `rag_service/**` edits.
-- 2026-08-31 [CODE] Added the senior-engineer handover narrative, exhaustive file/function index, and sub-300-line Python/TypeScript index generators under `docs/developer-handover/`.
 
 ## Decisions
 
@@ -78,44 +78,49 @@
 - D037 ACTIVE 2026-09-01 [USER] General Case Summarization is the report prerequisite; MITRE ATT&CK retrieval is conditional knowledge augmentation, not a report-generation prerequisite, and its report binding is nullable.
 - D038 ACTIVE 2026-09-01 [USER] Traceability supports plain and document-derived narratives; page labels require validated exact quote/page binding, while edited or legacy document text uses reviewed-narrative attribution without inventing a page.
 - D039 ACTIVE 2026-09-02 [CODE] Report chronology comes only from the explicit analysis timeline section; claim order is not chronology, raw narrative text is not a presentation section, and MITRE remains conditional external context.
+- D040 ACTIVE 2026-09-02 [CODE] Page locator admission requires a literal exact quote, matching document identity, valid text_sha256 spans, complete quote bounds, and one unambiguous page tuple; invalid or edited provenance keeps only the safe continuous prefix, while Overview/Chat expose page-first chips and narrative-only fallback; original PDF viewing is deferred to V2.
+
+- D041 ACTIVE 2026-09-03 [USER] Remove decorative UI bubbles, boilerplate and duplicate elements. Keep functional citations and concise uncertainty/conflict labels; preserve existing frontend/backend citation work.
+- D042 SUPERSEDED 2026-09-03 [CODE] Inline narrative attachments and the Files sidebar were replaced by the preparation workspace in D043; one-document extraction, explicit review/import, and backend APIs remain.
+- D043 ACTIVE 2026-09-03 [USER] Supersedes D042 layout: Case Preparation Workspace places document management near the top/right, bounds default text, exposes readable/raw modes, and keeps one primary CTA. Only real existing structured fields may be summarized; no sidebar redesign or backend/API change.
+- D044 ACTIVE 2026-09-03 [CODE] Current schema offers document pages/quality, evidence messages, and canonical analysis findings/gaps, not a separate pre-analysis entities/events stage. Normalize markup only in reading copies; preserve raw submitted content and exact citation provenance.
+- D045 ACTIVE 2026-09-03 [CODE] Overview grouping preserves claim_type and epistemic_status separately. No supported/confirmed category exists; uncertainty groups stay visible and source links never upgrade a claim. Per-finding Analysis details contain reasoning and optional external MITRE references. No original-document viewer or reliable report availability field is supplied to Overview.
 
 ## State (Done/Now/Next)
 
-- 2026-09-02 [TOOL] Done: rebuilt the backend and regenerated the live report as `output/pdf/CyberCase-Report-v1-Formal.pdf`; all three rendered pages passed visual QA and timeline/markdown/HTML content assertions.
-- 2026-09-02 [TOOL] Done: rebuilt/recreated the backend, applied `0002_optional_report_context`, verified the live nullable column and healthy API, replayed the original no-MITRE report successfully, and exported its PDF with HTTP 200.
-- 2026-09-01 [CODE] Done: Evidence pinpointing is implemented for new v3 analyses; existing analyses remain readable and use message-level source previews until regenerated with exact citations.
-- 2026-09-01 [CODE] Done: Report generation accepts generic structured claims without invoking `validate_structured_report`, and a completed general analysis can produce a report without MITRE/RAG context.
-- 2026-09-01 [TOOL] Done: Domain-neutral Gap Analysis prompt cleanup passes 57 focused general-case, gap-transport, and stateful-clarification tests plus compileall.
-- 2026-09-01 [TOOL] Done: Read-only prompt audit covered all production backend model calls, the served/legacy MITRE GraphRAG prompts, the Typhoon-generated OCR boundary, and isolated research/evaluation prompt families; no code changed.
-- 2026-09-01 [CODE] Done: P0 contract/trust repair is implemented and verified; the known v3 Overview recognition defect is closed.
-- 2026-09-01 [CODE] Superseded: P1 workflow/navigation redesign is implemented in the frontend; no backend or `rag_service/**` scope was added.
-- 2026-08-31 [CODE] Done: Reviewed OCR merged text can populate and submit the initial case narrative with bounded source-quality metadata; no Case=File model or schema migration was introduced.
-- 2026-09-01 [TOOL] Done: Final frontend TypeScript, ESLint, Vitest, and Next.js production-build checks pass; live provider-backed OCR was not invoked in this turn.
-- 2026-08-31 [USER] Next: Optionally run one real printed-document smoke through configured Typhoon credentials and evaluate OCR semantic-error impact against a human transcript.
-- 2026-08-31 [TOOL] Done: The requested four-file handover PDF export is complete and visually verified; no application behavior changed.
-- 2026-08-31 [CODE] Done: Complete developer handover suite created for the current checkout; application behavior was documented but not changed.
-- 2026-08-30 [CODE] Done: Phase 5 backend semantics and tests are implemented without Phase 6 or forbidden-scope changes.
-- 2026-08-30 [TOOL] Open: semantic identity-topic reformulation can still bypass exhaustion; this P0 frontend change does not alter backend clarification normalization.
+- 2026-09-03 [TOOL] Done: UI cleanup passes all 108 frontend tests, scoped ESLint, TypeScript, production build, desktop/mobile rendered QA, source-page navigation and browser console checks.
+- 2026-09-03 [TOOL] Done: UI cleanup and required frontend citation dependencies were pushed to main as 93c5ae1. Baseline backend citation/provenance edits and frontend narrative-provenance edits/tests remain uncommitted and untouched by the intake layout change.
+- 2026-09-03 [TOOL] Done: preparation workspace and OCR settings removal remain verified and uncommitted. Overview redesign is also implemented; all 24 pre-existing dirty/untracked files match initial hashes. No backend/API, dependency, route or source-data changes.
+- 2026-09-02 [TOOL] Done: page-aware citations passed backend 285 tests plus 2 subtests; formal report runtime and nullable retrieval migration were verified against the live API/PDF. See Receipts.
+- 2026-08-30 [TOOL] Open, outside this UI scope: semantic identity-topic reformulation can still bypass clarification exhaustion; current bounded aliases do not unify equivalent topics.
 
 ## Working set
 
-- 2026-09-02 [CODE] `backend/app/services/reports/report_analysis_projection.py`
-- 2026-09-02 [CODE] `backend/app/services/reports/report_finding_projection.py`
-- 2026-09-02 [CODE] `backend/app/services/reports/report_view_model_builder.py`
-- 2026-09-02 [CODE] `backend/app/services/reports/report_pdf_story.py`
-- 2026-09-02 [CODE] `backend/app/services/reports/report_pdf_evidence_story.py`
-- 2026-09-02 [CODE] `backend/app/services/reports/pdf_design.py`
-- 2026-09-02 [CODE] `backend/app/services/reports/pdf_chrome.py`
-- 2026-09-02 [CODE] `backend/app/services/reports/report_view_model_text.py`
-- 2026-09-02 [CODE] `backend/tests/test_report_view_model_and_pdf.py`
-- 2026-09-02 [TOOL] `output/pdf/CyberCase-Report-v1-Formal.pdf`
+- 2026-09-03 [CODE] frontend/src/components/overview/CaseOverviewView.tsx
+- 2026-09-03 [CODE] frontend/src/components/overview/CaseOverviewHeader.tsx
+- 2026-09-03 [CODE] frontend/src/components/overview/OverviewSummarySection.tsx
+- 2026-09-03 [CODE] frontend/src/components/overview/CaseFindingsSection.tsx and FindingRow.tsx
+- 2026-09-03 [CODE] frontend/src/components/overview/OverviewStatusRail.tsx and OpenQuestionsSection.tsx
+- 2026-09-03 [CODE] frontend/src/components/overview/SourceEvidenceDrawer.tsx and SourceEvidencePopover.tsx
+- 2026-09-03 [CODE] frontend/src/components/overview/MitreExplainedSimply.tsx
+- 2026-09-03 [CODE] frontend/src/components/evidence/EvidenceCitationChip.tsx and SourceEvidenceContent.tsx
+- 2026-09-03 [CODE] frontend/src/lib/case-finding-groups.ts
+- 2026-09-03 [CODE] frontend/src/lib/case-overview-metadata.ts
+- 2026-09-03 [CODE] frontend/src/test/components/overview/
+- 2026-09-03 [USER] C:/Users/kkham/.codex/attachments/b9e62f4b-48c5-4442-a21c-cd92ffe1a3f3/pasted-text.txt
 
 ## Receipts
 
+- 2026-09-03 [TOOL] Overview final verification: full frontend suite 31 files/126 tests; final focused Overview/evidence suite 4 files/17 tests; tsc, full and scoped ESLint, final production build and scoped diff checks pass. Browser: all 13 findings accessible, default uncertainty visible, exact page-4 quote centered in desktop/mobile drawer, native close restores citation focus, 390x844 mobile has zero horizontal overflow, Ask/Report navigation works, legacy multi-source cases render. Populated gaps/conflicts verified in fixtures; inspected saved cases have no recorded gaps. All 19 touched frontend code files are below 300 lines. All 24 pre-existing dirty/untracked baseline files match SHA-256 hashes. No case data changed; no commit or push. Initial JSX typo and test-environment dialog/timeout issues were corrected before final checks.
+
+- 2026-09-03 [TOOL] Preparation workspace: 29 test files/120 tests, TypeScript, scoped ESLint, production build, scoped whitespace checks pass. Browser: 320px bounded preview, full-text dialog, raw table markup only in Raw Text, canonical counts, analysis navigation, native chooser, manual readiness and pending-document gate, 390x844 mobile controls/primary CTA visible with zero horizontal overflow; zero browser errors. Disposable empty draft removed. Extraction/retry API contract tested with mocks, no live provider call. All touched code files remain below 300 lines; unrelated baseline hashes unchanged.
+- 2026-09-03 [TOOL] Intake integration: 27 frontend test files/112 tests, TypeScript, scoped ESLint, production build, and scoped whitespace checks pass. Browser verified shared input controls, native file chooser, persisted filenames, 390x844 mobile layout with zero horizontal overflow, and OCR settings. Empty test draft removed; four original saved cases remain. OCR API behavior verified with mocks; no live provider extraction requested. Initial JSX rewrite syntax error was corrected before final validation; touched code files remain below 300 lines.
+- 2026-09-03 [TOOL] Published 93c5ae1 to origin/main after exact staged-frontend validation: 26 test files/107 tests and TypeScript pass; staged whitespace check passes; 30 frontend files only. Push succeeded despite a nonfatal credential-manager-core warning. Remote main equals local HEAD and index is empty. Earlier full-worktree validation passed 108 tests, lint, build and browser QA.
+- 2026-09-03 [TOOL] UI cleanup: Vitest 26 files/108 tests pass, scoped ESLint, production build and TypeScript pass, desktop and 390x844 mobile QA pass, zero horizontal overflow, page-4 source inspector opens, chat selection feedback works, browser error log is empty, and all touched code files remain below 300 lines. Initial test failure expected the removed Active case badge; updated assertion passes.
 - 2026-09-02 [TOOL] Formal-report validation passes: 280 backend tests plus 2 subtests, focused report tests 5/5, backend image rebuild/recreate, health and live PDF HTTP 200, seven expected timeline dates, no rendered Markdown headings or raw HTML, all touched production files below 300 lines, and three-page full-resolution visual QA.
 - 2026-09-02 [TOOL] Report repair verified after final image recreation: Alembic head `0002_optional_report_context`, health OK, original idempotent no-MITRE report `596d67b7-c5ed-4cd7-aa61-5e144882116a` completed/validated with null retrieval context, PDF HTTP 200 with `%PDF` signature and 75,707 bytes; full backend passes 280 tests plus 2 subtests.
 - 2026-09-02 [TOOL] First migration attempt safely rolled back when the 38-character revision exceeded Alembic's `VARCHAR(32)`; revision was shortened to 28 characters and a regression assertion now enforces the limit.
-- 2026-09-01 [TOOL] Evidence pinpointing validation passes: backend 278 tests plus 2 subtests, frontend 95 tests, TypeScript, ESLint, production build, scoped diff check, sub-300-line production files, desktop/mobile visual QA, and no browser console errors; `rag_service/**` is unchanged.
+- 2026-09-02 [TOOL] V1 final validation passes: backend 285 tests plus 2 subtests, frontend 26 files/108 tests, TypeScript, ESLint, compileall, focused Ruff, production build, and scoped diff checks; all touched code files remain below 300 lines and `rag_service/**` is unchanged. Full repository Ruff/Black checks still report unrelated baseline violations.
 - 2026-09-01 [TOOL] Report generation regression: 7 focused report tests pass in `env_mitre`; targeted diff check passes; custom validation no longer runs during generation.
 - 2026-09-01 [TOOL] Optional-RAG report validation: 14 focused backend report/schema/migration tests pass, 267 other backend tests pass when excluding the unrelated dirty canonical-analysis fixture, 9 report frontend tests pass, ESLint passes, Alembic head is `0002_optional_report_retrieval_context`, and no `rag_service/**` files changed; full-suite failures remain outside this change in dirty intake/overview fixtures and that canonical fixture.
 - 2026-09-01 [TOOL] Prompt cleanup validation: 57/57 focused backend tests pass, follow-up compileall passes, scoped diff whitespace check passes, all touched files remain below 300 lines, and `rag_service/**` is unchanged.
@@ -126,16 +131,4 @@
 - 2026-09-01 [TOOL] All 17 existing source paths named by the revised P0/P1 working set resolve; the one unresolved path is explicitly marked as the proposed new `ClarificationActionCard.tsx`.
 - 2026-08-31 [TOOL] OCR narrative regression covers editable merged-text injection, missing-confidence disclosure, one-document request validation, provenance separation from evidence text/hash, prompt transport, MITRE gate transport, and idempotency compatibility.
 - 2026-08-31 [TOOL] Frontend full Vitest passes 23 files/90 tests; backend full Pytest passes 259 tests plus 2 subtests with one Starlette deprecation warning; scoped ESLint and compileall pass.
-- 2026-08-31 [TOOL] `tsc --noEmit` remains red only on existing stale test fixtures (`ChatPanelFollowUp` and `ChatWorkspaceIntake`); Ruff and Black are not installed in the active backend environment.
-- 2026-08-31 [TOOL] PDF outputs contain 17, 99, 5, and 3 A4 pages respectively; Pypdf found no empty pages and pdfplumber found no rendered characters outside page bounds.
-- 2026-08-31 [TOOL] Poppler rendered all 124 pages to PNG; contact sheets plus full-resolution cover, body, table, code, middle, and final-page inspection found no clipping, overlap, black boxes, or unreadable layout.
-- 2026-08-31 [TOOL] Generated index covers 436 first-party source files and 2,305 named Python/TypeScript/JavaScript symbols; all 436 file links resolve.
 - 2026-08-31 [TOOL] Handover generator compiles, TypeScript extractor passes `node --check`, docs contain no trailing whitespace, and live backend OpenAPI confirms all documented `/api/v1` routes including the isolated ingestion preview.
-- 2026-09-01 [TOOL] Focused UI redesign rendered QA passes at desktop and mobile; Overview pulse, grouped navigation, source popover, evidence-to-Chat, Intake, Chat, Report, and Technical Context were exercised.
-- 2026-09-01 [TOOL] Final frontend validation passes: TypeScript, ESLint, Vitest 24 files/93 tests, Next.js production build, rendered DOM internal-field audit, trailing-whitespace audit, and sub-300-line production UI audit; `rag_service/**` is unchanged.
-- 2026-08-30 [TOOL] Phase 5/canonical/gate regression and synthetic scenarios pass; optional RAG remains independent of clarification selection and can fail closed.
-- 2026-08-30 [TOOL] Live threads A `42fecb16-f936-4f05-9d31-abd8db5e7e06`, B `3556f16d-ae81-4bda-b666-8e634aadbd4a`, and D `46712cc3-b065-4e71-bad8-773c3507dea7` persist exact short answers plus structural linkage, mark answered topics EXPLICITLY_UNKNOWN/non-askable, and select a different next gap.
-- 2026-08-30 [TOOL] Live thread C `17c69176-a8d2-43af-8a03-230ba8e23adc` persists the new identity claim but immediately asks an equivalent reformulation; current bounded aliases do not unify “ตัวตนและลักษณะ” with “รายละเอียดและหลักเกณฑ์การยืนยันตัวบุคคล”.
-
-
-

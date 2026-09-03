@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { HighlightedEvidenceText } from "@/components/evidence/HighlightedEvidenceText";
+import { SourceEvidenceContent } from "@/components/evidence/SourceEvidenceContent";
 import type { SourceMessageRef } from "@/lib/case-overview";
 import { formatEvidenceCitationText, formatPageReference } from "@/lib/evidence-citation";
 import { Icon } from "@/components/common/icons";
@@ -114,11 +114,6 @@ export function SourceEvidencePopover({
   const citationText = sourceRef.pageNumbers.length > 0
     ? formatPageReference(sourceRef.pageNumbers)
     : formatEvidenceCitationText(sourceRef);
-  const evidenceHasHighlight = sourceRef.evidencePages.some((page) => (
-    page.exactQuote !== null && page.text.includes(page.exactQuote)
-  )) || (
-    sourceRef.exactQuote !== null && sourceRef.displayContent.includes(sourceRef.exactQuote)
-  );
   const roleText = citationRole === "conflicting"
     ? "Conflicting case source"
     : citationRole === "supporting"
@@ -178,37 +173,7 @@ export function SourceEvidencePopover({
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
-          {sourceRef.evidencePages.length > 0 ? (
-            <div className="space-y-3">
-              {sourceRef.evidencePages.map((page) => (
-                <section key={page.pageNumber} className="rounded border border-line/60 bg-canvas/60 p-3">
-                  <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
-                    Page {page.pageNumber}
-                  </h4>
-                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-ink font-normal select-text">
-                    <HighlightedEvidenceText
-                      content={page.text || "(No text content)"}
-                      exactQuote={page.exactQuote}
-                    />
-                  </p>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded border border-line/60 bg-canvas/60 p-3">
-              <p className="whitespace-pre-wrap text-xs leading-relaxed text-ink font-normal select-text">
-                <HighlightedEvidenceText
-                  content={sourceRef.displayContent || sourceRef.excerpt || "(No text content)"}
-                  exactQuote={sourceRef.exactQuote}
-                />
-              </p>
-            </div>
-          )}
-          {sourceRef.exactQuote && !evidenceHasHighlight && (
-            <p className="text-[10px] leading-relaxed text-ink-muted">
-              The cited passage could not be highlighted in the available source text.
-            </p>
-          )}
+          <SourceEvidenceContent sourceRef={sourceRef} />
         </div>
 
         {onNavigateToSource && (

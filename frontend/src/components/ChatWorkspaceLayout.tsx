@@ -90,6 +90,7 @@ export function ChatWorkspaceLayout({
                 <CaseIntakeView
                   caseKey={activeThreadId ?? "draft"}
                   threadId={activeThreadId}
+                  threadStatus={threadStatus}
                   isSubmitting={phase === "querying" || phase === "analyzing"}
                   error={null}
                   onSubmitCase={onSubmitCase ?? (() => {})}

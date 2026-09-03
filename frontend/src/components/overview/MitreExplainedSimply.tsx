@@ -23,18 +23,11 @@ export function MitreExplainedSimply({
   return (
     <section
       aria-labelledby="overview-mitre-heading"
-      className="workspace-card p-4 sm:p-5"
+      className="border-t border-line pt-4"
     >
       <WorkspaceSectionHeader
         headingId="overview-mitre-heading"
-        title={
-          <>
-            External Cyber Reference
-            <span className="ml-2 text-sm font-normal text-ink-secondary">
-              · บริบททางเทคนิคภายนอก
-            </span>
-          </>
-        }
+        title="External Cyber Reference"
         description="MITRE ATT&CK patterns associated with these findings."
       />
 
@@ -81,7 +74,7 @@ function TechnicalContextNotice({
 }) {
   const unavailable = status === "unavailable";
   return (
-    <section className="workspace-card p-4 sm:p-5" aria-label="External cyber reference status">
+    <section className="border-t border-line pt-4" aria-label="External cyber reference status">
       <div className="flex items-start gap-2.5">
         <div className="min-w-0">
           <h2 className="text-sm font-extrabold text-ink">

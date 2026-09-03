@@ -9,7 +9,8 @@ import { CaseFindingsSection } from "./CaseFindingsSection";
 import { MitreExplainedSimply } from "./MitreExplainedSimply";
 import { OpenQuestionsSection } from "./OpenQuestionsSection";
 import { OverviewSummarySection } from "./OverviewSummarySection";
-import { SourceEvidencePopover } from "./SourceEvidencePopover";
+import { SourceEvidenceDrawer } from "./SourceEvidenceDrawer";
+import { OverviewStatusRail } from "./OverviewStatusRail";
 
 interface CaseOverviewViewProps {
   threadId: string | null;
@@ -41,6 +42,7 @@ export function CaseOverviewView({
     anchorElement: HTMLElement;
     sourceKey: string;
     citationRole?: "supporting" | "conflicting";
+    analysisMessageId: string | null;
   } | null>(null);
   const overview = useMemo(
     () => buildCaseOverview(messages, threadStatus),
@@ -94,7 +96,7 @@ export function CaseOverviewView({
     setActiveSourcePopover((current) =>
       current?.sourceKey === sourceKey
         ? null
-        : { sourceRef, anchorElement, sourceKey, citationRole },
+        : { sourceRef, anchorElement, sourceKey, citationRole, analysisMessageId: overview.analysisMessageId },
     );
   };
 
@@ -105,38 +107,47 @@ export function CaseOverviewView({
       aria-label="Case Overview"
       className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas"
     >
-      <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
         <CaseOverviewHeader
+          key={threadId}
+          threadId={threadId}
+          threadStatus={threadStatus}
           threadTitle={threadTitle}
           onOpenChat={onOpenChat}
           onOpenReport={onOpenReport}
           onOpenMaterials={onOpenMaterials}
         />
 
-        <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_19rem]">
-          <div className="min-w-0 space-y-10">
+        <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-9">
+          <div className="contents lg:block lg:min-w-0 lg:space-y-8">
             <OverviewSummarySection summary={overview.incidentSummary} />
-            <CaseFindingsSection
-              findings={overview.findings}
-              onNavigateToSource={onNavigateToSource}
-              onSelectSource={handleSelectSource}
-              activeSourceKey={activeSourcePopover?.sourceKey ?? null}
-            />
+            <div className="order-3 min-w-0">
+              <CaseFindingsSection
+                key={overview.analysisMessageId}
+                findings={overview.findings}
+                onNavigateToSource={onNavigateToSource}
+                onSelectSource={handleSelectSource}
+                activeSourceKey={activeSourcePopover?.sourceKey ?? null}
+              />
+            </div>
           </div>
 
-          <aside className="min-w-0 space-y-5 xl:sticky xl:top-5">
+          <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5 lg:border-l lg:border-line lg:pl-5">
+            <OverviewStatusRail messages={messages} overview={overview} />
             <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
-            <MitreExplainedSimply
-              techniques={overview.mitreContext}
-              status={overview.technicalContextStatus}
-              onOpenTechnicalContext={onOpenTechnicalContext}
-            />
+            <div className="order-5 min-w-0">
+              <MitreExplainedSimply
+                techniques={overview.mitreContext}
+                status={overview.technicalContextStatus}
+                onOpenTechnicalContext={onOpenTechnicalContext}
+              />
+            </div>
           </aside>
         </div>
       </div>
 
-      {activeSourcePopover && (
-        <SourceEvidencePopover
+      {activeSourcePopover && activeSourcePopover.analysisMessageId === overview.analysisMessageId && (
+        <SourceEvidenceDrawer
           sourceRef={activeSourcePopover.sourceRef}
           anchorElement={activeSourcePopover.anchorElement}
           onClose={() => setActiveSourcePopover(null)}

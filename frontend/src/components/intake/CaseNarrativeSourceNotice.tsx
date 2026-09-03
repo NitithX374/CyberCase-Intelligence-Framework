@@ -18,18 +18,18 @@ export function CaseNarrativeSourceNotice({
   onRemove: () => void;
 }) {
   return (
-    <div className="space-y-2 rounded border border-amber-300 bg-amber-50 p-3 text-[11px] text-amber-950">
+    <div className="space-y-2 border-l-2 border-line-strong pl-3 text-[11px] text-ink-secondary">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-bold">Document-derived narrative draft</p>
           <p>
-            {source.filename} · {source.page_count} page(s) · {source.verification_status}
+            {source.filename} · {source.page_count} page(s)
           </p>
         </div>
         <button
           type="button"
           onClick={onRemove}
-          className="font-semibold underline underline-offset-2 hover:text-amber-700"
+          className="font-semibold underline underline-offset-2 hover:text-ink"
         >
           Remove source link
         </button>

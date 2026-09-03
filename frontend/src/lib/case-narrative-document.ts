@@ -7,6 +7,7 @@ import type {
   DocumentRegionPreview,
   IngestedDocumentPreview,
 } from "./document-ingestion";
+import { sha256Hex } from "./sha256";
 
 export interface CaseNarrativeDraft {
   text: string;
@@ -134,9 +135,18 @@ export function bindCaseNarrativeDocumentSource(
   narrative: string,
 ): CaseNarrativeDocumentSource {
   let searchOffset = 0;
+  let provenanceIsContinuous = true;
   const pageSpans = draft.pages.flatMap((page) => {
+    if (!provenanceIsContinuous) return [];
+    if (sha256Hex(page.text) !== page.textSha256) {
+      provenanceIsContinuous = false;
+      return [];
+    }
     const startOffset = narrative.indexOf(page.text, searchOffset);
-    if (startOffset < 0) return [];
+    if (startOffset < 0) {
+      provenanceIsContinuous = false;
+      return [];
+    }
     const endOffset = startOffset + page.text.length;
     searchOffset = endOffset;
     return [{

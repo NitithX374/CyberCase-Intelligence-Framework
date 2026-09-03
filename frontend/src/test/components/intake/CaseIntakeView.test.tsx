@@ -25,15 +25,15 @@ describe("CaseIntakeView component", () => {
       />,
     );
 
-    expect(screen.getByText(/NEW INVESTIGATION/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /เริ่มวิเคราะห์คดีใหม่/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/ชื่อคดี/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeInTheDocument();
+    expect(screen.getByText(/CASE INTAKE/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Case preparation" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Case title/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
     expect(
       screen.getByLabelText(/Document for OCR preview/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Run OCR preview/i }),
+      screen.getByRole("button", { name: /Extract text/i }),
     ).toBeDisabled();
 
     const submitBtn = screen.getByRole("button", { name: /Analyze case/i });
@@ -51,8 +51,8 @@ describe("CaseIntakeView component", () => {
       />,
     );
 
-    const titleInput = screen.getByLabelText(/ชื่อคดี/i) as HTMLInputElement;
-    const descInput = screen.getByLabelText(/รายละเอียดคดี/i) as HTMLTextAreaElement;
+    const titleInput = screen.getByLabelText(/Case title/i) as HTMLInputElement;
+    const descInput = screen.getByLabelText(/Case narrative/i) as HTMLTextAreaElement;
     const submitBtn = screen.getByRole("button", { name: /Analyze case/i });
 
     fireEvent.change(titleInput, { target: { value: "IIS Server Intrusion" } });
@@ -81,9 +81,9 @@ describe("CaseIntakeView component", () => {
       />,
     );
 
-    expect(screen.getAllByText(/กำลังวิเคราะห์ข้อมูลคดี/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByLabelText(/ชื่อคดี/i)).toBeDisabled();
-    expect(screen.getByLabelText(/รายละเอียดคดี/i)).toBeDisabled();
+    expect(screen.getAllByText(/Analyzing case/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByLabelText(/Case title/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Case narrative/i)).toBeDisabled();
   });
 
   it("fills an editable narrative and submits document quality metadata", () => {
@@ -143,9 +143,11 @@ describe("CaseIntakeView component", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /Use merged text as case narrative/i }),
+      screen.getByRole("button", { name: /Use reviewed text/i }),
     );
-    const narrative = screen.getByLabelText(/รายละเอียดคดี/i);
+    expect(screen.getByLabelText("Reviewed narrative text")).toHaveTextContent("OCR merged narrative");
+    fireEvent.click(screen.getByRole("tab", { name: "Raw Text" }));
+    const narrative = screen.getByLabelText("Edit raw narrative");
     expect(narrative).toHaveValue("OCR merged narrative");
     expect(screen.getByText(/did not report confidence/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Analyze case/i }));
@@ -193,27 +195,16 @@ describe("CaseIntakeView component", () => {
       />,
     );
 
-    expect(screen.getByText(/CASE INTAKE RECORD/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /บันทึกข้อมูลสำนวนคดี/i })).toBeInTheDocument();
-    expect(await screen.findByText("รายละเอียดสำนวนคดีเริ่มต้นเรื่องเซิร์ฟเวอร์ถูกบุกรุก")).toBeInTheDocument();
+    expect(screen.getByText(/CASE INTAKE/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Case preparation" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Case narrative text")).toHaveTextContent("รายละเอียดสำนวนคดีเริ่มต้นเรื่องเซิร์ฟเวอร์ถูกบุกรุก");
     expect(screen.queryByText(/ACTIVE CASE/i)).not.toBeInTheDocument();
 
-    // Navigation buttons must be present
-    const overviewBtn = screen.getByRole("button", { name: /View Case Overview/i });
-    const chatBtn = screen.getByRole("button", { name: /Ask in Chat/i });
-    const materialsBtn = screen.getByRole("button", { name: /Case Materials/i });
-    const addCaseInfoLink = screen.getByRole("button", { name: /Add case information in Chat →/i });
-
-    expect(overviewBtn).toBeInTheDocument();
-    expect(chatBtn).toBeInTheDocument();
-    expect(materialsBtn).toBeInTheDocument();
-    expect(addCaseInfoLink).toBeInTheDocument();
+    const chatBtn = screen.getByRole("button", { name: /Open analysis in Chat/i });
+    const materialsBtn = screen.getByRole("button", { name: /Open case materials/i });
     expect(
       screen.getByLabelText(/Document for OCR preview/i),
     ).toBeInTheDocument();
-
-    fireEvent.click(overviewBtn);
-    expect(onOpenOverview).toHaveBeenCalled();
 
     fireEvent.click(chatBtn);
     expect(onOpenChat).toHaveBeenCalled();
@@ -221,8 +212,7 @@ describe("CaseIntakeView component", () => {
     fireEvent.click(materialsBtn);
     expect(onOpenMaterials).toHaveBeenCalled();
 
-    // MUST NOT render description textarea or "Analyze updates" button
-    expect(screen.queryByLabelText(/รายละเอียดคดี/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Analyze updates/i })).not.toBeInTheDocument();
   }, 15000);
 });

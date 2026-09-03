@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DocumentIngestionPreview } from "@/components/intake/DocumentIngestionPreview";
 import * as ingestionApi from "@/lib/document-ingestion";
-import { resetDocumentIngestionState } from "@/lib/document-ingestion-store";
+import { resetDocumentIngestionState, setDocumentIngestionMode } from "@/lib/document-ingestion-store";
 
 const routedResult: ingestionApi.IngestedDocumentPreview = {
   document_id: "DOC-TEST",
@@ -80,7 +80,7 @@ describe("DocumentIngestionPreview", () => {
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
       target: { files: [file] },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Extract text/i }));
 
     await waitFor(() =>
       expect(preview).toHaveBeenCalledWith(
@@ -92,10 +92,10 @@ describe("DocumentIngestionPreview", () => {
         }),
       ),
     );
-    expect(await screen.findByText("DOC-TEST-P001-R001")).toBeInTheDocument();
-    expect(screen.getByText("DOC-TEST-P001-R002")).toBeInTheDocument();
-    expect(screen.getByText(/typhoon-ocr/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/HTR is disabled; manual transcription is required/i)).toHaveLength(2);
+    expect(await screen.findByRole("heading", { name: "Review extracted content" })).toBeInTheDocument();
+    expect(screen.getByText("Raw extraction details")).toBeInTheDocument();
+    expect(screen.getByText("case.pdf · 1 pages")).toBeInTheDocument();
+    expect(screen.getByText("1 extraction warning · Review required")).toBeInTheDocument();
   });
 
   it("preserves upload state and preview results across component unmount and remount", async () => {
@@ -106,9 +106,9 @@ describe("DocumentIngestionPreview", () => {
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
       target: { files: [file] },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Extract text/i }));
 
-    expect(await screen.findByText("DOC-TEST-P001-R001")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Review extracted content" })).toBeInTheDocument();
 
     // Simulate navigating away to another tab
     unmount();
@@ -117,12 +117,12 @@ describe("DocumentIngestionPreview", () => {
     render(<DocumentIngestionPreview caseKey="case-persist" />);
 
     // Result and clear button are still rendered immediately without needing to re-upload
-    expect(screen.getByText("DOC-TEST-P001-R001")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Review extracted content" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Clear preview/i })).toBeInTheDocument();
 
     // Clear preview works as expected
     fireEvent.click(screen.getByRole("button", { name: /Clear preview/i }));
-    expect(screen.queryByText("DOC-TEST-P001-R001")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Review extracted content" })).not.toBeInTheDocument();
   });
 
   it("isolates OCR state and results across multiple cases using case keys", async () => {
@@ -137,37 +137,37 @@ describe("DocumentIngestionPreview", () => {
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
       target: { files: [fileA] },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
-    expect(await screen.findByText("DOC-TEST-P001-R001")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Extract text/i }));
+    expect(await screen.findByRole("heading", { name: "Review extracted content" })).toBeInTheDocument();
     unmountCaseA();
 
     // Switch to Case B (which has no OCR preview yet)
     const { unmount: unmountCaseB } = render(
       <DocumentIngestionPreview caseKey="case-B" />,
     );
-    expect(screen.queryByText("DOC-TEST-P001-R001")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Review extracted content" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Restored: caseA.pdf/i)).not.toBeInTheDocument();
     unmountCaseB();
 
     // Switch back to Case A (restores Case A's OCR result)
     render(<DocumentIngestionPreview caseKey="case-A" />);
-    expect(screen.getByText("DOC-TEST-P001-R001")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Review extracted content" })).toBeInTheDocument();
   });
 
-  it("keeps the routed contract available for future comparison", async () => {
+  it("preserves the existing extraction mode without displaying settings", async () => {
     const preview = vi
       .spyOn(ingestionApi, "previewDocumentIngestion")
       .mockResolvedValue(routedResult);
+    setDocumentIngestionMode("routed", "case-routed");
     render(<DocumentIngestionPreview caseKey="case-routed" />);
+    expect(screen.queryByText("OCR settings")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Recognition mode/i)).not.toBeInTheDocument();
     const file = new File(["image"], "page.png", { type: "image/png" });
 
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
       target: { files: [file] },
     });
-    fireEvent.change(screen.getByLabelText(/Recognition mode/i), {
-      target: { value: "routed" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Extract text/i }));
 
     await waitFor(() =>
       expect(preview).toHaveBeenCalledWith(
@@ -195,10 +195,10 @@ describe("DocumentIngestionPreview", () => {
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
       target: { files: [file] },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Extract text/i }));
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /Use merged text as case narrative/i,
+        name: /Use reviewed text/i,
       }),
     );
 
@@ -214,19 +214,23 @@ describe("DocumentIngestionPreview", () => {
   });
 
   it("shows a controlled provider error", async () => {
-    vi.spyOn(ingestionApi, "previewDocumentIngestion").mockRejectedValue(
-      new Error("OCR provider is unavailable."),
-    );
+    const preview = vi.spyOn(ingestionApi, "previewDocumentIngestion")
+      .mockRejectedValueOnce(new Error("OCR provider is unavailable."))
+      .mockResolvedValueOnce(routedResult);
     render(<DocumentIngestionPreview caseKey="case-err" />);
     const file = new File(["image"], "page.jpg", { type: "image/jpeg" });
 
     fireEvent.change(screen.getByLabelText(/Document for OCR preview/i), {
       target: { files: [file] },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Run OCR preview/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Extract text/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "OCR provider is unavailable.",
     );
+    fireEvent.click(screen.getByRole("button", { name: "Retry extraction" }));
+    expect(await screen.findByRole("heading", { name: "Review extracted content" })).toBeInTheDocument();
+    expect(preview).toHaveBeenCalledTimes(2);
+    expect(preview.mock.calls[1]).toEqual(preview.mock.calls[0]);
   });
 });
