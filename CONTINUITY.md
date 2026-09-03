@@ -3,7 +3,7 @@
 ## Snapshot
 
 - 2026-09-03 [USER] Goal: commit and push the current Intake, Overview, OCR-settings removal and citation-provenance changes to main.
-- 2026-09-03 [TOOL] Now: origin/main and local main match at 93c5ae1; current 44-file scope reviewed. Frontend 126-test suite, final 17 focused tests, TypeScript, lint, build and browser QA passed. Next: finish backend citation validation, commit and push. No open questions.
+- 2026-09-03 [TOOL] Done: all 44 current files committed and pushed to origin/main as 5755d68; remote hash verified. Frontend 126 tests plus final 17 focused tests, TypeScript, lint, build and browser QA passed; backend citation tests 11/11 passed. Next: no product work remains. No open questions.
 
 - 2026-09-02 [CODE] Formal report projection now uses the explicit analysis chronology with real date/time labels, source-linked findings instead of raw narrative dumps, domain-neutral verification actions, and an optional MITRE section.
 - 2026-09-02 [TOOL] Supersedes the report runtime incident: Alembic `0002_optional_report_context` is applied, no-MITRE reports persist with null retrieval context, identical idempotent retries return the existing report, and long evidence now exports as a page-splittable PDF.
@@ -88,6 +88,8 @@
 
 ## State (Done/Now/Next)
 
+- 2026-09-03 [TOOL] Supersedes earlier uncommitted status: Intake, Overview, OCR-settings removal, frontend narrative provenance, backend citation/provenance fixes and tests were published together as 5755d68. Remote main matched the full commit SHA after push.
+
 - 2026-09-03 [TOOL] Done: UI cleanup passes all 108 frontend tests, scoped ESLint, TypeScript, production build, desktop/mobile rendered QA, source-page navigation and browser console checks.
 - 2026-09-03 [TOOL] Done: UI cleanup and required frontend citation dependencies were pushed to main as 93c5ae1. Baseline backend citation/provenance edits and frontend narrative-provenance edits/tests remain uncommitted and untouched by the intake layout change.
 - 2026-09-03 [TOOL] Done: preparation workspace and OCR settings removal remain verified and uncommitted. Overview redesign is also implemented; all 24 pre-existing dirty/untracked files match initial hashes. No backend/API, dependency, route or source-data changes.
@@ -111,6 +113,8 @@
 
 ## Receipts
 
+- 2026-09-03 [TOOL] Published 5755d684c22147bca2642b1982b8f8112a8d2d0f to origin/main: 44 reviewed files, staged whitespace check passed, all code files below 300 lines, 11 focused backend citation tests passed, existing frontend validation preserved. git ls-remote confirmed exact remote parity. Push succeeded despite the existing nonfatal credential-manager-core warning.
+
 - 2026-09-03 [TOOL] Overview final verification: full frontend suite 31 files/126 tests; final focused Overview/evidence suite 4 files/17 tests; tsc, full and scoped ESLint, final production build and scoped diff checks pass. Browser: all 13 findings accessible, default uncertainty visible, exact page-4 quote centered in desktop/mobile drawer, native close restores citation focus, 390x844 mobile has zero horizontal overflow, Ask/Report navigation works, legacy multi-source cases render. Populated gaps/conflicts verified in fixtures; inspected saved cases have no recorded gaps. All 19 touched frontend code files are below 300 lines. All 24 pre-existing dirty/untracked baseline files match SHA-256 hashes. No case data changed; no commit or push. Initial JSX typo and test-environment dialog/timeout issues were corrected before final checks.
 
 - 2026-09-03 [TOOL] Preparation workspace: 29 test files/120 tests, TypeScript, scoped ESLint, production build, scoped whitespace checks pass. Browser: 320px bounded preview, full-text dialog, raw table markup only in Raw Text, canonical counts, analysis navigation, native chooser, manual readiness and pending-document gate, 390x844 mobile controls/primary CTA visible with zero horizontal overflow; zero browser errors. Disposable empty draft removed. Extraction/retry API contract tested with mocks, no live provider call. All touched code files remain below 300 lines; unrelated baseline hashes unchanged.
@@ -131,4 +135,3 @@
 - 2026-09-01 [TOOL] All 17 existing source paths named by the revised P0/P1 working set resolve; the one unresolved path is explicitly marked as the proposed new `ClarificationActionCard.tsx`.
 - 2026-08-31 [TOOL] OCR narrative regression covers editable merged-text injection, missing-confidence disclosure, one-document request validation, provenance separation from evidence text/hash, prompt transport, MITRE gate transport, and idempotency compatibility.
 - 2026-08-31 [TOOL] Frontend full Vitest passes 23 files/90 tests; backend full Pytest passes 259 tests plus 2 subtests with one Starlette deprecation warning; scoped ESLint and compileall pass.
-- 2026-08-31 [TOOL] Handover generator compiles, TypeScript extractor passes `node --check`, docs contain no trailing whitespace, and live backend OpenAPI confirms all documented `/api/v1` routes including the isolated ingestion preview.
