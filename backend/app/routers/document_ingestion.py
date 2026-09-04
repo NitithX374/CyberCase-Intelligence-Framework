@@ -22,6 +22,14 @@ router = APIRouter(prefix="/document-ingestion", tags=["document-ingestion"])
 
 
 def _build_recognizer() -> DocumentRecognizer:
+    if settings.document_recognizer == "google_vision":
+        from app.services.document_ingestion.recognition.google_vision import (
+            GoogleVisionDocumentRecognizer,
+        )
+
+        return GoogleVisionDocumentRecognizer(
+            timeout_seconds=settings.document_recognition_timeout_seconds
+        )
     if settings.document_recognizer == "typhoon":
         return TyphoonDocumentRecognizer(
             TyphoonRecognizerConfig(

@@ -2,21 +2,13 @@ import re
 from dataclasses import dataclass
 
 from app.services.document_ingestion.contracts import (
-    BoundingBox,
-    ContentRole,
     DocumentBlock,
     DocumentPage,
-    DocumentRegion,
     ExtractionMethod,
     IngestedDocument,
     IngestionMode,
-    RecognitionCandidate,
-    RecognitionMethod,
-    RecognizedContent,
-    RegionType,
     RoutingSummary,
     SourceType,
-    VerificationStatus,
 )
 from app.services.document_ingestion.detection import DocumentKind, detect_document
 from app.services.document_ingestion.errors import (
@@ -34,12 +26,11 @@ from app.services.document_ingestion.provenance import (
     build_blocks,
     build_document_id,
     build_native_regions,
-    build_region_id,
 )
 from app.services.document_ingestion.recognition import DocumentRecognizer, RenderedPage
+from app.services.document_ingestion.recognized_region import build_unified_region
 from app.services.document_ingestion.region_pipeline import RegionRecognitionPipeline
 from app.services.document_ingestion.rendering import (
-    image_dimensions,
     normalize_image,
     render_pdf_page,
 )
@@ -200,7 +191,7 @@ class DocumentIngestionService:
             warning = f"Page {rendered_page.page_number} [{error.code}]: {error}"
             return DocumentPage(page_number=rendered_page.page_number), warning
 
-        region = self._unified_region(rendered_page, recognized)
+        region = build_unified_region(rendered_page, recognized)
         texts = [
             text.strip()
             for text in re.split(r"\n\s*\n", recognized.text.replace("\r\n", "\n"))
@@ -231,40 +222,6 @@ class DocumentIngestionService:
             full_text=recognized.text,
             layout_markdown=recognized.layout_markdown,
         ), None
-
-    def _unified_region(self, page: RenderedPage, recognized) -> DocumentRegion:
-        width, height = image_dimensions(page.image_bytes)
-        generated = [
-            RecognizedContent(
-                text=description,
-                content_role=ContentRole.GENERATED_VISUAL_DESCRIPTION,
-                verification_status=VerificationStatus.NON_AUTHORITATIVE,
-            )
-            for description in recognized.generated_visual_descriptions
-        ]
-        candidate = RecognitionCandidate(
-            recognition_method=RecognitionMethod.UNIFIED,
-            recognizer=recognized.recognizer,
-            text=recognized.text,
-            confidence=recognized.confidence,
-            content_role=ContentRole.TRANSCRIBED_TEXT,
-            verification_status=VerificationStatus.MACHINE_READ,
-        )
-        return DocumentRegion(
-            region_id=build_region_id(page.document_id, page.page_number, 1),
-            page_number=page.page_number,
-            bbox=BoundingBox(x0=0, y0=0, x1=width, y1=height),
-            region_type=RegionType.UNKNOWN,
-            recognition_method=RecognitionMethod.UNIFIED,
-            recognizer=recognized.recognizer,
-            text=recognized.text,
-            confidence=recognized.confidence,
-            verification_status=VerificationStatus.MACHINE_READ,
-            content_role=ContentRole.TRANSCRIBED_TEXT,
-            candidates=[candidate],
-            selected_candidate_index=0,
-            generated_contents=generated,
-        )
 
     @staticmethod
     def _native_page(

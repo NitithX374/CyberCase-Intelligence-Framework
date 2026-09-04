@@ -80,7 +80,7 @@ function confidence(
   const machineRead = regions.filter(
     (region) => region.verification_status !== "native",
   );
-  const reported = machineRead.map((region) => region.confidence);
+  const reported = machineRead.map((region) => region.recognition_confidence);
   if (
     reported.length === 0 ||
     reported.some((value) => value === null || value === undefined)
