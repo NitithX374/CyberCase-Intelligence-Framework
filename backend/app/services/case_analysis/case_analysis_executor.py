@@ -26,8 +26,10 @@ from app.services.case_analysis.case_analysis_response_parser import (
 )
 from app.services.case_analysis.personalization import resolve_response_language
 from app.services.llm.core_llm import resolve_core_llm_target
-from app.services.llm.structured_output_request_router import structured_output_request_options
-from app.services.llm.structured_output_router import structured_output_schema
+from app.services.llm.structured_output import (
+    structured_output_request_options,
+    structured_output_schema,
+)
 
 
 class MainCaseAnalysisService:

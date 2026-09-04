@@ -10,11 +10,11 @@ from app.services.workflow.outcome import (
     question_outcome,
 )
 from app.services.workflow.pipeline import process_chat_run
-from app.services.workflow.worker import (
+from app.services.workflow.chat_run_contracts import (
     RUN_LEASE_DURATION,
-    ChatRunWorker,
     ClaimedChatRun,
 )
+from app.services.workflow.chat_run_store import ChatRunWorker
 
 __all__ = [
     "AssistantOutcome",

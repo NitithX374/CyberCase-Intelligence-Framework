@@ -3,8 +3,8 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Mapping
 
-from app.services.case_analysis.contracts import AnalysisClaimV3
-from app.services.case_analysis.source_citation_contracts import (
+from app.services.case_analysis.contracts import (
+    AnalysisClaimV3,
     AnalysisEvidenceCitation,
 )
 

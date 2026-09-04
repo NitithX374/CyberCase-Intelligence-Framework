@@ -15,7 +15,7 @@ import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
 import { toUserFacingError, type UserFacingError } from "@/lib/user-facing-error";
 import { PersistedReportCard } from "./PersistedReportCard";
 import { NoSavedReport, ReportVersionSelector } from "./ReportHistory";
-import { chatQueryKeys } from "@/lib/query-keys";
+import { chatQueryKeys } from "@/hooks/use-chat-queries";
 import { Icon } from "@/components/common/icons";
 import { ReportEmptyState } from "./ReportEmptyState";
 import { StatusPill } from "@/components/common/StatusPill";

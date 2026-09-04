@@ -1,6 +1,6 @@
 import type { PersistedChatMessage } from "@/lib/api";
 import type { CaseOverviewData } from "@/lib/case-overview-contracts";
-import { caseOverviewMetadata } from "@/lib/case-overview-metadata";
+import { caseOverviewMetadata } from "@/lib/case-overview";
 
 export function OverviewStatusRail({ messages, overview }: {
   messages: PersistedChatMessage[];

@@ -8,7 +8,7 @@ import pytest
 
 from app.services.case_analysis.contracts import AnalysisTraceV3, CaseAnalysisResult
 from app.services.case_analysis.gap_assembly import enrich_case_analysis_result
-from app.services.followup.claim_transport import (
+from app.services.followup.schemas import (
     GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS,
     build_gap_analysis_claim_transport,
 )

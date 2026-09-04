@@ -3,8 +3,10 @@ from app.services.case_analysis.contracts import (
     ProviderCaseAnalysis,
     ProviderCaseAnalysisV3,
 )
-from app.services.llm.structured_output import anthropic_json_schema
-from app.services.llm.structured_output_router import structured_output_schema
+from app.services.llm.structured_output import (
+    anthropic_json_schema,
+    structured_output_schema,
+)
 
 
 def test_report_schema_is_provider_compatible() -> None:

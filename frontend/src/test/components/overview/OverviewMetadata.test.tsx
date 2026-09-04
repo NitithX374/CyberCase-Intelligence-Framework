@@ -1,8 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
-import { caseOverviewMetadata } from "@/lib/case-overview-metadata";
-import { buildCaseOverview } from "@/lib/case-overview";
+import { buildCaseOverview, caseOverviewMetadata } from "@/lib/case-overview";
 import { sourceMessage, analysisMessage } from "./overview-fixtures";
 
 describe("Overview metadata and summary", () => {

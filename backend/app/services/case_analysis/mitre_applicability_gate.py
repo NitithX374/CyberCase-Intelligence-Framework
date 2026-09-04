@@ -26,10 +26,10 @@ from app.services.case_analysis.mitre_applicability_validation import (
 )
 from app.services.chat.raw_evidence import RawEvidenceSource
 from app.services.llm.core_llm import resolve_core_llm_target
-from app.services.llm.structured_output_request_router import (
+from app.services.llm.structured_output import (
     structured_output_request_options,
+    structured_output_schema,
 )
-from app.services.llm.structured_output_router import structured_output_schema
 
 
 logger = logging.getLogger("app.chat")

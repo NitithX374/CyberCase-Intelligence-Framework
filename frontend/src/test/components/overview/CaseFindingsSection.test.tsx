@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CaseFindingsSection } from "@/components/overview/CaseFindingsSection";
 import type { CaseFinding, ClaimType, EpistemicStatus } from "@/lib/case-overview-contracts";
-import { groupCaseFindings } from "@/lib/case-finding-groups";
+import { groupCaseFindings } from "@/lib/case-overview";
 
 function finding(id: string, claimType: ClaimType = "reported", epistemicStatus: EpistemicStatus = "reported"): CaseFinding {
   return { id, text: `Original finding ${id}`, claimType, epistemicStatus,
