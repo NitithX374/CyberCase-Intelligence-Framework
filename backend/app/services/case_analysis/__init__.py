@@ -3,6 +3,7 @@ from app.services.case_analysis.contracts import (
     ANALYSIS_TRACE_V3_VERSION,
     AnalysisClaim,
     AnalysisClaimV3,
+    AnalysisEvidenceCitation,
     AnalysisGapV3,
     AnalysisMode,
     AnalysisTrace,
@@ -19,10 +20,8 @@ from app.services.case_analysis.contracts import (
     MitreAssociation,
     ProviderCaseAnalysis,
     ProviderCaseAnalysisV3,
-    ValidatedAnalysisTrace,
-)
-from app.services.case_analysis.compatibility import (
     ReadableAnalysisTrace,
+    ValidatedAnalysisTrace,
     read_analysis_trace,
 )
 from app.services.case_analysis.case_analysis_executor import (
@@ -58,6 +57,7 @@ __all__ = [
     "ANALYSIS_TRACE_V3_VERSION",
     "AnalysisClaim",
     "AnalysisClaimV3",
+    "AnalysisEvidenceCitation",
     "AnalysisGapV3",
     "AnalysisMode",
     "AnalysisTrace",

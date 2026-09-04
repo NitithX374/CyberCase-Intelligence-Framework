@@ -1,9 +1,11 @@
-import { HomeFooter } from "./HomeFooter";
-import { HomeHero } from "./HomeHero";
-import { HomeIntelligence } from "./HomeIntelligence";
-import { HomeNavigation } from "./HomeNavigation";
-import { HomePlatform } from "./HomePlatform";
-import { HomeWorkflow } from "./HomeWorkflow";
+import {
+  HomeFooter,
+  HomeHero,
+  HomeIntelligence,
+  HomeNavigation,
+  HomePlatform,
+  HomeWorkflow,
+} from "./HomeSections";
 
 export default function HomePage() {
   return (

@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 
 from app.models.chat import ChatMessage
-from app.services.case_analysis.compatibility import read_analysis_trace
-from app.services.case_analysis.contracts import AnalysisTraceV3
+from app.services.case_analysis.contracts import AnalysisTraceV3, read_analysis_trace
 from app.services.case_analysis.validation import (
     AnalysisTraceProvenanceError,
     AnalysisTraceStructureError,

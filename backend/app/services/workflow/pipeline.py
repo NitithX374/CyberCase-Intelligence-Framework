@@ -9,9 +9,11 @@ from app.services.case_analysis import request_case_analysis
 from app.services.clients.rag_client import request_rag
 from app.services.followup import evaluate_followup_outcome
 from app.services.followup.schemas import FollowUpPolicy, GapAnalyzer
-from app.services.workflow.pipeline_dependencies import PipelineDependencies
-from app.services.workflow.pipeline_execution import process_chat_run as execute_chat_run
-from app.services.workflow.worker import ChatRunWorker
+from app.services.workflow.chat_run_store import ChatRunWorker
+from app.services.workflow.pipeline_execution import (
+    PipelineDependencies,
+    process_chat_run as execute_chat_run,
+)
 
 
 def build_dependencies() -> PipelineDependencies:

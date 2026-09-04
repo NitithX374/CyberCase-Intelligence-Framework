@@ -1,8 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
-from app.services.case_analysis.compatibility import read_analysis_trace
-from app.services.case_analysis.contracts import AnalysisTrace, AnalysisTraceV3
+from app.services.case_analysis.contracts import (
+    AnalysisTrace,
+    AnalysisTraceV3,
+    read_analysis_trace,
+)
 from app.services.case_analysis.validation import (
     AnalysisTraceProvenanceError,
     AnalysisTraceStructureError,
