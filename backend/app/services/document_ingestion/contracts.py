@@ -63,6 +63,15 @@ class BoundingBox(BaseModel):
     y1: float
 
 
+class OCRWord(BaseModel):
+    text: str
+    confidence: float | None = Field(default=None, ge=0, le=1, strict=True)
+    bbox: BoundingBox | None = Field(
+        default=None,
+        description="Pixels in the recognition input image; crop-local in routed mode.",
+    )
+
+
 class DocumentBlock(BaseModel):
     block_id: str
     text: str
@@ -82,6 +91,7 @@ class RecognitionCandidate(BaseModel):
     recognizer: str
     text: str
     confidence: float | None = Field(default=None, ge=0, le=1)
+    words: list[OCRWord] = Field(default_factory=list)
     content_role: ContentRole
     verification_status: VerificationStatus
 
@@ -94,7 +104,9 @@ class DocumentRegion(BaseModel):
     recognition_method: RecognitionMethod
     recognizer: str
     text: str
-    confidence: float | None = Field(default=None, ge=0, le=1)
+    segmentation_confidence: float | None = Field(default=None, ge=0, le=1)
+    recognition_confidence: float | None = Field(default=None, ge=0, le=1)
+    words: list[OCRWord] = Field(default_factory=list)
     verification_status: VerificationStatus
     content_role: ContentRole
     contains_handwriting: bool | None = None

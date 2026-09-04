@@ -25,7 +25,11 @@ Google Document AI was removed from the runtime path because it required project
 
 ### Printed OCR and unified baseline
 
-Typhoon OCR 1.5 remains the printed and whole-page provider through `typhoon-ocr==0.4.1` and API model `typhoon-ocr`. The adapter uses the official `prepare_ocr_messages` helper with `task_type="v1.5"`, `figure_language="Thai"`, and the OpenAI-compatible `/chat/completions` API.
+Choose `DOCUMENT_RECOGNIZER=typhoon` (default) or `DOCUMENT_RECOGNIZER=google_vision` explicitly. Both implement the existing page and cropped-region recognition contracts; content never selects a provider automatically.
+
+Typhoon OCR 1.5 remains available through `typhoon-ocr==0.4.1` and API model `typhoon-ocr`. The adapter uses the official `prepare_ocr_messages` helper with `task_type="v1.5"`, `figure_language="Thai"`, and the OpenAI-compatible `/chat/completions` API. It offers generative Thai transcription but no documented recognition confidence; CyberCase retains null confidence and an empty word list.
+
+Google Cloud Vision `DOCUMENT_TEXT_DETECTION` supplies the printed-OCR research baseline: full-page text, ordered provider-neutral words, reported word confidence and available pixel bounding boxes. Provider confidence is not assumed to be calibrated for Thai case documents. Calibration must be evaluated empirically. See [Google Vision setup, confidence rules and validation](GOOGLE_VISION.md).
 
 Verified sources:
 
@@ -44,6 +48,7 @@ The production router keeps HTR off directly and does not require an environment
 
 ## Configuration
 
+- `DOCUMENT_RECOGNIZER=typhoon|google_vision`, default `typhoon`
 - `DOCUMENT_MIXED_REGION_POLICY=unified|review`
 - `DOCUMENT_UNKNOWN_REGION_POLICY=unified|review`
 - `TYPHOON_OCR_API_KEY`
@@ -55,9 +60,9 @@ Existing file-size, page-count, image-pixel, and rendered-edge limits remain con
 
 ## Deterministic routing
 
-- `printed_text` routes to Typhoon OCR.
+- `printed_text` routes to the configured OCR provider.
 - `handwriting` routes to no recognizer, remains `needs_review`, and emits an HTR-disabled warning.
-- `mixed_text` routes to the configured fallback; the default unified Typhoon candidate is `needs_review`.
+- `mixed_text` follows the configured policy; a unified candidate from the configured OCR provider remains `needs_review`.
 - `table` routes to OCR unless the segmenter reports handwriting, then it uses the mixed policy.
 - `figure` and `signature` are non-text and non-authoritative by default.
 - `unknown` uses the configured fallback.
@@ -71,7 +76,8 @@ Each page contains `regions`, `merged_text`, and `routing_summary`. Every region
 - `region_id`, page number, and bounding box
 - region type and handwriting flag
 - recognition method and recognizer
-- transcription, provider confidence when available, and verification status
+- transcription, `segmentation_confidence`, `recognition_confidence`, and verification status
+- ordered `words` with nullable recognition confidence and input-image pixel bounding boxes
 - content role
 - recognition candidates and selected candidate index
 - separately retained generated visual descriptions
@@ -122,4 +128,4 @@ The utility reports CER, whitespace-tokenized WER, printed/handwritten aggregate
 - Figure and signature routing is implemented in the canonical contract and router, but the selected OCR processor does not guarantee semantic figure or signature region labels.
 - DOCX uses a logical page because native parsing cannot reproduce renderer-dependent page boundaries.
 - Thai WER uses whitespace tokenization, so CER is usually more informative without a dedicated tokenizer.
-- The frontend exposes preview-only upload and provenance display. It does not create cases or pass extracted text into analysis, MITRE, RAG, reports, or persistence.
+- Ingestion itself remains preview-only. The separate frontend preparation workflow can submit reviewed text as case evidence; word metadata stays in the preview and is not passed into analysis.

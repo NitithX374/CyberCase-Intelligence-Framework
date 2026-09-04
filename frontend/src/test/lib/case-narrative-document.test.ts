@@ -35,7 +35,9 @@ function nativeDocument(): IngestedDocumentPreview {
             recognition_method: "native",
             recognizer: "native-pdf",
             text: "Native narrative",
-            confidence: null,
+            segmentation_confidence: null,
+            recognition_confidence: null,
+            words: [],
             verification_status: "native",
             content_role: "transcribed_text",
             contains_handwriting: false,
@@ -89,12 +91,52 @@ describe("buildCaseNarrativeDraft", () => {
     document.pages[0].regions[0].recognition_method = "ocr";
     document.pages[0].regions[0].recognizer = "typhoon-ocr";
     document.pages[0].regions[0].verification_status = "needs_review";
-    document.pages[0].regions[0].confidence = 0.94;
+    document.pages[0].regions[0].segmentation_confidence = 0.94;
 
     const draft = buildCaseNarrativeDraft(document);
     const bound = bindCaseNarrativeDocumentSource(draft, draft.text);
 
     expect(bound.page_spans).toHaveLength(1);
     expect(bound.page_spans[0].text_sha256).toBe(sha256Hex("Native narrative"));
+    expect(bound.confidence_status).toBe("not_reported");
+    expect(bound.minimum_confidence).toBeNull();
+  });
+
+  it("uses recognition minima across OCR regions without sending words downstream", () => {
+    const document = nativeDocument();
+    document.warnings = [];
+    const region = document.pages[0].regions[0];
+    region.verification_status = "machine_read";
+    region.recognizer = "google_vision";
+    region.recognition_method = "ocr";
+    region.segmentation_confidence = 0.99;
+    region.recognition_confidence = 0.71;
+    region.words = [{ text: "52,000", confidence: 0.71, bbox: null }];
+    document.pages[0].regions.push({ ...region, recognition_confidence: 0.42 });
+    const draft = buildCaseNarrativeDraft(document);
+    expect(draft.source.confidence_status).toBe("reported");
+    expect(draft.source.minimum_confidence).toBe(0.42);
+    expect(draft.source.verification_status).toBe("machine_read");
+    expect(draft.source).not.toHaveProperty("words");
+  });
+
+  it("retains zero recognition confidence without adding a review threshold", () => {
+    const document = nativeDocument();
+    document.warnings = [];
+    document.pages[0].regions[0].verification_status = "machine_read";
+    document.pages[0].regions[0].recognition_confidence = 0;
+    const draft = buildCaseNarrativeDraft(document);
+    expect(draft.source.confidence_status).toBe("reported");
+    expect(draft.source.minimum_confidence).toBe(0);
+    expect(draft.source.verification_status).toBe("machine_read");
+  });
+
+  it("does not claim complete confidence coverage when an OCR region has no measurements", () => {
+    const document = nativeDocument();
+    const region = document.pages[0].regions[0];
+    region.verification_status = "machine_read";
+    region.recognition_confidence = 0.71;
+    document.pages[0].regions.push({ ...region, recognition_confidence: null });
+    expect(buildCaseNarrativeDraft(document).source.confidence_status).toBe("not_reported");
   });
 });

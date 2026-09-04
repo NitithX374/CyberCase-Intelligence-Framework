@@ -4,6 +4,7 @@ from typing import Any, Protocol
 from app.services.document_ingestion.contracts import (
     BoundingBox,
     ContentRole,
+    OCRWord,
     RecognitionMethod,
     SourceType,
     VerificationStatus,
@@ -28,6 +29,7 @@ class RecognizedPage:
     layout_markdown: str | None = None
     generated_visual_descriptions: list[str] = field(default_factory=list)
     raw_provider_output: Any | None = None
+    words: list[OCRWord] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,7 @@ class RecognitionResult:
     generated_visual_descriptions: list[str] = field(default_factory=list)
     raw_provider_output: Any | None = None
     warning: str | None = None
+    words: list[OCRWord] = field(default_factory=list)
 
 
 class DocumentRecognizer(Protocol):

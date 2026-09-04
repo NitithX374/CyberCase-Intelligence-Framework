@@ -17,6 +17,7 @@ export interface DocumentRecognitionCandidate {
   recognizer: string;
   text: string;
   confidence: number | null;
+  words: OCRWord[];
   content_role: string;
   verification_status: string;
 }
@@ -27,6 +28,12 @@ export interface DocumentGeneratedContent {
   verification_status: string;
 }
 
+export interface OCRWord {
+  text: string;
+  confidence: number | null;
+  bbox: DocumentBoundingBox | null;
+}
+
 export interface DocumentRegionPreview {
   region_id: string;
   page_number: number;
@@ -35,7 +42,9 @@ export interface DocumentRegionPreview {
   recognition_method: string;
   recognizer: string;
   text: string;
-  confidence: number | null;
+  segmentation_confidence: number | null;
+  recognition_confidence: number | null;
+  words: OCRWord[];
   verification_status: string;
   content_role: string;
   contains_handwriting: boolean | null;

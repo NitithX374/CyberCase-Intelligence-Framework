@@ -130,7 +130,7 @@ class DocumentIngestionConfig(BaseModel):
     document_ingestion_max_pages: int = Field(default=50, ge=1, le=500)
     document_ingestion_max_image_pixels: int = Field(default=40_000_000, ge=1)
     document_ingestion_render_longest_edge: int = Field(default=1_800, ge=512, le=4096)
-    document_recognizer: Literal["typhoon"] = "typhoon"
+    document_recognizer: Literal["typhoon", "google_vision"] = "typhoon"
     document_mixed_region_policy: Literal["unified", "review"] = "unified"
     document_unknown_region_policy: Literal["unified", "review"] = "unified"
     document_recognition_timeout_seconds: float = Field(default=60.0, gt=0)

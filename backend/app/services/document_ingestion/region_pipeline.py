@@ -99,6 +99,7 @@ class RegionRecognitionPipeline:
                         recognizer=result.recognizer,
                         verification_status=VerificationStatus.NEEDS_REVIEW,
                         confidence=result.confidence,
+                        words=result.words,
                         generated_visual_descriptions=result.generated_visual_descriptions,
                         raw_provider_output=result.raw_provider_output,
                         warning=result.warning,
@@ -121,6 +122,7 @@ class RegionRecognitionPipeline:
             recognizer=result.recognizer,
             text=result.text,
             confidence=result.confidence,
+            words=result.words,
             content_role=result.content_role,
             verification_status=result.verification_status,
         )
@@ -140,7 +142,9 @@ class RegionRecognitionPipeline:
             recognition_method=result.recognition_method,
             recognizer=result.recognizer,
             text=result.text,
-            confidence=segmented_region.confidence,
+            segmentation_confidence=segmented_region.confidence,
+            recognition_confidence=result.confidence,
+            words=result.words,
             verification_status=result.verification_status,
             content_role=result.content_role,
             contains_handwriting=segmented_region.contains_handwriting,
@@ -164,7 +168,7 @@ class RegionRecognitionPipeline:
             recognition_method=route.recognition_method,
             recognizer="none",
             text="",
-            confidence=segmented_region.confidence,
+            segmentation_confidence=segmented_region.confidence,
             verification_status=route.verification_status,
             content_role=route.content_role,
             contains_handwriting=segmented_region.contains_handwriting,
@@ -205,7 +209,7 @@ class RegionRecognitionPipeline:
                     text=region.text,
                     source_type=source_type,
                     bbox=region.bbox,
-                    confidence=region.confidence,
+                    confidence=region.recognition_confidence,
                 )
             )
         return blocks

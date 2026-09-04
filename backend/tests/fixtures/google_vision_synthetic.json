@@ -1,0 +1,36 @@
+{
+  "fixture_kind": "synthetic_mock_not_live_provider_output",
+  "provider_response": {
+    "responses": [{
+      "fullTextAnnotation": {
+        "text": "นาย ก. 52,000 บาท\n",
+        "pages": [{
+          "blocks": [{
+            "paragraphs": [{
+              "words": [
+                {"symbols": [{"text": "น"}, {"text": "า"}, {"text": "ย"}], "confidence": 0.98},
+                {"symbols": [{"text": "ก"}, {"text": "."}], "confidence": 0.94},
+                {
+                  "symbols": [{"text": "5"}, {"text": "2"}, {"text": ","}, {"text": "0"}, {"text": "0"}, {"text": "0"}],
+                  "confidence": 0.71,
+                  "boundingBox": {"vertices": [{"x": 110, "y": 20}, {"x": 190, "y": 18}, {"x": 192, "y": 45}, {"x": 108, "y": 48}]}
+                },
+                {"symbols": [{"text": "บ"}, {"text": "า"}, {"text": "ท"}]}
+              ]
+            }]
+          }]
+        }]
+      }
+    }]
+  },
+  "normalized": {
+    "text": "นาย ก. 52,000 บาท\n",
+    "recognition_confidence": 0.71,
+    "words": [
+      {"text": "นาย", "confidence": 0.98, "bbox": null},
+      {"text": "ก.", "confidence": 0.94, "bbox": null},
+      {"text": "52,000", "confidence": 0.71, "bbox": {"x0": 108.0, "y0": 18.0, "x1": 192.0, "y1": 48.0}},
+      {"text": "บาท", "confidence": null, "bbox": null}
+    ]
+  }
+}
