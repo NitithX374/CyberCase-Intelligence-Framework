@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
 import type { ChatThreadRead } from "@/lib/api";
 import { Icon, type IconName } from "@/components/common/icons";
 import {
@@ -67,9 +68,7 @@ export function WorkspaceSidebar({
           aria-label="CyberCase home"
           className="flex items-center gap-2.5 rounded-lg outline-none transition-colors hover:text-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-black text-ivory shadow-sm">
-            C
-          </span>
+          <CyberCaseLogo size={32} />
           <span className="text-sm font-extrabold tracking-[-0.02em] text-ink">
             CyberCase
           </span>

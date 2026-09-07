@@ -2,6 +2,12 @@
 
 ## Snapshot
 
+- 2026-09-07 [USER] Current task supersedes audit-only scope for branding: generate a new CyberCase logo and install it in the website.
+- 2026-09-07 [TOOL] New generated mark at frontend/public/cybercase-mark.png; shared logo component used by sidebar/mobile header and icon metadata. Asset HTTP 200 and scoped ESLint pass; tsc blocked by two unrelated chat WorkspaceView errors.
+- 2026-09-07 [USER] Current scope: code-level v10-to-v11 migration audit only; preserve baseline and final AnalysisTraceV3, no production edits.
+- 2026-09-07 [TOOL] COMPLETE: docs/research/MAIN_ANALYSIS_V11_MIGRATION_AUDIT.md at 70bffbc; MODERATE REFACTOR, GO WITH LIMITED PHASE 1. 53 focused baseline tests pass.
+- 2026-09-07 [USER] Current task supersedes thesis editing: adversarial architecture/research assessment of Attribute-First comparison and OCR error propagation; assessment only.
+- 2026-09-07 [TOOL] COMPLETE: docs/research/ATTRIBUTE_FIRST_OCR_ASSESSMENT.md audits clean starting checkout 7a347b4. Recommends narrowed paired Thai OCR study; no novelty or empirical benefit established.
 - 2026-09-07 [USER] Supersedes the earlier 44-page rewrite: preserve Gemini's full original structure and detail; revise English phrasing and necessary clarity/correctness only.
 - 2026-09-07 [TOOL] COMPLETE: revised Gemini full original into deliverables/thesis_kmutnb_english/Cybercase_Thesis_KMUTNB_Full_Revised_English.docx: 89 pages, six chapters, 16 tables, five figures, 80 native math objects, eleven references. Rendered and visually reviewed; original hash unchanged.
 - 2026-09-07 [USER] Backend/frontend are the author's scope; partner rag_service is downstream only. Document merge authorized; original Thai/English files and production work preserved. Research contribution, empirical evaluation and official English approval/template requirements remain open.
@@ -22,13 +28,13 @@
 
 ## Done (recent)
 
+- 2026-09-07 [TOOL] Assessed Attribute-First/OCR study; reproduced semantic contradiction passing literal citation validation and absent quote removal without trace rejection. Legacy attribute pilot differs from ACL method.
 - 2026-09-07 [TOOL] Completed full Gemini thesis revision, native math/figure repairs, bibliography and updated contents. Details: deliverables/thesis_kmutnb_english/review/FULL_REVISION_REVIEW.md.
 - 2026-09-06 [TOOL] Completed explainability/product-fit audit, three sample DOCX text inspections, v3 explanation parser reproduction and 39 focused tests; proposals and limitations: docs/product/BACKEND_EXPLAINABILITY_REVIEW.md.
 - 2026-09-05 [CODE] Completed remaining parser, metadata, follow-up, report and run-recovery work; final 351 backend/150 frontend tests and static/build checks pass. Recovery verified against disposable PostgreSQL and HTTP. Details: backend/REFACTOR.md.
 - 2026-09-05 [CODE] Completed frontend Query-backed chat session, single polling loop, draft/retry state isolation, cancellation listener cleanup and 16 lifecycle regression tests. Final 145-test suite, lint, typecheck, build and synthetic browser QA pass.
 - 2026-09-04 [CODE] Added Google Vision OCR confidence baseline, provider-neutral words, explicit region confidence semantics, ADC configuration documentation and synthetic response receipt. Core analysis and HTR behavior remain unchanged.
 - 2026-09-03 [CODE] Overview preserves the original summary, groups real claim/status fields with uncertainty first, collapses only long reported/inference groups, and opens filename/page citations in a responsive native drawer at the exact highlighted passage. Real analysis/material metadata and compact questions replace heavy side cards; source ordinals distinguish separate clarification links.
-- 2026-09-03 [CODE] Superseded inline intake layout with a preparation workspace: material controls at top/right, explicit lifecycle status, bounded readable/raw text with full modal reader, real findings/evidence/gap counts, English controls and a persistent primary footer. Original source content/provenance and one-document extraction remain intact.
 
 ## Decisions
 
@@ -88,12 +94,13 @@
 
 ## State (Done/Now/Next)
 
-- 2026-09-07 [TOOL] Done: full-original English revision and document QA; production changes and original documents preserved.
-- 2026-09-07 [TOOL] Now: deliver the revised 89-page DOCX and record review receipts.
-- 2026-09-07 [ASSUMPTION] Next: professor review and future empirical evaluation; contribution selection and expert acceptance remain UNCONFIRMED.
+- 2026-09-07 [TOOL] Done: full adversarial assessment, targeted primary literature verification, synthetic parser probes and 32 focused tests. Full Gemini thesis revision remains complete.
+- 2026-09-07 [TOOL] Now: deliver v11 migration audit; no production implementation or inference experiment performed.
+- 2026-09-07 [ASSUMPTION] Next: select corpus, annotation capacity and frozen experiment protocol before implementation; empirical superiority and publication novelty remain UNCONFIRMED.
 
 ## Working set
 
+- 2026-09-07 [CODE] docs/research/ATTRIBUTE_FIRST_OCR_ASSESSMENT.md
 - 2026-09-06 [CODE] docs/product/BACKEND_EXPLAINABILITY_REVIEW.md
 - 2026-09-06 [CODE] backend/REFACTOR.md
 - 2026-09-06 [CODE] backend/app/services/workflow/pipeline_execution.py
@@ -106,6 +113,10 @@
 - 2026-09-06 [CODE] F:\งานอัยการ\Dataset
 
 ## Receipts
+
+- 2026-09-07 [TOOL] V11 migration audit: 53 passed in 10.50s across citations, trace, canonical state, main analysis, optional RAG, applicability and stateful clarification. CAMS v4 checked. No provider, frontend or report tests in this turn; no production edits.
+
+- 2026-09-07 [TOOL] Attribute-First audit: source_citations, analysis_trace_v3 and document_ingestion_eval tests: 32 passed in 6.03s. Synthetic parser accepted contradicted claim with exact quote and accepted trace after removing absent quote; Thai whitespace WER one-character example = 1.0. No provider calls or production edits.
 
 - 2026-09-07 [TOOL] Final thesis: 89 pages, no blank pages, six chapters, five figures, 80 native math objects, eleven references; visual review completed and original SHA256 unchanged. Receipt: deliverables/thesis_kmutnb_english/review/full_revision_receipt.json. Prior software tests are dated receipts, not rerun for document editing.
 
@@ -143,7 +154,4 @@
 
 - 2026-09-02 [TOOL] V1 final validation passes: backend 285 tests plus 2 subtests, frontend 26 files/108 tests, TypeScript, ESLint, compileall, focused Ruff, production build, and scoped diff checks; all touched code files remain below 300 lines and `rag_service/**` is unchanged. Full repository Ruff/Black checks still report unrelated baseline violations.
 
-- 2026-09-01 [TOOL] Report generation regression: 7 focused report tests pass in `env_mitre`; targeted diff check passes; custom validation no longer runs during generation.
-
-- 2026-09-01 [TOOL] Optional-RAG report validation: 14 focused backend report/schema/migration tests pass, 267 other backend tests pass when excluding the unrelated dirty canonical-analysis fixture, 9 report frontend tests pass, ESLint passes, Alembic head is `0002_optional_report_retrieval_context`, and no `rag_service/**` files changed; full-suite failures remain outside this change in dirty intake/overview fixtures and that canonical fixture.
 

@@ -17,6 +17,10 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "CyberCase Framework - Chat Workspace",
+  icons: {
+    icon: "/cybercase-mark.png",
+    apple: "/cybercase-mark.png",
+  },
   description:
     "An evidence-bound workspace for case summarization, analysis, and guided follow-up.",
 };

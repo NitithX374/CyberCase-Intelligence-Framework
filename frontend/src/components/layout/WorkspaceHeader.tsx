@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
 import type { ChatThreadRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import {
@@ -59,9 +60,9 @@ export function WorkspaceHeader({
         <Link
           href="/"
           aria-label="CyberCase home"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-extrabold text-ivory outline-none transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg outline-none transition-opacity hover:opacity-75 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
         >
-          C
+          <CyberCaseLogo size={36} />
         </Link>
         <div className="min-w-0 flex-1">
           <div className="hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-ink-muted sm:flex">
