@@ -2,7 +2,8 @@
 
 ## Snapshot
 
-- 2026-09-07 [TOOL] COMPLETE: verified/refined Gemini thesis into deliverables/thesis_kmutnb_english/CyberCase_Thesis_English_Merged.docx (44 pages, I-VI, ten tables, eleven references). All pages rendered/visually reviewed, native TOC updated. Correction log and build/citation receipts in its review/ directory.
+- 2026-09-07 [USER] Supersedes the earlier 44-page rewrite: preserve Gemini's full original structure and detail; revise English phrasing and necessary clarity/correctness only.
+- 2026-09-07 [TOOL] COMPLETE: revised Gemini full original into deliverables/thesis_kmutnb_english/Cybercase_Thesis_KMUTNB_Full_Revised_English.docx: 89 pages, six chapters, 16 tables, five figures, 80 native math objects, eleven references. Rendered and visually reviewed; original hash unchanged.
 - 2026-09-07 [USER] Backend/frontend are the author's scope; partner rag_service is downstream only. Document merge authorized; original Thai/English files and production work preserved. Research contribution, empirical evaluation and official English approval/template requirements remain open.
 - 2026-09-06 [TOOL] Gemini added six Thai/English chapters and full documents. Unsupported case scores, invented claim enums/timeline, absolute guarantees and placeholder figures require correction. Preserve originals and production changes; output to deliverables/thesis_kmutnb_english.
 - 2026-09-06 [USER] Current goal supersedes research selection: hold alternatives and assess thesis chapter readiness from F:\Chapter_II_Final.docx, F:\Draft_Chapter_I_Complete.pdf and F:\Enhanced Golf Swing Evaluation with MediaPipe.pdf.
@@ -21,13 +22,13 @@
 
 ## Done (recent)
 
+- 2026-09-07 [TOOL] Completed full Gemini thesis revision, native math/figure repairs, bibliography and updated contents. Details: deliverables/thesis_kmutnb_english/review/FULL_REVISION_REVIEW.md.
 - 2026-09-06 [TOOL] Completed explainability/product-fit audit, three sample DOCX text inspections, v3 explanation parser reproduction and 39 focused tests; proposals and limitations: docs/product/BACKEND_EXPLAINABILITY_REVIEW.md.
 - 2026-09-05 [CODE] Completed remaining parser, metadata, follow-up, report and run-recovery work; final 351 backend/150 frontend tests and static/build checks pass. Recovery verified against disposable PostgreSQL and HTTP. Details: backend/REFACTOR.md.
 - 2026-09-05 [CODE] Completed frontend Query-backed chat session, single polling loop, draft/retry state isolation, cancellation listener cleanup and 16 lifecycle regression tests. Final 145-test suite, lint, typecheck, build and synthetic browser QA pass.
 - 2026-09-04 [CODE] Added Google Vision OCR confidence baseline, provider-neutral words, explicit region confidence semantics, ADC configuration documentation and synthetic response receipt. Core analysis and HTR behavior remain unchanged.
 - 2026-09-03 [CODE] Overview preserves the original summary, groups real claim/status fields with uncertainty first, collapses only long reported/inference groups, and opens filename/page citations in a responsive native drawer at the exact highlighted passage. Real analysis/material metadata and compact questions replace heavy side cards; source ordinals distinguish separate clarification links.
 - 2026-09-03 [CODE] Superseded inline intake layout with a preparation workspace: material controls at top/right, explicit lifecycle status, bounded readable/raw text with full modal reader, real findings/evidence/gap counts, English controls and a persistent primary footer. Original source content/provenance and one-document extraction remain intact.
-- 2026-09-03 [CODE] Removed decorative badges, repeated disclaimers, duplicate finding citations, Overview summary cards/actions, repeated clarification actions, and OCR preview badges; kept source highlighting and plain-text uncertainty labels.
 
 ## Decisions
 
@@ -87,9 +88,9 @@
 
 ## State (Done/Now/Next)
 
-- 2026-09-06 [TOOL] Done: architecture/research alternatives and three-document chapter-readiness assessment. Prior refactor remains uncommitted; no production edits in these assessments.
-- 2026-09-06 [USER] Now: research selection on hold; user asks whether chapters can be written. No chapter rewriting authorized or performed in this assessment.
-- 2026-09-06 [ASSUMPTION] Next: align Chapter I to prosecutor case understanding, draft current Chapter IV, revise foundational Chapter II. Final contribution, expert rubric, study population and timeline remain UNCONFIRMED.
+- 2026-09-07 [TOOL] Done: full-original English revision and document QA; production changes and original documents preserved.
+- 2026-09-07 [TOOL] Now: deliver the revised 89-page DOCX and record review receipts.
+- 2026-09-07 [ASSUMPTION] Next: professor review and future empirical evaluation; contribution selection and expert acceptance remain UNCONFIRMED.
 
 ## Working set
 
@@ -105,6 +106,8 @@
 - 2026-09-06 [CODE] F:\งานอัยการ\Dataset
 
 ## Receipts
+
+- 2026-09-07 [TOOL] Final thesis: 89 pages, no blank pages, six chapters, five figures, 80 native math objects, eleven references; visual review completed and original SHA256 unchanged. Receipt: deliverables/thesis_kmutnb_english/review/full_revision_receipt.json. Prior software tests are dated receipts, not rerun for document editing.
 
 - 2026-09-06 [TOOL] Read-only audit at main d889226: 39 tests passed (stateful clarification decisions, gap assembly, v3 trace); actual transpiled frontend parser returned null for canonical v3 gap, accepted legacy affects control. Three DOCX samples read locally. No live provider/browser/prosecutor evaluation; only audit document and ledger changed.
 
@@ -144,4 +147,3 @@
 
 - 2026-09-01 [TOOL] Optional-RAG report validation: 14 focused backend report/schema/migration tests pass, 267 other backend tests pass when excluding the unrelated dirty canonical-analysis fixture, 9 report frontend tests pass, ESLint passes, Alembic head is `0002_optional_report_retrieval_context`, and no `rag_service/**` files changed; full-suite failures remain outside this change in dirty intake/overview fixtures and that canonical fixture.
 
-- 2026-09-01 [TOOL] Prompt cleanup validation: 57/57 focused backend tests pass, follow-up compileall passes, scoped diff whitespace check passes, all touched files remain below 300 lines, and `rag_service/**` is unchanged.

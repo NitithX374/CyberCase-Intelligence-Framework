@@ -58,4 +58,7 @@ export interface ChatWorkspaceLayoutProps {
   onSubmitCase?: (data: CaseIntakeSubmission) => void;
   onClearQueryError?: () => void;
   onRetryQuery?: () => void;
+  isChatOpen?: boolean;
+  onToggleChat?: () => void;
 }
+

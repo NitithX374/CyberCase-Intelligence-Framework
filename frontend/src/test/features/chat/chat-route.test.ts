@@ -18,7 +18,7 @@ describe("chat workspace routes", () => {
     });
     expect(chatRouteState("/chat/thread-1/chat")).toEqual({
       threadId: "thread-1",
-      view: "chat",
+      view: "overview",
     });
     expect(chatRouteState("/chat/thread-1/report")).toEqual({
       threadId: "thread-1",
@@ -37,7 +37,6 @@ describe("chat workspace routes", () => {
     });
     expect(chatPath("thread-1", "intake")).toBe("/chat/thread-1/intake");
     expect(chatPath("thread-1", "overview")).toBe("/chat/thread-1/overview");
-    expect(chatPath("thread-1", "chat")).toBe("/chat/thread-1/chat");
     expect(chatPath("thread-1", "report")).toBe("/chat/thread-1/report");
   });
 });

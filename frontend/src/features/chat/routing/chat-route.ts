@@ -29,9 +29,7 @@ export function chatRouteState(pathname: string): ChatRouteState {
           ? "technical-context"
           : routeSegment === "report"
             ? "report"
-            : routeSegment === "chat"
-              ? "chat"
-              : "overview";
+            : "overview";
 
   return { threadId, view };
 }

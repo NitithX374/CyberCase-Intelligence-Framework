@@ -19,6 +19,8 @@ interface WorkspaceHeaderProps {
   onSelectThread: (threadId: string) => void;
   onNewChat: () => void;
   onRequestDelete: (thread: ChatThreadRead) => void;
+  isChatOpen?: boolean;
+  onToggleChat?: () => void;
 }
 
 const phasePresentation: Record<RunPhase, { label: string }> = {
@@ -42,6 +44,8 @@ export function WorkspaceHeader({
   onSelectThread,
   onNewChat,
   onRequestDelete,
+  isChatOpen = true,
+  onToggleChat,
 }: WorkspaceHeaderProps) {
   const displayThreadTitle =
     activeThread?.title === "New chat" || !activeThread?.title
@@ -68,22 +72,49 @@ export function WorkspaceHeader({
           <p className="truncate text-sm font-extrabold tracking-[-0.02em] text-ink sm:mt-0.5 sm:text-base">
             {displayThreadTitle}
           </p>
-          {activeView !== "intake" && <div className="mt-1 flex items-center gap-2 text-[10px] font-medium text-ink-secondary">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                phase === "error"
-                  ? "bg-critical"
-                  : phase === "querying" || phase === "analyzing"
-                    ? "bg-evidence motion-safe:animate-pulse motion-reduce:animate-none"
-                    : phase === "awaiting_followup"
-                      ? "bg-unresolved"
-                      : "bg-established"
-              }`}
-              aria-hidden="true"
-            />
-            <span>{currentPhase.label}</span>
-          </div>}
+          {activeView !== "intake" && (
+            <div className="mt-1 flex items-center gap-2 text-[10px] font-medium text-ink-secondary">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  phase === "error"
+                    ? "bg-critical"
+                    : phase === "querying" || phase === "analyzing"
+                      ? "bg-evidence motion-safe:animate-pulse motion-reduce:animate-none"
+                      : phase === "awaiting_followup"
+                        ? "bg-unresolved"
+                        : "bg-established"
+                }`}
+                aria-hidden="true"
+              />
+              <span>{currentPhase.label}</span>
+            </div>
+          )}
         </div>
+
+        {onToggleChat && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleChat}
+              aria-label={isChatOpen ? "Close AI Copilot" : "Open AI Copilot"}
+              title={isChatOpen ? "Close Copilot" : "Open Copilot"}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all focus-visible:ring-2 focus-visible:ring-primary ${
+                isChatOpen
+                  ? "border-primary bg-primary text-ivory shadow-xs"
+                  : "border-line bg-canvas text-ink hover:border-line-strong hover:bg-surface-hover"
+              }`}
+            >
+              <Icon name="chat" className="h-4 w-4" />
+              <span className="hidden sm:inline">Copilot</span>
+              {phase === "awaiting_followup" && (
+                <span
+                  className="h-2 w-2 rounded-full bg-unresolved motion-safe:animate-ping"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:hidden">
@@ -101,7 +132,6 @@ export function WorkspaceHeader({
           <option value="overview">Overview</option>
           <option value="materials">Case Materials</option>
           <option value="technical-context">Technical Context</option>
-          <option value="chat">Chat</option>
           <option value="report">Report</option>
         </select>
         <label className="sr-only" htmlFor="mobile-saved-case">

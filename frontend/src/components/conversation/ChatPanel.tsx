@@ -13,9 +13,9 @@ interface ChatPanelProps {
   input: string;
   threadStatus: ThreadStatus | null;
   phase: RunPhase;
-  postAnswerAction: ChatMessageAction | null;
+  postAnswerAction?: ChatMessageAction | null;
   onInputChange: (value: string) => void;
-  onPostAnswerActionChange: (action: ChatMessageAction) => void;
+  onPostAnswerActionChange?: (action: ChatMessageAction) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
@@ -24,9 +24,7 @@ export function ChatPanel({
   input,
   threadStatus,
   phase,
-  postAnswerAction,
   onInputChange,
-  onPostAnswerActionChange,
   onSubmit,
 }: ChatPanelProps) {
   const isProcessing = phase === "querying" || phase === "analyzing";
@@ -37,25 +35,8 @@ export function ChatPanel({
         <ChatTranscript messages={messages} isProcessing={isProcessing} />
       </div>
 
-      <div className="shrink-0 border-t border-line bg-surface px-4 pb-4 pt-3 sm:px-7 sm:pb-5">
+      <div className="shrink-0 border-t border-line bg-surface px-3.5 pb-3.5 pt-3 md:px-4 md:pb-4">
         <div className="mx-auto w-full max-w-4xl">
-          {threadStatus === "answered" && (
-            <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
-              <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
-                Your next note
-              </span>
-              <ActionChoice
-                label="Ask question"
-                selected={postAnswerAction === "ask"}
-                onClick={() => onPostAnswerActionChange("ask")}
-              />
-              <ActionChoice
-                label="Add case info"
-                selected={postAnswerAction === "add_case_info"}
-                onClick={() => onPostAnswerActionChange("add_case_info")}
-              />
-            </div>
-          )}
           {threadStatus === "awaiting_followup" && (
             <div className="mb-3 flex items-center gap-2 px-1 text-[11px] text-ink-secondary">
               <span>Answer the question above to continue.</span>
@@ -68,7 +49,7 @@ export function ChatPanel({
             onSubmit={onSubmit}
           />
           <p className="mt-2 text-center text-[10px] leading-relaxed text-ink-muted">
-            Questions stay separate from submitted case evidence unless you choose “Add case info.”
+            Press Ctrl+Enter or click Send to submit.
           </p>
         </div>
       </div>
@@ -76,30 +57,6 @@ export function ChatPanel({
   );
 }
 
-function ActionChoice({
-  label,
-  selected,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={`rounded-md border px-3 py-1 text-[11px] font-bold transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
-        selected
-          ? "border-primary bg-primary text-ivory"
-          : "border-line-strong bg-canvas text-ink-secondary hover:border-primary hover:bg-surface-hover"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
 
 interface ChatComposerProps {
   input: string;

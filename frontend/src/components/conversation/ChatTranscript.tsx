@@ -22,7 +22,7 @@ export function ChatTranscript({ messages, isProcessing }: ChatTranscriptProps) 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }, [messages.length, isProcessing]);
 
   if (messages.length === 0) {
@@ -42,7 +42,7 @@ export function ChatTranscript({ messages, isProcessing }: ChatTranscriptProps) 
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-1 px-4 py-6 sm:px-7 sm:py-8">
+    <div className="mx-auto w-full max-w-4xl space-y-1 px-4 py-4 md:px-5 md:py-6">
       {messages.map((message) => {
         const isUser = message.role === "user";
         const followUpGap = followUpGapDetailForMessage(message);

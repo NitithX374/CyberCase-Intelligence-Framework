@@ -14,7 +14,7 @@ describe("WorkspaceSidebar", () => {
     },
   ];
 
-  it("renders the 6 case workspace tabs and does not include deleted Investigation Issues", () => {
+  it("renders the 5 case workspace tabs and does not include deleted Investigation Issues or chat tab", () => {
     render(
       <WorkspaceSidebar
         threads={sampleThreads}
@@ -33,13 +33,15 @@ describe("WorkspaceSidebar", () => {
     // Section title
     expect(screen.getByText("Case")).toBeInTheDocument();
 
-    // 6 Tabs
+    // 5 Tabs
     expect(screen.getByRole("tab", { name: /Intake/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Overview/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Case Materials/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Technical Context/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Chat/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Report/i })).toBeInTheDocument();
+
+    // Chat is docked in Copilot, not in the sidebar tabs
+    expect(screen.queryByRole("tab", { name: /^Chat$/i })).not.toBeInTheDocument();
 
     // Investigation Issues is deleted
     expect(screen.queryByRole("tab", { name: /Investigation Issues/i })).not.toBeInTheDocument();

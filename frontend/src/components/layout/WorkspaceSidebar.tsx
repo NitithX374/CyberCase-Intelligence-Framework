@@ -44,7 +44,6 @@ const reviewTabs: Array<{ view: WorkspaceView; icon: IconName }> = [
 ];
 
 const toolTabs: Array<{ view: WorkspaceView; icon: IconName }> = [
-  { view: "chat", icon: "chat" },
   { view: "technical-context", icon: "technical" },
 ];
 

@@ -46,6 +46,11 @@ export function ChatWorkspace() {
   const [deleteCandidate, setDeleteCandidate] = useState<ChatThreadRead | null>(
     null,
   );
+  const [isChatOpen, setIsChatOpen] = useState(true);
+
+  const handleToggleChat = useCallback(() => {
+    setIsChatOpen((prev) => !prev);
+  }, []);
 
   const threadsQuery = useChatThreads();
   const {
@@ -121,10 +126,8 @@ export function ChatWorkspace() {
   );
 
   const handleNavigateToSource = useCallback(() => {
-    setActiveView("chat");
-    const threadId = getActiveThreadId();
-    if (threadId !== null) router.push(chatPath(threadId, "chat"));
-  }, [getActiveThreadId, router]);
+    setIsChatOpen(true);
+  }, []);
 
   const handleSelectThread = useCallback(
     async (threadId: string): Promise<void> => {
@@ -230,6 +233,8 @@ export function ChatWorkspace() {
       onSubmitCase={handleSubmitCase}
       onClearQueryError={handleClearQueryError}
       onRetryQuery={handleRetryQuery}
+      isChatOpen={isChatOpen}
+      onToggleChat={handleToggleChat}
     />
   );
 }
