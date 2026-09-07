@@ -140,7 +140,7 @@ export function ChatWorkspace() {
   const handleNewChat = useCallback(async () => {
     if (creatingThread) return;
     setActiveView("intake");
-    changePostAnswerAction(null);
+    changePostAnswerAction("ask");
     try {
       const thread = await createMutation.mutateAsync();
       router.push(chatPath(thread.id, "intake"));

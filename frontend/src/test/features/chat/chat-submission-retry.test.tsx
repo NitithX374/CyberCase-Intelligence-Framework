@@ -114,4 +114,21 @@ describe("chat submission lifecycle", () => {
     expect(result.current.session.queryError).toContain("did not persist an assistant response");
     expect(result.current.session.getPendingSubmission()?.content).toBe("Evidence");
   });
+
+  it("defaults post-answer action to 'ask' when submitting on an answered thread without explicit choice", async () => {
+    const previous = [message("a", 1, "user", "Evidence"), message("a", 2, "assistant", "Summary")];
+    const questionMsg = message("a", 3, "user", "What technique is this?");
+    const receipt = accepted(questionMsg);
+    vi.spyOn(api, "getChatThread").mockResolvedValue(thread("a", "answered", previous));
+    const send = vi.spyOn(api, "createChatMessage").mockResolvedValue(receipt);
+    vi.spyOn(api, "getChatRun").mockResolvedValue({ ...receipt.run, status: "completed" });
+    const { result } = renderSession();
+    await act(async () => { await result.current.session.selectThread("a"); });
+    await tick();
+    act(() => result.current.submitContent("What technique is this?", "message"));
+    await tick();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][4]).toBe("ask");
+    expect(result.current.session.queryError).toBeNull();
+  });
 });

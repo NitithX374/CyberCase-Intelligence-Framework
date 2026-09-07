@@ -39,9 +39,12 @@ export function useChatSubmission({
     const initialSelection = session.getSelection();
     if (submissionsRef.current.has(initialSelection)) return;
     const statusBeforeSubmit = session.threadStatus;
-    const action = savedRetry ? savedRetry.action : statusBeforeSubmit === "answered"
-      ? session.postAnswerAction ?? undefined : undefined;
-    if (statusBeforeSubmit === "answered" && action === undefined) {
+    const action = savedRetry
+      ? (savedRetry.action ?? (statusBeforeSubmit === "answered" ? "ask" : undefined))
+      : statusBeforeSubmit === "answered"
+        ? (session.postAnswerAction ?? "ask")
+        : undefined;
+    if (statusBeforeSubmit === "answered" && !action) {
       session.reportError("Choose how to use the next message before sending it.");
       return;
     }

@@ -20,7 +20,7 @@ interface ChatDraftState {
 }
 
 const emptyDraft: ChatDraftState = {
-  input: "", postAnswerAction: null, pendingFollowUp: null,
+  input: "", postAnswerAction: "ask", pendingFollowUp: null,
   queryError: null, activity: null,
 };
 
@@ -50,7 +50,7 @@ export function useChatDraft() {
     setState((current) => ({
       ...current,
       input: pending?.threadId === threadId && pending.kind === "followup" ? pending.content : "",
-      postAnswerAction: pending?.threadId === threadId ? pending.action ?? null : null,
+      postAnswerAction: pending?.threadId === threadId ? pending.action ?? "ask" : "ask",
       pendingFollowUp: current.pendingFollowUp?.threadId === threadId ? current.pendingFollowUp : null,
       queryError: pending?.threadId === threadId ? current.queryError : null,
       activity: { phase: "querying", threadStatus: null },
@@ -100,11 +100,11 @@ export function useChatDraft() {
     if (completed) pendingRef.current = null;
     setState((current) => ({
       ...current, activity: null,
-      ...(restored ? { postAnswerAction: restored.action ?? null } : {}),
+      ...(restored ? { postAnswerAction: restored.action ?? "ask" } : {}),
       queryError: failureMessage || (detail.status === "failed"
         ? "Background processing failed. Retry the saved message."
         : pending?.threadId !== detail.id || requestOrdinal !== undefined ? null : current.queryError),
-      ...(completed ? { input: "", pendingFollowUp: null, postAnswerAction: null } : {}),
+      ...(completed ? { input: "", pendingFollowUp: null, postAnswerAction: "ask" } : {}),
     }));
   }, []);
   const clearDraft = useCallback(() => {
