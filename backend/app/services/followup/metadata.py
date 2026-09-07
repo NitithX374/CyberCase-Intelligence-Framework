@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import replace
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from app.config import settings
@@ -14,9 +13,6 @@ from app.services.followup.prompts import (
 )
 from app.services.followup.schemas import GapAnalysisResult
 from app.services.llm.core_llm import resolve_core_llm_target
-
-if TYPE_CHECKING:
-    from app.services.workflow.outcome import AssistantOutcome
 
 
 def empty_gap_analysis_trace(
@@ -114,30 +110,4 @@ def followup_metadata(
             "rag_skipped": rag_skipped,
             "rag_invoked": rag_invoked,
         }
-    }
-
-
-def mark_followup_rag_invoked(
-    outcome: AssistantOutcome,
-    metadata_json: dict[str, Any],
-) -> AssistantOutcome:
-    merged_metadata = mark_followup_rag_invoked_metadata(metadata_json)
-    if not merged_metadata:
-        return outcome
-    output_metadata = dict(outcome.metadata_json)
-    output_metadata["chat_followup"] = merged_metadata["chat_followup"]
-    return replace(outcome, metadata_json=output_metadata)
-
-
-def mark_followup_rag_invoked_metadata(metadata_json: dict[str, Any]) -> dict[str, Any]:
-    trace = metadata_json.get("chat_followup")
-    if not isinstance(trace, dict):
-        return {}
-    return {
-        **metadata_json,
-        "chat_followup": {
-            **trace,
-            "rag_skipped": False,
-            "rag_invoked": True,
-        },
     }

@@ -5,128 +5,21 @@ import inspect
 import json
 import re
 import unicodedata
-from collections.abc import Mapping
 from typing import Any
 
 import httpx
 
-from app.services.followup.schemas import GapAnalysis, GapAnalysisResult, GapItem, FollowUpDecision, FollowUpPolicyResult
-
-_VISIBLE_TEXT_BLOCK_TYPES = frozenset(
-    {"text", "output_text", "message", "thought_text"}
+from app.services.followup.response_content import (
+    _extract_llm_text as _extract_llm_text,
+    _extract_llm_json as _extract_llm_json,
 )
-
-
-def _extract_llm_text(payload: Mapping[str, object] | object) -> str:
-    """Extract raw text across supported provider response shapes (Anthropic, OpenRouter, etc.)."""
-    if not isinstance(payload, Mapping):
-        return ""
-
-    direct_output = payload.get("output_text")
-    if isinstance(direct_output, str) and direct_output.strip():
-        return direct_output
-
-    content = payload.get("content")
-    if content is not None:
-        extracted = _extract_text_value(content)
-        if extracted.strip():
-            return extracted
-
-    choices = payload.get("choices")
-    if isinstance(choices, list):
-        extracted = _extract_text_value(choices)
-        if extracted.strip():
-            return extracted
-
-    output = payload.get("output")
-    if output is not None:
-        extracted = _extract_text_value(output)
-        if extracted.strip():
-            return extracted
-
-    return ""
-
-
-def _extract_text_value(value: object) -> str:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list):
-        return "".join(_extract_text_value(item) for item in value)
-    if not isinstance(value, Mapping):
-        return ""
-
-    block_type = value.get("type")
-    # Ignore thinking/reasoning blocks
-    if block_type in {"thinking", "redacted_thinking", "reasoning"}:
-        return ""
-    if block_type in _VISIBLE_TEXT_BLOCK_TYPES:
-        text = value.get("text")
-        if isinstance(text, str):
-            return text
-
-    text = value.get("text")
-    if isinstance(text, str) and block_type in {None, "message", "output_text"}:
-        return text
-
-    nested_content = value.get("content")
-    if nested_content is not None:
-        nested = _extract_text_value(nested_content)
-        if nested:
-            return nested
-
-    message = value.get("message")
-    if message is not None:
-        return _extract_text_value(message)
-
-    return ""
-
-
-def _extract_llm_json(raw: str) -> dict[str, object]:
-    """Parse JSON object from LLM response text, handling markdown fences and whitespace."""
-    cleaned = raw.strip()
-    if not cleaned:
-        raise ValueError("LLM response text is empty")
-
-    # Strip markdown code fences if present
-    if cleaned.startswith("```"):
-        lines = cleaned.splitlines()
-        if lines and lines[0].strip().startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        cleaned = "\n".join(lines).strip()
-
-    # 1. Try direct json.loads
-    try:
-        data = json.loads(cleaned)
-        if isinstance(data, dict):
-            return data
-    except (json.JSONDecodeError, ValueError):
-        pass
-
-    # 2. Try outermost brace scan
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        candidate = cleaned[start : end + 1]
-        try:
-            data = json.loads(candidate)
-            if isinstance(data, dict):
-                return data
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    # 3. Try regex scan for JSON object block
-    match = re.search(r"\{[\s\S]*\}", cleaned)
-    if match:
-        try:
-            data = json.loads(match.group(0))
-            if isinstance(data, dict):
-                return data
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    raise ValueError(f"Could not parse valid JSON object from LLM response: {raw[:200]!r}")
+from app.services.followup.schemas import (
+    GapAnalysis,
+    GapAnalysisResult,
+    GapItem,
+    FollowUpDecision,
+    FollowUpPolicyResult,
+)
 
 
 async def _invoke_policy_method(

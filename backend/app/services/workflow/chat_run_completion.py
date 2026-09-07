@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.models.rag_context import RagContext
+from app.schemas.message_metadata import serialize_message_metadata
 from app.services.case_analysis.contracts import AnalysisTrace, AnalysisTraceV3
 from app.services.workflow.chat_run_locks import lock_owned_running_run, lock_run_thread
 from app.services.workflow.outcome import AssistantOutcome
@@ -21,7 +22,8 @@ async def complete_run(
     outcome: AssistantOutcome,
     *,
     lock_run_thread_fn: Callable[[UUID], Awaitable[ChatThread | None]] | None = None,
-    lock_owned_running_run_fn: Callable[[UUID, str], Awaitable[ChatRun | None]] | None = None,
+    lock_owned_running_run_fn: Callable[[UUID, str], Awaitable[ChatRun | None]]
+    | None = None,
 ) -> bool:
     now = datetime.now(timezone.utc)
     async with db.begin():
@@ -53,8 +55,8 @@ async def complete_run(
         if serialized_trace is not None:
             metadata["analysis_trace"] = serialized_trace
         elif outcome.analysis_trace_failure is not None:
-            metadata["analysis_trace_failure"] = outcome.analysis_trace_failure.model_dump(
-                mode="json"
+            metadata["analysis_trace_failure"] = (
+                outcome.analysis_trace_failure.model_dump(mode="json")
             )
         db.add(
             ChatMessage(
@@ -63,7 +65,7 @@ async def complete_run(
                 role="assistant",
                 content=outcome.content,
                 retrieval_context_id=outcome.retrieval_context_id,
-                metadata_json=metadata,
+                metadata_json=serialize_message_metadata(metadata),
             )
         )
         thread.next_message_ordinal += 1
@@ -84,9 +86,13 @@ def _serialize_analysis_trace(outcome: AssistantOutcome) -> dict[str, object] | 
         return None
     if isinstance(trace, AnalysisTraceV3):
         if trace.evidence_sha256 != outcome.evidence_sha256:
-            raise ValueError("Analysis trace evidence binding does not match the outcome")
+            raise ValueError(
+                "Analysis trace evidence binding does not match the outcome"
+            )
         if trace.retrieval_context_id != outcome.retrieval_context_id:
-            raise ValueError("Analysis trace retrieval binding does not match the outcome")
+            raise ValueError(
+                "Analysis trace retrieval binding does not match the outcome"
+            )
         return trace.model_dump(mode="json")
     if not outcome.retrieval_context_id or not outcome.evidence_sha256:
         raise ValueError("A v2 analysis trace requires retrieval and evidence bindings")

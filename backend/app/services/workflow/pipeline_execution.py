@@ -10,7 +10,10 @@ from app.services.case_analysis import (
     enrich_case_analysis_result,
     validate_canonical_case_overview_trace,
 )
-from app.services.case_analysis.contracts import AnalysisTraceV3, CaseAnalysisResult
+from app.services.case_analysis.contracts import (
+    AnalysisTraceV3,
+    CaseAnalysisResult,
+)
 from app.services.case_analysis.mitre_applicability_contracts import (
     MITRE_APPLICABILITY_GATE_VERSION,
     MitreApplicabilityRecord,
@@ -20,6 +23,7 @@ from app.services.case_analysis.mitre_applicability_gate import (
 )
 from app.services.clients.rag_client import RagCallFailure
 from app.services.followup.schemas import FollowUpPolicy, GapAnalyzer
+from app.services.followup.contracts import FollowUpResolution
 from app.services.followup.gap_stage import run_gap_analysis_stage
 from app.services.workflow.outcome import (
     AssistantOutcome,
@@ -30,11 +34,23 @@ from app.services.workflow.outcome import (
 from dataclasses import dataclass
 from typing import Any
 
+from app.services.workflow.run_heartbeat import maintain_run_lease
 from app.services.workflow.rag_routing import (
     RagAttempt,
     attempt_mitre_applicability,
     attempt_optional_rag,
 )
+
+
+def _coerce_analysis_result(value: object) -> CaseAnalysisResult:
+    if isinstance(value, CaseAnalysisResult) and value.answer.strip():
+        return value
+    if isinstance(value, str) and value.strip():
+        return CaseAnalysisResult(answer=value.strip(), trace=None)
+    raise CaseAnalysisFailure(
+        "analysis_invalid_response",
+        "The Main Case Analysis returned no answer",
+    )
 
 
 @dataclass(frozen=True)
@@ -43,7 +59,7 @@ class PipelineDependencies:
     worker_type: type[Any]
     rag_request: Callable[..., Any]
     analysis_request: Callable[..., Any]
-    followup_evaluator: Callable[..., Any]
+    followup_evaluator: Callable[..., Awaitable[FollowUpResolution]]
 
 
 async def record_failure(
@@ -84,19 +100,21 @@ async def process_chat_run(
     if claimed is None:
         return
     try:
-        analysis_request = ask_call or dependencies.analysis_request
-        if claimed.action == "ask":
-            outcome = await _run_question(claimed, analysis_request)
-        else:
-            outcome = await _run_fresh_analysis(
-                claimed,
-                rag_request=rag_call or dependencies.rag_request,
-                analysis_request=analysis_request,
-                followup_evaluator=dependencies.followup_evaluator,
-                policy=policy,
-                gap_analyzer=gap_analyzer,
-                applicability_gate=applicability_call or evaluate_mitre_applicability,
-            )
+        async with maintain_run_lease(dependencies.session_factory, run_id, worker_id):
+            analysis_request = ask_call or dependencies.analysis_request
+            if claimed.action == "ask":
+                outcome = await _run_question(claimed, analysis_request)
+            else:
+                outcome = await _run_fresh_analysis(
+                    claimed,
+                    rag_request=rag_call or dependencies.rag_request,
+                    analysis_request=analysis_request,
+                    followup_evaluator=dependencies.followup_evaluator,
+                    policy=policy,
+                    gap_analyzer=gap_analyzer,
+                    applicability_gate=applicability_call
+                    or evaluate_mitre_applicability,
+                )
         async with dependencies.session_factory() as completion_db:
             await dependencies.worker_type(completion_db).complete_run(
                 run_id, worker_id, outcome
@@ -106,6 +124,7 @@ async def process_chat_run(
     except CaseAnalysisFailure as error:
         await record_failure(dependencies, run_id, worker_id, error.code, error.message)
     except Exception:
+        logger.exception("Chat processing failed run_id=%s", run_id)
         await record_failure(
             dependencies,
             run_id,
@@ -222,9 +241,14 @@ async def _run_fresh_analysis(
         evidence_sha256=claimed.evidence_sha256,
         canonical_state_required=True,
     )
-    if followup.outcome is not None:
+    if followup.question is not None:
         return bind_followup_question(
-            followup.outcome,
+            AssistantOutcome(
+                content=followup.question,
+                retrieval_context_id=None,
+                metadata_json=followup.metadata_json,
+                thread_status="awaiting_followup",
+            ),
             rag_context=rag_context,
             rag_status=rag_attempt.status,
             rag_failure_code=rag_attempt.failure_code,
@@ -280,17 +304,6 @@ async def _run_question(claimed, analysis_request) -> AssistantOutcome:
         source_message_ids=claimed.source_message_ids,
         trace=result.trace,
         trace_failure=result.trace_failure,
-    )
-
-
-def _coerce_analysis_result(value: object) -> CaseAnalysisResult:
-    if isinstance(value, CaseAnalysisResult) and value.answer.strip():
-        return value
-    if isinstance(value, str) and value.strip():
-        return CaseAnalysisResult(answer=value.strip(), trace=None)
-    raise CaseAnalysisFailure(
-        "analysis_invalid_response",
-        "The Main Case Analysis returned no answer",
     )
 
 

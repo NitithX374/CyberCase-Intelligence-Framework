@@ -1,92 +1,28 @@
-export type ThreadStatus =
-  | "idle"
-  | "processing"
-  | "awaiting_followup"
-  | "answered"
-  | "failed";
+import type { ChatMessageCreate } from "./generated/ChatMessageCreate";
+import type { ChatMessageRead } from "./generated/ChatMessageRead";
+import type { ChatRunRead } from "./generated/ChatRunRead";
+import type { ChatThreadRead as ThreadRead } from "./generated/ChatThreadRead";
+import type { CaseNarrativeDocumentSource as DocumentSource } from "./generated/CaseNarrativeDocumentSource";
 
-export type ChatMessageAction = "ask" | "add_case_info";
-
-export type DocumentExtractionMethod =
-  | "native_pdf"
-  | "native_docx"
-  | "document_recognition"
-  | "hybrid";
-
-export type DocumentVerificationStatus =
-  | "native"
-  | "machine_read"
-  | "needs_review";
-
-export type DocumentConfidenceStatus =
-  | "reported"
-  | "not_reported"
-  | "not_applicable";
-
-export interface CaseNarrativeDocumentPageSpan {
-  page_number: number;
-  start_offset: number;
-  end_offset: number;
-  text_sha256: string;
-}
-
-export interface CaseNarrativeDocumentSource {
-  document_id: string;
-  filename: string;
-  extraction_method: DocumentExtractionMethod;
-  page_count: number;
-  verification_status: DocumentVerificationStatus;
-  confidence_status: DocumentConfidenceStatus;
-  minimum_confidence: number | null;
-  warnings: string[];
-  page_spans: CaseNarrativeDocumentPageSpan[];
-}
+export type { ChatThreadRead } from "./generated/ChatThreadRead";
+import type { ChatThreadDetail as ThreadDetail } from "./generated/ChatThreadDetail";
+export type ChatThreadDetail = ThreadDetail & { messages: ChatMessageRead[] };
+export type { ChatMessageAccepted } from "./generated/ChatMessageAccepted";
+export type CaseNarrativeDocumentSource = Required<DocumentSource>;
+export type { CaseNarrativeDocumentPageSpan } from "./generated/CaseNarrativeDocumentPageSpan";
+export type PersistedChatMessage = ChatMessageRead;
+export type ChatRun = ChatRunRead;
+export type ThreadStatus = ThreadRead["status"];
+export type RunStatus = ChatRunRead["status"];
+export type ChatMessageAction = NonNullable<ChatMessageCreate["action"]>;
+export type DocumentExtractionMethod = DocumentSource["extraction_method"];
+export type DocumentVerificationStatus = DocumentSource["verification_status"];
+export type DocumentConfidenceStatus = DocumentSource["confidence_status"];
 
 export interface CaseIntakeSubmission {
   title?: string;
   description: string;
   documentSources?: CaseNarrativeDocumentSource[];
-}
-
-export type RunStatus = "queued" | "running" | "completed" | "failed";
-
-export interface ChatThreadRead {
-  id: string;
-  title: string;
-  status: ThreadStatus;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PersistedChatMessage {
-  id: string;
-  thread_id: string;
-  ordinal: number;
-  role: "user" | "assistant";
-  content: string;
-  retrieval_context_id: string | null;
-  metadata_json: Record<string, unknown>;
-  created_at: string;
-}
-
-export interface ChatThreadDetail extends ChatThreadRead {
-  messages: PersistedChatMessage[];
-}
-
-export interface ChatRun {
-  id: string;
-  thread_id: string;
-  request_message_id: string;
-  status: RunStatus;
-  error_code: string | null;
-  error_message: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ChatMessageAccepted {
-  message: PersistedChatMessage;
-  run: ChatRun;
 }
 
 export type ChatReportSupportType =

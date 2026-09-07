@@ -45,7 +45,7 @@ describe("Case preparation workflow", () => {
   });
 
   it("does not manufacture extracted counts from a question-answer response", () => {
-    const questionResponse = { ...analysis, metadata_json: { ...analysis.metadata_json, analysis_state_scope: "response_scoped" } };
+    const questionResponse: PersistedChatMessage = { ...analysis, metadata_json: { ...analysis.metadata_json, analysis_state_scope: "response_scoped" } };
     render(<CaseIntakeView messages={[evidence, questionResponse]} isSubmitting={false} onSubmitCase={vi.fn()} />);
     expect(screen.getByText(/Findings and open questions become available after case analysis/)).toBeInTheDocument();
     expect(screen.queryByText("Evidence messages")).not.toBeInTheDocument();

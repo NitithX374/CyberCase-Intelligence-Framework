@@ -3,19 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 import unicodedata
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
+from app.schemas.message_metadata import MessageMetadata
 
 if TYPE_CHECKING:
     from app.services.followup.schemas import GapAnalysis
-    from app.services.workflow.outcome import AssistantOutcome
 
 
 @dataclass(frozen=True)
 class FollowUpResolution:
     """The gate result and the audit record carried into the final message."""
 
-    outcome: AssistantOutcome | None
-    metadata_json: dict[str, Any]
+    question: str | None
+    metadata_json: MessageMetadata
     gap_analysis: GapAnalysis | None = None
 
 

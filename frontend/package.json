@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "generate:api-types": "openapi-typescript http://localhost:8000/openapi.json -o src/lib/generated-api.d.ts",
+    "generate:api-types": "node scripts/generate-api-types.mjs",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:api-types": "node scripts/generate-api-types.mjs --check"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.4",

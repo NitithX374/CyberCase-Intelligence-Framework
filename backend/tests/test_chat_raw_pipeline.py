@@ -88,7 +88,7 @@ def test_initial_and_added_information_run_fresh_rag_on_raw_evidence(
 
     async def followup_evaluator(**kwargs):
         assert kwargs["raw_evidence"] == value.raw_evidence
-        return FollowUpResolution(outcome=None, metadata_json={"chat_followup": {}})
+        return FollowUpResolution(question=None, metadata_json={"chat_followup": {}})
 
     outcome = asyncio.run(
         _run_fresh_analysis(

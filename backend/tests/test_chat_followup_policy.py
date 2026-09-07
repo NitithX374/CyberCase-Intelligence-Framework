@@ -54,10 +54,9 @@ def test_followup_consumes_raw_evidence_without_case_state() -> None:
             policy=Policy(),
         )
     )
-    assert result.outcome is not None
-    assert result.outcome.thread_status == "awaiting_followup"
-    assert result.outcome.content == "Which account was affected?"
-    gap_trace = result.outcome.metadata_json["chat_followup"]["gap_analysis"]
+    assert result.question is not None
+    assert result.question == "Which account was affected?"
+    gap_trace = result.metadata_json["chat_followup"]["gap_analysis"]
     assert gap_trace["status"] == "completed"
     assert gap_trace["gaps"] == [
         {
@@ -282,7 +281,7 @@ def test_evaluate_followup_proceeds_when_only_gap_is_explicitly_unknown() -> Non
             policy=Policy(),
         )
     )
-    assert resolution.outcome is None
+    assert resolution.question is None
     assert (
         resolution.metadata_json["chat_followup"]["reason_code"]
         == "unresolved_gaps_recorded"

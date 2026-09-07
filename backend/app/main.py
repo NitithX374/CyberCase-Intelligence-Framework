@@ -1,28 +1,36 @@
 """FastAPI application for chat APIs and document ingestion preview."""
 
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
+from sqlalchemy import text
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database import engine
+from app.database import engine, async_session
+from app.services.workflow.run_recovery import (
+    monitor_interrupted_runs,
+    recover_expired_runs,
+)
 from app.routers import chat, document_ingestion, health
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown lifecycle."""
+    recovery = None
     try:
         async with engine.connect() as conn:
-            await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
-        print("[STARTUP] Database connection verified.")
-    except Exception as e:
-        print(f"[STARTUP] Database connection failed: {e}")
-        print("[STARTUP] Backend will start, but database endpoints will fail.")
-    yield
-    await engine.dispose()
-    print("[SHUTDOWN] Database engine disposed.")
+            await conn.execute(text("SELECT 1"))
+        await recover_expired_runs(async_session)
+        recovery = asyncio.create_task(monitor_interrupted_runs(async_session))
+        yield
+    finally:
+        if recovery is not None:
+            recovery.cancel()
+            with suppress(asyncio.CancelledError):
+                await recovery
+        await engine.dispose()
 
 
 app = FastAPI(

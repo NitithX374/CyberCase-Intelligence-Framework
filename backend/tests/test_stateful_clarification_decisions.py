@@ -61,7 +61,7 @@ def test_no_gaps_proceeds_without_question_generation() -> None:
         )
     )
 
-    assert result.outcome is None
+    assert result.question is None
     assert policy.calls == 0
     assert result.metadata_json["chat_followup"]["reason_code"] == (
         "sufficient_case_context"
@@ -101,9 +101,9 @@ def test_ambiguous_and_conflicting_gaps_allow_one_neutral_question(
         )
     )
 
-    assert result.outcome is not None
-    assert result.outcome.content == question
-    assert result.outcome.metadata_json["chat_followup"]["reason_code"] == reason_code
+    assert result.question is not None
+    assert result.question == question
+    assert result.metadata_json["chat_followup"]["reason_code"] == reason_code
 
 
 def test_resolved_gap_disappearance_does_not_keep_old_task_active() -> None:
@@ -126,7 +126,7 @@ def test_resolved_gap_disappearance_does_not_keep_old_task_active() -> None:
         )
     )
 
-    assert result.outcome is None
+    assert result.question is None
     assert result.gap_analysis is not None
     assert result.gap_analysis.gaps == []
     assert policy.calls == 0

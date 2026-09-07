@@ -4,6 +4,7 @@ from sqlalchemy.orm import selectinload
 from uuid import UUID
 from fastapi import HTTPException, status
 from app.models.chat import ChatThread
+from app.services.chat.chat_run_creation import read_retry_request
 from app.schemas.chat import ChatThreadCreate, ChatThreadUpdate
 
 
@@ -83,4 +84,5 @@ class ChatService:
                 detail="Chat thread not found",
             )
 
+        thread.retry_request = await read_retry_request(self.db, thread)
         return thread

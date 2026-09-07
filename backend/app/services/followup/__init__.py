@@ -3,16 +3,11 @@
 from app.services.followup.contracts import FollowUpResolution
 from app.services.followup.decision import (
     evaluate_followup_outcome,
-    resolve_followup_outcome,
 )
 from app.services.followup.gap_analysis import (
     AnthropicGapAnalysis,
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_VERSION,
-)
-from app.services.followup.metadata import (
-    mark_followup_rag_invoked as _mark_followup_rag_invoked,
-    mark_followup_rag_invoked_metadata as _mark_followup_rag_invoked_metadata,
 )
 from app.services.followup.policy import (
     AnthropicFollowUpPolicy,
@@ -73,11 +68,8 @@ __all__ = [
     "GapItem",
     "GapPriority",
     "GapStatus",
-    "_mark_followup_rag_invoked",
-    "_mark_followup_rag_invoked_metadata",
     "build_bounded_context",
     "build_gap_analysis_claim_transport",
     "build_clarified_query",
     "evaluate_followup_outcome",
-    "resolve_followup_outcome",
 ]

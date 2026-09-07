@@ -7,6 +7,7 @@ from app.services.reports.report_contracts import (
     ReportServiceError,
     ReportSourceMessage,
     ReportValidationError,
+    read_render_snapshot,
 )
 from app.services.reports.report_generation import (
     REPORT_PROMPT_VERSION,
@@ -51,6 +52,7 @@ __all__ = [
     "build_report_view_model",
     "build_template_report",
     "get_report_css",
+    "read_render_snapshot",
     "render_chat_report_html",
     "render_chat_report_html_from_view_model",
     "render_chat_report_pdf",

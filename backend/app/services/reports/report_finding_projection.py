@@ -46,8 +46,11 @@ def project_unresolved_issues(
         items = [
             _clean_inline(claim.get("text"))
             for claim in _trace_claims(snapshot)
-            if claim.get("epistemic_status") in {"not_established", "explicitly_unknown"}
+            if claim.get("epistemic_status")
+            in {"not_established", "explicitly_unknown"}
         ]
+    if snapshot is not None:
+        items.extend(snapshot.unresolved_issues)
     return [
         UnresolvedIssueViewRow(
             description=item,
@@ -102,7 +105,9 @@ def _structured_finding_rows(
             EvidenceViewRow(
                 item_id=claim.claim_id,
                 title="ข้อเท็จจริงที่รายงาน" if language == "th" else "Reported finding",
-                artifact_type="ข้อมูลจากบทวิเคราะห์" if language == "th" else "Analysis record",
+                artifact_type="ข้อมูลจากบทวิเคราะห์"
+                if language == "th"
+                else "Analysis record",
                 description=_clean_inline(claim.text),
                 source_type=_source_label(claim.source_message_ids, snapshot, language),
                 confidence=claim.support_type,

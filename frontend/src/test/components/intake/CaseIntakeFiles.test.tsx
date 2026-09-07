@@ -28,8 +28,8 @@ function filesPanel() {
 
 function evidenceMessage(
   id: string,
-  evidenceKind: string,
-  documentSources: unknown[],
+  evidenceKind: PersistedChatMessage["metadata_json"]["evidence_kind"],
+  documentSources: NonNullable<PersistedChatMessage["metadata_json"]["document_sources"]>,
   role: PersistedChatMessage["role"] = "user",
 ): PersistedChatMessage {
   return {
@@ -107,7 +107,7 @@ describe("Intake files integration", () => {
   it("lists unique saved evidence documents and excludes analytical or malformed metadata", () => {
     const source = { document_id: "DOC-1", filename: "statement.pdf" };
     const messages = [
-      evidenceMessage("initial", "initial_case_narrative", [source, null, { filename: "invalid.pdf" }]),
+      evidenceMessage("initial", "initial_case_narrative", [source, null as unknown as typeof source, { filename: "invalid.pdf" }]),
       evidenceMessage("added", "added_case_information", [source, { document_id: "DOC-2", filename: "receipt.pdf" }]),
       evidenceMessage("ask", "analyst_question", [{ document_id: "ASK", filename: "question.pdf" }]),
       evidenceMessage("assistant", "initial_case_narrative", [{ document_id: "AI", filename: "analysis.pdf" }], "assistant"),

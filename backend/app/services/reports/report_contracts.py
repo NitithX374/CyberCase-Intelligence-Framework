@@ -83,6 +83,14 @@ class ReportRunResult:
     output_tokens: int | None = None
 
 
+def read_render_snapshot(
+    raw: dict[str, object] | ReportInputSnapshot | None,
+) -> ReportInputSnapshot | None:
+    if raw is None:
+        return None
+    return ReportInputSnapshot.model_validate(raw)
+
+
 __all__ = [
     "AdmittedMitreRow",
     "ReportGenerationConflict",
@@ -92,4 +100,5 @@ __all__ = [
     "ReportServiceError",
     "ReportSourceMessage",
     "ReportValidationError",
+    "read_render_snapshot",
 ]

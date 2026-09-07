@@ -1,4 +1,5 @@
 import asyncio
+import pytest
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -52,7 +53,7 @@ def test_legacy_route_prefixes_return_not_found_without_startup() -> None:
         assert client.get(path).status_code == 404
 
 
-def test_startup_tolerates_database_unavailability_without_live_database(
+def test_startup_fails_when_database_is_unavailable(
     monkeypatch,
 ) -> None:
     class _FailingConnection:
@@ -79,6 +80,7 @@ def test_startup_tolerates_database_unavailability_without_live_database(
         async with main_module.lifespan(_fastapi_app()):
             pass
 
-    asyncio.run(exercise_lifespan())
+    with pytest.raises(OSError, match="database intentionally unavailable"):
+        asyncio.run(exercise_lifespan())
 
     assert fake_engine.disposed is True

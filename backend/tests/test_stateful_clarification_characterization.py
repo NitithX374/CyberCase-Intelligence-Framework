@@ -79,8 +79,8 @@ def test_unavailable_answer_exhausts_only_its_topic() -> None:
         )
     )
 
-    assert resolution.outcome is not None
-    assert resolution.outcome.content == (
+    assert resolution.question is not None
+    assert resolution.question == (
         "Is there information that identifies the CCTV subject?"
     )
 
@@ -108,7 +108,7 @@ def test_same_topic_is_not_reasked_with_different_wording() -> None:
         )
     )
 
-    assert resolution.outcome is None
+    assert resolution.question is None
 
 
 def test_clarification_chain_retains_structural_gap_context() -> None:
@@ -183,7 +183,7 @@ def test_asked_question_metadata_carries_gap_identity() -> None:
         )
     )
 
-    assert resolution.outcome is not None
-    context = resolution.outcome.metadata_json["chat_followup"]["followup_context"]
+    assert resolution.question is not None
+    context = resolution.metadata_json["chat_followup"]["followup_context"]
     assert context["gap_topic"] == "CCTV subject identity"
     assert context["gap_key"]

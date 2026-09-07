@@ -45,7 +45,7 @@ async def run_fresh(value, gate, rag_request):
 
     async def followup_evaluator(**kwargs):
         counts["gap"] += 1
-        return FollowUpResolution(outcome=None, metadata_json={"chat_followup": {}})
+        return FollowUpResolution(question=None, metadata_json={"chat_followup": {}})
 
     outcome = await _run_fresh_analysis(
         value,

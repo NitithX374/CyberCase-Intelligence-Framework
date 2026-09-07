@@ -94,6 +94,39 @@ yarn-error.log*
 /chat-desktop-stitch.png
 /chat-mobile-stitch.png
 
+# ==============================================================================
+# Documents, Office Artifacts & Thesis Deliverables
+# ==============================================================================
+# Word documents, templates, and backups
+*.docx
+*.doc
+*.dotx
+*.backup.docx
+*.bak.docx
+~$*.docx
+~$*.doc
+~$*
+
+# PDFs and Presentations
+*.pdf
+*.pptx
+*.ppt
+
+# Spreadsheets & OpenDocument
+*.xlsx
+*.xls
+*.xlsm
+*.odt
+*.ods
+*.odp
+*.rtf
+
+# Thesis deliverable packages
+deliverables/thesis_*/
+deliverables/**/*.docx
+deliverables/**/*.pdf
+/Cybercase_Thesis_*
+
 # local env files
 .env.local
 .env.development.local

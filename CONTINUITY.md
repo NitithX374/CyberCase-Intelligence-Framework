@@ -2,23 +2,32 @@
 
 ## Snapshot
 
-- 2026-09-04 [USER] Current goal: keep the multiple-provider mechanism but use Typhoon OCR first; Google remains optional. Original confidence baseline remains implemented; no thresholds, highlighting, LLM/RAG/report changes or migrations.
-- 2026-09-04 [TOOL] Baseline: clean local/remote main at 744a7ba861025ac58c7f2c125e363ee0ed6ddc73. Implementation is uncommitted on main.
-- 2026-09-04 [CODE] Google Vision official REST + ADC, normalized OCRWord metadata, minimum reported-word aggregate and separate segmentation/recognition fields now flow through preview. Existing narrative metadata consumes recognition confidence only.
-- 2026-09-04 [TOOL] Complete: backend 336 tests plus 2 subtests, frontend 129 tests with two workers, TypeScript, focused tests, scoped Ruff/format/ESLint, compileall and diff checks pass. ADC unavailable; live OCR skipped. Existing broader lint/format violations remain outside scope.
-- 2026-09-04 [CODE] Constraints: authoritative evidence stays reviewed user text; word confidence remains preview metadata. No downstream prompt, persistence, citation-offset, RAG/MITRE or report change.
-- 2026-09-04 [TOOL] Typhoon confirmed in local settings and the running backend factory; health is ok with database connected. Fixed eager Google import that prevented startup in the existing container without google-auth. Next: none; live OCR not called in this activation check.
-- 2026-09-03 [TOOL] Prior UI/citation publication: 5755d68; previous validation and durable decisions retained below.
+- 2026-09-07 [TOOL] COMPLETE: verified/refined Gemini thesis into deliverables/thesis_kmutnb_english/CyberCase_Thesis_English_Merged.docx (44 pages, I-VI, ten tables, eleven references). All pages rendered/visually reviewed, native TOC updated. Correction log and build/citation receipts in its review/ directory.
+- 2026-09-07 [USER] Backend/frontend are the author's scope; partner rag_service is downstream only. Document merge authorized; original Thai/English files and production work preserved. Research contribution, empirical evaluation and official English approval/template requirements remain open.
+- 2026-09-06 [TOOL] Gemini added six Thai/English chapters and full documents. Unsupported case scores, invented claim enums/timeline, absolute guarantees and placeholder figures require correction. Preserve originals and production changes; output to deliverables/thesis_kmutnb_english.
+- 2026-09-06 [USER] Current goal supersedes research selection: hold alternatives and assess thesis chapter readiness from F:\Chapter_II_Final.docx, F:\Draft_Chapter_I_Complete.pdf and F:\Enhanced Golf Swing Evaluation with MediaPipe.pdf.
+- 2026-09-06 [TOOL] Read both drafts and example chapter structure/development sections; I-II-IV can be drafted, III partly, V-VI results/conclusions await research. Drafts contain audience/stack/reference mismatches; findings and outline: docs/research/THESIS_CHAPTER_READINESS.md. Supplied files unchanged.
+- 2026-09-06 [TOOL] Five alternatives documented in docs/research/RESEARCH_ALTERNATIVES.md after targeted primary-source research: contextual explanations, attribution/uncertainty preservation, temporal constraints, external-knowledge separation and evidence-presentation evaluation. All remain proposals.
+- 2026-09-06 [USER] Latest request expands research exploration to several alternatives beyond clarification admission; no contribution selected.
+- 2026-09-06 [ASSUMPTION] Proposed one source-traceable clarification admission mechanism with gate-on/off matched evaluation; not accepted, implemented or evaluated. Story/inventories: docs/research/followup-admission/. Novelty remains UNCONFIRMED after a targeted primary-source literature check.
+- 2026-09-06 [USER] Goal: assess backend explainability and fit to helping prosecutors understand police case files; sample directory is F:\งานอัยการ.
+- 2026-09-06 [TOOL] Current main HEAD d889226 has pre-existing uncommitted backend/frontend refactors. Preserved; no production edits, staging, commit or push in this audit.
+- 2026-09-06 [CODE] Backend is a multi-stage LLM-plus-code workflow; gap identification, priority and semantic interpretation remain model judgments. Existing source/trace validation does not prove semantic support.
+- 2026-09-06 [TOOL] Reproduced frontend parser rejecting canonical v3 selected_gap_detail because it expects legacy affects rather than affected_claim_ids; legacy control accepted. 39 focused backend tests passed.
+- 2026-09-06 [TOOL] Read three investigation-report DOCX samples; one includes police-to-prosecutor forwarding letter and one includes LINE/transfer-slip evidence in an ordinary fraud case. Some samples contain appended drafting instructions/revised narrative.
+- 2026-09-06 [CODE] ATT&CK gate intentionally skips ordinary technology references; dedicated source-backed term explanations and explicit executable review/gap criteria are proposed, not implemented.
+- 2026-09-06 [CODE] Done: assessment at docs/product/BACKEND_EXPLAINABILITY_REVIEW.md. Next: validate comprehension rubric and implementation scope with user/professor. Open: complete prosecutor workflow and expert acceptance criteria UNCONFIRMED; no live provider or user study performed.
+- 2026-09-05 [TOOL] Previous six-area refactor remains complete and uncommitted; its 351 backend/150 frontend validation receipts are recorded in backend/REFACTOR.md and below, not rerun in this audit.
 
 ## Done (recent)
 
+- 2026-09-06 [TOOL] Completed explainability/product-fit audit, three sample DOCX text inspections, v3 explanation parser reproduction and 39 focused tests; proposals and limitations: docs/product/BACKEND_EXPLAINABILITY_REVIEW.md.
+- 2026-09-05 [CODE] Completed remaining parser, metadata, follow-up, report and run-recovery work; final 351 backend/150 frontend tests and static/build checks pass. Recovery verified against disposable PostgreSQL and HTTP. Details: backend/REFACTOR.md.
+- 2026-09-05 [CODE] Completed frontend Query-backed chat session, single polling loop, draft/retry state isolation, cancellation listener cleanup and 16 lifecycle regression tests. Final 145-test suite, lint, typecheck, build and synthetic browser QA pass.
 - 2026-09-04 [CODE] Added Google Vision OCR confidence baseline, provider-neutral words, explicit region confidence semantics, ADC configuration documentation and synthetic response receipt. Core analysis and HTR behavior remain unchanged.
 - 2026-09-03 [CODE] Overview preserves the original summary, groups real claim/status fields with uncertainty first, collapses only long reported/inference groups, and opens filename/page citations in a responsive native drawer at the exact highlighted passage. Real analysis/material metadata and compact questions replace heavy side cards; source ordinals distinguish separate clarification links.
 - 2026-09-03 [CODE] Superseded inline intake layout with a preparation workspace: material controls at top/right, explicit lifecycle status, bounded readable/raw text with full modal reader, real findings/evidence/gap counts, English controls and a persistent primary footer. Original source content/provenance and one-document extraction remain intact.
 - 2026-09-03 [CODE] Removed decorative badges, repeated disclaimers, duplicate finding citations, Overview summary cards/actions, repeated clarification actions, and OCR preview badges; kept source highlighting and plain-text uncertainty labels.
-- 2026-09-02 [CODE] Reworked the report PDF into a formal three-page case-review document with a seven-row dated timeline, compact claim/source table, conditional technical context, general-case follow-up actions, and a dedicated traceability appendix.
-- 2026-09-02 [CODE] Implemented exact-quote evidence citations, validated document page spans, narrative-only source highlighting, Overview/Chat citation chips, and a responsive page-specific source inspector without an additional model call; original PDF viewing remains V2.
-- 2026-09-02 [CODE] Completed the optional-MITRE report cutover: nullable retrieval migration, stable snapshot idempotency, page-splittable evidence PDF rendering, and generic/no-RAG regression coverage.
 
 ## Decisions
 
@@ -74,28 +83,36 @@
 
 - D048 ACTIVE 2026-09-04 [USER] Keep selectable providers and confidence plumbing; Typhoon is the active OCR provider for now.
 
+- D049 ACTIVE 2026-09-05 [CODE] Frontend thread detail has one Query cache owner; run polling stays in one shared function, and pending submission identity/input remain in a separate draft hook. Session lifecycle actions own cancellation, acceptance, recovery and deletion coordination.
+
 ## State (Done/Now/Next)
 
-- 2026-09-04 [TOOL] Typhoon active; Google import is lazy and no longer blocks a Typhoon deployment missing Google dependencies. Live backend factory and health verified; 17 focused provider/API tests pass including a subprocess with Google imports blocked.
-- 2026-09-04 [TOOL] Done: implementation, final diff review and validation receipts. All scoped checks pass. Full frontend initial parallel run had 3 timeout-only failures, then 129/129 passed with two workers and the same timeout. No commit/push requested or performed.
-- 2026-09-04 [TOOL] Supersedes prior UI-only current work: current task is the Google Vision ingestion baseline. ADC unavailable; live request skipped. Broader backend lint/format issues are unchanged and outside scope.
-- 2026-08-30 [TOOL] Open, outside this scope: semantic identity-topic reformulation can still bypass clarification exhaustion; current bounded aliases do not unify equivalent topics.
+- 2026-09-06 [TOOL] Done: architecture/research alternatives and three-document chapter-readiness assessment. Prior refactor remains uncommitted; no production edits in these assessments.
+- 2026-09-06 [USER] Now: research selection on hold; user asks whether chapters can be written. No chapter rewriting authorized or performed in this assessment.
+- 2026-09-06 [ASSUMPTION] Next: align Chapter I to prosecutor case understanding, draft current Chapter IV, revise foundational Chapter II. Final contribution, expert rubric, study population and timeline remain UNCONFIRMED.
 
 ## Working set
 
-- 2026-09-04 [CODE] backend/app/services/document_ingestion/GOOGLE_VISION.md and README.md
-- 2026-09-04 [CODE] backend/app/services/document_ingestion/recognition/google_vision.py
-- 2026-09-04 [CODE] backend/app/services/document_ingestion/recognition/google_vision_response.py
-- 2026-09-04 [CODE] backend/app/services/document_ingestion/recognition/base.py and contracts.py
-- 2026-09-04 [CODE] backend/app/services/document_ingestion/recognized_region.py
-- 2026-09-04 [CODE] backend/app/services/document_ingestion/region_pipeline.py and service.py
-- 2026-09-04 [CODE] backend/app/routers/document_ingestion.py and backend/app/config.py
-- 2026-09-04 [CODE] backend/requirements.txt
-- 2026-09-04 [CODE] backend/tests/test_document_ingestion_google_*.py and fixtures/google_vision_synthetic.json
-- 2026-09-04 [CODE] frontend/src/lib/document-ingestion.ts and case-narrative-document.ts
-- 2026-09-04 [CODE] frontend/src/test/lib/case-narrative-document.test.ts and components/intake/
+- 2026-09-06 [CODE] docs/product/BACKEND_EXPLAINABILITY_REVIEW.md
+- 2026-09-06 [CODE] backend/REFACTOR.md
+- 2026-09-06 [CODE] backend/app/services/workflow/pipeline_execution.py
+- 2026-09-06 [CODE] backend/app/services/case_analysis/
+- 2026-09-06 [CODE] backend/app/services/followup/
+- 2026-09-06 [CODE] frontend/src/lib/chat-followup.ts
+- 2026-09-06 [CODE] frontend/src/components/conversation/
+- 2026-09-06 [CODE] rag_service/app/RAG/GraphRAG/pipeline/agent_graph.py
+- 2026-09-06 [CODE] rag_service/app/RAG/GraphRAG/pipeline/evaluator.py
+- 2026-09-06 [CODE] F:\งานอัยการ\Dataset
 
 ## Receipts
+
+- 2026-09-06 [TOOL] Read-only audit at main d889226: 39 tests passed (stateful clarification decisions, gap assembly, v3 trace); actual transpiled frontend parser returned null for canonical v3 gap, accepted legacy affects control. Three DOCX samples read locally. No live provider/browser/prosecutor evaluation; only audit document and ledger changed.
+
+- 2026-09-05 [TOOL] FINAL REFACTOR: backend 351 passed + 2 subtests (includes four PostgreSQL/API tests); frontend 36 files/150 passed; generated API drift, TypeScript, full ESLint, production build, scoped Ruff/format and whitespace checks pass. Prompt text hashes match baseline. Original 13 frontend file hashes preserved except two hooks intentionally extended for retry. Disposable PostgreSQL server stopped; existing application database untouched. Details: backend/REFACTOR.md.
+
+- 2026-09-05 [TOOL] Frontend state/polling refactor: Vitest 35 files/145 tests (16 new regression cases); tsc --noEmit, full/scoped ESLint, final Next production build and diff checks pass. Changed code files max 235 lines. Browser on temporary localhost:3011 frontend and localhost:8011 synthetic API verified selection, Back, message processing/completion, draft clearing, Report navigation and zero final console errors. Temporary servers stopped. Backend/rag_service unchanged; Docker unavailable, live backend/provider not tested.
+
+- 2026-09-05 [TOOL] Refactor review at clean main d889226: measured 8 production files above 300 physical lines; traced current backend/frontend contracts. pytest analysis_trace_v3, canonical_analysis_state, source_citations, stateful_clarification_pipeline, report_view_model_and_pdf: 41 passed. Vitest case-overview, chat-followup, ChatReportView, ChatWorkspaceIntake with --maxWorkers=2: 19 passed. No application edits or live E2E verification.
 
 - 2026-09-04 [CODE] Read-only warning trace: service.py:130 appends one warning for each PDF page routed to OCR, before provider invocation. DocumentIngestionResult.tsx:19 labels any warnings as Review required; case-narrative-document.ts:53 also sets needs_review for any warning. These five notices do not establish OCR failure or low confidence. No product code changed; severity separation remains unimplemented.
 
@@ -128,11 +145,3 @@
 - 2026-09-01 [TOOL] Optional-RAG report validation: 14 focused backend report/schema/migration tests pass, 267 other backend tests pass when excluding the unrelated dirty canonical-analysis fixture, 9 report frontend tests pass, ESLint passes, Alembic head is `0002_optional_report_retrieval_context`, and no `rag_service/**` files changed; full-suite failures remain outside this change in dirty intake/overview fixtures and that canonical fixture.
 
 - 2026-09-01 [TOOL] Prompt cleanup validation: 57/57 focused backend tests pass, follow-up compileall passes, scoped diff whitespace check passes, all touched files remain below 300 lines, and `rag_service/**` is unchanged.
-
-- 2026-09-01 [TOOL] AUDIT BASELINE, superseded for Follow-up by prompt v4: Main Analysis forbids cyber assumptions and MITRE retrieval is gated; the audit found cyber role/priority wording in Gap Analysis, while RAG prompts remain intentionally MITRE-only and direct RAG `/query` has no independent applicability gate.
-
-- 2026-09-01 [TOOL] P0 validation passes: `tsc --noEmit`, ESLint, Vitest 24 files/92 tests, and Next.js production build.
-
-- 2026-09-01 [TOOL] Desktop 1440x900 and mobile 390x844 rendered QA passed on the live mounted frontend; source-evidence popover was also verified on mobile.
-
-- 2026-09-01 [TOOL] Scoped P0 diff whitespace check passes and `rag_service/**` remains untouched; repository-wide diff check still reports the pre-existing blank EOF in `backend/tests/test_general_case_analysis.py`.

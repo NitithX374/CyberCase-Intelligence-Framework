@@ -27,7 +27,6 @@ import {
 } from "@/hooks/use-chat-queries";
 import { chatPath, chatRouteState } from "@/features/chat/routing/chat-route";
 import { useChatSubmission } from "@/features/chat/runs/use-chat-submission";
-import type { PendingChatSubmission } from "@/features/chat/workspace/chat-workspace-types";
 import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
 import { useChatThreadDeletion } from "@/features/chat/workspace/use-chat-thread-deletion";
 import { useWorkspaceSubmissionActions } from "@/features/chat/workspace/use-workspace-submission-actions";
@@ -69,48 +68,23 @@ export function ChatWorkspace() {
         ? getApiErrorMessage(deleteMutation.error, "The chat could not be deleted.")
         : null;
 
-  const deletedThreadIdsRef = useRef(new Set<string>());
-  const pendingSubmissionRef = useRef<PendingChatSubmission | null>(null);
   const rootBootstrapDoneRef = useRef(false);
+  const session = useChatThreadSelection({ cacheUpsertThread });
   const {
-    activeThreadId,
-    setActiveThreadId,
-    activeThreadIdRef,
-    selectionGenerationRef,
-    pollControllerRef,
-    messages,
-    setMessages,
-    threadStatus,
-    setThreadStatus,
-    phase,
-    setPhase,
-    input,
-    setInput,
-    pendingFollowUp,
-    setPendingFollowUp,
-    postAnswerAction,
-    setPostAnswerAction,
-    queryError,
-    setQueryError,
-    upsertThread,
-    isCurrentSelection,
-    applyThreadDetail,
-    selectThread,
-  } = useChatThreadSelection({
-    cacheUpsertThread,
-    deletedThreadIdsRef,
-    pendingSubmissionRef,
-  });
+    activeThreadId, getActiveThreadId, messages, threadStatus, phase, input,
+    pendingFollowUp, postAnswerAction, queryError, selectThread, changeInput,
+    changePostAnswerAction,
+  } = session;
 
   useEffect(() => {
     if (routeThreadId !== null) rootBootstrapDoneRef.current = false;
     if (
       routeThreadId !== null &&
-      activeThreadIdRef.current !== routeThreadId
+      getActiveThreadId() !== routeThreadId
     ) {
       void selectThread(routeThreadId);
     }
-  }, [activeThreadIdRef, routeThreadId, selectThread]);
+  }, [getActiveThreadId, routeThreadId, selectThread]);
 
   useEffect(() => {
     if (
@@ -125,11 +99,11 @@ export function ChatWorkspace() {
     const firstThreadId = threads[0].id;
     rootBootstrapDoneRef.current = true;
     router.replace(chatPath(firstThreadId, "overview"));
-    if (activeThreadIdRef.current !== firstThreadId) {
+    if (getActiveThreadId() !== firstThreadId) {
       void selectThread(firstThreadId);
     }
   }, [
-    activeThreadIdRef,
+    getActiveThreadId,
     routeThreadId,
     router,
     selectThread,
@@ -140,17 +114,17 @@ export function ChatWorkspace() {
   const handleViewChange = useCallback(
     (view: WorkspaceView) => {
       setActiveView(view);
-      const threadId = activeThreadIdRef.current;
+      const threadId = getActiveThreadId();
       if (threadId !== null) router.push(chatPath(threadId, view));
     },
-    [activeThreadIdRef, router],
+    [getActiveThreadId, router],
   );
 
   const handleNavigateToSource = useCallback(() => {
     setActiveView("chat");
-    const threadId = activeThreadIdRef.current;
+    const threadId = getActiveThreadId();
     if (threadId !== null) router.push(chatPath(threadId, "chat"));
-  }, [activeThreadIdRef, router]);
+  }, [getActiveThreadId, router]);
 
   const handleSelectThread = useCallback(
     async (threadId: string): Promise<void> => {
@@ -163,7 +137,7 @@ export function ChatWorkspace() {
   const handleNewChat = useCallback(async () => {
     if (creatingThread) return;
     setActiveView("intake");
-    setPostAnswerAction(null);
+    changePostAnswerAction(null);
     try {
       const thread = await createMutation.mutateAsync();
       router.push(chatPath(thread.id, "intake"));
@@ -171,57 +145,26 @@ export function ChatWorkspace() {
     } catch {
       return;
     }
-  }, [creatingThread, createMutation, router, selectThread, setPostAnswerAction]);
+  }, [creatingThread, createMutation, router, selectThread, changePostAnswerAction]);
 
   const { submitContent } = useChatSubmission({
-    activeThreadIdRef,
-    selectionGenerationRef,
-    pollControllerRef,
-    pendingSubmissionRef,
-    messages,
+    session,
     threads,
-    phase,
-    threadStatus,
-    postAnswerAction,
     createThread: () => createMutation.mutateAsync(),
     updateThread: (input) => updateMutation.mutateAsync(input),
     router,
     chatPath,
-    selectThread,
-    isCurrentSelection,
-    applyThreadDetail,
-    upsertThread,
-    setMessages,
-    setPhase,
-    setThreadStatus,
-    setQueryError,
-    setInput,
-    setPendingFollowUp,
-    setPostAnswerAction,
   });
 
   const { cancelDelete, confirmDelete } = useChatThreadDeletion({
+    session,
     deleteCandidate,
     deletingThreadId,
-    activeThreadIdRef,
-    pollControllerRef,
-    selectionGenerationRef,
-    pendingSubmissionRef,
-    deletedThreadIdsRef,
     activeView,
     threads,
     deleteThread: (threadId) => deleteMutation.mutateAsync(threadId),
     router,
-    selectThread,
     setDeleteCandidate,
-    setActiveThreadId,
-    setPendingFollowUp,
-    setPostAnswerAction,
-    setMessages,
-    setInput,
-    setThreadStatus,
-    setQueryError,
-    setPhase,
   });
 
   const activeThread =
@@ -245,18 +188,12 @@ export function ChatWorkspace() {
     submitCase: handleSubmitCase,
     submitMessage: handleSubmit,
   } = useWorkspaceSubmissionActions({
-    activeThreadIdRef,
-    pendingSubmissionRef,
-    pendingFollowUp,
+    session,
     displayFollowUp,
-    input,
-    threadStatus,
     router,
     submitContent,
     updateTitle: updateMutation.mutateAsync,
     setActiveView,
-    setPostAnswerAction,
-    setQueryError,
   });
 
   return (
@@ -283,7 +220,7 @@ export function ChatWorkspace() {
       onNewChat={() => void handleNewChat()}
       onRequestDelete={setDeleteCandidate}
       onViewChange={handleViewChange}
-      onInputChange={setInput}
+      onInputChange={changeInput}
       onPostAnswerActionChange={handlePostAnswerActionChange}
       onSubmit={handleSubmit}
       onSetDeleteCandidate={setDeleteCandidate}

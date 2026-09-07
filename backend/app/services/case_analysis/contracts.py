@@ -44,7 +44,9 @@ class AnalysisEvidenceCitation(BaseModel):
         if has_document_locator and not (
             self.document_id and self.filename and self.page_numbers
         ):
-            raise ValueError("document citations require an identifier, filename, and pages")
+            raise ValueError(
+                "document citations require an identifier, filename, and pages"
+            )
         return self
 
 

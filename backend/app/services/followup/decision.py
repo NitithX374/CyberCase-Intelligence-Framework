@@ -3,11 +3,8 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
-
-if TYPE_CHECKING:
-    from app.services.workflow.outcome import AssistantOutcome
 
 from app.config import settings
 from app.services.case_analysis.contracts import AnalysisGapV3, AnalysisTraceV3
@@ -68,7 +65,7 @@ async def evaluate_followup_outcome(
         **metadata_kwargs: Any,
     ) -> FollowUpResolution:
         return FollowUpResolution(
-            outcome=None,
+            question=None,
             metadata_json=followup_metadata(
                 source_run_id=source_run_id,
                 followup_root_ordinal=followup_root_ordinal,
@@ -116,16 +113,9 @@ async def evaluate_followup_outcome(
             rag_skipped=True,
             **metadata_kwargs,
         )
-        from app.services.workflow.outcome import AssistantOutcome
-
         return FollowUpResolution(
-            outcome=AssistantOutcome(
-                content=question,
-                retrieval_context_id=None,
-                metadata_json=metadata,
-                thread_status="awaiting_followup",
-            ),
-            metadata_json={},
+            question=question,
+            metadata_json=metadata,
             gap_analysis=canonical_gap_analysis,
         )
 
@@ -295,32 +285,4 @@ async def evaluate_followup_outcome(
     )
 
 
-async def resolve_followup_outcome(
-    *,
-    original_user_content: str,
-    clarification_exchanges: Sequence[ClarificationExchange],
-    followup_root_ordinal: int,
-    source_run_id: UUID,
-    policy: FollowUpPolicy | None = None,
-    gap_analyzer: GapAnalyzer | None = None,
-    raw_evidence: str | None = None,
-    analysis_answer: str | None = None,
-    analysis_context: Mapping[str, object] | None = None,
-) -> AssistantOutcome | None:
-    """Compatibility wrapper returning only the pending assistant outcome."""
-
-    resolution = await evaluate_followup_outcome(
-        original_user_content=original_user_content,
-        clarification_exchanges=clarification_exchanges,
-        followup_root_ordinal=followup_root_ordinal,
-        source_run_id=source_run_id,
-        policy=policy,
-        gap_analyzer=gap_analyzer,
-        raw_evidence=raw_evidence,
-        analysis_answer=analysis_answer,
-        analysis_context=analysis_context,
-    )
-    return resolution.outcome
-
-
-__all__ = ["evaluate_followup_outcome", "resolve_followup_outcome"]
+__all__ = ["evaluate_followup_outcome"]

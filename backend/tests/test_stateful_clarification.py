@@ -230,7 +230,7 @@ def test_followup_round_limit_prevents_question_generation(monkeypatch) -> None:
         )
     )
 
-    assert result.outcome is None
+    assert result.question is None
     assert calls == 0
     assert result.metadata_json["chat_followup"]["stop_reason"] == "max_rounds_reached"
 

@@ -1,16 +1,12 @@
 "use client";
 
 import { useCallback, type FormEvent } from "react";
-import type {
-  CaseIntakeSubmission,
-  CaseNarrativeDocumentSource,
-  ChatMessageAction,
-  ChatThreadRead,
-} from "@/lib/api";
+import type { CaseIntakeSubmission, CaseNarrativeDocumentSource, ChatMessageAction } from "@/lib/api";
 import type { ActiveChatFollowUp } from "@/lib/chat-followup";
 import type { WorkspaceRouteView } from "@/components/common/types";
 import { chatPath } from "@/features/chat/routing/chat-route";
 import type { PendingChatSubmission } from "./chat-workspace-types";
+import type { ChatSession } from "./use-chat-thread-selection";
 
 type SubmitContent = (
   content: string,
@@ -21,95 +17,48 @@ type SubmitContent = (
 ) => void;
 
 interface WorkspaceSubmissionActionsOptions {
-  activeThreadIdRef: React.MutableRefObject<string | null>;
-  pendingSubmissionRef: React.MutableRefObject<PendingChatSubmission | null>;
-  pendingFollowUp: { threadId: string; followUp: ActiveChatFollowUp } | null;
+  session: ChatSession;
   displayFollowUp: ActiveChatFollowUp | null;
-  input: string;
-  threadStatus: ChatThreadRead["status"] | null;
   router: { push(path: string): void };
   submitContent: SubmitContent;
   updateTitle: (input: { threadId: string; title: string }) => Promise<unknown>;
   setActiveView: React.Dispatch<React.SetStateAction<WorkspaceRouteView>>;
-  setPostAnswerAction: React.Dispatch<React.SetStateAction<ChatMessageAction | null>>;
-  setQueryError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export function useWorkspaceSubmissionActions({
-  activeThreadIdRef,
-  pendingSubmissionRef,
-  pendingFollowUp,
-  displayFollowUp,
-  input,
-  threadStatus,
-  router,
-  submitContent,
-  updateTitle,
-  setActiveView,
-  setPostAnswerAction,
-  setQueryError,
+  session, displayFollowUp, router, submitContent, updateTitle, setActiveView,
 }: WorkspaceSubmissionActionsOptions) {
-  const changePostAnswerAction = useCallback(
-    (action: ChatMessageAction) => {
-      if (threadStatus === "answered") setPostAnswerAction(action);
-    },
-    [setPostAnswerAction, threadStatus],
-  );
+  const changePostAnswerAction = useCallback((action: ChatMessageAction) => {
+    if (session.threadStatus === "answered") session.changePostAnswerAction(action);
+  }, [session]);
 
-  const submitMessage = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      submitContent(
-        input,
-        displayFollowUp ? "followup" : "message",
-        displayFollowUp ?? undefined,
-      );
-    },
-    [displayFollowUp, input, submitContent],
-  );
+  const submitMessage = useCallback((event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    submitContent(session.input, displayFollowUp ? "followup" : "message", displayFollowUp ?? undefined);
+  }, [displayFollowUp, session.input, submitContent]);
 
-  const submitCase = useCallback(
-    ({ title, description, documentSources }: CaseIntakeSubmission) => {
-      const threadId = activeThreadIdRef.current;
-      if (threadId && title) {
-        void updateTitle({ threadId, title }).catch(() => undefined);
-      }
-      submitContent(
-        description,
-        "message",
-        undefined,
-        () => {
-          setActiveView("overview");
-          if (threadId !== null) router.push(chatPath(threadId, "overview"));
-        },
-        documentSources,
-      );
-    },
-    [activeThreadIdRef, router, setActiveView, submitContent, updateTitle],
-  );
+  const submitCase = useCallback(({ title, description, documentSources }: CaseIntakeSubmission) => {
+    const threadId = session.getActiveThreadId();
+    if (threadId && title) {
+      void updateTitle({ threadId, title }).catch(() => {
+        if (session.getActiveThreadId() === threadId) session.reportError("The case title could not be updated.");
+      });
+    }
+    submitContent(description, "message", undefined, () => {
+      setActiveView("overview");
+      const acceptedThreadId = session.getActiveThreadId();
+      if (acceptedThreadId !== null) router.push(chatPath(acceptedThreadId, "overview"));
+    }, documentSources);
+  }, [router, session, setActiveView, submitContent, updateTitle]);
 
-  const clearQueryError = useCallback(() => {
-    setQueryError(null);
-  }, [setQueryError]);
+  const clearQueryError = useCallback(() => session.reportError(null), [session]);
 
   const retryQuery = useCallback(() => {
-    const pending = pendingSubmissionRef.current;
-    setQueryError(null);
-    if (!pending) return;
-    submitContent(
-      pending.content,
-      pending.kind,
-      pendingFollowUp?.followUp,
-      undefined,
-      pending.documentSources,
-    );
-  }, [pendingFollowUp, pendingSubmissionRef, setQueryError, submitContent]);
+    const pending = session.getPendingSubmission();
+    if (!pending || pending.threadId !== session.getActiveThreadId()) return;
+    session.reportError(null);
+    submitContent(pending.content, pending.kind, session.pendingFollowUp?.followUp, undefined, pending.documentSources);
+  }, [session, submitContent]);
 
-  return {
-    changePostAnswerAction,
-    clearQueryError,
-    retryQuery,
-    submitCase,
-    submitMessage,
-  };
+  return { changePostAnswerAction, clearQueryError, retryQuery, submitCase, submitMessage };
 }
