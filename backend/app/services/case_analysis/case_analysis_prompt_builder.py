@@ -229,16 +229,6 @@ def build_overflow_case_context(
     return _dump(best_candidate)
 
 
-def _bounded_json(payload: dict[str, object], maximum: int) -> str:
-    """Legacy compatibility helper delegating to overflow builder."""
-    return build_overflow_case_context(
-        payload=payload,
-        prefix="",
-        suffix="",
-        token_budget=get_safe_input_token_budget(),
-    )
-
-
 def _separate_analysis_context(
     analysis_context: dict[str, object] | None,
 ) -> tuple[list[str], dict[str, object] | None]:

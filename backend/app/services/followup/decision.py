@@ -21,7 +21,6 @@ from app.services.followup.helpers import (
     _coerce_policy_result as coerce_policy_result,
     _followup_failure_code as followup_failure_code,
     _gap_reason_code as gap_reason_code,
-    _invoke_policy_method as invoke_policy_method,
     _normalized_question as normalized_question,
 )
 from app.services.followup.metadata import empty_gap_analysis_trace, followup_metadata
@@ -200,15 +199,9 @@ async def evaluate_followup_outcome(
         if hasattr(active_policy, "decide_with_metadata") and callable(
             getattr(active_policy, "decide_with_metadata")
         ):
-            raw_result = await invoke_policy_method(
-                active_policy.decide_with_metadata,
-                policy_kwargs,
-            )
+            raw_result = await active_policy.decide_with_metadata(**policy_kwargs)
         else:
-            raw_result = await invoke_policy_method(
-                active_policy.decide,
-                policy_kwargs,
-            )
+            raw_result = await active_policy.decide(**policy_kwargs)
         elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
         result = coerce_policy_result(raw_result, elapsed_ms=elapsed_ms)
         decision = result.decision
@@ -230,7 +223,7 @@ async def evaluate_followup_outcome(
         )
     if decision.decision == "proceed":
         return proceed_resolution(
-            reason_code=decision.reason_code or "unresolved_gaps_recorded",
+            reason_code="unresolved_gaps_recorded",
             stop_reason="question_generation_proceed",
             decision=decision.decision,
             latency_ms=result.latency_ms,
@@ -273,7 +266,7 @@ async def evaluate_followup_outcome(
     return ask_resolution(
         selected_gap=candidate,
         question=decision.question,
-        reason_code=decision.reason_code or gap_reason_code(candidate),
+        reason_code=gap_reason_code(candidate),
         stop_reason="ask_followup",
         decision_source="provider_policy",
         policy_decision=decision.decision,

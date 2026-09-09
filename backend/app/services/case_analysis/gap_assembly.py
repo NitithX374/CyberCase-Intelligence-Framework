@@ -19,7 +19,6 @@ from app.services.case_analysis.validation import (
 )
 from app.services.followup.schemas import GapAnalysis, GapItem
 
-
 _CLAIM_ID_PATTERN = re.compile(r"(?<![A-Z0-9])A-\d{2,}(?![A-Z0-9])", re.IGNORECASE)
 _TOKEN_PATTERN = re.compile(r"\w+", re.UNICODE)
 _IGNORED_TOKENS = {
@@ -88,6 +87,7 @@ def enrich_case_analysis_result(
     if gap_analysis is None:
         return CaseAnalysisResult(
             answer=result.answer,
+            execution_receipt=result.execution_receipt,
             trace=None,
             trace_failure=AnalysisTraceV3FailureMetadata(
                 failure_code="analysis_trace_v3_gap_analysis_unavailable"
@@ -104,12 +104,15 @@ def enrich_case_analysis_result(
         failure_code = getattr(error, "code", "analysis_trace_v3_gap_assembly_invalid")
         return CaseAnalysisResult(
             answer=result.answer,
+            execution_receipt=result.execution_receipt,
             trace=None,
             trace_failure=AnalysisTraceV3FailureMetadata(failure_code=failure_code),
         )
     except AnalysisTraceProvenanceError:
         raise
-    return CaseAnalysisResult(answer=result.answer, trace=trace)
+    return CaseAnalysisResult(
+        answer=result.answer, trace=trace, execution_receipt=result.execution_receipt
+    )
 
 
 def _affected_claim_ids(
@@ -168,6 +171,7 @@ def _validate_unchanged_trace_bindings(
     enriched: AnalysisTraceV3,
 ) -> None:
     preserved_fields = (
+        "summary",
         "claims",
         "mitre_associations",
         "evidence_sha256",

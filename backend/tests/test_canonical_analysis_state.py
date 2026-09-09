@@ -118,7 +118,7 @@ def test_invalid_main_trace_with_gap_metadata_is_not_canonical_state() -> None:
     assert selected is None
 
 
-def test_invalid_later_main_trace_cannot_replace_valid_canonical_gaps() -> None:
+def test_invalid_later_main_trace_blocks_older_canonical_gaps() -> None:
     overview = message(
         2,
         trace_payload(
@@ -149,9 +149,7 @@ def test_invalid_later_main_trace_cannot_replace_valid_canonical_gaps() -> None:
         evidence_sha256="a" * 64,
         source_message_ids={"message-1"},
     )
-    assert selected is not None
-    assert selected.message.id == overview.id
-    assert selected.trace.gaps[0].gap_id == "G-01"
+    assert selected is None
 
 
 def test_question_answer_is_response_scoped_and_runs_main_analysis_once() -> None:

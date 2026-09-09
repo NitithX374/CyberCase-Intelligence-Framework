@@ -208,7 +208,7 @@ describe("case-overview view model builder", () => {
     expect(overview.incidentSummary).toBe("Canonical summary");
   });
 
-  it("keeps markdown parsing isolated to validated legacy v2 messages", () => {
+  it("rejects legacy v2 trace from active synthesis and requires re-analysis without fabricating citations", () => {
     const source = message("source", 1, "user", "A witness reported a cash transfer.", {
       evidence_kind: "initial_case_narrative",
     });
@@ -236,7 +236,9 @@ describe("case-overview view model builder", () => {
     );
     const overview = buildCaseOverview([source, legacy], "answered");
     expect(overview.contractVersion).toBe("legacy");
-    expect(overview.incidentSummary).toBe("A witness reported a cash transfer.");
-    expect(overview.findings[0].supportingSources[0].id).toBe("source");
+    expect(overview.hasAnalysis).toBe(true);
+    expect(overview.incidentSummary).toContain("earlier schema version");
+    expect(overview.findings).toEqual([]);
+    expect(overview.gaps).toEqual([]);
   });
 });

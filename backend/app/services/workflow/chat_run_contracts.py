@@ -7,7 +7,6 @@ from uuid import UUID
 from app.services.chat.raw_evidence import RawEvidenceSource
 from app.services.followup.schemas import ClarificationExchange
 
-
 RUN_LEASE_DURATION = timedelta(minutes=6)
 
 
@@ -27,6 +26,7 @@ class ClaimedChatRun:
     clarification_exchanges: tuple[ClarificationExchange, ...]
     followup_root_ordinal: int
     analysis_context: dict[str, object] | None = None
+    analysis_pipeline: dict[str, object] | None = None
 
 
 __all__ = ["ClaimedChatRun", "RUN_LEASE_DURATION"]

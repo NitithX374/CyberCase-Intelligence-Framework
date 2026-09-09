@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from typing import Any
 from uuid import UUID, uuid4
 
 from app.schemas.rag import QueryResponse
@@ -12,45 +14,32 @@ from app.services.case_analysis import (
 )
 from app.services.case_analysis.contracts import (
     AnalysisTraceV3,
-    CaseAnalysisResult,
 )
 from app.services.case_analysis.mitre_applicability_contracts import (
-    MITRE_APPLICABILITY_GATE_VERSION,
     MitreApplicabilityRecord,
 )
 from app.services.case_analysis.mitre_applicability_gate import (
     evaluate_mitre_applicability,
 )
 from app.services.clients.rag_client import RagCallFailure
-from app.services.followup.schemas import FollowUpPolicy, GapAnalyzer
 from app.services.followup.contracts import FollowUpResolution
 from app.services.followup.gap_stage import run_gap_analysis_stage
+from app.services.followup.schemas import FollowUpPolicy, GapAnalyzer
+from app.services.workflow.analysis_execution_receipt import persist_analysis_receipt
+from app.services.workflow.analysis_pipeline_context import (
+    bind_pipeline_outcome,
+    prepare_analysis_context,
+)
+from app.services.workflow.analysis_pipeline_context import (
+    coerce_analysis_result as _coerce_analysis_result,
+)
 from app.services.workflow.outcome import (
     AssistantOutcome,
     bind_followup_question,
     fresh_analysis_outcome,
-    question_outcome,
 )
-from dataclasses import dataclass
-from typing import Any
-
+from app.services.workflow.question_execution import _run_question
 from app.services.workflow.run_heartbeat import maintain_run_lease
-from app.services.workflow.rag_routing import (
-    RagAttempt,
-    attempt_mitre_applicability,
-    attempt_optional_rag,
-)
-
-
-def _coerce_analysis_result(value: object) -> CaseAnalysisResult:
-    if isinstance(value, CaseAnalysisResult) and value.answer.strip():
-        return value
-    if isinstance(value, str) and value.strip():
-        return CaseAnalysisResult(answer=value.strip(), trace=None)
-    raise CaseAnalysisFailure(
-        "analysis_invalid_response",
-        "The Main Case Analysis returned no answer",
-    )
 
 
 @dataclass(frozen=True)
@@ -99,6 +88,12 @@ async def process_chat_run(
         claimed = await dependencies.worker_type(claim_db).claim_run(run_id, worker_id)
     if claimed is None:
         return
+
+    async def checkpoint(receipt):
+        await persist_analysis_receipt(
+            dependencies.session_factory, run_id, worker_id, receipt
+        )
+
     try:
         async with maintain_run_lease(dependencies.session_factory, run_id, worker_id):
             analysis_request = ask_call or dependencies.analysis_request
@@ -114,6 +109,7 @@ async def process_chat_run(
                     gap_analyzer=gap_analyzer,
                     applicability_gate=applicability_call
                     or evaluate_mitre_applicability,
+                    execution_checkpoint=checkpoint,
                 )
         async with dependencies.session_factory() as completion_db:
             await dependencies.worker_type(completion_db).complete_run(
@@ -122,8 +118,30 @@ async def process_chat_run(
     except RagCallFailure as error:
         await record_failure(dependencies, run_id, worker_id, error.code, error.message)
     except CaseAnalysisFailure as error:
-        await record_failure(dependencies, run_id, worker_id, error.code, error.message)
-    except Exception:
+        receipt = getattr(error, "receipt", None)
+        await record_failure(
+            dependencies,
+            run_id,
+            worker_id,
+            error.code,
+            error.message,
+            {"analysis_execution": receipt} if receipt is not None else None,
+        )
+    except Exception as error:
+        cause = error
+        while isinstance(cause, BaseExceptionGroup) and len(cause.exceptions) == 1:
+            cause = cause.exceptions[0]
+        if isinstance(cause, CaseAnalysisFailure):
+            receipt = getattr(cause, "receipt", None)
+            await record_failure(
+                dependencies,
+                run_id,
+                worker_id,
+                cause.code,
+                cause.message,
+                {"analysis_execution": receipt} if receipt is not None else None,
+            )
+            return
         logger.exception("Chat processing failed run_id=%s", run_id)
         await record_failure(
             dependencies,
@@ -143,46 +161,26 @@ async def _run_fresh_analysis(
     policy,
     gap_analyzer,
     applicability_gate,
+    execution_checkpoint=None,
 ) -> AssistantOutcome:
-    applicability = await attempt_mitre_applicability(
-        claimed,
-        applicability_gate,
-    )
-    rag_invoked = applicability.decision == "RETRIEVE"
-    rag_attempt = (
-        await attempt_optional_rag(claimed, rag_request)
-        if rag_invoked
-        else RagAttempt(status="no_applicable_context", context=None)
-    )
-    logger.info(
-        "MITRE applicability routed gate_version=%s source_run_id=%s "
-        "decision=%s cited_source_count=%s trigger_count=%s rag_invoked=%s",
-        MITRE_APPLICABILITY_GATE_VERSION,
-        claimed.id,
-        applicability.decision,
-        len(applicability.source_message_ids),
-        len(applicability.trigger_text),
-        rag_invoked,
-    )
+    (
+        config,
+        applicability,
+        rag_attempt,
+        analysis_context,
+    ) = await prepare_analysis_context(claimed, applicability_gate, rag_request)
     rag_context = rag_attempt.context
-    analysis_context = (
-        rag_context.to_analysis_context() if rag_context is not None else {}
-    )
-    analysis_context["source_message_ids"] = [
-        str(value) for value in claimed.source_message_ids
-    ]
-    analysis_context["_source_text_by_message_id"] = {
-        str(source.message_id): source.content for source in claimed.evidence_sources
-    }
-    if claimed.document_source_context:
-        analysis_context["document_source_context"] = list(
-            claimed.document_source_context
-        )
+    rag_invoked = applicability.decision == "RETRIEVE"
+    request_context = dict(analysis_context)
+    request_context["_analysis_pipeline"] = config.model_dump(mode="json")
+    request_context["_evidence_sha256"] = claimed.evidence_sha256
+    if execution_checkpoint is not None:
+        request_context["_execution_checkpoint"] = execution_checkpoint
     result = _coerce_analysis_result(
         await analysis_request(
             mode="case_overview",
             raw_evidence=claimed.raw_evidence,
-            analysis_context=analysis_context,
+            analysis_context=request_context,
             question=None,
             user_message=claimed.content,
         )
@@ -242,7 +240,7 @@ async def _run_fresh_analysis(
         canonical_state_required=True,
     )
     if followup.question is not None:
-        return bind_followup_question(
+        outcome = bind_followup_question(
             AssistantOutcome(
                 content=followup.question,
                 retrieval_context_id=None,
@@ -259,7 +257,8 @@ async def _run_fresh_analysis(
             trace=result.trace,
             trace_failure=result.trace_failure,
         )
-    return fresh_analysis_outcome(
+        return bind_pipeline_outcome(outcome, result, config.model_dump(mode="json"))
+    outcome = fresh_analysis_outcome(
         result.answer,
         action=claimed.action,
         rag_context=rag_context,
@@ -273,38 +272,7 @@ async def _run_fresh_analysis(
         trace=result.trace,
         trace_failure=result.trace_failure,
     )
-
-
-async def _run_question(claimed, analysis_request) -> AssistantOutcome:
-    if claimed.analysis_context is None:
-        raise CaseAnalysisFailure(
-            "analysis_context_missing",
-            "No completed analytical context is available for ASK",
-        )
-    context = dict(claimed.analysis_context)
-    context["source_message_ids"] = [str(value) for value in claimed.source_message_ids]
-    context["_source_text_by_message_id"] = {
-        str(source.message_id): source.content for source in claimed.evidence_sources
-    }
-    if claimed.document_source_context:
-        context["document_source_context"] = list(claimed.document_source_context)
-    result = _coerce_analysis_result(
-        await analysis_request(
-            mode="question_answer",
-            raw_evidence=claimed.raw_evidence,
-            analysis_context=context,
-            question=claimed.content,
-            user_message=claimed.content,
-        )
-    )
-    return question_outcome(
-        result.answer,
-        analysis_context=context,
-        evidence_sha256=claimed.evidence_sha256,
-        source_message_ids=claimed.source_message_ids,
-        trace=result.trace,
-        trace_failure=result.trace_failure,
-    )
+    return bind_pipeline_outcome(outcome, result, config.model_dump(mode="json"))
 
 
 __all__ = ["PipelineDependencies", "process_chat_run", "record_failure"]
