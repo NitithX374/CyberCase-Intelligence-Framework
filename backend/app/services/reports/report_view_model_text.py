@@ -1,4 +1,4 @@
-from __future__ import annotations;
+from __future__ import annotations
 
 from datetime import datetime, timezone
 import re
@@ -63,12 +63,10 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "running_header": "รายงานสรุปผลการวิเคราะห์คดี / ฉบับเบื้องต้น",
         "page_label": "หน้า",
         "end_of_report": "สิ้นสุดรายงาน - เอกสารฉบับเบื้องต้น",
-        # Meta
         "lbl_case_title": "กรณี / หัวข้อ:",
         "lbl_generated_date": "วันที่จัดทำรายงาน:",
         "lbl_report_status": "สถานะรายงาน:",
         "status_provisional": "รายงานเบื้องต้น / ยังไม่ได้รับการยืนยัน (Provisional / Unverified)",
-        # Section Headings (Standalone 1..7)
         "sec_1": "1. บทสรุปคดี",
         "sec_2": "2. ลำดับเหตุการณ์สำคัญ",
         "sec_3": "3. ข้อเท็จจริงที่รายงานและแหล่งอ้างอิง",
@@ -76,7 +74,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "sec_5": "5. ประเด็นที่ต้องยืนยันเพิ่มเติม",
         "sec_6": "6. แนวทางตรวจสอบเพิ่มเติม",
         "sec_7": "7. ขอบเขตและข้อจำกัด",
-        # Backward-compat aliases
         "sec_5_1": "1. ภาพรวมเหตุการณ์",
         "sec_5_2": "2. ลำดับเหตุการณ์สำคัญ",
         "sec_5_3": "3. ข้อเท็จจริงและหลักฐานสำคัญ",
@@ -84,7 +81,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "sec_5_5": "4. ข้อมูลอ้างอิง MITRE ATT&CK ที่เกี่ยวข้อง",
         "sec_5_6": "5. ประเด็นที่ยังไม่สามารถยืนยันได้",
         "sec_5_7": "7. ข้อจำกัดของรายงาน",
-        # Subheaders & Tables
         "sub_evidence_reg": "รายการข้อเท็จจริงจากบทวิเคราะห์ที่ผูกกับข้อมูลต้นทาง",
         "sub_iocs": "ตัวบ่งชี้ทางเทคนิคที่พบในสำนวน (Technical Indicators / IOCs)",
         "sub_mitre_intro": "MITRE ATT&CK เป็นข้อมูลอ้างอิงทางเทคนิคภายนอก การเชื่อมโยงเหล่านี้เป็นผลการวิเคราะห์เบื้องต้น และไม่ใช่หลักฐานยืนยันว่าเทคนิคดังกล่าวเกิดขึ้นจริงในคดี",
@@ -92,7 +88,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "sub_next_steps": "ประเด็นที่ควรตรวจสอบเพิ่มเติม (Investigative Next Steps)",
         "sub_limitations": "ข้อจำกัดของรายงาน (Report Limitations)",
         "sub_provenance": "ภาคผนวก: ข้อมูลตรวจสอบย้อนกลับของรายงาน",
-        # Table Columns
         "col_order": "ลำดับ",
         "col_time": "วัน / เวลา",
         "col_event": "เหตุการณ์",
@@ -110,7 +105,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "col_mapping_status": "สถานะการวิเคราะห์",
         "col_prov_item": "รายการตรวจสอบ",
         "col_prov_value": "ค่าระบุตัวตน / ข้อมูลสถิติ",
-        # Fallbacks
         "empty_summary": "ไม่มีข้อมูลสรุปเหตุการณ์ที่บันทึกไว้ในสแนปช็อตนี้",
         "empty_timeline": "ไม่พบข้อมูลลำดับเหตุการณ์ที่บันทึกไว้ในสแนปช็อตนี้",
         "empty_evidence": "ไม่พบรายการหลักฐานที่บันทึกไว้ในสแนปช็อตนี้",
@@ -127,12 +121,10 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "running_header": "CASE ANALYSIS REPORT / PRELIMINARY",
         "page_label": "Page",
         "end_of_report": "End of report - preliminary document",
-        # Meta
         "lbl_case_title": "Case / Title:",
         "lbl_generated_date": "Generated Date:",
         "lbl_report_status": "Report Status:",
         "status_provisional": "Provisional / Unverified Case Analysis Report",
-        # Section Headings
         "sec_1": "1. Case Summary",
         "sec_2": "2. Key Chronology",
         "sec_3": "3. Reported Facts and Source References",
@@ -140,7 +132,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "sec_5": "5. Matters Requiring Verification",
         "sec_6": "6. Further Verification Actions",
         "sec_7": "7. Scope and Limitations",
-        # Backward-compat aliases
         "sec_5_1": "1. Incident Summary",
         "sec_5_2": "2. Key Incident Progression",
         "sec_5_3": "3. Key Facts & Case Evidence",
@@ -148,7 +139,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "sec_5_5": "4. Relevant MITRE ATT&CK Context",
         "sec_5_6": "5. Unconfirmed Information & Gaps",
         "sec_5_7": "7. Report Limitations",
-        # Subheaders & Tables
         "sub_evidence_reg": "Analysis findings linked to source material",
         "sub_iocs": "Technical Indicators of Compromise (IOCs)",
         "sub_mitre_intro": "MITRE ATT&CK is external technical reference knowledge. Associated techniques represent preliminary analytical correlations and are not proof that the technique occurred in the incident.",
@@ -156,7 +146,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "sub_next_steps": "Points for Further Investigation",
         "sub_limitations": "Report Limitations",
         "sub_provenance": "Appendix: Report Traceability",
-        # Table Columns
         "col_order": "No.",
         "col_time": "Date / Time",
         "col_event": "Event Description",
@@ -174,7 +163,6 @@ I18N_STRINGS: Final[dict[str, dict[str, str]]] = {
         "col_mapping_status": "Analytical Status",
         "col_prov_item": "Audit Item",
         "col_prov_value": "Identifier / Value",
-        # Fallbacks
         "empty_summary": "No incident summary records were persisted for this snapshot.",
         "empty_timeline": "No incident progression events were persisted for this snapshot.",
         "empty_evidence": "No evidence items were persisted for this snapshot.",

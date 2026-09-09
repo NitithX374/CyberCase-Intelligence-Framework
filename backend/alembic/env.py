@@ -6,8 +6,6 @@ from logging.config import fileConfig
 # Add backend directory to sys.path to resolve 'app' imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from sqlalchemy import pool
-
 from alembic import context
 
 # this is the Alembic Config object, which provides access to the values within the .ini file in use.
@@ -18,7 +16,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
-from app.database import Base
+from app.database import Base  # noqa: E402
 # Make sure models are imported so they are registered on the Base metadata
 import app.models  # noqa
 target_metadata = Base.metadata

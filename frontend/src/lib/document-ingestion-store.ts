@@ -1,3 +1,4 @@
+import { accountStorageKey } from "@/lib/account-storage";
 import { useEffect, useSyncExternalStore } from "react";
 import {
   generateOcrIdempotencyKey,
@@ -31,16 +32,16 @@ export const DEFAULT_STATE: DocumentIngestionState = {
 
 function getStorageKey(caseKey: string): string {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  return `${STORAGE_KEY_PREFIX}:${normalizedKey}`;
+  return accountStorageKey(`${STORAGE_KEY_PREFIX}:${normalizedKey}`);
 }
 
 function loadInitialState(caseKey: string): DocumentIngestionState {
-  if (typeof window === "undefined" || typeof window.sessionStorage === "undefined") {
+  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
     return DEFAULT_STATE;
   }
 
   try {
-    const raw = window.sessionStorage.getItem(getStorageKey(caseKey));
+    const raw = window.localStorage.getItem(getStorageKey(caseKey));
     if (!raw) return DEFAULT_STATE;
     const parsed = JSON.parse(raw);
     return {
@@ -54,21 +55,21 @@ function loadInitialState(caseKey: string): DocumentIngestionState {
       idempotencyKey:
         typeof parsed.idempotencyKey === "string" ? parsed.idempotencyKey : null,
     };
-  } catch {
-    return DEFAULT_STATE;
+  } catch (error) {
+    throw new Error("Unable to restore saved document preparation", { cause: error });
   }
 }
 
-function saveToSessionStorage(caseKey: string, state: DocumentIngestionState) {
-  if (typeof window === "undefined" || typeof window.sessionStorage === "undefined") {
+function saveToLocalStorage(caseKey: string, state: DocumentIngestionState) {
+  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
     return;
   }
   try {
     const key = getStorageKey(caseKey);
     if (!state.result && !state.fileName && !state.error && state.mode === "unified") {
-      window.sessionStorage.removeItem(key);
+      window.localStorage.removeItem(key);
     } else {
-      window.sessionStorage.setItem(
+      window.localStorage.setItem(
         key,
         JSON.stringify({
           fileName: state.fileName ?? state.file?.name ?? null,
@@ -80,26 +81,25 @@ function saveToSessionStorage(caseKey: string, state: DocumentIngestionState) {
         }),
       );
     }
-  } catch {
-    // Ignore storage quota or disabled errors
+  } catch (error) {
+    throw new Error("Unable to save document preparation in this browser", { cause: error });
   }
 }
 
-// In-memory partitioned states per caseKey
 const caseStates = new Map<string, DocumentIngestionState>();
 const hydratedCases = new Set<string>();
 const listeners = new Set<() => void>();
 
 function notify(caseKey: string) {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  const state = caseStates.get(normalizedKey) ?? DEFAULT_STATE;
-  saveToSessionStorage(normalizedKey, state);
+  const state = caseStates.get(getStorageKey(normalizedKey)) ?? DEFAULT_STATE;
+  saveToLocalStorage(normalizedKey, state);
   listeners.forEach((listener) => listener());
 }
 
 export function getDocumentIngestionSnapshot(caseKey: string = "draft"): DocumentIngestionState {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  return caseStates.get(normalizedKey) ?? DEFAULT_STATE;
+  return caseStates.get(getStorageKey(normalizedKey)) ?? DEFAULT_STATE;
 }
 
 export function getServerSnapshot(): DocumentIngestionState {
@@ -115,8 +115,8 @@ export function subscribeDocumentIngestion(listener: () => void): () => void {
 
 export function hydrateDocumentIngestionStore(caseKey: string = "draft") {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  if (hydratedCases.has(normalizedKey)) return;
-  hydratedCases.add(normalizedKey);
+  if (hydratedCases.has(getStorageKey(normalizedKey))) return;
+  hydratedCases.add(getStorageKey(normalizedKey));
   const restored = loadInitialState(normalizedKey);
   if (
     restored.fileName ||
@@ -125,20 +125,20 @@ export function hydrateDocumentIngestionStore(caseKey: string = "draft") {
     restored.mode !== "unified" ||
     restored.idempotencyKey
   ) {
-    caseStates.set(normalizedKey, restored);
+    caseStates.set(getStorageKey(normalizedKey), restored);
     listeners.forEach((listener) => listener());
   }
 }
 
 export function setDocumentIngestionFile(file: File | null, caseKey: string = "draft") {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  hydratedCases.add(normalizedKey);
-  const prev = caseStates.get(normalizedKey) ?? DEFAULT_STATE;
+  hydratedCases.add(getStorageKey(normalizedKey));
+  const prev = caseStates.get(getStorageKey(normalizedKey)) ?? DEFAULT_STATE;
   const idempotencyKey = file
     ? generateOcrIdempotencyKey(normalizedKey, file, prev.mode)
     : null;
 
-  caseStates.set(normalizedKey, {
+  caseStates.set(getStorageKey(normalizedKey), {
     ...prev,
     file,
     fileName: file ? file.name : null,
@@ -155,12 +155,12 @@ export function setDocumentIngestionMode(
   caseKey: string = "draft",
 ) {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  const prev = caseStates.get(normalizedKey) ?? DEFAULT_STATE;
+  const prev = caseStates.get(getStorageKey(normalizedKey)) ?? DEFAULT_STATE;
   const idempotencyKey = prev.file
     ? generateOcrIdempotencyKey(normalizedKey, prev.file, mode)
     : prev.idempotencyKey;
 
-  caseStates.set(normalizedKey, {
+  caseStates.set(getStorageKey(normalizedKey), {
     ...prev,
     mode,
     idempotencyKey,
@@ -173,8 +173,8 @@ export function setDocumentIngestionProcessing(
   caseKey: string = "draft",
 ) {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  const prev = caseStates.get(normalizedKey) ?? DEFAULT_STATE;
-  caseStates.set(normalizedKey, {
+  const prev = caseStates.get(getStorageKey(normalizedKey)) ?? DEFAULT_STATE;
+  caseStates.set(getStorageKey(normalizedKey), {
     ...prev,
     isProcessing,
   });
@@ -186,8 +186,8 @@ export function setDocumentIngestionResult(
   caseKey: string = "draft",
 ) {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  const prev = caseStates.get(normalizedKey) ?? DEFAULT_STATE;
-  caseStates.set(normalizedKey, {
+  const prev = caseStates.get(getStorageKey(normalizedKey)) ?? DEFAULT_STATE;
+  caseStates.set(getStorageKey(normalizedKey), {
     ...prev,
     result,
     error: null,
@@ -200,8 +200,8 @@ export function setDocumentIngestionError(
   caseKey: string = "draft",
 ) {
   const normalizedKey = (caseKey || "draft").trim() || "draft";
-  const prev = caseStates.get(normalizedKey) ?? DEFAULT_STATE;
-  caseStates.set(normalizedKey, {
+  const prev = caseStates.get(getStorageKey(normalizedKey)) ?? DEFAULT_STATE;
+  caseStates.set(getStorageKey(normalizedKey), {
     ...prev,
     error,
   });
@@ -211,36 +211,35 @@ export function setDocumentIngestionError(
 export function resetDocumentIngestionState(caseKey?: string) {
   if (caseKey) {
     const normalizedKey = (caseKey || "draft").trim() || "draft";
-    caseStates.delete(normalizedKey);
-    hydratedCases.delete(normalizedKey);
-    if (typeof window !== "undefined" && window.sessionStorage) {
+    caseStates.delete(getStorageKey(normalizedKey));
+    hydratedCases.delete(getStorageKey(normalizedKey));
+    if (typeof window !== "undefined" && window.localStorage) {
       try {
-        window.sessionStorage.removeItem(getStorageKey(normalizedKey));
-      } catch {
-        // ignore
+        window.localStorage.removeItem(getStorageKey(normalizedKey));
+      } catch (error) {
+        throw new Error("Unable to clear saved document preparation", { cause: error });
       }
     }
     notify(normalizedKey);
   } else {
-    // Reset all case states
     caseStates.clear();
     hydratedCases.clear();
-    if (typeof window !== "undefined" && window.sessionStorage) {
+    if (typeof window !== "undefined" && window.localStorage) {
       try {
         const keysToRemove: string[] = [];
-        for (let i = 0; i < window.sessionStorage.length; i++) {
-          const key = window.sessionStorage.key(i);
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
           if (
             key &&
-            (key.startsWith(STORAGE_KEY_PREFIX) ||
+            (key.startsWith(accountStorageKey(STORAGE_KEY_PREFIX)) ||
               key.startsWith("cybercase_document_ingestion_preview_v1"))
           ) {
             keysToRemove.push(key);
           }
         }
-        keysToRemove.forEach((k) => window.sessionStorage.removeItem(k));
-      } catch {
-        // ignore
+        keysToRemove.forEach((k) => window.localStorage.removeItem(k));
+      } catch (error) {
+        throw new Error("Unable to clear saved document preparation", { cause: error });
       }
     }
     listeners.forEach((listener) => listener());

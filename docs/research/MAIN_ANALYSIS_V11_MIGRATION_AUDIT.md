@@ -1,5 +1,8 @@
 # 1. FINAL VERDICT
 
+> [!NOTE]
+> **Status: Partially superseded** by [`CURRENT_PROJECT_DIRECTION.md`](CURRENT_PROJECT_DIRECTION.md). Preserved as an immutable historical audit from 2026-09-07.
+
 **MODERATE REFACTOR.** Audit date: 2026-09-07. Local checkout: `70bffbc8b9faaf2a552bcc1665f99bd08bef9692`. Production analysis/workflow/follow-up paths have no committed diff from the previously audited `7a347b4`. Existing ledger changes and the earlier research assessment were preserved. Remote HEAD parity was not checked.
 
 CyberCase can retain its entrypoint, admitted evidence snapshot, final v3 trace, persistence tables, report contract and frontend readers. New extraction and constrained-generation stages, a stricter internal span resolver, explicit selection and per-run routing are needed. This is more than a prompt change but far less than replacing the application.

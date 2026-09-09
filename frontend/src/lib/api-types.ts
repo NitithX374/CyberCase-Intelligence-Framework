@@ -81,3 +81,25 @@ export interface ChatReportRead {
   input_tokens: number | null;
   output_tokens: number | null;
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url?: string | null;
+  oauth_provider: string;
+  created_at: string;
+}
+
+export interface AuthTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: UserProfile;
+}
+
+export interface DevLoginPayload {
+  email: string;
+  name?: string;
+  avatar_url?: string;
+}

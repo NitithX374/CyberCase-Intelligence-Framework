@@ -116,7 +116,6 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
   const rawAssocList = asArray(rawTrace?.mitre_associations) ?? [];
   const rawMitreTable = asArray(analysisMessage.metadata_json.mitre_table) ?? [];
 
-  // Build claims lookup for source message IDs
   const claimSourceMap = new Map<string, string[]>();
   for (const rawClaim of rawClaimsList) {
     const c = asRecord(rawClaim);
@@ -159,7 +158,6 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
     }
   }
 
-  // Build association map
   const assocMap = new Map<string, { reason: string; sourceIds: string[] }>();
   for (const rawAssoc of rawAssocList) {
     const a = asRecord(rawAssoc);
@@ -181,7 +179,6 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
     }
   }
 
-  // Ensure any associated techniques not in rawMitreTable are also present
   for (const [techId, assoc] of assocMap.entries()) {
     if (!seenIds.has(techId) && !techId.toUpperCase().startsWith("TA")) {
       seenIds.add(techId);
@@ -216,7 +213,6 @@ export function buildTechnicalContext(messages: PersistedChatMessage[]): Technic
     });
   }
 
-  // Sort: associated techniques with sources first
   techniques.sort((a, b) => {
     const aHasSources = a.caseBasisSources.length > 0 ? 1 : 0;
     const bHasSources = b.caseBasisSources.length > 0 ? 1 : 0;

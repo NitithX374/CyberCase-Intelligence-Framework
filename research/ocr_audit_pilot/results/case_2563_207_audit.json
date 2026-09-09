@@ -1,0 +1,411 @@
+{
+  "case_summary": {
+    "case_title": "สฝข.1 ส.2 เลขรับ 2563-207 ฉ้อโกง (สำนวนการสอบสวนคดีอาญาที่ ๑๙๓/๒๕๖๒ สน.สุทธิสาร)",
+    "target_document": "F:\\งานอัยการ\\Dataset\\สฝข.1 ส.2 เลขรับ 2563-207 ฉ้อโกง\\ลำดับ01 รายงานการสอบสวน.pdf",
+    "total_candidate_inconsistencies": 10,
+    "high_risk_candidates": 5,
+    "medium_risk_candidates": 4,
+    "low_risk_candidates": 1,
+    "ambiguous_candidates": 2
+  },
+  "findings": [
+    {
+      "finding_id": "OCR-I-001",
+      "category": "TECHNICAL_IDENTIFIER",
+      "variants": [
+        {
+          "text": "หมายจับศาลแขวงพระนครเหนือที่ ๑๕๒/๒๕๖๓ ลง ๑๑ มีนาคม ๒๕๖๓",
+          "locations": [
+            {
+              "page_or_section": "Page 1 / หนังสือส่งสำนวน ย่อหน้า 3",
+              "context_quote": "อนึ่ง คดีนี้ผู้ต้องหาหลบหนี พนักงานสอบสวนได้ขอยื่นขอหมายจับต่อศาลแขวงพระนครเหนือ ตาม หมายจับศาลแขวงพระนครเหนือที่ ๑๕๒/๒๕๖๓ ลง ๑๑ มีนาคม ๒๕๖๓ และประกาศสืบจับแล้ว"
+            }
+          ]
+        },
+        {
+          "text": "หมายจับศาลแขวงพระนครเหนือ ที่ ๑๕๒/๒๕๖๒ ลงวันที่ ๑๑ มีนาคม ๒๕๖๒",
+          "locations": [
+            {
+              "page_or_section": "Page 2 / แผ่นที่ ๑ ช่องวันที่ผู้ต้องหาถูกควบคุมฯ",
+              "context_quote": "ศาลแขวงพระนครเหนือได้ออกหมายจับและตำหนิรูปพรรณผู้ต้องหาไว้แล้ว ตามหมายจับศาลแขวงพระนครเหนือ ที่ ๑๕๒/๒๕๖๒ ลงวันที่ ๑๑ มีนาคม ๒๕๖๒ และได้ประกาศสืบจับแล้ว"
+            },
+            {
+              "page_or_section": "Page 4 / แผ่นที่ ๒ ข้อหลักฐานทางคดีและความเห็นพนักงานสอบสวน ย่อหน้า 3",
+              "context_quote": "อนึ่ง ผู้ต้องหาหลบหนี ศาลแขวงพระนครเหนือได้ออกหมายจับและทำหนี้รูปพรรณผู้ต้องหาไว้แล้ว ตามหมายจับศาลแขวงพระนครเหนือ ที่ ๑๕๒/๒๕๖๒ ลงวันที่ ๑๑ มีนาคม ๒๕๖๒ และได้ประกาศสืบจับแล้ว"
+            }
+          ]
+        },
+        {
+          "text": "หมายจับที่ ๑๕๒/๒๕๖๒",
+          "locations": [
+            {
+              "page_or_section": "Page 4 / แผ่นที่ ๒ ข้อการสอบสวนพยาน",
+              "context_quote": "ซึ่งศาลแขวงพระนครเหนือได้ออกหมายจับไว้แล้ว ตามหมายจับที่ ๑๕๒/๒๕๖๒ ซึ่งพยานได้ทำการสืบสวนเพื่อหาตัวผู้ต้องหาดังกล่าวแล้วแต่ยังไม่สามารถจับกุมได้"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "All instances refer to the exact same arrest warrant issued by Phra Nakhon Nuea District Court against fugitive accused Suratana Srirak for Criminal Case 193/2562.",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "Thai numerals '๒' and '๓' share similar curved loops and top hooks, leading to frequent OCR substitution; alternatively, an initial drafting typo occurred on Page 1 where the year was written as 2563 instead of 2562.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "IDENTIFIER_CHANGE",
+        "DATE_CHANGE",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-002",
+      "category": "DATE_TIME",
+      "variants": [
+        {
+          "text": "วันที่ ๑๕ เดือน พฤศจิกายน พุทธศักราช ๒๕๖๓",
+          "locations": [
+            {
+              "page_or_section": "Page 2 / แผ่นที่ ๑ ส่วนหัววันที่ในรายงานการสอบสวน",
+              "context_quote": "สถานีตำรวจ นครบาลสุทธิสาร เขต ดินแดง จังหวัด กรุงเทพมหานคร วันที่ ๑๕ เดือน พฤศจิกายน พุทธศักราช ๒๕๖๓"
+            }
+          ]
+        },
+        {
+          "text": "ลงวันที่ ๙ พฤศจิกายน ๒๕๖๓",
+          "locations": [
+            {
+              "page_or_section": "Page 1 / หนังสือส่งสำนวน สิ่งที่ส่งมาด้วย",
+              "context_quote": "สิ่งที่ส่งมาด้วย สำนวนการสอบสวนคดีอาญาที่ ๑๙๓/๒๕๖๒ ลงวันที่ ๙ พฤศจิกายน ๒๕๖๓"
+            }
+          ]
+        },
+        {
+          "text": "๑๐ พฤศจิกายน ๒๕๖๓",
+          "locations": [
+            {
+              "page_or_section": "Page 5 / แผ่นที่ ๓ ท้ายลายมือชื่อผู้กำกับการ",
+              "context_quote": "ผู้กำกับการสถานีตำรวจนครบาลสุทธิสาร ๑๐ พฤศจิกายน ๒๕๖๓"
+            }
+          ]
+        },
+        {
+          "text": "๑๑ พฤศจิกายน ๒๕๖๓",
+          "locations": [
+            {
+              "page_or_section": "Page 1 / หนังสือส่งสำนวน วันที่ทำหนังสือส่ง",
+              "context_quote": "สถานีตำรวจนครบาลสุทธิสาร แขวงรัชดาภิเษก เขตดินแดง กรุงเทพมหานคร ฯ ๑๐๔๐๐ ๑๑ พฤศจิกายน ๒๕๖๓"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Contextually refers to the completion date of the inquiry report. Page 1 cites the report date as 9 November 2563, and physical image inspection confirms the handwritten date on Page 2 is '๙'.",
+      "likely_ocr_related": "DEFINITE",
+      "ocr_reason": "Typhoon OCR misread the handwritten Thai numeral '๙' (9) on Page 2 as two digits '๑๕' (15). This creates an impossible chronological inversion where the internal report is dated 15 November, post-dating both the Superintendent approval (10 November) and the prosecutor submission letter (11 November).",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "DATE_CHANGE",
+        "CHRONOLOGY_INVERSION",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-003",
+      "category": "PERSON_NAME",
+      "variants": [
+        {
+          "text": "นางสาว สุรัตนา ศรีรักษ์ หรือ คงคาอินทร์",
+          "locations": [
+            {
+              "page_or_section": "Page 1 / หนังสือส่งสำนวน ตารางคู่ความ",
+              "context_quote": "คดีระหว่าง ... นางสาว สุรัตนา ศรีรักษ์ หรือ คงคาอินทร์ ผู้ต้องหา"
+            }
+          ]
+        },
+        {
+          "text": "นางสาวสุรัตนา ศรีรักษ์ อายุ ๔๑ ปี ไทย-ไทย ผู้ต้องหา ๑๗",
+          "locations": [
+            {
+              "page_or_section": "Page 2 / แผ่นที่ ๑ ตารางคู่ความ",
+              "context_quote": "นางสาวสุรัตนา ศรีรักษ์ อายุ ๔๑ ปี ไทย-ไทย ผู้ต้องหา ๑๗"
+            }
+          ]
+        },
+        {
+          "text": "นางสาวสุรัตนา ศรีรักษ์",
+          "locations": [
+            {
+              "page_or_section": "Page 3 & Page 4 / บรรยายพฤติการณ์คดี",
+              "context_quote": "ผู้ต้องหานี้ได้บังอาจแสดงข้อความอันเป็นเท็จ เพื่อหลอกให้ ผู้กล่าวหาที่ ๑ และที่ ๒ หลงเชื่อ"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "All entries refer to the single female suspect accused of fraud in this case.",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "The handwritten alias 'หรือ คงคาอินทร์' inserted on Page 2 was omitted in OCR, while the handwritten approval initial in the margin next to 'ผู้ต้องหา' was misrecognized as Thai numeral digits '๑๗'.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "NAME_CHANGE",
+        "MISSING_ALIAS",
+        "NUMERIC_CORRUPTION"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-004",
+      "category": "PERSON_NAME",
+      "variants": [
+        {
+          "text": "นางสาว พัชร์สิตา วราธรณ์สินชัย",
+          "locations": [
+            {
+              "page_or_section": "Page 1 / หนังสือส่งสำนวน ตารางคู่ความ",
+              "context_quote": "คดีระหว่าง นาย ถนอม รอดสุข ผู้กล่าวหาที่ ๑ นางสาว พัชร์สิตา วราธรณ์สินชัย ผู้กล่าวหาที่ ๒"
+            },
+            {
+              "page_or_section": "Page 4 / แผ่นที่ ๒ ข้อหลักฐานทางคดีฯ บรรทัดที่ 118",
+              "context_quote": "จากการสอบสวน มีนายถนอม รอดสุข ผู้กล่าวหาที่ ๑ และนางสาวพัชร์สิตา วราธรณ์สินชัย ผู้กล่าวหาที่ ๒ ให้การยืนยันการกระทำความผิด"
+            }
+          ]
+        },
+        {
+          "text": "นางสาวพัชรสิตา วราธรณ์สินชัย",
+          "locations": [
+            {
+              "page_or_section": "Page 2 / แผ่นที่ ๑ ตารางคู่ความ",
+              "context_quote": "คดีระหว่าง นางสาวพัชรสิตา วราธรณ์สินชัย อายุ ๔๓ ปี ไทย-ไทย ผู้กล่าวหาที่ ๒"
+            }
+          ]
+        },
+        {
+          "text": "นางสาวพัชร์สิตา วรารถณ์สินชัย",
+          "locations": [
+            {
+              "page_or_section": "Page 3 / ข้อการสอบสวนผู้กล่าวหา ปากที่ ๒",
+              "context_quote": "๒. นางสาวพัชร์สิตา วรารถณ์สินชัย ผู้กล่าวหาที่ ๒ ให้การว่า เมื่อประมาณกลางเดือนธันวาคม ๒๕๖๐"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "All entries refer to the second victim/complainant defrauded of 27,000 baht.",
+      "likely_ocr_related": "DEFINITE",
+      "ocr_reason": "Severe consonant substitution: Thai character 'ธ' (Tho Thong) was misrecognized as 'ถ' (Tho Thung) on Page 3 due to nearly identical outline curves; additionally, the Than-thakhat diacritic ('์') was missing in Page 2.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "WRONG_ENTITY_SURFACE_FORM",
+        "NAME_CHANGE",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-005",
+      "category": "PERSON_NAME",
+      "variants": [
+        {
+          "text": "พัชร์สิตา",
+          "locations": [
+            {
+              "page_or_section": "Page 1, Page 3, Page 4",
+              "context_quote": "นางสาว พัชร์สิตา วราธรณ์สินชัย"
+            }
+          ]
+        },
+        {
+          "text": "พัชรสิตา",
+          "locations": [
+            {
+              "page_or_section": "Page 2 / แผ่นที่ ๑ ตารางคู่ความ",
+              "context_quote": "คดีระหว่าง นางสาวพัชรสิตา วราธรณ์สินชัย อายุ ๔๓ ปี"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Same second complainant.",
+      "likely_ocr_related": "UNLIKELY",
+      "ocr_reason": "Visual scan confirmation shows Page 2 source typing omitted the Than-thakhat ('์') mark on 'ร'. This is an intra-document typing inconsistency originating in the police document drafting.",
+      "factual_risk": "MEDIUM",
+      "potential_effect": [
+        "WRONG_ENTITY_SURFACE_FORM",
+        "NAME_CHANGE"
+      ],
+      "needs_manual_verification": false
+    },
+    {
+      "finding_id": "OCR-I-006",
+      "category": "ORGANIZATION_NAME",
+      "variants": [
+        {
+          "text": "ศาลฎีกาได้ออกหมายจับและดำเนินคดีแล้ว ไว้ และได้ประกาศรับแจ้งแล้ว",
+          "locations": [
+            {
+              "page_or_section": "Page 5 / แผ่นที่ ๓ ข้อความเห็นทางคดี ใน OCR Raw text บรรทัดที่ 136-139",
+              "context_quote": "ควรมีพยานหลักฐานเพื่อฟ้องจำเป็นต่อการสืบพิจารณาคดี ตามกฎหมาย และคำว่ากฎหมายต่างกันอยู่ในเรื่องของ ความผิดและโทษ ซึ่งศาลฎีกาได้ออกหมายจับและดำเนินคดีแล้ว ไว้ และได้ประกาศรับแจ้งแล้ว"
+            }
+          ]
+        },
+        {
+          "text": "ศาลแขวงพระนครเหนือได้ออกหมายจับและตำหนิรูปพรรณผู้ต้องหาไว้แล้ว",
+          "locations": [
+            {
+              "page_or_section": "Page 2 line 71, Page 4 line 120, and Page 5 actual handwritten text",
+              "context_quote": "คดีมีพยานหลักฐานพอฟ้อง จึงเห็นควรสั่งฟ้องผู้ต้องหานี้ ตามฐานความผิด และตัวบทกฎหมายดังกล่าว ตามที่พนักงานสอบสวนผู้รับผิดชอบเสนอ อนึ่งผู้ต้องหาหลบหนี ได้ออกหมายจับและตำหนิรูปพรรณผู้ต้องหาไว้ และได้ประกาศสืบจับแล้ว"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Both reflect the Superintendent's review endorsement approving prosecution and noting fugitive warrant status.",
+      "likely_ocr_related": "DEFINITE",
+      "ocr_reason": "Catastrophic OCR hallucination on Thai cursive handwriting. The OCR engine failed to recognize the officer's rapid cursive strokes and hallucinated legal-sounding phrasing, including 'ศาลฎีกา' (Supreme Court) instead of 'ศาลแขวงพระนครเหนือ', and corrupted 'ประกาศสืบจับแล้ว' into 'ประกาศรับแจ้งแล้ว'.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "ORGANIZATION_CHANGE",
+        "JURISDICTION_ERROR",
+        "LEGAL_STATEMENT_DISTORTION"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-007",
+      "category": "TECHNICAL_IDENTIFIER",
+      "variants": [
+        {
+          "text": "ที่ ตช ๐๐๑๕(บก.น.๒)(๑๓)(สภ.)/๑๙๑๑",
+          "locations": [
+            {
+              "page_or_section": "Page 1 / หนังสือส่งสำนวน เลขที่หนังสือส่ง",
+              "context_quote": "ศาลแขวงฯ ที่ ตช ๐๐๑๕(บก.น.๒)(๑๓)(สภ.)/๑๙๑๑ สั่งฟ้อง สถานีตำรวจนครบาลสุทธิสาร"
+            }
+          ]
+        },
+        {
+          "text": "ที่ ตช ๐๐๑๕(บก.น.๒)(๑๓)(สน.)/๑๙๑๑",
+          "locations": [
+            {
+              "page_or_section": "Page 1 image scan / เลขที่หนังสือราชการ",
+              "context_quote": "Printed document clearly displays abbreviation '(สน.)' representing Sutthisan Metropolitan Police Station."
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Official dispatch reference number for Sutthisan Metropolitan Police Station under Metropolitan Police Division 2.",
+      "likely_ocr_related": "DEFINITE",
+      "ocr_reason": "Visual glyph confusion between Thai consonants 'น' (No Nu) and 'ภ' (Pho Samphao) enclosed in parentheses. Transcribed '(สน.)' as '(สภ.)' (Provincial Police Station).",
+      "factual_risk": "MEDIUM",
+      "potential_effect": [
+        "IDENTIFIER_CHANGE",
+        "ORGANIZATION_CHANGE"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-008",
+      "category": "EVENT_ACTION",
+      "variants": [
+        {
+          "text": "ทำหนี้รูปพรรณ",
+          "locations": [
+            {
+              "page_or_section": "Page 4 / แผ่นที่ ๒ ข้อหลักฐานทางคดีฯ ย่อหน้า 3",
+              "context_quote": "อนึ่ง ผู้ต้องหาหลบหนี ศาลแขวงพระนครเหนือได้ออกหมายจับและทำหนี้รูปพรรณผู้ต้องหาไว้แล้ว ตามหมายจับศาลแขวงพระนครเหนือ ที่ ๑๕๒/๒๕๖๒"
+            }
+          ]
+        },
+        {
+          "text": "ตำหนิรูปพรรณ",
+          "locations": [
+            {
+              "page_or_section": "Page 2 line 71, Page 4 image scan",
+              "context_quote": "ศาลแขวงพระนครเหนือได้ออกหมายจับและตำหนิรูปพรรณผู้ต้องหาไว้แล้ว"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Refers to the official procedural act of issuing physical descriptive features of the fugitive (ตำหนิรูปพรรณ).",
+      "likely_ocr_related": "DEFINITE",
+      "ocr_reason": "OCR phonetic and character confusion where 'ต' was misread as 'ท', and tone/vowel marks were misrecognized, turning 'ตำหนิ' (physical marks/features) into 'ทำหนี้' (create debt).",
+      "factual_risk": "MEDIUM",
+      "potential_effect": [
+        "LEXICAL_CORRUPTION",
+        "NONSENSICAL_PHRASE"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-009",
+      "category": "EVENT_ACTION",
+      "variants": [
+        {
+          "text": "ถวายขาย",
+          "locations": [
+            {
+              "page_or_section": "Page 4 / แผ่นที่ ๒ ข้อหลักฐานทางคดีฯ บรรทัดที่ 116",
+              "context_quote": "ครั้งเมื่อถึงกำหนดวันที่จะให้ผู้กล่าวหาทั้ง ๒ คน นำสินค้าไปขาย ณ จุดที่ตกลงกันไว้ ปรากฏว่าไม่สามารถถวายขายสินค้าได้"
+            }
+          ]
+        },
+        {
+          "text": "วางขาย",
+          "locations": [
+            {
+              "page_or_section": "Page 3 line 90 & 94, Page 4 image scan",
+              "context_quote": "ให้ผู้กล่าวหานำแผงขายของพร้อมสินค้าไปวางขายของในพื้นที่ดังกล่าวได้เลย"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Refers to the act of setting up market stalls to sell edible goods.",
+      "likely_ocr_related": "DEFINITE",
+      "ocr_reason": "Visual OCR artifact where 'วางขาย' was misclassified as 'ถวายขาย' due to character distortion on 'ว' and vowel 'า'.",
+      "factual_risk": "LOW",
+      "potential_effect": [
+        "LEXICAL_CORRUPTION",
+        "FACTUAL_NOISE"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-010",
+      "category": "EVENT_ACTION",
+      "variants": [
+        {
+          "text": "การสอบสวนผู้กล่าวหา มีจำนวน ๒ ปาก คือ",
+          "locations": [
+            {
+              "page_or_section": "Page 3 / บรรทัดที่ 88",
+              "context_quote": "การสอบสวนผู้กล่าวหา มีจำนวน ๒ ปาก คือ ๑. นายถนอม รอดสุข ... ๒. นางสาวพัชร์สิตา วรารถณ์สินชัย"
+            }
+          ]
+        },
+        {
+          "text": "การสอบสวนผู้กล่าวหา \\n ไม่มี",
+          "locations": [
+            {
+              "page_or_section": "Page 3 / บรรทัดที่ 98-99",
+              "context_quote": "**การสอบสวนผู้กล่าวหา** \\n ไม่มี"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "AMBIGUOUS",
+      "same_referent_reason": "Standard police inquiry template follows Complainants examination with Accused examination ('การสอบสวนผู้ต้องหา'). Here the heading was mistakenly printed as 'การสอบสวนผู้กล่าวหา' a second time with value 'ไม่มี'.",
+      "likely_ocr_related": "UNLIKELY",
+      "ocr_reason": "Physical image inspection verifies that the printed police document itself contained the typographical duplicate header 'การสอบสวนผู้กล่าวหา' instead of 'การสอบสวนผู้ต้องหา'. OCR accurately extracted the defective source document text.",
+      "factual_risk": "MEDIUM",
+      "potential_effect": [
+        "STRUCTURAL_CONTRADICTION",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    }
+  ]
+}

@@ -31,9 +31,7 @@ def _extract_summary_paragraphs(analysis_answer: str) -> list[str]:
 def _extract_progression_claims(snapshot: ReportInputSnapshot) -> list[ReportClaim]:
     claims: list[ReportClaim] = []
     source_ids = [str(message.message_id) for message in snapshot.source_messages]
-    valid_source_set = set(source_ids)
 
-    # 1. From snapshot.analysis_trace claims
     trace_claims = (
         snapshot.analysis_trace.get("claims", [])
         if isinstance(snapshot.analysis_trace, dict)
@@ -61,7 +59,6 @@ def _extract_progression_claims(snapshot: ReportInputSnapshot) -> list[ReportCla
                 )
             )
 
-    # 2. If no trace claims, extract sequence from analysis_answer
     if not claims and snapshot.analysis_answer:
         sec2_match = re.search(
             r"###\s*2\.\s*[^\n]+\n(.*?)(?=\n###\s*\d|\Z)",

@@ -6,6 +6,8 @@ import httpx
 from app.database import get_db
 from app.main import app
 from app.models import ChatRun
+from app.models.user import User
+from app.services.auth.dependencies import get_current_user
 from app.routers import chat
 from app.services.workflow.run_recovery import recover_expired_runs
 from run_recovery_support import isolated_database
@@ -26,9 +28,14 @@ def test_interrupted_request_can_be_read_and_retried_through_http(monkeypatch):
                 async with factory() as db:
                     yield db
 
+            async with factory() as db:
+                owner = User(email="recovery@example.com", name="Recovery", oauth_provider="test", oauth_subject_id="recovery")
+                db.add(owner)
+                await db.commit()
             application = app.app
             original_overrides = dict(application.dependency_overrides)
             application.dependency_overrides[get_db] = database
+            application.dependency_overrides[get_current_user] = lambda: owner
             try:
                 async with httpx.AsyncClient(
                     transport=httpx.ASGITransport(app=app), base_url="http://test"

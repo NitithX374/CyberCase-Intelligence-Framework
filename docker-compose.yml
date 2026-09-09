@@ -55,11 +55,20 @@ services:
       TYPHOON_OCR_MODEL: ${TYPHOON_OCR_MODEL:-typhoon-ocr}
       DOCUMENT_MIXED_REGION_POLICY: ${DOCUMENT_MIXED_REGION_POLICY:-unified}
       DOCUMENT_UNKNOWN_REGION_POLICY: ${DOCUMENT_UNKNOWN_REGION_POLICY:-unified}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
+      OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      OAUTH_GOOGLE_REDIRECT_URI: ${OAUTH_GOOGLE_REDIRECT_URI:-http://localhost:8000/api/v1/auth/callback/google}
+      OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID:-}
+      OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET:-}
+      OAUTH_GITHUB_REDIRECT_URI: ${OAUTH_GITHUB_REDIRECT_URI:-http://localhost:8000/api/v1/auth/callback/github}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
+      AUTH_DEV_LOGIN_ENABLED: ${AUTH_DEV_LOGIN_ENABLED:-false}
     ports:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       db:
         condition: service_healthy

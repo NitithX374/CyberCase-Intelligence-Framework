@@ -20,11 +20,9 @@ export function MeaningfulErrorModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
 
-  // Focus management & Escape key listener
   useEffect(() => {
     if (!isOpen || !error) return;
 
-    // Save previous active element to restore focus on close
     previouslyFocusedElementRef.current =
       document.activeElement as HTMLElement | null;
 
@@ -61,7 +59,6 @@ export function MeaningfulErrorModal({
 
     document.addEventListener("keydown", handleKeyDown);
 
-    // Initial focus on primary button or close button
     const timer = window.setTimeout(() => {
       if (!modalRef.current) return;
       const primaryBtn = modalRef.current.querySelector<HTMLElement>(

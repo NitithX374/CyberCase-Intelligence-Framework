@@ -2,12 +2,25 @@
 
 This file provides system architecture, rules, guidelines, and commands for AI coding assistants and developers working on the CyberCase Intelligence Framework repository.
 
-## 🌟 Project Overview
-**CyberCase Intelligence Framework** is a chat-focused full-stack Agentic RAG application for cybersecurity incident analysis. It maps threat activity to **MITRE ATT&CK intelligence (STIX 2.1)** and supports persisted chat, backend-owned clarification, raw-message evidence, and chat-scoped persisted reports. The report workflow is template-first and does not treat external knowledge as incident evidence. It features:
-- Multi-query hybrid retrieval fusing Dense Vector (Qdrant) and Graph Expansion (Neo4j).
-- Self-reflection and context-sufficiency loops using LangGraph.
-- Cross-lingual support (translating queries from Thai to English and translating reasoning back).
-- A single-user chat API backed by PostgreSQL. Authentication and per-user ownership are not implemented.
+## 🌟 Project Overview & Identity
+
+> [!IMPORTANT]
+> **Canonical Source of Truth**: For confirmed research questions, design philosophy, and product scope, always consult [`docs/research/CURRENT_PROJECT_DIRECTION.md`](docs/research/CURRENT_PROJECT_DIRECTION.md).
+
+**CyberCase Intelligence Framework** is an evidence-first full-stack application for **General Case Summarization and Grounded Analysis**. It processes investigative case materials (user narratives, police reports, and OCR-extracted transcripts), enforces deterministic evidence provenance, and generates citation-grounded case findings with explicit factuality guarantees:
+
+* **Core Task**: General Case Summarization and Grounded Analysis using a **claim-anchored, evidence-first pipeline**.
+* **Role of MITRE ATT&CK**: **Conditional external technical augmentation only**. External threat intelligence (`rag_service` with STIX 2.1) is retrieved only when applicable, isolated in a separate technical appendix, and never treated as incident evidence.
+* **Evidence Architecture**:
+  ```text
+  CASE MATERIAL → Learned Decomposition → Provenance Binding → Explicit Selection → Grounded Generation → Case Findings (→ Optional MITRE Augmentation)
+  ```
+* **Design Principles**:
+  * *Learned semantic decisions* $\to$ LLM / embeddings / NLI.
+  * *Structural guarantees* $\to$ deterministic backend.
+  * *Selection / ranking* $\to$ explicit policy where feasible.
+  * **Axioms**: Learned semantics $\neq$ structural guarantees; Provenance $\neq$ semantic entailment; Selection $\neq$ generation; Case evidence $\neq$ external knowledge.
+* **Storage & Persistence**: Single-user workspace backed by PostgreSQL (chat threads, raw-evidence snapshots, runs, analysis traces, and chat-scoped reports).
 
 ---
 
@@ -149,19 +162,24 @@ doppler run -- docker compose up --build
 
 ---
 
-## 🔄 Ingestion & RAG Core Pipelines
+## 🔄 Analysis Module & External Technical Augmentation
 
-### The Hybrid Retrieval System
-The `hybrid_retriever.py` queries Qdrant vectors and retrieves matching nodes from the Neo4j Graph DB:
-1. **Dense Vector Search**: Embeds query using `BAAI/bge-m3` → matches vectors in Qdrant with cosine similarity.
-2. **Graph Expansion**: Performs 2-hop depth Cypher queries in Neo4j to pull associated techniques, sub-techniques, software, and mitigations.
-3. **Fusion (RRF)**: Merges results using Reciprocal Rank Fusion to compile context that is fed to `context_builder.py`.
+### Main Case Analysis Pipeline (Claim-Anchored)
+The core analysis module (`backend/app/services/case_analysis/`) executes on admitted case evidence:
+1. **Extraction**: Calls LLM to decompose case material into atomic claims and exact quotes.
+2. **Provenance Binding**: Deterministically validates that each quote resolves to a unique character span and page in the immutable evidence snapshot.
+3. **Selection**: Applies deterministic coverage and token budget limits, logging all omissions.
+4. **Constrained Generation**: Generates grounded findings referencing only admitted claim IDs.
 
-### Context Sufficiency And Chat Clarification
-- `rag_service` evaluates whether retrieved context is sufficient for a grounded MITRE ATT&CK answer.
-- If sufficient, the reasoning model returns the completed technical answer.
-- If insufficient, the RAG graph may rewrite and broaden retrieval within its retry budget, then returns the best supported result or acknowledges the limit. It never exposes an interactive `/resume` step to chat.
-- Separately, the backend chat worker evaluates the accumulated incident conversation. If a focused clarification is needed, it persists the assistant question. The next answer is persisted as a normal user message, and the backend calls `rag_service POST /query` again with the original incident plus the accumulated clarification exchanges.
+### Conditional Technical Augmentation (`rag_service`)
+When admitted case findings describe cyber threat activity, the backend conditionally gates retrieval to `rag_service` (STIX 2.1 ATT&CK):
+1. **Dense Vector Search**: Embeds technical query using `BAAI/bge-m3` $\to$ matches vectors in Qdrant.
+2. **Graph Expansion**: Performs 2-hop depth Cypher queries in Neo4j (techniques, mitigations, groups).
+3. **Fusion (RRF)**: Merges results using Reciprocal Rank Fusion + Cross-Encoder reranking.
+4. **Source-Role Isolation**: The retrieved technical context is rendered strictly as an analytical appendix, never as an admitted case fact.
+
+### Clarification Gating
+The backend run worker evaluates accumulated case materials. If critical case indicators are absent, it gates the run and persists a focused clarification question to the analyst. The subsequent answer enters the authoritative case evidence snapshot.
 
 ### Backend Route Boundary
 

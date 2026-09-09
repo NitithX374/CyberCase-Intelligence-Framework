@@ -1,5 +1,8 @@
 # CyberCase: adversarial architecture and research assessment
 
+> [!NOTE]
+> **Status: Partially superseded** by [`CURRENT_PROJECT_DIRECTION.md`](CURRENT_PROJECT_DIRECTION.md) and [`OCR_SUMMARIZATION_EXPERIMENT.md`](OCR_SUMMARIZATION_EXPERIMENT.md). Preserved as an immutable historical audit from 2026-09-07.
+
 Assessment date: 2026-09-07. Audited local commit: `7a347b4f0fd1c93e43fffc5c3844e0eb50c1410d`. The working tree was clean at the start. Origin is the repository supplied by the user; remote HEAD parity was not checked. This assessment concerns the local checkout. No production code, thesis document, or partner-owned RAG code was changed. No paid inference or real-case OCR experiment was run.
 
 ## Verdict

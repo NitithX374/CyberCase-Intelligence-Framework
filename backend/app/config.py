@@ -146,10 +146,28 @@ class DocumentIngestionConfig(BaseModel):
     typhoon_ocr_model: str = "typhoon-ocr"
 
 
+# ── 9. Authentication & OAuth Configuration ─────────────────────────────────────
+class AuthConfig(BaseModel):
+    jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24 * 7
+    jwt_cookie_name: str = "cybercase_auth_token"
+    jwt_cookie_secure: bool = False
+    oauth_google_client_id: str = ""
+    oauth_google_client_secret: str = ""
+    oauth_google_redirect_uri: str = "http://localhost:8000/api/v1/auth/callback/google"
+    oauth_github_client_id: str = ""
+    oauth_github_client_secret: str = ""
+    oauth_github_redirect_uri: str = "http://localhost:8000/api/v1/auth/callback/github"
+    frontend_base_url: str = "http://localhost:3000"
+    auth_dev_login_enabled: bool = False
+
+
 # ── Root Settings Composition ─────────────────────────────────────────────────
 class Settings(
     DatabaseConfig,
     CORSConfig,
+    AuthConfig,
     LLMProviderConfig,
     LLMTokenBudgetConfig,
     FollowupPolicyConfig,
@@ -176,6 +194,7 @@ class Settings(
 settings = Settings()
 
 __all__ = [
+    "AuthConfig",
     "CORSConfig",
     "CaseAnalysisConfig",
     "DatabaseConfig",

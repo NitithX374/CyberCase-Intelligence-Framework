@@ -1,14 +1,13 @@
-# Phase 1 claim-anchored analysis plan
+# Phase 1 Claim-Anchored Analysis Plan (HOW)
 
-2026-09-08 [USER] Attribute-first implementation subsequently authorized. Implementation and validation are documented in ATTRIBUTE_FIRST_IMPLEMENTATION.md; planning-only statements below describe the earlier proposal. NLI remains the next separate integration, with a verifier interface provided by Phase 1.
+> [!NOTE]
+> **Document Role**: Implementation Architecture Plan (**HOW**).
+> * **Canonical Project Direction (WHY / WHAT)**: [`CURRENT_PROJECT_DIRECTION.md`](CURRENT_PROJECT_DIRECTION.md)
+> * **Actual Implemented Code (STATUS)**: [`ATTRIBUTE_FIRST_IMPLEMENTATION.md`](ATTRIBUTE_FIRST_IMPLEMENTATION.md)
+> * **Historical Ledger**: Retained in the appendix at the bottom of this document.
 
-2026-09-08 [USER] Subsequent clarification: the user specifically wants NLI or another dedicated learned component beyond generative LLM prompts. The earlier recommendation below to defer NLI does not satisfy that preference and is superseded as the preferred direction. Revised candidate scope is an evidence-to-claim NLI support check and an evidence-to-generated-proposition check; Thai model selection, calibration and failure policy remain open. This note records direction, not implementation authorization.
-
-2026-09-08 [USER] Requested a proposed Phase 1 plan, model choice, and suitability assessment of supplied CAMS v4. This is planning, not production implementation authorization.
-
-## Recommendation
-
-2026-09-08 [ASSUMPTION] Implement the limited opt-in case-overview branch in MAIN_ANALYSIS_V11_MIGRATION_AUDIT.md. Use GPT-5.6 Luna for extraction and generation initially, with the same model in the case-only baseline. Treat CAMS as methodological related work, not a reproduced algorithm or evidence that CyberCase improves accuracy.
+## 1. Recommendation
+Implement the limited opt-in case-overview branch (`CASE_ANALYSIS_PIPELINE=claim_anchored`). Use GPT-5.6 Luna for extraction and generation initially, with the same model in the case-only baseline. Treat CAMS as methodological related work, not a reproduced algorithm or evidence that CyberCase improves accuracy.
 
 ## Verified starting point
 
@@ -93,3 +92,12 @@
 - 2026-09-08 [ASSUMPTION] Research gate: prespecify acceptable support-error, important-fact coverage and cost/latency changes after development and before held-out evaluation. Higher citation validity alone is insufficient for promotion. Numerical thresholds and expert acceptance are UNCONFIRMED.
 - 2026-09-08 [ASSUMPTION] Prior 8-16 engineering-hour estimate covers the bounded implementation and regression scope, not full CAMS reproduction, annotated evaluation, model comparison or unpredictable integration repairs. Treat it as provisional rather than a deadline.
 - 2026-09-08 [ASSUMPTION] Defensible framing: a CAMS-inspired, source-bound intermediate representation for Thai case analysis, evaluated against the existing joint-generation pipeline. Novelty and empirical benefit remain unestablished. Do not claim a new trained model, hallucination elimination or proven legal reliability.
+
+---
+
+## Appendix: Historical Planning Ledger
+
+* **2026-09-08 [USER]**: Attribute-first implementation authorized and documented in `ATTRIBUTE_FIRST_IMPLEMENTATION.md`. NLI remains the next separate integration step, with a verifier interface provided by Phase 1.
+* **2026-09-08 [USER]**: Subsequent clarification: User prefers dedicated learned components (NLI/learned verification) beyond pure generative LLM prompts. Candidate scope includes evidence-to-claim NLI support checks and evidence-to-generated-proposition checks.
+* **2026-09-08 [USER]**: Initial request for proposed Phase 1 plan and CAMS v4 suitability assessment.
+

@@ -91,7 +91,10 @@ def test_assembly_copies_citations_status_and_joins_only_valid_units():
 
 def test_selection_is_stable_and_uses_actual_fit_function():
     values = candidates(5)
-    budget = lambda selected: len(selected) <= 2
+
+    def budget(selected):
+        return len(selected) <= 2
+
     first = select(values, fits=budget)
     assert first == select(values, fits=budget)
     assert len(first.claims) == 2 and len(first.omissions) == 3

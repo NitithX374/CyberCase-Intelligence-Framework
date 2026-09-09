@@ -1,0 +1,492 @@
+{
+  "case_summary": {
+    "total_candidate_inconsistencies": 11,
+    "high_risk_candidates": 5,
+    "medium_risk_candidates": 2,
+    "low_risk_candidates": 4,
+    "ambiguous_candidates": 2
+  },
+  "findings": [
+    {
+      "finding_id": "OCR-I-001",
+      "category": "TECHNICAL_IDENTIFIER",
+      "variants": [
+        {
+          "text": "ทศ ๔๙๐๒ กรุงเทพ",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๒.๑.๑ คำให้การผู้ต้องหา",
+              "context_quote": "จึงได้รถยนต์แท็กซี่ สีส้ม ทะเบียน ทศ ๔๙๐๒ กรุงเทพ เพื่อมาขับรับผู้โดยสารตามปกติ จนเวลาประมาณ ๒๐.๐๐ น.เศษ"
+            }
+          ]
+        },
+        {
+          "text": "ทห๙๙๐๒ กรุงเทพฯ",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๒ / ข้อ ๓.๑.๒ คำให้การเจ้าของอู่รถแท็กซี่",
+              "context_quote": "ยืนยันว่าในช่วง วันที่ ๒๔ เมษายน ๒๕๖๔ ถึงวันที่ ๒๖ เมษายน ๒๕๖๔ ผู้ต้องหา ใช้รถยนต์ แท็กซี่สีส้ม ทะเบียน ทห๙๙๐๒ กรุงเทพฯ ในการใช้รับจ้างส่งผู้โดยสาร โดยต่อเนื่องกัน"
+            }
+          ]
+        },
+        {
+          "text": "ทศ ๙๙๐๒ กรุงเทพฯ",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ หลักฐานทางคดีและความเห็นพนักงานสอบสวน",
+              "context_quote": "สืบสวนจนทราบว่าขณะเกิดเหตุมีรถยนต์ แท็กซี่สีส้ม ทะเบียน ทศ ๙๙๐๒ กรุงเทพฯ ซึ่งมีผู้ต้องหาเป็นผู้ขับขี่ ขับสวน ทางมา และใช้หนังสติ๊กยิงก้อนหินใส่รถผู้กล่าวหา"
+            }
+          ]
+        },
+        {
+          "text": "ทห๙๙๐๒ กทม",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ หลักฐานทางคดีและความเห็นพนักงานสอบสวน",
+              "context_quote": "ผู้ต้องหารับว่าเป็นผู้ก่อเหตุตามวัน เวลาเกิดเหตุจริง โดยใช้รถยนต์ แท็กซี่ สีส้ม หมายเลขทะเบียน ทห๙๙๐๒ กทม ในการก่อเหตุ"
+            }
+          ]
+        },
+        {
+          "text": "ทห ๙๙๐๒ กรุงเทพฯ",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ การวิเคราะห์พยานหลักฐาน",
+              "context_quote": "มีพยานฝ่ายสืบสวน และนายณรงค์ฤทธิ์ฯ เป็นพยานบุคคลยืนยันว่าผู้ขับขี่รถยนต์ ทะเบียน ทห ๙๙๐๒ กรุงเทพฯ ในวันเวลาเกิดเหตุคือนายไพรวัลย์ แอ้ชัยภูมิ ผู้ต้องหาในคดีนี้"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Context indicates all variants refer to the single orange taxi rented from garage owner นายณรงค์ฤทธิ์ and driven by the accused (นายไพรวัลย์ แอ้ชัยภูมิ) to commit the offense on 24 April 2564 around 20:00 hrs on Ratchadaphisek Road.",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "Thai consonants 'ศ' and 'ห' are visually similar in curved font profiles; Thai digits '๔' (4) and '๙' (9) share curved strokes and are common OCR substitution pairs; spacing and province abbreviation variations ('กรุงเทพ', 'กรุงเทพฯ', 'กทม') frequently occur in OCR output.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "IDENTIFIER_CHANGE",
+        "WRONG_ENTITY_SURFACE_FORM",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-002",
+      "category": "NUMBER_QUANTITY",
+      "variants": [
+        {
+          "text": "๑ ชิ้น",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อเท็จจริงและความเห็น (ส่วนต้น)",
+              "context_quote": "ทําให้กระจกประตูหลังด้านขวาแตกเสียหาย มีเศษกระจกแตกเข้ามาในรถ และพบเศษหิน ๑ ชิ้นในรถ"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๑.๑.๑ คำให้การผู้กล่าวหา",
+              "context_quote": "พบว่ากระจกประตูหลังด้านขวาแตก มีเศษกระจกแตกเข้ามาในรถ และพบเศษหิน ๑ ชิ้น ในรถ มูลค่าความเสียหายประมาณ 4,000 บาท"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ หลักฐานทางคดีและความเห็นพนักงานสอบสวน",
+              "context_quote": "กระจกรถยนต์ ประตูหลังด้านขวาถูกยิงด้วยหนังสติ๊กแตกเสียหาย มีเศษกระจกแตกเข้ามาในรถ และพบเศษหิน ๑ ชิ้นในรถ"
+            }
+          ]
+        },
+        {
+          "text": "9 ชิ้น",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๑.๒.๑ บัญชีพยานวัตถุฝ่ายผู้กล่าวหา",
+              "context_quote": "๑.๒.๑ พยานวัตถุ เศษหิน จํานวน 9 ชิ้น ๒.พยานหลักฐานฝ่ายผู้กล่าวหา"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Both surface forms designate the stone fragment evidence (เศษหิน) found inside the complainant's vehicle resulting from the slingshot attack.",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "Thai numeral '๑' (1) and Arabic digit '9' (9) share a nearly identical spiral/swirl glyph profile, making them a common OCR misclassification pair in mixed numeral settings.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "NUMERIC_CHANGE",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-003",
+      "category": "DATE_TIME",
+      "variants": [
+        {
+          "text": "๑๔.๐๐ น.",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๒.๑.๑ คำให้การผู้ต้องหา",
+              "context_quote": "โดยจะได้ขับในช่วงเวลา ๑๖.๐๐ น. ถึง ๑๔.๐๐ น. ของวันรุ่งขึ้น และก็ขับรถรับจ้างเรื่อยมา"
+            }
+          ]
+        },
+        {
+          "text": "๐๔.๐๐ น.",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๒ / ข้อ ๓.๑.๒ คำให้การเจ้าของอู่รถแท็กซี่",
+              "context_quote": "ซึ่งพยานได้ให้ผู้ต้องหาขับในช่วงเวลา ๑๖.๐๐ น. ถึง ๐๔.๐๐ น.ของวันรุ่งขึ้น แต่ไม่ได้กําหนดเวลาเริ่มขับตายตัว"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Both mentions specify the agreed daily return time for the taxi rented from the garage by the accused.",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "Single character substitution between Thai numerals '๑' (1) and '๐' (0) in the tens place of the hour representation ('๑๔.๐๐' vs '๐๔.๐๐').",
+      "factual_risk": "MEDIUM",
+      "potential_effect": [
+        "DATE_CHANGE",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-004",
+      "category": "DATE_TIME",
+      "variants": [
+        {
+          "text": "๒๑ มิถุนายน",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ส่วนหัวแบบฟอร์มรายงานการสอบสวน",
+              "context_quote": "วันที่ เดือน ๒๑ มิถุนายน "
+            }
+          ]
+        },
+        {
+          "text": "3 มิถุนายน ๒๕๖๔",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๓ / ท้ายรายงานความเห็นพนักงานสอบสวน",
+              "context_quote": "สารวัตร (สอบสวน) สถานีตํารวจนครบาลสุทธิสาร 3 มิถุนายน ๒๕๖๔"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Both represent the completion/endorsement date of the investigation report by the investigating officer (พ.ต.ท. สุธิรพงศ์ ชัยศิริ).",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "Arabic digit '3' resembles Thai numeral '๒' or condensed '๒๑'. Furthermore, paragraph [22] of the report cites a court detention warrant dated 16 June 2564, making 3 June chronologically incompatible with the cited proceedings.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "DATE_CHANGE",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-005",
+      "category": "DATE_TIME",
+      "variants": [
+        {
+          "text": "๒) มิถุนายน ๒๕๖๔",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๔ / ลายมือชื่อรองผู้กำกับการ (สอบสวน)",
+              "context_quote": "รองผู้กํากับการ (สอบสวน) สถานีตํารวจนครบาลสุทธิสาร ๒) มิถุนายน ๒๕๖๔"
+            }
+          ]
+        },
+        {
+          "text": "๒๓ มิถุนายน ๒๕๖๔",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๔ / ลายมือชื่อผู้กำกับการสถานีตำรวจนครบาลสุทธิสาร",
+              "context_quote": "๒๓ มิถุนายน ๒๕๖๔"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "POSSIBLE",
+      "same_referent_reason": "Both represent successive supervisory endorsement dates in late June 2564 following the investigating officer's report date (21 June 2564).",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "The non-numeric character ')' in '๒)' is an OCR misinterpretation of a Thai numeral digit such as '๒' (yielding '๒๒') or '๑' (yielding '๒๑').",
+      "factual_risk": "MEDIUM",
+      "potential_effect": [
+        "DATE_CHANGE",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-006",
+      "category": "LOCATION",
+      "variants": [
+        {
+          "text": "ธนาคารกกรุงศรีอยุธยา",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / สถานที่เกิดเหตุ",
+              "context_quote": "เหตุเกิดที่ ถนนรัชดาภิเษกขาเข้า หน้าธนาคารกกรุงศรีอยุธยา แขวงสามเสนนอก เขตห้วยขวาง"
+            }
+          ]
+        },
+        {
+          "text": "ธนาคารกรุงศรีอยุธยา",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อเท็จจริงและความเห็น (ส่วนต้น)",
+              "context_quote": "ขณะกําลังขับเลยเพดานอุโมงค์ลอดแยกสุทธิสารมาถึงบริเวณหน้า ธนาคารกรุงศรีอยุธยา ได้ถูกผู้ต้องหาซึ่งขับรถยนต์แท็กซี่สีส้มสวนทางมา"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๑.๑.๑ คำให้การผู้กล่าวหา",
+              "context_quote": "ขณะเลยหลังคาอุโมงค์ลอดแยกสุทธิสาร มาถึงหน้า ธนาคารกรุงศรีอยุธยา ก็ได้ยินเสียงกระจกรถแตก"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ หลักฐานทางคดีและความเห็นพนักงานสอบสวน",
+              "context_quote": "ขณะขับเลยเพดานอุโมงค์ลอดแยกสุทธิสาร มาถึงหน้าธนาคารกรุงศรีอยุธยา กระจกรถยนต์ ประตูหลังด้านขวาถูกยิงด้วยหนังสติ๊กแตกเสียหาย"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Refers to the Bank of Ayudhya branch situated on Ratchadaphisek Road near the Sutthisan underpass exit where the offense occurred.",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "Repetition/duplication of the initial Thai consonant 'ก' leading to 'กกรุงศรีอยุธยา', characteristic of visual OCR scan artifacting.",
+      "factual_risk": "LOW",
+      "potential_effect": [
+        "WRONG_ENTITY_SURFACE_FORM"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-007",
+      "category": "PERSON_NAME",
+      "variants": [
+        {
+          "text": "แอ้ชัยภูมิ",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / คดีระหว่าง",
+              "context_quote": "นายไพรวัลย์ แอ้ชัยภูมิ อายุ ๔๘ ปี ไทย-ไทย"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๒.๑.๑ คำให้การผู้ต้องหา",
+              "context_quote": "๒.๑.๑ นายไพรวัลย์ แอ้ชัยภูมิ ผู้ต้องหา ให้การรับสารภาพตลอดข้อกล่าวหา"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๒ / ข้อ ๓.๑.๑ คำให้การตำรวจฝ่ายสืบสวน",
+              "context_quote": "จึงได้ทําการสืบสวนจนทราบ่าผู้ก่อเหตุคือนายไพรวัลย์ แอ้ชัยภูมิ"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ การวิเคราะห์พยานหลักฐาน",
+              "context_quote": "ในวันเวลาเกิดเหตุคือนายไพรวัลย์ แอ้ชัยภูมิ ผู้ต้องหาในคดีนี้"
+            }
+          ]
+        },
+        {
+          "text": "แอ้ ชัยภูมิ",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๒ / ข้อ ๓.๑.๒ คำให้การเจ้าของอู่รถแท็กซี่",
+              "context_quote": "นายไพรวัลย์ แอ้ ชัยภูมิ ผู้ต้องหา มาสมัครขอเช่าขับรถยนต์แท็กซี่รับจ้างกับอู่ของพยาน"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Refers to the surname of the accused in case 211/2564 across repeated witness and administrative entries.",
+      "likely_ocr_related": "POSSIBLE",
+      "ocr_reason": "Spurious space inserted between Thai word syllables ('แอ้' and 'ชัยภูมิ'), common in Thai OCR segmentation.",
+      "factual_risk": "LOW",
+      "potential_effect": [
+        "WRONG_ENTITY_SURFACE_FORM"
+      ],
+      "needs_manual_verification": false
+    },
+    {
+      "finding_id": "OCR-I-008",
+      "category": "OTHER_FACTUAL_ELEMENT",
+      "variants": [
+        {
+          "text": "พ.ศ. ๒๕. ๖๔",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ส่วนหัวแบบฟอร์มรายงานการสอบสวน",
+              "context_quote": "สั่งฟ้อง กรุงเทพมหานคร พ.ศ. ๒๕. ๖๔"
+            }
+          ]
+        },
+        {
+          "text": "๒๕๖๔",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / เลขคดีอาญา",
+              "context_quote": "คดีอาญาที่ ๒๑๑/๒๕๖๔"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๑ / วันเวลาเกิดเหตุ",
+              "context_quote": "วันเวลาเกิดเหตุ วันที่ ๒๔ เมษายน ๒๕๖๔ เวลาประมาณ ๒๐.๐๐ น."
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Identifies the Buddhist Era calendar year 2564 applied to the case and its procedural filings.",
+      "likely_ocr_related": "LIKELY",
+      "ocr_reason": "Extraneous period and space inserted between Thai numerals '๒๕' and '๖๔'.",
+      "factual_risk": "LOW",
+      "potential_effect": [
+        "WRONG_ENTITY_SURFACE_FORM"
+      ],
+      "needs_manual_verification": false
+    },
+    {
+      "finding_id": "OCR-I-009",
+      "category": "LOCATION",
+      "variants": [
+        {
+          "text": "เพดานอุโมงค์ลอดแยกสุทธิสาร",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อเท็จจริงและความเห็น (ส่วนต้น)",
+              "context_quote": "ขณะกําลังขับเลยเพดานอุโมงค์ลอดแยกสุทธิสารมาถึงบริเวณหน้า ธนาคารกรุงศรีอยุธยา"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ หลักฐานทางคดีและความเห็นพนักงานสอบสวน",
+              "context_quote": "ขณะขับเลยเพดานอุโมงค์ลอดแยกสุทธิสาร มาถึงหน้าธนาคารกรุงศรีอยุธยา กระจกรถยนต์ ประตูหลังด้านขวาถูกยิงด้วยหนังสติ๊กแตกเสียหาย"
+            }
+          ]
+        },
+        {
+          "text": "หลังคาอุโมงค์ลอดแยกสุทธิสาร",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๑.๑.๑ คำให้การผู้กล่าวหา",
+              "context_quote": "ขณะเลยหลังคาอุโมงค์ลอดแยกสุทธิสาร มาถึงหน้า ธนาคารกรุงศรีอยุธยา ก็ได้ยินเสียงกระจกรถแตก"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "LIKELY",
+      "same_referent_reason": "Both phrases describe the overhead portal/structure of the Sutthisan intersection underpass tunnel on Ratchadaphisek Road that the complainant had just driven past when hit.",
+      "likely_ocr_related": "UNLIKELY",
+      "ocr_reason": "'เพดาน' and 'หลังคา' are distinct lexical synonyms with completely different Thai letter sequences and shapes, indicating human authorial paraphrase rather than OCR corruption.",
+      "factual_risk": "LOW",
+      "potential_effect": [
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": false
+    },
+    {
+      "finding_id": "OCR-I-010",
+      "category": "PERSON_NAME",
+      "variants": [
+        {
+          "text": "นายมณธนัฐ ติสสพงษ์กุล",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / คดีระหว่าง",
+              "context_quote": "นายมณธนัฐ ติสสพงษ์กุล อายุ ๒๙ ปี ไทย-ไทย"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๑.๑.๑ คำให้การผู้กล่าวหา",
+              "context_quote": "๑.๑.๑ นายมณธนัฐ ติสสพงษ์กุล ผู้กล่าวหา กล่าวคือ เมื่อวันที่ ๒๔ เมษายน ๒๕๖๔ เวลาประมาณ ๒๐.๐๐ น."
+            }
+          ]
+        },
+        {
+          "text": "นายทอง",
+          "locations": [
+            {
+              "page_or_section": "ตารางท้ายเอกสาร / คำสั่งฝึกจัดทำเอกสาร",
+              "context_quote": "คดีนี้กล่าวหาว่า เมื่อวันที่ 24 เมษายน 2564 เวลาประมาณ 20.00 น.ขณะที่ นายทองผู้กล่าวหาขับรถ มาตามถนนรัชดาภิเษก"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "AMBIGUOUS",
+      "same_referent_reason": "Both names occupy the exact same complainant role for the same event (24 April 2564, 20:00 hrs, Ratchadaphisek Road, Honda car, 4,000 baht window damage). However, the table at the document end is an appended legal drafting exercise using placeholder names rather than an organic narrative continuation.",
+      "likely_ocr_related": "UNLIKELY",
+      "ocr_reason": "'นายมณธนัฐ ติสสพงษ์กุล' and 'นายทอง' have entirely different orthography, length, and phonology; this is an intentional pseudonymization in the appended exercise, not an OCR misrecognition.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "ENTITY_SPLIT",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    },
+    {
+      "finding_id": "OCR-I-011",
+      "category": "PERSON_NAME",
+      "variants": [
+        {
+          "text": "นายไพรวัลย์ แอ้ชัยภูมิ",
+          "locations": [
+            {
+              "page_or_section": "แผ่นที่ ๑ / คดีระหว่าง",
+              "context_quote": "นายไพรวัลย์ แอ้ชัยภูมิ อายุ ๔๘ ปี ไทย-ไทย"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๑ / ข้อ ๒.๑.๑ คำให้การผู้ต้องหา",
+              "context_quote": "๒.๑.๑ นายไพรวัลย์ แอ้ชัยภูมิ ผู้ต้องหา ให้การรับสารภาพตลอดข้อกล่าวหา"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๒ / ข้อ ๓.๑.๑ คำให้การตำรวจฝ่ายสืบสวน",
+              "context_quote": "จึงได้ทําการสืบสวนจนทราบ่าผู้ก่อเหตุคือนายไพรวัลย์ แอ้ชัยภูมิ"
+            },
+            {
+              "page_or_section": "แผ่นที่ ๓ / ข้อ ๓.๒ การวิเคราะห์พยานหลักฐาน",
+              "context_quote": "ในวันเวลาเกิดเหตุคือนายไพรวัลย์ แอ้ชัยภูมิ ผู้ต้องหาในคดีนี้"
+            }
+          ]
+        },
+        {
+          "text": "นายดำ",
+          "locations": [
+            {
+              "page_or_section": "ตารางท้ายเอกสาร / คำสั่งฝึกจัดทำเอกสาร",
+              "context_quote": "ถูกนายดำ ผู้ต้องหา ซึ่งขับรถยนต์แท็กซี่สีส้มสวนทางมา ใช้หนังสติ๊กยิงก้อนหินไปที่รถของผู้กล่าวหา"
+            }
+          ]
+        }
+      ],
+      "same_underlying_referent": "AMBIGUOUS",
+      "same_referent_reason": "Both names identify the accused operating the orange taxi and firing the slingshot during the identical incident on 24 April 2564 at 20:00 hrs. However, the table at the document end is an appended drafting practice assignment.",
+      "likely_ocr_related": "UNLIKELY",
+      "ocr_reason": "'นายไพรวัลย์ แอ้ชัยภูมิ' and 'นายดำ' share no visual or phonetic resemblance; this is an intentional pseudonym used in legal drafting instructions.",
+      "factual_risk": "HIGH",
+      "potential_effect": [
+        "ENTITY_SPLIT",
+        "AMBIGUITY"
+      ],
+      "needs_manual_verification": true
+    }
+  ],
+  "observed_pattern_summary": [
+    {
+      "category": "TECHNICAL_IDENTIFIER",
+      "count": 1
+    },
+    {
+      "category": "NUMBER_QUANTITY",
+      "count": 1
+    },
+    {
+      "category": "DATE_TIME",
+      "count": 3
+    },
+    {
+      "category": "LOCATION",
+      "count": 2
+    },
+    {
+      "category": "PERSON_NAME",
+      "count": 3
+    },
+    {
+      "category": "OTHER_FACTUAL_ELEMENT",
+      "count": 1
+    }
+  ],
+  "limitations": [
+    "No verified ground-truth transcription was provided.",
+    "The findings represent OCR inconsistencies or likely OCR-related variants, not confirmed OCR errors.",
+    "Table 0 appended at the end of the document appears to be an instructional drafting exercise containing intentional placeholder pseudonyms ('นายทอง', 'นายดำ') rather than OCR corruption, but is included as an ambiguous entity variant due to its presence in the supplied document text."
+  ]
+}

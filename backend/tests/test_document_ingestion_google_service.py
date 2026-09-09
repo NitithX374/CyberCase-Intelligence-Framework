@@ -190,3 +190,10 @@ def test_google_service_failure_retains_warning_and_no_false_measurement(monkeyp
     assert result.full_text == ""
     assert result.pages[0].regions == []
     assert "document_recognition_provider_error" in result.warnings[0]
+
+
+@pytest.fixture(autouse=True)
+def authenticated_ingestion_request(monkeypatch):
+    from app.services.auth.dependencies import get_current_user
+    application = main_module.app.app
+    monkeypatch.setitem(application.dependency_overrides, get_current_user, lambda: object())

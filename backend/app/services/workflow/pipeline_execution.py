@@ -4,6 +4,11 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
+
+try:
+    _BaseExceptionGroup = BaseExceptionGroup
+except NameError:
+    _BaseExceptionGroup = ()
 from uuid import UUID, uuid4
 
 from app.schemas.rag import QueryResponse
@@ -129,7 +134,7 @@ async def process_chat_run(
         )
     except Exception as error:
         cause = error
-        while isinstance(cause, BaseExceptionGroup) and len(cause.exceptions) == 1:
+        while isinstance(cause, _BaseExceptionGroup) and len(cause.exceptions) == 1:
             cause = cause.exceptions[0]
         if isinstance(cause, CaseAnalysisFailure):
             receipt = getattr(cause, "receipt", None)

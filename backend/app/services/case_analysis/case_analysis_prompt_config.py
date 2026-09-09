@@ -4,6 +4,7 @@ import logging
 from typing import Literal
 
 from app.services.case_analysis.contracts import AnalysisMode
+
 _ANALYSIS_TRACE_OUTPUT_PROMPT = """
 STRUCTURED OUTPUT
 
@@ -56,7 +57,7 @@ AnalysisInputMode = Literal["raw_direct"]
 DEFAULT_ANALYSIS_INPUT_MODE: AnalysisInputMode = "raw_direct"
 VALID_ANALYSIS_INPUT_MODES: frozenset[str] = frozenset({"raw_direct"})
 
-CASE_ANALYSIS_PROMPT_VERSION = "main_case_analysis_v10"
+CASE_ANALYSIS_PROMPT_VERSION = "main_case_analysis_v1"
 logger = logging.getLogger("app.case_analysis")
 
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text"})

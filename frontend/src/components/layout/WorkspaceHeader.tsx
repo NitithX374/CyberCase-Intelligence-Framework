@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
 import type { ChatThreadRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
+import { UserProfileMenu } from "@/components/common/UserProfileMenu";
 import {
   workspaceViewLabels,
   type RunPhase,
@@ -92,8 +93,8 @@ export function WorkspaceHeader({
           )}
         </div>
 
-        {onToggleChat && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {onToggleChat && (
             <button
               type="button"
               onClick={onToggleChat}
@@ -114,8 +115,9 @@ export function WorkspaceHeader({
                 />
               )}
             </button>
-          </div>
-        )}
+          )}
+          <UserProfileMenu />
+        </div>
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:hidden">

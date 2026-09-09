@@ -1,9 +1,5 @@
 import json
-from uuid import uuid4
 
-import pytest
-
-from app.config import settings
 from app.services.case_analysis.case_analysis_prompt_builder import (
     build_case_analysis_prompt,
     build_overflow_case_context,

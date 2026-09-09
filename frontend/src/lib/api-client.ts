@@ -1,5 +1,7 @@
 import axios from "axios";
 
+axios.defaults.withCredentials = true;
+
 import type {
   ChatMessageAccepted,
   ChatMessageAction,
@@ -8,6 +10,9 @@ import type {
   ChatRun,
   ChatThreadDetail,
   ChatThreadRead,
+  UserProfile,
+  AuthTokenResponse,
+  DevLoginPayload,
 } from "./api-types";
 
 const CHAT_POLL_REQUEST_TIMEOUT_MS = 15_000;
@@ -205,3 +210,50 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+export const getSession = async (
+  signal?: AbortSignal,
+): Promise<UserProfile | null> => {
+  const response = await axios.get<UserProfile | null>(
+    `${getApiBaseUrl()}/auth/session`,
+    { signal },
+  );
+  return response.data;
+};
+
+export const getCurrentUser = async (
+  signal?: AbortSignal,
+): Promise<UserProfile> => {
+  const response = await axios.get<UserProfile>(
+    `${getApiBaseUrl()}/auth/me`,
+    { signal },
+  );
+  return response.data;
+};
+
+export const devLogin = async (
+  payload: DevLoginPayload,
+  signal?: AbortSignal,
+): Promise<AuthTokenResponse> => {
+  const response = await axios.post<AuthTokenResponse>(
+    `${getApiBaseUrl()}/auth/dev-login`,
+    payload,
+    { signal },
+  );
+  return response.data;
+};
+
+export const logout = async (
+  signal?: AbortSignal,
+): Promise<{ message: string }> => {
+  const response = await axios.post<{ message: string }>(
+    `${getApiBaseUrl()}/auth/logout`,
+    {},
+    { signal },
+  );
+  return response.data;
+};
+
+export const getOAuthLoginUrl = (provider: "google" | "github"): string => {
+  return `${getApiBaseUrl()}/auth/login/${provider}`;
+};

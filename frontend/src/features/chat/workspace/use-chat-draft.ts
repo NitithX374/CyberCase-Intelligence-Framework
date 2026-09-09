@@ -1,5 +1,6 @@
 "use client";
 
+import { readAccountValue, writeAccountValue } from "@/lib/account-storage";
 import { useCallback, useRef, useState } from "react";
 import type { ChatMessageAction, ChatThreadDetail, ThreadStatus } from "@/lib/api";
 import type { RunPhase } from "@/components/common/types";
@@ -33,24 +34,28 @@ export function phaseForThread(detail: ChatThreadDetail | undefined): RunPhase {
 }
 
 export function useChatDraft() {
-  const [state, setState] = useState(emptyDraft);
+  const [state, setState] = useState(() => ({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" }));
+  const draftThreadRef = useRef("new");
   const pendingRef = useRef<PendingChatSubmission | null>(null);
   const getPendingSubmission = useCallback(() => pendingRef.current, []);
   const changeInput = useCallback((input: string) => {
+    writeAccountValue(`draft:${draftThreadRef.current}`, input);
     setState((current) => ({ ...current, input }));
   }, []);
   const changePostAnswerAction = useCallback((postAnswerAction: ChatMessageAction | null) => {
+    writeAccountValue(`action:${draftThreadRef.current}`, postAnswerAction ?? "ask");
     setState((current) => ({ ...current, postAnswerAction }));
   }, []);
   const reportError = useCallback((queryError: string | null) => {
     setState((current) => ({ ...current, queryError }));
   }, []);
   const selectDraft = useCallback((threadId: string) => {
+    draftThreadRef.current = threadId;
     const pending = pendingRef.current;
     setState((current) => ({
       ...current,
-      input: pending?.threadId === threadId && pending.kind === "followup" ? pending.content : "",
-      postAnswerAction: pending?.threadId === threadId ? pending.action ?? "ask" : "ask",
+      input: pending?.threadId === threadId && pending.kind === "followup" ? pending.content : readAccountValue(`draft:${threadId}`) ?? "",
+      postAnswerAction: pending?.threadId === threadId ? pending.action ?? "ask" : readAccountValue(`action:${threadId}`) === "add_case_info" ? "add_case_info" : "ask",
       pendingFollowUp: current.pendingFollowUp?.threadId === threadId ? current.pendingFollowUp : null,
       queryError: pending?.threadId === threadId ? current.queryError : null,
       activity: { phase: "querying", threadStatus: null },
@@ -97,7 +102,10 @@ export function useChatDraft() {
     }
     const completed = pending?.threadId === detail.id && requestOrdinal !== undefined &&
       hasCompletedAssistantOutput(detail, requestOrdinal);
-    if (completed) pendingRef.current = null;
+    if (completed) {
+      pendingRef.current = null;
+      writeAccountValue(`draft:${detail.id}`, "");
+    }
     setState((current) => ({
       ...current, activity: null,
       ...(restored ? { postAnswerAction: restored.action ?? "ask" } : {}),
@@ -108,7 +116,8 @@ export function useChatDraft() {
     }));
   }, []);
   const clearDraft = useCallback(() => {
-    setState(emptyDraft);
+    draftThreadRef.current = "new";
+    setState({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" });
   }, []);
   const forgetThread = useCallback((threadId: string) => {
     if (pendingRef.current?.threadId === threadId) pendingRef.current = null;

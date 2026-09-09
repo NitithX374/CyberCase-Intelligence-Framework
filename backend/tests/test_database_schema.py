@@ -1,9 +1,10 @@
 from app.database import Base
-import app.models
+import app.models  # noqa: F401
 
 
 def test_schema_contains_only_product_runtime_tables() -> None:
     assert set(Base.metadata.tables) == {
+        "users",
         "chat_threads",
         "chat_messages",
         "chat_runs",
