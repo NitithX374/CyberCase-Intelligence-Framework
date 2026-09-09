@@ -2,6 +2,10 @@
 
 ## Snapshot
 
+- 2026-09-09 [USER] Authorized commit and deployment of current code, keeping rag_service/** excluded.
+- 2026-09-09 [TOOL] Committed/pushed main 019fa29 (attribute-first, legacy cleanup and verified fixes). Commit uses [skip ci] to avoid the workflow rebuilding/pushing RAG.
+- 2026-09-09 [TOOL] Railway Cybercase production backend source upload from git archive was rejected: trial expired, select a plan. No successful deployment; frontend upload not retried after billing rejection. User billing action required.
+
 - 2026-09-09 [USER] Authorized follow-up fixes and verification of Gemini legacy cleanup; rag_service/** remains excluded.
 - 2026-09-09 [CODE] Supersedes cleanup completion caveats: latest overview blocks stale fallback; frontend distinguishes retired vs invalid analysis; ASK cannot bypass via legacy context. Raw persisted data unchanged. Details: docs/research/LEGACY_CLEANUP_VERIFICATION_2026-09-09.md.
 - 2026-09-09 [TOOL] Backend 405 passed plus 2 subtests, no skips, disposable PostgreSQL stopped. Frontend 158 passed; lint, API types, tsc and diff checks passed. Production build passed.
