@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.chat import ChatRun, ChatThread
 from app.services.workflow.chat_run_locks import lock_owned_running_run, lock_run_thread
 
+
 async def fail_run(
     db: AsyncSession,
     run_id: UUID,
@@ -19,7 +20,8 @@ async def fail_run(
     followup_metadata_json: dict[str, Any] | None = None,
     *,
     lock_run_thread_fn: Callable[[UUID], Awaitable[ChatThread | None]] | None = None,
-    lock_owned_running_run_fn: Callable[[UUID, str], Awaitable[ChatRun | None]] | None = None,
+    lock_owned_running_run_fn: Callable[[UUID, str], Awaitable[ChatRun | None]]
+    | None = None,
 ) -> bool:
     """Persist a safe failure without exposing upstream response content."""
 
@@ -44,10 +46,15 @@ async def fail_run(
         request_payload = run.request_payload
         if followup_metadata_json:
             updated_payload = dict(request_payload or {})
-            for audit_key in ("chat_followup",):
+            for audit_key in ("chat_followup", "analysis_execution"):
                 audit_value = followup_metadata_json.get(audit_key)
                 if isinstance(audit_value, dict):
                     updated_payload[audit_key] = audit_value
+            execution = followup_metadata_json.get("analysis_execution")
+            if isinstance(execution, dict):
+                attempts = list(updated_payload.get("analysis_failed_attempts", []))
+                attempts.append({"attempt": run.attempt_count, "receipt": execution})
+                updated_payload["analysis_failed_attempts"] = attempts
             if updated_payload != dict(request_payload or {}):
                 run.request_payload = updated_payload
         followup_round = (

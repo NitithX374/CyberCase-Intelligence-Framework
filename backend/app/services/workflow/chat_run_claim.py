@@ -4,18 +4,21 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from uuid import UUID
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.chat import ChatMessage, ChatRun
+from app.models.chat import ChatMessage, ChatRun, ChatThread
 from app.models.rag_context import RagContext
-from app.services.chat.clarification_chain import reconstruct_clarification_chain
-from app.services.chat.raw_evidence import build_raw_evidence_snapshot
+from app.services.case_analysis.pipeline_config import read_pipeline
 from app.services.case_analysis.state_selector import (
     CanonicalCaseAnalysisState,
+    is_case_overview_record,
     select_latest_canonical_case_overview,
 )
-from app.services.workflow.chat_run_contracts import ClaimedChatRun, RUN_LEASE_DURATION
+from app.services.chat.clarification_chain import reconstruct_clarification_chain
+from app.services.chat.raw_evidence import build_raw_evidence_snapshot
+from app.services.workflow.chat_run_contracts import RUN_LEASE_DURATION, ClaimedChatRun
 
 
 async def claim_run(
@@ -51,6 +54,16 @@ async def claim_run(
             await _fail_missing_evidence(run, now)
             return None
         payload = run.request_payload if isinstance(run.request_payload, dict) else {}
+        try:
+            pipeline = read_pipeline(payload.get("analysis_pipeline"))
+        except ValidationError:
+            await _mark_claim_failure(
+                run, now, "analysis_pipeline_invalid", "Pinned pipeline is invalid"
+            )
+            thread = await db.get(ChatThread, run.thread_id)
+            if thread is not None:
+                thread.status = "failed"
+            return None
         action = payload.get("action")
         if action not in {"initial_analysis", "ask", "add_case_info"}:
             action = "add_case_info"
@@ -79,7 +92,13 @@ async def claim_run(
                 run,
                 canonical_state,
             )
-            if canonical_state is None:
+            has_overview_record = any(
+                message.role == "assistant"
+                and isinstance(message.metadata_json, dict)
+                and is_case_overview_record(message.metadata_json)
+                for message in history
+            )
+            if canonical_state is None and not has_overview_record:
                 analysis_context = await _latest_legacy_analysis_context(db, run)
             if analysis_context is None:
                 await _fail_missing_context(run, now)
@@ -105,6 +124,7 @@ async def claim_run(
             clarification_exchanges=clarification_exchanges,
             followup_root_ordinal=root_ordinal,
             analysis_context=analysis_context,
+            analysis_pipeline=pipeline.model_dump(mode="json"),
         )
 
 

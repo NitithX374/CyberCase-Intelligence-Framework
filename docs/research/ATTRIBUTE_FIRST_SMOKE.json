@@ -1,0 +1,438 @@
+{
+  "status": "completed",
+  "input_kind": "synthetic_thai_case",
+  "trace": {
+    "version": "analysis_trace_v3",
+    "validation_status": "validated",
+    "analysis_mode": "case_overview",
+    "summary": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569\n\nนางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป\n\nยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+    "claims": [
+      {
+        "claim_id": "A-01",
+        "claim_type": "reported",
+        "text": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+        "epistemic_status": "reported",
+        "supporting_source_message_ids": [
+          "synthetic-source-1"
+        ],
+        "contradicting_source_message_ids": [],
+        "supporting_citations": [
+          {
+            "source_message_id": "synthetic-source-1",
+            "exact_quote": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+            "document_id": null,
+            "filename": null,
+            "page_numbers": []
+          }
+        ],
+        "contradicting_citations": [],
+        "reasoning_summary": "เป็นคำแจ้งของนายสมชาย ไม่ใช่การยืนยันโดยอิสระว่าจักรยานหายจริง"
+      },
+      {
+        "claim_id": "A-02",
+        "claim_type": "reported",
+        "text": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+        "epistemic_status": "reported",
+        "supporting_source_message_ids": [
+          "synthetic-source-1"
+        ],
+        "contradicting_source_message_ids": [],
+        "supporting_citations": [
+          {
+            "source_message_id": "synthetic-source-1",
+            "exact_quote": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+            "document_id": null,
+            "filename": null,
+            "page_numbers": []
+          }
+        ],
+        "contradicting_citations": [],
+        "reasoning_summary": "เป็นคำระบุของนางมาลีเกี่ยวกับสิ่งที่นางมาลีเห็นหรือไม่เห็น"
+      },
+      {
+        "claim_id": "A-03",
+        "claim_type": "reported",
+        "text": "ยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+        "epistemic_status": "unknown",
+        "supporting_source_message_ids": [
+          "synthetic-source-1"
+        ],
+        "contradicting_source_message_ids": [],
+        "supporting_citations": [
+          {
+            "source_message_id": "synthetic-source-1",
+            "exact_quote": "และยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+            "document_id": null,
+            "filename": null,
+            "page_numbers": []
+          }
+        ],
+        "contradicting_citations": [],
+        "reasoning_summary": "แหล่งข้อมูลระบุอย่างชัดเจนว่ายังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่"
+      }
+    ],
+    "gaps": [],
+    "mitre_associations": [],
+    "evidence_sha256": "857c7dd1b85dda6a62ac1db4194fbc7b7534c315a6cd7fcff423726fa7b5b02b",
+    "retrieval_context_id": null
+  },
+  "execution": {
+    "configuration": {
+      "pipeline": "claim_anchored",
+      "version": "claim_anchored_v1",
+      "extraction_version": "claim_extraction_v1",
+      "generation_version": "claim_generation_v1",
+      "provider": "openrouter",
+      "model": "openai/gpt-5.6-luna",
+      "context_tokens": 128000,
+      "input_tokens": 80000,
+      "output_tokens": 16384,
+      "safety_tokens": 4000,
+      "selection_tokens": 24000,
+      "max_claims": 64,
+      "timeout_seconds": 120.0,
+      "encoding": "o200k_base"
+    },
+    "calls": [
+      {
+        "stage": "extraction",
+        "model": "openai/gpt-5.6-luna",
+        "provider": "openrouter",
+        "estimated_input_tokens": 748,
+        "token_estimator": "o200k_base",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 651,
+          "output_tokens": 479,
+          "output_tokens_details": {
+            "thinking_tokens": 114
+          },
+          "cache_creation_input_tokens": null,
+          "cache_read_input_tokens": 0,
+          "cache_creation": null,
+          "inference_geo": null,
+          "server_tool_use": null,
+          "service_tier": "standard",
+          "speed": "standard",
+          "cost": 0.000705,
+          "is_byok": false,
+          "cost_details": {
+            "upstream_inference_cost": 0.000705,
+            "upstream_inference_prompt_cost": 0.0001302,
+            "upstream_inference_completions_cost": 0.0005748
+          }
+        },
+        "returned_model": "openai/gpt-5.6-luna",
+        "request_id": "gen-1788849766-Ni5l5Cpo3JS8ysBbYoqi",
+        "elapsed_ms": 6890
+      },
+      {
+        "stage": "generation",
+        "model": "openai/gpt-5.6-luna",
+        "provider": "openrouter",
+        "estimated_input_tokens": 907,
+        "token_estimator": "o200k_base",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 841,
+          "output_tokens": 173,
+          "output_tokens_details": {
+            "thinking_tokens": 59
+          },
+          "cache_creation_input_tokens": null,
+          "cache_read_input_tokens": 0,
+          "cache_creation": null,
+          "inference_geo": null,
+          "server_tool_use": null,
+          "service_tier": "standard",
+          "speed": "standard",
+          "cost": 0.0003758,
+          "is_byok": false,
+          "cost_details": {
+            "upstream_inference_cost": 0.0003758,
+            "upstream_inference_prompt_cost": 0.0001682,
+            "upstream_inference_completions_cost": 0.0002076
+          }
+        },
+        "returned_model": "openai/gpt-5.6-luna",
+        "request_id": "gen-1788849771-Oe1zX0pcxa81aLfMgZXS",
+        "elapsed_ms": 4813
+      }
+    ],
+    "semantic_verification": "not_performed",
+    "evidence_sha256": "857c7dd1b85dda6a62ac1db4194fbc7b7534c315a6cd7fcff423726fa7b5b02b",
+    "sources": [
+      {
+        "source_message_id": "synthetic-source-1",
+        "sha256": "1ca663c544e4bdb9f5bd00b8e6a6ab637e7176f2e4f409f50f44fd0c779544e2"
+      }
+    ],
+    "extracted_claim_count": 3,
+    "bound_claims": [
+      {
+        "candidate_id": "C-001",
+        "claim": {
+          "claim_id": "A-01",
+          "claim_type": "reported",
+          "text": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+          "epistemic_status": "reported",
+          "supporting_source_message_ids": [
+            "synthetic-source-1"
+          ],
+          "contradicting_source_message_ids": [],
+          "supporting_citations": [
+            {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            }
+          ],
+          "contradicting_citations": [],
+          "reasoning_summary": "เป็นคำแจ้งของนายสมชาย ไม่ใช่การยืนยันโดยอิสระว่าจักรยานหายจริง"
+        },
+        "spans": [
+          {
+            "citation": {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            },
+            "source_text_sha256": "1ca663c544e4bdb9f5bd00b8e6a6ab637e7176f2e4f409f50f44fd0c779544e2",
+            "start_offset": 0,
+            "end_offset": 67,
+            "role": "supporting",
+            "locator_status": "narrative_only"
+          }
+        ]
+      },
+      {
+        "candidate_id": "C-002",
+        "claim": {
+          "claim_id": "A-02",
+          "claim_type": "reported",
+          "text": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+          "epistemic_status": "reported",
+          "supporting_source_message_ids": [
+            "synthetic-source-1"
+          ],
+          "contradicting_source_message_ids": [],
+          "supporting_citations": [
+            {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            }
+          ],
+          "contradicting_citations": [],
+          "reasoning_summary": "เป็นคำระบุของนางมาลีเกี่ยวกับสิ่งที่นางมาลีเห็นหรือไม่เห็น"
+        },
+        "spans": [
+          {
+            "citation": {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            },
+            "source_text_sha256": "1ca663c544e4bdb9f5bd00b8e6a6ab637e7176f2e4f409f50f44fd0c779544e2",
+            "start_offset": 68,
+            "end_offset": 106,
+            "role": "supporting",
+            "locator_status": "narrative_only"
+          }
+        ]
+      },
+      {
+        "candidate_id": "C-003",
+        "claim": {
+          "claim_id": "A-03",
+          "claim_type": "reported",
+          "text": "ยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+          "epistemic_status": "unknown",
+          "supporting_source_message_ids": [
+            "synthetic-source-1"
+          ],
+          "contradicting_source_message_ids": [],
+          "supporting_citations": [
+            {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "และยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            }
+          ],
+          "contradicting_citations": [],
+          "reasoning_summary": "แหล่งข้อมูลระบุอย่างชัดเจนว่ายังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่"
+        },
+        "spans": [
+          {
+            "citation": {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "และยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            },
+            "source_text_sha256": "1ca663c544e4bdb9f5bd00b8e6a6ab637e7176f2e4f409f50f44fd0c779544e2",
+            "start_offset": 107,
+            "end_offset": 154,
+            "role": "supporting",
+            "locator_status": "narrative_only"
+          }
+        ]
+      }
+    ],
+    "selection_policy": "stable_source_coverage_v1",
+    "omissions": [],
+    "selected_claims": [
+      {
+        "candidate_id": "C-001",
+        "claim": {
+          "claim_id": "A-01",
+          "claim_type": "reported",
+          "text": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+          "epistemic_status": "reported",
+          "supporting_source_message_ids": [
+            "synthetic-source-1"
+          ],
+          "contradicting_source_message_ids": [],
+          "supporting_citations": [
+            {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            }
+          ],
+          "contradicting_citations": [],
+          "reasoning_summary": "เป็นคำแจ้งของนายสมชาย ไม่ใช่การยืนยันโดยอิสระว่าจักรยานหายจริง"
+        },
+        "spans": [
+          {
+            "citation": {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            },
+            "source_text_sha256": "1ca663c544e4bdb9f5bd00b8e6a6ab637e7176f2e4f409f50f44fd0c779544e2",
+            "start_offset": 0,
+            "end_offset": 67,
+            "role": "supporting",
+            "locator_status": "narrative_only"
+          }
+        ]
+      },
+      {
+        "candidate_id": "C-002",
+        "claim": {
+          "claim_id": "A-02",
+          "claim_type": "reported",
+          "text": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+          "epistemic_status": "reported",
+          "supporting_source_message_ids": [
+            "synthetic-source-1"
+          ],
+          "contradicting_source_message_ids": [],
+          "supporting_citations": [
+            {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            }
+          ],
+          "contradicting_citations": [],
+          "reasoning_summary": "เป็นคำระบุของนางมาลีเกี่ยวกับสิ่งที่นางมาลีเห็นหรือไม่เห็น"
+        },
+        "spans": [
+          {
+            "citation": {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            },
+            "source_text_sha256": "1ca663c544e4bdb9f5bd00b8e6a6ab637e7176f2e4f409f50f44fd0c779544e2",
+            "start_offset": 68,
+            "end_offset": 106,
+            "role": "supporting",
+            "locator_status": "narrative_only"
+          }
+        ]
+      },
+      {
+        "candidate_id": "C-003",
+        "claim": {
+          "claim_id": "A-03",
+          "claim_type": "reported",
+          "text": "ยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+          "epistemic_status": "unknown",
+          "supporting_source_message_ids": [
+            "synthetic-source-1"
+          ],
+          "contradicting_source_message_ids": [],
+          "supporting_citations": [
+            {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "และยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            }
+          ],
+          "contradicting_citations": [],
+          "reasoning_summary": "แหล่งข้อมูลระบุอย่างชัดเจนว่ายังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่"
+        },
+        "spans": [
+          {
+            "citation": {
+              "source_message_id": "synthetic-source-1",
+              "exact_quote": "และยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+              "document_id": null,
+              "filename": null,
+              "page_numbers": []
+            },
+            "source_text_sha256": "1ca663c544e4bdb9f5bd00b8e6a6ab637e7176f2e4f409f50f44fd0c779544e2",
+            "start_offset": 107,
+            "end_offset": 154,
+            "role": "supporting",
+            "locator_status": "narrative_only"
+          }
+        ]
+      }
+    ],
+    "units": [
+      {
+        "text": "นายสมชายแจ้งว่าจักรยานของตนหายจากหน้าบ้านเมื่อวันที่ 1 กันยายน 2569",
+        "claim_ids": [
+          "A-01"
+        ]
+      },
+      {
+        "text": "นางมาลีระบุว่าไม่เห็นผู้ที่นำจักรยานไป",
+        "claim_ids": [
+          "A-02"
+        ]
+      },
+      {
+        "text": "ยังไม่ทราบว่ามีกล้องวงจรปิดบริเวณนั้นหรือไม่",
+        "claim_ids": [
+          "A-03"
+        ]
+      }
+    ]
+  }
+}

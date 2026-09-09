@@ -2,12 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from app.services.case_analysis.contracts import (
-    AnalysisMode,
-    AnalysisTraceDraft,
-    AnalysisTraceV3,
-    ProviderCaseAnalysis,
-)
+from app.services.case_analysis.contracts import AnalysisTraceV3
 
 
 class AnalysisTraceStructureError(ValueError):
@@ -20,49 +15,6 @@ class AnalysisTraceProvenanceError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
-
-
-def validate_analysis_trace(
-    analysis: ProviderCaseAnalysis,
-    *,
-    source_message_ids: set[str],
-    mitre_table: object,
-    analysis_mode: AnalysisMode,
-) -> AnalysisTraceDraft:
-    claim_ids = [claim.claim_id for claim in analysis.claims]
-    if len(set(claim_ids)) != len(claim_ids):
-        raise AnalysisTraceStructureError(
-            "analysis_trace_duplicate_claim_id",
-            "Analysis claims must have unique identifiers",
-        )
-    for claim in analysis.claims:
-        if claim.claim_type == "reported" and not claim.source_message_ids:
-            raise AnalysisTraceProvenanceError(
-                "analysis_trace_reported_claim_unbound",
-                "Reported claims must cite a user-authored source message",
-            )
-        if not set(claim.source_message_ids).issubset(source_message_ids):
-            raise AnalysisTraceProvenanceError(
-                "analysis_trace_source_outside_evidence",
-                "A claim cites a message outside accumulated raw evidence",
-            )
-    admitted_techniques = _admitted_technique_ids(mitre_table)
-    for association in analysis.mitre_associations:
-        if not set(association.claim_ids).issubset(set(claim_ids)):
-            raise AnalysisTraceStructureError(
-                "analysis_trace_unknown_claim",
-                "A MITRE association cites an unknown analytical claim",
-            )
-        if association.technique_id not in admitted_techniques:
-            raise AnalysisTraceProvenanceError(
-                "analysis_trace_mitre_outside_context",
-                "A MITRE association is outside the bound retrieval context",
-            )
-    return AnalysisTraceDraft(
-        analysis_mode=analysis_mode,
-        claims=analysis.claims,
-        mitre_associations=analysis.mitre_associations,
-    )
 
 
 def validate_analysis_trace_v3(
@@ -209,6 +161,5 @@ __all__ = [
     "AnalysisTraceProvenanceError",
     "AnalysisTraceStructureError",
     "detect_forbidden_provenance",
-    "validate_analysis_trace",
     "validate_analysis_trace_v3",
 ]

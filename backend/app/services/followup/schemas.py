@@ -137,9 +137,6 @@ class FollowUpDecision(BaseModel):
     decision: Literal["ask_followup", "proceed"]
     selected_gap: str | None = None
     question: str = ""
-    # Kept only as an in-process compatibility field for legacy custom policies.
-    # The provider schema in prompts.py deliberately does not expose it.
-    reason_code: FollowUpReasonCode | None = None
 
     @field_validator("decision", mode="before")
     @classmethod
@@ -152,24 +149,6 @@ class FollowUpDecision(BaseModel):
         if val in ("proceed", "continue", "skip", "no_followup", "none"):
             return "proceed"
         return val
-
-    @model_validator(mode="before")
-    @classmethod
-    def accept_legacy_action_shape(cls, value: object) -> object:
-        if not isinstance(value, Mapping):
-            return value
-        normalized = dict(value)
-        if "decision" not in normalized and "action" in normalized:
-            normalized["decision"] = normalized.pop("action")
-        if (
-            normalized.get("decision") == "ask_followup"
-            and not normalized.get("selected_gap")
-            and normalized.get("reason_code") is not None
-        ):
-            # Old injected policies had no gap key. Keep them callable while the
-            # production path requires a validated topic from Gap Analysis.
-            normalized["selected_gap"] = "legacy_gap"
-        return normalized
 
     @field_validator("selected_gap", mode="before")
     @classmethod
@@ -191,20 +170,10 @@ class FollowUpDecision(BaseModel):
         if self.decision == "proceed":
             self.selected_gap = None
             self.question = ""
-            if self.reason_code not in (
-                None,
-                "sufficient_case_context",
-                "unresolved_gaps_recorded",
-            ):
-                raise ValueError("Proceed decisions have an invalid legacy reason code")
             return self
 
         if self.selected_gap is None:
             raise ValueError("Follow-up decisions require a selected gap")
-        if self.reason_code == "sufficient_case_context":
-            raise ValueError(
-                "Follow-up decisions require a material missing or unclear fact"
-            )
         if (
             not self.question
             or len(self.question) > 300
@@ -214,12 +183,6 @@ class FollowUpDecision(BaseModel):
         ):
             raise ValueError("Follow-up must be one concise question")
         return self
-
-    @property
-    def action(self) -> Literal["ask_followup", "proceed"]:
-        """Legacy name retained for existing in-process callers."""
-
-        return self.decision
 
 
 @dataclass(frozen=True)

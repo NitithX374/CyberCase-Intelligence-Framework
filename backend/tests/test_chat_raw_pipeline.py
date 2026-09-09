@@ -10,9 +10,10 @@ from app.services.case_analysis.mitre_applicability_contracts import (
 )
 from app.services.chat.raw_evidence import RawEvidenceSource
 from app.services.case_analysis.contracts import (
-    AnalysisTraceDraft,
+    AnalysisTrace,
     AnalysisTraceV3,
     CaseAnalysisResult,
+    read_analysis_trace,
 )
 from app.services.followup.contracts import FollowUpResolution
 from app.services.followup.decision import evaluate_followup_outcome
@@ -154,26 +155,33 @@ def test_v3_trace_persists_without_a_retrieval_context() -> None:
     assert serialized["retrieval_context_id"] is None
 
 
-def test_v2_trace_persistence_remains_backward_compatible() -> None:
-    trace = AnalysisTraceDraft.model_validate(
-        {
-            "analysis_mode": "case_overview",
-            "claims": [],
-            "mitre_associations": [],
-        }
-    )
+def test_v2_trace_reading_remains_backward_compatible() -> None:
+    payload = {
+        "version": "analysis_trace_v2",
+        "validation_status": "validated",
+        "analysis_mode": "case_overview",
+        "claims": [],
+        "mitre_associations": [],
+        "retrieval_context_id": "ctx-v2",
+        "evidence_sha256": "b" * 64,
+    }
+    trace = read_analysis_trace(payload)
+    assert isinstance(trace, AnalysisTrace)
+    assert trace.version == "analysis_trace_v2"
+    assert trace.retrieval_context_id == "ctx-v2"
+
+
+def test_serialize_analysis_trace_rejects_unsupported_draft() -> None:
     outcome = AssistantOutcome(
-        content="Legacy grounded overview",
+        content="Grounded overview",
         retrieval_context_id="ctx-v2",
         metadata_json={},
         thread_status="answered",
-        analysis_trace_draft=trace,
+        analysis_trace_draft={"version": "analysis_trace_v2"},
         evidence_sha256="b" * 64,
     )
-    serialized = _serialize_analysis_trace(outcome)
-    assert serialized is not None
-    assert serialized["version"] == "analysis_trace_v2"
-    assert serialized["retrieval_context_id"] == "ctx-v2"
+    with pytest.raises(TypeError, match="Unsupported analysis trace draft"):
+        _serialize_analysis_trace(outcome)
 
 
 def test_fresh_pipeline_uses_one_analysis_and_one_gap_result_for_both_surfaces() -> (

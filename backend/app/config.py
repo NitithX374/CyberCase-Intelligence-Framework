@@ -110,6 +110,10 @@ class CaseAnalysisConfig(BaseModel):
     chat_ask_max_output_tokens: int = 16_384
     chat_ask_max_input_chars: int = 400_000
     analysis_input_mode: Literal["raw_direct"] = "raw_direct"
+    case_analysis_pipeline: Literal["raw_direct", "claim_anchored"] = "raw_direct"
+    claim_anchored_input_tokens: int = Field(default=80_000, ge=1)
+    claim_anchored_output_tokens: int = Field(default=16_384, ge=16_384)
+    claim_anchored_selection_tokens: int = Field(default=24_000, ge=1)
 
 
 # ── 7. Persisted Report Generation ───────────────────────────────────────────

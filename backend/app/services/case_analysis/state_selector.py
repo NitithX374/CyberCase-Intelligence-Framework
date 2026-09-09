@@ -41,6 +41,27 @@ def validate_canonical_case_overview_trace(
         return None
 
 
+def is_case_overview_record(metadata: dict) -> bool:
+    trace = metadata.get("analysis_trace")
+    trace = trace if isinstance(trace, dict) else {}
+    action = metadata.get("chat_action")
+    action = action if isinstance(action, dict) else {}
+    if (
+        metadata.get("analysis_state_scope") == "response_scoped"
+        or metadata.get("canonical_case_state") is False
+        or trace.get("analysis_mode") == "question_answer"
+        or action.get("analysis_mode") == "question_answer"
+        or action.get("action") == "ask"
+    ):
+        return False
+    return (
+        metadata.get("analysis_state_scope") == "canonical_case_overview"
+        or metadata.get("analysis_kind") == "grounded_main_analysis"
+        or trace.get("analysis_mode") == "case_overview"
+        or trace.get("version") == "analysis_trace_v2"
+    )
+
+
 def select_latest_canonical_case_overview(
     messages: Sequence[ChatMessage],
     *,
@@ -52,14 +73,14 @@ def select_latest_canonical_case_overview(
         if message.role != "assistant":
             continue
         metadata = message.metadata_json
-        if not isinstance(metadata, dict):
+        if not isinstance(metadata, dict) or not is_case_overview_record(metadata):
             continue
         try:
             trace = read_analysis_trace(metadata.get("analysis_trace"))
         except ValidationError:
-            continue
+            return None
         if not isinstance(trace, AnalysisTraceV3):
-            continue
+            return None
         mitre_table = metadata.get("mitre_table", [])
         validated = validate_canonical_case_overview_trace(
             trace,
@@ -68,7 +89,7 @@ def select_latest_canonical_case_overview(
             mitre_table=mitre_table,
         )
         if validated is None:
-            continue
+            return None
         return CanonicalCaseAnalysisState(message=message, trace=validated)
     return None
 

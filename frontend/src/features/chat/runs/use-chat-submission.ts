@@ -7,6 +7,7 @@ import {
 } from "@/lib/api";
 import { hasCompletedAssistantOutput, type ActiveChatFollowUp } from "@/lib/chat-followup";
 import { isChatRequestCanceled } from "./chat-polling";
+import type { WorkspaceRouteView } from "@/components/common/types";
 import type { PendingChatSubmission } from "../workspace/chat-workspace-types";
 import type { ChatSelection, ChatSession } from "../workspace/use-chat-thread-selection";
 
@@ -16,7 +17,7 @@ interface UseChatSubmissionOptions {
   createThread: () => Promise<ChatThreadRead>;
   updateThread: (input: { threadId: string; title: string }) => Promise<ChatThreadRead>;
   router: { push(path: string): void };
-  chatPath: (threadId: string, view: "chat") => string;
+  chatPath: (threadId: string, view: WorkspaceRouteView) => string;
 }
 
 export function useChatSubmission({
@@ -58,7 +59,7 @@ export function useChatSubmission({
         if (!selection) {
           const created = await createThread();
           if (session.getSelection() !== initialSelection) return;
-          router.push(chatPath(created.id, "chat"));
+          router.push(chatPath(created.id, "overview"));
           await session.selectThread(created.id);
           selection = session.getSelection();
           if (selection?.threadId !== created.id) return;

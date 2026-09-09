@@ -10,7 +10,6 @@ from app.services.followup.gap_analysis import AnthropicGapAnalysis
 from app.services.followup.helpers import (
     _coerce_gap_analysis_result,
     _followup_failure_code,
-    _invoke_policy_method,
 )
 from app.services.followup.metadata import (
     empty_gap_analysis_trace,
@@ -42,7 +41,7 @@ async def run_gap_analysis_stage(
     *,
     original_user_content: str,
     clarification_exchanges: Sequence[ClarificationExchange],
-    policy: FollowUpPolicy | None,
+    policy: FollowUpPolicy | None = None,
     gap_analyzer: GapAnalyzer | None,
     raw_evidence: str | None,
     analysis_answer: str | None,
@@ -50,14 +49,6 @@ async def run_gap_analysis_stage(
     analysis_claims: Sequence[Mapping[str, object]] | None,
     source_run_id: UUID,
 ) -> GapStageResult:
-    if gap_analyzer is None and policy is not None:
-        empty = GapAnalysisResult(analysis=GapAnalysis(gaps=[]))
-        return GapStageResult(
-            policy_input=empty,
-            canonical_analysis=None,
-            metadata=empty_gap_analysis_trace(status="compatibility_skipped"),
-        )
-
     started = time.perf_counter()
     try:
         active_analyzer = (
@@ -65,16 +56,13 @@ async def run_gap_analysis_stage(
             if isinstance(gap_analyzer, type)
             else (gap_analyzer or AnthropicGapAnalysis())
         )
-        raw_result = await _invoke_policy_method(
-            active_analyzer.analyze,
-            {
-                "original_user_content": original_user_content,
-                "clarification_exchanges": clarification_exchanges,
-                "raw_evidence": raw_evidence,
-                "analysis_answer": analysis_answer,
-                "analysis_context": analysis_context,
-                "analysis_claims": analysis_claims,
-            },
+        raw_result = await active_analyzer.analyze(
+            original_user_content=original_user_content,
+            clarification_exchanges=clarification_exchanges,
+            raw_evidence=raw_evidence,
+            analysis_answer=analysis_answer,
+            analysis_context=analysis_context,
+            analysis_claims=analysis_claims,
         )
         result = _coerce_gap_analysis_result(
             raw_result,

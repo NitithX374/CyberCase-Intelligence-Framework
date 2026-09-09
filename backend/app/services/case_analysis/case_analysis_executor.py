@@ -10,19 +10,19 @@ from app.services.case_analysis.case_analysis_prompt_builder import (
     build_case_analysis_prompt,
 )
 from app.services.case_analysis.case_analysis_prompt_config import (
-    CaseAnalysisFailure,
     _ANALYSIS_TRACE_OUTPUT_PROMPT,
     _CASE_ANALYSIS_TRUST_PROMPT,
     _PERSONALIZED_RESPONSE_PROMPT,
     _TASK_PROMPTS,
+    CaseAnalysisFailure,
+)
+from app.services.case_analysis.case_analysis_response_parser import (
+    parse_case_analysis_response,
 )
 from app.services.case_analysis.contracts import (
     AnalysisMode,
     CaseAnalysisResult,
     ProviderCaseAnalysisV3,
-)
-from app.services.case_analysis.case_analysis_response_parser import (
-    parse_case_analysis_response,
 )
 from app.services.case_analysis.personalization import resolve_response_language
 from app.services.llm.core_llm import resolve_core_llm_target
@@ -53,6 +53,21 @@ class MainCaseAnalysisService:
             mode,
             question,
         )
+        from app.services.case_analysis.pipeline_config import read_pipeline
+
+        config = read_pipeline((analysis_context or {}).get("_analysis_pipeline"))
+        if validated_mode == "case_overview" and config.pipeline == "claim_anchored":
+            from app.services.case_analysis.claim_anchored.service import (
+                analyze_claim_anchored,
+            )
+
+            return await analyze_claim_anchored(
+                raw_evidence=raw_evidence,
+                analysis_context=analysis_context or {},
+                user_message=user_message,
+                config=config,
+                client=self._client,
+            )
         try:
             response_language = resolve_response_language(user_message)
         except ValueError as error:
@@ -116,9 +131,11 @@ class MainCaseAnalysisService:
 
         trusted_context = analysis_context or {}
         raw_source_ids = trusted_context.get("source_message_ids", [])
-        source_message_ids = {
-            value.strip() for value in raw_source_ids if isinstance(value, str)
-        } if isinstance(raw_source_ids, list) else set()
+        source_message_ids = (
+            {value.strip() for value in raw_source_ids if isinstance(value, str)}
+            if isinstance(raw_source_ids, list)
+            else set()
+        )
         return parse_case_analysis_response(
             response,
             source_message_ids=source_message_ids,

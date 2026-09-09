@@ -6,10 +6,6 @@ import type {
   EpistemicStatus,
 } from "@/lib/case-overview-contracts";
 import {
-  buildLegacyCaseOverview,
-  isLegacyCaseOverviewMessage,
-} from "@/lib/case-overview-legacy";
-import {
   buildV3CaseOverview,
   isV3CaseOverviewMessage,
 } from "@/lib/case-overview-v3";
@@ -80,6 +76,28 @@ export function caseOverviewMetadata(messages: PersistedChatMessage[], overview:
   };
 }
 
+function analysisRecord(message: PersistedChatMessage) {
+  const value = message.metadata_json.analysis_trace;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown> : {};
+}
+
+function isCandidateAnalysisMessage(message: PersistedChatMessage): boolean {
+  if (message.role !== "assistant") return false;
+  const metadata = message.metadata_json;
+  const trace = analysisRecord(message);
+  const value = metadata.chat_action;
+  const action = value && typeof value === "object"
+    ? value as Record<string, unknown> : {};
+  if (metadata.analysis_state_scope === "response_scoped" ||
+      metadata.canonical_case_state === false ||
+      trace.analysis_mode === "question_answer" ||
+      action.analysis_mode === "question_answer" || action.action === "ask") return false;
+  return metadata.analysis_state_scope === "canonical_case_overview" ||
+    metadata.analysis_kind === "grounded_main_analysis" ||
+    trace.analysis_mode === "case_overview" || trace.version === "analysis_trace_v2";
+}
+
 export function buildCaseOverview(
   messages: PersistedChatMessage[],
   threadStatus?: ThreadStatus | null,
@@ -87,25 +105,41 @@ export function buildCaseOverview(
   const isProcessing =
     threadStatus === "processing" || threadStatus === "awaiting_followup";
   const assistantMessages = messages.filter((message) => message.role === "assistant");
-  const v3Message = [...assistantMessages].reverse().find(isV3CaseOverviewMessage);
-  if (v3Message) return buildV3CaseOverview(v3Message, messages, isProcessing);
+  const latestAnalysis = [...assistantMessages].sort((a, b) => b.ordinal - a.ordinal).find(isCandidateAnalysisMessage);
 
-  const legacyMessage = [...assistantMessages]
-    .reverse()
-    .find(isLegacyCaseOverviewMessage);
-  if (legacyMessage) {
-    return buildLegacyCaseOverview(legacyMessage, messages, isProcessing);
+  if (!latestAnalysis) {
+    return {
+      hasAnalysis: false,
+      isProcessing,
+      incidentSummary: "",
+      findings: [],
+      gaps: [],
+      mitreContext: [],
+      technicalContextStatus: "hidden",
+      analysisMessageId: null,
+      contractVersion: null,
+    };
   }
 
+  if (isV3CaseOverviewMessage(latestAnalysis)) {
+    return buildV3CaseOverview(latestAnalysis, messages, isProcessing);
+  }
+
+  const version = analysisRecord(latestAnalysis).version;
+  const legacy = version === "analysis_trace_v2" ||
+    (version == null && !latestAnalysis.metadata_json.analysis_trace_failure);
+  const summary = legacy
+    ? "This case analysis was generated with an earlier schema version. Please re-run analysis from Intake."
+    : "The latest case analysis is unavailable or uses an unsupported format. Please re-run analysis from Intake.";
   return {
-    hasAnalysis: false,
+    hasAnalysis: true,
     isProcessing,
-    incidentSummary: "",
+    incidentSummary: summary,
     findings: [],
     gaps: [],
     mitreContext: [],
     technicalContextStatus: "hidden",
-    analysisMessageId: null,
-    contractVersion: null,
+    analysisMessageId: latestAnalysis.id,
+    contractVersion: legacy ? "legacy" : version === "analysis_trace_v3" ? "v3" : null,
   };
 }
