@@ -2,6 +2,8 @@
 
 ## Snapshot
 
+- 2026-09-10 [USER/CODE] Integrated user authentication (OAuth & password accounts), thread ownership protection, and SDLC architecture documentation. Aligned root and research documentation with canonical project direction: General Case Summarization and Grounded Analysis is confirmed as core; MITRE ATT&CK is isolated conditional technical augmentation; Main Analysis is claim-anchored and evidence-first.
+- 2026-09-10 [TOOL] Verification complete: Backend pytest 425 passed (0 failed, 11 skipped, 2 subtests passed), Frontend vitest 162 passed (39 files), ESLint 0 errors, Next.js production build succeeded. Commit authorized [skip ci].
 - 2026-09-09 [USER] Authorized commit and deployment of current code, keeping rag_service/** excluded.
 - 2026-09-09 [TOOL] Committed/pushed main 019fa29 (attribute-first, legacy cleanup and verified fixes). Commit uses [skip ci] to avoid the workflow rebuilding/pushing RAG.
 - 2026-09-09 [TOOL] Railway Cybercase production backend source upload from git archive was rejected: trial expired, select a plan. No successful deployment; frontend upload not retried after billing rejection. User billing action required.
@@ -96,6 +98,7 @@
 - D050 ACTIVE 2026-09-08 [USER] Implement attribute-first before NLI. Preserve raw_direct/v3 compatibility and provide the verifier boundary without claiming semantic verification.
 - D051 ACTIVE 2026-09-08 [CODE] Claim-anchored overview is opt-in through CASE_ANALYSIS_PIPELINE; strict unique literal spans, typed unit references, per-run configuration and attempt receipts; technical augmentation explicitly disabled in Phase 1.
 - D052 ACTIVE 2026-09-08 [CODE] Retired legacy follow-up compatibility and analysis trace v2 drafting/parsers; active contracts strictly enforce v3, while historical persisted v2 records remain read-only and explicitly require re-analysis in Overview without fallback or synthesized provenance.
+- D053 ACTIVE 2026-09-10 [USER] Canonical project identity: General Case Summarization and Grounded Analysis is confirmed as core; MITRE ATT&CK is an isolated conditional technical augmentation. Main Analysis follows claim-anchored decomposition, deterministic provenance binding, explicit selection, and grounded generation. See docs/research/CURRENT_PROJECT_DIRECTION.md and OCR_SUMMARIZATION_EXPERIMENT.md.
 
 ## State (Done/Now/Next)
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 
-from app.config import settings
 from app.services.case_analysis.case_analysis_prompt_config import (
     CaseAnalysisFailure,
     _TASK_PROMPTS,

@@ -10,7 +10,6 @@ from app.services.followup.schemas import (
     FollowUpDecision,
     GapAnalysis,
     GapAnalysisResult,
-    GapItem,
 )
 from app.services.followup.gap_stage import run_gap_analysis_stage
 

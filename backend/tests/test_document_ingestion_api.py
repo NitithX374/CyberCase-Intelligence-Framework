@@ -1,3 +1,4 @@
+import pytest
 from io import BytesIO
 
 from docx import Document
@@ -104,3 +105,10 @@ def test_default_image_preview_does_not_require_google_configuration(
     assert payload["mode"] == "unified"
     assert payload["full_text"] == "recognized text"
     assert not any("GOOGLE_DOCUMENT_AI" in warning for warning in payload["warnings"])
+
+
+@pytest.fixture(autouse=True)
+def authenticated_ingestion_request(monkeypatch):
+    from app.services.auth.dependencies import get_current_user
+    application = main_module.app.app
+    monkeypatch.setitem(application.dependency_overrides, get_current_user, lambda: object())

@@ -4,11 +4,9 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from app.config import settings
 from app.services.followup.schemas import ClarificationExchange, GapAnalysis
 from app.services.llm.token_budget import (
     estimate_json_tokens,
-    estimate_tokens,
     get_safe_input_token_budget,
     log_context_budget_diagnostics,
 )

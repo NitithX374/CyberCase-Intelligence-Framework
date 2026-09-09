@@ -1,5 +1,6 @@
 "use client";
 
+import { useAccountState } from "@/hooks/use-account-state";
 import { useMemo, useState, type FormEvent } from "react";
 import type { CaseIntakeSubmission, PersistedChatMessage, ThreadStatus } from "@/lib/api";
 import { bindCaseNarrativeDocumentSource, type CaseNarrativeDraft } from "@/lib/case-narrative-document";
@@ -37,10 +38,10 @@ function CaseIntakeContent({
   caseKey, threadId, threadStatus, isSubmitting, error, onSubmitCase, messages = [],
   onOpenOverview, onOpenChat, onOpenMaterials,
 }: CaseIntakeViewProps & { caseKey: string }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [documentDraft, setDocumentDraft] = useState<CaseNarrativeDraft | null>(null);
-  const [includeSource, setIncludeSource] = useState(true);
+  const [title, setTitle] = useAccountState(`intake:${caseKey}:title`, "");
+  const [description, setDescription] = useAccountState(`intake:${caseKey}:description`, "");
+  const [documentDraft, setDocumentDraft] = useAccountState<CaseNarrativeDraft | null>(`intake:${caseKey}:source`, null);
+  const [includeSource, setIncludeSource] = useAccountState(`intake:${caseKey}:include-source`, true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const ingestion = useDocumentIngestion(caseKey);
   const evidence = messages.filter(isCaseEvidenceMessage);

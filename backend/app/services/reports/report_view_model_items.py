@@ -28,7 +28,6 @@ def _extract_timeline_from_text(
     if not text.strip():
         return rows
 
-    # 1. Try finding Section 2 (Key Sequence / Progression) in markdown
     sec2_match = re.search(
         r"###\s*2\.\s*[^\n]+\n(.*?)(?=\n###\s*\d|\Z)",
         text,
@@ -46,7 +45,6 @@ def _extract_timeline_from_text(
             if clean and len(clean) > 5 and not clean.startswith("#"):
                 lines_to_parse.append(clean)
 
-    # 2. Fallback: Check for numbered list in general text
     if not lines_to_parse:
         for line in text.split("\n"):
             m = re.match(r"^\s*(\d+)\.\s+(.+)$", line)
@@ -62,7 +60,6 @@ def _extract_timeline_from_text(
     )
 
     for idx, item in enumerate(lines_to_parse):
-        # Remove bold markers from event text
         clean_event = re.sub(r"\*\*(.*?)\*\*", r"\1", item).strip()
         rows.append(
             TimelineViewRow(
@@ -87,7 +84,6 @@ def parse_report_items(
     indicator_rows: list[IndicatorViewRow] = []
     seen: set[str] = set()
 
-    # Parse Evidence Items from indicators_found section
     for section_id in ("indicators_found",):
         section = sections_by_id.get(section_id)
         if section is None:
@@ -138,7 +134,6 @@ def parse_report_items(
                 )
             )
 
-    # Parse Timeline Rows from case_summary paragraphs or raw markdown
     timeline_rows: list[TimelineViewRow] = []
     case_summary = sections_by_id.get("case_summary")
     if case_summary:

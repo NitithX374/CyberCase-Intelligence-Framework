@@ -11,7 +11,23 @@ import type { IngestedDocumentPreview } from "@/lib/document-ingestion";
 
 describe("CaseIntakeView component", () => {
   beforeEach(() => {
+    localStorage.clear();
     resetDocumentIngestionState();
+  });
+
+  it("restores an account's intake draft after remounting", () => {
+    localStorage.setItem("cybercase:account", "analyst-a");
+    const first = render(<CaseIntakeView isSubmitting={false} onSubmitCase={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Case title/i), { target: { value: "Saved title" } });
+    fireEvent.change(screen.getByLabelText(/Case narrative/i), { target: { value: "Saved narrative" } });
+    first.unmount();
+    const restored = render(<CaseIntakeView isSubmitting={false} onSubmitCase={vi.fn()} />);
+    expect(screen.getByLabelText(/Case title/i)).toHaveValue("Saved title");
+    expect(screen.getByLabelText(/Case narrative/i)).toHaveValue("Saved narrative");
+    restored.unmount();
+    localStorage.setItem("cybercase:account", "analyst-b");
+    render(<CaseIntakeView isSubmitting={false} onSubmitCase={vi.fn()} />);
+    expect(screen.getByLabelText(/Case narrative/i)).toHaveValue("");
   });
 
   it("renders the new case intake screen with required description and document preview", () => {

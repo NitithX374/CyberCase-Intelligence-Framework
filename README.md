@@ -1,29 +1,32 @@
 # CyberCase Intelligence Framework
 
-CyberCase is a persisted-chat application for cybersecurity incident analysis. The accumulated raw user-authored incident messages are the authoritative case evidence. The backend combines that evidence with external MITRE ATT&CK retrieval, produces a source-traceable analysis, optionally asks a bounded clarification question, and stores a chat-scoped report.
+CyberCase is an evidence-first full-stack system for **General Case Summarization and Grounded Analysis**. The admitted user narratives and reviewed case document transcripts serve as authoritative case evidence. The backend decomposes case evidence into atomic claims with exact literal span provenance, applies deterministic selection, generates factually grounded case findings, optionally requests bounded clarifications, and conditionally augments findings with external MITRE ATT&CK intelligence.
 
-## Trust boundary
+> For complete research questions, design principles, and confirmed architecture, see [`docs/research/CURRENT_PROJECT_DIRECTION.md`](docs/research/CURRENT_PROJECT_DIRECTION.md).
 
-- Included evidence: the initial incident message, clarification answers, and messages explicitly submitted as added case information.
-- Excluded evidence: ordinary `ask` messages, assistant text, RAG output, MITRE descriptions, and model knowledge.
-- External knowledge can support analysis and candidate MITRE mappings, but it never becomes an incident fact.
-- Reported claims carry `source_message_ids`; the persisted analysis trace also binds the exact raw-evidence SHA-256 and retrieval context.
+## Trust boundary & Source-Role Isolation
 
-There is no canonical Case State, extraction layer, entity graph, relationship graph, state version, or delta workflow in the product runtime.
+- **Included Evidence**: Initial case narratives, user clarification answers, and reviewed document transcripts. Only admitted case evidence can support case facts, timelines, and findings.
+- **Excluded Evidence**: Assistant text, RAG output, MITRE ATT&CK descriptions, and general model knowledge.
+- **External Knowledge Isolation**: External knowledge provides technical threat actor context; it **never** becomes an admitted case fact.
+- **Provenance Invariant**: Every reported claim binds exact character spans in the admitted raw evidence snapshot (`source_message_ids` + SHA-256 hash).
 
 ## Runtime flow
 
 ```text
-user message -> ChatRun -> raw evidence projection
-                         -> rag_service /query for initial, clarification, and add-info runs
-                         -> Main Case Analysis
-                         -> bounded follow-up decision
-                         -> assistant message + run-bound RagContext
-
-ordinary ask -> reuse latest durable RagContext -> question-answer analysis
+CASE MATERIAL (User Narrative / Reviewed Document)
+      ↓
+Claim-Anchored Case Analysis
+  [ Extraction → Provenance Binding → Selection → Constrained Generation ]
+      ↓
+Grounded Case Findings (AnalysisTraceV3)
+      ↓ (conditional on cyber threat indicators)
+Optional Technical Augmentation (rag_service STIX 2.1)
+      ↓
+Persisted Assistant Message + Chat-Scoped Report
 ```
 
-The deterministic report workflow reads raw source messages, the latest grounded analysis, its persisted retrieval context, and admitted MITRE rows. Report generation does not call RAG again.
+Ordinary `ask` runs reuse the latest durable case analysis context for focused question-answering. Report generation is deterministic and template-first; it reads persisted case findings and optional technical appendices without re-querying RAG.
 
 ## Components
 

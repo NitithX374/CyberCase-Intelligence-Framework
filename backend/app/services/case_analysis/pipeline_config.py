@@ -11,8 +11,8 @@ class AnalysisPipelineConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     pipeline: Literal["raw_direct", "claim_anchored"] = "raw_direct"
-    version: Literal["main_case_analysis_v10", "claim_anchored_v1"] = (
-        "main_case_analysis_v10"
+    version: Literal["main_case_analysis_v1", "claim_anchored_v1"] = (
+        "main_case_analysis_v1"
     )
     extraction_version: Literal["claim_extraction_v1"] = "claim_extraction_v1"
     generation_version: Literal["claim_generation_v1"] = "claim_generation_v1"
@@ -35,7 +35,7 @@ class AnalysisPipelineConfig(BaseModel):
             value["version"] = (
                 "claim_anchored_v1"
                 if value.get("pipeline") == "claim_anchored"
-                else "main_case_analysis_v10"
+                else "main_case_analysis_v1"
             )
         return value
 
@@ -44,7 +44,7 @@ class AnalysisPipelineConfig(BaseModel):
         expected = (
             "claim_anchored_v1"
             if self.pipeline == "claim_anchored"
-            else "main_case_analysis_v10"
+            else "main_case_analysis_v1"
         )
         if self.version != expected:
             raise ValueError("Pipeline version does not match selected method")
@@ -94,4 +94,10 @@ def configured_pipeline(
 def read_pipeline(value: object) -> AnalysisPipelineConfig:
     if value is None:
         return AnalysisPipelineConfig()
+    if (
+        isinstance(value, dict)
+        and value.get("pipeline") == "raw_direct"
+        and value.get("version") == "main_case_analysis_v10"
+    ):
+        value = {**value, "version": "main_case_analysis_v1"}
     return AnalysisPipelineConfig.model_validate(value)

@@ -39,9 +39,9 @@ CLAIM_ANCHORED_SELECTION_TOKENS=24000
 
 Docker Compose forwards these variables to the backend. Rebuild the backend image after installing the now-required existing tokenizer dependency in backend/requirements.txt. For local execution, install those requirements and restart the backend with the selected environment. No live deployment or persistent environment setting was changed by this implementation.
 
-A new overview run pins its effective v11 model/provider, stage/pipeline versions, limits and timeout. Clarification inherits its root run's selection; idempotent retries reuse the original run payload. Changing the environment affects new independent runs, not a queued v11 run or its clarification chain. Historical records without configuration explicitly mean legacy raw_direct. Legacy v10 model routing remains unchanged, rather than being retroactively version-pinned.
+A new overview run pins its effective claim_anchored_v1 model/provider, stage/pipeline versions, limits and timeout. Clarification inherits its root run's selection; idempotent retries reuse the original run payload. Changing the environment affects new independent runs, not a queued claim_anchored_v1 run or its clarification chain. Historical records without configuration explicitly mean legacy raw_direct. Raw_direct v1 model routing remains unchanged, rather than being retroactively version-pinned.
 
-Raw_direct remains available for the baseline; changing the setting back does not rewrite an already pinned run. ASK stays on v10 and cannot replace canonical overview state.
+Raw_direct remains available for the baseline; changing the setting back does not rewrite an already pinned run. ASK stays on raw_direct v1 and cannot replace canonical overview state.
 
 ## Implementation boundaries
 
@@ -74,3 +74,7 @@ Run the live synthetic smoke from backend with configured provider credentials:
 ## Remaining limits
 
 Extraction and generation remain learned semantic decisions. A correct literal quote can still accompany a misinterpreted claim; NLI qualification and independent Thai annotation remain subsequent work. Selecting claims can omit important facts, and automatic atomicity is not guaranteed. Output is an overview of admitted units, without synthesizing a report timeline from claim order. Multi-document equivalence/clustering, calibrated ranking, technical augmentation and a user-facing sentence-receipt viewer remain deferred.
+
+## Version naming reset (2026-09-09)
+
+The current raw_direct prompt and pipeline use `main_case_analysis_v1`; claim-anchored uses `claim_anchored_v1`. Historical v11 terminology refers to claim-anchored, not another active runtime version. Persisted raw_direct configurations labeled `main_case_analysis_v10` are explicitly read as the same implementation under the new v1 name without rewriting saved payloads or historical prompt receipts. Unknown versions still fail validation. The independent `analysis_trace_v3` data schema is unchanged. Dated audits and experiment receipts preserve their original labels.

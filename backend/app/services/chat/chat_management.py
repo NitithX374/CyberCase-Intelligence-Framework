@@ -12,11 +12,26 @@ class ChatService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    def _verify_thread_access(
+        self,
+        thread: ChatThread,
+        user_id: UUID | None,
+    ) -> None:
+        if thread.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat thread not found",
+            )
+
     async def create_thread(
         self,
         request: ChatThreadCreate,
+        user_id: UUID | None = None,
     ) -> ChatThread:
-        thread = ChatThread(title=request.title)
+        thread = ChatThread(
+            title=request.title,
+            user_id=user_id,
+        )
 
         self.db.add(thread)
         await self.db.commit()
@@ -28,6 +43,7 @@ class ChatService:
         self,
         thread_id: UUID,
         request: ChatThreadUpdate,
+        user_id: UUID | None = None,
     ) -> ChatThread:
         thread = await self.db.get(ChatThread, thread_id)
         if thread is None:
@@ -35,6 +51,7 @@ class ChatService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
             )
+        self._verify_thread_access(thread, user_id)
 
         thread.title = request.title
 
@@ -42,7 +59,11 @@ class ChatService:
         await self.db.refresh(thread)
         return thread
 
-    async def delete_thread(self, thread_id: UUID) -> None:
+    async def delete_thread(
+        self,
+        thread_id: UUID,
+        user_id: UUID | None = None,
+    ) -> None:
         statement = (
             select(ChatThread).where(ChatThread.id == thread_id).with_for_update()
         )
@@ -54,12 +75,27 @@ class ChatService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
             )
+        self._verify_thread_access(thread, user_id)
 
         await self.db.delete(thread)
         await self.db.commit()
 
-    async def list_threads(self) -> list[ChatThread]:
-        statement = select(ChatThread).order_by(ChatThread.updated_at.desc())
+    async def list_threads(
+        self,
+        user_id: UUID | None = None,
+    ) -> list[ChatThread]:
+        if user_id is not None:
+            statement = (
+                select(ChatThread)
+                .where(ChatThread.user_id == user_id)
+                .order_by(ChatThread.updated_at.desc())
+            )
+        else:
+            statement = (
+                select(ChatThread)
+                .where(ChatThread.user_id.is_(None))
+                .order_by(ChatThread.updated_at.desc())
+            )
 
         result = await self.db.execute(statement)
 
@@ -68,6 +104,7 @@ class ChatService:
     async def get_thread(
         self,
         thread_id: UUID,
+        user_id: UUID | None = None,
     ) -> ChatThread:
         statement = (
             select(ChatThread)
@@ -83,6 +120,7 @@ class ChatService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
             )
+        self._verify_thread_access(thread, user_id)
 
         thread.retry_request = await read_retry_request(self.db, thread)
         return thread

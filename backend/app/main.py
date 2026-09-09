@@ -2,18 +2,20 @@
 
 import asyncio
 from contextlib import asynccontextmanager, suppress
+
+from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from app.config import settings
-from app.database import engine, async_session
+from app.database import async_session, engine
+from app.routers import auth, chat, document_ingestion, health, password_auth
+from app.services.auth.dependencies import get_current_user
+from app.services.auth.request_guard import guard_browser_request
 from app.services.workflow.run_recovery import (
     monitor_interrupted_runs,
     recover_expired_runs,
 )
-from app.routers import chat, document_ingestion, health
 
 
 @asynccontextmanager
@@ -41,9 +43,12 @@ app = FastAPI(
 )
 
 # ── Routers ──────────────────────────────────────────────────────────────────
+app.middleware("http")(guard_browser_request)
 app.include_router(health.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(password_auth.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
-app.include_router(document_ingestion.router, prefix="/api/v1")
+app.include_router(document_ingestion.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
 # Wrap the full ASGI app so even unhandled 500 responses carry CORS headers.
 app = CORSMiddleware(

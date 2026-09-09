@@ -1,0 +1,155 @@
+<mxfile host="Electron" agent="Antigravity" version="26.0.0">
+  <diagram id="activity-diagram" name="CyberCase Activity Diagram">
+    <mxGraphModel adaptiveColors="auto">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <mxCell id="lane_analyst" value="Security Analyst" style="swimlane;startSize=28;fontStyle=1;horizontal=1;fillColor=#f8f9fa;strokeColor=#495057;html=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="40" width="240" height="780" as="geometry" />
+    </mxCell>
+    <mxCell id="start_node" value="" style="ellipse;fillColor=#212529;strokeColor=none;html=1;" vertex="1" parent="lane_analyst">
+      <mxGeometry x="105" y="45" width="30" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="act_submit" value="Submit Incident Details&#xa;&amp; IOC Logs" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_analyst">
+      <mxGeometry x="40" y="110" width="160" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_provide_info" value="Provide Missing&#xa;Incident Indicators" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_analyst">
+      <mxGeometry x="40" y="270" width="160" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_review" value="Review Grounded&#xa;ATT&amp;CK Analysis" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_analyst">
+      <mxGeometry x="40" y="660" width="160" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="end_node" value="" style="ellipse;shape=endState;fillColor=#212529;strokeColor=#212529;html=1;" vertex="1" parent="lane_analyst">
+      <mxGeometry x="105" y="735" width="30" height="30" as="geometry" />
+    </mxCell>
+
+    <mxCell id="lane_backend" value="FastAPI Backend Orchestrator" style="swimlane;startSize=28;fontStyle=1;horizontal=1;fillColor=#f8f9fa;strokeColor=#495057;html=1;" vertex="1" parent="1">
+      <mxGeometry x="280" y="40" width="280" height="780" as="geometry" />
+    </mxCell>
+    <mxCell id="act_persist_msg" value="Persist User Message&#xa;in PostgreSQL" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_backend">
+      <mxGeometry x="60" y="110" width="160" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_lease_run" value="Acquire Run Lease &amp;&#xa;Evaluate Gaps" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_backend">
+      <mxGeometry x="60" y="185" width="160" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="dec_gaps" value="" style="rhombus;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_backend">
+      <mxGeometry x="120" y="270" width="40" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="act_ask_clarify" value="Generate Clarification&#xa;Question &amp; Persist" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_backend">
+      <mxGeometry x="60" y="345" width="160" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_dispatch_rag" value="Dispatch Query Payload&#xa;via HTTP (POST /query)" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_backend">
+      <mxGeometry x="60" y="420" width="160" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_save_result" value="Persist RAG Context &amp;&#xa;Stream Assistant Turn" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_backend">
+      <mxGeometry x="60" y="660" width="160" height="50" as="geometry" />
+    </mxCell>
+
+    <mxCell id="lane_rag" value="Agentic GraphRAG Service (LangGraph)" style="swimlane;startSize=28;fontStyle=1;horizontal=1;fillColor=#f8f9fa;strokeColor=#495057;html=1;" vertex="1" parent="1">
+      <mxGeometry x="560" y="40" width="360" height="780" as="geometry" />
+    </mxCell>
+    <mxCell id="act_expand_query" value="Translate &amp; Expand Query&#xa;(Thai ↔ English)" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="100" y="110" width="170" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="fork_retrieval" value="" style="rounded=1;fillColor=#212529;strokeColor=none;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="70" y="185" width="230" height="6" as="geometry" />
+    </mxCell>
+    <mxCell id="act_dense_search" value="Dense Vector Search&#xa;(Qdrant BGE-M3)" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="30" y="215" width="140" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_graph_search" value="2-Hop Graph Traversal&#xa;(Neo4j STIX 2.1)" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="190" y="215" width="140" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="join_retrieval" value="" style="rounded=1;fillColor=#212529;strokeColor=none;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="70" y="295" width="230" height="6" as="geometry" />
+    </mxCell>
+    <mxCell id="act_fusion" value="RRF Fusion &amp; Cross-Encoder&#xa;Reranking" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="100" y="325" width="170" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_build_ctx" value="Build Context Bundle" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="100" y="400" width="170" height="45" as="geometry" />
+    </mxCell>
+    <mxCell id="dec_sufficient" value="" style="rhombus;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="165" y="470" width="40" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="act_rewrite" value="Rewrite Query &amp;&#xa;Broaden Graph Depth" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;dashed=1;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="185" y="535" width="150" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="act_llm_reason" value="Reasoning LLM (GPT-5.6)&#xa;Map MITRE ATT&amp;CK &amp; Ground Evidence" style="rounded=1;arcSize=30;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#212529;html=1;" vertex="1" parent="lane_rag">
+      <mxGeometry x="80" y="600" width="210" height="50" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e1" edge="1" parent="1" source="start_node" target="act_submit" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e2" edge="1" parent="1" source="act_submit" target="act_persist_msg" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e3" edge="1" parent="1" source="act_persist_msg" target="act_lease_run" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e4" edge="1" parent="1" source="act_lease_run" target="dec_gaps" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e5" value="[Missing Critical Info]" edge="1" parent="1" source="dec_gaps" target="act_ask_clarify" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e6" edge="1" parent="1" source="act_ask_clarify" target="act_provide_info" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e7" edge="1" parent="1" source="act_provide_info" target="act_persist_msg" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e8" value="[Context Sufficient]" edge="1" parent="1" source="dec_gaps" target="act_dispatch_rag" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e9" edge="1" parent="1" source="act_dispatch_rag" target="act_expand_query" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e10" edge="1" parent="1" source="act_expand_query" target="fork_retrieval" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e11" edge="1" parent="1" source="fork_retrieval" target="act_dense_search" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e12" edge="1" parent="1" source="fork_retrieval" target="act_graph_search" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e13" edge="1" parent="1" source="act_dense_search" target="join_retrieval" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e14" edge="1" parent="1" source="act_graph_search" target="join_retrieval" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e15" edge="1" parent="1" source="join_retrieval" target="act_fusion" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e16" edge="1" parent="1" source="act_fusion" target="act_build_ctx" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e17" edge="1" parent="1" source="act_build_ctx" target="dec_sufficient" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e18" value="[Insufficient &amp; retries &lt; 3]" edge="1" parent="1" source="dec_sufficient" target="act_rewrite" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e19" edge="1" parent="1" source="act_rewrite" target="fork_retrieval" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;dashed=1;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e20" value="[Sufficient]" edge="1" parent="1" source="dec_sufficient" target="act_llm_reason" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e21" edge="1" parent="1" source="act_llm_reason" target="act_save_result" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e22" edge="1" parent="1" source="act_save_result" target="act_review" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e23" edge="1" parent="1" source="act_review" target="end_node" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#212529;">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+  </root>
+</mxGraphModel>
+  </diagram>
+</mxfile>

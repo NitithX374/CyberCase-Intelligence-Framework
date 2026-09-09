@@ -24,6 +24,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.models.user import User
 
 if TYPE_CHECKING:
     from app.models.rag_context import RagContext
@@ -43,12 +44,18 @@ class ChatThread(Base):
             name="ck_chat_threads_next_message_ordinal_positive",
         ),
         Index("ix_chat_threads_updated_at", "updated_at"),
+        Index("ix_chat_threads_user_id", "user_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", name="fk_chat_threads_user_id", ondelete="CASCADE"),
+        nullable=True,
     )
     title: Mapped[str] = mapped_column(
         String(255),
@@ -95,6 +102,10 @@ class ChatThread(Base):
         back_populates="thread",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    user: Mapped[User | None] = relationship(
+        "User",
+        back_populates="threads",
     )
 
 
