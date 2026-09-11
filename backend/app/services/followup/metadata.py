@@ -8,11 +8,13 @@ from app.config import settings
 from app.services.followup.prompts import (
     FOLLOWUP_POLICY_VERSION,
     FOLLOWUP_PROMPT_VERSION,
-    GAP_ANALYSIS_PROMPT_VERSION,
-    GAP_ANALYSIS_VERSION,
 )
+from app.services.case_analysis.contracts import CaseAnalysisGap
 from app.services.followup.contracts import GapAnalysisResult
 from app.services.llm.coreLlm import resolve_core_llm_target
+
+GAP_ANALYSIS_VERSION = "gap_analysis_v1"
+GAP_ANALYSIS_PROMPT_VERSION = "gap_analysis_prompt_v7"
 
 
 def empty_gap_analysis_trace(
@@ -46,6 +48,21 @@ def gap_analysis_trace(result: GapAnalysisResult) -> dict[str, Any]:
         "output_tokens": result.output_tokens,
         "provider": result.provider,
         "model": result.model,
+        "failure_code": None,
+    }
+
+
+def main_analysis_gap_trace(gaps: list[CaseAnalysisGap]) -> dict[str, Any]:
+    return {
+        "status": "completed",
+        "version": "main_analysis_gaps_v1",
+        "prompt_version": None,
+        "gaps": [gap.model_dump(mode="json") for gap in gaps],
+        "latency_ms": None,
+        "input_tokens": None,
+        "output_tokens": None,
+        "provider": None,
+        "model": None,
         "failure_code": None,
     }
 

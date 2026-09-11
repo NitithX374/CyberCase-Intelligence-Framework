@@ -3,13 +3,16 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from app.config import settings
-from app.services.case_analysis.contracts import AnalysisGapV3, AnalysisTraceV3
-from app.services.followup.contracts import FollowUpResolution
-from app.services.followup.gapAnalysis import GapStageResult, run_gap_analysis_stage
+from app.services.case_analysis.contracts import (
+    AnalysisGapV3,
+    AnalysisTraceV3,
+    CaseAnalysisTrace,
+)
+from app.services.followup.contracts import FollowUpResolution, GapAnalysisResult
 from app.services.followup.policy import AnthropicFollowUpPolicy
 from app.services.followup.contracts import (
     ClarificationExchange,
@@ -23,8 +26,13 @@ from app.services.followup.helpers import (
     _gap_reason_code as gap_reason_code,
     _normalized_question as normalized_question,
 )
-from app.services.followup.metadata import empty_gap_analysis_trace, followup_metadata
+from app.services.followup.metadata import (
+    empty_gap_analysis_trace,
+    followup_metadata,
+    main_analysis_gap_trace,
+)
 from app.services.followup.stateful import (
+    apply_clarification_history,
     followup_context,
     normalize_gap_key,
     policy_gap,
@@ -33,6 +41,9 @@ from app.services.followup.stateful import (
 )
 
 logger = logging.getLogger("app.chat")
+
+if TYPE_CHECKING:
+    from app.services.followup.gapAnalysis import GapStageResult
 
 
 async def evaluate_followup_outcome(
@@ -47,7 +58,7 @@ async def evaluate_followup_outcome(
     analysis_answer: str | None = None,
     analysis_context: Mapping[str, object] | None = None,
     analysis_claims: Sequence[Mapping[str, object]] | None = None,
-    canonical_trace: AnalysisTraceV3 | None = None,
+    canonical_trace: AnalysisTraceV3 | CaseAnalysisTrace | None = None,
     precomputed_gap_stage: GapStageResult | None = None,
     evidence_sha256: str | None = None,
     canonical_state_required: bool = False,
@@ -127,7 +138,16 @@ async def evaluate_followup_outcome(
             reason_code="canonical_state_unavailable",
             stop_reason="canonical_state_unavailable",
         )
-    if gap_stage is None:
+    if gap_stage is None and isinstance(canonical_trace, CaseAnalysisTrace):
+        canonical_gap_analysis = apply_clarification_history(
+            GapAnalysis(gaps=[policy_gap(gap) for gap in canonical_trace.gaps]),
+            clarification_exchanges,
+        )
+        gap_result = GapAnalysisResult(analysis=canonical_gap_analysis)
+        gap_trace = main_analysis_gap_trace(canonical_trace.gaps)
+    elif gap_stage is None:
+        from app.services.followup.gapAnalysis import run_gap_analysis_stage
+
         gap_stage = await run_gap_analysis_stage(
             original_user_content=original_user_content,
             clarification_exchanges=clarification_exchanges,
@@ -139,16 +159,27 @@ async def evaluate_followup_outcome(
             analysis_claims=analysis_claims,
             source_run_id=source_run_id,
         )
-    gap_result = gap_stage.policy_input
-    gap_trace = gap_stage.metadata
-    canonical_gap_analysis = gap_stage.canonical_analysis
-    if gap_stage.failure_code is not None:
-        return proceed_resolution(
-            reason_code="gap_analysis_failed_open",
-            stop_reason="gap_analysis_failed_open",
-            latency_ms=gap_stage.latency_ms,
-            failure_code=gap_stage.failure_code,
-        )
+        gap_result = gap_stage.policy_input
+        gap_trace = gap_stage.metadata
+        canonical_gap_analysis = gap_stage.canonical_analysis
+        if gap_stage.failure_code is not None:
+            return proceed_resolution(
+                reason_code="gap_analysis_failed_open",
+                stop_reason="gap_analysis_failed_open",
+                latency_ms=gap_stage.latency_ms,
+                failure_code=gap_stage.failure_code,
+            )
+    else:
+        gap_result = gap_stage.policy_input
+        gap_trace = gap_stage.metadata
+        canonical_gap_analysis = gap_stage.canonical_analysis
+        if gap_stage.failure_code is not None:
+            return proceed_resolution(
+                reason_code="gap_analysis_failed_open",
+                stop_reason="gap_analysis_failed_open",
+                latency_ms=gap_stage.latency_ms,
+                failure_code=gap_stage.failure_code,
+            )
     if not settings.chat_followup_policy_enabled:
         return proceed_resolution(
             reason_code="followup_policy_disabled",
@@ -268,7 +299,7 @@ async def evaluate_followup_outcome(
         question=decision.question,
         reason_code=gap_reason_code(candidate),
         stop_reason="ask_followup",
-        decision_source="provider_policy",
+        decision_source="provider_question_realizer",
         policy_decision=decision.decision,
         latency_ms=result.latency_ms,
         input_tokens=result.input_tokens,

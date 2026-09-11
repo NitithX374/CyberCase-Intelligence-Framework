@@ -188,6 +188,32 @@ def test_case_provider_analysis_normalizes_model_claim_ids_from_json():
     assert parsed.mitre_associations[0].claim_ids == ["A-01", "A-09"]
 
 
+def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
+    parsed = CaseProviderAnalysis.model_validate(
+        {
+            "version": "case_analysis_trace_v1",
+            "answer": "The incident time remains unresolved.",
+            "summary": "A loss was reported, but its timing is not established.",
+            "claims": [],
+            "gaps": [
+                {
+                    "gap_id": "gap1",
+                    "topic": "Incident time",
+                    "status": "NOT_PROVIDED",
+                    "description": "The supplied material does not state when the incident occurred.",
+                    "affected_claim_ids": [],
+                    "reason": "Timing affects the case chronology.",
+                    "priority": "high",
+                    "askable": True,
+                }
+            ],
+            "mitre_associations": [],
+        }
+    )
+    assert parsed.gaps[0].gap_id == "G-01"
+    assert parsed.gaps[0].topic == "Incident time"
+
+
 def test_case_generated_unit_and_gap_identifier_normalization():
     unit = CaseGeneratedUnit(
         text="A single generated summary unit.",

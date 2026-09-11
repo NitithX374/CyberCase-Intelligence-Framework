@@ -1,6 +1,6 @@
 import json
 
-from app.services.case_analysis.prompts import (
+from app.services.case_analysis.legacyPrompts import (
     build_case_analysis_prompt,
     build_overflow_case_context,
 )

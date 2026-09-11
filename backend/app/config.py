@@ -88,12 +88,11 @@ class LLMTokenBudgetConfig(BaseModel):
     chat_safety_margin_tokens: int = 12_000
 
 
-# ── 5. Follow-up Policy & Gap Analysis ───────────────────────────────────────
+# ── 5. Follow-up Question Realization ────────────────────────────────────────
 class FollowupPolicyConfig(BaseModel):
     chat_followup_policy_enabled: bool = True
     chat_followup_policy_model: str = "openai/gpt-5.6-luna"
     chat_followup_policy_timeout_seconds: float = 45.0
-    chat_gap_analysis_max_output_tokens: int = 4_096
     chat_followup_policy_max_output_tokens: int = 2_048
     chat_followup_policy_max_user_chars: int = 400_000
     chat_followup_question_max_chars: int = 4_000
@@ -112,10 +111,6 @@ class CaseAnalysisConfig(BaseModel):
     chat_ask_max_output_tokens: int = 16_384
     chat_ask_max_input_chars: int = 400_000
     analysis_input_mode: Literal["raw_direct"] = "raw_direct"
-    case_analysis_pipeline: Literal["raw_direct", "claim_anchored"] = "raw_direct"
-    claim_anchored_input_tokens: int = Field(default=80_000, ge=1)
-    claim_anchored_output_tokens: int = Field(default=16_384, ge=16_384)
-    claim_anchored_selection_tokens: int = Field(default=24_000, ge=1)
 
 
 # ── 7. Persisted Report Generation ───────────────────────────────────────────

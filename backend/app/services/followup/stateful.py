@@ -7,6 +7,8 @@ from collections.abc import Mapping, Sequence
 from app.services.case_analysis.contracts import (
     AnalysisGapV3,
     AnalysisTraceV3,
+    CaseAnalysisGap,
+    CaseAnalysisTrace,
 )
 from app.services.followup.contracts import answer_indicates_unavailable
 from app.services.followup.contracts import ClarificationExchange, GapAnalysis, GapItem
@@ -109,7 +111,7 @@ def unavailable_gap_keys(
 
 
 def select_next_gap(
-    gaps: Sequence[AnalysisGapV3 | GapItem],
+    gaps: Sequence[AnalysisGapV3 | CaseAnalysisGap | GapItem],
     exchanges: Sequence[ClarificationExchange],
 ) -> AnalysisGapV3 | GapItem | None:
     exhausted = exhausted_gap_keys(exchanges)
@@ -133,7 +135,7 @@ def select_next_gap(
     )[1]
 
 
-def policy_gap(gap: AnalysisGapV3 | GapItem) -> GapItem:
+def policy_gap(gap: AnalysisGapV3 | CaseAnalysisGap | GapItem) -> GapItem:
     if isinstance(gap, GapItem):
         return gap
     return GapItem(
@@ -148,8 +150,8 @@ def policy_gap(gap: AnalysisGapV3 | GapItem) -> GapItem:
 
 
 def relevant_claim_context(
-    trace: AnalysisTraceV3,
-    gap: AnalysisGapV3,
+    trace: AnalysisTraceV3 | CaseAnalysisTrace,
+    gap: AnalysisGapV3 | CaseAnalysisGap,
 ) -> dict[str, object]:
     affected = set(gap.affected_claim_ids)
     return {
@@ -166,7 +168,7 @@ def relevant_claim_context(
 
 
 def followup_context(
-    gap: AnalysisGapV3 | GapItem,
+    gap: AnalysisGapV3 | CaseAnalysisGap | GapItem,
     *,
     evidence_sha256: str | None,
 ) -> dict[str, str]:
@@ -174,7 +176,7 @@ def followup_context(
         "gap_topic": gap.topic,
         "gap_key": normalize_gap_key(gap.topic),
     }
-    gap_id = gap.gap_id if isinstance(gap, AnalysisGapV3) else None
+    gap_id = gap.gap_id if isinstance(gap, (AnalysisGapV3, CaseAnalysisGap)) else None
     if gap_id is not None:
         context["gap_id"] = gap_id
     if evidence_sha256 is not None:
@@ -208,8 +210,8 @@ def _exchange_gap_key(exchange: ClarificationExchange) -> str | None:
     return None
 
 
-def _has_claim_links(gap: AnalysisGapV3 | GapItem) -> bool:
-    if isinstance(gap, AnalysisGapV3):
+def _has_claim_links(gap: AnalysisGapV3 | CaseAnalysisGap | GapItem) -> bool:
+    if isinstance(gap, (AnalysisGapV3, CaseAnalysisGap)):
         return bool(gap.affected_claim_ids)
     return bool(re.search(r"(?<![A-Z0-9])A-\d{2,}(?![A-Z0-9])", gap.affects))
 

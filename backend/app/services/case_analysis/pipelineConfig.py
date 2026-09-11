@@ -2,11 +2,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.config import settings
-from app.services.llm.coreLlm import resolve_core_llm_target
-from app.services.llm.modelRegistry import CURATED_MODEL_PRESETS
-
-
 class AnalysisPipelineConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -59,36 +54,8 @@ class AnalysisPipelineConfig(BaseModel):
         return self
 
 
-def configured_pipeline(
-    *,
-    pipeline: Literal["raw_direct", "claim_anchored"] | None = None,
-) -> AnalysisPipelineConfig:
-    selected_pipeline = (
-        settings.case_analysis_pipeline if pipeline is None else pipeline
-    )
-    if selected_pipeline == "raw_direct":
-        return AnalysisPipelineConfig()
-    selected = settings.chat_ask_model.strip()
-    aliases = {alias for preset in CURATED_MODEL_PRESETS for alias in preset.aliases}
-    if (
-        settings.core_llm_provider == "openrouter"
-        and "/" not in selected
-        and selected.lower() not in aliases
-    ):
-        raise ValueError(
-            "Attribute-first requires a known alias or explicit model identifier"
-        )
-    target = resolve_core_llm_target(settings.chat_ask_model, require_key=False)
-    return AnalysisPipelineConfig(
-        pipeline=selected_pipeline,
-        provider=target.provider,
-        model=target.model,
-        context_tokens=settings.chat_model_context_tokens,
-        input_tokens=settings.claim_anchored_input_tokens,
-        output_tokens=settings.claim_anchored_output_tokens,
-        selection_tokens=settings.claim_anchored_selection_tokens,
-        timeout_seconds=settings.chat_ask_timeout_seconds,
-    )
+def configured_pipeline() -> AnalysisPipelineConfig:
+    return AnalysisPipelineConfig()
 
 
 def read_pipeline(value: object) -> AnalysisPipelineConfig:

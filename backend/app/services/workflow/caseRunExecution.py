@@ -27,7 +27,7 @@ from app.services.workflow.caseMitreAugmentation import (
     merge_case_mitre_trace,
     run_case_mitre_augmentation,
 )
-from app.services.followup import evaluate_followup_outcome
+from app.services.followup.decision import evaluate_followup_outcome
 from app.services.followup.caseClarification import (
     CaseClarificationHistoryError,
     load_case_clarification_exchanges,
@@ -285,8 +285,8 @@ async def _attach_case_followup(
         analysis_answer=output.answer,
         analysis_context=_analysis_context(claimed),
         analysis_claims=claims,
-        canonical_trace=None,
-        canonical_state_required=False,
+        canonical_trace=output.trace,
+        canonical_state_required=True,
         evidence_sha256=claimed.text_sha256,
     )
     if resolution.question is None:

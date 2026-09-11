@@ -328,6 +328,7 @@ class CaseProviderAnalysis(BaseModel):
     answer: str = Field(min_length=1, max_length=24_000)
     summary: str = Field(min_length=1, max_length=24_000)
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
+    gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
     mitre_associations: list[CaseMitreAssociation] = Field(
         default_factory=list, max_length=64
     )
