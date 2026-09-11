@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from app.config import settings
 from app.services.case_analysis.contracts import AnalysisGapV3
 from app.services.followup.decision import evaluate_followup_outcome
-from app.services.followup.gapStage import run_gap_analysis_stage
+from app.services.followup.gapAnalysis import run_gap_analysis_stage
 from app.services.followup.contracts import (
     ClarificationExchange,
     FollowUpDecision,

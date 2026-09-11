@@ -11,7 +11,7 @@ from app.services.followup.contracts import (
     GapAnalysis,
     GapAnalysisResult,
 )
-from app.services.followup.gapStage import run_gap_analysis_stage
+from app.services.followup.gapAnalysis import run_gap_analysis_stage
 
 
 def test_followup_decision_rejects_legacy_action_shape() -> None:
