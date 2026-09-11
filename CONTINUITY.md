@@ -2,6 +2,8 @@
 
 ## Snapshot
 
+- 2026-09-12 [USER/TOOL] User explicitly authorized committing all current worktree changes. Commit `72e0b36` contains the full staged workspace delta and was pushed to `origin/codex/backend-architecture-simplification`; local HEAD matches the remote and the worktree is clean.
+
 - 2026-09-12 [USER/CODE/TOOL] Reproduced the persisted Case failure `case_trace_conflicting_source_role` on the long reviewed document. The compact direct-analysis prompt now requires disjoint source roles, one bounded correction pass sequence retries provenance failures twice, and quote binding expands only unique whitespace/ellipsis variants to the original source span. A standalone live backend run on the same snapshot completed with 13 validated claims; no result was persisted.
 
 - 2026-09-12 [USER/CODE/TOOL] Playwright audit reproduced the Docker `:3000` 404 for `/case/7efe2d45-c14b-4c2e-b39d-2012bb4cfb1f/intake`; touching the mounted dynamic route and restarting the frontend rebuilt the stale Next route snapshot, after which the direct Playwright assertion passed 1/1 and the full `npx playwright test` suite passed 2/2. Full backend then exposed and fixed a read-race/legacy guard: `analysis_freshness` now returns `missing` when `result.snapshot` is unavailable instead of raising; backend is 356 passed, 44 skipped, 2 subtests. Case route source remains existing uncommitted frontend work; no frontend architecture redesign or `rag_service/**` change.
