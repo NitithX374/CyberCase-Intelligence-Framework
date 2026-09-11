@@ -1,4 +1,3 @@
-import path from "node:path";
 import { defineConfig } from "@playwright/test";
 
 const frontendDirectory = __dirname;
