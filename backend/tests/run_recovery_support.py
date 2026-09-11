@@ -7,9 +7,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.database import Base
-from app.models import ChatThread
-from app.schemas.chat import ChatMessageCreate
-from app.services.chat.chat_run_creation import create_message_and_run
 
 
 @asynccontextmanager
@@ -33,17 +30,3 @@ async def isolated_database():
         async with administration.begin() as connection:
             await connection.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
         await administration.dispose()
-
-
-async def create_request(factory):
-    async with factory() as db:
-        thread = ChatThread(title="Recovery test")
-        db.add(thread)
-        await db.commit()
-        thread_id = thread.id
-    request = ChatMessageCreate(
-        content="A witness reported a missing bicycle.", idempotency_key="saved-request"
-    )
-    async with factory() as db:
-        message, run = await create_message_and_run(db, thread_id, request)
-    return thread_id, message, run, request

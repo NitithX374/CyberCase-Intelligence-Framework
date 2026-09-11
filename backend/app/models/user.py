@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.case import Case
     from app.models.chat import ChatThread
 
 
@@ -78,6 +79,11 @@ class User(Base):
 
     threads: Mapped[list[ChatThread]] = relationship(
         "ChatThread",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    cases: Mapped[list[Case]] = relationship(
+        "Case",
         back_populates="user",
         cascade="all, delete-orphan",
     )

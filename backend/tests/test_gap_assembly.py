@@ -1,7 +1,7 @@
 import pytest
 
 from app.services.case_analysis.contracts import AnalysisTraceV3, CaseAnalysisResult
-from app.services.case_analysis.gap_assembly import (
+from app.services.case_analysis.gapAssembly import (
     assemble_claim_linked_gaps,
     enrich_case_analysis_result,
 )

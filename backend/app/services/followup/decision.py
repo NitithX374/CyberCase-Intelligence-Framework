@@ -9,7 +9,7 @@ from uuid import UUID
 from app.config import settings
 from app.services.case_analysis.contracts import AnalysisGapV3, AnalysisTraceV3
 from app.services.followup.contracts import FollowUpResolution
-from app.services.followup.gap_stage import GapStageResult, run_gap_analysis_stage
+from app.services.followup.gapStage import GapStageResult, run_gap_analysis_stage
 from app.services.followup.policy import AnthropicFollowUpPolicy
 from app.services.followup.schemas import (
     ClarificationExchange,
@@ -278,4 +278,6 @@ async def evaluate_followup_outcome(
     )
 
 
-__all__ = ["evaluate_followup_outcome"]
+evaluateFollowupOutcome = evaluate_followup_outcome
+
+__all__ = ["evaluateFollowupOutcome", "evaluate_followup_outcome"]

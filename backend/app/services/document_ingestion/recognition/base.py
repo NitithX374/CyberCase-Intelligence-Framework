@@ -55,6 +55,24 @@ class RecognitionResult:
     words: list[OCRWord] = field(default_factory=list)
 
 
+import re
+
+_FIGURE_PATTERN = re.compile(
+    r"<figure\b[^>]*>(.*?)</figure>", re.DOTALL | re.IGNORECASE
+)
+
+
+def separate_generated_visual_descriptions(text: str) -> tuple[str, list[str]]:
+    descriptions = [
+        " ".join(match.split())
+        for match in _FIGURE_PATTERN.findall(text)
+        if match.strip()
+    ]
+    transcription = _FIGURE_PATTERN.sub("", text)
+    transcription = re.sub(r"\n{3,}", "\n\n", transcription).strip()
+    return transcription, descriptions
+
+
 class DocumentRecognizer(Protocol):
     async def recognize_page(self, page: RenderedPage) -> RecognizedPage: ...
 
@@ -65,3 +83,30 @@ class OCRRecognizer(Protocol):
 
 class HTRRecognizer(Protocol):
     async def recognize(self, region: RenderedRegion) -> RecognitionResult: ...
+
+
+class ReviewRequiredHTRRecognizer:
+    async def recognize(self, region: RenderedRegion) -> RecognitionResult:
+        return RecognitionResult(
+            text="",
+            recognition_method=RecognitionMethod.HTR,
+            recognizer="review_required",
+            verification_status=VerificationStatus.NEEDS_REVIEW,
+            warning=(
+                f"Page {region.page_number} region {region.region_id}: no verified "
+                "Thai HTR provider is configured; manual transcription is required."
+            ),
+        )
+
+
+__all__ = [
+    "DocumentRecognizer",
+    "HTRRecognizer",
+    "OCRRecognizer",
+    "RecognitionResult",
+    "RecognizedPage",
+    "RenderedPage",
+    "RenderedRegion",
+    "ReviewRequiredHTRRecognizer",
+    "separate_generated_visual_descriptions",
+]

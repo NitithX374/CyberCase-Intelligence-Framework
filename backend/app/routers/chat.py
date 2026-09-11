@@ -5,9 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import commit_dependency_transaction, get_db
 from app.models.user import User
 from app.schemas.chat import (
+    CaseChatMessageAccepted,
+    ChatCaseLinkRead,
     ChatMessageAccepted,
     ChatMessageCreate,
     ChatRunRead,
@@ -17,19 +19,26 @@ from app.schemas.chat import (
     ChatThreadUpdate,
 )
 from app.schemas.reports import (
+    CaseReportCreate,
     ChatReportCreate,
     ChatReportRead,
 )
 from app.services.auth.dependencies import get_current_user
 from app.services.chat import (
+    CaseChatError,
     ChatMessageService,
     ChatService,
+    createCaseChatMessageAndRun,
 )
 from app.services.reports import (
+    CaseReportService,
+    ReportGenerationConflict,
     ReportGenerationError,
+    ReportNotFound,
     ReportService,
+    ReportServiceError,
 )
-from app.services.workflow import process_chat_run
+from app.services.workflow import process_case_run
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -45,6 +54,19 @@ async def list_chat_threads(
 ):
     service = ChatService(db)
     return await service.list_threads(user_id=user.id)
+
+
+@router.get(
+    "/{thread_id}/case-link",
+    response_model=ChatCaseLinkRead,
+    status_code=status.HTTP_200_OK,
+)
+async def get_chat_case_link(
+    thread_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await ChatService(db).get_case_link(thread_id, user_id=user.id)
 
 
 @router.get(
@@ -108,7 +130,7 @@ async def delete_chat_thread(
 
 @router.post(
     "/{thread_id}/messages",
-    response_model=ChatMessageAccepted,
+    response_model=CaseChatMessageAccepted | ChatMessageAccepted,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def create_chat_message(
@@ -119,14 +141,33 @@ async def create_chat_message(
     user: User = Depends(get_current_user),
 ):
     chat_service = ChatService(db)
-    await chat_service.get_thread(thread_id, user_id=user.id)
-    service = ChatMessageService(db)
-    await db.commit()
-    message, run = await service.create_message_and_run(thread_id, request)
-    background_tasks.add_task(process_chat_run, run.id)
-    return ChatMessageAccepted(
-        message=message,
-        run=run,
+    thread = await chat_service.get_thread(thread_id, user_id=user.id)
+    if thread.case is not None:
+        await commit_dependency_transaction(db)
+        try:
+            async with db.begin():
+                message, run = await createCaseChatMessageAndRun(
+                    db,
+                    case_id=thread.case.id,
+                    user_id=user.id,
+                    request=request,
+                )
+        except CaseChatError as error:
+            raise HTTPException(
+                status_code=error.status_code,
+                detail={"code": error.code, "message": error.message},
+            ) from error
+        background_tasks.add_task(process_case_run, run.id)
+        return CaseChatMessageAccepted(message=message, run=run)
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail={
+            "code": "legacy_chat_execution_retired",
+            "message": (
+                "This historical Chat thread is read-only. "
+                "Create or open a Case to start new analysis."
+            ),
+        },
     )
 
 
@@ -171,12 +212,20 @@ async def generate_chat_report(
     user: User = Depends(get_current_user),
 ):
     chat_service = ChatService(db)
-    await chat_service.get_thread(thread_id, user_id=user.id)
-    service = ReportService(db)
+    thread = await chat_service.get_thread(thread_id, user_id=user.id)
+    if thread.case_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chat thread is not linked to a case. Reports require a case.",
+        )
+    service = CaseReportService(db)
     try:
         await db.commit()
-        return await service.generate_report(thread_id, request)
-    except ReportGenerationError as error:
+        return await service.generate_report(
+            thread.case_id,
+            CaseReportCreate(idempotency_key=request.idempotency_key),
+        )
+    except ReportServiceError as error:
         raise _report_http_exception(error) from error
 
 
@@ -191,11 +240,13 @@ async def list_chat_reports(
     user: User = Depends(get_current_user),
 ):
     chat_service = ChatService(db)
-    await chat_service.get_thread(thread_id, user_id=user.id)
-    service = ReportService(db)
+    thread = await chat_service.get_thread(thread_id, user_id=user.id)
+    if thread.case_id is None:
+        return []
+    service = CaseReportService(db)
     try:
-        return await service.list_reports(thread_id)
-    except ReportGenerationError as error:
+        return await service.list_reports(thread.case_id)
+    except ReportServiceError as error:
         raise _report_http_exception(error) from error
 
 
@@ -211,11 +262,13 @@ async def get_chat_report(
     user: User = Depends(get_current_user),
 ):
     chat_service = ChatService(db)
-    await chat_service.get_thread(thread_id, user_id=user.id)
-    service = ReportService(db)
+    thread = await chat_service.get_thread(thread_id, user_id=user.id)
+    if thread.case_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
+    service = CaseReportService(db)
     try:
-        return await service.get_report(thread_id, report_id)
-    except ReportGenerationError as error:
+        return await service.get_report(thread.case_id, report_id)
+    except ReportServiceError as error:
         raise _report_http_exception(error) from error
 
 
@@ -231,11 +284,13 @@ async def download_chat_report_pdf(
     user: User = Depends(get_current_user),
 ):
     chat_service = ChatService(db)
-    await chat_service.get_thread(thread_id, user_id=user.id)
-    service = ReportService(db)
+    thread = await chat_service.get_thread(thread_id, user_id=user.id)
+    if thread.case_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
+    service = CaseReportService(db)
     try:
-        content, filename = await service.get_report_pdf(thread_id, report_id)
-    except ReportGenerationError as error:
+        content, filename = await service.get_report_pdf(thread.case_id, report_id)
+    except ReportServiceError as error:
         raise _report_http_exception(error) from error
     return Response(
         content=content,

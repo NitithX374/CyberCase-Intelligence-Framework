@@ -12,18 +12,14 @@ from app.services.document_ingestion.contracts import (
     VerificationStatus,
 )
 from app.services.document_ingestion.errors import RecognitionProviderError
-from app.services.document_ingestion.recognition import (
+from app.services.document_ingestion.recognition.base import (
     RecognizedPage,
     RecognitionResult,
     RenderedPage,
-)
-from app.services.document_ingestion.recognition.content_filter import (
+    ReviewRequiredHTRRecognizer,
     separate_generated_visual_descriptions,
 )
-from app.services.document_ingestion.recognition.htr import (
-    ReviewRequiredHTRRecognizer,
-)
-from app.services.document_ingestion.region_pipeline import RegionRecognitionPipeline
+from app.services.document_ingestion.regionPipeline import RegionRecognitionPipeline
 from app.services.document_ingestion.routing import RegionRouter
 from app.services.document_ingestion.segmentation.base import (
     SegmentedPage,

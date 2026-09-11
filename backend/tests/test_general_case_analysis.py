@@ -5,12 +5,11 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from app.services.case_analysis.case_analysis_executor import MainCaseAnalysisService
-from app.services.case_analysis.case_analysis_prompt_config import CaseAnalysisFailure
-from app.services.case_analysis.case_analysis_response_parser import (
+from app.services.case_analysis.caseAnalysis import MainCaseAnalysisService
+from app.services.case_analysis.caseAnalysisResponseParser import (
     parse_case_analysis_response,
 )
-from app.services.case_analysis.contracts import AnalysisTraceV3
+from app.services.case_analysis.contracts import AnalysisTraceV3, CaseAnalysisFailure
 
 
 DOMAIN_CLAIMS = [
@@ -275,7 +274,7 @@ def test_service_requests_v3_schema_with_optional_external_context(monkeypatch) 
             )
 
     monkeypatch.setattr(
-        "app.services.case_analysis.case_analysis_executor.resolve_core_llm_target",
+        "app.services.case_analysis.caseAnalysis.resolve_core_llm_target",
         lambda model: SimpleNamespace(
             model=model,
             provider="anthropic",

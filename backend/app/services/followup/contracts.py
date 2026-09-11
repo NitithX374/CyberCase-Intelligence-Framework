@@ -5,7 +5,7 @@ import re
 import unicodedata
 from typing import TYPE_CHECKING
 
-from app.schemas.message_metadata import MessageMetadata
+from app.schemas.messageMetadata import MessageMetadata
 
 if TYPE_CHECKING:
     from app.services.followup.schemas import GapAnalysis

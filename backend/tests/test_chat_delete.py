@@ -5,7 +5,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from app.models.chat import ChatThread
-from app.services.chat.chat_management import ChatService
+from app.services.chat.chatService import ChatService
 
 
 class ChatDeleteServiceTests(unittest.IsolatedAsyncioTestCase):

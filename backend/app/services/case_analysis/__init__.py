@@ -1,3 +1,9 @@
+from app.services.case_analysis.caseAnalysis import (
+    MainCaseAnalysisService,
+    analyze_case,
+    analyze_case_native,
+    request_case_analysis,
+)
 from app.services.case_analysis.contracts import (
     ANALYSIS_TRACE_VERSION,
     ANALYSIS_TRACE_V3_VERSION,
@@ -11,40 +17,36 @@ from app.services.case_analysis.contracts import (
     AnalysisTraceFailureMetadata,
     AnalysisTraceV3,
     AnalysisTraceV3FailureMetadata,
+    CaseAnalysisFailure,
+    CaseAnalysisFailureMetadata,
     CaseAnalysisResult,
+    CaseAnalysisTrace,
     ClaimType,
     EpistemicStatus,
     GapPriority,
     GapStatus,
     MitreAssociation,
+    NativeCaseAnalysisFailureMetadata,
+    NativeCaseAnalysisTrace,
     ProviderCaseAnalysisV3,
     ReadableAnalysisTrace,
-    ValidatedAnalysisTrace,
-    read_analysis_trace,
-)
-from app.services.case_analysis.case_analysis_executor import (
-    MainCaseAnalysisService,
-    request_case_analysis,
-)
-from app.services.case_analysis.case_analysis_prompt_builder import (
-    build_analysis_prompt,
-    build_case_analysis_prompt,
-)
-from app.services.case_analysis.case_analysis_prompt_config import (
-    CASE_ANALYSIS_PROMPT_VERSION,
-    CaseAnalysisFailure,
-)
-from app.services.case_analysis.gap_assembly import (
-    assemble_claim_linked_gaps,
-    enrich_case_analysis_result,
-)
-from app.services.case_analysis.personalization import (
     ResponseLanguage,
     VALID_RESPONSE_LANGUAGES,
+    ValidatedAnalysisTrace,
+    read_analysis_trace,
     resolve_response_language,
     validate_response_language,
 )
-from app.services.case_analysis.state_selector import (
+from app.services.case_analysis.gapAssembly import (
+    assemble_claim_linked_gaps,
+    enrich_case_analysis_result,
+)
+from app.services.case_analysis.prompts import (
+    CASE_ANALYSIS_PROMPT_VERSION,
+    build_analysis_prompt,
+    build_case_analysis_prompt,
+)
+from app.services.case_analysis.stateSelector import (
     CanonicalCaseAnalysisState,
     select_latest_canonical_case_overview,
     validate_canonical_case_overview_trace,
@@ -66,24 +68,30 @@ __all__ = [
     "CASE_ANALYSIS_PROMPT_VERSION",
     "CanonicalCaseAnalysisState",
     "CaseAnalysisFailure",
+    "CaseAnalysisFailureMetadata",
     "CaseAnalysisResult",
+    "CaseAnalysisTrace",
     "ClaimType",
     "EpistemicStatus",
     "GapPriority",
     "GapStatus",
-    "MitreAssociation",
     "MainCaseAnalysisService",
+    "MitreAssociation",
+    "NativeCaseAnalysisFailureMetadata",
+    "NativeCaseAnalysisTrace",
     "ProviderCaseAnalysisV3",
     "ReadableAnalysisTrace",
     "ResponseLanguage",
     "VALID_RESPONSE_LANGUAGES",
     "ValidatedAnalysisTrace",
+    "analyze_case",
+    "analyze_case_native",
+    "assemble_claim_linked_gaps",
     "build_analysis_prompt",
     "build_case_analysis_prompt",
-    "assemble_claim_linked_gaps",
     "enrich_case_analysis_result",
-    "request_case_analysis",
     "read_analysis_trace",
+    "request_case_analysis",
     "resolve_response_language",
     "select_latest_canonical_case_overview",
     "validate_canonical_case_overview_trace",

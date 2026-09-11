@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app import main as main_module
-from app.routers import document_ingestion as ingestion_router
+from app.routers import documentIngestion as ingestion_router
 from app.services.document_ingestion.contracts import SourceType
 from app.services.document_ingestion.recognition import RecognizedPage
 

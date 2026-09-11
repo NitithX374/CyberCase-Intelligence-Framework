@@ -12,7 +12,7 @@ from app.models.chat import ChatThread
 from app.models.user import User
 from app.schemas.chat import ChatThreadCreate, ChatThreadUpdate
 from app.services.auth.dependencies import get_optional_user
-from app.services.chat.chat_management import ChatService
+from app.services.chat.chatService import ChatService
 
 
 def _fastapi_app() -> FastAPI:
@@ -172,7 +172,7 @@ def test_api_chat_thread_ownership_routes(client, mock_db):
     # Scenario 3: User A gets their own thread -> 200
     fastapi_app.dependency_overrides[get_optional_user] = lambda: user_a
     with patch(
-        "app.services.chat.chat_management.read_retry_request",
+        "app.services.chat.chatService.findRetryRequest",
         new_callable=AsyncMock,
     ) as mock_retry:
         mock_retry.return_value = None

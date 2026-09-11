@@ -1,8 +1,6 @@
-import asyncio
 from uuid import uuid4
 
-from app.models.chat import ChatMessage, ChatThread
-from app.services.chat.chat_run_creation import _followup_position
+from app.models.chat import ChatMessage
 from app.services.chat.clarification_chain import reconstruct_clarification_chain
 from app.services.chat.raw_evidence import build_raw_evidence_snapshot
 from app.services.followup.context import build_bounded_context
@@ -59,71 +57,6 @@ def test_raw_evidence_hash_ignores_workflow_context_and_assistant_question() -> 
     assert contextual.source_message_ids == (initial_id, answer_id)
     assert contextual.sources[1].content == "ไม่ทราบ"
     assert "What time did it happen?" not in contextual.text
-
-
-def test_followup_position_copies_question_context_to_answer_metadata() -> None:
-    thread_id = uuid4()
-    question_id = uuid4()
-    messages = [
-        ChatMessage(
-            id=uuid4(),
-            thread_id=thread_id,
-            ordinal=1,
-            role="user",
-            content="case",
-            metadata_json={"evidence_kind": "initial_case_narrative"},
-        ),
-        ChatMessage(
-            id=question_id,
-            thread_id=thread_id,
-            ordinal=2,
-            role="assistant",
-            content="ทราบเวลาที่เกิดเหตุหรือไม่?",
-            metadata_json={
-                "chat_followup": {
-                    "kind": "clarification",
-                    "root_ordinal": 1,
-                    "followup_context": {
-                        "gap_id": "G-01",
-                        "gap_topic": "เวลาที่เกิดเหตุ",
-                        "gap_key": "topic:incident-time",
-                        "evidence_sha256": "a" * 64,
-                    },
-                }
-            },
-        ),
-    ]
-
-    class Scalars:
-        def all(self):
-            return messages
-
-    class Result:
-        def scalars(self):
-            return Scalars()
-
-    class Database:
-        async def execute(self, statement):
-            return Result()
-
-    thread = ChatThread(
-        id=thread_id,
-        status="awaiting_followup",
-        next_message_ordinal=3,
-    )
-    root, round_number, context = asyncio.run(
-        _followup_position(Database(), thread, "ไม่ทราบ", 3)
-    )
-
-    assert root == 1
-    assert round_number == 1
-    assert context == {
-        "question_message_id": str(question_id),
-        "answered_gap_id": "G-01",
-        "answered_gap_topic": "เวลาที่เกิดเหตุ",
-        "answered_gap_key": "topic:incident-time",
-        "question_evidence_sha256": "a" * 64,
-    }
 
 
 def test_short_answer_context_is_structural_and_does_not_rewrite_user_content() -> None:

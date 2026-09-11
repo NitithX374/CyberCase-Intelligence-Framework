@@ -1,10 +1,10 @@
 import hashlib
 
 import pytest
-from app.services.case_analysis.claim_anchored.binder import bind_claims
-from app.services.case_analysis.claim_anchored.contracts import ExtractedClaims
-from app.services.case_analysis.claim_anchored.failure import ClaimAnchoredFailure
-from app.services.case_analysis.claim_anchored.source_registry import (
+from app.services.case_analysis.claim_anchored import bind_claims
+from app.services.case_analysis.claim_anchored.contracts import (
+    ClaimAnchoredFailure,
+    ExtractedClaims,
     build_source_registry,
 )
 

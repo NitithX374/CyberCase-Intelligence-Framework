@@ -3,8 +3,9 @@
 from app.services.followup.contracts import FollowUpResolution
 from app.services.followup.decision import (
     evaluate_followup_outcome,
+    evaluateFollowupOutcome,
 )
-from app.services.followup.gap_analysis import (
+from app.services.followup.gapAnalysis import (
     AnthropicGapAnalysis,
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_VERSION,
@@ -39,13 +40,16 @@ from app.services.followup.schemas import (
     GapPriority,
     GapStatus,
     build_gap_analysis_claim_transport,
+    buildGapAnalysisClaimTransport,
 )
+
+buildClarifiedQuery = build_clarified_query
+buildBoundedContext = build_bounded_context
 
 __all__ = [
     "AnthropicFollowUpPolicy",
     "AnthropicGapAnalysis",
     "ClarificationExchange",
-    "FOLLOWUP_POLICY_PROVIDER",
     "FOLLOWUP_POLICY_SCHEMA",
     "FOLLOWUP_POLICY_SYSTEM",
     "FOLLOWUP_POLICY_VERSION",
@@ -69,7 +73,11 @@ __all__ = [
     "GapPriority",
     "GapStatus",
     "build_bounded_context",
+    "buildBoundedContext",
     "build_gap_analysis_claim_transport",
+    "buildGapAnalysisClaimTransport",
     "build_clarified_query",
+    "buildClarifiedQuery",
     "evaluate_followup_outcome",
+    "evaluateFollowupOutcome",
 ]

@@ -1,15 +1,24 @@
 from app.database import Base
-import app.models  # noqa: F401
+from app.models import Case, ChatThread
 
 
 def test_schema_contains_only_product_runtime_tables() -> None:
     assert set(Base.metadata.tables) == {
+        "cases",
         "users",
         "chat_threads",
         "chat_messages",
         "chat_runs",
         "rag_contexts",
         "chat_reports",
+        "case_documents",
+        "document_extractions",
+        "case_evidence_sources",
+        "case_evidence_revisions",
+        "case_evidence_snapshots",
+        "case_runs",
+        "case_analysis_results",
+        "case_clarifications",
     }
 
 
@@ -18,6 +27,34 @@ def test_case_state_columns_and_tables_are_absent() -> None:
     assert "current_case_state_version_id" not in Base.metadata.tables["chat_threads"].c
     assert "run_id" in Base.metadata.tables["rag_contexts"].c
     assert "case_state_version_id" not in Base.metadata.tables["rag_contexts"].c
+
+
+def test_case_owns_one_shared_identity_chat_thread() -> None:
+    cases = Base.metadata.tables["cases"]
+    threads = Base.metadata.tables["chat_threads"]
+    assert Case.chat_thread.property.uselist is False
+    assert ChatThread.case.property.uselist is False
+    assert any(
+        foreign_key.target_fullname == "cases.id"
+        for foreign_key in threads.c["id"].foreign_keys
+    )
+    assert cases.c["user_id"].nullable
+    assert threads.c["id"].primary_key
+
+
+def test_case_first_workflow_schema_is_case_owned() -> None:
+    cases = Base.metadata.tables["cases"]
+    runs = Base.metadata.tables["case_runs"]
+    results = Base.metadata.tables["case_analysis_results"]
+    messages = Base.metadata.tables["chat_messages"]
+    assert cases.c["evidence_revision"].nullable is False
+    assert cases.c["latest_analysis_result_id"].nullable
+    assert runs.c["request_message_id"].nullable
+    assert runs.c["context_analysis_result_id"].nullable
+    assert results.c["run_id"].nullable is False
+    assert messages.c["analysis_result_id"].nullable
+    assert messages.c["message_kind"].nullable is False
+    assert runs.c["clarification_id"].nullable
 
 
 def test_rag_context_is_bound_one_to_one_to_chat_run() -> None:
@@ -35,7 +72,18 @@ def test_rag_context_is_bound_one_to_one_to_chat_run() -> None:
 def test_report_uses_analysis_and_retrieval_bindings() -> None:
     table = Base.metadata.tables["chat_reports"]
     columns = set(table.c.keys())
-    assert {"analysis_message_id", "retrieval_context_id"}.issubset(columns)
+    assert {
+        "analysis_message_id",
+        "case_id",
+        "analysis_result_id",
+        "evidence_snapshot_id",
+        "retrieval_context_id",
+    }.issubset(columns)
+    assert table.c["analysis_message_id"].nullable
+    assert table.c["thread_id"].nullable
+    assert table.c["case_id"].nullable
+    assert table.c["analysis_result_id"].nullable
+    assert table.c["evidence_snapshot_id"].nullable
     assert table.c["retrieval_context_id"].nullable
     assert "extraction_message_id" not in columns
     assert "extraction_version" not in columns

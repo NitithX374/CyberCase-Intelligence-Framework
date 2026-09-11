@@ -1,7 +1,7 @@
 import app.services.case_analysis.contracts as analysis_contracts
 from app.schemas.reports import StructuredReport
 from app.services.case_analysis.contracts import ProviderCaseAnalysisV3
-from app.services.llm.structured_output import (
+from app.services.llm.structuredOutput import (
     anthropic_json_schema,
     structured_output_schema,
 )

@@ -4,9 +4,9 @@ import hashlib
 import json
 from pathlib import Path
 
-from app.services.case_analysis.case_analysis_executor import request_case_analysis
-from app.services.case_analysis.claim_anchored.failure import ClaimAnchoredFailure
-from app.services.case_analysis.pipeline_config import (
+from app.services.case_analysis import request_case_analysis
+from app.services.case_analysis.claim_anchored.contracts import ClaimAnchoredFailure
+from app.services.case_analysis.pipelineConfig import (
     configured_pipeline,
 )
 

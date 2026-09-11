@@ -105,6 +105,8 @@ class FollowupPolicyConfig(BaseModel):
 class CaseAnalysisConfig(BaseModel):
     # Post-answer ASK reasons over the persisted case and latest analysis. It
     # deliberately does not call the retrieval service again.
+    case_run_timeout_seconds: float = Field(default=900.0, gt=0)
+    case_run_failure_persistence_timeout_seconds: float = Field(default=5.0, gt=0)
     chat_ask_model: str = "openai/gpt-5.6-luna"
     chat_ask_timeout_seconds: float = 120.0
     chat_ask_max_output_tokens: int = 16_384
@@ -134,7 +136,7 @@ class DocumentIngestionConfig(BaseModel):
     document_ingestion_max_pages: int = Field(default=50, ge=1, le=500)
     document_ingestion_max_image_pixels: int = Field(default=40_000_000, ge=1)
     document_ingestion_render_longest_edge: int = Field(default=1_800, ge=512, le=4096)
-    document_recognizer: Literal["typhoon", "google_vision"] = "typhoon"
+    document_recognizer: Literal["typhoon"] = "typhoon"
     document_mixed_region_policy: Literal["unified", "review"] = "unified"
     document_unknown_region_policy: Literal["unified", "review"] = "unified"
     document_recognition_timeout_seconds: float = Field(default=60.0, gt=0)
@@ -156,9 +158,6 @@ class AuthConfig(BaseModel):
     oauth_google_client_id: str = ""
     oauth_google_client_secret: str = ""
     oauth_google_redirect_uri: str = "http://localhost:8000/api/v1/auth/callback/google"
-    oauth_github_client_id: str = ""
-    oauth_github_client_secret: str = ""
-    oauth_github_redirect_uri: str = "http://localhost:8000/api/v1/auth/callback/github"
     frontend_base_url: str = "http://localhost:3000"
     auth_dev_login_enabled: bool = False
 

@@ -5,7 +5,7 @@ from PIL import Image
 
 from app.services.document_ingestion.contracts import RegionType
 from app.services.document_ingestion.recognition import RenderedPage
-from app.services.document_ingestion.segmentation.whole_page import (
+from app.services.document_ingestion.segmentation.base import (
     WholePageRegionSegmenter,
 )
 

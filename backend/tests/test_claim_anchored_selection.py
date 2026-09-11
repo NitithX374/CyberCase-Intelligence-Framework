@@ -1,13 +1,13 @@
 import pytest
-from app.services.case_analysis.claim_anchored.assembly import assemble_trace
-from app.services.case_analysis.claim_anchored.binder import bind_claims
+from app.services.case_analysis.claim_anchored import (
+    assemble_trace,
+    bind_claims,
+    select_claims,
+)
 from app.services.case_analysis.claim_anchored.contracts import (
+    ClaimAnchoredFailure,
     ExtractedClaims,
     GeneratedSummary,
-)
-from app.services.case_analysis.claim_anchored.failure import ClaimAnchoredFailure
-from app.services.case_analysis.claim_anchored.selector import select_claims
-from app.services.case_analysis.claim_anchored.source_registry import (
     build_source_registry,
 )
 from test_claim_anchored_binding import extraction

@@ -1,8 +1,9 @@
 import hashlib
 
 from app.services.case_analysis.contracts import AnalysisClaimV3
-from app.services.case_analysis.source_citations import bind_analysis_claim_citations
-from app.services.chat.document_provenance import validated_document_source_payloads
+from app.services.case_analysis.caseAnalysisResponseParser import (
+    bind_analysis_claim_citations,
+)
 from app.schemas.chat import CaseNarrativeDocumentSource
 from app.services.document_ingestion.contracts import DocumentPage
 
@@ -120,19 +121,6 @@ def test_invalid_quote_is_not_persisted_as_a_citation() -> None:
         {"_source_text_by_message_id": {source_id: "Exact source text"}},
     )
     assert bound[0].supporting_citations == []
-
-
-def test_edited_narrative_drops_stale_page_span() -> None:
-    source = document_source("Original page text")
-    payload = validated_document_source_payloads("Edited page text", [source])
-    assert payload[0]["page_spans"] == []
-
-
-def test_edited_early_page_drops_later_page_spans() -> None:
-    content, source = multi_page_source([(1, "Original first page"), (2, "Second page")])
-    edited = content.replace("Original first page", "Reviewed first page")
-    payload = validated_document_source_payloads(edited, [source])
-    assert payload[0]["page_spans"] == []
 
 
 def test_quote_spanning_pages_binds_all_touched_pages() -> None:

@@ -1,11 +1,11 @@
 """Core LLM Provider & Structured Output Infrastructure."""
 
-from app.services.llm.core_llm import (
+from app.services.llm.coreLlm import (
     CoreLlmConfigurationError,
     CoreLlmTarget,
     resolve_core_llm_target,
 )
-from app.services.llm.structured_output import (
+from app.services.llm.structuredOutput import (
     StructuredOutputFeature,
     anthropic_json_schema,
     structured_output_request_options,

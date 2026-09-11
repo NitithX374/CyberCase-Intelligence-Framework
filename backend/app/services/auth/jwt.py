@@ -48,5 +48,16 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
             algorithms=[settings.jwt_algorithm],
         )
         return payload
-    except (jwt.PyJWTError, ValueError):
+    except jwt.PyJWTError:
         return None
+
+
+createAccessToken = create_access_token
+decodeAccessToken = decode_access_token
+
+__all__ = [
+    "createAccessToken",
+    "create_access_token",
+    "decodeAccessToken",
+    "decode_access_token",
+]
