@@ -119,7 +119,11 @@ class CaseAnalysisResult(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     trace_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     execution_receipt_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
-    retrieval_context_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    retrieval_context_id: Mapped[str | None] = mapped_column(
+        String(160),
+        ForeignKey("rag_contexts.retrieval_context_id", name="fk_case_analysis_results_retrieval_context_id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     pipeline_config: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     provider_metadata_json: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

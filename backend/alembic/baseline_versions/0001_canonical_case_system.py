@@ -1,4 +1,4 @@
-﻿"""Canonical Case System Baseline Migration.
+"""Canonical Case System Baseline Migration.
 
 Defines the 14 product runtime tables for the CyberCase Framework:
 users, cases, case_documents, document_extractions, chat_threads,
@@ -354,7 +354,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["analysis_result_id"], ["case_analysis_results.id"], name="fk_case_reports_analysis_result_id_case_analysis_results", ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_reports_case_id_cases", ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["evidence_snapshot_id"], ["case_evidence_snapshots.id"], name="fk_case_reports_evidence_snapshot_id_case_evidence_snapshots", ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["retrieval_context_id"], ["rag_contexts.retrieval_context_id"], name="fk_case_reports_retrieval_context_id_rag_contexts", ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["retrieval_context_id"], ["rag_contexts.retrieval_context_id"], name="fk_case_reports_retrieval_context_id_rag_contexts", ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id", name="pk_case_reports"),
         sa.UniqueConstraint("case_id", "idempotency_key", name="uq_case_reports_case_id_idempotency_key"),
         sa.UniqueConstraint("case_id", "version_number", name="uq_case_reports_case_id_version_number"),
@@ -363,6 +363,14 @@ def upgrade() -> None:
     op.create_index("ix_case_reports_case_id_created_at", "case_reports", ["case_id", "created_at"])
 
     # Circular foreign keys
+    op.create_foreign_key(
+        "fk_case_analysis_results_retrieval_context_id",
+        "case_analysis_results",
+        "rag_contexts",
+        ["retrieval_context_id"],
+        ["retrieval_context_id"],
+        ondelete="RESTRICT",
+    )
     op.create_foreign_key(
         "fk_cases_latest_analysis_result_id",
         "cases",
@@ -411,6 +419,7 @@ def downgrade() -> None:
     op.drop_constraint("fk_case_runs_request_message_id", "case_runs", type_="foreignkey")
     op.drop_constraint("fk_chat_messages_analysis_result_id", "chat_messages", type_="foreignkey")
     op.drop_constraint("fk_cases_latest_analysis_result_id", "cases", type_="foreignkey")
+    op.drop_constraint("fk_case_analysis_results_retrieval_context_id", "case_analysis_results", type_="foreignkey")
 
     op.drop_table("case_reports")
     op.drop_table("rag_contexts")

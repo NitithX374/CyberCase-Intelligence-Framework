@@ -54,7 +54,6 @@ export function useChatSubmission({
     submissionsRef.current.add(initialSelection);
 
     void (async () => {
-      let requestAccepted = false;
       try {
         const selection = initialSelection;
         if (!selection || !session.isCurrentSelection(selection)) return;
@@ -70,10 +69,9 @@ export function useChatSubmission({
         };
         session.beginSubmission(submission, followUp);
         const accepted = await createCaseChatMessage(
-          threadId, content, submission.key, selection.signal, action,
+          caseId, content, submission.key, selection.signal, action,
         );
         if (!session.isCurrentSelection(selection)) return;
-        requestAccepted = true;
         session.acceptSubmission(selection, submission.key, accepted);
 
         if (currentCase) {
@@ -90,7 +88,7 @@ export function useChatSubmission({
           currentCase?.title === "New case") {
           const requestSelection = selection;
           void updateCase({
-            caseId: threadId,
+            caseId,
             title: content.length <= 60 ? content : `${content.slice(0, 57).trimEnd()}...`,
           }).then((updated) => {
             if (session.isCurrentSelection(requestSelection)) upsertCase(updated);

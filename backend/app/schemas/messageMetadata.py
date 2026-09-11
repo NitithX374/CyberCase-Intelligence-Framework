@@ -65,7 +65,6 @@ class MessageMetadata(TypedDict, total=False):
     clarification_context: dict[str, str]
     analysis_kind: str
     analysis_state_scope: Literal["canonical_case_overview", "response_scoped"]
-    canonical_case_state: bool
     evidence_sha256: str
     source_message_ids: list[str]
     analysis_trace: dict[str, object]

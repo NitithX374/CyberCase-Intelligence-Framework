@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
+from app.models.caseClarification import CaseClarification
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage, ChatThread
@@ -39,7 +40,7 @@ async def completeCaseAsk(
             return False
         if run.operation != "ask" or run.request_message_id is None:
             raise CaseRunCompletionError("case_ask_run_invalid", "Case ASK run is incomplete")
-        thread = await db.scalar(select(ChatThread).where(ChatThread.id == case.id).with_for_update())
+        thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
         if thread is None:
             raise CaseRunCompletionError("case_chat_missing", "Case Chat thread is missing")
         request_message = await db.get(ChatMessage, run.request_message_id)
@@ -89,7 +90,6 @@ async def completeCaseAsk(
                 {
                     "analysis_kind": "question_answer",
                     "analysis_state_scope": "response_scoped",
-                    "canonical_case_state": False,
                     "context_analysis_result_id": str(context_result.id),
                     "evidence_snapshot_id": str(run.snapshot_id),
                     "evidence_sha256": trace.evidence_sha256,
@@ -109,7 +109,13 @@ async def completeCaseAsk(
         )
         db.add(message)
         thread.next_message_ordinal += 1
-        thread.status = "answered"
+        pending_clarification = await db.scalar(
+            select(CaseClarification.id).where(
+                CaseClarification.case_id == case.id,
+                CaseClarification.state == "pending",
+            )
+        )
+        thread.status = "awaiting_followup" if pending_clarification is not None else "answered"
         thread.updated_at = now
         await db.flush()
     return True

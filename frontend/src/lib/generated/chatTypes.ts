@@ -27,6 +27,8 @@ export type ChatMessageCreate = {
     content: string;
     idempotency_key: string;
     action?: ("ask" | "add_case_info") | null;
+    intent?: "ask" | "clarification_answer";
+    clarification_id?: string | null;
     response_language: "thai" | "english";
     document_sources?: CaseNarrativeDocumentSource[];
 };
@@ -38,7 +40,7 @@ export type ChatMessageRead = {
     role: "user" | "assistant";
     content: string;
     retrieval_context_id: string | null;
-    message_kind: "conversation" | "analysis_result" | "followup_question";
+    message_kind: "conversation" | "clarification_answer" | "followup_question";
     analysis_result_id: string | null;
     metadata_json: MessageMetadata;
     created_at: string;

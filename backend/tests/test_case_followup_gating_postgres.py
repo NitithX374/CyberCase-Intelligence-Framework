@@ -120,9 +120,10 @@ def test_followup_gates_analysis_result_message_and_attaches_gap_why():
 
             # Assertions after initial run with follow-up:
             async with factory() as db:
-                thread = await db.get(ChatThread, case_id)
+                thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case_id))
+                assert thread is not None
                 assert thread.status == "awaiting_followup"
-                messages = list((await db.scalars(select(ChatMessage).where(ChatMessage.thread_id == case_id).order_by(ChatMessage.ordinal))).all())
+                messages = list((await db.scalars(select(ChatMessage).where(ChatMessage.thread_id == thread.id).order_by(ChatMessage.ordinal))).all())
                 # Analysis result message MUST NOT be posted yet
                 assert len(messages) == 1
                 assert messages[0].message_kind == "followup_question"
@@ -181,14 +182,15 @@ def test_followup_gates_analysis_result_message_and_attaches_gap_why():
 
             # Assertions after final run:
             async with factory() as db:
-                thread = await db.get(ChatThread, case_id)
+                thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case_id))
+                assert thread is not None
                 assert thread.status == "answered"
-                final_messages = list((await db.scalars(select(ChatMessage).where(ChatMessage.thread_id == case_id).order_by(ChatMessage.ordinal))).all())
+                final_messages = list((await db.scalars(select(ChatMessage).where(ChatMessage.thread_id == thread.id).order_by(ChatMessage.ordinal))).all())
                 # Should have 2 messages in order:
                 # 1. followup_question (assistant)
-                # 2. conversation (user clarification answer)
+                # 2. clarification_answer (user clarification answer)
                 assert len(final_messages) == 2
-                assert [m.message_kind for m in final_messages] == ["followup_question", "conversation"]
+                assert [m.message_kind for m in final_messages] == ["followup_question", "clarification_answer"]
                 assert [m.role for m in final_messages] == ["assistant", "user"]
 
     asyncio.run(exercise())

@@ -24,7 +24,7 @@ ThreadStatus = Literal[
 ]
 
 MessageRole = Literal["user", "assistant"]
-MessageKind = Literal["conversation", "analysis_result", "followup_question"]
+MessageKind = Literal["conversation", "clarification_answer", "followup_question"]
 
 ChatCaseLinkStatus = Literal["linked", "historical_unavailable"]
 
@@ -58,6 +58,8 @@ class ChatMessageCreate(BaseModel):
         max_length=255,
     )
     action: Literal["ask"] | None = None
+    intent: Literal["ask", "clarification_answer"] = "ask"
+    clarification_id: UUID | None = None
     response_language: Literal["thai", "english"] = "english"
     document_sources: list[CaseNarrativeDocumentSource] = Field(
         default_factory=list,

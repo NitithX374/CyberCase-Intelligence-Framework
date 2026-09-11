@@ -48,7 +48,7 @@ async def lockCaseChat(
     case = await db.scalar(select(Case).where(Case.id == case_id).with_for_update())
     if case is None or case.user_id != user_id:
         raise CaseChatError("case_not_found", "Case not found", 404)
-    thread = await db.scalar(select(ChatThread).where(ChatThread.id == case.id).with_for_update())
+    thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
     if thread is None:
         raise CaseChatError(
             "chat_not_open",
@@ -126,21 +126,49 @@ async def createCaseChatMessageAndRun(
             "Add documents from the Case materials workspace before analysis",
             status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
-    if thread.status == "awaiting_followup":
-        clarification = await findPendingClarification(db, case.id)
+
+    if request.intent == "clarification_answer":
+        if request.clarification_id is None:
+            raise CaseChatError(
+                "clarification_id_required",
+                "clarification_id is required when intent is clarification_answer",
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        clarification = await db.scalar(
+            select(CaseClarification)
+            .where(
+                CaseClarification.id == request.clarification_id,
+                CaseClarification.case_id == case.id,
+            )
+            .with_for_update()
+        )
         if clarification is None:
             raise CaseChatError(
-                "clarification_missing",
-                "The Case has no pending clarification to answer",
+                "clarification_not_found",
+                "Specified clarification was not found for this case",
+                status.HTTP_404_NOT_FOUND,
+            )
+        if clarification.state == "answered":
+            answered = await find_answered_clarification(
+                db,
+                case_id=case.id,
+                request=buildClarificationRequest(request),
+            )
+            if answered is not None and answered.id == clarification.id:
+                return await submitCaseClarification(db, case.id, user_id, answered, request)
+            raise CaseChatError(
+                "clarification_already_answered",
+                "Clarification has already been answered",
+                status.HTTP_409_CONFLICT,
+            )
+        if clarification.state != "pending":
+            raise CaseChatError(
+                "clarification_not_pending",
+                f"Clarification is not pending (current state: {clarification.state})",
+                status.HTTP_409_CONFLICT,
             )
         return await submitCaseClarification(db, case.id, user_id, clarification, request)
-    answered = await find_answered_clarification(
-        db,
-        case_id=case.id,
-        request=buildClarificationRequest(request),
-    )
-    if answered is not None:
-        return await submitCaseClarification(db, case.id, user_id, answered, request)
+
     expected_payload = buildChatRequestPayload(request, "ask")
     existing = await findCaseRunByIdempotencyKey(db, case.id, request.idempotency_key, expected_payload)
     if existing is not None:
@@ -217,7 +245,6 @@ async def createCaseAsk(
             {
                 "analysis_kind": "question_request",
                 "analysis_state_scope": "response_scoped",
-                "canonical_case_state": False,
                 "context_analysis_result_id": str(context_result.id),
                 "evidence_snapshot_id": str(snapshot.id),
                 "chat_action": {
