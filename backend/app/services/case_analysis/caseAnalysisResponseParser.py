@@ -1,36 +1,16 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
-import unicodedata
 from collections.abc import Mapping
 from copy import deepcopy
 
 import httpx
-from pydantic import ValidationError
 
-from app.services.case_analysis.contracts import (
-    AnalysisClaimV3,
-    AnalysisEvidenceCitation,
-    AnalysisMode,
-    AnalysisTraceV3,
-    AnalysisTraceV3FailureMetadata,
-    CaseAnalysisFailure,
-    CaseAnalysisResult,
-    ProviderCaseAnalysisV3,
-)
-
-_VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text"})
-from app.services.case_analysis.evidenceQuoteResolver import resolve_document_locator
-from app.services.case_analysis.validation import (
-    AnalysisTraceProvenanceError,
-    AnalysisTraceStructureError,
-    detect_forbidden_provenance,
-    validate_analysis_trace_v3,
-)
+from app.services.case_analysis.contracts import CaseAnalysisFailure
 
 logger = logging.getLogger("app.case_analysis")
+_VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text"})
 
 
 def formatIdentifier(value: object, prefix: str, aliases: str) -> object:
@@ -148,25 +128,46 @@ def stripTrailingOcrBoilerplate(text: str) -> str:
             lines.pop()
             continue
         cleaned = last_line.lstrip("*-# \t").rstrip(".*- \t")
-        if (
-            "เอกสารต้นทางใช้การรู้จำเอกสารจากภาพ" in cleaned
-            or ("รู้จำเอกสารจากภาพ" in cleaned and "ความเชื่อมั่น" in cleaned)
-            or ("OCR" in cleaned and "ไม่ได้รายงานค่าความเชื่อมั่น" in cleaned)
-            or ("การรู้จำเอกสาร" in cleaned and "ไม่ได้รายงานค่าความเชื่อมั่น" in cleaned)
+        if any(
+            marker in cleaned.lower()
+            for marker in (
+                "ocr confidence",
+                "ocr quality",
+                "extraction metadata",
+                "document recognition quality",
+                "low confidence",
+                "unverified extraction",
+            )
         ):
             lines.pop()
-        else:
-            break
-    return "\n".join(lines).strip()
+            continue
+        break
+    return "\n".join(lines).rstrip()
 
 
 def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
-    """Validate HTTP response status, decode JSON, and ensure no provider-level error/stop."""
-    if not 200 <= response.status_code < 300:
+    """Validate HTTP response payload from analysis provider."""
+    if response.status_code >= 500:
+        raise CaseAnalysisFailure(
+            "analysis_provider_down",
+            "The post-answer analysis provider is unavailable",
+        )
+    if response.status_code in {401, 403}:
+        raise CaseAnalysisFailure(
+            "analysis_provider_unauthorized",
+            "The post-answer analysis provider credentials are invalid",
+        )
+    if response.status_code in {408, 429, 504}:
+        raise CaseAnalysisFailure(
+            "analysis_provider_timeout",
+            "The post-answer analysis provider timed out",
+        )
+    if response.status_code != 200:
         raise CaseAnalysisFailure(
             "analysis_provider_error",
             "The post-answer analysis provider returned an error",
         )
+
     try:
         response_payload = response.json()
     except (TypeError, ValueError) as error:
@@ -210,227 +211,12 @@ def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
     return response_payload
 
 
-def parseCaseAnalysisResponse(
-    response: httpx.Response,
-    *,
-    source_message_ids: set[str],
-    analysis_context: Mapping[str, object],
-    analysis_mode: AnalysisMode,
-    evidence_sha256: str,
-) -> CaseAnalysisResult:
-    """Parse, normalize, and validate structured Case Analysis response from provider."""
-    response_payload = validateResponsePayload(response)
-    raw_text = extractVisibleText(response_payload).strip()
-    if not raw_text:
-        raise CaseAnalysisFailure(
-            "analysis_invalid_response",
-            "The post-answer analysis provider returned no answer",
-        )
-
-    try:
-        raw_analysis = json.loads(raw_text)
-    except (TypeError, ValueError) as error:
-        raise CaseAnalysisFailure(
-            "analysis_invalid_response",
-            "The post-answer analysis provider did not return structured JSON",
-        ) from error
-
-    if not isinstance(raw_analysis, dict):
-        raise CaseAnalysisFailure(
-            "analysis_invalid_response",
-            "The post-answer structured analysis must be an object",
-        )
-
-    raw_answer = raw_analysis.get("answer")
-    if not isinstance(raw_answer, str) or not raw_answer.strip():
-        raise CaseAnalysisFailure(
-            "analysis_invalid_response",
-            "The post-answer structured analysis returned no safe prose",
-        )
-
-    raw_answer = stripTrailingOcrBoilerplate(raw_answer)
-    raw_analysis["answer"] = raw_answer
-
-    raw_summary = raw_analysis.get("summary")
-    if isinstance(raw_summary, str):
-        raw_analysis["summary"] = stripTrailingOcrBoilerplate(raw_summary)
-
-    try:
-        detect_forbidden_provenance(raw_analysis)
-    except AnalysisTraceProvenanceError as error:
-        raise CaseAnalysisFailure(error.code, str(error)) from error
-
-    try:
-        parsed = ProviderCaseAnalysisV3.model_validate(
-            normalizeAnalysisIdentifiers(raw_analysis)
-        )
-    except ValidationError as error:
-        logger.warning(
-            "Case analysis trace validation failed: %s | keys: %s",
-            error,
-            list(raw_analysis.keys()),
-        )
-        failure_code = (
-            "analysis_trace_version_unsupported"
-            if raw_analysis.get("version") != "analysis_trace_v3"
-            else "analysis_trace_structure_invalid"
-        )
-        return CaseAnalysisResult(
-            answer=raw_answer.strip(),
-            trace=None,
-            trace_failure=AnalysisTraceV3FailureMetadata(failure_code=failure_code),
-        )
-
-    retrieval_context_id = _retrieval_context_id(analysis_context)
-    candidate_trace = AnalysisTraceV3(
-        analysis_mode=analysis_mode,
-        summary=parsed.summary,
-        claims=bind_analysis_claim_citations(parsed.claims, analysis_context),
-        gaps=[],
-        mitre_associations=(
-            parsed.mitre_associations if retrieval_context_id is not None else []
-        ),
-        evidence_sha256=evidence_sha256,
-        retrieval_context_id=retrieval_context_id,
-    )
-
-    try:
-        trace = validate_analysis_trace_v3(
-            candidate_trace,
-            source_message_ids=source_message_ids,
-            mitre_table=analysis_context.get("mitre_table", []),
-        )
-    except AnalysisTraceStructureError as error:
-        logger.warning(
-            "Case analysis trace structure error: %s (code=%s)",
-            error,
-            error.code,
-        )
-        return CaseAnalysisResult(
-            answer=parsed.answer,
-            trace=None,
-            trace_failure=AnalysisTraceV3FailureMetadata(failure_code=error.code),
-        )
-    except AnalysisTraceProvenanceError as error:
-        logger.warning(
-            "Case analysis trace provenance error: %s (code=%s)",
-            error,
-            error.code,
-        )
-        raise CaseAnalysisFailure(error.code, str(error)) from error
-
-    return CaseAnalysisResult(answer=parsed.answer.strip(), trace=trace)
-
-
-def _retrieval_context_id(analysis_context: Mapping[str, object]) -> str | None:
-    value = analysis_context.get("retrieval_context_id")
-    if value is None:
-        return None
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-    raise CaseAnalysisFailure(
-        "analysis_context_invalid",
-        "Retrieval context identifier must be a non-empty string or null",
-    )
-
-
-def bind_analysis_claim_citations(
-    claims: list[AnalysisClaimV3],
-    analysis_context: Mapping[str, object],
-) -> list[AnalysisClaimV3]:
-    source_texts = _source_texts(analysis_context)
-    document_context = analysis_context.get("document_source_context", [])
-    return [
-        claim.model_copy(
-            update={
-                "supporting_citations": _bind_citations(
-                    claim.supporting_citations,
-                    set(claim.supporting_source_message_ids),
-                    source_texts,
-                    document_context,
-                ),
-                "contradicting_citations": _bind_citations(
-                    claim.contradicting_citations,
-                    set(claim.contradicting_source_message_ids),
-                    source_texts,
-                    document_context,
-                ),
-            }
-        )
-        for claim in claims
-    ]
-
-
-def _bind_citations(
-    citations: list[AnalysisEvidenceCitation],
-    allowed_source_ids: set[str],
-    source_texts: dict[str, str],
-    document_context: object,
-) -> list[AnalysisEvidenceCitation]:
-    bound: list[AnalysisEvidenceCitation] = []
-    seen: set[tuple[str, str]] = set()
-    for citation in citations:
-        source_id = citation.source_message_id
-        quote = citation.exact_quote
-        key = (source_id, quote)
-        content = source_texts.get(source_id)
-        if (
-            source_id not in allowed_source_ids
-            or content is None
-            or quote not in content
-        ):
-            continue
-        if key in seen:
-            continue
-        seen.add(key)
-        locator = resolve_document_locator(
-            source_id,
-            quote,
-            content,
-            document_context,
-        )
-        bound.append(
-            AnalysisEvidenceCitation(
-                source_message_id=source_id,
-                exact_quote=quote,
-                **locator,
-            )
-        )
-    return bound
-
-
-def _source_texts(analysis_context: Mapping[str, object]) -> dict[str, str]:
-    raw = analysis_context.get("_source_text_by_message_id")
-    if not isinstance(raw, Mapping):
-        return {}
-    return {
-        str(source_id): content
-        for source_id, content in raw.items()
-        if isinstance(source_id, str) and isinstance(content, str)
-    }
-
-
-# Backward-compatibility aliases
-_format_identifier = formatIdentifier
-normalize_analysis_identifiers = normalizeAnalysisIdentifiers
-_extract_text_value = extractTextValue
-_extract_visible_text = extractVisibleText
-_log_response_shape = logResponseShape
-_strip_trailing_ocr_boilerplate = stripTrailingOcrBoilerplate
-validated_response_payload = validateResponsePayload
-parse_case_analysis_response = parseCaseAnalysisResponse
-
 __all__ = [
-    "bind_analysis_claim_citations",
     "extractTextValue",
     "extractVisibleText",
     "formatIdentifier",
     "logResponseShape",
     "normalizeAnalysisIdentifiers",
-    "normalize_analysis_identifiers",
-    "parseCaseAnalysisResponse",
-    "parse_case_analysis_response",
     "stripTrailingOcrBoilerplate",
     "validateResponsePayload",
-    "validated_response_payload",
 ]

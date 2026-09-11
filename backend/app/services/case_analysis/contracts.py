@@ -155,39 +155,6 @@ class CaseEvidenceCitation(BaseModel):
         return self
 
 
-class CaseQuoteCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_id: str = Field(min_length=1, max_length=160)
-    source_revision: int = Field(ge=1)
-    exact_quote: str = Field(min_length=1, max_length=2_000)
-    role: Literal["supporting", "contradicting"]
-
-    @field_validator("source_id", "exact_quote")
-    @classmethod
-    def require_trimmed_text(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized or normalized != value:
-            raise ValueError("Source references must contain trimmed text")
-        return normalized
-
-
-class CaseClaimCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    text: str = Field(min_length=1, max_length=4_000)
-    claim_type: CaseClaimType
-    epistemic_status: CaseEpistemicStatus
-    evidence: tuple[CaseQuoteCandidate, ...] = Field(min_length=1, max_length=64)
-    reasoning_summary: str | None = Field(default=None, min_length=1, max_length=1_000)
-
-
-class CaseExtractedClaims(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    claims: tuple[CaseClaimCandidate, ...] = Field(min_length=1, max_length=256)
-
-
 class CaseGeneratedUnit(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -208,12 +175,6 @@ class CaseGeneratedUnit(BaseModel):
         if not normalized:
             raise ValueError("generated text must be non-empty")
         return normalized
-
-
-class CaseGeneratedSummary(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    units: tuple[CaseGeneratedUnit, ...] = Field(min_length=1, max_length=64)
 
 
 class CaseAnalysisClaim(BaseModel):
@@ -455,50 +416,6 @@ class CaseAnalysisFailureMetadata(BaseModel):
     failure_code: str = Field(min_length=1, max_length=120)
 
 
-CaseClaimCandidate.model_rebuild()
-
-
-# ==============================================================================
-# Legacy V3 & Cross-Version Trace Models
-# ==============================================================================
-
-class AnalysisEvidenceCitation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_message_id: str = Field(min_length=1, max_length=160)
-    exact_quote: str = Field(min_length=1, max_length=2_000)
-    document_id: str | None = Field(default=None, min_length=1, max_length=160)
-    filename: str | None = Field(default=None, min_length=1, max_length=255)
-    page_numbers: list[int] = Field(default_factory=list, max_length=8)
-
-    @field_validator("source_message_id", "exact_quote", "document_id", "filename")
-    @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        return value.strip() if value is not None else None
-
-    @field_validator("page_numbers")
-    @classmethod
-    def unique_page_numbers(cls, value: list[int]) -> list[int]:
-        if any(page < 1 or page > 500 for page in value):
-            raise ValueError("citation page numbers must be between 1 and 500")
-        if len(value) != len(set(value)):
-            raise ValueError("citation page numbers must be unique")
-        return value
-
-    @model_validator(mode="after")
-    def validate_document_locator(self) -> "AnalysisEvidenceCitation":
-        has_document_locator = bool(
-            self.document_id or self.filename or self.page_numbers
-        )
-        if has_document_locator and not (
-            self.document_id and self.filename and self.page_numbers
-        ):
-            raise ValueError(
-                "document citations require an identifier, filename, and pages"
-            )
-        return self
-
-
 ResponseLanguage = Literal["thai", "english"]
 VALID_RESPONSE_LANGUAGES: frozenset[str] = frozenset({"thai", "english"})
 
@@ -523,297 +440,32 @@ def resolve_response_language(user_message: object) -> ResponseLanguage:
     raise ValueError("User message language must be Thai or English")
 
 
-ANALYSIS_TRACE_VERSION = "analysis_trace_v2"
-ANALYSIS_TRACE_V3_VERSION = "analysis_trace_v3"
-AnalysisMode = Literal["case_overview", "question_answer"]
-ClaimType = Literal["reported", "analytical_inference", "unknown"]
-EpistemicStatus = Literal[
-    "reported",
-    "suspected",
-    "contradicted",
-    "not_established",
-    "unknown",
-    "not_confirmed",
-]
-GapStatus = Literal[
-    "NOT_PROVIDED",
-    "EXPLICITLY_UNKNOWN",
-    "AMBIGUOUS",
-    "CONFLICTING",
-]
-GapPriority = Literal["high", "medium", "low"]
-PROVIDER_CLAIM_IDS = tuple(f"A-{index:02d}" for index in range(1, 65))
-ProviderClaimId = Literal[*PROVIDER_CLAIM_IDS]
-
-
-class AnalysisClaim(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    claim_id: str = Field(pattern=r"^A-\d{2,}$", max_length=80)
-    claim_type: ClaimType
-    text: str = Field(min_length=1, max_length=4_000)
-    epistemic_status: EpistemicStatus
-    source_message_ids: list[str] = Field(default_factory=list, max_length=64)
-
-    @field_validator("text")
-    @classmethod
-    def normalize_text(cls, value: str) -> str:
-        return value.strip()
-
-    @field_validator("source_message_ids")
-    @classmethod
-    def unique_source_ids(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip() for item in value]
-        if any(not item for item in normalized) or len(set(normalized)) != len(
-            normalized
-        ):
-            raise ValueError("source message IDs must be non-empty and unique")
-        return normalized
-
-
-class MitreAssociation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    association_id: str = Field(pattern=r"^MA-\d{2,}$", max_length=80)
-    technique_id: str = Field(pattern=r"^T\d{4}(?:\.\d{3})?$", max_length=9)
-    claim_ids: list[str] = Field(min_length=1, max_length=64)
-    reason: str = Field(min_length=1, max_length=4_000)
-    status: Literal["candidate_only"]
-    support_role: Literal["external_technical_context"]
-
-    @field_validator("association_id", mode="before")
-    @classmethod
-    def normalize_association_id(cls, value: object) -> object:
-        return _format_identifier(value, "MA", "MA|assoc|association")
-
-    @field_validator("claim_ids", mode="before")
-    @classmethod
-    def normalize_claim_ids(cls, value: object) -> object:
-        if isinstance(value, (list, tuple)):
-            return [_format_identifier(item, "A", "A|claim|c") for item in value]
-        return value
-
-
-class AnalysisClaimV3(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    claim_id: str = Field(pattern=r"^A-\d{2,}$", max_length=80)
-    claim_type: ClaimType
-    text: str = Field(min_length=1, max_length=4_000)
-    epistemic_status: EpistemicStatus
-    supporting_source_message_ids: list[str] = Field(
-        default_factory=list, max_length=64
-    )
-    contradicting_source_message_ids: list[str] = Field(
-        default_factory=list, max_length=64
-    )
-    supporting_citations: list[AnalysisEvidenceCitation] = Field(
-        default_factory=list, max_length=64
-    )
-    contradicting_citations: list[AnalysisEvidenceCitation] = Field(
-        default_factory=list, max_length=64
-    )
-    reasoning_summary: str | None = Field(default=None, min_length=1, max_length=1_000)
-
-    @field_validator("claim_id", mode="before")
-    @classmethod
-    def normalize_claim_id(cls, value: object) -> object:
-        return _format_identifier(value, "A", "A|claim|c")
-
-    @field_validator("text", "reasoning_summary")
-    @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("claim text values must be non-empty")
-        return normalized
-
-    @field_validator(
-        "supporting_source_message_ids", "contradicting_source_message_ids"
-    )
-    @classmethod
-    def unique_source_ids(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip() for item in value]
-        if any(not item for item in normalized) or len(set(normalized)) != len(
-            normalized
-        ):
-            raise ValueError("source message IDs must be non-empty and unique")
-        return normalized
-
-
-class AnalysisGapV3(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    gap_id: str = Field(pattern=r"^G-\d{2,}$", max_length=80)
-    topic: str = Field(min_length=1, max_length=500)
-    status: GapStatus
-    description: str = Field(min_length=1, max_length=4_000)
-    affected_claim_ids: list[str] = Field(default_factory=list, max_length=64)
-    reason: str = Field(min_length=1, max_length=4_000)
-    priority: GapPriority
-    askable: bool
-
-    @field_validator("gap_id", mode="before")
-    @classmethod
-    def normalize_gap_id(cls, value: object) -> object:
-        return _format_identifier(value, "G", "G|gap")
-
-    @field_validator("affected_claim_ids", mode="before")
-    @classmethod
-    def normalize_affected_claim_ids(cls, value: object) -> object:
-        if isinstance(value, (list, tuple)):
-            return [_format_identifier(item, "A", "A|claim|c") for item in value]
-        return value
-
-
-    @field_validator("affected_claim_ids")
-    @classmethod
-    def unique_affected_claim_ids(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip() for item in value]
-        if any(not item for item in normalized) or len(set(normalized)) != len(normalized):
-            raise ValueError("affected claim IDs must be non-empty and unique")
-        return normalized
-
-
-class AnalysisTraceV3(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["analysis_trace_v3"] = "analysis_trace_v3"
-    validation_status: Literal["validated"] = "validated"
-    analysis_mode: AnalysisMode
-    summary: str = Field(min_length=1, max_length=24_000)
-    claims: list[AnalysisClaimV3] = Field(max_length=64)
-    gaps: list[AnalysisGapV3] = Field(default_factory=list, max_length=64)
-    mitre_associations: list[MitreAssociation] = Field(
-        default_factory=list, max_length=64
-    )
-    evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    retrieval_context_id: str | None = Field(
-        default=None, min_length=1, max_length=160
-    )
-
-
-class ProviderAnalysisClaimV3(AnalysisClaimV3):
-    claim_id: ProviderClaimId
-
-
-class ProviderMitreAssociation(MitreAssociation):
-    claim_ids: list[ProviderClaimId] = Field(min_length=1, max_length=64)
-
-
-class ProviderCaseAnalysisV3(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["analysis_trace_v3"]
-    answer: str = Field(min_length=1, max_length=24_000)
-    summary: str = Field(min_length=1, max_length=24_000)
-    claims: list[ProviderAnalysisClaimV3] = Field(max_length=64)
-    mitre_associations: list[ProviderMitreAssociation] = Field(
-        default_factory=list,
-        max_length=64,
-    )
-
-
-class AnalysisTrace(BaseModel):
-    """Historical v2 analysis trace model retained strictly for read-only deserialization."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["analysis_trace_v2"] = "analysis_trace_v2"
-    validation_status: Literal["validated"] = "validated"
-    analysis_mode: AnalysisMode
-    claims: list[AnalysisClaim]
-    mitre_associations: list[MitreAssociation] = Field(default_factory=list)
-    retrieval_context_id: str = Field(min_length=1, max_length=160)
-    evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-
-
-class AnalysisTraceFailureMetadata(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["analysis_trace_v2"] = "analysis_trace_v2"
-    validation_status: Literal["unavailable"] = "unavailable"
-    failure_code: str = Field(min_length=1, max_length=120)
-
-
-class AnalysisTraceV3FailureMetadata(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["analysis_trace_v3"] = "analysis_trace_v3"
-    validation_status: Literal["unavailable"] = "unavailable"
-    failure_code: str = Field(min_length=1, max_length=120)
-
-
-AnalysisTraceFailure = (
-    AnalysisTraceFailureMetadata | AnalysisTraceV3FailureMetadata | CaseAnalysisFailureMetadata
-)
-ValidatedAnalysisTrace = AnalysisTraceV3 | CaseAnalysisTrace
+AnalysisMode = CaseAnalysisMode
+AnalysisTraceFailure = CaseAnalysisFailureMetadata
+ValidatedAnalysisTrace = CaseAnalysisTrace
 
 
 @dataclass(frozen=True)
 class CaseAnalysisResult:
     answer: str
-    trace: CaseAnalysisTrace | AnalysisTraceV3 | None
-    trace_failure: AnalysisTraceFailure | None = None
+    trace: CaseAnalysisTrace | None
+    trace_failure: CaseAnalysisFailureMetadata | None = None
     execution_receipt: dict[str, object] | None = None
     followup_question: str | None = None
     followup_metadata: dict[str, object] | None = None
 
 
-ReadableAnalysisTrace = Annotated[
-    AnalysisTrace | AnalysisTraceV3 | CaseAnalysisTrace,
-    Field(discriminator="version"),
-]
-
-_analysis_trace_reader = TypeAdapter(ReadableAnalysisTrace)
+ReadableAnalysisTrace = CaseAnalysisTrace
+_analysis_trace_reader = TypeAdapter(CaseAnalysisTrace)
 
 
-def read_analysis_trace(payload: object) -> ReadableAnalysisTrace:
+def read_analysis_trace(payload: object) -> CaseAnalysisTrace:
     return _analysis_trace_reader.validate_python(payload)
 
 
-# ==============================================================================
-# Backward-compatibility aliases for smooth transition away from 'native' naming
-# ==============================================================================
-NativeClaimType = CaseClaimType
-NativeEpistemicStatus = CaseEpistemicStatus
-NativeAnalysisMode = CaseAnalysisMode
-NativeAdmittedSource = CaseAdmittedSource
-build_native_source_registry = build_case_source_registry
-NativeCaseEvidenceCitation = CaseEvidenceCitation
-NativeClaimCandidate = CaseClaimCandidate
-NativeQuoteCandidate = CaseQuoteCandidate
-NativeExtractedClaims = CaseExtractedClaims
-NativeGeneratedUnit = CaseGeneratedUnit
-NativeGeneratedSummary = CaseGeneratedSummary
-NativeInvolvedParty = CaseInvolvedParty
-NativeTimelineItem = CaseTimelineItem
-NativeImpactItem = CaseImpactItem
-NativeCaseAnalysisClaim = CaseAnalysisClaim
-NativeCaseAnalysisGap = CaseAnalysisGap
-NativeMitreAssociation = CaseMitreAssociation
-NativeCaseAnalysisTrace = CaseAnalysisTrace
-NativeProviderCaseAnalysis = CaseProviderAnalysis
-NativeProviderMitreMapping = CaseProviderMitreMapping
-NativeCaseAnalysisFailureMetadata = CaseAnalysisFailureMetadata
-NativeCaseAnalysisResult = CaseAnalysisResult
-
-
 __all__ = [
-    "ANALYSIS_TRACE_VERSION",
-    "ANALYSIS_TRACE_V3_VERSION",
-    "AnalysisClaim",
-    "AnalysisClaimV3",
-    "AnalysisEvidenceCitation",
-    "AnalysisGapV3",
     "AnalysisMode",
-    "AnalysisTrace",
     "AnalysisTraceFailure",
-    "AnalysisTraceFailureMetadata",
-    "AnalysisTraceV3",
-    "AnalysisTraceV3FailureMetadata",
     "CaseAdmittedSource",
     "CaseAnalysisClaim",
     "CaseAnalysisFailure",
@@ -822,57 +474,21 @@ __all__ = [
     "CaseAnalysisMode",
     "CaseAnalysisResult",
     "CaseAnalysisTrace",
-    "CaseClaimCandidate",
     "CaseClaimType",
     "CaseEpistemicStatus",
     "CaseEvidenceCitation",
-    "CaseExtractedClaims",
-    "CaseGeneratedSummary",
     "CaseGeneratedUnit",
     "CaseImpactItem",
     "CaseInvolvedParty",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
     "CaseProviderMitreMapping",
-    "CaseQuoteCandidate",
     "CaseTimelineItem",
-    "ClaimType",
-    "EpistemicStatus",
-    "GapPriority",
-    "GapStatus",
-    "MitreAssociation",
-    "NativeAdmittedSource",
-    "NativeAnalysisMode",
-    "NativeCaseAnalysisClaim",
-    "NativeCaseAnalysisFailureMetadata",
-    "NativeCaseAnalysisGap",
-    "NativeCaseAnalysisResult",
-    "NativeCaseAnalysisTrace",
-    "NativeCaseEvidenceCitation",
-    "NativeClaimCandidate",
-    "NativeClaimType",
-    "NativeEpistemicStatus",
-    "NativeExtractedClaims",
-    "NativeGeneratedSummary",
-    "NativeGeneratedUnit",
-    "NativeImpactItem",
-    "NativeInvolvedParty",
-    "NativeMitreAssociation",
-    "NativeProviderCaseAnalysis",
-    "NativeProviderMitreMapping",
-    "NativeQuoteCandidate",
-    "NativeTimelineItem",
-    "PROVIDER_CLAIM_IDS",
-    "ProviderAnalysisClaimV3",
-    "ProviderCaseAnalysisV3",
-    "ProviderClaimId",
-    "ProviderMitreAssociation",
     "ReadableAnalysisTrace",
     "ResponseLanguage",
     "VALID_RESPONSE_LANGUAGES",
     "ValidatedAnalysisTrace",
     "build_case_source_registry",
-    "build_native_source_registry",
     "formatIdentifier",
     "read_analysis_trace",
     "resolve_response_language",

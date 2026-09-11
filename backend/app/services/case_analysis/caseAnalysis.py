@@ -92,21 +92,6 @@ async def executeCaseAnalysisPipeline(
     if context.get("_evidence_sha256", digest) != digest:
         raise CaseAnalysisFailure("case_evidence_stale", "Case snapshot hash changed")
     language = resolve_response_language(user_message)
-    if mode == "case_overview" and config.pipeline == "claim_anchored":
-        from app.services.case_analysis.claim_anchored.nativeAdapter import (
-            execute_claim_anchored_case_pipeline,
-        )
-
-        return await execute_claim_anchored_case_pipeline(
-            raw_evidence=raw_evidence,
-            context=context,
-            language=language,
-            config=config,
-            sources=sources,
-            client=client,
-            evidence_sha256=digest,
-            receipt=receipt,
-        )
     return await executeRawDirectPipeline(
         raw_evidence,
         context,
@@ -340,16 +325,10 @@ async def request_case_analysis(
     )
 
 
-# Backward-compatibility aliases
-analyze_case_native = analyze_case
-executeNativeAnalysisPipeline = executeCaseAnalysisPipeline
-
 __all__ = [
     "MainCaseAnalysisService",
     "analyze_case",
-    "analyze_case_native",
     "executeCaseAnalysisPipeline",
-    "executeNativeAnalysisPipeline",
     "executeRawDirectPipeline",
     "requestAnalysisStage",
     "request_case_analysis",

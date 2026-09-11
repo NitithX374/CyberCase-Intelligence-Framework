@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import settings
-from app.services.case_analysis.contracts import AnalysisGapV3
+from app.services.case_analysis.contracts import CaseAnalysisGap
 from app.services.followup.decision import evaluate_followup_outcome
 from app.services.followup.gapAnalysis import run_gap_analysis_stage
 from app.services.followup.contracts import (
@@ -49,8 +49,8 @@ def canonical_gap(
     priority: str = "high",
     askable: bool = True,
     claims: list[str] | None = None,
-) -> AnalysisGapV3:
-    return AnalysisGapV3(
+) -> CaseAnalysisGap:
+    return CaseAnalysisGap(
         gap_id=gap_id,
         topic=topic,
         status=status,

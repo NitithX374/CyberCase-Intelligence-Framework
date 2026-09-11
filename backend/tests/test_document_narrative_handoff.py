@@ -6,9 +6,6 @@ from pydantic import ValidationError
 
 from app.models.chat import ChatMessage
 from app.schemas.chat import ChatMessageCreate
-from app.services.case_analysis.legacyPrompts import (
-    build_case_analysis_prompt,
-)
 from app.services.case_analysis.mitreApplicabilityGate import (
     build_mitre_applicability_prompt,
 )
@@ -69,7 +66,7 @@ def test_raw_evidence_keeps_text_authoritative_and_quality_metadata_separate() -
     )
 
 
-def test_analysis_and_mitre_prompts_receive_quality_as_non_evidence_context() -> None:
+def test_mitre_prompts_receive_quality_as_non_evidence_context() -> None:
     message_id = uuid4()
     message = ChatMessage(
         id=message_id,
@@ -83,42 +80,6 @@ def test_analysis_and_mitre_prompts_receive_quality_as_non_evidence_context() ->
         },
     )
     snapshot = build_raw_evidence_snapshot([message])
-    analysis_prompt = build_case_analysis_prompt(
-        mode="case_overview",
-        raw_evidence=snapshot.text,
-        analysis_context={
-            "source_message_ids": [str(message_id)],
-            "document_source_context": list(snapshot.document_source_context),
-        },
-        question=None,
-        response_language="english",
-    )
-    analysis_payload = json.loads(
-        analysis_prompt.split("<case_context_json>\n", 1)[1].split(
-            "\n</case_context_json>", 1
-        )[0]
-    )
-    assert analysis_payload["raw_user_case_evidence"] == snapshot.text
-    assert analysis_payload["optional_external_context"]["document_source_context"]
     mitre_prompt = build_mitre_applicability_prompt(snapshot.sources)
     assert '"confidence_status":"not_reported"' in mitre_prompt
     assert '"document_sources"' in mitre_prompt
-
-
-def test_internal_source_text_map_is_not_serialized_into_the_provider_context() -> None:
-    prompt = build_case_analysis_prompt(
-        mode="case_overview",
-        raw_evidence="[INITIAL CASE NARRATIVE]\nVisible evidence",
-        analysis_context={
-            "source_message_ids": ["message-1"],
-            "_source_text_by_message_id": {"message-1": "internal duplicate"},
-        },
-        question=None,
-        response_language="english",
-    )
-    payload = json.loads(
-        prompt.split("<case_context_json>\n", 1)[1].split("\n</case_context_json>", 1)[
-            0
-        ]
-    )
-    assert payload["optional_external_context"] is None
