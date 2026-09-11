@@ -47,18 +47,33 @@ def validate_case_trace(
     ]
     known_claim_ids = set(claim_ids)
     for party in trace.involved_parties:
+        if not party.claim_ids:
+            raise CaseAnalysisFailure(
+                "case_trace_party_without_claim",
+                "Case involved party requires at least one claim ID",
+            )
         if not set(party.claim_ids).issubset(known_claim_ids):
             raise CaseAnalysisFailure(
                 "case_trace_party_unknown_claim",
                 "Case involved party references an unknown claim",
             )
     for item in trace.timeline:
+        if not item.claim_ids:
+            raise CaseAnalysisFailure(
+                "case_trace_timeline_without_claim",
+                "Case timeline item requires at least one claim ID",
+            )
         if not set(item.claim_ids).issubset(known_claim_ids):
             raise CaseAnalysisFailure(
                 "case_trace_timeline_unknown_claim",
                 "Case timeline item references an unknown claim",
             )
     for impact in trace.impacts:
+        if not impact.claim_ids:
+            raise CaseAnalysisFailure(
+                "case_trace_impact_without_claim",
+                "Case impact requires at least one claim ID",
+            )
         if not set(impact.claim_ids).issubset(known_claim_ids):
             raise CaseAnalysisFailure(
                 "case_trace_impact_unknown_claim",

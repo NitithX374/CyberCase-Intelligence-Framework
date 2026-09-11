@@ -88,7 +88,72 @@ def test_build_case_report_snapshot_rejects_stale_analysis() -> None:
         build_case_report_snapshot(case, result, thread)
 
     assert exc_info.value.code == "case_analysis_stale"
-    assert "older evidence" in exc_info.value.message.lower()
+    assert "evidence revision" in exc_info.value.message.lower()
+
+
+def test_build_case_report_snapshot_rejects_evidence_revision_mismatch() -> None:
+    case_id = uuid4()
+    thread_id = case_id
+    analysis_id = uuid4()
+    snapshot_id = uuid4()
+
+    # Mismatch: snapshot evidence_revision=2 vs case evidence_revision=1
+    case = Case(
+        id=case_id,
+        title="Mismatch Report Test",
+        evidence_revision=1,
+        latest_analysis_result_id=analysis_id,
+    )
+    thread = ChatThread(id=thread_id, title="Thread")
+
+    source_uuid = uuid4()
+    evidence_text = f"[SOURCE {source_uuid}]\nFact."
+    evidence_sha = hashlib.sha256(evidence_text.encode()).hexdigest()
+    mismatched_snapshot = CaseEvidenceSnapshot(
+        id=snapshot_id,
+        case_id=case_id,
+        evidence_revision=2,
+        format_version="case_evidence_snapshot_v1",
+        input_text=evidence_text,
+        text_sha256=evidence_sha,
+        manifest_sha256="0" * 64,
+        manifest_json=[
+            {
+                "source_id": str(source_uuid),
+                "source_kind": "narrative",
+                "revision_id": str(uuid4()),
+                "revision": 2,
+                "exact_text": "Fact.",
+                "text_sha256": hashlib.sha256(b"Fact.").hexdigest(),
+                "provenance": {},
+            }
+        ],
+    )
+    result = CaseAnalysisResult(
+        id=analysis_id,
+        case_id=case_id,
+        snapshot_id=snapshot_id,
+        status="validated",
+        answer="Answer",
+        summary="Summary",
+        trace_json={
+            "version": "case_analysis_trace_v1",
+            "validation_status": "validated",
+            "analysis_mode": "case_overview",
+            "summary": "Summary",
+            "claims": [],
+            "gaps": [],
+            "mitre_associations": [],
+            "evidence_sha256": evidence_sha,
+        },
+    )
+    result.snapshot = mismatched_snapshot
+
+    with pytest.raises(ReportGenerationConflict) as exc_info:
+        build_case_report_snapshot(case, result, thread)
+
+    assert exc_info.value.code == "case_analysis_stale"
+    assert "evidence revision" in exc_info.value.message.lower()
 
 
 def test_build_case_report_snapshot_allows_current_analysis() -> None:

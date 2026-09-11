@@ -97,10 +97,10 @@ def build_case_report_snapshot(
     snapshot = result.snapshot
     if snapshot is None or snapshot.case_id != case.id or result.snapshot_id != snapshot.id:
         raise ReportGenerationConflict("case_snapshot_missing", "The selected analysis snapshot is unavailable")
-    if snapshot.evidence_revision < case.evidence_revision:
+    if snapshot.evidence_revision != case.evidence_revision:
         raise ReportGenerationConflict(
             "case_analysis_stale",
-            "The selected Case analysis is based on older evidence. Re-run analysis before generating a report.",
+            "The selected Case analysis is based on a different evidence revision. Re-run analysis before generating a report.",
         )
     trace = _validated_trace(result, snapshot)
     technical_augmentation = _technical_augmentation_snapshot(result, snapshot, trace)

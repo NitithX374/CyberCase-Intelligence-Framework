@@ -259,3 +259,86 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
         assert result.trace.timeline[0].event == "Unauthorized access"
         assert len(result.trace.impacts) == 1
         assert result.trace.impacts[0].description == "Unauthorized access to systems"
+
+
+def test_case_overview_models_reject_empty_claim_ids() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        CaseInvolvedParty(name="Alice Corp", role="Victim", claim_ids=[])
+    with pytest.raises(ValidationError):
+        CaseTimelineItem(time="Monday", event="Breach", claim_ids=[])
+    with pytest.raises(ValidationError):
+        CaseImpactItem(description="Data leak", claim_ids=[])
+
+
+def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() -> None:
+    from pydantic import ValidationError
+
+    valid = CaseProviderAnalysis.model_validate(
+        {
+            "version": "case_analysis_trace_v1",
+            "answer": "Answer",
+            "summary": "Summary",
+            "involved_parties": [],
+            "timeline": [],
+            "impacts": [],
+            "claims": [],
+        }
+    )
+    assert valid.involved_parties == []
+    assert valid.timeline == []
+    assert valid.impacts == []
+
+    # Missing involved_parties raises ValidationError
+    with pytest.raises(ValidationError):
+        CaseProviderAnalysis.model_validate(
+            {
+                "version": "case_analysis_trace_v1",
+                "answer": "Answer",
+                "summary": "Summary",
+                "timeline": [],
+                "impacts": [],
+                "claims": [],
+            }
+        )
+
+    # Missing timeline raises ValidationError
+    with pytest.raises(ValidationError):
+        CaseProviderAnalysis.model_validate(
+            {
+                "version": "case_analysis_trace_v1",
+                "answer": "Answer",
+                "summary": "Summary",
+                "involved_parties": [],
+                "impacts": [],
+                "claims": [],
+            }
+        )
+
+    # Missing impacts raises ValidationError
+    with pytest.raises(ValidationError):
+        CaseProviderAnalysis.model_validate(
+            {
+                "version": "case_analysis_trace_v1",
+                "answer": "Answer",
+                "summary": "Summary",
+                "involved_parties": [],
+                "timeline": [],
+                "claims": [],
+            }
+        )
+
+
+def test_persisted_case_analysis_trace_defaults_structural_keys_when_omitted() -> None:
+    trace = CaseAnalysisTrace.model_validate(
+        {
+            "analysis_mode": "case_overview",
+            "summary": "Summary",
+            "claims": [],
+            "evidence_sha256": "0" * 64,
+        }
+    )
+    assert trace.involved_parties == []
+    assert trace.timeline == []
+    assert trace.impacts == []

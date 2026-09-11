@@ -104,6 +104,9 @@ class DirectPipelineOcrQualityTests(unittest.IsolatedAsyncioTestCase):
             version="case_analysis_trace_v1",
             answer="Answer",
             summary="Summary",
+            involved_parties=[],
+            timeline=[],
+            impacts=[],
             claims=[claim],
         )
 

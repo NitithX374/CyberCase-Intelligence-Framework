@@ -222,8 +222,11 @@ _DIRECT_TRACE_CORRECTION_CODES = frozenset(
         "case_trace_citation_role_invalid",
         "case_trace_citation_revision_invalid",
         "case_trace_citation_quote_invalid",
+        "case_trace_party_without_claim",
         "case_trace_party_unknown_claim",
+        "case_trace_timeline_without_claim",
         "case_trace_timeline_unknown_claim",
+        "case_trace_impact_without_claim",
         "case_trace_impact_unknown_claim",
         "case_trace_gap_unknown_claim",
     }

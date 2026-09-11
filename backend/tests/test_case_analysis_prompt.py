@@ -67,6 +67,9 @@ def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
         version="case_analysis_trace_v1",
         answer="The report was submitted.",
         summary="The report was submitted.",
+        involved_parties=[],
+        timeline=[],
+        impacts=[],
         claims=[claim],
     )
 
