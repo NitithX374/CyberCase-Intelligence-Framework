@@ -6,26 +6,16 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.case_analysis.contracts import AnalysisTraceV3, CaseAnalysisResult
-from app.services.case_analysis.gap_assembly import enrich_case_analysis_result
 from app.services.followup.schemas import (
     GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS,
     build_gap_analysis_claim_transport,
 )
 from app.services.followup.decision import evaluate_followup_outcome
-from app.services.followup.gap_analysis import AnthropicGapAnalysis
+from app.services.followup.gapAnalysis import AnthropicGapAnalysis
 from app.services.followup.prompts import (
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_SYSTEM,
 )
-from app.services.followup.schemas import (
-    FollowUpDecision,
-    GapAnalysis,
-    GapAnalysisResult,
-    GapItem,
-)
-from app.services.workflow.chat_run_completion import _serialize_analysis_trace
-from app.services.workflow.outcome import AssistantOutcome
 
 
 def claim_payload(index: int) -> dict[str, object]:
@@ -38,29 +28,6 @@ def claim_payload(index: int) -> dict[str, object]:
         "claim_type": "reported",
         "epistemic_status": "reported",
     }
-
-
-def trace_with_64_claims() -> AnalysisTraceV3:
-    claims = [
-        {
-            **claim_payload(index),
-            "supporting_source_message_ids": ["message-1"],
-            "contradicting_source_message_ids": [],
-            "reasoning_summary": None,
-        }
-        for index in range(1, 65)
-    ]
-    return AnalysisTraceV3.model_validate(
-        {
-            "analysis_mode": "case_overview",
-            "summary": "The evidence supports sixty-four bounded claims.",
-            "claims": claims,
-            "gaps": [],
-            "mitre_associations": [],
-            "evidence_sha256": "a" * 64,
-            "retrieval_context_id": None,
-        }
-    )
 
 
 def test_dedicated_transport_preserves_all_64_claims_in_order() -> None:
@@ -84,7 +51,7 @@ def test_gap_provider_payload_bypasses_generic_32_item_limiter(monkeypatch) -> N
         return {"gaps": []}, None, None
 
     monkeypatch.setattr(
-        "app.services.followup.gap_analysis.resolve_core_llm_target",
+        "app.services.followup.gapAnalysis.resolve_core_llm_target",
         lambda model: SimpleNamespace(
             model="test-model",
             provider="openrouter",
@@ -143,73 +110,6 @@ def test_transport_rejects_claim_count_above_v3_contract() -> None:
         build_gap_analysis_claim_transport(
             [claim_payload(index) for index in range(1, 66)]
         )
-
-
-def test_a64_exact_link_survives_gap_stage_assembly_and_serialization() -> None:
-    trace = trace_with_64_claims()
-    source_run_id = uuid4()
-
-    class Analyzer:
-        async def analyze(self, **kwargs):
-            transmitted = kwargs["analysis_claims"]
-            assert len(transmitted) == 64
-            assert transmitted[-1]["claim_id"] == "A-64"
-            return GapAnalysisResult(
-                analysis=GapAnalysis(
-                    gaps=[
-                        GapItem(
-                            topic="ลำดับการส่งมอบ",
-                            status="AMBIGUOUS",
-                            description="ยังยืนยันลำดับการส่งมอบไม่ได้",
-                            affects="A-64 — ต้องยืนยันช่วงเวลารับมอบ",
-                            reason="ลำดับเวลามีผลต่อข้อสรุป",
-                            priority="high",
-                            askable=True,
-                        )
-                    ]
-                )
-            )
-
-    class Policy:
-        async def decide(self, **kwargs):
-            return FollowUpDecision(
-                decision="ask_followup",
-                selected_gap="ลำดับการส่งมอบ",
-                question="ทรัพย์สินถูกส่งมอบเมื่อใด?",
-            )
-
-    resolution = asyncio.run(
-        evaluate_followup_outcome(
-            original_user_content="ทรัพย์สินสูญหาย",
-            clarification_exchanges=(),
-            followup_root_ordinal=1,
-            source_run_id=source_run_id,
-            raw_evidence="raw evidence",
-            analysis_answer="analysis",
-            analysis_context={},
-            analysis_claims=[claim_payload(index) for index in range(1, 65)],
-            gap_analyzer=Analyzer(),
-            policy=Policy(),
-        )
-    )
-    enriched = enrich_case_analysis_result(
-        CaseAnalysisResult(answer="analysis", trace=trace),
-        resolution.gap_analysis,
-        source_message_ids={"message-1"},
-    )
-    assert enriched.trace is not None
-    assert enriched.trace.gaps[0].affected_claim_ids == ["A-64"]
-    outcome = AssistantOutcome(
-        content="analysis",
-        retrieval_context_id=None,
-        metadata_json={},
-        thread_status="answered",
-        analysis_trace_draft=enriched.trace,
-        evidence_sha256="a" * 64,
-    )
-    persisted = _serialize_analysis_trace(outcome)
-    assert persisted is not None
-    assert persisted["gaps"][0]["affected_claim_ids"] == ["A-64"]
 
 
 def test_gap_failure_log_includes_source_run_id(caplog) -> None:

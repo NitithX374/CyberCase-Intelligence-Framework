@@ -7,7 +7,7 @@ import httpx
 import pytest
 from app.config import settings
 from app.database import engine
-from app.routers import auth, chat, password_auth
+from app.routers import auth, chat, passwordAuth
 from fastapi import FastAPI
 
 
@@ -20,7 +20,7 @@ def test_registered_accounts_persist_private_chats(monkeypatch):
 
     async def exercise():
         application = FastAPI()
-        for router in (auth.router, password_auth.router, chat.router):
+        for router in (auth.router, passwordAuth.router, chat.router):
             application.include_router(router)
         transport = httpx.ASGITransport(app=application)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -32,7 +32,7 @@ def test_registered_accounts_persist_private_chats(monkeypatch):
             created = await client.post("/chats", json={"title": "Persisted private case"})
             assert created.status_code == 201, created.text
             thread_id = created.json()["id"]
-            with patch("app.routers.chat.process_chat_run", new=AsyncMock()):
+            with patch("app.routers.chat.process_case_run", new=AsyncMock()):
                 accepted = await client.post(f"/chats/{thread_id}/messages", json={
                     "content": "Saved incident evidence", "idempotency_key": "persisted-evidence"
                 })

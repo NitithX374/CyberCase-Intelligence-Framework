@@ -6,7 +6,7 @@ import pytest
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.routers import auth, chat, password_auth
+from app.routers import auth, chat, passwordAuth
 from app.services.auth.passwords import hash_password, verify_password
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -19,7 +19,7 @@ def account_client(monkeypatch):
         settings, "jwt_secret_key", "test-secret-for-account-tests-1234567890"
     )
     application = FastAPI()
-    application.include_router(password_auth.router)
+    application.include_router(passwordAuth.router)
     application.include_router(auth.router)
     application.include_router(chat.router)
     db = AsyncMock()

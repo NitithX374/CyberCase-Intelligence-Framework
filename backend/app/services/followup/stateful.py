@@ -214,14 +214,33 @@ def _has_claim_links(gap: AnalysisGapV3 | GapItem) -> bool:
     return bool(re.search(r"(?<![A-Z0-9])A-\d{2,}(?![A-Z0-9])", gap.affects))
 
 
+applyClarificationHistory = apply_clarification_history
+normalizeGapKey = normalize_gap_key
+clarificationAnswerContext = clarification_answer_context
+exhaustedGapKeys = exhausted_gap_keys
+followupContext = followup_context
+policyGap = policy_gap
+relevantClaimContext = relevant_claim_context
+selectNextGap = select_next_gap
+unavailableGapKeys = unavailable_gap_keys
+
 __all__ = [
+    "applyClarificationHistory",
     "apply_clarification_history",
+    "clarificationAnswerContext",
     "clarification_answer_context",
+    "exhaustedGapKeys",
     "exhausted_gap_keys",
+    "followupContext",
     "followup_context",
+    "normalizeGapKey",
     "normalize_gap_key",
+    "policyGap",
     "policy_gap",
+    "relevantClaimContext",
     "relevant_claim_context",
+    "selectNextGap",
     "select_next_gap",
+    "unavailableGapKeys",
     "unavailable_gap_keys",
 ]

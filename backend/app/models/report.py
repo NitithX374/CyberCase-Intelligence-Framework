@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CHAR,
@@ -24,6 +25,11 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.case import Case
+    from app.models.caseMaterials import CaseEvidenceSnapshot
+    from app.models.caseRun import CaseAnalysisResult
 
 
 class ChatReport(Base):
@@ -53,6 +59,8 @@ class ChatReport(Base):
             name="ck_chat_reports_validation_status",
         ),
         Index("ix_chat_reports_thread_id_created_at", "thread_id", "created_at"),
+        Index("ix_chat_reports_case_id_created_at", "case_id", "created_at"),
+        Index("ix_chat_reports_analysis_result_id", "analysis_result_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -65,9 +73,9 @@ class ChatReport(Base):
         ForeignKey(
             "chat_threads.id",
             name="fk_chat_reports_thread_id_chat_threads",
-            ondelete="CASCADE",
+            ondelete="SET NULL",
         ),
-        nullable=False,
+        nullable=True,
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -79,14 +87,41 @@ class ChatReport(Base):
         CHAR(64),
         nullable=False,
     )
-    analysis_message_id: Mapped[uuid.UUID] = mapped_column(
+    analysis_message_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "chat_messages.id",
             name="fk_chat_reports_analysis_message_id_chat_messages",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+    )
+    case_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "cases.id",
+            name="fk_chat_reports_case_id_cases",
             ondelete="CASCADE",
         ),
-        nullable=False,
+        nullable=True,
+    )
+    analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "case_analysis_results.id",
+            name="fk_chat_reports_analysis_result_id_case_analysis_results",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+    )
+    evidence_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "case_evidence_snapshots.id",
+            name="fk_chat_reports_evidence_snapshot_id_case_evidence_snapshots",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
     )
     retrieval_context_id: Mapped[str | None] = mapped_column(
         String(160),
@@ -138,6 +173,9 @@ class ChatReport(Base):
 
     thread = relationship("ChatThread", back_populates="reports")
     analysis_message = relationship("ChatMessage")
+    case: Mapped["Case | None"] = relationship("Case", back_populates="reports")
+    analysis_result: Mapped["CaseAnalysisResult | None"] = relationship("CaseAnalysisResult")
+    evidence_snapshot: Mapped["CaseEvidenceSnapshot | None"] = relationship("CaseEvidenceSnapshot")
 
 
 __all__ = ["ChatReport"]

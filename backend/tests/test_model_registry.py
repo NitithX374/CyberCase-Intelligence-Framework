@@ -1,7 +1,7 @@
 """Unit tests for the OpenRouter model registry and alias resolver."""
 
 import pytest
-from app.services.llm.model_registry import (
+from app.services.llm.modelRegistry import (
     DEFAULT_OPENROUTER_MODEL,
     CURATED_MODEL_PRESETS,
     format_model_table,

@@ -68,6 +68,7 @@ class ReportClaim(BaseModel):
     text: str = Field(min_length=1, max_length=4_000)
     support_type: ReportSupportType
     source_message_ids: list[str] = Field(default_factory=list, max_length=32)
+    source_evidence_ids: list[str] = Field(default_factory=list, max_length=32)
     mitre_technique_ids: list[str] = Field(default_factory=list, max_length=32)
 
 
@@ -105,15 +106,34 @@ class ChatReportCreate(BaseModel):
         return normalized or None
 
 
+class CaseReportCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    analysis_result_id: UUID | None = None
+    idempotency_key: str | None = Field(default=None, max_length=255)
+
+    @field_validator("idempotency_key")
+    @classmethod
+    def normalize_idempotency_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+
 class ChatReportRead(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     report_id: UUID
-    thread_id: UUID
+    thread_id: UUID | None
     version_number: int
     idempotency_key: str
     source_snapshot_hash: str
-    analysis_message_id: UUID
+    analysis_message_id: UUID | None = None
+    case_id: UUID | None = None
+    analysis_result_id: UUID | None = None
+    evidence_snapshot_id: UUID | None = None
+    source_reference_type: Literal["legacy_chat", "case_evidence"] = "legacy_chat"
     retrieval_context_id: str | None
     prompt_version: str
     provider: str
@@ -134,6 +154,7 @@ class ChatReportRead(BaseModel):
 
 
 __all__ = [
+    "CaseReportCreate",
     "ChatReportCreate",
     "ChatReportRead",
     "REPORT_SECTION_HEADINGS_BY_VERSION",

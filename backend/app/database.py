@@ -43,3 +43,8 @@ async def get_db():
             yield session
         finally:
             await session.close()
+
+
+async def commit_dependency_transaction(session: AsyncSession) -> None:
+    if session.in_transaction():
+        await session.commit()

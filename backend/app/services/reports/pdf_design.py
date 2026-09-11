@@ -9,8 +9,10 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Paragraph, Table, TableStyle
 
 INK = colors.HexColor("#111827")
 MUTED = colors.HexColor("#4B5563")
@@ -118,3 +120,37 @@ def plain_text(value: object) -> str:
         .replace("\u2212", "-")
     )
 
+
+def table_style() -> TableStyle:
+    return TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), PANEL),
+        ("TEXTCOLOR", (0, 0), (-1, 0), INK),
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 2.0 * mm),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2.0 * mm),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2.0 * mm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2.0 * mm),
+        ("GRID", (0, 0), (-1, -1), 0.4, RULE),
+        ("LINEABOVE", (0, 0), (-1, 0), 1.0, DARK_RULE),
+        ("LINEBELOW", (0, 0), (-1, 0), 1.0, DARK_RULE),
+    ])
+
+
+__all__ = [
+    "ACCENT",
+    "DARK_RULE",
+    "INK",
+    "MUTED",
+    "PAGE_HEIGHT",
+    "PAGE_WIDTH",
+    "PANEL",
+    "RULE",
+    "build_report_styles",
+    "find_report_font",
+    "formatted_text",
+    "paragraph_text",
+    "plain_text",
+    "register_report_fonts",
+    "table_style",
+]

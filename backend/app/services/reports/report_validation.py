@@ -7,13 +7,14 @@ from app.schemas.reports import (
     PRELIMINARY_REPORT_SECTION_IDS,
     StructuredReport,
 )
-from app.services.reports.report_contracts import ReportInputSnapshot, ReportValidationError
+from app.services.reports.case_report_contracts import CaseReportInputSnapshot
+from app.services.reports.report_contracts import ReportValidationError
 
 
-def validate_structured_report(
+def validate_case_structured_report(
     report: StructuredReport,
     *,
-    source_message_ids: set[str],
+    source_evidence_ids: set[str],
     mitre_ids: set[str],
 ) -> None:
     section_ids = tuple(section.section_id for section in report.sections)
@@ -24,18 +25,18 @@ def validate_structured_report(
         if claim.claim_id in claim_ids:
             raise ReportValidationError("Report claim identifiers must be unique")
         claim_ids.add(claim.claim_id)
-        if not set(claim.source_message_ids).issubset(source_message_ids):
-            raise ReportValidationError("A report claim cites a non-evidence message")
+        if claim.source_message_ids:
+            raise ReportValidationError("Case reports cannot cite chat message IDs")
+        if not set(claim.source_evidence_ids).issubset(source_evidence_ids):
+            raise ReportValidationError("A case report claim cites a non-evidence source")
         if not set(claim.mitre_technique_ids).issubset(mitre_ids):
             raise ReportValidationError("A report claim cites an unadmitted MITRE technique")
 
 
-def source_snapshot_hash(snapshot: ReportInputSnapshot | dict[str, object]) -> str:
-    payload = (
-        snapshot.model_dump(mode="json")
-        if isinstance(snapshot, ReportInputSnapshot)
-        else dict(snapshot)
-    )
+def source_snapshot_hash(
+    snapshot: CaseReportInputSnapshot | dict[str, object],
+) -> str:
+    payload = snapshot.model_dump(mode="json") if hasattr(snapshot, "model_dump") else dict(snapshot)
     payload.pop("created_at", None)
     serialized = json.dumps(
         payload,
@@ -47,4 +48,7 @@ def source_snapshot_hash(snapshot: ReportInputSnapshot | dict[str, object]) -> s
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
-__all__ = ["source_snapshot_hash", "validate_structured_report"]
+__all__ = [
+    "source_snapshot_hash",
+    "validate_case_structured_report",
+]

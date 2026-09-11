@@ -17,7 +17,7 @@ from app.services.document_ingestion.errors import (
     InvalidDocumentError,
 )
 from app.services.document_ingestion.parsers import inspect_pdf, parse_docx
-from app.services.document_ingestion.parsers.pdf_text_parser import (
+from app.services.document_ingestion.parsers.pdfTextParser import (
     NativeTextPolicy,
     split_native_blocks,
 )
@@ -28,8 +28,8 @@ from app.services.document_ingestion.provenance import (
     build_native_regions,
 )
 from app.services.document_ingestion.recognition import DocumentRecognizer, RenderedPage
-from app.services.document_ingestion.recognized_region import build_unified_region
-from app.services.document_ingestion.region_pipeline import RegionRecognitionPipeline
+from app.services.document_ingestion.recognizedRegion import build_unified_region
+from app.services.document_ingestion.regionPipeline import RegionRecognitionPipeline
 from app.services.document_ingestion.rendering import (
     normalize_image,
     render_pdf_page,

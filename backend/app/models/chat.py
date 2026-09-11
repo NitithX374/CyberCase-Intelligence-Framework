@@ -27,7 +27,8 @@ from app.database import Base
 from app.models.user import User
 
 if TYPE_CHECKING:
-    from app.models.rag_context import RagContext
+    from app.models.case import Case
+    from app.models.ragContext import RagContext
     from app.models.report import ChatReport
 
 
@@ -49,6 +50,11 @@ class ChatThread(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
+        ForeignKey(
+            "cases.id",
+            name="fk_chat_threads_id_cases",
+            ondelete="CASCADE",
+        ),
         primary_key=True,
         default=uuid.uuid4,
     )
@@ -60,8 +66,8 @@ class ChatThread(Base):
     title: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        default="New chat",
-        server_default=text("'New chat'"),
+        default="New case",
+        server_default=text("'New case'"),
     )
     status: Mapped[str] = mapped_column(
         String(24),
@@ -100,12 +106,16 @@ class ChatThread(Base):
     )
     reports: Mapped[list["ChatReport"]] = relationship(
         back_populates="thread",
-        cascade="all, delete-orphan",
         passive_deletes=True,
     )
     user: Mapped[User | None] = relationship(
         "User",
         back_populates="threads",
+    )
+    case: Mapped["Case | None"] = relationship(
+        "Case",
+        back_populates="chat_thread",
+        uselist=False,
     )
 
 
@@ -154,6 +164,8 @@ class ChatMessage(Base):
         String(160),
         nullable=True,
     )
+    message_kind: Mapped[str] = mapped_column(String(32), nullable=False, default="conversation", server_default=text("'conversation'"))
+    analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("case_analysis_results.id", name="fk_chat_messages_analysis_result_id", ondelete="SET NULL"), nullable=True)
     metadata_json: Mapped[dict[str, object]] = mapped_column(
         JSONB,
         nullable=False,

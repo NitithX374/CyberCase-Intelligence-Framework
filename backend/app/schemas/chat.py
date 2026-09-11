@@ -8,11 +8,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.document_sources import (
+from app.schemas.documentSources import (
     CaseNarrativeDocumentPageSpan as CaseNarrativeDocumentPageSpan,
     CaseNarrativeDocumentSource as CaseNarrativeDocumentSource,
 )
-from app.schemas.message_metadata import MessageMetadata
+from app.schemas.caseRuns import CaseRunRead
+from app.schemas.messageMetadata import MessageMetadata
 
 ThreadStatus = Literal[
     "idle",
@@ -23,6 +24,9 @@ ThreadStatus = Literal[
 ]
 
 MessageRole = Literal["user", "assistant"]
+MessageKind = Literal["conversation", "analysis_result", "followup_question"]
+
+ChatCaseLinkStatus = Literal["linked", "historical_unavailable"]
 
 RunStatus = Literal[
     "queued",
@@ -34,7 +38,7 @@ RunStatus = Literal[
 
 class ChatThreadCreate(BaseModel):
     title: str = Field(
-        default="New chat",
+        default="New case",
         min_length=1,
         max_length=255,
     )
@@ -54,6 +58,7 @@ class ChatMessageCreate(BaseModel):
         max_length=255,
     )
     action: Literal["ask", "add_case_info"] | None = None
+    response_language: Literal["thai", "english"] = "english"
     document_sources: list[CaseNarrativeDocumentSource] = Field(
         default_factory=list,
         max_length=1,
@@ -80,6 +85,8 @@ class ChatMessageRead(BaseModel):
     role: MessageRole
     content: str
     retrieval_context_id: str | None
+    message_kind: MessageKind
+    analysis_result_id: UUID | None
     metadata_json: MessageMetadata
     created_at: datetime
 
@@ -92,6 +99,14 @@ class ChatRetryRequest(ChatMessageCreate):
 class ChatThreadDetail(ChatThreadRead):
     retry_request: ChatRetryRequest | None = None
     messages: list[ChatMessageRead] = Field(default_factory=list)
+
+
+class ChatCaseLinkRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    thread_id: UUID
+    status: ChatCaseLinkStatus
+    case_id: UUID | None = None
 
 
 class ChatRunRead(BaseModel):
@@ -112,18 +127,27 @@ class ChatMessageAccepted(BaseModel):
     run: ChatRunRead
 
 
+class CaseChatMessageAccepted(BaseModel):
+    message: ChatMessageRead
+    run: CaseRunRead
+
+
 __all__ = [
     "ChatMessageAccepted",
     "CaseNarrativeDocumentPageSpan",
     "CaseNarrativeDocumentSource",
+    "CaseChatMessageAccepted",
     "ChatMessageCreate",
     "ChatMessageRead",
+    "ChatCaseLinkRead",
+    "ChatCaseLinkStatus",
     "ChatRunRead",
     "ChatThreadCreate",
     "ChatThreadDetail",
     "ChatThreadRead",
     "ChatThreadUpdate",
     "MessageRole",
+    "MessageKind",
     "RunStatus",
     "ThreadStatus",
 ]

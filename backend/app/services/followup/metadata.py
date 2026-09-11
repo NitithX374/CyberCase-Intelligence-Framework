@@ -12,7 +12,7 @@ from app.services.followup.prompts import (
     GAP_ANALYSIS_VERSION,
 )
 from app.services.followup.schemas import GapAnalysisResult
-from app.services.llm.core_llm import resolve_core_llm_target
+from app.services.llm.coreLlm import resolve_core_llm_target
 
 
 def empty_gap_analysis_trace(

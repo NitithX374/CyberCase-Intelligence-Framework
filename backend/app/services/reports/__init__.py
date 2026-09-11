@@ -1,62 +1,56 @@
+from app.services.reports.case_report_contracts import (
+    CaseReportInputSnapshot,
+    CaseReportSource,
+    CaseReportTechnicalAugmentation,
+    CaseTechnicalAugmentationStatus,
+    ensure_case_report_snapshot,
+    native_source_ids,
+)
+from app.services.reports.case_report_pdf import render_case_report_pdf
+from app.services.reports.case_report_persistence import (
+    CaseReportService,
+    build_case_report_snapshot,
+    serialize_chat_report,
+)
+from app.services.reports.case_report_template import (
+    build_case_template_report,
+    run_case_report_generation,
+)
 from app.services.reports.report_contracts import (
-    AdmittedMitreRow,
     ReportGenerationConflict,
-    ReportInputSnapshot,
     ReportNotFound,
     ReportRunResult,
     ReportServiceError,
-    ReportSourceMessage,
     ReportValidationError,
-    read_render_snapshot,
 )
-from app.services.reports.report_generation import (
-    REPORT_PROMPT_VERSION,
-    run_report_generation,
-)
-from app.services.reports.report_html import (
-    get_report_css,
-    render_chat_report_html,
-    render_chat_report_html_from_view_model,
-)
-from app.services.reports.report_pdf import render_chat_report_pdf
-from app.services.reports.report_persistence import ChatReportService
-from app.services.reports.report_template import build_template_report
 from app.services.reports.report_validation import (
     source_snapshot_hash,
-    validate_structured_report,
-)
-from app.services.reports.report_view_model_builder import build_report_view_model
-from app.services.reports.report_view_model_contracts import (
-    ReportLanguage,
-    ReportViewModel,
+    validate_case_structured_report,
 )
 
-ReportService = ChatReportService
+ReportService = CaseReportService
 ReportGenerationError = ReportServiceError
 
 __all__ = [
-    "AdmittedMitreRow",
-    "ChatReportService",
-    "REPORT_PROMPT_VERSION",
+    "CaseReportInputSnapshot",
+    "CaseReportService",
+    "CaseReportSource",
+    "CaseReportTechnicalAugmentation",
+    "CaseTechnicalAugmentationStatus",
     "ReportGenerationConflict",
     "ReportGenerationError",
-    "ReportInputSnapshot",
-    "ReportLanguage",
     "ReportNotFound",
     "ReportRunResult",
     "ReportService",
     "ReportServiceError",
-    "ReportSourceMessage",
     "ReportValidationError",
-    "ReportViewModel",
-    "build_report_view_model",
-    "build_template_report",
-    "get_report_css",
-    "read_render_snapshot",
-    "render_chat_report_html",
-    "render_chat_report_html_from_view_model",
-    "render_chat_report_pdf",
-    "run_report_generation",
+    "build_case_template_report",
+    "build_case_report_snapshot",
+    "ensure_case_report_snapshot",
+    "native_source_ids",
+    "render_case_report_pdf",
+    "run_case_report_generation",
+    "serialize_chat_report",
     "source_snapshot_hash",
-    "validate_structured_report",
+    "validate_case_structured_report",
 ]

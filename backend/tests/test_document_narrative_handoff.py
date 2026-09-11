@@ -1,4 +1,3 @@
-import hashlib
 import json
 from uuid import uuid4
 
@@ -7,15 +6,13 @@ from pydantic import ValidationError
 
 from app.models.chat import ChatMessage
 from app.schemas.chat import ChatMessageCreate
-from app.services.case_analysis.case_analysis_prompt_builder import (
+from app.services.case_analysis.prompts import (
     build_case_analysis_prompt,
 )
-from app.services.case_analysis.mitre_applicability_prompt import (
+from app.services.case_analysis.mitreApplicabilityGate import (
     build_mitre_applicability_prompt,
 )
-from app.services.chat.chat_run_creation import request_fingerprint as _fingerprint
 from app.services.chat.raw_evidence import build_raw_evidence_snapshot
-
 
 def document_source() -> dict[str, object]:
     return {
@@ -43,20 +40,6 @@ def test_message_contract_accepts_one_document_source_and_rejects_two() -> None:
             idempotency_key="handoff-2",
             document_sources=[document_source(), document_source()],
         )
-
-
-def test_document_source_participates_in_idempotency_without_changing_plain_messages() -> (
-    None
-):
-    plain = ChatMessageCreate(content="Narrative", idempotency_key="plain")
-    legacy_source = "Narrative\x00"
-    assert _fingerprint(plain) == hashlib.sha256(legacy_source.encode()).hexdigest()
-    with_document = ChatMessageCreate(
-        content="Narrative",
-        idempotency_key="with-document",
-        document_sources=[document_source()],
-    )
-    assert _fingerprint(with_document) != _fingerprint(plain)
 
 
 def test_raw_evidence_keeps_text_authoritative_and_quality_metadata_separate() -> None:

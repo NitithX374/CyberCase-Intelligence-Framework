@@ -21,8 +21,6 @@ from app.services.document_ingestion.recognition.base import (
     RecognitionResult,
     RenderedPage,
     RenderedRegion,
-)
-from app.services.document_ingestion.recognition.content_filter import (
     separate_generated_visual_descriptions,
 )
 

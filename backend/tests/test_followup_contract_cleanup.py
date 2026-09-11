@@ -11,7 +11,7 @@ from app.services.followup.schemas import (
     GapAnalysis,
     GapAnalysisResult,
 )
-from app.services.followup.gap_stage import run_gap_analysis_stage
+from app.services.followup.gapStage import run_gap_analysis_stage
 
 
 def test_followup_decision_rejects_legacy_action_shape() -> None:
@@ -63,7 +63,7 @@ def test_retired_followup_helpers_are_removed() -> None:
 
 
 def test_retired_prompt_builder_helpers_are_removed() -> None:
-    import app.services.case_analysis.case_analysis_prompt_builder as builder
+    import app.services.case_analysis.prompts as builder
 
     assert not hasattr(builder, "_bounded_json")
 

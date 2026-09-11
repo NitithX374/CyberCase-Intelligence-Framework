@@ -10,12 +10,45 @@ from typing import Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-from app.services.followup.claim_transport import (
-    GAP_ANALYSIS_CLAIM_LIMIT as GAP_ANALYSIS_CLAIM_LIMIT,
-    GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS as GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS,
-    GapAnalysisClaim as GapAnalysisClaim,
-    build_gap_analysis_claim_transport as build_gap_analysis_claim_transport,
-)
+GAP_ANALYSIS_CLAIM_LIMIT = 64
+GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS = 1_000
+
+
+class GapAnalysisClaim(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    claim_id: str = Field(pattern=r"^A-\d{2,}$", max_length=80)
+    text: str = Field(min_length=1, max_length=GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS)
+    claim_type: Literal["reported", "analytical_inference", "unknown"]
+    epistemic_status: Literal[
+        "reported",
+        "suspected",
+        "contradicted",
+        "not_established",
+        "unknown",
+        "not_confirmed",
+    ]
+
+
+def build_gap_analysis_claim_transport(
+    claims: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    if len(claims) > GAP_ANALYSIS_CLAIM_LIMIT:
+        raise ValueError("Gap Analysis claim transport exceeds the v3 claim limit")
+    transported: list[GapAnalysisClaim] = []
+    for claim in claims:
+        value = dict(claim)
+        text = value.get("text")
+        if isinstance(text, str):
+            value["text"] = text.strip()[:GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS]
+        transported.append(GapAnalysisClaim.model_validate(value))
+    claim_ids = [claim.claim_id for claim in transported]
+    if len(set(claim_ids)) != len(claim_ids):
+        raise ValueError("Gap Analysis claim transport requires unique claim IDs")
+    return [claim.model_dump(mode="json") for claim in transported]
+
+
+buildGapAnalysisClaimTransport = build_gap_analysis_claim_transport
 
 GapStatus = Literal[
     "NOT_PROVIDED",
@@ -251,4 +284,5 @@ __all__ = [
     "GapPriority",
     "GapStatus",
     "build_gap_analysis_claim_transport",
+    "buildGapAnalysisClaimTransport",
 ]

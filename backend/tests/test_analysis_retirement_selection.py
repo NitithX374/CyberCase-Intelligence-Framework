@@ -1,5 +1,5 @@
 import pytest
-from app.services.case_analysis.state_selector import (
+from app.services.case_analysis.stateSelector import (
     select_latest_canonical_case_overview,
 )
 from test_canonical_analysis_state import message, trace_payload

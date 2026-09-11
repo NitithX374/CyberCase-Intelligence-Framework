@@ -4,21 +4,17 @@ from uuid import uuid4
 
 import httpx
 
-from app.services.case_analysis.mitre_applicability_contracts import (
+from app.services.case_analysis.mitreApplicabilityGate import (
     MITRE_APPLICABILITY_GATE_VERSION,
-)
-from app.services.case_analysis.mitre_applicability_gate import (
+    MITRE_APPLICABILITY_SYSTEM_PROMPT,
     MitreApplicabilityGate,
     evaluate_mitre_applicability,
 )
-from app.services.case_analysis.mitre_applicability_prompt import (
-    MITRE_APPLICABILITY_SYSTEM_PROMPT,
-)
 from app.services.chat.raw_evidence import RawEvidenceSource
-from app.services.llm.core_llm import CoreLlmTarget
+from app.services.llm.coreLlm import CoreLlmTarget
 
 
-def target() -> CoreLlmTarget:
+def target():
     return CoreLlmTarget(
         provider="openrouter",
         model="test-model",
@@ -48,7 +44,7 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
         return httpx.Response(200, json={"output_text": json.dumps(output)})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
+        "app.services.case_analysis.mitreApplicabilityGate.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -77,7 +73,7 @@ def test_malformed_provider_output_fails_closed(monkeypatch) -> None:
         return httpx.Response(200, json={"output_text": "```json\n{}\n```"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
+        "app.services.case_analysis.mitreApplicabilityGate.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -101,7 +97,7 @@ def test_provider_error_fails_closed(monkeypatch) -> None:
         return httpx.Response(503, json={"error": "unavailable"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
+        "app.services.case_analysis.mitreApplicabilityGate.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))

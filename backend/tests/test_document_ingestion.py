@@ -193,9 +193,9 @@ def test_ingestion_does_not_call_rag_or_case_analysis(monkeypatch) -> None:
     async def forbidden_analysis(*args, **kwargs):
         calls["analysis"] += 1
 
-    monkeypatch.setattr("app.services.clients.rag_client.request_rag", forbidden_rag)
+    monkeypatch.setattr("app.services.clients.ragClient.request_rag", forbidden_rag)
     monkeypatch.setattr(
-        "app.services.case_analysis.case_analysis_executor.request_case_analysis",
+        "app.services.case_analysis.caseAnalysis.request_case_analysis",
         forbidden_analysis,
     )
 
@@ -214,7 +214,7 @@ def test_ingestion_does_not_create_persisted_chat_or_case(monkeypatch) -> None:
         calls["create"] += 1
 
     monkeypatch.setattr(
-        "app.services.chat.chat_management.ChatService.create_thread",
+        "app.services.chat.chatService.ChatService.create_thread",
         forbidden_create,
     )
 
