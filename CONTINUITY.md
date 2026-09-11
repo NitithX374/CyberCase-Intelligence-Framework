@@ -2,6 +2,8 @@
 
 ## Snapshot
 
+- 2026-09-12 [USER/TOOL] User requested local non-core artifacts be ignored. Added root patterns for dataset indexes, ad-hoc scripts, sample images, scratch OCR/render directories, and generated architecture preview pages; removed those already-tracked artifacts from the index without deleting local files. Core source and project documentation remain tracked.
+
 - 2026-09-12 [USER/TOOL] User explicitly authorized committing all current worktree changes. Commit `72e0b36` contains the full staged workspace delta and was pushed to `origin/codex/backend-architecture-simplification`; local HEAD matches the remote and the worktree is clean.
 
 - 2026-09-12 [USER/CODE/TOOL] Reproduced the persisted Case failure `case_trace_conflicting_source_role` on the long reviewed document. The compact direct-analysis prompt now requires disjoint source roles, one bounded correction pass sequence retries provenance failures twice, and quote binding expands only unique whitespace/ellipsis variants to the original source span. A standalone live backend run on the same snapshot completed with 13 validated claims; no result was persisted.

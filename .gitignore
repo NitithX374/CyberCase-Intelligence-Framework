@@ -96,6 +96,18 @@ yarn-error.log*
 /scratch/
 scratch/
 
+# Local dataset indexes, OCR outputs and rendered inspection artifacts
+/all_pdfs_list*.txt
+/classified_full_dataset.json
+/classified_pdfs.json
+/selected_50_files.json
+/scratch_pdfs.json
+/title_groups.txt
+/test.py
+/sample_*.png
+/scratch_*/
+/docs/architecture/page_*.png
+
 # ==============================================================================
 # Documents, Office Artifacts & Thesis Deliverables
 # ==============================================================================
