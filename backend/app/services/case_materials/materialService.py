@@ -116,6 +116,56 @@ class CaseMaterialsService:
             extraction.provenance_json,
             extraction.extracted_text,
         )
+        if extraction.warnings_json:
+            provenance["warnings"] = list(extraction.warnings_json)
+        extraction_method = (
+            extraction.provenance_json.get("extraction_method")
+            or extraction.provider
+        )
+        if extraction_method:
+            provenance["extraction_method"] = str(extraction_method)
+        if extraction.provider:
+            provenance["provider"] = extraction.provider
+
+        verification_status = extraction.provenance_json.get("verification_status")
+        if not verification_status:
+            statuses = [
+                region.get("verification_status")
+                for page in provenance.get("pages", [])
+                if isinstance(page, dict)
+                for region in page.get("regions", [])
+                if isinstance(region, dict) and region.get("verification_status")
+            ]
+            if any(s == "needs_review" for s in statuses):
+                verification_status = "needs_review"
+            elif any(s == "machine_read" for s in statuses):
+                verification_status = "machine_read"
+            elif extraction_method in ("document_recognition", "ocr"):
+                verification_status = "machine_read"
+            else:
+                verification_status = "native"
+        provenance["verification_status"] = str(verification_status)
+
+        confidence_status = extraction.provenance_json.get("confidence_status")
+        if not confidence_status:
+            confidences = [
+                float(region["recognition_confidence"])
+                for page in provenance.get("pages", [])
+                if isinstance(page, dict)
+                for region in page.get("regions", [])
+                if isinstance(region, dict) and region.get("recognition_confidence") is not None
+            ]
+            if confidences:
+                confidence_status = "reported"
+                provenance["minimum_confidence"] = min(confidences)
+            else:
+                confidence_status = (
+                    "not_reported"
+                    if extraction_method in ("document_recognition", "ocr")
+                    else "not_applicable"
+                )
+                provenance["minimum_confidence"] = None
+        provenance["confidence_status"] = str(confidence_status)
         source_result = await self.db.execute(
             select(EvidenceSource)
             .options(selectinload(EvidenceSource.revisions))

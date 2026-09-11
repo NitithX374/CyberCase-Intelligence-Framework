@@ -46,6 +46,24 @@ def validate_case_trace(
         _validate_claim(claim, registry, document_context) for claim in trace.claims
     ]
     known_claim_ids = set(claim_ids)
+    for party in trace.involved_parties:
+        if not set(party.claim_ids).issubset(known_claim_ids):
+            raise CaseAnalysisFailure(
+                "case_trace_party_unknown_claim",
+                "Case involved party references an unknown claim",
+            )
+    for item in trace.timeline:
+        if not set(item.claim_ids).issubset(known_claim_ids):
+            raise CaseAnalysisFailure(
+                "case_trace_timeline_unknown_claim",
+                "Case timeline item references an unknown claim",
+            )
+    for impact in trace.impacts:
+        if not set(impact.claim_ids).issubset(known_claim_ids):
+            raise CaseAnalysisFailure(
+                "case_trace_impact_unknown_claim",
+                "Case impact references an unknown claim",
+            )
     for gap in trace.gaps:
         if not set(gap.affected_claim_ids).issubset(known_claim_ids):
             raise CaseAnalysisFailure(

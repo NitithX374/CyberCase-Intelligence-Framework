@@ -282,6 +282,98 @@ class CaseAnalysisGap(BaseModel):
         return value
 
 
+class CaseInvolvedParty(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=500)
+    role: str = Field(min_length=1, max_length=500)
+    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+
+    @field_validator("name", "role")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("party text values must be non-empty")
+        return normalized
+
+    @field_validator("claim_ids", mode="before")
+    @classmethod
+    def normalize_claim_ids(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+        return value
+
+    @field_validator("claim_ids")
+    @classmethod
+    def unique_claim_ids(cls, value: list[str]) -> list[str]:
+        normalized = [item.strip() for item in value]
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("claim IDs must be unique")
+        return normalized
+
+
+class CaseTimelineItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    time: str = Field(min_length=1, max_length=500)
+    event: str = Field(min_length=1, max_length=2_000)
+    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+
+    @field_validator("time", "event")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("timeline text values must be non-empty")
+        return normalized
+
+    @field_validator("claim_ids", mode="before")
+    @classmethod
+    def normalize_claim_ids(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+        return value
+
+    @field_validator("claim_ids")
+    @classmethod
+    def unique_claim_ids(cls, value: list[str]) -> list[str]:
+        normalized = [item.strip() for item in value]
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("claim IDs must be unique")
+        return normalized
+
+
+class CaseImpactItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    description: str = Field(min_length=1, max_length=2_000)
+    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+
+    @field_validator("description")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("impact text values must be non-empty")
+        return normalized
+
+    @field_validator("claim_ids", mode="before")
+    @classmethod
+    def normalize_claim_ids(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+        return value
+
+    @field_validator("claim_ids")
+    @classmethod
+    def unique_claim_ids(cls, value: list[str]) -> list[str]:
+        normalized = [item.strip() for item in value]
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("claim IDs must be unique")
+        return normalized
+
+
 class CaseMitreAssociation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -312,7 +404,16 @@ class CaseAnalysisTrace(BaseModel):
     validation_status: Literal["validated"] = "validated"
     analysis_mode: CaseAnalysisMode
     summary: str = Field(min_length=1, max_length=24_000)
+    involved_parties: list[CaseInvolvedParty] = Field(
+        default_factory=list, max_length=64
+    )
+    timeline: list[CaseTimelineItem] = Field(
+        default_factory=list, max_length=64
+    )
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
+    impacts: list[CaseImpactItem] = Field(
+        default_factory=list, max_length=64
+    )
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=64)
     mitre_associations: list[CaseMitreAssociation] = Field(
         default_factory=list, max_length=64
@@ -327,7 +428,16 @@ class CaseProviderAnalysis(BaseModel):
     version: Literal["case_analysis_trace_v1"]
     answer: str = Field(min_length=1, max_length=24_000)
     summary: str = Field(min_length=1, max_length=24_000)
+    involved_parties: list[CaseInvolvedParty] = Field(
+        default_factory=list, max_length=64
+    )
+    timeline: list[CaseTimelineItem] = Field(
+        default_factory=list, max_length=64
+    )
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
+    impacts: list[CaseImpactItem] = Field(
+        default_factory=list, max_length=64
+    )
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
     mitre_associations: list[CaseMitreAssociation] = Field(
         default_factory=list, max_length=64
@@ -684,6 +794,9 @@ NativeQuoteCandidate = CaseQuoteCandidate
 NativeExtractedClaims = CaseExtractedClaims
 NativeGeneratedUnit = CaseGeneratedUnit
 NativeGeneratedSummary = CaseGeneratedSummary
+NativeInvolvedParty = CaseInvolvedParty
+NativeTimelineItem = CaseTimelineItem
+NativeImpactItem = CaseImpactItem
 NativeCaseAnalysisClaim = CaseAnalysisClaim
 NativeCaseAnalysisGap = CaseAnalysisGap
 NativeMitreAssociation = CaseMitreAssociation
@@ -722,10 +835,13 @@ __all__ = [
     "CaseExtractedClaims",
     "CaseGeneratedSummary",
     "CaseGeneratedUnit",
+    "CaseImpactItem",
+    "CaseInvolvedParty",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
     "CaseProviderMitreMapping",
     "CaseQuoteCandidate",
+    "CaseTimelineItem",
     "ClaimType",
     "EpistemicStatus",
     "GapPriority",
@@ -745,10 +861,13 @@ __all__ = [
     "NativeExtractedClaims",
     "NativeGeneratedSummary",
     "NativeGeneratedUnit",
+    "NativeImpactItem",
+    "NativeInvolvedParty",
     "NativeMitreAssociation",
     "NativeProviderCaseAnalysis",
     "NativeProviderMitreMapping",
     "NativeQuoteCandidate",
+    "NativeTimelineItem",
     "PROVIDER_CLAIM_IDS",
     "ProviderAnalysisClaimV3",
     "ProviderCaseAnalysisV3",
