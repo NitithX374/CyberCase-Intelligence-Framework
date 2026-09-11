@@ -24,7 +24,7 @@ from app.services.workflow.caseMitreAugmentation import (
     run_case_mitre_augmentation,
 )
 from app.services.followup import evaluate_followup_outcome
-from app.services.followup.caseHistory import (
+from app.services.followup.caseClarification import (
     CaseClarificationHistoryError,
     load_case_clarification_exchanges,
 )
