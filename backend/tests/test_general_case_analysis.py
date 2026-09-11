@@ -261,21 +261,48 @@ def test_invalid_provider_structure_uses_safe_trace_failure() -> None:
     assert result.trace_failure.failure_code == "analysis_trace_structure_invalid"
 
 
-def test_service_requests_v3_schema_with_optional_external_context(monkeypatch) -> None:
+def test_service_requests_direct_case_schema_with_material_gaps(monkeypatch) -> None:
     captured: dict[str, object] = {}
+    evidence = "A bicycle was reported missing."
 
     class Client:
-        async def post(self, url, *, headers, json):
+        async def post(self, url, *, headers, json, timeout):
             captured.update(json)
             return response_for(
-                provider_payload(
-                    [reported_claim("The owner reported a missing bicycle.")]
-                )
+                {
+                    "version": "case_analysis_trace_v1",
+                    "answer": "A bicycle was reported missing.",
+                    "summary": "A bicycle was reported missing.",
+                    "claims": [
+                        {
+                            "claim_id": "A-01",
+                            "claim_type": "reported",
+                            "text": evidence,
+                            "epistemic_status": "reported",
+                            "supporting_source_ids": ["S1"],
+                            "contradicting_source_ids": [],
+                            "supporting_citations": [
+                                {
+                                    "source_id": "S1",
+                                    "source_revision": 1,
+                                    "exact_quote": evidence,
+                                    "document_id": None,
+                                    "filename": None,
+                                    "page_numbers": [],
+                                }
+                            ],
+                            "contradicting_citations": [],
+                            "reasoning_summary": None,
+                        }
+                    ],
+                    "gaps": [],
+                    "mitre_associations": [],
+                }
             )
 
     monkeypatch.setattr(
-        "app.services.case_analysis.caseAnalysis.resolve_core_llm_target",
-        lambda model: SimpleNamespace(
+        "app.services.case_analysis.providerStage.resolve_core_llm_target",
+        lambda model, **kwargs: SimpleNamespace(
             model=model,
             provider="anthropic",
             messages_url="https://example.test/messages",
@@ -285,18 +312,22 @@ def test_service_requests_v3_schema_with_optional_external_context(monkeypatch) 
     result = asyncio.run(
         MainCaseAnalysisService(client=Client()).analyze(
             mode="case_overview",
-            raw_evidence="[INITIAL CASE NARRATIVE]\nA bicycle was reported missing.",
-            analysis_context={"source_message_ids": ["S1"]},
+            raw_evidence=evidence,
+            analysis_context={
+                "source_reference_type": "case_evidence_source",
+                "source_ids": ["S1"],
+                "source_revisions": {"S1": 1},
+                "_source_text_by_source_id": {"S1": evidence},
+            },
             question=None,
             user_message="Please analyze this case.",
         )
     )
     schema = captured["output_config"]["format"]["schema"]
-    assert schema["properties"]["version"]["const"] == "analysis_trace_v3"
-    assert (
-        'claim_id must be exactly "A-01", "A-02", through "A-64"' in captured["system"]
-    )
+    assert schema["properties"]["version"]["const"] == "case_analysis_trace_v1"
+    assert "materially unresolved factual issues" in captured["system"]
     assert result.trace is not None
+    assert result.trace.gaps == []
     assert result.trace.retrieval_context_id is None
 
 

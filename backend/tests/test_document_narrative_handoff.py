@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from app.models.chat import ChatMessage
 from app.schemas.chat import ChatMessageCreate
-from app.services.case_analysis.prompts import (
+from app.services.case_analysis.legacyPrompts import (
     build_case_analysis_prompt,
 )
 from app.services.case_analysis.mitreApplicabilityGate import (

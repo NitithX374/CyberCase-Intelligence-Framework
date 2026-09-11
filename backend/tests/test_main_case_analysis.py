@@ -3,7 +3,7 @@ import json
 import pytest
 
 from app.services.case_analysis.contracts import CaseAnalysisFailure
-from app.services.case_analysis.prompts import (
+from app.services.case_analysis.legacyPrompts import (
     _ANALYSIS_TRACE_OUTPUT_PROMPT,
     _CASE_ANALYSIS_TRUST_PROMPT,
     _CASE_OVERVIEW_TASK_PROMPT,

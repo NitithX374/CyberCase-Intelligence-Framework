@@ -1,5 +1,4 @@
 import pytest
-from app.config import settings
 from app.services.case_analysis.pipelineConfig import (
     AnalysisPipelineConfig,
     configured_pipeline,
@@ -23,18 +22,14 @@ def test_invalid_configuration_fails(payload):
         read_pipeline(payload)
 
 
-def test_missing_historical_configuration_means_legacy_even_after_setting_change(
-    monkeypatch,
-):
-    monkeypatch.setattr(settings, "case_analysis_pipeline", "claim_anchored")
+def test_missing_historical_configuration_uses_direct_analysis():
     assert read_pipeline(None).pipeline == "raw_direct"
     assert read_pipeline(None).version == "main_case_analysis_v1"
 
 
-def test_unknown_model_alias_cannot_silently_select_default(monkeypatch):
-    monkeypatch.setattr(settings, "core_llm_provider", "openrouter")
-    monkeypatch.setattr(settings, "chat_ask_model", "misspelled-model")
-    with pytest.raises(ValueError, match="known alias"):
+def test_new_runs_cannot_select_experimental_pipeline():
+    assert configured_pipeline().pipeline == "raw_direct"
+    with pytest.raises(TypeError):
         configured_pipeline(pipeline="claim_anchored")
 
 

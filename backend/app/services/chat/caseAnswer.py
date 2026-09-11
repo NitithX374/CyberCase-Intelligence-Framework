@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage
-from app.services.case_analysis.claim_anchored import request_stage, resolve_target
 from app.services.case_analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisResult as AnalysisOutput,
@@ -22,6 +21,7 @@ from app.services.case_analysis.contracts import (
     resolve_response_language,
 )
 from app.services.case_analysis.pipelineConfig import read_pipeline
+from app.services.case_analysis.providerStage import request_stage, resolve_target
 from app.services.case_analysis.validation import validate_case_trace
 from app.services.case_materials import canonicalJson
 

@@ -11,7 +11,6 @@ import httpx
 from pydantic import ValidationError
 
 from app.schemas.rag import QueryResponse
-from app.services.case_analysis.claim_anchored import request_stage, resolve_target
 from app.services.case_analysis.contracts import (
     CaseAdmittedSource,
     CaseAnalysisClaim,
@@ -26,6 +25,7 @@ from app.services.case_analysis.mitreApplicabilityGate import (
     skipped_mitre_applicability,
 )
 from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
+from app.services.case_analysis.providerStage import request_stage, resolve_target
 from app.services.case_analysis.prompts import CASE_MITRE_MAPPING_PROMPT
 from app.services.case_analysis.validation import validate_case_trace
 from app.services.chat.raw_evidence import RawEvidenceSource

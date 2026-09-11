@@ -12,7 +12,7 @@ from app.services.followup.contracts import (
 )
 from app.services.followup.decision import evaluate_followup_outcome
 from app.services.followup.gapAnalysis import AnthropicGapAnalysis
-from app.services.followup.prompts import (
+from app.services.followup.experimentalGapPrompts import (
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_SYSTEM,
 )

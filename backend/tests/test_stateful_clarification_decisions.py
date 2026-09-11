@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.services.case_analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace
 from app.services.followup.decision import evaluate_followup_outcome
 from app.services.followup.contracts import (
     ClarificationExchange,
@@ -66,6 +67,47 @@ def test_no_gaps_proceeds_without_question_generation() -> None:
     assert result.metadata_json["chat_followup"]["reason_code"] == (
         "sufficient_case_context"
     )
+
+
+def test_case_main_analysis_gaps_bypass_separate_gap_analyzer() -> None:
+    class ForbiddenAnalyzer:
+        async def analyze(self, **kwargs):
+            raise AssertionError("separate gap analysis must not run")
+
+    trace = CaseAnalysisTrace(
+        analysis_mode="case_overview",
+        summary="A loss was reported, but the incident time is unresolved.",
+        claims=[],
+        gaps=[
+            CaseAnalysisGap(
+                gap_id="G-01",
+                topic="incident time",
+                status="NOT_PROVIDED",
+                description="The incident time is absent.",
+                affected_claim_ids=[],
+                reason="Timing materially affects the chronology.",
+                priority="high",
+                askable=True,
+            )
+        ],
+        evidence_sha256="a" * 64,
+    )
+    result = asyncio.run(
+        evaluate_followup_outcome(
+            original_user_content="A loss was reported.",
+            clarification_exchanges=(),
+            followup_root_ordinal=1,
+            source_run_id=uuid4(),
+            canonical_trace=trace,
+            canonical_state_required=True,
+            gap_analyzer=ForbiddenAnalyzer(),
+            policy=Policy("incident time", "When did the incident occur?"),
+        )
+    )
+    assert result.question == "When did the incident occur?"
+    metadata = result.metadata_json["chat_followup"]
+    assert metadata["decision_source"] == "provider_question_realizer"
+    assert metadata["gap_analysis"]["version"] == "main_analysis_gaps_v1"
 
 
 @pytest.mark.parametrize(

@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 from app.config import settings
-from app.services.case_analysis.caseAnalysis import request_case_analysis
+from app.services.case_analysis.claim_anchored.service import analyze_claim_anchored
 from app.services.case_analysis.claim_anchored.contracts import ClaimAnchoredFailure
 from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
 from test_claim_anchored_binding import extraction, source_context
@@ -53,12 +53,11 @@ def run_pipeline(
 
     async def execute():
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            return await request_case_analysis(
-                mode="case_overview",
+            return await analyze_claim_anchored(
                 raw_evidence=raw,
                 analysis_context=context,
-                question=None,
                 user_message="thai",
+                config=config,
                 client=client,
             )
 

@@ -22,11 +22,13 @@ from app.services.followup.metadata import (
     empty_gap_analysis_trace,
     gap_analysis_trace,
 )
-from app.services.followup.prompts import (
+from app.services.followup.experimentalGapPrompts import (
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_SCHEMA,
     GAP_ANALYSIS_SYSTEM,
     GAP_ANALYSIS_VERSION,
+)
+from app.services.followup.prompts import (
     build_bounded_context,
 )
 from app.services.followup.contracts import (
@@ -76,7 +78,7 @@ class AnthropicGapAnalysis:
             **structured_output_request_options(
                 provider=target.provider,
                 feature="gap_analysis",
-                configured_max_tokens=settings.chat_gap_analysis_max_output_tokens,
+                configured_max_tokens=4_096,
             ),
             "system": GAP_ANALYSIS_SYSTEM,
             "messages": [
