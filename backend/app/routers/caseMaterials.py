@@ -82,6 +82,7 @@ async def add_case_document(
             "extraction_method": ingested.extraction_method.value,
             "mode": ingested.mode.value,
             "pages": [page.model_dump(mode="json") for page in ingested.pages],
+            "warnings": list(ingested.warnings),
         },
         "warnings_json": list(ingested.warnings),
     }

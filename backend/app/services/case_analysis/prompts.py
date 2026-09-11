@@ -13,6 +13,12 @@ Return the requested case_analysis_trace_v1 JSON. Write answer, summary, claim t
 gap text, and reasoning in the requested language. Keep identifiers and schema values
 unchanged. Do not force cyber terminology onto a general case or make legal conclusions.
 
+Case Structure:
+- summary: concise high-level overview.
+- involved_parties: list known persons, entities, or accounts as objects with "name", "role", and "claim_ids" referencing supporting claims. Do not invent roles or legal guilt.
+- timeline: list chronologically anchored events as objects with "time", "event", and "claim_ids" referencing supporting claims. Do not invent chronology when time is unknown.
+- impacts: list tangible impacts, losses, or scope as objects with "description" and "claim_ids" referencing supporting claims.
+
 Claims:
 - Use sequential claim IDs A-01 through A-64.
 - Distinguish reported facts, qualified analytical inferences, and unknowns.
@@ -24,6 +30,7 @@ Claims:
   opposing statements, create separate attributed claims or a conflict gap; never
   list that source in both supporting_source_ids and contradicting_source_ids.
 - Preserve attribution, conflicts, and material OCR uncertainty. Never invent facts.
+- Document extraction metadata and OCR warnings provide extraction provenance, not Case facts.
 
 Gaps:
 - Include only materially unresolved factual issues that affect the current analysis.
@@ -56,6 +63,7 @@ Re-emit the complete JSON object. This is a provenance correction pass.
 - Use only authoritative_case_source_ids and the matching source_revision values.
 - For one claim, each source ID may appear in only one role. Split opposing statements
   into separate attributed claims or use a conflict gap.
+- Ensure all claim_ids in involved_parties, timeline, impacts, and gaps reference valid claim IDs from claims.
 - If a proposition cannot be quoted exactly, represent it as unknown or omit it.
 Do not add explanations or markdown outside the JSON object.
 """

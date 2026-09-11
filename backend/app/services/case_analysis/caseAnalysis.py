@@ -133,6 +133,30 @@ async def executeRawDirectPipeline(
     mode: str,
     question: str | None,
 ) -> CaseAnalysisResult:
+    document_quality_context = []
+    for item in (context.get("document_source_context") or []):
+        if not isinstance(item, dict):
+            continue
+        for doc in item.get("documents", []):
+            if not isinstance(doc, dict):
+                continue
+            meta = {
+                "source_id": item.get("source_id"),
+                "document_id": doc.get("document_id"),
+                "filename": doc.get("filename"),
+            }
+            for k in (
+                "extraction_method",
+                "provider",
+                "verification_status",
+                "confidence_status",
+                "minimum_confidence",
+                "warnings",
+            ):
+                if k in doc:
+                    meta[k] = doc[k]
+            document_quality_context.append(meta)
+
     request_content = {
         "response_language": language,
         "analysis_mode": mode,
@@ -140,6 +164,9 @@ async def executeRawDirectPipeline(
         "authoritative_case_source_ids": [source.source_id for source in sources],
         "question": question,
     }
+    if document_quality_context:
+        request_content["document_quality_context"] = document_quality_context
+
     parsed = await requestAnalysisStage(
         client,
         config,
@@ -195,6 +222,10 @@ _DIRECT_TRACE_CORRECTION_CODES = frozenset(
         "case_trace_citation_role_invalid",
         "case_trace_citation_revision_invalid",
         "case_trace_citation_quote_invalid",
+        "case_trace_party_unknown_claim",
+        "case_trace_timeline_unknown_claim",
+        "case_trace_impact_unknown_claim",
+        "case_trace_gap_unknown_claim",
     }
 )
 _DIRECT_TRACE_MAX_CORRECTIONS = 2
@@ -212,7 +243,10 @@ def _validate_direct_trace(
         CaseAnalysisTrace(
             analysis_mode=mode,
             summary=parsed.summary,
+            involved_parties=parsed.involved_parties,
+            timeline=parsed.timeline,
             claims=parsed.claims,
+            impacts=parsed.impacts,
             gaps=parsed.gaps,
             mitre_associations=[],
             evidence_sha256=digest,

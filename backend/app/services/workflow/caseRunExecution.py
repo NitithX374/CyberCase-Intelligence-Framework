@@ -199,16 +199,25 @@ def _analysis_context(claimed: ClaimedCaseRun) -> dict[str, object]:
         pages = provenance.get("pages")
         if not isinstance(document_id, str) or not isinstance(filename, str) or not isinstance(pages, list):
             continue
+        document_entry = {
+            "document_id": document_id,
+            "filename": filename,
+            "page_spans": pages,
+        }
+        for quality_key in (
+            "extraction_method",
+            "provider",
+            "verification_status",
+            "confidence_status",
+            "minimum_confidence",
+            "warnings",
+        ):
+            if quality_key in provenance:
+                document_entry[quality_key] = provenance[quality_key]
         document_context.append(
             {
                 "source_id": str(entry["source_id"]),
-                "documents": [
-                    {
-                        "document_id": document_id,
-                        "filename": filename,
-                        "page_spans": pages,
-                    }
-                ],
+                "documents": [document_entry],
             }
         )
     return {
