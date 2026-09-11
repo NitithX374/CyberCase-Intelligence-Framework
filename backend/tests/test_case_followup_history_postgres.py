@@ -15,6 +15,9 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisResult as AnalysisOutput,
     CaseAnalysisTrace,
     CaseEvidenceCitation,
+    NativeCaseAnalysisClaim,
+    NativeCaseEvidenceCitation,
+    NativeCaseAnalysisTrace,
 )
 from app.services.case_materials import CaseMaterialsService
 from app.services.followup.caseClarification import (
