@@ -1,6 +1,7 @@
 import asyncio
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import func, select
 
 from app.models import Case, CaseAnalysisResult, ChatMessage, ChatReport
@@ -16,6 +17,7 @@ from app.services.case_analysis.contracts import (
 from app.services.case_materials import CaseMaterialsService
 from app.services.chat import ChatService
 from app.services.reports.case_report_persistence import CaseReportService
+from app.services.reports.report_contracts import ReportGenerationConflict
 from app.services.workflow.caseRunClaim import claimCaseRun
 from app.services.workflow.caseRunCompletion import complete_case_run
 from app.services.workflow.caseRunService import enqueue_case_analysis
@@ -127,6 +129,14 @@ def test_case_report_reuses_old_result_snapshot_after_new_evidence():
         async with isolated_database() as factory:
             case_id, source_id = await _case_with_source(factory)
             result = await _complete(factory, case_id, source_id, "old-result")
+            # Generate report from current analysis
+            async with factory() as db:
+                report = await CaseReportService(db).generate_report(
+                    case_id,
+                    CaseReportCreate(analysis_result_id=result.id, idempotency_key="old-result-report"),
+                    None,
+                )
+            # Admit new evidence, bumping evidence revision
             async with factory() as db, db.begin():
                 await CaseMaterialsService(db).admitText(
                     case_id=case_id,
@@ -135,12 +145,17 @@ def test_case_report_reuses_old_result_snapshot_after_new_evidence():
                     exact_text="A second document mentions a red bicycle.",
                     provenance_json={"origin": "analyst-authored"},
                 )
+            # Attempting to generate a new report from now-stale analysis must be rejected
             async with factory() as db:
-                report = await CaseReportService(db).generate_report(
-                    case_id,
-                    CaseReportCreate(analysis_result_id=result.id, idempotency_key="old-result-report"),
-                    None,
-                )
+                with pytest.raises(ReportGenerationConflict) as exc_info:
+                    await CaseReportService(db).generate_report(
+                        case_id,
+                        CaseReportCreate(analysis_result_id=result.id, idempotency_key="stale-report-attempt"),
+                        None,
+                    )
+                assert exc_info.value.code == "case_analysis_stale"
+
+            # Historical report generated before new evidence remains readable
             snapshot = report.source_snapshot
             assert snapshot is not None
             assert report.analysis_result_id == result.id

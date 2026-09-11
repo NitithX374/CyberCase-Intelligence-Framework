@@ -273,6 +273,9 @@ def test_service_requests_direct_case_schema_with_material_gaps(monkeypatch) -> 
                     "version": "case_analysis_trace_v1",
                     "answer": "A bicycle was reported missing.",
                     "summary": "A bicycle was reported missing.",
+                    "involved_parties": [],
+                    "timeline": [],
+                    "impacts": [],
                     "claims": [
                         {
                             "claim_id": "A-01",

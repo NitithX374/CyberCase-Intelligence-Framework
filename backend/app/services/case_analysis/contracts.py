@@ -287,7 +287,7 @@ class CaseInvolvedParty(BaseModel):
 
     name: str = Field(min_length=1, max_length=500)
     role: str = Field(min_length=1, max_length=500)
-    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+    claim_ids: list[str] = Field(min_length=1, max_length=64)
 
     @field_validator("name", "role")
     @classmethod
@@ -318,7 +318,7 @@ class CaseTimelineItem(BaseModel):
 
     time: str = Field(min_length=1, max_length=500)
     event: str = Field(min_length=1, max_length=2_000)
-    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+    claim_ids: list[str] = Field(min_length=1, max_length=64)
 
     @field_validator("time", "event")
     @classmethod
@@ -348,7 +348,7 @@ class CaseImpactItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = Field(min_length=1, max_length=2_000)
-    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+    claim_ids: list[str] = Field(min_length=1, max_length=64)
 
     @field_validator("description")
     @classmethod
@@ -428,16 +428,10 @@ class CaseProviderAnalysis(BaseModel):
     version: Literal["case_analysis_trace_v1"]
     answer: str = Field(min_length=1, max_length=24_000)
     summary: str = Field(min_length=1, max_length=24_000)
-    involved_parties: list[CaseInvolvedParty] = Field(
-        default_factory=list, max_length=64
-    )
-    timeline: list[CaseTimelineItem] = Field(
-        default_factory=list, max_length=64
-    )
+    involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
+    timeline: list[CaseTimelineItem] = Field(max_length=64)
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
-    impacts: list[CaseImpactItem] = Field(
-        default_factory=list, max_length=64
-    )
+    impacts: list[CaseImpactItem] = Field(max_length=64)
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
     mitre_associations: list[CaseMitreAssociation] = Field(
         default_factory=list, max_length=64

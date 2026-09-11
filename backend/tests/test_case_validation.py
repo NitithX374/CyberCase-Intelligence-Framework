@@ -146,6 +146,9 @@ def test_case_provider_analysis_normalizes_model_claim_ids_from_json():
         "version": "case_analysis_trace_v1",
         "answer": "Grounded answer text.",
         "summary": "Summary text.",
+        "involved_parties": [],
+        "timeline": [],
+        "impacts": [],
         "claims": [
             {
                 "claim_id": "C1",
@@ -194,6 +197,9 @@ def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
             "version": "case_analysis_trace_v1",
             "answer": "The incident time remains unresolved.",
             "summary": "A loss was reported, but its timing is not established.",
+            "involved_parties": [],
+            "timeline": [],
+            "impacts": [],
             "claims": [],
             "gaps": [
                 {
