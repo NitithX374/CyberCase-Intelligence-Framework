@@ -81,8 +81,8 @@ async def loadCaseAnswerContext(
     mitre_table = augmentation.get("mitre_table", metadata.get("mitre_table", []))
     if mitre_table is not None and not isinstance(mitre_table, list):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Pinned Chat augmentation table is invalid")
-    trace = validate_native_trace(
-        trace, build_native_source_registry(analysis_context),
+    trace = validate_case_trace(
+        trace, build_case_source_registry(analysis_context),
         analysis_context.get("document_source_context", []),
         mitre_table=mitre_table,
     )

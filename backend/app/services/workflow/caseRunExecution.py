@@ -10,7 +10,11 @@ from uuid import UUID, uuid4
 from app.config import settings
 from app.services.case_analysis import CaseAnalysisFailure, request_case_analysis
 from app.services.chat.caseAnswer import generateCaseAnswer, loadCaseAnswerContext
-from app.services.case_analysis.contracts import CaseAnalysisResult as AnalysisOutput
+from app.services.case_analysis.contracts import (
+    CaseAnalysisResult as AnalysisOutput,
+    NativeCaseAnalysisTrace,
+    build_native_source_registry,
+)
 from app.services.case_analysis.pipelineConfig import read_pipeline
 from app.services.workflow.caseRunClaim import claimCaseRun
 from app.services.workflow.caseRunCompletion import (

@@ -8,7 +8,7 @@ from app.schemas.reports import (
     ReportSection,
     StructuredReport,
 )
-from app.services.case_analysis.contracts import CaseAnalysisTrace
+from app.services.case_analysis.contracts import NativeCaseAnalysisTrace
 from app.services.reports.case_report_contracts import (
     CaseReportInputSnapshot,
     native_source_ids,
@@ -23,7 +23,7 @@ async def run_case_report_generation(snapshot: CaseReportInputSnapshot) -> Repor
     started = time.perf_counter()
     try:
         report = build_case_template_report(snapshot)
-        trace = CaseAnalysisTrace.model_validate(snapshot.analysis_trace)
+        trace = NativeCaseAnalysisTrace.model_validate(snapshot.analysis_trace)
         validate_case_structured_report(
             report,
             source_evidence_ids=native_source_ids(snapshot),

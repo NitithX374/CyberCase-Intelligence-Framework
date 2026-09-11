@@ -15,6 +15,9 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisTrace,
     CaseEvidenceCitation,
     CaseMitreAssociation,
+    NativeCaseAnalysisClaim,
+    NativeCaseEvidenceCitation,
+    NativeCaseAnalysisTrace,
 )
 from app.services.case_analysis.mitreApplicabilityGate import MitreApplicabilityRecord
 from app.services.case_materials import CaseMaterialsService
