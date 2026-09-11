@@ -7,11 +7,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from app.config import settings
-from app.services.case_analysis.contracts import (
-    AnalysisGapV3,
-    AnalysisTraceV3,
-    CaseAnalysisTrace,
-)
+from app.services.case_analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace
 from app.services.followup.contracts import FollowUpResolution, GapAnalysisResult
 from app.services.followup.policy import AnthropicFollowUpPolicy
 from app.services.followup.contracts import (
@@ -58,7 +54,7 @@ async def evaluate_followup_outcome(
     analysis_answer: str | None = None,
     analysis_context: Mapping[str, object] | None = None,
     analysis_claims: Sequence[Mapping[str, object]] | None = None,
-    canonical_trace: AnalysisTraceV3 | CaseAnalysisTrace | None = None,
+    canonical_trace: CaseAnalysisTrace | None = None,
     precomputed_gap_stage: GapStageResult | None = None,
     evidence_sha256: str | None = None,
     canonical_state_required: bool = False,
@@ -209,7 +205,7 @@ async def evaluate_followup_outcome(
     selected_gap_analysis = GapAnalysis(gaps=[selected_gap])
     question_context = analysis_context
     question_analysis = analysis_answer
-    if canonical_trace is not None and isinstance(candidate, AnalysisGapV3):
+    if canonical_trace is not None and isinstance(candidate, CaseAnalysisGap):
         question_context = relevant_claim_context(canonical_trace, candidate)
         question_analysis = canonical_trace.summary
     started = time.perf_counter()

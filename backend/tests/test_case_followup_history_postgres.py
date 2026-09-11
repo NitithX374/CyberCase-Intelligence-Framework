@@ -15,9 +15,6 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisResult as AnalysisOutput,
     CaseAnalysisTrace,
     CaseEvidenceCitation,
-    NativeCaseAnalysisClaim,
-    NativeCaseEvidenceCitation,
-    NativeCaseAnalysisTrace,
 )
 from app.services.case_materials import CaseMaterialsService
 from app.services.followup.caseClarification import (
@@ -217,18 +214,18 @@ def test_case_execution_passes_durable_exchanges_to_followup_policy(monkeypatch)
 
 
 def _output_from_context(context, source_id, text):
-    trace = NativeCaseAnalysisTrace(
+    trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary=text,
         claims=[
-            NativeCaseAnalysisClaim(
+            CaseAnalysisClaim(
                 claim_id="A-01",
                 claim_type="reported",
                 text=text,
                 epistemic_status="reported",
                 supporting_source_ids=[source_id],
                 supporting_citations=[
-                    NativeCaseEvidenceCitation(
+                    CaseEvidenceCitation(
                         source_id=source_id,
                         source_revision=1,
                         exact_quote=text,

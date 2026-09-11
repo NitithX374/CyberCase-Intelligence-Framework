@@ -12,8 +12,8 @@ from app.services.case_analysis import CaseAnalysisFailure, request_case_analysi
 from app.services.chat.caseAnswer import generateCaseAnswer, loadCaseAnswerContext
 from app.services.case_analysis.contracts import (
     CaseAnalysisResult as AnalysisOutput,
-    NativeCaseAnalysisTrace,
-    build_native_source_registry,
+    CaseAnalysisTrace,
+    build_case_source_registry,
 )
 from app.services.case_analysis.pipelineConfig import read_pipeline
 from app.services.workflow.caseRunClaim import claimCaseRun
@@ -152,7 +152,7 @@ async def _execute_claimed_work(
         )
     if (
         claimed.operation == "analysis"
-        and isinstance(output.trace, NativeCaseAnalysisTrace)
+        and isinstance(output.trace, CaseAnalysisTrace)
         and applicability_gate is not None
         and rag_request is not None
     ):
@@ -163,7 +163,7 @@ async def _execute_claimed_work(
             rag_request,
             mapping_request,
         )
-    if claimed.operation == "analysis" and isinstance(output.trace, NativeCaseAnalysisTrace):
+    if claimed.operation == "analysis" and isinstance(output.trace, CaseAnalysisTrace):
         output = await _attach_case_followup(
             output,
             claimed,
@@ -258,7 +258,7 @@ async def _attach_case_augmentation(
         mapping_request=mapping_request,
         calls=calls,
     )
-    sources = build_native_source_registry(context)
+    sources = build_case_source_registry(context)
     merged_trace = merge_case_mitre_trace(
         output.trace,
         augmentation,

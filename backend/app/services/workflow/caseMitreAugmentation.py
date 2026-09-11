@@ -49,7 +49,7 @@ class CaseMitreAugmentation:
     status: CaseMitreAugmentationStatus
     applicability: MitreApplicabilityRecord
     context: CaseRagContextPayload | None
-    associations: tuple[NativeMitreAssociation, ...]
+    associations: tuple[CaseMitreAssociation, ...]
     failure_code: str | None = None
 
     @property
@@ -274,16 +274,16 @@ def _technique_rows(rows: Sequence[Mapping[str, object]]) -> list[dict[str, obje
 
 
 def _validate_associations(
-    associations: Sequence[NativeMitreAssociation],
-    claims: Sequence[NativeCaseAnalysisClaim],
+    associations: Sequence[CaseMitreAssociation],
+    claims: Sequence[CaseAnalysisClaim],
     applicability: MitreApplicabilityRecord,
     rows: Sequence[Mapping[str, object]],
-) -> list[NativeMitreAssociation]:
+) -> list[CaseMitreAssociation]:
     known_claims = {claim.claim_id: claim for claim in claims}
     technique_ids = {str(row["technique_id"]) for row in rows}
     cited_sources = set(applicability.source_message_ids)
     seen_ids: set[str] = set()
-    validated: list[NativeMitreAssociation] = []
+    validated: list[CaseMitreAssociation] = []
     for association in associations:
         if association.association_id in seen_ids:
             raise ValueError("MITRE association identifiers must be unique")

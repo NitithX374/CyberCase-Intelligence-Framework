@@ -15,9 +15,6 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisTrace,
     CaseEvidenceCitation,
     CaseMitreAssociation,
-    NativeCaseAnalysisClaim,
-    NativeCaseEvidenceCitation,
-    NativeCaseAnalysisTrace,
 )
 from app.services.case_analysis.mitreApplicabilityGate import MitreApplicabilityRecord
 from app.services.case_materials import CaseMaterialsService
@@ -193,13 +190,13 @@ def test_native_worker_skip_publishes_and_reports_not_applicable_outcome():
                 quote = "The evidence reports PowerShell network activity."
                 return AnalysisOutput(
                     answer=quote,
-                    trace=NativeCaseAnalysisTrace(
+                    trace=CaseAnalysisTrace(
                         analysis_mode="case_overview",
                         summary=quote,
-                        claims=[NativeCaseAnalysisClaim(
+                        claims=[CaseAnalysisClaim(
                             claim_id="A-01", claim_type="reported", text=quote, epistemic_status="reported",
                             supporting_source_ids=[str(source_id)],
-                            supporting_citations=[NativeCaseEvidenceCitation(source_id=str(source_id), source_revision=1, exact_quote=quote)],
+                            supporting_citations=[CaseEvidenceCitation(source_id=str(source_id), source_revision=1, exact_quote=quote)],
                         )],
                         evidence_sha256=snapshot.text_sha256,
                     ),

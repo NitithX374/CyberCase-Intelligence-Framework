@@ -8,7 +8,7 @@ from app.schemas.reports import (
     ReportSection,
     StructuredReport,
 )
-from app.services.case_analysis.contracts import NativeCaseAnalysisTrace
+from app.services.case_analysis.contracts import CaseAnalysisTrace
 from app.services.reports.case_report_contracts import (
     CaseReportInputSnapshot,
     native_source_ids,
@@ -23,7 +23,7 @@ async def run_case_report_generation(snapshot: CaseReportInputSnapshot) -> Repor
     started = time.perf_counter()
     try:
         report = build_case_template_report(snapshot)
-        trace = NativeCaseAnalysisTrace.model_validate(snapshot.analysis_trace)
+        trace = CaseAnalysisTrace.model_validate(snapshot.analysis_trace)
         validate_case_structured_report(
             report,
             source_evidence_ids=native_source_ids(snapshot),
@@ -54,7 +54,7 @@ async def run_case_report_generation(snapshot: CaseReportInputSnapshot) -> Repor
 def build_case_template_report(
     snapshot: CaseReportInputSnapshot,
 ) -> StructuredReport:
-    trace = NativeCaseAnalysisTrace.model_validate(snapshot.analysis_trace)
+    trace = CaseAnalysisTrace.model_validate(snapshot.analysis_trace)
     association_by_claim: dict[str, list[str]] = {}
     for association in trace.mitre_associations:
         for claim_id in association.claim_ids:
@@ -153,7 +153,7 @@ def _support_type(claim_type: str) -> str:
 
 def _technical_items(
     snapshot: CaseReportInputSnapshot,
-    trace: NativeCaseAnalysisTrace,
+    trace: CaseAnalysisTrace,
 ) -> list[str]:
     augmentation = snapshot.technical_augmentation
     if augmentation is None:
@@ -171,7 +171,7 @@ def _technical_items(
 
 def _technical_rationale(
     snapshot: CaseReportInputSnapshot,
-    trace: NativeCaseAnalysisTrace,
+    trace: CaseAnalysisTrace,
 ) -> list[str]:
     augmentation = snapshot.technical_augmentation
     if augmentation is not None and augmentation.status == "retrieved_with_matches":
