@@ -1,56 +1,59 @@
 "use client";
 
 import { useCallback } from "react";
-import type { ChatThreadRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api";
 import type { WorkspaceRouteView } from "@/components/common/types";
-import { chatPath } from "../routing/chat-route";
+import { casePath } from "../routing/workspaceRoutes";
 import type { ChatSession } from "./use-chat-thread-selection";
 
 interface UseChatThreadDeletionOptions {
   session: ChatSession;
-  deleteCandidate: ChatThreadRead | null;
-  deletingThreadId: string | null;
+  deleteCandidate: CaseRead | null;
+  deletingCaseId: string | null;
   activeView: WorkspaceRouteView;
-  threads: ChatThreadRead[];
-  deleteThread: (threadId: string) => Promise<void>;
+  activeCaseId?: string | null;
+  isChatOpen?: boolean;
+  cases: CaseRead[];
+  deleteCase: (caseId: string) => Promise<void>;
   router: { replace(path: string): void };
-  setDeleteCandidate: React.Dispatch<React.SetStateAction<ChatThreadRead | null>>;
+  setDeleteCandidate: React.Dispatch<React.SetStateAction<CaseRead | null>>;
 }
 
 export function useChatThreadDeletion({
-  session, deleteCandidate, deletingThreadId, activeView, threads,
-  deleteThread, router, setDeleteCandidate,
+  session, deleteCandidate, deletingCaseId, activeView, cases,
+  activeCaseId = null, isChatOpen = true, deleteCase, router, setDeleteCandidate,
 }: UseChatThreadDeletionOptions) {
   const cancelDelete = useCallback(() => {
-    if (deletingThreadId === null) setDeleteCandidate(null);
-  }, [deletingThreadId, setDeleteCandidate]);
+    if (deletingCaseId === null) setDeleteCandidate(null);
+  }, [deletingCaseId, setDeleteCandidate]);
 
   const confirmDelete = useCallback(async () => {
-    const thread = deleteCandidate;
-    if (!thread || deletingThreadId !== null) return;
-    const deletingActiveThread = session.suspendThread(thread.id);
+    const caseRecord = deleteCandidate;
+    if (!caseRecord || deletingCaseId !== null) return;
+    const deletingActiveThread = session.suspendThread(caseRecord.id);
+    const deletingActiveCase = deletingActiveThread || activeCaseId === caseRecord.id;
     try {
-      await deleteThread(thread.id);
+      await deleteCase(caseRecord.id);
     } catch {
-      session.restoreThread(thread.id);
+      session.restoreThread(caseRecord.id);
       setDeleteCandidate(null);
       if (deletingActiveThread && session.getActiveThreadId() === null) {
-        await session.selectThread(thread.id);
+        await session.selectThread(caseRecord.id);
       }
       return;
     }
-    session.removeThread(thread.id);
+    session.removeThread(caseRecord.id);
     setDeleteCandidate(null);
-    if (!deletingActiveThread || session.getActiveThreadId() !== null) return;
+    if (!deletingActiveCase || session.getActiveThreadId() !== null) return;
     session.clearSelection();
-    const remaining = threads.filter((item) => item.id !== thread.id);
+    const remaining = cases.filter((item) => item.id !== caseRecord.id);
     if (remaining[0]) {
-      router.replace(chatPath(remaining[0].id, activeView));
-      await session.selectThread(remaining[0].id);
+      router.replace(casePath(remaining[0].id, activeView));
+      if (isChatOpen && remaining[0].chat_thread_id) await session.selectThread(remaining[0].chat_thread_id);
     } else {
-      router.replace("/chat");
+      router.replace("/case");
     }
-  }, [activeView, deleteCandidate, deleteThread, deletingThreadId, router, session, setDeleteCandidate, threads]);
+  }, [activeCaseId, activeView, cases, deleteCandidate, deleteCase, deletingCaseId, isChatOpen, router, session, setDeleteCandidate]);
 
   return { cancelDelete, confirmDelete };
 }

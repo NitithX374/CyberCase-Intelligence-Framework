@@ -1,240 +1,263 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   getApiErrorMessage,
+  type CaseRead,
+  type ChatThreadDetail,
   type ChatThreadRead,
 } from "@/lib/api";
-import {
-  type WorkspaceRouteView,
-  type WorkspaceView,
-} from "@/components/common/types";
-import {
-  activeChatFollowUpForThread,
-  chatTranscriptMessages,
-} from "@/lib/chat-followup";
+import type { RunPhase, WorkspaceRouteView, WorkspaceView } from "@/components/common/types";
+import { chatTranscriptMessages } from "@/lib/chat-followup";
 import { ChatWorkspaceLayout } from "@/components/ChatWorkspaceLayout";
-import {
-  useChatThreadMutations,
-  useChatThreads,
-} from "@/hooks/use-chat-queries";
-import { chatPath, chatRouteState } from "@/features/chat/routing/chat-route";
-import { useChatSubmission } from "@/features/chat/runs/use-chat-submission";
+import { useCaseMutations, useCaseWorkspaceQueries, useCases } from "@/hooks/useCaseQueries";
+import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
+import { chatQueryKeys } from "@/hooks/useChatQueries";
+import { casePath, chatRouteState } from "@/features/chat/routing/workspaceRoutes";
+import { useChatSubmission } from "@/features/chat/runs/useChatSubmission";
 import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
 import { useChatThreadDeletion } from "@/features/chat/workspace/use-chat-thread-deletion";
 import { useWorkspaceSubmissionActions } from "@/features/chat/workspace/use-workspace-submission-actions";
+import { useCaseWorkspaceActions } from "@/hooks/useCaseWorkspaceActions";
 
 export function ChatWorkspace() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const routeState = chatRouteState(pathname);
-  const routeThreadId = routeState.threadId;
-  const routeView = routeState.view;
-  const [activeView, setActiveView] = useState<WorkspaceRouteView>(routeView);
+  const routeCaseId = routeState.caseId;
+  const [activeView, setActiveView] = useState<WorkspaceRouteView>(routeState.view);
   const [activeViewPathname, setActiveViewPathname] = useState(pathname);
   if (activeViewPathname !== pathname) {
     setActiveViewPathname(pathname);
-    setActiveView(routeView);
+    setActiveView(routeState.view);
   }
-  const [deleteCandidate, setDeleteCandidate] = useState<ChatThreadRead | null>(
-    null,
-  );
-  const [isChatOpen, setIsChatOpen] = useState(true);
-
-  const handleToggleChat = useCallback(() => {
-    setIsChatOpen((prev) => !prev);
-  }, []);
-
-  const threadsQuery = useChatThreads();
-  const {
-    upsertThread: cacheUpsertThread,
-    createMutation,
-    updateMutation,
-    deleteMutation,
-  } = useChatThreadMutations();
-  const threads = useMemo(() => threadsQuery.data ?? [], [threadsQuery.data]);
-  const threadsLoading = threadsQuery.isLoading;
-  const creatingThread = createMutation.isPending;
-  const deletingThreadId = deleteMutation.isPending
-    ? deleteMutation.variables ?? null
-    : null;
-  const threadsError = threadsQuery.error
-    ? getApiErrorMessage(threadsQuery.error, "Saved chats could not be loaded.")
-    : createMutation.error
-      ? getApiErrorMessage(createMutation.error, "A new chat could not be created.")
-      : deleteMutation.error
-        ? getApiErrorMessage(deleteMutation.error, "The chat could not be deleted.")
-        : null;
-
+  const [deleteCandidate, setDeleteCandidate] = useState<CaseRead | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const rootBootstrapDoneRef = useRef(false);
-  const session = useChatThreadSelection({ cacheUpsertThread });
+
+  const casesQuery = useCases();
+  const { upsertCase, createMutation, updateMutation, deleteMutation } = useCaseMutations();
+  const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
+  const activeCaseId = routeCaseId;
+  const activeCase = cases.find((caseRecord) => caseRecord.id === activeCaseId) ?? null;
+  const isInvalidCase = casesQuery.isSuccess && activeCaseId !== null && !activeCase;
+  const caseData = useCaseWorkspaceQueries(isInvalidCase ? null : activeCaseId);
+  const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
+  const runQuery = useCaseRunPolling(
+    isInvalidCase ? null : activeCaseId,
+    runId,
+    activeCase?.chat_thread_id,
+  );
+  const nativeResult = caseData.analysis.data ?? null;
+  const nativeRunStatus = runQuery.data?.status ?? caseRunStatus(activeCase);
+
+  const cacheUpsertCaseFromChat = useCallback((thread: ChatThreadRead) => {
+    queryClient.setQueryData<ChatThreadDetail>(chatQueryKeys.detail(thread.id), (current) =>
+      current ? { ...current, ...thread } : undefined
+    );
+  }, [queryClient]);
+  const session = useChatThreadSelection({
+    cacheUpsertThread: cacheUpsertCaseFromChat,
+  });
   const {
-    activeThreadId, getActiveThreadId, messages, threadStatus, phase, input,
-    pendingFollowUp, postAnswerAction, queryError, selectThread, changeInput,
-    changePostAnswerAction,
+    activeThreadId, getActiveThreadId, messages, input,
+    queryError, selectThread, clearSelection, changeInput,
   } = session;
+  const actions = useCaseWorkspaceActions({
+    activeCaseId,
+    activeCase,
+    isChatOpen,
+    setIsChatOpen,
+    session,
+    upsertCase,
+    updateCase: updateMutation.mutateAsync,
+    router,
+    setActiveView,
+  });
 
   useEffect(() => {
-    if (routeThreadId !== null) rootBootstrapDoneRef.current = false;
-    if (
-      routeThreadId !== null &&
-      getActiveThreadId() !== routeThreadId
-    ) {
-      void selectThread(routeThreadId);
-    }
-  }, [getActiveThreadId, routeThreadId, selectThread]);
-
-  useEffect(() => {
-    if (
-      threadsLoading ||
-      routeThreadId !== null ||
-      !threads[0] ||
-      rootBootstrapDoneRef.current
-    ) {
+    if (!activeCase) return;
+    const threadId = activeCase?.chat_thread_id ?? null;
+    if (!isChatOpen || !threadId) {
+      if (getActiveThreadId() !== null) clearSelection();
       return;
     }
+    if (getActiveThreadId() !== threadId) void selectThread(threadId);
+  }, [activeCase, clearSelection, getActiveThreadId, isChatOpen, selectThread, activeCase?.chat_thread_id]);
 
-    const firstThreadId = threads[0].id;
-    rootBootstrapDoneRef.current = true;
-    router.replace(chatPath(firstThreadId, "overview"));
-    if (getActiveThreadId() !== firstThreadId) {
-      void selectThread(firstThreadId);
+  useEffect(() => {
+    if (casesQuery.isLoading) return;
+    if (routeCaseId === null) {
+      if (!cases[0] || rootBootstrapDoneRef.current) return;
+      rootBootstrapDoneRef.current = true;
+      router.replace(casePath(cases[0].id, "overview"));
+    } else if (!activeCase) {
+      if (cases[0]) {
+        router.replace(casePath(cases[0].id, activeView));
+      } else {
+        router.replace("/case");
+      }
     }
-  }, [
-    getActiveThreadId,
-    routeThreadId,
-    router,
-    selectThread,
-    threads,
-    threadsLoading,
-  ]);
+  }, [activeCase, activeView, cases, casesQuery.isLoading, routeCaseId, router]);
 
-  const handleViewChange = useCallback(
-    (view: WorkspaceView) => {
-      setActiveView(view);
-      const threadId = getActiveThreadId();
-      if (threadId !== null) router.push(chatPath(threadId, view));
-    },
-    [getActiveThreadId, router],
-  );
+  const handleViewChange = useCallback((view: WorkspaceView) => {
+    setActiveView(view);
+    if (activeCaseId) router.push(casePath(activeCaseId, view));
+  }, [activeCaseId, router]);
 
-  const handleNavigateToSource = useCallback(() => {
-    setIsChatOpen(true);
-  }, []);
+  const handleSelectCase = useCallback(async (caseId: string) => {
+    const selected = cases.find((caseRecord) => caseRecord.id === caseId);
+    router.push(casePath(caseId, activeView));
+    if (isChatOpen && selected?.chat_thread_id) await selectThread(selected.chat_thread_id);
+    else clearSelection();
+  }, [activeView, cases, clearSelection, isChatOpen, router, selectThread]);
 
-  const handleSelectThread = useCallback(
-    async (threadId: string): Promise<void> => {
-      router.push(chatPath(threadId, activeView));
-      await selectThread(threadId);
-    },
-    [activeView, router, selectThread],
-  );
-
-  const handleNewChat = useCallback(async () => {
-    if (creatingThread) return;
+  const handleNewCase = useCallback(async () => {
+    if (createMutation.isPending) return;
     setActiveView("intake");
-    changePostAnswerAction("ask");
+    clearSelection();
+    setIsChatOpen(false);
     try {
-      const thread = await createMutation.mutateAsync();
-      router.push(chatPath(thread.id, "intake"));
-      await selectThread(thread.id);
+      const caseRecord = await createMutation.mutateAsync();
+      router.push(casePath(caseRecord.id, "intake"));
     } catch {
       return;
     }
-  }, [creatingThread, createMutation, router, selectThread, changePostAnswerAction]);
+  }, [clearSelection, createMutation, router]);
 
   const { submitContent } = useChatSubmission({
     session,
-    threads,
-    createThread: () => createMutation.mutateAsync(),
-    updateThread: (input) => updateMutation.mutateAsync(input),
-    router,
-    chatPath,
+    cases,
+    upsertCase,
+    updateCase: (inputValue) => updateMutation.mutateAsync(inputValue),
+    caseId: activeCaseId,
   });
-
   const { cancelDelete, confirmDelete } = useChatThreadDeletion({
     session,
     deleteCandidate,
-    deletingThreadId,
+    deletingCaseId: deleteMutation.isPending ? deleteMutation.variables ?? null : null,
     activeView,
-    threads,
-    deleteThread: (threadId) => deleteMutation.mutateAsync(threadId),
+    activeCaseId,
+    isChatOpen,
+    cases,
+    deleteCase: (caseId) => deleteMutation.mutateAsync(caseId),
     router,
     setDeleteCandidate,
   });
 
-  const activeThread =
-    threads.find((thread) => thread.id === activeThreadId) ?? null;
-  const persistedFollowUp = activeChatFollowUpForThread(messages, threadStatus);
-  const displayFollowUp =
-    persistedFollowUp ??
-    (pendingFollowUp?.threadId === activeThreadId
-      ? pendingFollowUp.followUp
-      : null);
   const visibleMessages = chatTranscriptMessages(messages);
-  const hasCompletedAnalysis = messages.some(
-    (message) =>
-      message.role === "assistant" &&
-      message.metadata_json.analysis_kind === "grounded_main_analysis",
-  );
   const {
-    changePostAnswerAction: handlePostAnswerActionChange,
     clearQueryError: handleClearQueryError,
     retryQuery: handleRetryQuery,
-    submitCase: handleSubmitCase,
     submitMessage: handleSubmit,
   } = useWorkspaceSubmissionActions({
     session,
-    displayFollowUp,
-    router,
     submitContent,
-    updateTitle: updateMutation.mutateAsync,
-    setActiveView,
   });
+
+  const workspaceError = actions.actionError ?? queryError;
+  const caseDataError = caseData.documents.error
+    ? getApiErrorMessage(caseData.documents.error, "Case documents could not be loaded.")
+    : caseData.evidence.error
+      ? getApiErrorMessage(caseData.evidence.error, "Admitted case evidence could not be loaded.")
+      : caseData.analysis.error
+        ? getApiErrorMessage(caseData.analysis.error, "Case analysis could not be loaded.")
+        : caseData.snapshot.error
+          ? getApiErrorMessage(caseData.snapshot.error, "The case evidence snapshot could not be loaded.")
+          : caseData.clarifications.error
+            ? getApiErrorMessage(caseData.clarifications.error, "Case clarification state could not be loaded.")
+            : null;
+  const visibleWorkspaceError = workspaceError ?? caseDataError;
+  const clearWorkspaceError = useCallback(() => {
+    actions.clearActionError();
+    handleClearQueryError();
+  }, [actions, handleClearQueryError]);
+  const retryWorkspace = useCallback(() => {
+    if (actions.actionError) actions.clearActionError();
+    else handleRetryQuery();
+  }, [actions, handleRetryQuery]);
+  const workspaceThreadStatus = nativeThreadStatus(activeCase, nativeRunStatus);
+  const workspacePhase = determineCaseRunPhase(nativeRunStatus, nativeResult?.status === "validated");
+  const casesError = casesQuery.error
+    ? getApiErrorMessage(casesQuery.error, "Saved cases could not be loaded.")
+    : createMutation.error
+      ? getApiErrorMessage(createMutation.error, "A new case could not be created.")
+      : deleteMutation.error
+        ? getApiErrorMessage(deleteMutation.error, "The case could not be deleted.")
+        : null;
 
   return (
     <ChatWorkspaceLayout
-      activeThread={activeThread}
-      activeThreadId={activeThreadId}
+      activeCase={activeCase}
+      activeCaseId={activeCaseId}
+      chatThreadId={activeThreadId}
       activeView={activeView}
       activeWorkspaceView={activeView}
-      threads={threads}
-      threadsLoading={threadsLoading}
-      threadsError={threadsError}
-      creatingThread={creatingThread}
-      deletingThreadId={deletingThreadId}
-      phase={phase}
-      threadStatus={threadStatus}
-      queryError={queryError}
+      cases={cases}
+      casesLoading={casesQuery.isLoading}
+      casesError={casesError}
+      creatingCase={createMutation.isPending}
+      deletingCaseId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}
+      phase={workspacePhase}
+      threadStatus={workspaceThreadStatus}
+      queryError={visibleWorkspaceError}
       input={input}
-      postAnswerAction={postAnswerAction}
       visibleMessages={visibleMessages}
-      hasCompletedAnalysis={hasCompletedAnalysis}
       messages={messages}
+      nativeDocuments={caseData.documents.data ?? []}
+      nativeEvidence={caseData.evidence.data ?? []}
+      nativeAnalysisResult={nativeResult}
+      nativeEvidenceSnapshot={caseData.snapshot.data ?? null}
+      nativeRun={runQuery.data ?? null}
+      nativeRunStatus={nativeRunStatus}
+      nativeClarifications={caseData.clarifications.data ?? []}
+      clarificationSubmittingId={actions.answeringClarificationId}
+      nativeAnalysisLoading={caseData.analysis.isLoading}
+      nativeAnalysisSubmitting={actions.isSubmitting}
+      nativeCaseDataLoading={caseData.documents.isLoading || caseData.evidence.isLoading || caseData.analysis.isLoading}
+      nativeSnapshotLoading={caseData.snapshot.isLoading}
+      nativeIsUploadingDocument={actions.isUploadingDocument}
+      nativeAdmittingExtractionId={actions.admittingExtractionId}
       deleteCandidate={deleteCandidate}
-      onSelectThread={(threadId) => void handleSelectThread(threadId)}
-      onNewChat={() => void handleNewChat()}
+      onSelectCase={(caseId) => void handleSelectCase(caseId)}
+      onNewCase={() => void handleNewCase()}
       onRequestDelete={setDeleteCandidate}
       onViewChange={handleViewChange}
       onInputChange={changeInput}
-      onPostAnswerActionChange={handlePostAnswerActionChange}
       onSubmit={handleSubmit}
       onSetDeleteCandidate={setDeleteCandidate}
       onCancelDelete={cancelDelete}
       onConfirmDelete={() => void confirmDelete()}
-      onNavigateToSource={handleNavigateToSource}
-      onSubmitCase={handleSubmitCase}
-      onClearQueryError={handleClearQueryError}
-      onRetryQuery={handleRetryQuery}
+      onNavigateToSource={() => { void actions.toggleChat(); }}
+      onSubmitCase={actions.submitCase}
+      onClearQueryError={clearWorkspaceError}
+      onRetryQuery={retryWorkspace}
       isChatOpen={isChatOpen}
-      onToggleChat={handleToggleChat}
+      onToggleChat={() => void actions.toggleChat()}
+      onUploadNativeDocument={(file) => void actions.uploadDocument(file)}
+      onAdmitNativeExtraction={(documentId, extractionId) => void actions.admitExtraction(documentId, extractionId)}
+      onAnswerClarification={(clarificationId, answer) => void actions.answerClarification(clarificationId, answer)}
     />
   );
+}
+
+function caseRunStatus(caseRecord: CaseRead | null): "queued" | "running" | "failed" | null {
+  const status = caseRecord?.processing_status;
+  return status === "queued" || status === "running" || status === "failed" ? status : null;
+}
+
+function nativeThreadStatus(caseRecord: CaseRead | null, runStatus: string | null) {
+  if (runStatus === "queued" || runStatus === "running") return "processing" as const;
+  if (runStatus === "failed") return "failed" as const;
+  return caseRecord?.status ?? null;
+}
+
+function determineCaseRunPhase(status: string | null, hasResult: boolean): RunPhase {
+  if (status === "queued") return "querying";
+  if (status === "running") return "analyzing";
+  if (status === "failed") return "error";
+  return hasResult ? "ready" : "idle";
 }

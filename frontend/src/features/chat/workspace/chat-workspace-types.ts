@@ -8,57 +8,77 @@ import type {
 import type {
   ChatMessageAction,
   CaseIntakeSubmission,
-  CaseNarrativeDocumentSource,
-  ChatThreadRead,
+  CaseRead,
+  CaseAnalysisResultRead,
+  CaseClarificationRead,
+  CaseDocumentRead,
+  CaseEvidenceSnapshotRead,
+  CaseRunRead,
+  EvidenceSourceRead,
   PersistedChatMessage,
   ThreadStatus,
 } from "@/lib/api";
 
 export interface PendingChatSubmission {
   threadId: string;
+  caseId: string;
   content: string;
   key: string;
   kind: "message" | "followup";
   action?: ChatMessageAction;
-  documentSources?: CaseNarrativeDocumentSource[];
   lastKnownMessageOrdinal: number;
   requestOrdinal?: number;
 }
 
 export interface ChatWorkspaceLayoutProps {
-  activeThread: ChatThreadRead | null;
-  activeThreadId: string | null;
+  activeCase: CaseRead | null;
+  activeCaseId: string | null;
+  chatThreadId: string | null;
   activeView: WorkspaceRouteView;
   activeWorkspaceView: WorkspaceRouteView;
-  threads: ChatThreadRead[];
-  threadsLoading: boolean;
-  threadsError: string | null;
-  creatingThread: boolean;
-  deletingThreadId: string | null;
+  cases: CaseRead[];
+  casesLoading: boolean;
+  casesError: string | null;
+  creatingCase: boolean;
+  deletingCaseId: string | null;
   phase: RunPhase;
   threadStatus: ThreadStatus | null;
   queryError: string | null;
   input: string;
-  postAnswerAction: ChatMessageAction | null;
   visibleMessages: PersistedChatMessage[];
-  hasCompletedAnalysis: boolean;
   messages: PersistedChatMessage[];
-  deleteCandidate: ChatThreadRead | null;
-  onSelectThread: (threadId: string) => void;
-  onNewChat: () => void;
-  onRequestDelete: (thread: ChatThreadRead) => void;
+  nativeDocuments?: CaseDocumentRead[];
+  nativeEvidence?: EvidenceSourceRead[];
+  nativeAnalysisResult?: CaseAnalysisResultRead | null;
+  nativeEvidenceSnapshot?: CaseEvidenceSnapshotRead | null;
+  nativeRun?: CaseRunRead | null;
+  nativeRunStatus?: CaseRunRead["status"] | null;
+  nativeClarifications?: CaseClarificationRead[];
+  clarificationSubmittingId?: string | null;
+  nativeAnalysisLoading?: boolean;
+  nativeAnalysisSubmitting?: boolean;
+  nativeCaseDataLoading?: boolean;
+  nativeSnapshotLoading?: boolean;
+  nativeIsUploadingDocument?: boolean;
+  nativeAdmittingExtractionId?: string | null;
+  deleteCandidate: CaseRead | null;
+  onSelectCase: (caseId: string) => void;
+  onNewCase: () => void;
+  onRequestDelete: (caseRecord: CaseRead) => void;
   onViewChange: (view: WorkspaceView) => void;
   onInputChange: (value: string) => void;
-  onPostAnswerActionChange: (action: ChatMessageAction) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onSetDeleteCandidate: (thread: ChatThreadRead | null) => void;
+  onSetDeleteCandidate: (caseRecord: CaseRead | null) => void;
   onCancelDelete: () => void;
   onConfirmDelete: () => void;
   onNavigateToSource?: (messageId: string) => void;
-  onSubmitCase?: (data: CaseIntakeSubmission) => void;
+  onSubmitCase: (data: CaseIntakeSubmission) => void;
   onClearQueryError?: () => void;
   onRetryQuery?: () => void;
   isChatOpen?: boolean;
   onToggleChat?: () => void;
+  onUploadNativeDocument?: (file: File) => void;
+  onAdmitNativeExtraction?: (documentId: string, extractionId: string) => void;
+  onAnswerClarification?: (clarificationId: string, answer: string) => void;
 }
 

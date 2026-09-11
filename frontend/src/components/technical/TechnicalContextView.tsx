@@ -1,14 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, PersistedChatMessage } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import { SourceEvidencePopover } from "@/components/overview/SourceEvidencePopover";
 import type { SourceMessageRef } from "@/lib/case-overview";
-import { buildTechnicalContext, type TechnicalContextCard } from "@/lib/technical-context";
+import {
+  buildNativeTechnicalContext,
+  buildTechnicalContext,
+  type RetrievedTechnicalContextCard,
+  type TechnicalContextCard,
+  type TechnicalContextData,
+  type TechnicalContextStatus,
+} from "@/lib/technicalContext";
 
 interface TechnicalContextViewProps {
   messages: PersistedChatMessage[];
+  nativeAnalysisResult?: CaseAnalysisResultRead | null;
+  nativeEvidenceSnapshot?: CaseEvidenceSnapshotRead | null;
   onOpenIntake?: () => void;
   onNavigateToSource?: (messageId: string) => void;
 }
@@ -44,7 +53,7 @@ function TechnicalItem({
       )}
 
       <div className="space-y-1">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">เหตุผลที่เกี่ยวข้องกับคดี</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">เหตุผลการเชื่อมโยงเชิงวิเคราะห์</h3>
         <p className="text-xs leading-relaxed text-ink">{item.whyRelevantHere}</p>
       </div>
 
@@ -96,12 +105,93 @@ function TechnicalItem({
   );
 }
 
+function RetrievedOnlyItem({ item }: { item: RetrievedTechnicalContextCard }) {
+  const [isDefinitionOpen, setIsDefinitionOpen] = useState(false);
+  return (
+    <article className="space-y-3 py-4 first:pt-2 last:pb-2">
+      <div className="flex flex-wrap items-baseline gap-2.5">
+        <span className="font-mono text-[11px] text-mitre">{item.techniqueId}</span>
+        <h3 className="text-sm font-extrabold text-ink">{item.techniqueName}</h3>
+      </div>
+      {item.tactic && <p className="text-xs font-medium text-ink-muted">{item.tactic}</p>}
+      <p className="text-[11px] font-semibold text-ink-muted">Retrieved-only context · no validated Case mapping</p>
+      {item.fullTechnicalDefinition && (
+        <details open={isDefinitionOpen} className="border-t border-line/70 pt-3">
+          <summary
+            className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-bold text-ink-muted marker:hidden focus-visible:ring-2 focus-visible:ring-primary"
+            onClick={(event) => {
+              event.preventDefault();
+              setIsDefinitionOpen((open) => !open);
+            }}
+          >
+            <span>Technical definition</span>
+            <Icon name="chevron" className="h-3 w-3" />
+          </summary>
+          {isDefinitionOpen && <p className="mt-2 rounded-lg border border-line bg-canvas/60 p-3 text-xs leading-relaxed text-ink-secondary select-text">{item.fullTechnicalDefinition}</p>}
+        </details>
+      )}
+    </article>
+  );
+}
+
+function statusMessage(data: TechnicalContextData): { title: string; body: string } {
+  const stage = data.failureStage ? ` during ${data.failureStage}` : "";
+  const messages: Record<TechnicalContextStatus, { title: string; body: string }> = {
+    not_applicable: {
+      title: "MITRE augmentation was not applicable",
+      body: "The Case did not meet the technical-context gate, so no external retrieval was performed.",
+    },
+    insufficient_context: {
+      title: "Technical context was insufficient",
+      body: "The augmentation result contains no supported MITRE context. No Case mapping is asserted.",
+    },
+    retrieved_with_matches: {
+      title: `${data.totalCount} validated Case mapping${data.totalCount === 1 ? "" : "s"}`,
+      body: "Only associations validated against Case evidence are shown as mappings. Retrieved-only rows remain separate.",
+    },
+    retrieved_without_supported_match: {
+      title: "MITRE context retrieved without a supported Case match",
+      body: "The retrieved rows are external context only. None was validated as a Case association.",
+    },
+    failed: {
+      title: `Technical augmentation failed${stage}`,
+      body: "No Case mapping is asserted from this augmentation attempt.",
+    },
+    invalid_trace: {
+      title: "Saved technical trace is invalid",
+      body: "The persisted trace or its augmentation binding could not be validated. Technical mappings are withheld.",
+    },
+    unavailable: {
+      title: "Technical augmentation outcome is unavailable",
+      body: "The saved result does not provide a verifiable augmentation outcome. No association was inferred.",
+    },
+  };
+  return messages[data.status];
+}
+
+function ContextStatus({ data }: { data: TechnicalContextData }) {
+  const message = statusMessage(data);
+  return (
+    <div className="border-b border-line/70 px-4 py-4 sm:px-6" role="status">
+      <p className="text-sm font-extrabold text-ink">{message.title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-ink-secondary">{message.body}</p>
+      {data.failureCode && <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-critical">Failure code: {data.failureCode}</p>}
+    </div>
+  );
+}
+
 export function TechnicalContextView({
   messages,
+  nativeAnalysisResult,
+  nativeEvidenceSnapshot,
   onOpenIntake,
   onNavigateToSource,
 }: TechnicalContextViewProps) {
-  const contextData = buildTechnicalContext(messages);
+  const isNativeContext = nativeAnalysisResult !== undefined || nativeEvidenceSnapshot !== undefined;
+  const contextData =
+    isNativeContext
+      ? buildNativeTechnicalContext(nativeAnalysisResult ?? null, nativeEvidenceSnapshot ?? null)
+      : buildTechnicalContext(messages);
   const [activePopover, setActivePopover] = useState<{
     source: SourceMessageRef;
     element: HTMLElement;
@@ -142,10 +232,9 @@ export function TechnicalContextView({
             <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-mitre/10 text-mitre">
               <Icon name="technical" className="h-5 w-5" />
             </span>
-            <h2 className="mt-4 text-sm font-extrabold text-ink">No relevant MITRE ATT&amp;CK context is currently available.</h2>
-            <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-ink-muted">
-              ยังไม่มีข้อมูลบริบททางเทคนิค MITRE ATT&amp;CK ในขณะนี้ กรุณาส่งรายละเอียดเหตุการณ์ในหน้า Case Intake เพื่อให้ระบบทำการสืบค้นและเชื่อมโยง
-            </p>
+            <h2 className="mt-4 text-sm font-extrabold text-ink">{isNativeContext ? statusMessage(contextData).title : contextData.status === "invalid_trace" ? "Technical context cannot be validated." : "No relevant MITRE ATT&CK context is currently available."}</h2>
+            <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-ink-muted">{statusMessage(contextData).body}</p>
+            {contextData.failureCode && <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-critical">Failure code: {contextData.failureCode}</p>}
             {onOpenIntake && (
               <button type="button" onClick={onOpenIntake} className="btn-primary mt-5 inline-flex items-center gap-2 rounded-lg">
                 <Icon name="intake" className="h-3.5 w-3.5" />
@@ -155,16 +244,29 @@ export function TechnicalContextView({
           </div>
         ) : (
           <section className="workspace-card px-4 sm:px-6">
-            <div className="divide-y divide-line/70">
-              {contextData.techniques.map((item) => (
-                <TechnicalItem
-                  key={item.techniqueId}
-                  item={item}
-                  onSelectSource={handleSelectSource}
-                  activeSourceKey={activeSourceKey}
-                />
-              ))}
-            </div>
+            <ContextStatus data={contextData} />
+            {contextData.techniques.length > 0 && (
+              <div className="divide-y divide-line/70">
+                <div className="px-0 pt-5 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">Validated Case mappings</div>
+                {contextData.techniques.map((item) => (
+                  <TechnicalItem
+                    key={item.associationId}
+                    item={item}
+                    onSelectSource={handleSelectSource}
+                    activeSourceKey={activeSourceKey}
+                  />
+                ))}
+              </div>
+            )}
+            {contextData.retrievedOnlyTechniques.length > 0 && (
+              <div className="mt-2 border-t border-line/70">
+                <div className="pt-5 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">Retrieved-only technical context</div>
+                <p className="mt-1 text-xs leading-relaxed text-ink-muted">These rows came from external retrieval and have no validated Case association or evidence citation.</p>
+                <div className="divide-y divide-line/70 pt-2">
+                  {contextData.retrievedOnlyTechniques.map((item) => <RetrievedOnlyItem key={item.techniqueId} item={item} />)}
+                </div>
+              </div>
+            )}
           </section>
         )}
       </div>

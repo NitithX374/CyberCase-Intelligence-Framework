@@ -151,6 +151,8 @@ async def get_latest_case_analysis(
 
 
 def analysis_freshness(case: Case, result: CaseAnalysisResult) -> str:
+    if result.snapshot is None:
+        return "missing"
     return "current" if result.snapshot.evidence_revision == case.evidence_revision else "stale"
 
 

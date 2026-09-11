@@ -30,7 +30,10 @@ def serializeCase(case: Case) -> CaseRead:
         "idle"
     )
     freshness = "missing"
-    if case.latest_analysis_result is not None:
+    if (
+        case.latest_analysis_result is not None
+        and case.latest_analysis_result.snapshot is not None
+    ):
         freshness = (
             "current"
             if case.latest_analysis_result.snapshot.evidence_revision == case.evidence_revision

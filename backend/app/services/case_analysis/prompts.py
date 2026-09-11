@@ -20,6 +20,9 @@ Claims:
 - For each supporting or contradicting source, copy one specific exact quote from the
   raw evidence. Include its source revision; leave document_id and filename null and
   page_numbers empty so the backend can attach document locations.
+- For one claim, a source ID may appear in only one role. If one source contains
+  opposing statements, create separate attributed claims or a conflict gap; never
+  list that source in both supporting_source_ids and contradicting_source_ids.
 - Preserve attribution, conflicts, and material OCR uncertainty. Never invent facts.
 
 Gaps:
@@ -41,6 +44,20 @@ in a supplied claim. Use existing claim IDs and technique IDs copied from the su
 MITRE table. External context is not Case evidence. Return an empty associations list
 when no supported mapping exists. Do not create facts, sources, confidence scores, or
 legal conclusions.
+"""
+
+CASE_TRACE_CORRECTION_PROMPT = """
+CORRECTION REQUIREMENTS
+
+Re-emit the complete JSON object. This is a provenance correction pass.
+- Copy every exact_quote character-for-character from raw_case_evidence.
+- Do not use ellipses, brackets, paraphrases, translations, OCR corrections, or
+  punctuation changes inside exact_quote.
+- Use only authoritative_case_source_ids and the matching source_revision values.
+- For one claim, each source ID may appear in only one role. Split opposing statements
+  into separate attributed claims or use a conflict gap.
+- If a proposition cannot be quoted exactly, represent it as unknown or omit it.
+Do not add explanations or markdown outside the JSON object.
 """
 
 
@@ -67,6 +84,7 @@ _validate_analysis_request = validate_analysis_request
 __all__ = [
     "CASE_ANALYSIS_PROMPT_VERSION",
     "CASE_MITRE_MAPPING_PROMPT",
+    "CASE_TRACE_CORRECTION_PROMPT",
     "MAIN_CASE_ANALYSIS_SYSTEM_PROMPT",
     "_validate_analysis_request",
     "case_system_prompt",

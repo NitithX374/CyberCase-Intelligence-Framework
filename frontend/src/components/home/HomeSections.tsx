@@ -1,4 +1,9 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { getSession, logout, type UserProfile } from "@/lib/api";
+import { SignOutDialog } from "@/components/common/SignOutDialog";
 
 export type HomePillarVisual = "bars" | "grid" | "line";
 
@@ -15,7 +20,7 @@ export const homePillars: HomePillar[] = [
     number: "01",
     title: "Ask",
     description:
-      "Bring an incident, question, or piece of evidence into one persistent conversation.",
+      "Bring an incident, question, or piece of evidence into one persistent case workspace.",
     label: "Start anywhere",
     type: "bars",
   },
@@ -31,23 +36,23 @@ export const homePillars: HomePillar[] = [
     number: "03",
     title: "Continue",
     description:
-      "Keep saved chat threads available so every investigation can pick up where it left off.",
-    label: "Saved threads",
+      "Keep saved cases available so every investigation can pick up where it left off.",
+    label: "Saved cases",
     type: "line",
   },
 ];
 
 export const homeWorkflowSteps = [
-  ["01", "Start", "Open a chat and describe what you need to understand."],
+  ["01", "Start", "Open a case and describe what you need to understand."],
   ["02", "Clarify", "Answer focused follow-ups when more context is needed."],
   ["03", "Continue", "Keep each accepted message and response in the thread."],
-  ["04", "Return", "Come back to any saved chat without losing the thread."],
+  ["04", "Return", "Come back to any saved case without losing the context."],
 ] as const;
 
 export const homeIntelligencePillars = [
   ["Persistent context", "Keep the accepted conversation available across sessions."],
   ["Guided follow-up", "Ask for the missing detail before continuing the analysis."],
-  ["Saved threads", "Switch between multiple conversations from one workspace."],
+  ["Saved cases", "Switch between multiple investigations from one workspace."],
   ["Clear handoff", "Keep questions, answers, and analysis together."],
 ] as const;
 
@@ -108,6 +113,83 @@ export function HomeMiniVisual({ type }: { type: HomePillarVisual }) {
 }
 
 export function HomeNavigation() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [workspaceRoute, setWorkspaceRoute] = useState("/case");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Verify session with backend without requiring QueryClientProvider
+    getSession()
+      .then((fetchedUser) => {
+        const accountId = typeof window !== "undefined" ? localStorage.getItem("cybercase:account") : null;
+        if (fetchedUser) {
+          setIsLoggedIn(true);
+          setUser(fetchedUser);
+          const savedRoute = localStorage.getItem(`cybercase:${fetchedUser.id}:route`);
+          if (savedRoute && (savedRoute.startsWith("/case/") || savedRoute.startsWith("/chat/"))) {
+            setWorkspaceRoute(savedRoute);
+          }
+        } else if (accountId) {
+          setIsLoggedIn(true);
+          const savedRoute = localStorage.getItem(`cybercase:${accountId}:route`);
+          if (savedRoute && (savedRoute.startsWith("/case/") || savedRoute.startsWith("/chat/"))) {
+            setWorkspaceRoute(savedRoute);
+          }
+        } else {
+          setIsLoggedIn(false);
+        }
+      })
+      .catch(() => {
+        const accountId = typeof window !== "undefined" ? localStorage.getItem("cybercase:account") : null;
+        if (accountId) {
+          setIsLoggedIn(true);
+          const savedRoute = localStorage.getItem(`cybercase:${accountId}:route`);
+          if (savedRoute && (savedRoute.startsWith("/case/") || savedRoute.startsWith("/chat/"))) {
+            setWorkspaceRoute(savedRoute);
+          }
+        } else {
+          setIsLoggedIn(false);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  const handleLogout = async () => {
+    setIsSigningOut(true);
+    try {
+      await logout();
+    } catch {
+      setIsSignOutDialogOpen(false);
+    }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("cybercase:account");
+      localStorage.setItem("cybercase:session-change", String(Date.now()));
+    }
+    setIsLoggedIn(false);
+    setUser(null);
+    setIsDropdownOpen(false);
+    setIsSignOutDialogOpen(false);
+    setWorkspaceRoute("/case");
+    setIsSigningOut(false);
+  };
+
   return (
     <header className="flex items-center justify-between border-b border-primary/10 px-5 py-4 md:px-8">
       <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
@@ -132,21 +214,118 @@ export function HomeNavigation() {
         </a>
       </nav>
 
-      <div className="flex items-center gap-3">
-        <Link
-          href="/chat"
-          className="hidden text-[11px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary sm:block"
-        >
-          Open chat
-        </Link>
-        <Link
-          href="/chat"
-          className="flex items-center gap-3 bg-primary px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-ivory transition hover:bg-charcoal-hover active:bg-charcoal-pressed"
-        >
-          Start case
-          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        </Link>
+      <div className="flex items-center gap-6">
+        {isLoggedIn ? (
+          <>
+            <Link
+              href={workspaceRoute}
+              className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-primary hover:text-accent"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+              Go to Workspace
+            </Link>
+
+            {/* Noticeable gap + User Detail Component with Dropdown */}
+            <div className="relative border-l border-primary/15 pl-6" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                aria-expanded={isDropdownOpen}
+                aria-haspopup="true"
+                aria-label="User account menu"
+                className="group flex items-center gap-1.5 rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name || "Profile avatar"}
+                    className="h-8 w-8 rounded-full border border-primary/20 object-cover shadow-xs transition group-hover:border-primary"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-ivory shadow-xs transition group-hover:bg-charcoal-hover">
+                    {user?.name ? (
+                      user.name.trim().charAt(0).toUpperCase()
+                    ) : (
+                      <svg
+                        className="h-4 w-4 text-ivory/80"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    )}
+                  </div>
+                )}
+                <span className="text-[9px] text-primary/40 transition group-hover:text-primary">
+                  ▼
+                </span>
+              </button>
+
+              {isDropdownOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2.5 w-56 rounded-xl border border-primary/15 bg-surface p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150"
+                >
+                  <div className="px-3 py-2.5 border-b border-primary/10">
+                    <p className="text-xs font-bold text-ink truncate">
+                      {user?.name || "Analyst"}
+                    </p>
+                    {user?.email && (
+                      <p className="mt-0.5 text-[11px] text-ink-secondary truncate">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsSignOutDialogOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-critical hover:bg-critical/10 transition outline-none focus-visible:ring-1 focus-visible:ring-critical"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                      Log out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <Link
+            href="/login"
+            className="text-[11px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary"
+          >
+            Sign in
+          </Link>
+        )}
       </div>
+      <SignOutDialog
+        isOpen={isSignOutDialogOpen}
+        isSigningOut={isSigningOut}
+        onCancel={() => setIsSignOutDialogOpen(false)}
+        onConfirm={() => void handleLogout()}
+      />
     </header>
   );
 }
@@ -188,7 +367,7 @@ export function HomeHero() {
         </p>
         <div className="mt-9 flex flex-wrap justify-center gap-3">
           <Link
-            href="/chat"
+            href="/case"
             className="bg-primary px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-ivory transition hover:bg-charcoal-hover active:bg-charcoal-pressed"
           >
             Start new case
@@ -216,7 +395,7 @@ export function HomeHero() {
           Built for analysts
         </p>
         <p className="mt-2 text-xs text-ink-secondary">
-          Persistent chat · Guided follow-up · Saved threads
+          Case workspace · Chat assistant · Guided follow-up · Saved cases
         </p>
       </div>
     </section>
@@ -283,7 +462,7 @@ export function HomeWorkflow() {
             <span className="text-xs font-bold uppercase tracking-widest">Guided chat</span>
           </div>
           <Link
-            href="/chat"
+            href="/case"
             className="border border-primary px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition hover:bg-primary hover:text-ivory active:bg-charcoal-pressed"
           >
             Open chat
@@ -306,7 +485,7 @@ export function HomeWorkflow() {
               conversations.
             </p>
             <Link
-              href="/chat"
+              href="/case"
               className="mt-9 inline-flex w-fit items-center gap-3 bg-primary px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-ivory transition hover:bg-charcoal-hover active:bg-charcoal-pressed"
             >
               Start a conversation
@@ -386,7 +565,7 @@ export function HomeFooter() {
     >
       <p>CyberCase Intelligence Framework</p>
       <div className="flex gap-5">
-        <Link href="/chat" className="hover:text-primary">
+        <Link href="/case" className="hover:text-primary">
           Workspace
         </Link>
         <a href="#platform" className="hover:text-primary">

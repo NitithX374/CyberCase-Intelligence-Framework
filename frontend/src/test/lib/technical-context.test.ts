@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { PersistedChatMessage } from "@/lib/api";
-import { buildTechnicalContext } from "@/lib/technical-context";
+import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, PersistedChatMessage } from "@/lib/api";
+import { buildNativeTechnicalContext, buildTechnicalContext } from "@/lib/technicalContext";
+import { sha256Hex } from "@/lib/sha256";
 
 describe("buildTechnicalContext", () => {
   it("extracts admitted MITRE techniques, tactics, concise plain meaning, case-specific relevance, and sources", () => {
@@ -69,7 +70,7 @@ describe("buildTechnicalContext", () => {
 
     const result = buildTechnicalContext(messages);
     expect(result.hasContext).toBe(true);
-    expect(result.totalCount).toBe(2);
+    expect(result.totalCount).toBe(1);
 
     // Technique 1: T1190 (linked through claim c1 to msg-1)
     const t1190 = result.techniques.find((t) => t.techniqueId === "T1190")!;
@@ -82,11 +83,9 @@ describe("buildTechnicalContext", () => {
     expect(t1190.caseBasisSources[0].id).toBe("msg-1");
     expect(t1190.isExternalReference).toBe(true);
 
-    // Technique 2: T1546.011 (no association/claims -> zero caseBasisSources, NO fake fallback)
-    const t1546 = result.techniques.find((t) => t.techniqueId === "T1546.011")!;
-    expect(t1546).toBeDefined();
-    expect(t1546.tactic).toContain("Persistence");
-    expect(t1546.caseBasisSources).toHaveLength(0);
+    const retrievedOnly = result.retrievedOnlyTechniques.find((t) => t.techniqueId === "T1546.011");
+    expect(retrievedOnly).toBeDefined();
+    expect(result.techniques.some((t) => t.techniqueId === "T1546.011")).toBe(false);
   });
 
   it("proves unlinked MITRE techniques or associations linking to analyst_question get zero caseBasisSources", () => {
@@ -162,7 +161,7 @@ describe("buildTechnicalContext", () => {
     expect(result.techniques[0].caseBasisSources).toHaveLength(0);
   });
 
-  it("returns conservative fallback when reason contains generic filler", () => {
+  it("keeps raw retrieved rows separate when no validated association exists", () => {
     const messages: PersistedChatMessage[] = [
       {
         id: "msg-1",
@@ -198,7 +197,9 @@ describe("buildTechnicalContext", () => {
     ];
 
     const result = buildTechnicalContext(messages);
-    expect(result.techniques[0].whyRelevantHere).toBe("พบพฤติกรรมในข้อมูลคดีที่สอดคล้องกับเทคนิคนี้");
+    expect(result.status).toBe("retrieved_without_supported_match");
+    expect(result.techniques).toHaveLength(0);
+    expect(result.retrievedOnlyTechniques[0].techniqueId).toBe("T1018");
   });
 
   it("filters out Tactics (TAxxxx) so they do not appear as standalone technique cards", () => {
@@ -288,5 +289,138 @@ describe("buildTechnicalContext", () => {
     expect(result.hasContext).toBe(false);
     expect(result.techniques).toHaveLength(0);
     expect(result.totalCount).toBe(0);
+  });
+});
+
+const nativeSourceId = "11111111-1111-4111-8111-111111111111";
+const nativeCaseId = "22222222-2222-4222-8222-222222222222";
+const nativeSnapshotId = "33333333-3333-4333-8333-333333333333";
+const nativeResultId = "44444444-4444-4444-8444-444444444444";
+const nativeQuote = "The evidence reports PowerShell network activity.";
+
+function nativeFixture(
+  status: string,
+  rows: Record<string, string>[],
+  associations: Record<string, unknown>[] = [],
+  failureCode?: string,
+): { result: CaseAnalysisResultRead; snapshot: CaseEvidenceSnapshotRead } {
+  const manifest = [{
+    exact_text: nativeQuote,
+    provenance: { origin: "analyst-authored" },
+    revision: 1,
+    source_id: nativeSourceId,
+    source_kind: "narrative",
+    text_sha256: sha256Hex(nativeQuote),
+  }];
+  const snapshot: CaseEvidenceSnapshotRead = {
+    id: nativeSnapshotId,
+    case_id: nativeCaseId,
+    evidence_revision: 1,
+    format_version: "case_evidence_snapshot_v1",
+    manifest_json: manifest,
+    input_text: nativeQuote,
+    text_sha256: sha256Hex(nativeQuote),
+    manifest_sha256: sha256Hex(JSON.stringify(manifest)),
+    created_at: "2026-09-10T00:00:00Z",
+  };
+  const retrievalContextId = status === "not_applicable" ? null : "retrieval-native-1";
+  const traceAssociations = associations.map((association) => ({
+    association_id: association.association_id,
+    technique_id: association.technique_id,
+    claim_ids: association.claim_ids,
+    reason: association.reason,
+    status: "candidate_only",
+    support_role: "external_technical_context",
+  }));
+  const result: CaseAnalysisResultRead = {
+    id: nativeResultId,
+    case_id: nativeCaseId,
+    run_id: "55555555-5555-4555-8555-555555555555",
+    snapshot_id: nativeSnapshotId,
+    schema_version: "case_analysis_result_v1",
+    status: "validated",
+    answer: nativeQuote,
+    summary: nativeQuote,
+    trace_json: {
+      version: "case_analysis_trace_v1",
+      validation_status: "validated",
+      analysis_mode: "case_overview",
+      evidence_sha256: snapshot.text_sha256,
+      summary: nativeQuote,
+      claims: [{
+        claim_id: "A-01",
+        claim_type: "reported",
+        text: nativeQuote,
+        epistemic_status: "reported",
+        reasoning_summary: null,
+        supporting_source_ids: [nativeSourceId],
+        contradicting_source_ids: [],
+        supporting_citations: [{ source_id: nativeSourceId, source_revision: 1, exact_quote: nativeQuote }],
+        contradicting_citations: [],
+      }],
+      gaps: [],
+      mitre_associations: traceAssociations,
+      retrieval_context_id: retrievalContextId,
+    },
+    execution_receipt_json: {},
+    retrieval_context_id: retrievalContextId,
+    pipeline_config: {},
+    provider_metadata_json: {
+      technical_augmentation: {
+        version: "case_mitre_augmentation_v1",
+        status,
+        applicability: { decision: "RETRIEVE", source_message_ids: [nativeSourceId], trigger_text: [nativeQuote] },
+        retrieval_context_id: retrievalContextId,
+        mitre_table: rows,
+        query_sha256: "a".repeat(64),
+        association_ids: associations.map((association) => association.association_id),
+        ...(failureCode ? { failure_code: failureCode } : {}),
+      },
+    },
+    created_at: "2026-09-10T00:00:00Z",
+    freshness: "current",
+  };
+  return { result, snapshot };
+}
+
+describe("buildNativeTechnicalContext", () => {
+  const row = { technique_id: "T1059.001", name: "PowerShell", tactic: "Execution", description: "Command and scripting interpreter." };
+
+  it("shows mapping failure separately from retrieved-only context", () => {
+    const fixture = nativeFixture("failed", [row], [], "mitre_mapping_invalid");
+    const result = buildNativeTechnicalContext(fixture.result, fixture.snapshot);
+    expect(result.status).toBe("failed");
+    expect(result.failureStage).toBe("mapping");
+    expect(result.retrievedOnlyTechniques).toHaveLength(1);
+    expect(result.techniques).toHaveLength(0);
+  });
+
+  it("distinguishes a valid retrieval with no supported match", () => {
+    const fixture = nativeFixture("retrieved_without_supported_match", [row]);
+    const result = buildNativeTechnicalContext(fixture.result, fixture.snapshot);
+    expect(result.status).toBe("retrieved_without_supported_match");
+    expect(result.techniques).toHaveLength(0);
+    expect(result.retrievedOnlyCount).toBe(1);
+  });
+
+  it("renders only the mapped subset when retrieval contains partial mappings", () => {
+    const fixture = nativeFixture(
+      "retrieved_with_matches",
+      [row, { technique_id: "T1105", name: "Ingress Tool Transfer", tactic: "Command and Control", description: "Transfer tools into the environment." }],
+      [{ association_id: "MA-01", technique_id: "T1059.001", claim_ids: ["A-01"], reason: "The claim describes PowerShell activity." }],
+    );
+    const result = buildNativeTechnicalContext(fixture.result, fixture.snapshot);
+    expect(result.status).toBe("retrieved_with_matches");
+    expect(result.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001"]);
+    expect(result.retrievedOnlyTechniques.map((item) => item.techniqueId)).toEqual(["T1105"]);
+    expect(result.techniques[0].caseBasisSources).toHaveLength(1);
+  });
+
+  it("exposes invalid trace instead of collapsing it into empty context", () => {
+    const fixture = nativeFixture("retrieved_without_supported_match", [row]);
+    fixture.result.trace_json = { ...(fixture.result.trace_json ?? {}), evidence_sha256: "0".repeat(64) };
+    const result = buildNativeTechnicalContext(fixture.result, fixture.snapshot);
+    expect(result.status).toBe("invalid_trace");
+    expect(result.failureCode).toBe("invalid_trace");
   });
 });

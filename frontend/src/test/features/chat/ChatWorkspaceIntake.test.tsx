@@ -34,24 +34,26 @@ describe("ChatWorkspace Intake submission integration", () => {
   });
 
   it("preserves draft narrative and keeps Intake mounted when message submission fails", async () => {
-    const threadId = "thread-test-123";
-    mockPathname = `/chat/${threadId}/intake`;
-    const initialThread: api.ChatThreadRead = {
-      id: threadId,
+    const caseId = "case-test-123";
+    mockPathname = `/case/${caseId}/intake`;
+    const initialCase: api.CaseRead = {
+      id: caseId,
       title: "New case",
       status: "idle",
+      chat_thread_id: null,
+      evidence_revision: 0,
       created_at: "2026-08-24T06:00:00Z",
       updated_at: "2026-08-24T06:00:00Z",
     };
 
-    vi.spyOn(api, "listChatThreads").mockResolvedValue([initialThread]);
-    vi.spyOn(api, "getChatThread").mockResolvedValue({
-      ...initialThread,
-      messages: [],
-    });
-    vi.spyOn(api, "updateChatThread").mockResolvedValue(initialThread);
-    vi.spyOn(api, "listChatReports").mockResolvedValue([]);
-    vi.spyOn(api, "createChatMessage").mockRejectedValue(
+    vi.spyOn(api, "listCases").mockResolvedValue([initialCase]);
+    vi.spyOn(api, "listCaseDocuments").mockResolvedValue([]);
+    vi.spyOn(api, "listCaseEvidence").mockResolvedValue([]);
+    vi.spyOn(api, "getCaseAnalysis").mockResolvedValue(null);
+    vi.spyOn(api, "listCaseClarifications").mockResolvedValue([]);
+    vi.spyOn(api, "getCase").mockResolvedValue(initialCase);
+    vi.spyOn(api, "updateCase").mockResolvedValue(initialCase);
+    vi.spyOn(api, "admitCaseEvidence").mockRejectedValue(
       new Error("Network error: failed to submit case description"),
     );
 
@@ -74,11 +76,15 @@ describe("ChatWorkspace Intake submission integration", () => {
       target: { value: "PowerShell connected to 198.51.100.23 and downloaded payload." },
     });
 
+    await waitFor(() => {
+      expect(submitBtn).not.toBeDisabled();
+    });
+
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText("ไม่สามารถเชื่อมต่อกับระบบได้")).toBeInTheDocument();
-      expect(screen.getByText(/failed to submit case description/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/failed to submit case description/i).length).toBeGreaterThan(0);
     });
 
     expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
@@ -91,61 +97,47 @@ describe("ChatWorkspace Intake submission integration", () => {
   });
 
   it("navigates to Overview when initial case message submission is accepted", async () => {
-    const threadId = "thread-test-456";
-    mockPathname = `/chat/${threadId}/intake`;
-    const initialThread: api.ChatThreadRead = {
-      id: threadId,
+    const caseId = "case-test-456";
+    mockPathname = `/case/${caseId}/intake`;
+    const initialCase: api.CaseRead = {
+      id: caseId,
       title: "New case",
       status: "idle",
+      chat_thread_id: null,
+      evidence_revision: 0,
       created_at: "2026-08-24T06:00:00Z",
       updated_at: "2026-08-24T06:00:00Z",
     };
+    const admittedCase = { ...initialCase, evidence_revision: 1 };
 
-    vi.spyOn(api, "listChatThreads").mockResolvedValue([initialThread]);
-    const getChatThreadSpy = vi.spyOn(api, "getChatThread").mockResolvedValueOnce({
-      ...initialThread,
-      messages: [],
-    });
-    vi.spyOn(api, "updateChatThread").mockResolvedValue(initialThread);
-    vi.spyOn(api, "listChatReports").mockResolvedValue([]);
-
-    const createdMessage: api.PersistedChatMessage = {
-      id: "msg-101",
-      thread_id: threadId,
-      ordinal: 1,
-      role: "user",
-      content: "PowerShell connected to 198.51.100.23",
-      retrieval_context_id: null,
-      metadata_json: { evidence_kind: "initial_case_narrative" },
-      created_at: "2026-08-24T06:00:00Z",
-    };
-
-    const createdRun: api.ChatRun = {
+    vi.spyOn(api, "listCases").mockResolvedValue([initialCase]);
+    vi.spyOn(api, "listCaseDocuments").mockResolvedValue([]);
+    vi.spyOn(api, "listCaseEvidence").mockResolvedValue([]);
+    vi.spyOn(api, "getCaseAnalysis").mockResolvedValue(null);
+    vi.spyOn(api, "listCaseClarifications").mockResolvedValue([]);
+    vi.spyOn(api, "getCase").mockResolvedValueOnce(initialCase).mockResolvedValue(admittedCase);
+    vi.spyOn(api, "admitCaseEvidence").mockResolvedValue({} as Awaited<ReturnType<typeof api.admitCaseEvidence>>);
+    vi.spyOn(api, "updateCase").mockResolvedValue(initialCase);
+    const createdRun: api.CaseRunRead = {
       id: "run-101",
-      thread_id: threadId,
-      request_message_id: createdMessage.id,
-      status: "running",
+      case_id: caseId,
+      operation: "analysis",
+      snapshot_id: "snapshot-101",
+      request_message_id: null,
+      context_analysis_result_id: null,
+      clarification_id: null,
+      status: "queued",
+      attempt_count: 0,
       error_code: null,
       error_message: null,
       created_at: "2026-08-24T06:00:00Z",
+      started_at: null,
+      finished_at: null,
       updated_at: "2026-08-24T06:00:00Z",
     };
 
-    getChatThreadSpy.mockResolvedValue({
-      ...initialThread,
-      status: "answered",
-      messages: [createdMessage],
-    });
-
-    vi.spyOn(api, "createChatMessage").mockResolvedValue({
-      message: createdMessage,
-      run: createdRun,
-    });
-
-    vi.spyOn(api, "getChatRun").mockResolvedValue({
-      ...createdRun,
-      status: "completed",
-    });
+    vi.spyOn(api, "startCaseAnalysis").mockResolvedValue({ run: createdRun });
+    vi.spyOn(api, "getCaseRun").mockResolvedValue({ ...createdRun, status: "completed" });
     render(
       <QueryClientProvider client={queryClient}>
         <ChatWorkspace />
@@ -163,10 +155,14 @@ describe("ChatWorkspace Intake submission integration", () => {
       target: { value: "PowerShell connected to 198.51.100.23" },
     });
 
+    await waitFor(() => {
+      expect(submitBtn).not.toBeDisabled();
+    });
+
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(`/chat/${threadId}/overview`);
+      expect(mockPush).toHaveBeenCalledWith(`/case/${caseId}/overview`);
     });
   });
 });

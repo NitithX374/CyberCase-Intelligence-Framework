@@ -42,8 +42,8 @@ const messages: PersistedChatMessage[] = [
   },
 ];
 
-describe("ChatPanel follow-up", () => {
-  it("renders the persisted question, gap explanation, and enabled answer composer", () => {
+describe("ChatPanel boundaries", () => {
+  it("renders the persisted clarification and enables composer to answer in Chat", () => {
     Element.prototype.scrollIntoView = vi.fn();
     const onInputChange = vi.fn();
 
@@ -53,9 +53,8 @@ describe("ChatPanel follow-up", () => {
         input="host-7"
         threadStatus="awaiting_followup"
         phase="awaiting_followup"
-        postAnswerAction={null}
+        hasAnalysisContext
         onInputChange={onInputChange}
-        onPostAnswerActionChange={vi.fn()}
         onSubmit={vi.fn()}
       />,
     );
@@ -65,10 +64,30 @@ describe("ChatPanel follow-up", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("affected host")).toBeInTheDocument();
     const composer = screen.getByLabelText("Chat message");
-    expect(composer).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+    expect(screen.getByText("Clarification needed")).toBeInTheDocument();
+    expect(screen.getByText(/Provide your answer below to resume the case analysis/i)).toBeInTheDocument();
+    expect(composer).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send message" })).not.toBeDisabled();
 
     fireEvent.change(composer, { target: { value: "host-9" } });
     expect(onInputChange).toHaveBeenCalledWith("host-9");
+  });
+
+  it("explains that Chat has no context before Case analysis", () => {
+    render(
+      <ChatPanel
+        messages={[]}
+        input=""
+        threadStatus="idle"
+        phase="idle"
+        hasAnalysisContext={false}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Complete the Case analysis from Intake before using Chat/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chat will not start analysis/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Chat message")).toBeDisabled();
   });
 });

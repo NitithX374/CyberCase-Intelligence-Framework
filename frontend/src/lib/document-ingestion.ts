@@ -1,7 +1,7 @@
 import axios from "axios";
 
-import { getApiBaseUrl } from "./api-client";
-import type { DocumentExtractionMethod } from "./api-types";
+import { getApiBaseUrl } from "./apiClient";
+import type { DocumentExtractionMethod } from "./apiTypes";
 
 export type DocumentIngestionMode = "unified" | "routed";
 

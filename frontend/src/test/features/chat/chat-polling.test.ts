@@ -1,37 +1,35 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
-import { pollChatThreadUntilSettled, waitForNextChatPoll } from "@/features/chat/runs/chat-polling";
-import { accepted, deferred, message, thread } from "./chat-session-test-support";
+import { pollCaseRunUntilSettled, waitForNextChatPoll } from "@/features/chat/runs/chat-polling";
+import { caseAccepted, deferred, message, thread } from "./chat-session-test-support";
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
-it("preserves the existing one-read retry budget and then surfaces the error", async () => {
+it("preserves the CaseRun one-read retry budget and then surfaces the error", async () => {
   const controller = new AbortController();
   const failure = new Error("Read failed");
-  const readThread = vi.fn().mockRejectedValue(failure);
+  const readRun = vi.fn().mockRejectedValue(failure);
   const apply = vi.fn();
-  const completion = pollChatThreadUntilSettled({
-    threadId: "a", signal: controller.signal, isCurrent: () => true,
-    readThread, applyThreadDetail: apply,
+  const completion = pollCaseRunUntilSettled({
+    runId: "run-1", signal: controller.signal, isCurrent: () => true,
+    readRun, readThread: vi.fn(), applyThreadDetail: apply,
   });
   const assertion = expect(completion).rejects.toThrow("Read failed");
   await vi.advanceTimersByTimeAsync(2000);
   await assertion;
-  expect(readThread).toHaveBeenCalledTimes(2);
+  expect(readRun).toHaveBeenCalledTimes(2);
   expect(apply).not.toHaveBeenCalled();
 });
 
-it("surfaces a run failure even when the thread response has already settled", async () => {
-  const receipt = accepted(message("a", 1, "user"));
-  vi.spyOn(api, "getChatRun").mockResolvedValue({
-    ...receipt.run, status: "failed", error_message: "Analysis failed",
-  });
+it("surfaces a CaseRun failure even when the thread response has already settled", async () => {
+  const receipt = caseAccepted(message("a", 1, "user"));
   const apply = vi.fn();
   const detail = thread("a", "answered");
-  const completion = pollChatThreadUntilSettled({
-    threadId: "a", runId: receipt.run.id,
+  const completion = pollCaseRunUntilSettled({
+    runId: receipt.run.id,
     signal: new AbortController().signal, isCurrent: () => true,
+    readRun: async () => ({ ...receipt.run, status: "failed", error_message: "Analysis failed" }),
     readThread: async () => detail, applyThreadDetail: apply,
   });
   await vi.advanceTimersByTimeAsync(1000);
@@ -41,18 +39,20 @@ it("surfaces a run failure even when the thread response has already settled", a
 
 it("does not apply a run result after cancellation during its HTTP request", async () => {
   const controller = new AbortController();
-  const waiting = deferred<api.ChatRun>();
-  const receipt = accepted(message("a", 1, "user"));
-  vi.spyOn(api, "getChatRun").mockReturnValue(waiting.promise);
+  const waiting = deferred<api.CaseRunRead>();
   const apply = vi.fn();
-  const completion = pollChatThreadUntilSettled({
-    threadId: "a", runId: receipt.run.id, signal: controller.signal,
-    isCurrent: () => true, readThread: async () => thread("a", "answered"),
+  const completion = pollCaseRunUntilSettled({
+    runId: "run-1", signal: controller.signal,
+    isCurrent: () => true, readRun: () => waiting.promise,
+    readThread: async () => thread("a", "answered"),
     applyThreadDetail: apply,
   });
   await vi.advanceTimersByTimeAsync(1000);
   controller.abort();
-  waiting.resolve({ ...receipt.run, status: "completed" });
+  waiting.resolve({
+    ...caseAccepted(message("a", 1, "user")).run,
+    status: "completed",
+  });
   expect(await completion).toBeNull();
   expect(apply).not.toHaveBeenCalled();
 });

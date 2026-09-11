@@ -1,77 +1,58 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import * as api from "@/lib/api";
 import type { ChatThreadDetail } from "@/lib/api";
-import { restoreInterruptedSubmission } from "@/features/chat/workspace/chat-retry-request";
+import { writeAccountValue } from "@/lib/account-storage";
 import { useChatDraft } from "@/features/chat/workspace/use-chat-draft";
-import { renderSession, tick } from "./chat-session-test-support";
+import type { PendingChatSubmission } from "@/features/chat/workspace/chat-workspace-types";
+import { message, thread } from "./chat-session-test-support";
 
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+  vi.restoreAllMocks();
+});
 
-const interrupted: ChatThreadDetail = {
-  id: "thread", title: "Interrupted case", status: "failed",
-  created_at: "2026-09-05T00:00:00Z", updated_at: "2026-09-05T00:00:00Z",
-  messages: [{
-    id: "message", thread_id: "thread", ordinal: 1, role: "user",
-    content: "Original narrative", retrieval_context_id: null,
-    metadata_json: { evidence_kind: "initial_case_narrative" },
-    created_at: "2026-09-05T00:00:00Z",
-  }],
-  retry_request: {
-    content: "Original narrative", idempotency_key: "original-key",
-    action: null, request_ordinal: 1, clarification_answer: false,
-    document_sources: [],
-  },
-};
-
-describe("Interrupted chat recovery", () => {
-  it("submits a restored clarification using its saved key without an in-memory question", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(api, "getChatThread").mockResolvedValue({
-      ...interrupted,
-      retry_request: { ...interrupted.retry_request!, action: "add_case_info", clarification_answer: true },
-    });
-    const send = vi.spyOn(api, "createChatMessage").mockRejectedValue(new Error("Network failure"));
-    const { result } = renderSession();
-    await act(async () => { await result.current.session.selectThread("thread"); });
-    await tick();
-    act(() => result.current.submitContent("Original narrative", "followup", undefined, undefined, []));
-    await tick();
-    expect(send).toHaveBeenCalledWith("thread", "Original narrative", "original-key", expect.any(AbortSignal), "add_case_info", []);
-  });
-
-  it("restores the original request identity into a fresh draft after reload", () => {
+describe("Case Chat interrupted recovery", () => {
+  it("restores a persisted Case Chat submission after reload", () => {
+    const pending: PendingChatSubmission = {
+      threadId: "thread",
+      caseId: "case",
+      content: "Original narrative",
+      key: "original-key",
+      kind: "message",
+      lastKnownMessageOrdinal: 0,
+    };
+    writeAccountValue("pending-case-chat:thread", JSON.stringify(pending));
+    const detail = thread("thread", "failed", [message("thread", 1, "user", pending.content)]);
     const { result } = renderHook(() => useChatDraft());
-    act(() => result.current.reconcile(interrupted));
+
+    act(() => result.current.selectDraft("thread"));
+    act(() => result.current.reconcile(detail));
+
     expect(result.current.getPendingSubmission()).toMatchObject({
-      key: "original-key", threadId: "thread", content: "Original narrative",
-      requestOrdinal: 1, lastKnownMessageOrdinal: 0,
+      ...pending,
+      requestOrdinal: 1,
     });
     expect(result.current.state.queryError).toContain("Retry the saved message");
   });
 
-  it("preserves clarification retry kind and the original action", () => {
-    const pending = restoreInterruptedSubmission({
-      ...interrupted,
-      retry_request: { ...interrupted.retry_request!, action: "add_case_info", clarification_answer: true },
-    });
-    expect(pending).toMatchObject({ kind: "followup", action: "add_case_info", key: "original-key" });
-  });
-
-  it("does not fabricate retry identity from an ordinary failed thread", () => {
-    expect(restoreInterruptedSubmission({ ...interrupted, retry_request: null })).toBeNull();
-  });
-
-  it("rejects incomplete document retry metadata", () => {
-    expect(() => restoreInterruptedSubmission({
-      ...interrupted,
+  it("does not restore legacy retry metadata into Case Chat state", () => {
+    const detail: ChatThreadDetail = {
+      ...thread("thread", "failed", [message("thread", 1, "user", "Historical narrative")]),
       retry_request: {
-        ...interrupted.retry_request!,
-        document_sources: [{
-          document_id: "doc", filename: "source.pdf", extraction_method: "native_pdf",
-          page_count: 1, verification_status: "native", confidence_status: "not_applicable",
-        }],
+        content: "Historical narrative",
+        idempotency_key: "legacy-key",
+        action: null,
+        request_ordinal: 1,
+        clarification_answer: false,
+        document_sources: [],
       },
-    })).toThrow("incomplete");
+    };
+    const { result } = renderHook(() => useChatDraft());
+
+    act(() => result.current.reconcile(detail));
+
+    expect(result.current.getPendingSubmission()).toBeNull();
+    expect(result.current.state.queryError).toContain("Retry the saved message");
   });
 });

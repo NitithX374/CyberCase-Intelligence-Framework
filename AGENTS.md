@@ -7,20 +7,20 @@ This file provides system architecture, rules, guidelines, and commands for AI c
 > [!IMPORTANT]
 > **Canonical Source of Truth**: For confirmed research questions, design philosophy, and product scope, always consult [`docs/research/CURRENT_PROJECT_DIRECTION.md`](docs/research/CURRENT_PROJECT_DIRECTION.md).
 
-**CyberCase Intelligence Framework** is an evidence-first full-stack application for **General Case Summarization and Grounded Analysis**. It processes investigative case materials (user narratives, police reports, and OCR-extracted transcripts), enforces deterministic evidence provenance, and generates citation-grounded case findings with explicit factuality guarantees:
+**CyberCase Intelligence Framework** is a full-stack prototype for **General Case Summarization and Case Analysis**. It processes investigative case materials, produces structured summaries and material gaps, and conditionally augments technical cases with MITRE ATT&CK context:
 
-* **Core Task**: General Case Summarization and Grounded Analysis using a **claim-anchored, evidence-first pipeline**.
+* **Core Task**: General Case Summarization and Case Analysis using one direct structured Main Analysis call.
 * **Role of MITRE ATT&CK**: **Conditional external technical augmentation only**. External threat intelligence (`rag_service` with STIX 2.1) is retrieved only when applicable, isolated in a separate technical appendix, and never treated as incident evidence.
 * **Evidence Architecture**:
   ```text
-  CASE MATERIAL → Learned Decomposition → Provenance Binding → Explicit Selection → Grounded Generation → Case Findings (→ Optional MITRE Augmentation)
+  CASE MATERIAL → MAIN ANALYSIS → DETERMINISTIC FOLLOW-UP POLICY → PRELIMINARY REPORT
+                              ↘ CONDITIONAL MITRE AUGMENTATION ↗
   ```
 * **Design Principles**:
-  * *Learned semantic decisions* $\to$ LLM / embeddings / NLI.
-  * *Structural guarantees* $\to$ deterministic backend.
-  * *Selection / ranking* $\to$ explicit policy where feasible.
-  * **Axioms**: Learned semantics $\neq$ structural guarantees; Provenance $\neq$ semantic entailment; Selection $\neq$ generation; Case evidence $\neq$ external knowledge.
-* **Storage & Persistence**: Single-user workspace backed by PostgreSQL (chat threads, raw-evidence snapshots, runs, analysis traces, and chat-scoped reports).
+  * *Semantic analysis and language generation* $\to$ LLM.
+  * *Validation, state, routing, priority, and stopping rules* $\to$ deterministic backend.
+  * *External technical knowledge* $\to$ conditional, isolated augmentation.
+* **Storage & Persistence**: Single-user workspace backed by PostgreSQL (Cases, original documents and extraction revisions, admitted evidence revisions, immutable evidence snapshots, CaseRuns/results/clarifications, optional Chat transcripts, and result-bound reports).
 
 ---
 
@@ -58,7 +58,7 @@ Cybercase Framework/
 │   │   │   ├── case_analysis/# Grounded case overview & Q&A prompt reasoning
 │   │   │   ├── chat/         # Thread & message management + compatibility facade
 │   │   │   ├── clients/      # HTTP service clients (GraphRAG API client)
-│   │   │   ├── followup/     # Gap analysis & clarification policy gating
+│   │   │   ├── followup/     # Deterministic gap selection & question realization
 │   │   │   ├── llm/          # LLM provider routing & model registry
 │   │   │   ├── reports/      # Markdown & PDF report generation service
 │   │   │   └── workflow/     # Background run lease worker, pipeline & outcomes
@@ -164,12 +164,12 @@ doppler run -- docker compose up --build
 
 ## 🔄 Analysis Module & External Technical Augmentation
 
-### Main Case Analysis Pipeline (Claim-Anchored)
+### Main Case Analysis Pipeline
 The core analysis module (`backend/app/services/case_analysis/`) executes on admitted case evidence:
-1. **Extraction**: Calls LLM to decompose case material into atomic claims and exact quotes.
-2. **Provenance Binding**: Deterministically validates that each quote resolves to a unique character span and page in the immutable evidence snapshot.
-3. **Selection**: Applies deterministic coverage and token budget limits, logging all omissions.
-4. **Constrained Generation**: Generates grounded findings referencing only admitted claim IDs.
+1. **Direct Analysis**: One structured LLM call returns a summary, key findings, material gaps, and lightweight source references.
+2. **Validation**: The backend validates identifiers and supplied source references without adding a second semantic analysis pipeline.
+3. **Follow-up Policy**: Deterministic rules filter answered or explicitly unknown gaps, apply priority and round limits, and select one gap.
+4. **Question Realization**: A small optional LLM call phrases only the selected gap as a concise question.
 
 ### Conditional Technical Augmentation (`rag_service`)
 When admitted case findings describe cyber threat activity, the backend conditionally gates retrieval to `rag_service` (STIX 2.1 ATT&CK):
@@ -179,8 +179,8 @@ When admitted case findings describe cyber threat activity, the backend conditio
 4. **Source-Role Isolation**: The retrieved technical context is rendered strictly as an analytical appendix, never as an admitted case fact.
 
 ### Clarification Gating
-The backend run worker evaluates accumulated case materials. If critical case indicators are absent, it gates the run and persists a focused clarification question to the analyst. The subsequent answer enters the authoritative case evidence snapshot.
+The Main Analysis emits material unresolved gaps. The backend deterministically selects at most one eligible gap and persists a focused clarification question. The subsequent answer enters the Case evidence snapshot. The retired separate Gap Analysis LLM is not part of the production Case path.
 
 ### Backend Route Boundary
 
-The backend exposes `/api/v1/health`, the `/api/v1/chats` thread/message/run routes, and chat-scoped report routes under `/api/v1/chats/{thread_id}/reports`. Do not add standalone case routes, top-level `/api/v1/reports`, user, upload/OCR, or standalone RAG-proxy endpoints without an explicit product decision. The Report workspace uses the existing persisted chat-scoped report contract and is not evidence that a standalone case/report API exists.
+The backend exposes `/api/v1/health`, authenticated Case CRUD/material/evidence/snapshot/analysis/run/clarification/report routes, and optional Case Chat Assistant endpoints under `/api/v1/cases/{case_id}/chat` (`GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages`, `GET /cases/{case_id}/chat/runs/{run_id}`). Existing `/api/v1/chats` thread/message/run/report routes remain a compatibility interaction surface; Case analysis and worker ownership do not depend on Chat. Do not add top-level `/api/v1/reports`, public upload/OCR, or standalone RAG-proxy endpoints. Chat messages, assistant analysis publications, and external RAG context are not authoritative evidence; native citations resolve Case evidence source revisions and snapshots.

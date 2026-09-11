@@ -29,13 +29,15 @@ function returnType(node, sourceFile) {
   return node.type ? `: ${clean(node.type.getText(sourceFile))}` : "";
 }
 
-function addSymbol(symbols, sourceFile, node, kind, name, signature, parent = "") {
+function addSymbol(symbols, sourceFile, node, kind, name, signature, inputs = "", output = "", parent = "") {
   symbols.push({
     kind,
     name,
     qualified_name: parent ? `${parent}.${name}` : name,
     line: lineOf(sourceFile, node),
     signature: clean(signature),
+    inputs: clean(inputs),
+    output: clean(output),
   });
 }
 
@@ -52,11 +54,13 @@ function walk(sourceFile) {
         "function",
         name,
         `function ${name}(${parameters(node, sourceFile)})${returnType(node, sourceFile)}`,
+        parameters(node, sourceFile),
+        node.type ? clean(node.type.getText(sourceFile)) : "inferred or void",
         parentName,
       );
     } else if (ts.isClassDeclaration(node)) {
       const name = declarationName(node, "default class");
-      addSymbol(symbols, sourceFile, node, "class", name, `class ${name}`, parentName);
+      addSymbol(symbols, sourceFile, node, "class", name, `class ${name}`, "constructor arguments and class fields", name, parentName);
       node.members.forEach((member) => visit(member, parentName ? `${parentName}.${name}` : name));
       return;
     } else if (ts.isMethodDeclaration(node)) {
@@ -68,6 +72,8 @@ function walk(sourceFile) {
         "method",
         name,
         `${name}(${parameters(node, sourceFile)})${returnType(node, sourceFile)}`,
+        parameters(node, sourceFile),
+        node.type ? clean(node.type.getText(sourceFile)) : "inferred or void",
         parentName,
       );
     } else if (ts.isConstructorDeclaration(node)) {
@@ -78,6 +84,8 @@ function walk(sourceFile) {
         "constructor",
         "constructor",
         `constructor(${parameters(node, sourceFile)})`,
+        parameters(node, sourceFile),
+        parentName.split(".").at(-1) || "instance",
         parentName,
       );
     } else if (ts.isVariableDeclaration(node) && node.initializer) {
@@ -90,18 +98,20 @@ function walk(sourceFile) {
           "function",
           name,
           `${name}(${parameters(node.initializer, sourceFile)})${returnType(node.initializer, sourceFile)}`,
+          parameters(node.initializer, sourceFile),
+          node.initializer.type ? clean(node.initializer.type.getText(sourceFile)) : "inferred or void",
           parentName,
         );
       }
     } else if (ts.isInterfaceDeclaration(node)) {
       const name = declarationName(node, "interface");
-      addSymbol(symbols, sourceFile, node, "interface", name, `interface ${name}`, parentName);
+      addSymbol(symbols, sourceFile, node, "interface", name, `interface ${name}`, "not applicable", "type declaration", parentName);
     } else if (ts.isTypeAliasDeclaration(node)) {
       const name = declarationName(node, "type");
-      addSymbol(symbols, sourceFile, node, "type", name, `type ${name}`, parentName);
+      addSymbol(symbols, sourceFile, node, "type", name, `type ${name}`, "not applicable", "type declaration", parentName);
     } else if (ts.isEnumDeclaration(node)) {
       const name = declarationName(node, "enum");
-      addSymbol(symbols, sourceFile, node, "enum", name, `enum ${name}`, parentName);
+      addSymbol(symbols, sourceFile, node, "enum", name, `enum ${name}`, "not applicable", "enum declaration", parentName);
     }
 
     ts.forEachChild(node, (child) => visit(child, parentName));

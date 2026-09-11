@@ -3,11 +3,16 @@
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  getApiErrorMessage, getChatThread,
-  type ChatMessageAccepted, type ChatThreadDetail, type ChatThreadRead,
+  getApiErrorMessage, getCaseRun, getChatThread,
+  type CaseChatMessageAccepted,
+  type ChatThreadDetail, type ChatThreadRead,
 } from "@/lib/api";
-import { chatQueryKeys } from "@/hooks/use-chat-queries";
-import { isChatRequestCanceled, pollChatThreadUntilSettled } from "../runs/chat-polling";
+import { chatQueryKeys } from "@/hooks/useChatQueries";
+import { caseQueryKeys } from "@/hooks/useCaseQueries";
+import {
+  isChatRequestCanceled,
+  pollCaseRunUntilSettled,
+} from "../runs/chat-polling";
 import { phaseForThread, useChatDraft } from "./use-chat-draft";
 
 export interface ChatSelection {
@@ -22,7 +27,9 @@ async function readChatThreadDetail(threadId: string, signal: AbortSignal) {
 
 export function useChatThreadSelection({
   cacheUpsertThread,
-}: { cacheUpsertThread: (thread: ChatThreadRead) => void }) {
+}: {
+  cacheUpsertThread: (thread: ChatThreadRead) => void;
+}) {
   const queryClient = useQueryClient();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const selectionRef = useRef<ChatSelection | null>(null);
@@ -65,15 +72,29 @@ export function useChatThreadSelection({
     reconcile(thread, failureMessage);
   }, [reconcile, upsertThread]);
 
-  const monitorThread = useCallback((selection: ChatSelection, runId?: string) =>
-    pollChatThreadUntilSettled({
-      threadId: selection.threadId,
-      runId,
-      signal: selection.signal,
-      isCurrent: () => isCurrentSelection(selection),
-      readThread: () => readThread(selection),
-      applyThreadDetail,
-    }), [applyThreadDetail, isCurrentSelection, readThread]);
+  const monitorCaseRun = useCallback((
+    selection: ChatSelection,
+    caseId: string,
+    runId: string,
+  ) => pollCaseRunUntilSettled({
+    runId,
+    signal: selection.signal,
+    isCurrent: () => isCurrentSelection(selection),
+    readRun: () => getCaseRun(caseId, runId, selection.signal),
+    readThread: () => readThread(selection),
+    applyThreadDetail: (thread, failureMessage) => {
+      applyThreadDetail(thread, failureMessage);
+      void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId) });
+      void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) });
+      void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
+      void queryClient.invalidateQueries({ queryKey: caseQueryKeys.clarifications(caseId) });
+      void queryClient.refetchQueries({
+        queryKey: chatQueryKeys.detail(selection.threadId),
+        exact: true,
+        type: "all",
+      });
+    },
+    }), [applyThreadDetail, isCurrentSelection, queryClient, readThread]);
 
   const cancelSelection = useCallback(() => {
     const previous = selectionRef.current;
@@ -98,15 +119,16 @@ export function useChatThreadSelection({
       const thread = await readThread(selection);
       if (!isCurrentSelection(selection)) return;
       applyThreadDetail(thread);
-      if (thread.status === "processing") await monitorThread(selection);
     } catch (error) {
       if (isChatRequestCanceled(selection.signal, error) || !isCurrentSelection(selection)) return;
       failSelection(getApiErrorMessage(error, "The chat could not be loaded."));
     }
-  }, [applyThreadDetail, cancelSelection, failSelection, isCurrentSelection, monitorThread, readThread, selectDraft]);
+  }, [applyThreadDetail, cancelSelection, failSelection, isCurrentSelection, readThread, selectDraft]);
 
   const acceptSubmission = useCallback((
-    selection: ChatSelection, key: string, accepted: ChatMessageAccepted,
+    selection: ChatSelection,
+    key: string,
+    accepted: CaseChatMessageAccepted,
   ) => {
     if (!isCurrentSelection(selection)) return;
     acceptDraftSubmission(key, accepted.message.ordinal);
@@ -161,7 +183,7 @@ export function useChatThreadSelection({
     beginSubmission: draft.beginSubmission,
     failSubmission: draft.failSubmission,
     getSelection, getActiveThreadId, isCurrentSelection, selectThread,
-    monitorThread, acceptSubmission, upsertThread,
+    monitorCaseRun, acceptSubmission, upsertThread,
     clearSelection, suspendThread, restoreThread, removeThread,
   };
 }

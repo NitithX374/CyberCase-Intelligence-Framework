@@ -2,7 +2,7 @@ import type {
   CaseNarrativeDocumentSource,
   DocumentConfidenceStatus,
   DocumentVerificationStatus,
-} from "./api-types";
+} from "./apiTypes";
 import type {
   DocumentRegionPreview,
   IngestedDocumentPreview,

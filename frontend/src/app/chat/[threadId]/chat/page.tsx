@@ -6,5 +6,5 @@ interface PageProps {
 
 export default async function ThreadSpecificChatPage({ params }: PageProps) {
   const { threadId } = await params;
-  redirect(`/chat/${encodeURIComponent(threadId)}/overview`);
+  redirect(`/case/${encodeURIComponent(threadId)}/overview`);
 }

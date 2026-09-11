@@ -18,6 +18,7 @@ from app.services.case_analysis.contracts import (
 from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
 from app.services.case_analysis.providerStage import request_stage, resolve_target
 from app.services.case_analysis.prompts import (
+    CASE_TRACE_CORRECTION_PROMPT,
     _validate_analysis_request,
     case_system_prompt,
 )
@@ -132,22 +133,82 @@ async def executeRawDirectPipeline(
     mode: str,
     question: str | None,
 ) -> CaseAnalysisResult:
+    request_content = {
+        "response_language": language,
+        "analysis_mode": mode,
+        "raw_case_evidence": raw_evidence,
+        "authoritative_case_source_ids": [source.source_id for source in sources],
+        "question": question,
+    }
     parsed = await requestAnalysisStage(
         client,
         config,
         "direct",
         case_system_prompt(),
-        {
-            "response_language": language,
-            "analysis_mode": mode,
-            "raw_case_evidence": raw_evidence,
-            "authoritative_case_source_ids": [source.source_id for source in sources],
-            "question": question,
-        },
+        request_content,
         CaseProviderAnalysis,
         receipt,
     )
-    trace = validate_case_trace(
+    for correction_attempt in range(_DIRECT_TRACE_MAX_CORRECTIONS + 1):
+        try:
+            trace = _validate_direct_trace(
+                parsed,
+                mode=mode,
+                digest=digest,
+                sources=sources,
+                document_context=context.get("document_source_context", []),
+            )
+            break
+        except CaseAnalysisFailure as error:
+            if (
+                error.code not in _DIRECT_TRACE_CORRECTION_CODES
+                or correction_attempt >= _DIRECT_TRACE_MAX_CORRECTIONS
+            ):
+                raise
+            receipt.setdefault("validation_retries", []).append(
+                {"attempt": correction_attempt + 1, "reason": error.code}
+            )
+            receipt.setdefault("validation_retry", {"reason": error.code})
+            parsed = await requestAnalysisStage(
+                client,
+                config,
+                "direct_correction",
+                case_system_prompt() + "\n" + CASE_TRACE_CORRECTION_PROMPT,
+                request_content,
+                CaseProviderAnalysis,
+                receipt,
+            )
+    return CaseAnalysisResult(
+        answer=parsed.answer.strip(),
+        trace=trace,
+        execution_receipt=receipt,
+    )
+
+
+_DIRECT_TRACE_CORRECTION_CODES = frozenset(
+    {
+        "case_trace_support_outside_evidence",
+        "case_trace_contradiction_outside_evidence",
+        "case_trace_conflicting_source_role",
+        "case_trace_claim_unbound",
+        "case_trace_role_citation_missing",
+        "case_trace_citation_role_invalid",
+        "case_trace_citation_revision_invalid",
+        "case_trace_citation_quote_invalid",
+    }
+)
+_DIRECT_TRACE_MAX_CORRECTIONS = 2
+
+
+def _validate_direct_trace(
+    parsed: CaseProviderAnalysis,
+    *,
+    mode: str,
+    digest: str,
+    sources: tuple[CaseAdmittedSource, ...],
+    document_context: object,
+) -> CaseAnalysisTrace:
+    return validate_case_trace(
         CaseAnalysisTrace(
             analysis_mode=mode,
             summary=parsed.summary,
@@ -157,12 +218,7 @@ async def executeRawDirectPipeline(
             evidence_sha256=digest,
         ),
         sources,
-        context.get("document_source_context", []),
-    )
-    return CaseAnalysisResult(
-        answer=parsed.answer.strip(),
-        trace=trace,
-        execution_receipt=receipt,
+        document_context,
     )
 
 

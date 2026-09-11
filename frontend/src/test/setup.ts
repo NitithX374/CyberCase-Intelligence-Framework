@@ -49,4 +49,17 @@ if (typeof window !== "undefined") {
         height: 100,
       }) as DOMRect;
   }
+
+  if (typeof HTMLDialogElement !== "undefined") {
+    HTMLDialogElement.prototype.showModal =
+      HTMLDialogElement.prototype.showModal ||
+      function (this: HTMLDialogElement) {
+        this.open = true;
+      };
+    HTMLDialogElement.prototype.close =
+      HTMLDialogElement.prototype.close ||
+      function (this: HTMLDialogElement) {
+        this.open = false;
+      };
+  }
 }
