@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.caseClarification import CaseClarification
 from app.models.caseMaterials import EvidenceSource
-from app.services.followup.schemas import ClarificationExchange
+from app.services.followup.contracts import ClarificationExchange
 
 
 class CaseClarificationHistoryError(Exception):

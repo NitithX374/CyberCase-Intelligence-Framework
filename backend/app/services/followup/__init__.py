@@ -1,6 +1,24 @@
 """Gap Analysis and Follow-Up / Clarification Policy Package."""
 
-from app.services.followup.contracts import FollowUpResolution
+from app.services.followup.contracts import (
+    GAP_ANALYSIS_CLAIM_LIMIT,
+    GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS,
+    ClarificationExchange,
+    FollowUpDecision,
+    FollowUpPolicy,
+    FollowUpPolicyResult,
+    FollowUpReasonCode,
+    FollowUpResolution,
+    GapAnalysis,
+    GapAnalysisClaim,
+    GapAnalysisResult,
+    GapAnalyzer,
+    GapItem,
+    GapPriority,
+    GapStatus,
+    build_gap_analysis_claim_transport,
+    buildGapAnalysisClaimTransport,
+)
 from app.services.followup.decision import (
     evaluate_followup_outcome,
     evaluateFollowupOutcome,
@@ -24,25 +42,6 @@ from app.services.followup.prompts import (
     GAP_ANALYSIS_SYSTEM,
     build_bounded_context,
 )
-from app.services.followup.schemas import (
-    GAP_ANALYSIS_CLAIM_LIMIT,
-    GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS,
-    ClarificationExchange,
-    FollowUpDecision,
-    FollowUpPolicy,
-    FollowUpPolicyResult,
-    FollowUpReasonCode,
-    GapAnalysis,
-    GapAnalysisClaim,
-    GapAnalysisResult,
-    GapAnalyzer,
-    GapItem,
-    GapPriority,
-    GapStatus,
-    build_gap_analysis_claim_transport,
-    buildGapAnalysisClaimTransport,
-)
-
 buildClarifiedQuery = build_clarified_query
 buildBoundedContext = build_bounded_context
 

@@ -2,7 +2,7 @@ import asyncio
 from uuid import uuid4
 
 from app.services.followup.decision import evaluate_followup_outcome
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     FollowUpDecision,
     GapAnalysis,
     GapAnalysisResult,
@@ -243,7 +243,7 @@ def test_answer_indicates_unavailable_thai_and_english() -> None:
 
 
 def test_evaluate_followup_proceeds_when_only_gap_is_explicitly_unknown() -> None:
-    from app.services.followup.schemas import ClarificationExchange
+    from app.services.followup.contracts import ClarificationExchange
 
     class UnknownAnalyzer:
         async def analyze(self, **kwargs):

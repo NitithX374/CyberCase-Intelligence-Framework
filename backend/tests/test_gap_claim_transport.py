@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS,
     build_gap_analysis_claim_transport,
 )

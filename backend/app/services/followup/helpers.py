@@ -101,7 +101,7 @@ def _extract_llm_json(raw: str) -> dict[str, object]:
 
 extractLlmText = _extract_llm_text
 extractLlmJson = _extract_llm_json
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     GapAnalysis,
     GapAnalysisResult,
     GapItem,

@@ -1,15 +1,275 @@
+"""Strict contracts shared by gap analysis and follow-up policy."""
+
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import re
 import unicodedata
-from typing import TYPE_CHECKING
+from typing import Literal, Protocol
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.messageMetadata import MessageMetadata
 
-if TYPE_CHECKING:
-    from app.services.followup.schemas import GapAnalysis
 
+GAP_ANALYSIS_CLAIM_LIMIT = 64
+GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS = 1_000
+
+
+class GapAnalysisClaim(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    claim_id: str = Field(pattern=r"^A-\d{2,}$", max_length=80)
+    text: str = Field(min_length=1, max_length=GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS)
+    claim_type: Literal["reported", "analytical_inference", "unknown"]
+    epistemic_status: Literal[
+        "reported",
+        "suspected",
+        "contradicted",
+        "not_established",
+        "unknown",
+        "not_confirmed",
+    ]
+
+
+def build_gap_analysis_claim_transport(
+    claims: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    if len(claims) > GAP_ANALYSIS_CLAIM_LIMIT:
+        raise ValueError("Gap Analysis claim transport exceeds the v3 claim limit")
+    transported: list[GapAnalysisClaim] = []
+    for claim in claims:
+        value = dict(claim)
+        text = value.get("text")
+        if isinstance(text, str):
+            value["text"] = text.strip()[:GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS]
+        transported.append(GapAnalysisClaim.model_validate(value))
+    claim_ids = [claim.claim_id for claim in transported]
+    if len(set(claim_ids)) != len(claim_ids):
+        raise ValueError("Gap Analysis claim transport requires unique claim IDs")
+    return [claim.model_dump(mode="json") for claim in transported]
+
+
+buildGapAnalysisClaimTransport = build_gap_analysis_claim_transport
+
+
+GapStatus = Literal[
+    "NOT_PROVIDED",
+    "EXPLICITLY_UNKNOWN",
+    "AMBIGUOUS",
+    "CONFLICTING",
+]
+GapPriority = Literal["high", "medium", "low"]
+
+FollowUpReasonCode = Literal[
+    "sufficient_case_context",
+    "unresolved_gaps_recorded",
+    "material_incident_fact_missing",
+    "material_incident_fact_ambiguous",
+    "material_incident_fact_conflicting",
+]
+
+_COMPOUND_QUESTION_RE = re.compile(
+    r"\b(?:and|or|but)\s+"
+    r"(?:what|which|when|where|who|whom|why|how|"
+    r"did|does|do|is|are|was|were|can|could|has|have|had)\b",
+    re.IGNORECASE,
+)
+
+
+class GapItem(BaseModel):
+    """One incident-specific information gap found in the current analysis."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    topic: str
+    status: GapStatus
+    description: str
+    affects: str
+    reason: str
+    priority: GapPriority
+    askable: bool
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip().upper().replace(" ", "_").replace("-", "_")
+        mapping = {
+            "NOT_PROVIDED": "NOT_PROVIDED",
+            "MISSING": "NOT_PROVIDED",
+            "NOTPROVIDED": "NOT_PROVIDED",
+            "NOT_SPECIFIED": "NOT_PROVIDED",
+            "EXPLICITLY_UNKNOWN": "EXPLICITLY_UNKNOWN",
+            "UNKNOWN": "EXPLICITLY_UNKNOWN",
+            "UNAVAILABLE": "EXPLICITLY_UNKNOWN",
+            "EXPLICITLYUNKNOWN": "EXPLICITLY_UNKNOWN",
+            "AMBIGUOUS": "AMBIGUOUS",
+            "UNCLEAR": "AMBIGUOUS",
+            "CONFLICTING": "CONFLICTING",
+            "INCONSISTENT": "CONFLICTING",
+        }
+        return mapping.get(normalized, normalized)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip().lower()
+        if normalized in ("high", "medium", "low"):
+            return normalized
+        if normalized in ("critical", "urgent", "highest"):
+            return "high"
+        if normalized in ("moderate", "normal"):
+            return "medium"
+        if normalized in ("info", "minor", "lowest"):
+            return "low"
+        return normalized
+
+    @field_validator("topic", "description", "affects", "reason")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Gap text fields must not be blank")
+        if len(value) > 1_000:
+            raise ValueError("Gap text fields are too long")
+        return value
+
+    @model_validator(mode="after")
+    def explicitly_unknown_is_not_askable(self) -> "GapItem":
+        if self.status == "EXPLICITLY_UNKNOWN":
+            self.askable = False
+        return self
+
+
+class GapAnalysis(BaseModel):
+    """All relevant gaps detected for one completed Main Case Analysis."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    gaps: list[GapItem] = Field(default_factory=list, max_length=32)
+
+
+@dataclass(frozen=True)
+class GapAnalysisResult:
+    """Gap output plus provider telemetry; never an evidence mutation."""
+
+    analysis: GapAnalysis
+    latency_ms: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    provider: str | None = None
+    model: str | None = None
+
+
+class FollowUpDecision(BaseModel):
+    """One bounded decision made from an already-computed Gap Analysis."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    decision: Literal["ask_followup", "proceed"]
+    selected_gap: str | None = None
+    question: str = ""
+
+    @field_validator("decision", mode="before")
+    @classmethod
+    def normalize_decision_mode(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        val = value.strip().lower().replace("-", "_").replace(" ", "_")
+        if val in ("ask_followup", "ask_follow_up", "ask", "followup", "ask_question"):
+            return "ask_followup"
+        if val in ("proceed", "continue", "skip", "no_followup", "none"):
+            return "proceed"
+        return val
+
+    @field_validator("selected_gap", mode="before")
+    @classmethod
+    def validate_selected_gap(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            return str(value)
+        cleaned = value.strip()
+        if not cleaned or cleaned.lower() in ("none", "null", "n/a"):
+            return None
+        if len(cleaned) > 240:
+            return cleaned[:240]
+        return cleaned
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> "FollowUpDecision":
+        self.question = self.question.strip()
+        if self.decision == "proceed":
+            self.selected_gap = None
+            self.question = ""
+            return self
+
+        if self.selected_gap is None:
+            raise ValueError("Follow-up decisions require a selected gap")
+        if (
+            not self.question
+            or len(self.question) > 300
+            or any(character in self.question for character in "\r\n\u2028\u2029")
+            or sum(self.question.count(mark) for mark in ("?", "？", "؟")) > 1
+            or _COMPOUND_QUESTION_RE.search(self.question) is not None
+        ):
+            raise ValueError("Follow-up must be one concise question")
+        return self
+
+
+@dataclass(frozen=True)
+class FollowUpPolicyResult:
+    """Decision plus safe provider metrics when the adapter supplies them."""
+
+    decision: FollowUpDecision
+    latency_ms: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    provider: str | None = None
+    model: str | None = None
+
+
+@dataclass(frozen=True)
+class ClarificationExchange:
+    question: str
+    answer: str
+    gap_id: str | None = None
+    gap_topic: str | None = None
+    gap_key: str | None = None
+    evidence_sha256: str | None = None
+    question_message_id: str | None = None
+    answer_message_id: str | None = None
+
+
+class GapAnalyzer(Protocol):
+    async def analyze(
+        self,
+        *,
+        original_user_content: str,
+        clarification_exchanges: Sequence[ClarificationExchange],
+        raw_evidence: str | None = None,
+        analysis_answer: str | None = None,
+        analysis_context: Mapping[str, object] | None = None,
+        analysis_claims: Sequence[Mapping[str, object]] | None = None,
+    ) -> GapAnalysisResult: ...
+
+
+class FollowUpPolicy(Protocol):
+    async def decide(
+        self,
+        *,
+        original_user_content: str,
+        clarification_exchanges: Sequence[ClarificationExchange],
+        gap_analysis: GapAnalysis,
+        raw_evidence: str | None = None,
+        analysis_answer: str | None = None,
+        analysis_context: Mapping[str, object] | None = None,
+    ) -> FollowUpDecision: ...
 
 @dataclass(frozen=True)
 class FollowUpResolution:
@@ -97,3 +357,24 @@ def _answer_indicates_unavailable(answer: str) -> bool:
 
 
 answer_indicates_unavailable = _answer_indicates_unavailable
+
+__all__ = [
+    "ClarificationExchange",
+    "FollowUpDecision",
+    "FollowUpPolicy",
+    "FollowUpPolicyResult",
+    "FollowUpReasonCode",
+    "FollowUpResolution",
+    "GAP_ANALYSIS_CLAIM_LIMIT",
+    "GAP_ANALYSIS_CLAIM_TEXT_MAX_CHARS",
+    "GapAnalysis",
+    "GapAnalysisClaim",
+    "GapAnalysisResult",
+    "GapAnalyzer",
+    "GapItem",
+    "GapPriority",
+    "GapStatus",
+    "answer_indicates_unavailable",
+    "build_gap_analysis_claim_transport",
+    "buildGapAnalysisClaimTransport",
+]

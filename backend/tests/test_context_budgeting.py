@@ -5,7 +5,7 @@ from app.services.case_analysis.prompts import (
     build_overflow_case_context,
 )
 from app.services.followup.context import build_bounded_context
-from app.services.followup.schemas import ClarificationExchange, GapAnalysis, GapItem
+from app.services.followup.contracts import ClarificationExchange, GapAnalysis, GapItem
 from app.services.llm.tokenBudget import (
     estimate_json_tokens,
     estimate_tokens,

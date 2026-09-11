@@ -15,7 +15,7 @@ from app.services.followup.metadata import (
     empty_gap_analysis_trace,
     gap_analysis_trace,
 )
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     ClarificationExchange,
     FollowUpPolicy,
     GapAnalysis,

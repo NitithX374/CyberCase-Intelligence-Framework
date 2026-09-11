@@ -4,7 +4,7 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from app.services.followup.schemas import ClarificationExchange, GapAnalysis
+from app.services.followup.contracts import ClarificationExchange, GapAnalysis
 from app.services.llm.tokenBudget import (
     estimate_json_tokens,
     get_safe_input_token_budget,

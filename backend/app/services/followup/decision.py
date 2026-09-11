@@ -11,7 +11,7 @@ from app.services.case_analysis.contracts import AnalysisGapV3, AnalysisTraceV3
 from app.services.followup.contracts import FollowUpResolution
 from app.services.followup.gapStage import GapStageResult, run_gap_analysis_stage
 from app.services.followup.policy import AnthropicFollowUpPolicy
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     ClarificationExchange,
     GapAnalysis,
     GapAnalyzer,

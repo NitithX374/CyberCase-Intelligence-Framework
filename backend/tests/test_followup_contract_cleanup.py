@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     ClarificationExchange,
     FollowUpDecision,
     GapAnalysis,
