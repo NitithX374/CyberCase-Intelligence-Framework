@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "e2e": "playwright test",
-    "check:api-types": "node scripts/generate-api-types.mjs --check"
+    "check:api-types": "node scripts/generate-api-types.mjs --check",
+    "test:api-types": "node --test scripts/generate-api-types.node.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.4",

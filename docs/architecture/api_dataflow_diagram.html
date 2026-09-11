@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberCase Framework · API Dataflow & File Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design Tokens (Editorial Default Skin) ─────────────────────── */
+    :root {
+      --color-paper:       #f5f5f5;
+      --color-paper-2:     #ececec;
+      --color-paper-card:  #ffffff;
+      --color-ink:         #2d3142;
+      --color-muted:       #4f5d75;
+      --color-soft:        #7a8399;
+      --color-rule:        rgba(45, 49, 66, 0.12);
+      --color-rule-solid:  rgba(79, 93, 117, 0.25);
+      --color-accent:      #eb6c36;
+      --color-accent-tint: rgba(235, 108, 54, 0.08);
+      --color-link:        #2e5aa8;
+      --color-amber:       #a66a20;
+      --color-sage:        #4f725b;
+
+      --font-sans:   'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-serif:  'Instrument Serif', Georgia, 'Times New Roman', serif;
+      --font-mono:   'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      min-height: 100vh;
+      padding: 2rem 2rem;
+      color: var(--color-ink);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--color-rule);
+      padding-bottom: 1rem;
+    }
+
+    .header-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .header-eyebrow .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--color-accent-tint);
+      color: var(--color-accent);
+      border: 1px solid rgba(235, 108, 54, 0.3);
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.85rem, 3vw + 1rem, 2.65rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      color: var(--color-ink);
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--color-muted);
+      max-width: 82ch;
+    }
+
+    /* ── Flow Summary Badges ───────────────────────────────────────── */
+    .flow-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 0.85rem;
+    }
+
+    .flow-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      background: var(--color-paper-card);
+      border: 1px solid var(--color-rule);
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--color-ink);
+    }
+
+    .flow-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .flow-dot.f1 { background: var(--color-link); }
+    .flow-dot.f2 { background: var(--color-muted); }
+    .flow-dot.f3 { background: var(--color-accent); }
+    .flow-dot.f4 { background: var(--color-amber); }
+    .flow-dot.f5 { background: var(--color-sage); }
+
+    /* ── Diagram Container ────────────────────────────────────────── */
+    .diagram-container {
+      background: transparent;
+      border: none;
+      padding: 0;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 1100px;
+      height: auto;
+      display: block;
+    }
+
+    /* ── Summary Cards ────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr 0.95fr;
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--color-paper-card);
+      border-radius: 6px;
+      border: 1px solid var(--color-rule);
+      padding: 1.35rem;
+    }
+
+    .card .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.link  { background: var(--color-link); }
+    .card-dot.ink   { background: var(--color-ink); }
+    .card-dot.amber { background: var(--color-amber); }
+
+    .card h3 {
+      font-family: var(--font-sans);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    .card p {
+      font-size: 0.85rem;
+      color: var(--color-muted);
+      line-height: 1.55;
+      margin-bottom: 0.75rem;
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .card li {
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--color-ink);
+      padding-left: 0.9rem;
+      position: relative;
+    }
+
+    .card li::before {
+      content: "—";
+      position: absolute;
+      left: 0;
+      color: var(--color-soft);
+    }
+
+    .card code {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      background: var(--color-paper-2);
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: var(--color-ink);
+    }
+
+    /* ── File Directory Reference Table ───────────────────────────── */
+    .reference-section {
+      background: var(--color-paper-card);
+      border-radius: 6px;
+      border: 1px solid var(--color-rule);
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .reference-section h2 {
+      font-family: var(--font-serif);
+      font-size: 1.65rem;
+      font-weight: 400;
+      color: var(--color-ink);
+      margin-bottom: 0.4rem;
+    }
+
+    .reference-section .lead {
+      font-size: 0.88rem;
+      color: var(--color-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    th {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-muted);
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid var(--color-rule-solid);
+      background: var(--color-paper);
+    }
+
+    td {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid var(--color-rule);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    td.file-col {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--color-ink);
+      white-space: nowrap;
+    }
+
+    td.tier-col {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--color-soft);
+      white-space: nowrap;
+    }
+
+    .tag-tier {
+      display: inline-block;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: var(--color-paper-2);
+      color: var(--color-ink);
+    }
+    .tag-tier.focal {
+      background: var(--color-accent-tint);
+      color: var(--color-accent);
+      border: 1px solid rgba(235, 108, 54, 0.3);
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--color-rule);
+      padding-top: 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--color-soft);
+    }
+
+    footer a {
+      color: var(--color-muted);
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── PDF & Print-Ready Specifications ─────────────────────────── */
+    @page {
+      size: A3 landscape;
+      margin: 8mm 12mm;
+    }
+
+    @media print {
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      body {
+        background: var(--color-paper) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 8pt;
+      }
+
+      .container {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .hero-page {
+        height: 275mm !important;
+        max-height: 275mm !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        overflow: hidden !important;
+      }
+
+      .header {
+        margin-bottom: 0.4rem !important;
+        padding-bottom: 0.3rem !important;
+        flex-shrink: 0 !important;
+      }
+
+      .header-eyebrow {
+        margin-bottom: 0.2rem !important;
+        font-size: 0.65rem !important;
+      }
+
+      h1 {
+        font-size: 1.9rem !important;
+        margin-bottom: 0.2rem !important;
+      }
+
+      .subtitle {
+        font-size: 0.82rem !important;
+        line-height: 1.35 !important;
+      }
+
+      .flow-nav {
+        margin-top: 0.35rem !important;
+        gap: 0.4rem !important;
+      }
+
+      .flow-badge {
+        padding: 0.15rem 0.45rem !important;
+        font-size: 0.68rem !important;
+      }
+
+      .diagram-container {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 0 !important;
+        margin-bottom: 0 !important;
+        overflow: visible !important;
+      }
+
+      .diagram-container svg {
+        max-height: 205mm !important;
+        max-width: 100% !important;
+        height: auto !important;
+        width: auto !important;
+      }
+
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+        margin-top: 1rem !important;
+      }
+
+      .cards {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+      }
+
+      .reference-section {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        margin-top: 1rem !important;
+      }
+
+      tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      footer {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-top: 1.5rem !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ── Page 1: Hero Page (Header + Full Architecture Diagram) ─── -->
+    <div class="hero-page">
+      <header class="header">
+        <p class="header-eyebrow">
+          <span>CyberCase Intelligence Framework · System Architecture</span>
+          <span class="badge">EVIDENCE-FIRST PIPELINE</span>
+        </p>
+        <h1>API Dataflow &amp; File Architecture</h1>
+        <p class="subtitle">
+          Comprehensive end-to-end trace mapping every component, state hook, typed client, FastAPI router, worker lease, claim-anchored analysis service, and PostgreSQL data model across frontend and backend.
+        </p>
+        <div class="flow-nav">
+          <div class="flow-badge"><span class="flow-dot f1"></span>Flow 1: Intake &amp; Evidence Admittance</div>
+          <div class="flow-badge"><span class="flow-dot f2"></span>Flow 2: Background Run Leasing &amp; Execution</div>
+          <div class="flow-badge"><span class="flow-dot f3"></span>Flow 3: Claim-Anchored Provenance Binding (Focal)</div>
+          <div class="flow-badge"><span class="flow-dot f4"></span>Flow 4: Clarification Gating &amp; Interactive Follow-Up</div>
+          <div class="flow-badge"><span class="flow-dot f5"></span>Flow 5: Admitted Findings, Citations &amp; Reports</div>
+        </div>
+      </header>
+
+      <!-- ── Standalone Inline SVG Architecture Diagram ───────────── -->
+      <div class="diagram-container">
+        <svg role="img" aria-labelledby="cybercase-api-dataflow-title cybercase-api-dataflow-desc" viewBox="0 0 1440 980" xmlns="http://www.w3.org/2000/svg">
+          <title id="cybercase-api-dataflow-title">CyberCase Framework End-to-End API Dataflow &amp; File Architecture</title>
+          <desc id="cybercase-api-dataflow-desc">Architectural dataflow diagram detailing the 5 tiers and exact file paths across frontend UI, client hooks, FastAPI routers, analysis pipeline, and PostgreSQL persistence.</desc>
+
+          <defs>
+            <!-- Paper Texture Grid -->
+            <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.8" fill="rgba(45,49,66,0.08)"/>
+            </pattern>
+
+            <!-- Marker Definitions (SKILL.md standard contract) -->
+            <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+            </marker>
+            <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+            </marker>
+            <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/>
+            </marker>
+            <marker id="arrow-amber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#a66a20"/>
+            </marker>
+            <marker id="arrow-sage" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#4f725b"/>
+            </marker>
+          </defs>
+
+          <!-- Background Layer -->
+          <rect width="100%" height="100%" fill="#f5f5f5"/>
+          <rect width="100%" height="100%" fill="url(#dots)" opacity="0.6"/>
+
+          <!-- ────────────────────────────────────────────────────────────
+               TIER 1: FRONTEND UI LAYER (React 19 / Next.js 16)
+               y: 20 to 156 (h=136)
+               ──────────────────────────────────────────────────────────── -->
+          <rect x="24" y="20" width="1392" height="136" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="40" y="24" width="360" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="44" y="34" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" letter-spacing="0.14em">TIER 1 · FRONTEND REACT 19 / NEXT.JS 16 UI COMPONENTS</text>
+
+          <!-- ────────────────────────────────────────────────────────────
+               TIER 2: FRONTEND STATE & CLIENT LAYER
+               y: 188 to 324 (h=136)
+               ──────────────────────────────────────────────────────────── -->
+          <rect x="24" y="188" width="1392" height="136" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="40" y="192" width="340" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="44" y="202" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" letter-spacing="0.14em">TIER 2 · FRONTEND STATE HOOKS &amp; TYPED API CLIENTS</text>
+
+          <!-- ────────────────────────────────────────────────────────────
+               TIER 3: FASTAPI ROUTERS (API INGRESS BOUNDARY)
+               y: 356 to 476 (h=120)
+               ──────────────────────────────────────────────────────────── -->
+          <rect x="24" y="356" width="1392" height="120" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="40" y="360" width="330" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="44" y="370" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" letter-spacing="0.14em">TIER 3 · FASTAPI ASYNC ROUTERS &amp; INGRESS BOUNDARY</text>
+
+          <!-- ────────────────────────────────────────────────────────────
+               TIER 4: WORKFLOW & ANALYSIS PIPELINE
+               y: 508 to 748 (h=240)
+               ──────────────────────────────────────────────────────────── -->
+          <rect x="24" y="508" width="1392" height="240" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="40" y="512" width="460" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="44" y="522" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" letter-spacing="0.14em">TIER 4 · BACKGROUND WORKER, CLAIM-ANCHORED ANALYSIS &amp; FOLLOW-UP GATING</text>
+
+          <!-- ────────────────────────────────────────────────────────────
+               TIER 5: PERSISTENCE & EXTERNAL AUGMENTATION
+               y: 780 to 900 (h=120)
+               ──────────────────────────────────────────────────────────── -->
+          <rect x="24" y="780" width="1392" height="120" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+          <rect x="40" y="784" width="480" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="44" y="794" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" letter-spacing="0.14em">TIER 5 · PERSISTENCE (POSTGRESQL) &amp; EXTERNAL AUGMENTATION (RAG / OPENROUTER)</text>
+
+          <!-- ────────────────────────────────────────────────────────────
+               CONNECTORS & DATAFLOW ARROWS (PAINTED BEFORE BOXES)
+               Rule 1: Orthogonal rounded right-angle (r=8)
+               Rule 2: Label-to-connector margin >= 6px with opaque mask
+               Rule 3: No overlapping connectors
+               Rule 4: Shared edges have distinct attach points (>= 12px)
+               ──────────────────────────────────────────────────────────── -->
+
+          <!-- FLOW 1: Intake to Persistence (Col 1: x_attach = 172) -->
+          <line x1="172" y1="144" x2="172" y2="220" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="136" y="174" width="72" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="172" y="184" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">MUTATE DRAFT</text>
+
+          <line x1="172" y1="312" x2="172" y2="388" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="124" y="342" width="96" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="172" y="352" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">POST /materials</text>
+
+          <line x1="172" y1="464" x2="172" y2="540" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="120" y="494" width="104" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="172" y="504" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">NORMALIZE &amp; HASH</text>
+
+          <line x1="172" y1="736" x2="172" y2="808" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="122" y="764" width="100" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="172" y="774" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">COMMIT SNAPSHOT</text>
+
+          <!-- FLOW 2: Analysis Trigger & Lease Worker (Col 3: x_attach = 712) -->
+          <line x1="712" y1="144" x2="712" y2="220" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="672" y="174" width="80" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="712" y="184" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">TRIGGER RUN</text>
+
+          <line x1="712" y1="312" x2="712" y2="388" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="668" y="342" width="88" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="712" y="352" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">POST /analysis</text>
+
+          <line x1="712" y1="464" x2="712" y2="540" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="664" y="494" width="96" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="712" y="504" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">ENQUEUE &amp; LEASE</text>
+
+          <!-- FLOW 2 return: Polling Loop (Col 3: x_attach = 760, dashed) -->
+          <line x1="760" y1="388" x2="760" y2="312" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <rect x="716" y="342" width="88" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="760" y="352" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">POLL /runs/active</text>
+
+          <!-- FLOW 3: Core LLM Decomposition & Binding (Focal Accent #eb6c36) -->
+          <line x1="680" y1="736" x2="680" y2="808" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+          <rect x="632" y="764" width="96" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="680" y="774" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">SAVE ADMITTED CLAIMS</text>
+
+          <line x1="784" y1="736" x2="784" y2="808" stroke="#eb6c36" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow-accent)"/>
+          <rect x="736" y="764" width="96" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="784" y="774" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">PROMPT GPT-5.6-LUNA</text>
+
+          <!-- FLOW 4: Clarification Gating & Follow-Up Loop (Amber #a66a20) -->
+          <!-- Service to DB: Persist Clarification -->
+          <line x1="996" y1="736" x2="996" y2="808" stroke="#a66a20" stroke-width="1.2" marker-end="url(#arrow-amber)"/>
+          <rect x="948" y="764" width="96" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="996" y="774" fill="#a66a20" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">SAVE CLARIFICATION</text>
+
+          <!-- DB to Router to Hook: Polling reveals awaiting_followup -->
+          <path d="M 1040,388 V 320" fill="none" stroke="#a66a20" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-amber)"/>
+          <rect x="984" y="342" width="112" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="1040" y="352" fill="#a66a20" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">AWAITING_FOLLOWUP</text>
+
+          <line x1="1040" y1="220" x2="1040" y2="144" stroke="#a66a20" stroke-width="1.2" marker-end="url(#arrow-amber)"/>
+          <rect x="980" y="174" width="120" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="1040" y="184" fill="#a66a20" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">RENDER FOLLOWUP CARD</text>
+
+          <!-- Analyst Answers: Return Loop (x=948) -->
+          <line x1="948" y1="144" x2="948" y2="220" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="908" y="174" width="80" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="948" y="184" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">SUBMIT ANSWER</text>
+
+          <line x1="948" y1="312" x2="948" y2="388" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="896" y="342" width="104" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="948" y="352" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">POST /clarifications</text>
+
+          <!-- Orthogonal connector: Follow-up answer feeds new snapshot & analysis re-run -->
+          <!-- From Router (948, 464) left-and-down to Snapshot / Analysis Queue (x=736, y=540) -->
+          <path d="M 948,464 V 480 Q 948,488 940,488 H 744 Q 736,488 736,496 V 540" fill="none" stroke="#a66a20" stroke-width="1.2" marker-end="url(#arrow-amber)"/>
+          <rect x="800" y="480" width="112" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="856" y="490" fill="#a66a20" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">NEW EVIDENCE &amp; RE-RUN</text>
+
+          <!-- FLOW 5: Findings & Overview Queries (Col 2: Sage #4f725b) -->
+          <line x1="452" y1="808" x2="452" y2="736" stroke="#4f725b" stroke-width="1.2" marker-end="url(#arrow-sage)"/>
+          <rect x="408" y="764" width="88" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="452" y="774" fill="#4f725b" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">FETCH RESULT</text>
+
+          <line x1="452" y1="540" x2="452" y2="464" stroke="#4f725b" stroke-width="1.2" marker-end="url(#arrow-sage)"/>
+          <rect x="404" y="494" width="96" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="452" y="504" fill="#4f725b" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">PARSE PROVENANCE</text>
+
+          <line x1="452" y1="388" x2="452" y2="312" stroke="#4f725b" stroke-width="1.2" marker-end="url(#arrow-sage)"/>
+          <rect x="400" y="342" width="104" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="452" y="352" fill="#4f725b" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">GET /cases/{id}/analysis</text>
+
+          <line x1="452" y1="220" x2="452" y2="144" stroke="#4f725b" stroke-width="1.2" marker-end="url(#arrow-sage)"/>
+          <rect x="408" y="174" width="88" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="452" y="184" fill="#4f725b" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">VIEW FINDINGS</text>
+
+          <!-- FLOW 5B: Reports & Technical Augmentation (Col 5) -->
+          <line x1="1288" y1="144" x2="1288" y2="220" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="1248" y="174" width="80" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="1288" y="184" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">GENERATE PDF</text>
+
+          <line x1="1288" y1="312" x2="1288" y2="388" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <rect x="1244" y="342" width="88" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="1288" y="352" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">POST /reports</text>
+
+          <line x1="1288" y1="464" x2="1288" y2="540" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+          <rect x="1236" y="494" width="104" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="1288" y="504" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">COMPILE REPORT</text>
+
+          <line x1="1288" y1="736" x2="1288" y2="808" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+          <rect x="1232" y="764" width="112" height="14" rx="2" fill="#f5f5f5"/>
+          <text x="1288" y="774" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">RAG HYBRID QUERY</text>
+
+
+          <!-- ────────────────────────────────────────────────────────────
+               NODE BOXES — PAINTED OVER ARROWS (Z-ORDER)
+               ──────────────────────────────────────────────────────────── -->
+
+          <!-- ══ TIER 1: FRONTEND UI NODES (y=52, h=92) ══ -->
+
+          <!-- Node 1.1: Intake UI (x=48, w=248) -->
+          <rect x="48" y="52" width="248" height="92" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="56" y="58" width="38" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="75" y="67" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">REACT</text>
+          <text x="172" y="80" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Case Intake &amp; OCR View</text>
+          <text x="172" y="98" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">CaseFirstIntakeView.tsx</text>
+          <text x="172" y="112" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">IntakeNarrativeForm · ExtractedText</text>
+          <text x="172" y="126" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">DocumentIngestionPreview.tsx</text>
+
+          <!-- Node 1.2: Overview UI (x=328, w=248) -->
+          <rect x="328" y="52" width="248" height="92" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="336" y="58" width="38" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="355" y="67" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">REACT</text>
+          <text x="452" y="80" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Case Overview &amp; Citations</text>
+          <text x="452" y="98" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">CaseOverviewView.tsx</text>
+          <text x="452" y="112" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">CaseFindingsSection.tsx</text>
+          <text x="452" y="126" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">SourceEvidencePopover.tsx</text>
+
+          <!-- Node 1.3: Workspace Orchestrator (x=608, w=256) -->
+          <rect x="608" y="52" width="256" height="92" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="616" y="58" width="46" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="639" y="67" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LAYOUT</text>
+          <text x="736" y="80" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Workspace Shell &amp; Run Trigger</text>
+          <text x="736" y="98" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">ChatWorkspace.tsx</text>
+          <text x="736" y="112" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">ChatWorkspaceLayout.tsx</text>
+          <text x="736" y="126" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">WorkspaceHeader · WorkspaceSidebar</text>
+
+          <!-- Node 1.4: Conversation & Clarification UI (x=896, w=248) -->
+          <rect x="896" y="52" width="248" height="92" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="904" y="58" width="38" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="923" y="67" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">REACT</text>
+          <text x="1020" y="80" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Chat &amp; Follow-Up Panel</text>
+          <text x="1020" y="98" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">WorkspaceChatPanel.tsx</text>
+          <text x="1020" y="112" fill="#a66a20" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">FollowUpActionCard.tsx</text>
+          <text x="1020" y="126" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">ChatTranscript · EvidenceReferences</text>
+
+          <!-- Node 1.5: Report & MITRE Panel UI (x=1176, w=224) -->
+          <rect x="1176" y="52" width="224" height="92" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="1184" y="58" width="38" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="1203" y="67" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">REACT</text>
+          <text x="1288" y="80" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Case Report &amp; Tech Appendix</text>
+          <text x="1288" y="98" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">CaseReportView.tsx</text>
+          <text x="1288" y="112" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">MitreCandidatePanel.tsx</text>
+          <text x="1288" y="126" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">ChatReportView.tsx</text>
+
+
+          <!-- ══ TIER 2: FRONTEND STATE & API CLIENT NODES (y=220, h=92) ══ -->
+
+          <!-- Node 2.1: Material Client & Workspace Actions (x=48, w=248) -->
+          <rect x="48" y="220" width="248" height="92" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="56" y="226" width="38" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.3)" stroke-width="0.8"/>
+          <text x="75" y="235" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HOOKS</text>
+          <text x="172" y="248" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Material Actions &amp; Client</text>
+          <text x="172" y="266" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">use-case-workspace-actions.ts</text>
+          <text x="172" y="280" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case-materials.ts · case-client.ts</text>
+          <text x="172" y="294" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">document-ingestion-store.ts</text>
+
+          <!-- Node 2.2: Overview Queries & Parsers (x=328, w=248) -->
+          <rect x="328" y="220" width="248" height="92" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="336" y="226" width="38" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.3)" stroke-width="0.8"/>
+          <text x="355" y="235" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">QUERY</text>
+          <text x="452" y="248" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Findings Query &amp; Adapter</text>
+          <text x="452" y="266" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">useCaseAnalysis (use-case-queries)</text>
+          <text x="452" y="280" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case-overview.ts · parsing.ts</text>
+          <text x="452" y="294" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">evidence-citation.ts (Claim Anchors)</text>
+
+          <!-- Node 2.3: Analysis Submission & Polling (x=608, w=256) -->
+          <rect x="608" y="220" width="256" height="92" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="616" y="226" width="38" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.3)" stroke-width="0.8"/>
+          <text x="635" y="235" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MUTATE</text>
+          <text x="736" y="248" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Run Submission &amp; Polling</text>
+          <text x="736" y="266" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">use-case-analysis-submission.ts</text>
+          <text x="736" y="280" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">use-case-run-polling.ts</text>
+          <text x="736" y="294" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">api-client.ts · Doppler Auth Wrapper</text>
+
+          <!-- Node 2.4: Chat Submission & Follow-up State (x=896, w=248) -->
+          <rect x="896" y="220" width="248" height="92" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="904" y="226" width="38" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.3)" stroke-width="0.8"/>
+          <text x="923" y="235" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MUTATE</text>
+          <text x="1020" y="248" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Chat Run &amp; Follow-up Parser</text>
+          <text x="1020" y="266" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">use-chat-submission.ts</text>
+          <text x="1020" y="280" fill="#a66a20" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">chat-followup.ts (Gap Payload)</text>
+          <text x="1020" y="294" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">useCaseClarifications.ts</text>
+
+          <!-- Node 2.5: Report & Technical Context Client (x=1176, w=224) -->
+          <rect x="1176" y="220" width="224" height="92" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="1184" y="226" width="38" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.3)" stroke-width="0.8"/>
+          <text x="1203" y="235" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLIENT</text>
+          <text x="1288" y="248" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Report Client &amp; MITRE State</text>
+          <text x="1288" y="266" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">case-client.ts (Reports API)</text>
+          <text x="1288" y="280" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">technical-context.ts</text>
+          <text x="1288" y="294" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">mitre-candidate.ts</text>
+
+
+          <!-- ══ TIER 3: FASTAPI ROUTER NODES (y=388, h=76) ══ -->
+
+          <!-- Node 3.1: Materials Router (x=48, w=248) -->
+          <rect x="48" y="388" width="248" height="76" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="56" y="394" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="73" y="403" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROUTER</text>
+          <text x="172" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Materials &amp; Ingestion Router</text>
+          <text x="172" y="434" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">backend/app/routers/case_materials.py</text>
+          <text x="172" y="448" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">routers/document_ingestion.py</text>
+
+          <!-- Node 3.2: Case Read Router (x=328, w=248) -->
+          <rect x="328" y="388" width="248" height="76" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="336" y="394" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="353" y="403" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROUTER</text>
+          <text x="452" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cases &amp; Findings Router</text>
+          <text x="452" y="434" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">backend/app/routers/cases.py</text>
+          <text x="452" y="448" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">routers/case_analysis.py (GET /analysis)</text>
+
+          <!-- Node 3.3: Analysis Trigger & Run Router (x=608, w=256) -->
+          <rect x="608" y="388" width="256" height="76" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="616" y="394" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="633" y="403" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROUTER</text>
+          <text x="736" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Analysis Execution Router</text>
+          <text x="736" y="434" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">backend/app/routers/case_analysis.py</text>
+          <text x="736" y="448" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">POST /analysis · GET /runs/{run_id}</text>
+
+          <!-- Node 3.4: Clarification & Chat Router (x=896, w=248) -->
+          <rect x="896" y="388" width="248" height="76" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="904" y="394" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="921" y="403" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROUTER</text>
+          <text x="1020" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Clarification &amp; Chat Router</text>
+          <text x="1020" y="434" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">backend/app/routers/case_clarifications.py</text>
+          <text x="1020" y="448" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">routers/chat.py (Interactive Surface)</text>
+
+          <!-- Node 3.5: Report Router (x=1176, w=224) -->
+          <rect x="1176" y="388" width="224" height="76" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <rect x="1184" y="394" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="1201" y="403" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROUTER</text>
+          <text x="1288" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Case Reports Router</text>
+          <text x="1288" y="434" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">backend/app/routers/case_reports.py</text>
+          <text x="1288" y="448" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">POST /reports · GET /reports/{id}/pdf</text>
+
+
+          <!-- ══ TIER 4: WORKFLOW & ANALYSIS PIPELINE NODES (y=540, h=196) ══ -->
+
+          <!-- Node 4.1: Material Lifecycle & Snapshot Service (x=48, w=248) -->
+          <rect x="48" y="540" width="248" height="196" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+          <rect x="56" y="546" width="42" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="77" y="555" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
+          <text x="172" y="568" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Material &amp; Snapshot Service</text>
+          <text x="172" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">case_materials/material_service.py</text>
+          <text x="172" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">snapshot_builder.py (SHA-256 Hashing)</text>
+          <!-- Internal Detail Box -->
+          <rect x="60" y="616" width="224" height="108" rx="4" fill="#ffffff" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="72" y="632" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Material Ingestion Flow:</text>
+          <text x="72" y="648" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">1. Parse intake narrative &amp; OCR text</text>
+          <text x="72" y="664" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">2. Create EvidenceSource &amp; Revision</text>
+          <text x="72" y="680" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">3. Calculate normalized sha256 hash</text>
+          <text x="72" y="696" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">4. Lock CaseEvidenceSnapshot</text>
+          <text x="72" y="712" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">5. Invariant: Immutable evidence base</text>
+
+          <!-- Node 4.2: Case Findings Parsing & Projection (x=328, w=248) -->
+          <rect x="328" y="540" width="248" height="196" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+          <rect x="336" y="546" width="42" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="357" y="555" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
+          <text x="452" y="568" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Findings Projection &amp; Quotes</text>
+          <text x="452" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">cases/case_management.py</text>
+          <text x="452" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case_analysis_response_parser.py</text>
+          <!-- Internal Detail Box -->
+          <rect x="340" y="616" width="224" height="108" rx="4" fill="#ffffff" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="352" y="632" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Grounded Projection Pipeline:</text>
+          <text x="352" y="648" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">1. Fetch latest CaseAnalysisResult</text>
+          <text x="352" y="664" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">2. Project findings with claim IDs</text>
+          <text x="352" y="680" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">3. Resolve quote character offsets</text>
+          <text x="352" y="696" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">4. Map evidence source provenance</text>
+          <text x="352" y="712" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">5. Invariant: No quote without span</text>
+
+          <!-- Node 4.3: FOCAL CORE — CLAIM-ANCHORED ANALYSIS ENGINE (x=608, w=256) -->
+          <rect x="608" y="540" width="256" height="196" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.5"/>
+          <rect x="616" y="546" width="68" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.5)" stroke-width="0.8"/>
+          <text x="650" y="555" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CORE · FOCAL</text>
+          <text x="736" y="568" fill="#2d3142" font-size="12.5" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Claim-Anchored Analysis Engine</text>
+          <text x="736" y="586" fill="#eb6c36" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">case_native_analysis · binding.py</text>
+          <text x="736" y="602" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">workflow/case_run_execution.py</text>
+          <!-- Internal Detail Box -->
+          <rect x="618" y="616" width="236" height="108" rx="4" fill="#ffffff" stroke="rgba(235,108,54,0.3)" stroke-width="0.8"/>
+          <text x="628" y="632" fill="#eb6c36" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Execution &amp; Provenance Binding:</text>
+          <text x="628" y="648" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">1. Worker claims lease: case_run_claim.py</text>
+          <text x="628" y="664" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">2. LLM claim extraction &amp; exact quotes</text>
+          <text x="628" y="680" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">3. Budget selection: case_native_selection.py</text>
+          <text x="628" y="696" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">4. Deterministic quote offset verification</text>
+          <text x="628" y="712" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">5. Contracts: case_native_validation.py</text>
+
+          <!-- Node 4.4: Clarification & Follow-up Policy Engine (x=896, w=248) -->
+          <rect x="896" y="540" width="248" height="196" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+          <rect x="904" y="546" width="48" height="12" rx="2" fill="transparent" stroke="rgba(166,106,32,0.5)" stroke-width="0.8"/>
+          <text x="928" y="555" fill="#a66a20" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DECISION</text>
+          <text x="1020" y="568" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Follow-Up &amp; Clarification Policy</text>
+          <text x="1020" y="586" fill="#a66a20" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">followup/decision.py · policy.py</text>
+          <text x="1020" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case_run_completion_metadata.py</text>
+          <!-- Internal Detail Box -->
+          <rect x="908" y="616" width="224" height="108" rx="4" fill="#ffffff" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="920" y="632" fill="#a66a20" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Clarification Decision Gating:</text>
+          <text x="920" y="648" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">1. evaluate_followup_outcome() checks gaps</text>
+          <text x="920" y="664" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">2. If critical gap: pause &amp; gate status</text>
+          <text x="920" y="680" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">3. Embed selected_gap_detail in metadata</text>
+          <text x="920" y="696" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">4. Suppress analysis_result in chat</text>
+          <text x="920" y="712" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">5. Emit followup_question message</text>
+
+          <!-- Node 4.5: MITRE Augmentation & Report Service (x=1176, w=224) -->
+          <rect x="1176" y="540" width="224" height="196" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+          <rect x="1184" y="546" width="42" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="1205" y="555" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
+          <text x="1288" y="568" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Report Generation &amp; MITRE Gate</text>
+          <text x="1288" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">case_mitre_augmentation.py</text>
+          <text x="1288" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case_report_generation.py · pdf.py</text>
+          <!-- Internal Detail Box -->
+          <rect x="1186" y="616" width="204" height="108" rx="4" fill="#ffffff" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="1196" y="632" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Technical Augmentation:</text>
+          <text x="1196" y="648" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">1. Evaluate cyber threat indicators</text>
+          <text x="1196" y="664" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">2. Call rag_client.py HTTP service</text>
+          <text x="1196" y="680" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">3. Strict isolation: Appendix only</text>
+          <text x="1196" y="696" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">4. Compile Markdown &amp; PDF story</text>
+          <text x="1196" y="712" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">5. Never treat RAG as incident fact</text>
+
+
+          <!-- ══ TIER 5: PERSISTENCE & EXTERNAL ENGINE NODES (y=808, h=80) ══ -->
+
+          <!-- Node 5.1: Case & Snapshot DB Models (x=48, w=248) -->
+          <rect x="48" y="808" width="248" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="56" y="814" width="28" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.4)" stroke-width="0.8"/>
+          <text x="70" y="823" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+          <text x="172" y="834" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Evidence Snapshot Storage</text>
+          <text x="172" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">models/case.py (SQLAlchemy)</text>
+          <text x="172" y="868" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">EvidenceSource · EvidenceRevision · Snapshot</text>
+
+          <!-- Node 5.2: Analysis Results DB Model (x=328, w=248) -->
+          <rect x="328" y="808" width="248" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="336" y="814" width="28" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.4)" stroke-width="0.8"/>
+          <text x="350" y="823" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+          <text x="452" y="834" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Admitted Findings Storage</text>
+          <text x="452" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">models/case_run.py (SQLAlchemy)</text>
+          <text x="452" y="868" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">CaseAnalysisResult (summary_json, claims)</text>
+
+          <!-- Node 5.3: Run Leases & LLM Provider (x=608, w=256) -->
+          <rect x="608" y="808" width="256" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="616" y="814" width="34" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.4)" stroke-width="0.8"/>
+          <text x="633" y="823" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+          <text x="736" y="834" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">CaseRun State &amp; OpenRouter</text>
+          <text x="736" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">CaseRun (queued · leased · completed)</text>
+          <text x="736" y="868" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">OpenRouter: openai/gpt-5.6-luna</text>
+
+          <!-- Node 5.4: Clarifications & Chat DB Models (x=896, w=248) -->
+          <rect x="896" y="808" width="248" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <rect x="904" y="814" width="28" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.4)" stroke-width="0.8"/>
+          <text x="918" y="823" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+          <text x="1020" y="834" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Clarification &amp; Chat Storage</text>
+          <text x="1020" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">models/case_run.py · models/chat.py</text>
+          <text x="1020" y="868" fill="#a66a20" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">CaseClarification · ChatMessage · ChatThread</text>
+
+          <!-- Node 5.5: External RAG Service (Qdrant & Neo4j) (x=1176, w=224) -->
+          <rect x="1176" y="808" width="224" height="80" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+          <rect x="1184" y="814" width="46" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
+          <text x="1207" y="823" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXTERNAL</text>
+          <text x="1288" y="834" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">RAG Service (STIX 2.1)</text>
+          <text x="1288" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">Qdrant (1024-dim BGE-M3)</text>
+          <text x="1288" y="868" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Neo4j (ATT&amp;CK Graph) · ChatReport</text>
+
+
+          <!-- ────────────────────────────────────────────────────────────
+               LEGEND STRIP (BOTTOM)
+               Rule: Horizontal bottom strip, hairline divider, Y=924
+               ──────────────────────────────────────────────────────────── -->
+          <line x1="24" y1="924" x2="1416" y2="924" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+          <text x="40" y="952" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" font-weight="600" letter-spacing="0.14em">LEGEND</text>
+
+          <!-- Legend Item 1: Focal Core -->
+          <rect x="120" y="942" width="12" height="12" rx="2" fill="rgba(235,108,54,0.15)" stroke="#eb6c36" stroke-width="1.2"/>
+          <text x="138" y="952" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">Focal Analysis Core (Claim-Anchored)</text>
+
+          <!-- Legend Item 2: Frontend & Routers -->
+          <rect x="360" y="942" width="12" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+          <text x="378" y="952" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">UI / FastAPI Router Node</text>
+
+          <!-- Legend Item 3: Storage / DB -->
+          <rect x="540" y="942" width="12" height="12" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+          <text x="558" y="952" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">PostgreSQL / State Storage</text>
+
+          <!-- Legend Item 4: External / RAG -->
+          <rect x="740" y="942" width="12" height="12" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.3)" stroke-width="1" stroke-dasharray="3,2"/>
+          <text x="758" y="952" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">External Technical RAG / LLM</text>
+
+          <!-- Legend Item 5: Connectors -->
+          <line x1="940" y1="948" x2="964" y2="948" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+          <text x="972" y="952" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace">HTTP REST / Action</text>
+
+          <line x1="1100" y1="948" x2="1124" y2="948" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+          <text x="1132" y="952" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace">Focal Grounding Flow</text>
+
+          <line x1="1268" y1="948" x2="1292" y2="948" stroke="#a66a20" stroke-width="1.2" marker-end="url(#arrow-amber)"/>
+          <text x="1300" y="952" fill="#a66a20" font-size="8" font-family="'Geist Mono', monospace">Clarification Loop</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── Page 2: Summary Cards & Comprehensive Directory ──────── -->
+    <div class="cards">
+      <!-- Card 1: Pipeline & Grounding -->
+      <div class="card">
+        <p class="eyebrow">CORE ARCHITECTURE · ZERO HALLUCINATION</p>
+        <div class="card-header">
+          <span class="card-dot coral"></span>
+          <h3>Claim-Anchored Provenance Pipeline</h3>
+        </div>
+        <p>
+          Unlike naive RAG systems that summarize unstructured case narratives directly, CyberCase enforces strict deterministic evidence provenance before generating findings:
+        </p>
+        <ul>
+          <li><strong>Decomposition:</strong> <code>case_native_analysis.py</code> decomposes narratives and OCR transcripts into atomic claims and exact quotes.</li>
+          <li><strong>Character-Span Binding:</strong> <code>case_native_binding.py</code> validates that each quote resolves to a deterministic character offset and page in the immutable <code>CaseEvidenceSnapshot</code>.</li>
+          <li><strong>Budget Selection:</strong> <code>case_native_selection.py</code> enforces deterministic coverage and token caps, recording omitted claims.</li>
+          <li><strong>Grounded Output:</strong> Assistant findings reference only admitted claim IDs—no citation without an exact evidence quote.</li>
+        </ul>
+      </div>
+
+      <!-- Card 2: Async Worker & Follow-Up Gating -->
+      <div class="card">
+        <p class="eyebrow">ASYNC EXECUTION · INTERACTIVE GATING</p>
+        <div class="card-header">
+          <span class="card-dot amber"></span>
+          <h3>Worker Leasing &amp; Clarification Gating</h3>
+        </div>
+        <p>
+          Long-running analysis runs execute asynchronously via a background lease engine with proactive information gap detection:
+        </p>
+        <ul>
+          <li><strong>Database Leasing:</strong> <code>case_run_claim.py</code> atomically acquires queued runs via PostgreSQL row-level locks.</li>
+          <li><strong>Gap Evaluation:</strong> <code>followup/decision.py</code> inspects extracted case elements (perpetrator, damages, timeline holes).</li>
+          <li><strong>Selective Pausing:</strong> If critical facts are absent, the run completes as <code>awaiting_followup</code>, persisting a focused clarification question with <code>selected_gap_detail</code>.</li>
+          <li><strong>Chat Isolation:</strong> <code>analysis_result</code> messages remain withheld during follow-up; only resolved, fully verified findings publish to the overview.</li>
+        </ul>
+      </div>
+
+      <!-- Card 3: External Knowledge & Auditability -->
+      <div class="card">
+        <p class="eyebrow">EXTERNAL ENRICHMENT · TECHNICAL APPENDIX</p>
+        <div class="card-header">
+          <span class="card-dot link"></span>
+          <h3>MITRE ATT&amp;CK &amp; Report Generation</h3>
+        </div>
+        <p>
+          External threat intelligence is strictly isolated from incident case evidence to preserve legal admissibility and factual guarantees:
+        </p>
+        <ul>
+          <li><strong>Conditional Trigger:</strong> <code>case_mitre_augmentation.py</code> queries <code>rag_service</code> only when confirmed cyber threat indicators appear.</li>
+          <li><strong>Hybrid Graph Search:</strong> Vector similarity in Qdrant (BGE-M3 1024-dim) combined with 2-hop graph expansion in Neo4j (STIX 2.1).</li>
+          <li><strong>Source-Role Isolation:</strong> ATT&amp;CK techniques are displayed strictly in a technical appendix, never as incident evidence.</li>
+          <li><strong>Export Engine:</strong> <code>case_report_generation.py</code> compiles findings, citations, and audit trails into Markdown and publication-grade PDF.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── Comprehensive File Reference Table ────────────────────── -->
+    <div class="reference-section">
+      <h2>Complete File Directory Reference</h2>
+      <p class="lead">Exhaustive mapping of every file across the 5 architectural tiers, detailing operational responsibilities, inputs, and outputs.</p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Tier</th>
+              <th>File Path</th>
+              <th>Primary Responsibility</th>
+              <th>Inputs / Triggers</th>
+              <th>Outputs / Artifacts</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Tier 1: Frontend UI -->
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../CaseFirstIntakeView.tsx</td>
+              <td>Top-level intake container for new case initialization, title, description, and source material drafting.</td>
+              <td>Analyst input</td>
+              <td>Case intake draft state</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../IntakeNarrativeForm.tsx</td>
+              <td>Form for entering initial incident narratives, user statements, and incident notes.</td>
+              <td>Text narrative input</td>
+              <td>Narrative material payload</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../DocumentIngestionPreview.tsx</td>
+              <td>Dropzone file upload preview with client-side SHA-256 calculation and OCR extraction status.</td>
+              <td>PDF / Image files</td>
+              <td>OCR job dispatch</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../ChatWorkspace.tsx</td>
+              <td>Main case workspace coordinator. Manages active tab state (overview, chat, report) and background polling.</td>
+              <td>Active case ID</td>
+              <td>Workspace layout coordination</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../CaseOverviewView.tsx</td>
+              <td>Renders case overview dashboard: switches between Ready Overview, Processing Spinner, and Needs Clarification Banner.</td>
+              <td><code>useCaseAnalysis</code> data</td>
+              <td>Case findings presentation</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../CaseFindingsSection.tsx</td>
+              <td>Renders structured case findings: Incident Overview, Parties Involved, Damage Assessment, Chronology.</td>
+              <td><code>CaseAnalysisResultRead</code></td>
+              <td>Grounded findings cards</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../SourceEvidencePopover.tsx</td>
+              <td>Interactive citation popover displaying exact quote snippet, character offsets, and source document revision.</td>
+              <td>Citation badge click</td>
+              <td>Evidence quote popover</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../WorkspaceChatPanel.tsx</td>
+              <td>Interactive chat conversation panel with streaming status and analyst input form.</td>
+              <td>Analyst chat messages</td>
+              <td>Conversation stream</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../FollowUpActionCard.tsx</td>
+              <td>Interactive clarification question card: renders "What remains unclear", "Why this matters", and answer form.</td>
+              <td><code>chat_followup</code> metadata</td>
+              <td>Clarification answer submission</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
+              <td class="file-col">frontend/.../CaseReportView.tsx</td>
+              <td>Publication-grade case findings report with Markdown viewer and PDF download action.</td>
+              <td>Case analysis &amp; snapshot</td>
+              <td>Report rendering &amp; download</td>
+            </tr>
+
+            <!-- Tier 2: Frontend State & Client -->
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/src/hooks/use-case-queries.ts</td>
+              <td>React Query hooks for case entities: <code>useCaseDetail</code>, <code>useCaseMaterials</code>, <code>useCaseAnalysis</code>, etc.</td>
+              <td>Case ID &amp; query keys</td>
+              <td>Cached query data</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/.../use-case-workspace-actions.ts</td>
+              <td>Central action orchestrator: case creation, adding materials, admitting evidence, updating title.</td>
+              <td>User actions in workspace</td>
+              <td>API client invocations</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/.../use-case-analysis-submission.ts</td>
+              <td>Submits analysis run mutation (<code>POST /api/v1/cases/{case_id}/analysis</code>).</td>
+              <td>Trigger analysis button</td>
+              <td><code>CaseRunRead</code> queued state</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/src/hooks/use-case-run-polling.ts</td>
+              <td>Polls active background runs until terminal status (<code>completed</code>, <code>awaiting_followup</code>, <code>failed</code>).</td>
+              <td>Active run ID</td>
+              <td>Run lifecycle state updates</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/.../use-chat-submission.ts</td>
+              <td>Handles chat message sending and clarification answer submission via <code>answerClarification</code>.</td>
+              <td>User submit in chat / card</td>
+              <td>Message mutation execution</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/src/lib/case-client.ts</td>
+              <td>Typed REST API client implementing all Case domain endpoints.</td>
+              <td>Request parameters</td>
+              <td>Typed JSON responses</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/src/lib/api-client.ts</td>
+              <td>Low-level fetch wrapper with Doppler authorization headers, timeout, and structured error throwing.</td>
+              <td>HTTP requests</td>
+              <td>Validated HTTP responses</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/src/lib/chat-followup.ts</td>
+              <td>Parses follow-up questions, gap rationale, and metadata schemas for <code>&lt;FollowUpActionCard&gt;</code>.</td>
+              <td><code>metadata_json["chat_followup"]</code></td>
+              <td>Structured follow-up view model</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
+              <td class="file-col">frontend/src/lib/evidence-citation.ts</td>
+              <td>Extracts claim anchors and matches quote character spans against admitted evidence snapshot texts.</td>
+              <td>Analysis claims &amp; snapshot</td>
+              <td>Grounded citation models</td>
+            </tr>
+
+            <!-- Tier 3: FastAPI Routers -->
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
+              <td class="file-col">backend/app/main.py</td>
+              <td>FastAPI application factory, CORS setup, lifespan handlers, and router mount points.</td>
+              <td>ASGI startup</td>
+              <td>FastAPI instance</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
+              <td class="file-col">backend/app/routers/cases.py</td>
+              <td>Endpoints: <code>GET /api/v1/cases</code>, <code>POST /api/v1/cases</code>, <code>GET /cases/{id}</code>, <code>DELETE /cases/{id}</code>.</td>
+              <td>HTTP Requests</td>
+              <td><code>CaseRead</code> / <code>CaseListRead</code></td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
+              <td class="file-col">backend/app/routers/case_materials.py</td>
+              <td>Endpoints: <code>POST /materials</code> (create narrative/document) and <code>POST /evidence</code> (admit revision).</td>
+              <td>Material payloads</td>
+              <td><code>EvidenceSourceRead</code></td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
+              <td class="file-col">backend/app/routers/case_analysis.py</td>
+              <td>Endpoints: <code>POST /analysis</code> (enqueue run), <code>GET /analysis</code> (latest findings), <code>GET /runs</code>.</td>
+              <td>Analysis trigger / read</td>
+              <td><code>CaseRunRead</code> / <code>CaseAnalysisResultRead</code></td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
+              <td class="file-col">backend/app/routers/case_clarifications.py</td>
+              <td>Endpoints: <code>GET /clarifications</code> and <code>POST /clarifications/{id}/answer</code>.</td>
+              <td>Clarification answer payload</td>
+              <td>Updated clarification &amp; run trigger</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
+              <td class="file-col">backend/app/routers/case_reports.py</td>
+              <td>Endpoints: <code>POST /reports</code> (generate report) and <code>GET /reports/{id}/pdf</code> (download PDF).</td>
+              <td>Report generation options</td>
+              <td>Report model / PDF streaming response</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
+              <td class="file-col">backend/app/routers/chat.py</td>
+              <td>Endpoints: <code>POST /cases/{case_id}/chat/messages</code> and thread persistence (interactive surface).</td>
+              <td>Chat message payload</td>
+              <td><code>ChatMessageRead</code></td>
+            </tr>
+
+            <!-- Tier 4: Services & Pipeline -->
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../material_service.py</td>
+              <td>Ingestion, text normalization, and revision tracking for narratives and OCR extractions.</td>
+              <td>Raw text / OCR result</td>
+              <td><code>EvidenceRevision</code> record</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../snapshot_builder.py</td>
+              <td>Assembles immutable <code>CaseEvidenceSnapshot</code> with deterministic SHA-256 hashes of admitted text.</td>
+              <td>Admitted evidence revisions</td>
+              <td>Immutable <code>CaseEvidenceSnapshot</code></td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../case_run_service.py</td>
+              <td>Enqueues analysis runs, manages run caching, and prevents concurrent duplicate executions.</td>
+              <td>Analysis request</td>
+              <td>Enqueued <code>CaseRun</code></td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../case_run_claim.py</td>
+              <td>Worker lease loop acquiring queued runs via row-level PostgreSQL locks with heartbeat lease renewal.</td>
+              <td>Queued runs</td>
+              <td>Leased <code>CaseRun</code></td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../case_run_execution.py</td>
+              <td>Coordinates end-to-end execution: snapshot loading, claim extraction, follow-up gating, outcome decision.</td>
+              <td>Leased run</td>
+              <td>Execution result state</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier focal">Tier 4 · Core (Focal)</span></td>
+              <td class="file-col">backend/.../case_native_analysis.py</td>
+              <td>Core claim-anchored analysis engine: calls LLM to decompose snapshot into claims and exact verbatim quotes.</td>
+              <td>Snapshot text</td>
+              <td>Extracted atomic claims</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier focal">Tier 4 · Core (Focal)</span></td>
+              <td class="file-col">backend/.../case_native_binding.py</td>
+              <td>Deterministically verifies each quote against snapshot text; computes exact start/end character offsets.</td>
+              <td>Extracted quotes &amp; snapshot</td>
+              <td>Verified quote spans</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier focal">Tier 4 · Core (Focal)</span></td>
+              <td class="file-col">backend/.../case_native_selection.py</td>
+              <td>Applies deterministic coverage and token budget constraints, recording all omitted claims in trace.</td>
+              <td>Bound claims list</td>
+              <td>Admitted claims subset</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../decision.py</td>
+              <td>Follow-up policy engine: evaluates information completeness against askability thresholds and stop rules.</td>
+              <td>Case findings &amp; history</td>
+              <td><code>COMPLETED</code> vs <code>AWAITING_FOLLOWUP</code></td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../case_run_completion.py</td>
+              <td>Persists final analysis results, updates run status, and coordinates MITRE technical augmentation.</td>
+              <td>Analysis trace</td>
+              <td>Persisted analysis outcome</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../case_run_completion_metadata.py</td>
+              <td>Formats <code>chat_followup</code> metadata payload: question text, gap rationale, and citation mappings.</td>
+              <td>Decision result &amp; gap state</td>
+              <td><code>metadata_json</code> follow-up payload</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../case_mitre_augmentation.py</td>
+              <td>Evaluates technical cyber indicators and conditionally calls <code>rag_service</code> for STIX 2.1 ATT&amp;CK context.</td>
+              <td>Admitted case findings</td>
+              <td>MITRE candidate techniques</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
+              <td class="file-col">backend/.../case_report_generation.py</td>
+              <td>Compiles structured findings, citations, and MITRE appendix into Markdown and WeasyPrint PDF reports.</td>
+              <td>Case analysis &amp; metadata</td>
+              <td>Markdown text &amp; PDF binary</td>
+            </tr>
+
+            <!-- Tier 5: Persistence & External -->
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 5 · Store</span></td>
+              <td class="file-col">backend/app/database.py</td>
+              <td>Async SQLAlchemy engine configuration (<code>asyncpg</code>) and session dependency provider <code>get_db</code>.</td>
+              <td>PostgreSQL URL</td>
+              <td>Async database session</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 5 · Store</span></td>
+              <td class="file-col">backend/app/models/case.py</td>
+              <td>Database entities: <code>Case</code>, <code>EvidenceSource</code>, <code>EvidenceRevision</code>, <code>CaseEvidenceSnapshot</code>.</td>
+              <td>SQLAlchemy ORM</td>
+              <td>Case &amp; Evidence tables</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 5 · Store</span></td>
+              <td class="file-col">backend/app/models/case_run.py</td>
+              <td>Database entities: <code>CaseRun</code> (state machine), <code>CaseAnalysisResult</code>, <code>CaseClarification</code>.</td>
+              <td>SQLAlchemy ORM</td>
+              <td>Workflow execution tables</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 5 · Store</span></td>
+              <td class="file-col">backend/app/models/chat.py</td>
+              <td>Database entities: <code>ChatThread</code>, <code>ChatMessage</code>, <code>ChatReport</code>.</td>
+              <td>SQLAlchemy ORM</td>
+              <td>Chat &amp; Report tables</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 5 · External</span></td>
+              <td class="file-col">backend/app/services/llm/client.py</td>
+              <td>Async OpenRouter client routing prompt requests to models (default: <code>openai/gpt-5.6-luna</code>).</td>
+              <td>Prompt &amp; system contracts</td>
+              <td>Structured JSON generation</td>
+            </tr>
+            <tr>
+              <td class="tier-col"><span class="tag-tier">Tier 5 · External</span></td>
+              <td class="file-col">rag_service/.../hybrid_retriever.py</td>
+              <td>External GraphRAG service: Qdrant dense vector search (BGE-M3) + Neo4j 2-hop graph expansion.</td>
+              <td>Technical search query</td>
+              <td>STIX 2.1 ATT&amp;CK techniques</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Colophon Footer ──────────────────────────────────────── -->
+    <footer>
+      <span>CyberCase Intelligence Framework · Evidence-First Architecture</span>
+      <span>PostgreSQL 16 · FastAPI · React 19 · Next.js 16 · OpenRouter (GPT-5.6-Luna)</span>
+      <span>Canonical Reference: docs/research/CURRENT_PROJECT_DIRECTION.md</span>
+    </footer>
+
+  </div>
+</body>
+</html>

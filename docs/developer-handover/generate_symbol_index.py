@@ -150,6 +150,14 @@ def python_signature(node: ast.AST) -> str:
     return f"{prefix} {node.name}({ast.unparse(node.args)}){returns}"
 
 
+def python_io(node: ast.AST) -> tuple[str, str]:
+    if isinstance(node, ast.ClassDef):
+        return "constructor arguments and class fields", node.name
+    inputs = ast.unparse(node.args)
+    output = ast.unparse(node.returns) if node.returns else "inferred or None"
+    return inputs, output
+
+
 def python_symbols(path: Path) -> tuple[str | None, list[dict[str, object]]]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     symbols = []
@@ -164,7 +172,8 @@ def python_symbols(path: Path) -> tuple[str | None, list[dict[str, object]]]:
 
         def visit_ClassDef(self, node: ast.ClassDef) -> None:
             qualified = self.qualified(node.name)
-            symbols.append({"kind": "class", "name": qualified, "line": node.lineno, "signature": python_signature(node), "doc": ast.get_docstring(node)})
+            inputs, output = python_io(node)
+            symbols.append({"kind": "class", "name": qualified, "line": node.lineno, "signature": python_signature(node), "inputs": inputs, "output": output, "doc": ast.get_docstring(node)})
             self.scope.append((node.name, "class"))
             self.generic_visit(node)
             self.scope.pop()
@@ -172,7 +181,8 @@ def python_symbols(path: Path) -> tuple[str | None, list[dict[str, object]]]:
         def record_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
             qualified = self.qualified(node.name)
             kind = "method" if self.scope and self.scope[-1][1] == "class" else "function"
-            symbols.append({"kind": kind, "name": qualified, "line": node.lineno, "signature": python_signature(node), "doc": ast.get_docstring(node)})
+            inputs, output = python_io(node)
+            symbols.append({"kind": kind, "name": qualified, "line": node.lineno, "signature": python_signature(node), "inputs": inputs, "output": output, "doc": ast.get_docstring(node)})
             self.scope.append((node.name, "function"))
             self.generic_visit(node)
             self.scope.pop()
@@ -221,6 +231,7 @@ def generate() -> str:
         f"Generated `{generated}` from branch `{branch}` at commit `{commit}`; working tree dirty: `{'yes' if dirty else 'no'}`.",
         "",
         "This is the exhaustive first-party source inventory for the checkout. Descriptions generated from code names are navigation aids; runtime truth is determined by imports, route registration, and the handover guide.",
+        "Each symbol includes the declared input and output contract when the language exposes one; body-level effects and cross-file handoffs are explained in the integration guide.",
         "",
     ]
     grouped: dict[str, list[Path]] = {}
@@ -244,7 +255,12 @@ def generate() -> str:
             for symbol in symbols:
                 description = first_sentence(symbol.get("doc")) or describe(str(symbol["name"]), str(symbol["kind"]))
                 signature = str(symbol["signature"]).replace("`", "'")
-                lines.append(f"- L{symbol['line']} `{signature}` — {description}")
+                inputs = str(symbol.get("inputs") or "not applicable")
+                output = str(symbol.get("output") or "not declared")
+                lines.append(
+                    f"- L{symbol['line']} `{signature}` — {description} "
+                    f"Receives: `{inputs}`. Sends: `{output}`."
+                )
             lines.append("")
     lines[5:5] = [f"Coverage: **{len(files)} source files** and **{symbol_count} named symbols**.", ""]
     return "\n".join(lines).rstrip() + "\n"

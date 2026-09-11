@@ -34,6 +34,7 @@ export interface SourceMessageRef {
   filename: string | null;
   pageNumbers: number[];
   evidencePages: EvidencePage[];
+  isNativeEvidence?: boolean;
 }
 
 export interface EvidencePage {
@@ -97,5 +98,6 @@ export interface CaseOverviewData {
   mitreContext: MitreExplainedCard[];
   technicalContextStatus: TechnicalContextStatus;
   analysisMessageId: string | null;
-  contractVersion: "v3" | "legacy" | null;
+  contractVersion: "v3" | "legacy" | "case_native" | null;
+  unavailableReason?: string;
 }

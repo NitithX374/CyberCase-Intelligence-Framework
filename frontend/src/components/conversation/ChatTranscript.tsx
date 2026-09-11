@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, PersistedChatMessage } from "@/lib/api";
 import {
   followUpGapDetailForMessage,
 } from "@/lib/chat-followup";
@@ -12,20 +12,34 @@ import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { AnalysisEvidenceReferences } from "./AnalysisEvidenceReferences";
 import { FollowUpActionCard } from "./FollowUpActionCard";
 import { MitreCandidatePanel } from "./MitreCandidatePanel";
+import { CaseAnalysisLeadCard } from "./CaseAnalysisLeadCard";
 
 interface ChatTranscriptProps {
   messages: PersistedChatMessage[];
   isProcessing: boolean;
+  leadResult?: CaseAnalysisResultRead | null;
+  leadSnapshot?: CaseEvidenceSnapshotRead | null;
+  onOpenOverview?: () => void;
 }
 
-export function ChatTranscript({ messages, isProcessing }: ChatTranscriptProps) {
+export function ChatTranscript({
+  messages,
+  isProcessing,
+  leadResult,
+  leadSnapshot,
+  onOpenOverview,
+}: ChatTranscriptProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const displayMessages = leadResult
+    ? messages.filter((message) => !isLeadAnalysisPublication(message, leadResult.id))
+    : messages;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView?.({ behavior: "smooth" });
-  }, [messages.length, isProcessing]);
+  }, [displayMessages.length, isProcessing]);
 
-  if (messages.length === 0) {
+  if (displayMessages.length === 0 && !leadResult) {
     return (
       <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-8 text-center">
         <div className="workspace-card max-w-md space-y-3 p-8">
@@ -43,7 +57,19 @@ export function ChatTranscript({ messages, isProcessing }: ChatTranscriptProps) 
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-1 px-4 py-4 md:px-5 md:py-6">
-      {messages.map((message) => {
+      {leadResult && (
+        <CaseAnalysisLeadCard
+          result={leadResult}
+          snapshot={leadSnapshot}
+          onOpenOverview={onOpenOverview}
+        />
+      )}
+      {displayMessages.length === 0 && leadResult && (
+        <div className="rounded-xl border border-line bg-surface/40 p-4 text-center text-xs text-ink-muted">
+          Ask a question below to explore the case analysis or review details.
+        </div>
+      )}
+      {displayMessages.map((message) => {
         const isUser = message.role === "user";
         const followUpGap = followUpGapDetailForMessage(message);
         const mitreCandidates = isUser ? null : mitreCandidatesForMessage(message);
@@ -90,4 +116,18 @@ export function ChatTranscript({ messages, isProcessing }: ChatTranscriptProps) 
       <div ref={bottomRef} aria-hidden="true" />
     </div>
   );
+}
+
+function isLeadAnalysisPublication(
+  message: PersistedChatMessage,
+  leadResultId: string,
+): boolean {
+  const metadata = message.metadata_json;
+  const isResponseScopedAnswer = message.message_kind === "conversation" && (
+    metadata?.analysis_kind === "question_answer" ||
+    metadata?.context_analysis_result_id === leadResultId
+  );
+  if (isResponseScopedAnswer) return false;
+  return message.analysis_result_id === leadResultId ||
+    metadata?.analysis_result_id === leadResultId;
 }

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { sourceMessage, analysisMessage } from "./overview-fixtures";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
+import type { CaseRunRead } from "@/lib/api";
 import { sha256Hex } from "@/lib/sha256";
 import { mockNativeDialog } from "./mock-native-dialog";
 
@@ -168,5 +169,79 @@ describe("CaseOverviewView", () => {
     fireEvent(dialog, new Event("cancel", { bubbles: false, cancelable: true }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(sourceButton).toHaveFocus();
+  });
+
+  it("renders failed state when native run has failed and no analysis result is present", () => {
+    const openIntake = vi.fn();
+    render(
+      <CaseOverviewView
+        threadId="case-1"
+        threadTitle="Failed Case"
+        threadStatus="idle"
+        messages={[]}
+        onOpenChat={vi.fn()}
+        onOpenReport={vi.fn()}
+        onOpenIntake={openIntake}
+        nativeRunStatus="failed"
+        nativeRun={{
+          id: "run-1",
+          case_id: "case-1",
+          status: "failed",
+          error_message: "Case analysis extraction failed.",
+          created_at: "2026-09-10T00:00:00Z",
+          updated_at: "2026-09-10T00:00:00Z",
+        } as unknown as CaseRunRead}
+      />,
+    );
+    expect(screen.getByText("Analysis Failed")).toBeInTheDocument();
+    expect(screen.getByText("Case analysis extraction failed.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open Intake" }));
+    expect(openIntake).toHaveBeenCalledOnce();
+  });
+
+  it("renders clarification needed state with Proceed to Chat button when a clarification is pending", () => {
+    const openChat = vi.fn();
+    const clarification = {
+      id: "clarification-1",
+      case_id: "case-1",
+      origin_analysis_result_id: "analysis-1",
+      origin_snapshot_id: "snapshot-1",
+      gap_key: "topic:incident-time",
+      gap_id: "G-01",
+      topic: "Incident time",
+      question: "When did the incident occur?",
+      metadata_json: {},
+      state: "pending" as const,
+      answer_evidence_source_id: null,
+      question_message_id: null,
+      answer_message_id: null,
+      answer_fingerprint: null,
+      answered_at: null,
+      created_at: "2026-09-10T01:00:00Z",
+      updated_at: "2026-09-10T01:00:00Z",
+    };
+
+    render(
+      <CaseOverviewView
+        threadId="case-1"
+        threadTitle="Awaiting Case"
+        threadStatus="awaiting_followup"
+        messages={[]}
+        onOpenChat={openChat}
+        onOpenReport={vi.fn()}
+        nativeClarifications={[clarification]}
+      />,
+    );
+
+    expect(screen.getByText(/CLARIFICATION NEEDED/i)).toBeInTheDocument();
+    expect(screen.getByText("Analysis Needs More Information")).toBeInTheDocument();
+    expect(screen.getByText(/When did the incident occur\?/)).toBeInTheDocument();
+    expect(screen.queryByText(/Executive Summary/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Case Findings/i)).not.toBeInTheDocument();
+
+    const proceedButton = screen.getByRole("button", { name: "Proceed to Chat" });
+    expect(proceedButton).toBeInTheDocument();
+    fireEvent.click(proceedButton);
+    expect(openChat).toHaveBeenCalledOnce();
   });
 });

@@ -1,4 +1,4 @@
-import { getChatRun, type ChatThreadDetail } from "@/lib/api";
+import type { CaseRunRead, ChatThreadDetail } from "@/lib/api";
 
 export const CHAT_POLL_INTERVAL_MS = 1000;
 
@@ -8,13 +8,13 @@ export function waitForNextChatPoll(signal: AbortSignal): Promise<void> {
       resolve();
       return;
     }
-    const finish = () => {
+    const finishChatPollingWait = () => {
       window.clearTimeout(timeoutId);
-      signal.removeEventListener("abort", finish);
+      signal.removeEventListener("abort", finishChatPollingWait);
       resolve();
     };
-    const timeoutId = window.setTimeout(finish, CHAT_POLL_INTERVAL_MS);
-    signal.addEventListener("abort", finish, { once: true });
+    const timeoutId = window.setTimeout(finishChatPollingWait, CHAT_POLL_INTERVAL_MS);
+    signal.addEventListener("abort", finishChatPollingWait, { once: true });
   });
 }
 
@@ -25,25 +25,29 @@ export function isChatRequestCanceled(signal: AbortSignal, error: unknown): bool
   );
 }
 
-interface ChatPollingOptions {
-  threadId: string;
-  runId?: string;
+interface CasePollingOptions {
+  runId: string;
   signal: AbortSignal;
   isCurrent: () => boolean;
+  readRun: () => Promise<CaseRunRead>;
   readThread: () => Promise<ChatThreadDetail>;
   applyThreadDetail: (detail: ChatThreadDetail, failureMessage?: string) => void;
 }
 
-export async function pollChatThreadUntilSettled({
-  threadId, runId, signal, isCurrent, readThread, applyThreadDetail,
-}: ChatPollingOptions): Promise<ChatThreadDetail | null> {
+export async function pollCaseRunUntilSettled({
+  signal,
+  isCurrent,
+  readRun,
+  readThread,
+  applyThreadDetail,
+}: CasePollingOptions): Promise<ChatThreadDetail | null> {
   let consecutiveReadFailures = 0;
   while (!signal.aborted && isCurrent()) {
     await waitForNextChatPoll(signal);
     if (signal.aborted || !isCurrent()) return null;
-    let detail: ChatThreadDetail;
+    let run: CaseRunRead;
     try {
-      detail = await readThread();
+      run = await readRun();
       consecutiveReadFailures = 0;
     } catch (error) {
       if (isChatRequestCanceled(signal, error) || !isCurrent()) return null;
@@ -52,24 +56,21 @@ export async function pollChatThreadUntilSettled({
       continue;
     }
     if (signal.aborted || !isCurrent()) return null;
-    if (detail.status === "processing") {
-      applyThreadDetail(detail);
-      continue;
+    if (run.status === "queued" || run.status === "running") continue;
+    let detail: ChatThreadDetail;
+    try {
+      detail = await readThread();
+    } catch (error) {
+      if (isChatRequestCanceled(signal, error) || !isCurrent()) return null;
+      throw error;
     }
-    if (runId) {
-      let run;
-      try {
-        run = await getChatRun(threadId, runId, signal);
-      } catch (error) {
-        if (isChatRequestCanceled(signal, error) || !isCurrent()) return null;
-        throw error;
-      }
-      if (signal.aborted || !isCurrent()) return null;
-      if (run.status === "failed") {
-        applyThreadDetail(detail, run.error_message || "Background processing failed. Retry the answer.");
-        return null;
-      }
-      if (run.status !== "completed") continue;
+    if (signal.aborted || !isCurrent()) return null;
+    if (run.status === "failed") {
+      applyThreadDetail(
+        detail,
+        run.error_message || "Case processing failed. Retry the saved message.",
+      );
+      return null;
     }
     applyThreadDetail(detail);
     return detail;

@@ -67,9 +67,10 @@ export function formatPageReference(pageNumbers: number[]): string {
 }
 
 export function formatEvidenceCitationText(
-  sourceRef: Pick<SourceMessageRef, "label" | "pageNumbers" | "sourceType">,
+  sourceRef: Pick<SourceMessageRef, "label" | "pageNumbers" | "sourceType" | "isNativeEvidence">,
 ): string {
   if (sourceRef.pageNumbers.length > 0) return formatPageReference(sourceRef.pageNumbers);
+  if (sourceRef.isNativeEvidence) return sourceRef.label;
   if (sourceRef.sourceType === "case_description") return "Case narrative";
   if (sourceRef.sourceType === "clarification_response") return "Clarification";
   if (sourceRef.sourceType === "additional_info") return "Added information";

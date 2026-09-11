@@ -149,6 +149,10 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
     if len(occurrences) > 1:
         return None
 
+    ellipsis_aligned = _expand_unique_ellipsis_quote(content, quote)
+    if ellipsis_aligned is not None:
+        return ellipsis_aligned
+
     clean_quote = re.sub(r"[*_#`~]", "", quote)
     clean_quote = re.sub(r'["“”]', '"', clean_quote)
     clean_quote = re.sub(r"['‘’]", "'", clean_quote)
@@ -165,10 +169,10 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
                 parts.append(r"['‘’]")
             else:
                 parts.append(re.escape(ch))
-        return r"[*_#`~]*".join(parts)
+        return r"[*_#`~]*\s*".join(parts)
 
     word_patterns = [word_to_pattern(w) for w in words]
-    pattern_str = r"[*_#`~]*" + r"[*_#`~\s]+".join(word_patterns) + r"[*_#`~]*"
+    pattern_str = r"[*_#`~]*" + r"[*_#`~\s]*".join(word_patterns) + r"[*_#`~]*"
 
     try:
         matches = list(re.finditer(pattern_str, content))
@@ -180,6 +184,38 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
         return content[match.start() : match.end()]
 
     return None
+
+
+def _expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
+    parts = [part.strip() for part in re.split(r"(?:\.{3,}|…+)", quote)]
+    if len(parts) < 2 or any(len(part) < 2 for part in parts):
+        return None
+    candidates: list[tuple[int, int]] = []
+
+    def collect(part_index: int, search_from: int, span_start: int | None) -> None:
+        if len(candidates) > 1:
+            return
+        if part_index == len(parts):
+            if span_start is not None:
+                candidates.append((span_start, search_from))
+            return
+        part = parts[part_index]
+        start = content.find(part, search_from)
+        while start >= 0:
+            collect(
+                part_index + 1,
+                start + len(part),
+                start if span_start is None else span_start,
+            )
+            if len(candidates) > 1:
+                return
+            start = content.find(part, start + 1)
+
+    collect(0, 0, None)
+    if len(candidates) != 1:
+        return None
+    lower, upper = candidates[0]
+    return content[lower:upper]
 
 
 __all__ = [

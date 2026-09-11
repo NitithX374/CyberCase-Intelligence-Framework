@@ -2,7 +2,7 @@
 
 import { useAccountState } from "@/hooks/use-account-state";
 import { useMemo, useState, type FormEvent } from "react";
-import type { CaseIntakeSubmission, PersistedChatMessage, ThreadStatus } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseDocumentRead, CaseIntakeSubmission, CaseRunRead, EvidenceSourceRead, PersistedChatMessage, ThreadStatus } from "@/lib/api";
 import { bindCaseNarrativeDocumentSource, type CaseNarrativeDraft } from "@/lib/case-narrative-document";
 import { isCaseEvidenceMessage } from "@/lib/case-evidence";
 import { buildCaseOverview } from "@/lib/case-overview";
@@ -15,6 +15,7 @@ import { ExtractedTextPreview } from "./ExtractedTextPreview";
 import { IntakeNarrativeForm } from "./IntakeNarrativeForm";
 import { intakeReadableText } from "@/lib/intake-readable-text";
 import type { CaseOverviewData } from "@/lib/case-overview";
+import { CaseFirstIntakeView } from "./CaseFirstIntakeView";
 
 interface CaseIntakeViewProps {
   caseKey?: string;
@@ -27,9 +28,41 @@ interface CaseIntakeViewProps {
   onOpenOverview?: () => void;
   onOpenChat?: () => void;
   onOpenMaterials?: () => void;
+  nativeCaseId?: string;
+  nativeDocuments?: CaseDocumentRead[];
+  nativeEvidence?: EvidenceSourceRead[];
+  nativeAnalysisResult?: CaseAnalysisResultRead | null;
+  nativeRun?: CaseRunRead | null;
+  nativeCaseDataLoading?: boolean;
+  nativeIsUploadingDocument?: boolean;
+  nativeAdmittingExtractionId?: string | null;
+  onUploadNativeDocument?: (file: File) => void;
+  onAdmitNativeExtraction?: (documentId: string, extractionId: string) => void;
 }
 
 export function CaseIntakeView(props: CaseIntakeViewProps) {
+  if (props.nativeCaseId) {
+    return (
+      <CaseFirstIntakeView
+        caseId={props.nativeCaseId}
+        documents={props.nativeDocuments ?? []}
+        evidence={props.nativeEvidence ?? []}
+        analysisResult={props.nativeAnalysisResult ?? null}
+        run={props.nativeRun ?? null}
+        isSubmitting={props.isSubmitting}
+        isCaseDataLoading={props.nativeCaseDataLoading ?? false}
+        error={props.error}
+        isUploadingDocument={props.nativeIsUploadingDocument ?? false}
+        admittingExtractionId={props.nativeAdmittingExtractionId ?? null}
+        onSubmitCase={props.onSubmitCase}
+        onUploadDocument={props.onUploadNativeDocument!}
+        onAdmitExtraction={props.onAdmitNativeExtraction!}
+        onOpenOverview={props.onOpenOverview}
+        onOpenChat={props.onOpenChat}
+        onOpenMaterials={props.onOpenMaterials}
+      />
+    );
+  }
   const caseKey = (props.caseKey ?? props.threadId ?? props.messages?.[0]?.thread_id ?? "draft").trim() || "draft";
   return <CaseIntakeContent key={caseKey} {...props} caseKey={caseKey} />;
 }

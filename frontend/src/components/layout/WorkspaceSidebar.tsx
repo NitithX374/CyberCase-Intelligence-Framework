@@ -2,29 +2,30 @@
 
 import Link from "next/link";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
-import type { ChatThreadRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api";
 import { Icon, type IconName } from "@/components/common/icons";
 import {
   workspaceViewDescriptions,
   workspaceViewLabels,
   type WorkspaceView,
 } from "@/components/common/types";
+import { UserProfileMenu } from "@/components/common/UserProfileMenu";
 
 interface WorkspaceNavigationProps {
-  threads: ChatThreadRead[];
-  activeThreadId: string | null;
-  threadsLoading: boolean;
-  threadsError: string | null;
-  onSelectThread: (threadId: string) => void;
-  onNewChat: () => void;
-  onRequestDelete: (thread: ChatThreadRead) => void;
-  deletingThreadId: string | null;
+  cases: CaseRead[];
+  activeCaseId: string | null;
+  casesLoading: boolean;
+  casesError: string | null;
+  onSelectCase: (caseId: string) => void;
+  onNewCase: () => void;
+  onRequestDelete: (caseRecord: CaseRead) => void;
+  deletingCaseId: string | null;
   activeView: WorkspaceView;
   onViewChange: (view: WorkspaceView) => void;
 }
 
 const threadStatusConfig: Record<
-  ChatThreadRead["status"],
+  CaseRead["status"],
   { label: string; dotClass: string }
 > = {
   idle: { label: "Ready", dotClass: "bg-ink-muted" },
@@ -49,14 +50,14 @@ const toolTabs: Array<{ view: WorkspaceView; icon: IconName }> = [
 ];
 
 export function WorkspaceSidebar({
-  threads,
-  activeThreadId,
-  threadsLoading,
-  threadsError,
-  onSelectThread,
-  onNewChat,
+  cases,
+  activeCaseId,
+  casesLoading,
+  casesError,
+  onSelectCase,
+  onNewCase,
   onRequestDelete,
-  deletingThreadId,
+  deletingCaseId,
   activeView,
   onViewChange,
 }: WorkspaceNavigationProps) {
@@ -81,7 +82,7 @@ export function WorkspaceSidebar({
       <div className="px-3">
         <button
           type="button"
-          onClick={onNewChat}
+          onClick={onNewCase}
           className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-xs font-bold text-ivory outline-none transition-colors duration-150 hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
           <Icon name="plus" className="h-3.5 w-3.5 shrink-0" />
@@ -110,39 +111,39 @@ export function WorkspaceSidebar({
       >
         <div className="flex items-center justify-between px-1">
           <p className="section-eyebrow">Recent cases</p>
-          {threads.length > 0 && (
+          {cases.length > 0 && (
             <span className="rounded-full bg-surface-hover px-1.5 py-0.5 text-[9px] font-bold text-ink-secondary">
-              {threads.length}
+              {cases.length}
             </span>
           )}
         </div>
 
-        {threadsLoading ? (
+        {casesLoading ? (
           <p className="mt-3 px-1 text-xs text-ink-secondary" role="status">
             Loading…
           </p>
-        ) : threadsError ? (
+        ) : casesError ? (
           <p className="mt-3 break-words px-1 text-xs leading-5 text-accent">
             ไม่สามารถโหลดรายการคดีได้
           </p>
-        ) : threads.length === 0 ? (
+        ) : cases.length === 0 ? (
           <p className="mt-3 px-1 text-xs leading-5 text-ink-secondary">
             No saved cases yet.
           </p>
         ) : (
           <div className="mt-2 space-y-1">
-            {threads.map((thread) => {
-              const selected = thread.id === activeThreadId;
-              const statusInfo = threadStatusConfig[thread.status];
-              const displayTitle = thread.title === "New chat" ? "New case" : thread.title;
+            {cases.map((caseRecord) => {
+              const selected = caseRecord.id === activeCaseId;
+              const statusInfo = threadStatusConfig[caseRecord.status];
+              const displayTitle = caseRecord.title;
               return (
-                <div key={thread.id} className="group flex items-center gap-1">
+                <div key={caseRecord.id} className="group flex items-center gap-1">
                   <button
                     type="button"
                     aria-current={selected ? "page" : undefined}
                     aria-label={`${displayTitle}, ${statusInfo.label}`}
                     title={displayTitle}
-                    onClick={() => onSelectThread(thread.id)}
+                    onClick={() => onSelectCase(caseRecord.id)}
                     className={`relative flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border-l-2 px-2.5 py-1.5 text-left outline-none transition-[background-color,border-color,color] duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 motion-reduce:transition-none ${
                       selected
                         ? "border-l-accent bg-surface text-ink shadow-[0_1px_2px_rgba(39,39,39,0.04)]"
@@ -161,8 +162,8 @@ export function WorkspaceSidebar({
                     type="button"
                     aria-label={`Delete ${displayTitle}`}
                     title={`Delete ${displayTitle}`}
-                    disabled={deletingThreadId !== null}
-                    onClick={() => onRequestDelete(thread)}
+                    disabled={deletingCaseId !== null}
+                    onClick={() => onRequestDelete(caseRecord)}
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-secondary opacity-0 outline-none transition-[opacity,background-color,color] duration-150 hover:bg-accent-soft hover:text-accent focus:opacity-100 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:text-ink-disabled disabled:opacity-40 group-hover:opacity-100 group-focus-within:opacity-100 motion-reduce:transition-none"
                   >
                     <Icon name="trash" className="h-3 w-3" />
@@ -173,6 +174,11 @@ export function WorkspaceSidebar({
           </div>
         )}
       </section>
+
+      {/* User Account / Profile at bottom left */}
+      <div className="mt-auto border-t border-line p-3">
+        <UserProfileMenu />
+      </div>
     </aside>
   );
 }

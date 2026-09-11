@@ -4,7 +4,7 @@
 
 This handover describes the live working tree on branch `main` at commit `58f2302` on 2026-08-31. The working tree was already materially dirty when this report was created. The uncommitted backend Case Analysis and Stateful Follow-up implementation is part of the described system, but it is not yet a clean, immutable release baseline.
 
-Use this guide for architecture and operational intent. Use [SYMBOL_INDEX.md](SYMBOL_INDEX.md) for the exhaustive file-by-file and function-by-function inventory. The index is generated from the checkout, includes line numbers and signatures, and covers runtime code, tests, migrations, evaluation utilities, research scripts, and repository tooling.
+Use this guide for the historical handover context. Use [BACKEND_FRONTEND_INTEGRATION.md](BACKEND_FRONTEND_INTEGRATION.md) for the current backend/frontend contract, file roles, integration pipelines, and verified route caveats. Use [SYMBOL_INDEX.md](SYMBOL_INDEX.md) for the exhaustive file-by-file and function-by-function inventory. The index is generated from the checkout, includes line numbers and signatures, and covers runtime code, tests, migrations, evaluation utilities, research scripts, and repository tooling.
 
 ## Executive handover
 

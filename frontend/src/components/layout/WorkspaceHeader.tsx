@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
-import type { ChatThreadRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import { UserProfileMenu } from "@/components/common/UserProfileMenu";
 import {
@@ -10,17 +10,17 @@ import {
 } from "@/components/common/types";
 
 interface WorkspaceHeaderProps {
-  activeThread: ChatThreadRead | null;
-  activeThreadId: string | null;
+  activeCase: CaseRead | null;
+  activeCaseId: string | null;
   activeView: WorkspaceView;
-  threads: ChatThreadRead[];
-  creatingThread: boolean;
-  deletingThreadId: string | null;
+  cases: CaseRead[];
+  creatingCase: boolean;
+  deletingCaseId: string | null;
   phase: RunPhase;
   onViewChange: (view: WorkspaceView) => void;
-  onSelectThread: (threadId: string) => void;
-  onNewChat: () => void;
-  onRequestDelete: (thread: ChatThreadRead) => void;
+  onSelectCase: (caseId: string) => void;
+  onNewCase: () => void;
+  onRequestDelete: (caseRecord: CaseRead) => void;
   isChatOpen?: boolean;
   onToggleChat?: () => void;
 }
@@ -35,24 +35,24 @@ const phasePresentation: Record<RunPhase, { label: string }> = {
 };
 
 export function WorkspaceHeader({
-  activeThread,
-  activeThreadId,
+  activeCase,
+  activeCaseId,
   activeView,
-  threads,
-  creatingThread,
-  deletingThreadId,
+  cases,
+  creatingCase,
+  deletingCaseId,
   phase,
   onViewChange,
-  onSelectThread,
-  onNewChat,
+  onSelectCase,
+  onNewCase,
   onRequestDelete,
   isChatOpen = true,
   onToggleChat,
 }: WorkspaceHeaderProps) {
-  const displayThreadTitle =
-    activeThread?.title === "New chat" || !activeThread?.title
+  const displayCaseTitle =
+    !activeCase?.title
       ? "New case"
-      : activeThread.title;
+      : activeCase.title;
   const currentPhase = phasePresentation[phase];
 
   return (
@@ -72,7 +72,7 @@ export function WorkspaceHeader({
             <span>{workspaceViewLabels[activeView]}</span>
           </div>
           <p className="truncate text-sm font-extrabold tracking-[-0.02em] text-ink sm:mt-0.5 sm:text-base">
-            {displayThreadTitle}
+            {displayCaseTitle}
           </p>
           {activeView !== "intake" && (
             <div className="mt-1 flex items-center gap-2 text-[10px] font-medium text-ink-secondary">
@@ -98,8 +98,8 @@ export function WorkspaceHeader({
             <button
               type="button"
               onClick={onToggleChat}
-              aria-label={isChatOpen ? "Close AI Copilot" : "Open AI Copilot"}
-              title={isChatOpen ? "Close Copilot" : "Open Copilot"}
+              aria-label={isChatOpen ? "Close chat" : "Open chat"}
+              title={isChatOpen ? "Close chat" : "Open chat"}
               className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all focus-visible:ring-2 focus-visible:ring-primary ${
                 isChatOpen
                   ? "border-primary bg-primary text-ivory shadow-xs"
@@ -107,7 +107,7 @@ export function WorkspaceHeader({
               }`}
             >
               <Icon name="chat" className="h-4 w-4" />
-              <span className="hidden sm:inline">Copilot</span>
+              <span className="hidden sm:inline">Chat</span>
               {phase === "awaiting_followup" && (
                 <span
                   className="h-2 w-2 rounded-full bg-unresolved motion-safe:animate-ping"
@@ -116,7 +116,6 @@ export function WorkspaceHeader({
               )}
             </button>
           )}
-          <UserProfileMenu />
         </div>
       </div>
 
@@ -142,44 +141,48 @@ export function WorkspaceHeader({
         </label>
         <select
           id="mobile-saved-case"
-          value={activeThreadId ?? ""}
+          value={activeCaseId ?? ""}
           onChange={(event) => {
-            if (event.target.value) onSelectThread(event.target.value);
+            if (event.target.value) onSelectCase(event.target.value);
           }}
           aria-label="Select saved case"
           className="min-h-10 min-w-0 rounded-lg border border-line bg-canvas px-3 text-xs font-bold text-ink outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-primary"
         >
           <option value="">Select case</option>
-          {threads.map((thread) => (
-            <option key={thread.id} value={thread.id}>
-              {thread.title === "New chat" ? "New case" : thread.title}
+          {cases.map((caseRecord) => (
+            <option key={caseRecord.id} value={caseRecord.id}>
+              {caseRecord.title}
             </option>
           ))}
         </select>
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={onNewChat}
-            disabled={creatingThread}
+            onClick={onNewCase}
+            disabled={creatingCase}
             aria-label="New case"
             title="New case"
             className="flex min-h-10 min-w-10 flex-1 items-center justify-center rounded-lg border border-line bg-canvas text-ink outline-none transition-colors hover:border-line-strong hover:bg-surface-hover active:bg-surface-nested focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
           >
             <Icon name="plus" className="h-4 w-4" />
           </button>
-          {activeThread && (
+          {activeCase && (
             <button
               type="button"
-              onClick={() => onRequestDelete(activeThread)}
-              disabled={deletingThreadId !== null}
-              aria-label={`Delete ${displayThreadTitle}`}
-              title={`Delete ${displayThreadTitle}`}
+              onClick={() => onRequestDelete(activeCase)}
+              disabled={deletingCaseId !== null}
+              aria-label={`Delete ${displayCaseTitle}`}
+              title={`Delete ${displayCaseTitle}`}
               className="flex min-h-10 min-w-10 flex-1 items-center justify-center rounded-lg border border-line bg-canvas text-ink-secondary outline-none transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
             >
               <Icon name="trash" className="h-4 w-4" />
             </button>
           )}
         </div>
+      </div>
+
+      <div className="mt-2.5 border-t border-line/60 pt-2 md:hidden">
+        <UserProfileMenu />
       </div>
     </header>
   );

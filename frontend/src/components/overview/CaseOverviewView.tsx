@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/common/icons";
-import type { PersistedChatMessage, ThreadStatus } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseClarificationRead, CaseEvidenceSnapshotRead, CaseRunRead, PersistedChatMessage, ThreadStatus } from "@/lib/api";
 import { buildCaseOverview, type SourceMessageRef } from "@/lib/case-overview";
+import { buildNativeCaseOverview } from "@/lib/caseOverviewNative";
 import { CaseOverviewHeader } from "./CaseOverviewHeader";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import { MitreExplainedSimply } from "./MitreExplainedSimply";
@@ -36,6 +37,15 @@ interface CaseOverviewViewProps {
   onOpenMaterials?: () => void;
   onOpenTechnicalContext?: () => void;
   onNavigateToSource?: (messageId: string) => void;
+  nativeAnalysisResult?: CaseAnalysisResultRead | null;
+  nativeEvidenceSnapshot?: CaseEvidenceSnapshotRead | null;
+  nativeRunStatus?: CaseRunRead["status"] | null;
+  nativeClarifications?: CaseClarificationRead[];
+  clarificationSubmittingId?: string | null;
+  onAnswerClarification?: (clarificationId: string, answer: string) => void;
+  nativeAnalysisLoading?: boolean;
+  nativeSnapshotLoading?: boolean;
+  nativeRun?: CaseRunRead | null;
 }
 
 export function CaseOverviewView({
@@ -49,6 +59,15 @@ export function CaseOverviewView({
   onOpenMaterials,
   onOpenTechnicalContext,
   onNavigateToSource,
+  nativeAnalysisResult,
+  nativeEvidenceSnapshot,
+  nativeRunStatus,
+  nativeClarifications,
+  clarificationSubmittingId = null,
+  onAnswerClarification,
+  nativeAnalysisLoading = false,
+  nativeSnapshotLoading = false,
+  nativeRun,
 }: CaseOverviewViewProps) {
   const [activeSourcePopover, setActiveSourcePopover] = useState<{
     sourceRef: SourceMessageRef;
@@ -57,12 +76,13 @@ export function CaseOverviewView({
     citationRole?: "supporting" | "conflicting";
     analysisMessageId: string | null;
   } | null>(null);
-  const overview = useMemo(
-    () => buildCaseOverview(messages, threadStatus),
-    [messages, threadStatus],
-  );
+  const nativeMode = nativeAnalysisResult !== undefined || nativeEvidenceSnapshot !== undefined || nativeRunStatus !== undefined || nativeClarifications !== undefined;
+  const overview = useMemo(() => nativeMode
+    ? buildNativeCaseOverview(nativeAnalysisResult ?? null, nativeEvidenceSnapshot ?? null, nativeRunStatus ?? null)
+    : buildCaseOverview(messages, threadStatus),
+  [messages, nativeAnalysisResult, nativeEvidenceSnapshot, nativeMode, nativeRunStatus, threadStatus]);
 
-  if (!threadId || messages.length === 0) {
+  if (!threadId || (!nativeMode && messages.length === 0)) {
     return (
       <OverviewState
         eyebrow="CASE OVERVIEW"
@@ -73,6 +93,47 @@ export function CaseOverviewView({
         actionIcon="intake"
       />
     );
+  }
+
+  if (nativeMode && nativeAnalysisLoading && !nativeAnalysisResult) {
+    return <OverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and its evidence snapshot." actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} processing />;
+  }
+
+  if (nativeMode && nativeSnapshotLoading && nativeAnalysisResult) {
+    return <OverviewState title="Loading Case evidence…" description="Restoring the exact evidence snapshot used by this analysis." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenChat} processing />;
+  }
+
+  if (nativeMode && nativeRunStatus === "failed" && !nativeAnalysisResult) {
+    return (
+      <OverviewState
+        eyebrow="CASE OVERVIEW"
+        title="Analysis Failed"
+        description={nativeRun?.error_message || "The case analysis failed to complete. Return to Intake to verify the admitted material and retry."}
+        actionLabel="Open Intake"
+        onAction={onOpenIntake ?? onOpenChat}
+        actionIcon="intake"
+      />
+    );
+  }
+
+  const pendingClarification = nativeClarifications?.find((item) => item.state === "pending");
+  const isAwaitingFollowup = threadStatus === "awaiting_followup" || Boolean(pendingClarification);
+  if (isAwaitingFollowup) {
+    const question = pendingClarification?.question?.trim();
+    return (
+      <OverviewState
+        eyebrow={pendingClarification?.topic ? `CLARIFICATION NEEDED · ${pendingClarification.topic}` : "CLARIFICATION NEEDED"}
+        title="Analysis Needs More Information"
+        description={question ? `The case analysis requires additional details: "${question}" Please proceed to Chat to follow up.` : "The case analysis requires additional details to proceed. Please proceed to Chat to follow up."}
+        actionLabel="Proceed to Chat"
+        onAction={onOpenChat}
+        actionIcon="chat"
+      />
+    );
+  }
+
+  if (overview.unavailableReason) {
+    return <OverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the admitted Case material.`} actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} actionIcon="intake" />;
   }
 
   if (!overview.hasAnalysis && overview.isProcessing) {
@@ -112,6 +173,8 @@ export function CaseOverviewView({
         : { sourceRef, anchorElement, sourceKey, citationRole, analysisMessageId: overview.analysisMessageId },
     );
   };
+  const sourceNavigation = nativeMode ? undefined : onNavigateToSource;
+  const analysisKey = nativeAnalysisResult?.id ?? overview.analysisMessageId;
 
   return (
     <div
@@ -136,9 +199,9 @@ export function CaseOverviewView({
             <OverviewSummarySection summary={overview.incidentSummary} />
             <div className="order-3 min-w-0">
               <CaseFindingsSection
-                key={overview.analysisMessageId}
+                key={analysisKey}
                 findings={overview.findings}
-                onNavigateToSource={onNavigateToSource}
+                onNavigateToSource={sourceNavigation}
                 onSelectSource={handleSelectSource}
                 activeSourceKey={activeSourcePopover?.sourceKey ?? null}
               />
@@ -146,7 +209,13 @@ export function CaseOverviewView({
           </div>
 
           <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5 lg:border-l lg:border-line lg:pl-5">
-            <OverviewStatusRail messages={messages} overview={overview} />
+            <OverviewStatusRail
+              messages={messages}
+              overview={overview}
+              nativeAnalysisResult={nativeAnalysisResult}
+              nativeEvidenceSnapshot={nativeEvidenceSnapshot}
+              nativeRunStatus={nativeRunStatus}
+            />
             <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
             <div className="order-5 min-w-0">
               <MitreExplainedSimply
@@ -164,7 +233,7 @@ export function CaseOverviewView({
           sourceRef={activeSourcePopover.sourceRef}
           anchorElement={activeSourcePopover.anchorElement}
           onClose={() => setActiveSourcePopover(null)}
-          onNavigateToSource={onNavigateToSource}
+          onNavigateToSource={sourceNavigation}
           citationRole={activeSourcePopover.citationRole}
         />
       )}

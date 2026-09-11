@@ -7,7 +7,7 @@ import {
   getOAuthLoginUrl,
   type DevLoginPayload,
 } from "@/lib/api";
-import { chatQueryKeys } from "./use-chat-queries";
+import { chatQueryKeys } from "./useChatQueries";
 
 export const authQueryKeys = {
   all: ["auth"] as const,
@@ -64,8 +64,8 @@ export function useAuth() {
     },
   });
 
-  const loginWithOAuth = (provider: "google" | "github") => {
-    window.location.href = getOAuthLoginUrl(provider);
+  const loginWithOAuth = (provider: "google" = "google", redirect?: string) => {
+    window.location.href = getOAuthLoginUrl(provider, redirect);
   };
 
   return {

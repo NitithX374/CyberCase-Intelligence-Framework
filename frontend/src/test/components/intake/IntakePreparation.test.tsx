@@ -28,6 +28,62 @@ const analysis: PersistedChatMessage = {
 describe("Case preparation workflow", () => {
   beforeEach(() => resetDocumentIngestionState());
 
+  it("allows native analysis from admitted evidence without another chat or narrative submission", () => {
+    const submit = vi.fn();
+    render(
+      <CaseIntakeView
+        nativeCaseId="case-1"
+        nativeEvidence={[{
+          id: "source-1",
+          case_id: "case-1",
+          source_kind: "narrative",
+          document_id: null,
+          origin_message_id: null,
+          source_metadata_json: {},
+          created_at: "2026-09-11T00:00:00Z",
+          archived_at: null,
+          revisions: [{
+            id: "revision-1",
+            source_id: "source-1",
+            revision: 1,
+            exact_text: "Admitted case material",
+            text_sha256: "hash",
+            provenance_json: {},
+            extraction_id: null,
+            admitted_at: "2026-09-11T00:00:00Z",
+            archived_at: null,
+          }],
+        }]}
+        isSubmitting={false}
+        nativeCaseDataLoading={false}
+        onSubmitCase={submit}
+        onUploadNativeDocument={vi.fn()}
+        onAdmitNativeExtraction={vi.fn()}
+      />,
+    );
+
+    const analyzeButton = screen.getByRole("button", { name: /Analyze case/i });
+    expect(analyzeButton).not.toBeDisabled();
+    fireEvent.click(analyzeButton);
+    expect(submit).toHaveBeenCalledWith({ title: undefined, description: "" });
+  });
+
+  it("keeps native analysis disabled while saved case material is loading", () => {
+    render(
+      <CaseIntakeView
+        nativeCaseId="case-1"
+        isSubmitting={false}
+        nativeCaseDataLoading
+        onSubmitCase={vi.fn()}
+        onUploadNativeDocument={vi.fn()}
+        onAdmitNativeExtraction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading case material");
+    expect(screen.getByRole("button", { name: /Analyze case/i })).toBeDisabled();
+  });
+
   it("shows real analysis fields and one primary continuation for a saved case", () => {
     const onOverview = vi.fn();
     render(<CaseIntakeView messages={[evidence, analysis]} threadStatus="answered" isSubmitting={false} onSubmitCase={vi.fn()} onOpenOverview={onOverview} onOpenChat={vi.fn()} />);

@@ -21,11 +21,18 @@ function renderDeletion(deleteThread: (id: string) => Promise<void>) {
     <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   const hook = renderHook(() => {
     const session = useChatThreadSelection({ cacheUpsertThread: upsert });
-    const [candidate, setCandidate] = useState<api.ChatThreadRead | null>(thread("a"));
+    const [candidate, setCandidate] = useState<api.CaseRead | null>({
+      ...thread("a"),
+      chat_thread_id: "a",
+    });
     const deletion = useChatThreadDeletion({
       session, deleteCandidate: candidate, setDeleteCandidate: setCandidate,
-      deletingThreadId: null, activeView: "overview", threads: [thread("a"), thread("b")],
-      deleteThread, router,
+      deletingCaseId: null, activeView: "overview",
+      cases: [
+        { ...thread("a"), chat_thread_id: "a" },
+        { ...thread("b"), chat_thread_id: "b" },
+      ],
+      deleteCase: deleteThread, router,
     });
     return { session, deletion };
   }, { wrapper });
@@ -41,7 +48,7 @@ it("selects the remaining case after deleting the active case", async () => {
   await tick();
   expect(remove).toHaveBeenCalledWith("a");
   expect(result.current.session.activeThreadId).toBe("b");
-  expect(router.replace).toHaveBeenCalledWith("/chat/b/overview");
+  expect(router.replace).toHaveBeenCalledWith("/case/b/overview");
 });
 
 it("restores the active case after a failed deletion", async () => {

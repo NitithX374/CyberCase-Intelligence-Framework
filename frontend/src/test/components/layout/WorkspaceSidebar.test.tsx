@@ -1,14 +1,24 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceSidebar } from "@/components/layout/WorkspaceSidebar";
-import type { ChatThreadRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api";
+
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({
+    user: { id: "u1", name: "Test Analyst", email: "analyst@example.com" },
+    isLoading: false,
+    logout: vi.fn(),
+    isLoggingOut: false,
+  }),
+}));
 
 describe("WorkspaceSidebar", () => {
-  const sampleThreads: ChatThreadRead[] = [
+  const sampleCases: CaseRead[] = [
     {
       id: "thread-1",
       title: "คดีการบุกรุกเว็บเซิร์ฟเวอร์",
       status: "answered",
+      chat_thread_id: "thread-1",
       created_at: "2026-03-10T08:00:00Z",
       updated_at: "2026-03-10T08:10:00Z",
     },
@@ -17,14 +27,14 @@ describe("WorkspaceSidebar", () => {
   it("renders the 5 case workspace tabs and does not include deleted Investigation Issues or chat tab", () => {
     render(
       <WorkspaceSidebar
-        threads={sampleThreads}
-        activeThreadId="thread-1"
-        threadsLoading={false}
-        threadsError={null}
-        onSelectThread={vi.fn()}
-        onNewChat={vi.fn()}
+        cases={sampleCases}
+        activeCaseId="thread-1"
+        casesLoading={false}
+        casesError={null}
+        onSelectCase={vi.fn()}
+        onNewCase={vi.fn()}
         onRequestDelete={vi.fn()}
-        deletingThreadId={null}
+        deletingCaseId={null}
         activeView="overview"
         onViewChange={vi.fn()}
       />,
@@ -55,14 +65,14 @@ describe("WorkspaceSidebar", () => {
 
     render(
       <WorkspaceSidebar
-        threads={sampleThreads}
-        activeThreadId="thread-1"
-        threadsLoading={false}
-        threadsError={null}
-        onSelectThread={vi.fn()}
-        onNewChat={vi.fn()}
+        cases={sampleCases}
+        activeCaseId="thread-1"
+        casesLoading={false}
+        casesError={null}
+        onSelectCase={vi.fn()}
+        onNewCase={vi.fn()}
         onRequestDelete={vi.fn()}
-        deletingThreadId={null}
+        deletingCaseId={null}
         activeView="overview"
         onViewChange={handleViewChange}
       />,

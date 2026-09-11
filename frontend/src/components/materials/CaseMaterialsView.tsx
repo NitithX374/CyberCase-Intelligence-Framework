@@ -1,13 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { CaseDocumentRead, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import { StatusPill } from "@/components/common/StatusPill";
 import { buildCaseMaterials, type CaseMaterialItem } from "@/lib/case-materials";
+import { CaseNativeMaterialsView } from "./CaseNativeMaterialsView";
 
 interface CaseMaterialsViewProps {
   messages: PersistedChatMessage[];
+  nativeDocuments?: CaseDocumentRead[];
+  nativeEvidence?: EvidenceSourceRead[];
+  isUploadingDocument?: boolean;
+  admittingExtractionId?: string | null;
+  onUploadDocument?: (file: File) => void;
+  onAdmitExtraction?: (documentId: string, extractionId: string) => void;
   onOpenChat?: () => void;
   onOpenIntake?: () => void;
 }
@@ -65,9 +72,29 @@ function MaterialRow({
 
 export function CaseMaterialsView({
   messages,
+  nativeDocuments,
+  nativeEvidence,
+  isUploadingDocument = false,
+  admittingExtractionId = null,
+  onUploadDocument,
+  onAdmitExtraction,
   onOpenChat,
   onOpenIntake,
 }: CaseMaterialsViewProps) {
+  if (nativeDocuments && nativeEvidence && onUploadDocument && onAdmitExtraction) {
+    return (
+      <CaseNativeMaterialsView
+        documents={nativeDocuments}
+        evidence={nativeEvidence}
+        isUploading={isUploadingDocument}
+        admittingExtractionId={admittingExtractionId}
+        onUploadDocument={onUploadDocument}
+        onAdmitExtraction={onAdmitExtraction}
+        onOpenChat={onOpenChat}
+        onOpenIntake={onOpenIntake}
+      />
+    );
+  }
   const materialsData = buildCaseMaterials(messages);
 
   return (
