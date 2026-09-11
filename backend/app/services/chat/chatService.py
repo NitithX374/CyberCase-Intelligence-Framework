@@ -93,11 +93,11 @@ class ChatService:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "Case not found")
 
             thread_result = await self.db.execute(
-                select(ChatThread).where(ChatThread.id == case.id).with_for_update()
+                select(ChatThread).where(ChatThread.case_id == case.id).with_for_update()
             )
             thread = thread_result.scalar_one_or_none()
             if thread is None:
-                thread = ChatThread(id=case.id, title=case.title, user_id=case.user_id)
+                thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
                 thread.case = case
                 self.db.add(thread)
                 await self.db.flush()
@@ -118,6 +118,15 @@ class ChatService:
             thread_id,
             options=[selectinload(ChatThread.case)],
         )
+        if thread is None:
+            statement = (
+                select(ChatThread)
+                .options(selectinload(ChatThread.case))
+                .where(ChatThread.case_id == thread_id)
+                .with_for_update()
+            )
+            result = await self.db.execute(statement)
+            thread = result.scalar_one_or_none()
         if thread is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -141,7 +150,7 @@ class ChatService:
         statement = (
             select(ChatThread)
             .options(selectinload(ChatThread.case))
-            .where(ChatThread.id == thread_id)
+            .where((ChatThread.id == thread_id) | (ChatThread.case_id == thread_id))
             .with_for_update()
         )
         result = await self.db.execute(statement)
@@ -188,7 +197,7 @@ class ChatService:
                 selectinload(ChatThread.messages),
                 selectinload(ChatThread.case),
             )
-            .where(ChatThread.id == thread_id)
+            .where((ChatThread.id == thread_id) | (ChatThread.case_id == thread_id))
         )
 
         result = await self.db.execute(statement)
@@ -212,7 +221,7 @@ class ChatService:
         statement = (
             select(ChatThread)
             .options(selectinload(ChatThread.case))
-            .where(ChatThread.id == thread_id)
+            .where((ChatThread.id == thread_id) | (ChatThread.case_id == thread_id))
         )
         result = await self.db.execute(statement)
         thread = result.scalar_one_or_none()
@@ -256,9 +265,10 @@ class ChatService:
         self,
         thread_id: UUID,
     ) -> list[ChatMessageRead]:
+        thread = await self.getThread(thread_id)
         statement = (
             select(ChatMessage)
-            .where(ChatMessage.thread_id == thread_id)
+            .where(ChatMessage.thread_id == thread.id)
             .order_by(ChatMessage.ordinal)
         )
         result = await self.db.execute(statement)

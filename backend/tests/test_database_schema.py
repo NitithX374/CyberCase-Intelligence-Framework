@@ -87,3 +87,27 @@ def test_report_uses_analysis_and_retrieval_bindings() -> None:
     assert "analysis_message_id" not in columns
     assert "extraction_message_id" not in columns
     assert "extraction_version" not in columns
+
+
+def test_retrieval_context_foreign_keys_enforce_restrict() -> None:
+    report_table = Base.metadata.tables["case_reports"]
+    report_fk = next(
+        fk for fk in report_table.foreign_keys
+        if fk.target_fullname == "rag_contexts.retrieval_context_id"
+    )
+    assert report_fk.ondelete == "RESTRICT"
+
+    analysis_table = Base.metadata.tables["case_analysis_results"]
+    analysis_fk = next(
+        fk for fk in analysis_table.foreign_keys
+        if fk.target_fullname == "rag_contexts.retrieval_context_id"
+    )
+    assert analysis_fk.ondelete == "RESTRICT"
+
+
+def test_chat_thread_has_unique_case_id() -> None:
+    threads = Base.metadata.tables["chat_threads"]
+    assert any(
+        constraint.name == "uq_chat_threads_case_id"
+        for constraint in threads.constraints
+    )

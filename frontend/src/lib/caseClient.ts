@@ -22,19 +22,23 @@ import type {
 import { getApiBaseUrl } from "./apiClient";
 
 export const createCaseChatMessage = async (
-  threadId: string,
+  caseId: string,
   content: string,
   idempotencyKey: string,
   signal?: AbortSignal,
   action?: ChatMessageAction,
   documentSources?: CaseNarrativeDocumentSource[],
+  intent?: "ask" | "clarification_answer",
+  clarificationId?: string,
 ): Promise<CaseChatMessageAccepted> => {
   const response = await axios.post<CaseChatMessageAccepted>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(threadId)}/chat/messages`,
+    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat/messages`,
     {
       content,
       idempotency_key: idempotencyKey,
       ...(action ? { action } : {}),
+      ...(intent ? { intent } : {}),
+      ...(clarificationId ? { clarification_id: clarificationId } : {}),
       ...(documentSources?.length
         ? { document_sources: documentSources }
         : {}),

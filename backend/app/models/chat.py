@@ -88,8 +88,8 @@ class ChatThread(Base):
         user_id = kwargs.pop("user_id", None)
         if "case_id" not in kwargs and "id" in kwargs:
             kwargs["case_id"] = kwargs["id"]
-        elif "id" not in kwargs and "case_id" in kwargs:
-            kwargs["id"] = kwargs["case_id"]
+        if "id" not in kwargs:
+            kwargs["id"] = uuid.uuid4()
         super().__init__(**kwargs)
         self._title = title or "New case"
         self._user_id = user_id

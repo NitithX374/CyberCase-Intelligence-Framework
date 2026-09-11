@@ -63,7 +63,8 @@ def buildCaseWithChat(
     case_id = uuid4()
     case = Case(id=case_id, title=title, user_id=user_id)
     thread = ChatThread(
-        id=case_id,
+        id=uuid4(),
+        case_id=case_id,
         title=title,
         user_id=user_id,
     )

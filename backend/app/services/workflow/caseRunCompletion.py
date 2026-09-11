@@ -202,35 +202,6 @@ def build_followup_message_metadata(
     }
 
 
-def build_analysis_result_message_metadata(
-    *,
-    result_id: UUID,
-    snapshot_id: UUID,
-    trace: CaseAnalysisTrace,
-    augmentation_payload: dict[str, object],
-    is_augmentation_present: bool,
-    run_pipeline_config: dict[str, object],
-) -> dict[str, object]:
-    return {
-        "analysis_kind": "grounded_main_analysis",
-        "analysis_state_scope": "canonical_case_overview",
-        "canonical_case_state": True,
-        "analysis_result_id": str(result_id),
-        "evidence_snapshot_id": str(snapshot_id),
-        "evidence_sha256": trace.evidence_sha256,
-        "evidence_source_ids": trace_source_ids(trace),
-        "analysis_trace": trace.model_dump(mode="json"),
-        **augmentation_message_metadata(augmentation_payload, is_augmentation_present),
-        "chat_action": {
-            "action": "initial_analysis",
-            "route": "analysis",
-            "rag_invoked": rag_invoked(augmentation_payload),
-            "retrieval_context_reused": False,
-            "analysis_mode": "case_overview",
-            "prompt_version": run_pipeline_config.get("version", "main_case_analysis_v1"),
-        },
-    }
-
 class CaseRunCompletionError(Exception):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
@@ -308,25 +279,27 @@ async def complete_case_run(
         )
         db.add(result)
         if augmentation is not None and trace.retrieval_context_id:
-            query_str = str(augmentation.get("query", augmentation.get("trigger_text", "")))
-            rag_context = RagContext(
-                retrieval_context_id=trace.retrieval_context_id,
-                case_id=case.id,
-                case_run_id=run.id,
-                evidence_snapshot_id=run.snapshot_id,
-                query_text=query_str,
-                query_sha256=hashlib.sha256(query_str.encode("utf-8")).hexdigest(),
-                context_text=str(augmentation.get("context", "")),
-                mitre_table=deepcopy(augmentation.get("mitre_table", [])),
-            )
-            db.add(rag_context)
+            existing_rag = await db.get(RagContext, trace.retrieval_context_id)
+            if existing_rag is None:
+                query_str = str(augmentation.get("query", augmentation.get("trigger_text", "")))
+                rag_context = RagContext(
+                    retrieval_context_id=trace.retrieval_context_id,
+                    case_id=case.id,
+                    case_run_id=run.id,
+                    evidence_snapshot_id=run.snapshot_id,
+                    query_text=query_str,
+                    query_sha256=hashlib.sha256(query_str.encode("utf-8")).hexdigest(),
+                    context_text=str(augmentation.get("context", "")),
+                    mitre_table=deepcopy(augmentation.get("mitre_table", [])),
+                )
+                db.add(rag_context)
         await db.flush()
 
         has_followup = output.followup_question is not None
-        thread = await db.scalar(select(ChatThread).where(ChatThread.id == case.id).with_for_update())
+        thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
         if has_followup:
             if thread is None:
-                thread = ChatThread(id=case.id, title=case.title, user_id=case.user_id)
+                thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
                 db.add(thread)
                 await db.flush()
             followup_metadata_raw = output.followup_metadata or {}

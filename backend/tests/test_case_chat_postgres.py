@@ -283,7 +283,7 @@ def test_removing_chat_preserves_case_history():
                 assert await db.get(Case, case_id) is not None
                 assert await db.get(CaseAnalysisResult, result.id) is not None
                 assert await db.get(CaseEvidenceSnapshot, snapshot.id) is not None
-                assert await db.get(ChatThread, case_id) is None
+                assert await db.scalar(select(ChatThread).where(ChatThread.case_id == case_id)) is None
                 assert await db.scalar(select(func.count()).select_from(ChatMessage)) == 0
 
     asyncio.run(exercise())

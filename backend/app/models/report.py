@@ -110,7 +110,7 @@ class CaseReport(Base):
         ForeignKey(
             "rag_contexts.retrieval_context_id",
             name="fk_case_reports_retrieval_context_id_rag_contexts",
-            ondelete="SET NULL",
+            ondelete="RESTRICT",
         ),
         nullable=True,
     )

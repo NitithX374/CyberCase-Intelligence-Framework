@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 from collections.abc import Callable
 from copy import deepcopy
@@ -8,6 +9,7 @@ from dataclasses import replace
 from uuid import UUID, uuid4
 
 from app.config import settings
+from app.models.ragContext import RagContext
 from app.services.case_analysis import CaseAnalysisFailure, request_case_analysis
 from app.services.chat.caseAnswer import generateCaseAnswer, loadCaseAnswerContext
 from app.services.case_analysis.contracts import (
@@ -24,6 +26,7 @@ from app.services.workflow.caseRunCompletion import (
 from app.services.workflow.caseAskCompletion import completeCaseAsk
 from app.services.workflow.caseRunService import ClaimedCaseRun, fail_case_run
 from app.services.workflow.caseMitreAugmentation import (
+    CaseRagContextPayload,
     merge_case_mitre_trace,
     run_case_mitre_augmentation,
 )
@@ -162,6 +165,7 @@ async def _execute_claimed_work(
             applicability_gate,
             rag_request,
             mapping_request,
+            session_factory=session_factory,
         )
     if claimed.operation == "analysis" and isinstance(output.trace, CaseAnalysisTrace):
         output = await _attach_case_followup(
@@ -240,12 +244,34 @@ async def _attach_case_augmentation(
     applicability_gate,
     rag_request,
     mapping_request,
+    session_factory: Callable | None = None,
 ):
     context = _analysis_context(claimed)
     config = read_pipeline(claimed.pipeline_config)
     calls = output.execution_receipt.get("calls", []) if isinstance(output.execution_receipt, dict) else []
     if not isinstance(calls, list):
         raise CaseRunExecutionError("analysis_receipt_invalid", "Case analysis receipt calls are invalid")
+
+    async def _persist_rag_context(rag_payload: CaseRagContextPayload) -> None:
+        if session_factory is None:
+            return
+        async with session_factory() as db, db.begin():
+            existing = await db.get(RagContext, rag_payload.retrieval_context_id)
+            if existing is None:
+                query_str = claimed.input_text
+                db.add(
+                    RagContext(
+                        retrieval_context_id=rag_payload.retrieval_context_id,
+                        case_id=claimed.case_id,
+                        case_run_id=claimed.id,
+                        evidence_snapshot_id=claimed.snapshot_id,
+                        query_text=query_str,
+                        query_sha256=hashlib.sha256(query_str.encode("utf-8")).hexdigest(),
+                        context_text=str(rag_payload.context),
+                        mitre_table=list(rag_payload.mitre_table),
+                    )
+                )
+
     augmentation = await run_case_mitre_augmentation(
         run_id=claimed.id,
         input_text=claimed.input_text,
@@ -257,6 +283,7 @@ async def _attach_case_augmentation(
         rag_request=rag_request,
         mapping_request=mapping_request,
         calls=calls,
+        on_rag_validated=_persist_rag_context,
     )
     sources = build_case_source_registry(context)
     merged_trace = merge_case_mitre_trace(

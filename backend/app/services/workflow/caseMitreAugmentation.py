@@ -87,6 +87,7 @@ async def run_case_mitre_augmentation(
     rag_request=request_rag,
     mapping_request=None,
     calls: list[dict[str, object]] | None = None,
+    on_rag_validated=None,
 ) -> CaseMitreAugmentation:
     try:
         evidence_sources = _case_evidence_sources(manifest)
@@ -113,6 +114,12 @@ async def run_case_mitre_augmentation(
     except Exception:
         logger.exception("Case MITRE retrieval failed run_id=%s", run_id)
         return _failed("rag_service_error", applicability)
+
+    if on_rag_validated is not None:
+        try:
+            await on_rag_validated(context)
+        except Exception:
+            logger.exception("Case MITRE early persistence callback failed run_id=%s", run_id)
 
     technique_rows = _technique_rows(context.mitre_table)
     if not context.retrieval_context_id or not technique_rows:

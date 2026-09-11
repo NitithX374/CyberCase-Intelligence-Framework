@@ -231,7 +231,7 @@ async def submit_clarification_answer(
         ordinal=thread.next_message_ordinal,
         role="user",
         content=request.answer.strip(),
-        message_kind="conversation",
+        message_kind="clarification_answer",
         metadata_json=serialize_message_metadata(
             {
                 "evidence_kind": "clarification_answer",
@@ -316,9 +316,9 @@ async def _owned_case(
 
 
 async def _locked_case_thread(db: AsyncSession, case: Case) -> ChatThread:
-    thread = await db.scalar(select(ChatThread).where(ChatThread.id == case.id).with_for_update())
+    thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
     if thread is None:
-        thread = ChatThread(id=case.id, title=case.title, user_id=case.user_id)
+        thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
         db.add(thread)
         await db.flush()
     return thread

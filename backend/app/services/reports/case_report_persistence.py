@@ -400,9 +400,9 @@ class CaseReportService:
         return case
 
     async def _locked_or_create_thread(self, case: Case) -> ChatThread:
-        thread = await self.db.scalar(select(ChatThread).where(ChatThread.id == case.id).with_for_update())
+        thread = await self.db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
         if thread is None:
-            thread = ChatThread(id=case.id, title=case.title, user_id=case.user_id)
+            thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
             thread.case = case
             self.db.add(thread)
             await self.db.flush()
@@ -433,18 +433,6 @@ class CaseReportService:
     async def _next_version(self, case_id: UUID) -> int:
         current = await self.db.scalar(select(func.max(CaseReport.version_number)).where(CaseReport.case_id == case_id))
         return (current or 0) + 1
-
-    async def _analysis_message_id(self, thread_id: UUID, result_id: UUID) -> UUID | None:
-        return await self.db.scalar(
-            select(ChatMessage.id)
-            .where(
-                ChatMessage.thread_id == thread_id,
-                ChatMessage.analysis_result_id == result_id,
-                ChatMessage.message_kind == "analysis_result",
-            )
-            .order_by(ChatMessage.ordinal.desc())
-            .limit(1)
-        )
 
     async def _report(
         self,
