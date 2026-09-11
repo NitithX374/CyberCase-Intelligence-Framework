@@ -2,10 +2,8 @@
 
 from app.schemas.chat import (
     CaseChatMessageAccepted,
-    ChatMessageAccepted,
     ChatMessageCreate,
     ChatMessageRead,
-    ChatRunRead,
     ChatThreadCreate,
     ChatThreadDetail,
     ChatThreadRead,
@@ -28,6 +26,7 @@ from app.schemas.rag import (
 )
 from app.schemas.reports import (
     CaseReportCreate,
+    CaseReportRead,
     ChatReportCreate,
     ChatReportRead,
     ReportClaim,
@@ -45,17 +44,16 @@ __all__ = [
     "CaseCreate",
     "CaseRead",
     "CaseReportCreate",
+    "CaseReportRead",
     "CaseUpdate",
     "CaseClarificationAccepted",
     "CaseClarificationAnswer",
     "CaseClarificationRead",
     "CaseChatMessageAccepted",
-    "ChatMessageAccepted",
     "ChatMessageCreate",
     "ChatMessageRead",
     "ChatReportCreate",
     "ChatReportRead",
-    "ChatRunRead",
     "ChatThreadCreate",
     "ChatThreadDetail",
     "ChatThreadRead",

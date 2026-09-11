@@ -21,7 +21,8 @@ if TYPE_CHECKING:
     from app.models.caseClarification import CaseClarification
     from app.models.caseRun import CaseAnalysisResult, CaseRun
     from app.models.chat import ChatThread
-    from app.models.report import ChatReport
+    from app.models.ragContext import RagContext
+    from app.models.report import CaseReport
     from app.models.user import User
 
 
@@ -126,8 +127,14 @@ class Case(Base):
         foreign_keys=[latest_analysis_result_id],
         post_update=True,
     )
-    reports: Mapped[list["ChatReport"]] = relationship(
-        "ChatReport",
+    rag_contexts: Mapped[list["RagContext"]] = relationship(
+        "RagContext",
+        back_populates="case",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    reports: Mapped[list["CaseReport"]] = relationship(
+        "CaseReport",
         back_populates="case",
         cascade="all, delete-orphan",
         passive_deletes=True,

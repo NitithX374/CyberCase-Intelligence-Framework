@@ -36,7 +36,7 @@ export function OverviewStatusRail({
           <summary className="w-fit cursor-pointer py-1 underline decoration-line-strong underline-offset-4 focus-visible:ring-2 focus-visible:ring-primary">Analysis record</summary>
           <dl className="mt-3 space-y-2 border-l border-line pl-3">
             <div className="flex justify-between gap-3"><dt>Analysis kind</dt><dd>Case overview</dd></div>
-            {overview.contractVersion && <div className="flex justify-between gap-3"><dt>Format</dt><dd>{overview.contractVersion === "v3" ? "v3" : "Legacy"}</dd></div>}
+            {overview.contractVersion && <div className="flex justify-between gap-3"><dt>Format</dt><dd>{overview.contractVersion === "v3" ? "v3" : overview.contractVersion === "case_analysis_trace_v1" || overview.contractVersion === "case_native" ? "v1" : "Legacy"}</dd></div>}
             <div className="flex justify-between gap-3"><dt>Evidence entries cited</dt><dd>{metadata.citedSourceCount}</dd></div>
           </dl>
         </details>

@@ -7,12 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import commit_dependency_transaction, get_db
 from app.models.user import User
+from app.schemas.caseRuns import CaseRunRead
 from app.schemas.chat import (
     CaseChatMessageAccepted,
     ChatCaseLinkRead,
-    ChatMessageAccepted,
     ChatMessageCreate,
-    ChatRunRead,
     ChatThreadCreate,
     ChatThreadDetail,
     ChatThreadRead,
@@ -130,7 +129,7 @@ async def delete_chat_thread(
 
 @router.post(
     "/{thread_id}/messages",
-    response_model=CaseChatMessageAccepted | ChatMessageAccepted,
+    response_model=CaseChatMessageAccepted,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def create_chat_message(
@@ -173,7 +172,7 @@ async def create_chat_message(
 
 @router.get(
     "/{thread_id}/runs/{run_id}",
-    response_model=ChatRunRead,
+    response_model=CaseRunRead,
     status_code=status.HTTP_200_OK,
 )
 async def get_chat_run(

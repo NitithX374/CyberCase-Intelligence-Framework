@@ -4,10 +4,10 @@ from uuid import uuid4
 
 import pytest
 
-from app.models import Case, CaseRun, ChatThread
+from app.models import Case, CaseAnalysisResult, CaseRun, ChatThread
 from app.schemas.caseRuns import CaseAnalysisCreate
 from app.schemas.chat import ChatMessageCreate
-from app.services.case_materials import CaseMaterialsService
+from app.services.case_materials import CaseMaterialsService, buildCaseEvidenceSnapshot
 from app.services.chat import CaseChatError, createCaseChatMessageAndRun
 from app.services.workflow.caseRunService import enqueue_case_analysis
 from run_recovery_support import isolated_database
@@ -15,6 +15,7 @@ from run_recovery_support import isolated_database
 
 async def _case(factory):
     case_id = uuid4()
+    run_id = uuid4()
     async with factory() as db, db.begin():
         db.add(Case(id=case_id, title="Case Chat retry"))
         await CaseMaterialsService(db).admitText(
@@ -24,7 +25,35 @@ async def _case(factory):
             exact_text="The witness reported a blue vehicle.",
             provenance_json={"origin": "test"},
         )
-        db.add(ChatThread(id=case_id, title="Case Chat retry", status="answered"))
+        case = await db.get(Case, case_id)
+        snapshot = await buildCaseEvidenceSnapshot(db, case_id=case_id, user_id=None)
+        run = CaseRun(
+            id=run_id,
+            case_id=case_id,
+            operation="analysis",
+            snapshot_id=snapshot.id,
+            idempotency_key=f"init-{case_id}",
+            request_fingerprint="0" * 64,
+            status="completed",
+        )
+        db.add(run)
+        await db.flush()
+        result_id = uuid4()
+        result = CaseAnalysisResult(
+            id=result_id,
+            case_id=case_id,
+            run_id=run.id,
+            snapshot_id=snapshot.id,
+            schema_version="case_analysis_trace_v1",
+            status="validated",
+            answer="Summary",
+            summary="Summary",
+            pipeline_config={"version": "main_case_analysis_v1"},
+        )
+        db.add(result)
+        await db.flush()
+        case.latest_analysis_result_id = result_id
+        db.add(ChatThread(id=case_id, case_id=case_id, title="Case Chat retry", status="answered"))
     return case_id
 
 
@@ -32,7 +61,7 @@ async def _chat_run(factory, case_id, key):
     request = ChatMessageCreate(
         content="The witness identified the vehicle as blue.",
         idempotency_key=key,
-        action="add_case_info",
+        action="ask",
     )
     async with factory() as db, db.begin():
         _, run = await createCaseChatMessageAndRun(

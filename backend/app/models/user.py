@@ -77,13 +77,12 @@ class User(Base):
         onupdate=func.now(),
     )
 
-    threads: Mapped[list[ChatThread]] = relationship(
-        "ChatThread",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
     cases: Mapped[list[Case]] = relationship(
         "Case",
         back_populates="user",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def threads(self) -> list[ChatThread]:
+        return [c.thread for c in self.cases if c.thread is not None]

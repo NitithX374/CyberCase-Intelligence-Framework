@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
-from app.models import Case, CaseAnalysisResult, ChatMessage, ChatReport
+from app.models import Case, CaseAnalysisResult, CaseReport, ChatMessage
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.schemas.caseRuns import CaseAnalysisCreate
 from app.schemas.reports import CaseReportCreate
@@ -114,12 +114,12 @@ def test_case_report_is_bound_to_selected_native_result_and_snapshot():
             assert report.report.claims[0].source_evidence_ids == [str(source_id)]
             assert repeated.report_id == report.report_id
             async with factory() as db:
-                stored = await db.get(ChatReport, report.report_id)
+                stored = await db.get(CaseReport, report.report_id)
                 assert stored is not None
                 assert stored.case_id == case_id
                 assert stored.analysis_result_id == result.id
                 assert stored.evidence_snapshot_id == result.snapshot_id
-                assert await db.scalar(select(func.count()).select_from(ChatReport)) == 1
+                assert await db.scalar(select(func.count()).select_from(CaseReport)) == 1
 
     asyncio.run(exercise())
 
@@ -185,7 +185,7 @@ def test_chat_removal_preserves_case_report_and_history():
                 await ChatService(db).delete_thread(case_id, user_id=None)
             async with factory() as db:
                 saved = await CaseReportService(db).get_report(case_id, report.report_id, None)
-                assert saved.thread_id is None
+                assert saved.case_id == case_id
                 assert saved.analysis_result_id == result.id
                 assert saved.evidence_snapshot_id == result.snapshot_id
                 assert await db.get(Case, case_id) is not None

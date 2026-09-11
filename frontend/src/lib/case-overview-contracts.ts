@@ -98,6 +98,6 @@ export interface CaseOverviewData {
   mitreContext: MitreExplainedCard[];
   technicalContextStatus: TechnicalContextStatus;
   analysisMessageId: string | null;
-  contractVersion: "v3" | "legacy" | "case_native" | null;
+  contractVersion: "case_analysis_trace_v1" | "v3" | "legacy" | "case_native" | null;
   unavailableReason?: string;
 }

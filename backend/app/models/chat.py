@@ -1,13 +1,12 @@
-"""Persistent chat threads, messages, and background processing runs."""
+"""Persistent chat threads and messages."""
 
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
-    CHAR,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -24,18 +23,16 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.user import User
 
 if TYPE_CHECKING:
     from app.models.case import Case
-    from app.models.ragContext import RagContext
-    from app.models.report import ChatReport
 
 
 class ChatThread(Base):
     __tablename__ = "chat_threads"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_chat_threads"),
+        UniqueConstraint("case_id", name="uq_chat_threads_case_id"),
         CheckConstraint(
             "status IN ('idle', 'processing', 'awaiting_followup', 'answered', 'failed')",
             name="ck_chat_threads_status",
@@ -44,30 +41,23 @@ class ChatThread(Base):
             "next_message_ordinal > 0",
             name="ck_chat_threads_next_message_ordinal_positive",
         ),
+        Index("ix_chat_threads_case_id", "case_id"),
         Index("ix_chat_threads_updated_at", "updated_at"),
-        Index("ix_chat_threads_user_id", "user_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey(
-            "cases.id",
-            name="fk_chat_threads_id_cases",
-            ondelete="CASCADE",
-        ),
         primary_key=True,
         default=uuid.uuid4,
     )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
+    case_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", name="fk_chat_threads_user_id", ondelete="CASCADE"),
-        nullable=True,
-    )
-    title: Mapped[str] = mapped_column(
-        String(255),
+        ForeignKey(
+            "cases.id",
+            name="fk_chat_threads_case_id_cases",
+            ondelete="CASCADE",
+        ),
         nullable=False,
-        default="New case",
-        server_default=text("'New case'"),
     )
     status: Mapped[str] = mapped_column(
         String(24),
@@ -93,28 +83,55 @@ class ChatThread(Base):
         onupdate=func.now(),
     )
 
+    def __init__(self, **kwargs: Any) -> None:
+        title = kwargs.pop("title", None)
+        user_id = kwargs.pop("user_id", None)
+        if "case_id" not in kwargs and "id" in kwargs:
+            kwargs["case_id"] = kwargs["id"]
+        elif "id" not in kwargs and "case_id" in kwargs:
+            kwargs["id"] = kwargs["case_id"]
+        super().__init__(**kwargs)
+        self._title = title or "New case"
+        self._user_id = user_id
+
+    @property
+    def user_id(self) -> uuid.UUID | None:
+        case = self.__dict__.get("case")
+        if case is not None and getattr(case, "user_id", None) is not None:
+            return case.user_id
+        return getattr(self, "_user_id", None)
+
+    @user_id.setter
+    def user_id(self, val: uuid.UUID | None) -> None:
+        self._user_id = val
+        case = self.__dict__.get("case")
+        if case is not None:
+            case.user_id = val
+
+    @property
+    def title(self) -> str:
+        case = self.__dict__.get("case")
+        if case is not None and getattr(case, "title", None) is not None:
+            return case.title
+        return getattr(self, "_title", "New case")
+
+    @title.setter
+    def title(self, val: str) -> None:
+        self._title = val
+        case = self.__dict__.get("case")
+        if case is not None:
+            case.title = val
+
     messages: Mapped[list[ChatMessage]] = relationship(
         back_populates="thread",
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="ChatMessage.ordinal",
     )
-    runs: Mapped[list[ChatRun]] = relationship(
-        back_populates="thread",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    reports: Mapped[list["ChatReport"]] = relationship(
-        back_populates="thread",
-        passive_deletes=True,
-    )
-    user: Mapped[User | None] = relationship(
-        "User",
-        back_populates="threads",
-    )
     case: Mapped["Case | None"] = relationship(
         "Case",
         back_populates="chat_thread",
+        foreign_keys=[case_id],
         uselist=False,
     )
 
@@ -164,8 +181,17 @@ class ChatMessage(Base):
         String(160),
         nullable=True,
     )
-    message_kind: Mapped[str] = mapped_column(String(32), nullable=False, default="conversation", server_default=text("'conversation'"))
-    analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("case_analysis_results.id", name="fk_chat_messages_analysis_result_id", ondelete="SET NULL"), nullable=True)
+    message_kind: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="conversation",
+        server_default=text("'conversation'"),
+    )
+    analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("case_analysis_results.id", name="fk_chat_messages_analysis_result_id", ondelete="SET NULL"),
+        nullable=True,
+    )
     metadata_json: Mapped[dict[str, object]] = mapped_column(
         JSONB,
         nullable=False,
@@ -179,119 +205,6 @@ class ChatMessage(Base):
     )
 
     thread: Mapped[ChatThread] = relationship(back_populates="messages")
-    runs: Mapped[list[ChatRun]] = relationship(
-        back_populates="request_message",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
 
 
-class ChatRun(Base):
-    __tablename__ = "chat_runs"
-    __table_args__ = (
-        PrimaryKeyConstraint("id", name="pk_chat_runs"),
-        UniqueConstraint(
-            "thread_id",
-            "idempotency_key",
-            name="uq_chat_runs_thread_id_idempotency_key",
-        ),
-        CheckConstraint(
-            "status IN ('queued', 'running', 'completed', 'failed')",
-            name="ck_chat_runs_status",
-        ),
-        CheckConstraint(
-            "attempt_count >= 0",
-            name="ck_chat_runs_attempt_count_nonnegative",
-        ),
-        Index(
-            "ux_chat_runs_one_active_per_thread",
-            "thread_id",
-            unique=True,
-            postgresql_where=text("status IN ('queued', 'running')"),
-        ),
-        Index(
-            "ix_chat_runs_status_lease_expires_at",
-            "status",
-            "lease_expires_at",
-        ),
-        Index("ix_chat_runs_thread_id_created_at", "thread_id", "created_at"),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    thread_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "chat_threads.id",
-            name="fk_chat_runs_thread_id_chat_threads",
-            ondelete="CASCADE",
-        ),
-        nullable=False,
-    )
-    request_message_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "chat_messages.id",
-            name="fk_chat_runs_request_message_id_chat_messages",
-            ondelete="CASCADE",
-        ),
-        nullable=False,
-    )
-    status: Mapped[str] = mapped_column(
-        String(16),
-        nullable=False,
-        default="queued",
-        server_default=text("'queued'"),
-    )
-    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    request_fingerprint: Mapped[str] = mapped_column(CHAR(64), nullable=False)
-    request_payload: Mapped[dict[str, object]] = mapped_column(
-        JSONB,
-        nullable=False,
-        default=dict,
-        server_default=text("'{}'::jsonb"),
-    )
-    attempt_count: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=0,
-        server_default=text("0"),
-    )
-    lease_owner: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    lease_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
-    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-    finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-    thread: Mapped[ChatThread] = relationship(back_populates="runs")
-    request_message: Mapped[ChatMessage] = relationship(back_populates="runs")
-    rag_context: Mapped["RagContext | None"] = relationship(
-        back_populates="run",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        uselist=False,
-    )
+__all__ = ["ChatMessage", "ChatThread"]

@@ -12,9 +12,9 @@ from app.models import (
     Case,
     CaseAnalysisResult,
     CaseClarification,
+    CaseReport,
     CaseRun,
     ChatMessage,
-    ChatReport,
     ChatThread,
     EvidenceSource,
 )
@@ -121,9 +121,8 @@ def test_delete_case_cascades_all_dependent_records_without_error(monkeypatch):
                 )
                 db.add(clarification)
 
-                report = ChatReport(
+                report = CaseReport(
                     id=uuid4(),
-                    thread_id=case_id,
                     case_id=case_id,
                     analysis_result_id=result_id,
                     evidence_snapshot_id=snapshot_id,
@@ -145,7 +144,7 @@ def test_delete_case_cascades_all_dependent_records_without_error(monkeypatch):
                 assert await db.scalar(select(func.count()).select_from(Case)) == 1
                 assert await db.scalar(select(func.count()).select_from(CaseRun)) == 1
                 assert await db.scalar(select(func.count()).select_from(CaseAnalysisResult)) == 1
-                assert await db.scalar(select(func.count()).select_from(ChatReport)) == 1
+                assert await db.scalar(select(func.count()).select_from(CaseReport)) == 1
                 assert await db.scalar(select(func.count()).select_from(CaseClarification)) == 1
                 assert await db.scalar(select(func.count()).select_from(ChatMessage)) == 1
                 assert await db.scalar(select(func.count()).select_from(CaseEvidenceSnapshot)) == 1
@@ -159,7 +158,7 @@ def test_delete_case_cascades_all_dependent_records_without_error(monkeypatch):
                 assert await db.scalar(select(func.count()).select_from(Case)) == 0
                 assert await db.scalar(select(func.count()).select_from(CaseRun)) == 0
                 assert await db.scalar(select(func.count()).select_from(CaseAnalysisResult)) == 0
-                assert await db.scalar(select(func.count()).select_from(ChatReport)) == 0
+                assert await db.scalar(select(func.count()).select_from(CaseReport)) == 0
                 assert await db.scalar(select(func.count()).select_from(CaseClarification)) == 0
                 assert await db.scalar(select(func.count()).select_from(ChatMessage)) == 0
                 assert await db.scalar(select(func.count()).select_from(ChatThread)) == 0
