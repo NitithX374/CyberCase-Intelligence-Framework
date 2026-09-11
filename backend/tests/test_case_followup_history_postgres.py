@@ -21,7 +21,7 @@ from app.services.followup.caseClarification import (
     CaseClarificationError,
     submit_clarification_answer,
 )
-from app.services.followup.caseHistory import load_case_clarification_exchanges
+from app.services.followup.caseClarification import load_case_clarification_exchanges
 from app.services.followup.contracts import FollowUpResolution
 from app.services.workflow.caseRunClaim import claimCaseRun
 from app.services.workflow.caseRunCompletion import complete_case_run
