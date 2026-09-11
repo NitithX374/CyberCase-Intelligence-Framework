@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import commit_dependency_transaction, get_db
 from app.models.user import User
+from app.schemas.caseRuns import CaseRunRead
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 from app.schemas.chat import (
     CaseChatMessageAccepted,
     ChatMessageCreate,
-    ChatRunRead,
     ChatThreadDetail,
     ChatThreadRead,
 )
@@ -80,7 +80,7 @@ async def create_case_chat_message(
 
 @router.get(
     "/{case_id}/chat/runs/{run_id}",
-    response_model=ChatRunRead,
+    response_model=CaseRunRead,
     status_code=status.HTTP_200_OK,
 )
 async def get_case_chat_run(

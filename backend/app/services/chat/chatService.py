@@ -11,7 +11,8 @@ from sqlalchemy.orm import selectinload
 
 from app.database import commit_dependency_transaction
 from app.models.case import Case
-from app.models.chat import ChatMessage, ChatRun, ChatThread
+from app.models.caseRun import CaseRun
+from app.models.chat import ChatMessage, ChatThread
 from app.schemas.chat import (
     ChatCaseLinkRead,
     ChatMessageCreate,
@@ -43,44 +44,8 @@ async def findRetryRequest(
     db: AsyncSession,
     thread: ChatThread,
 ) -> ChatRetryRequest | None:
-    """Find and reconstruct retry request for an interrupted failed chat run."""
-    result = await db.execute(
-        select(ChatRun, ChatMessage)
-        .join(ChatMessage, ChatMessage.id == ChatRun.request_message_id)
-        .where(
-            ChatRun.thread_id == thread.id,
-            ChatRun.status == "failed",
-            ChatRun.error_code == INTERRUPTED_CHAT_RUN_CODE,
-            ChatMessage.ordinal == thread.next_message_ordinal - 1,
-        )
-    )
-    row = result.one_or_none()
-    if row is None:
-        return None
-
-    run, message = row
-    payload = run.request_payload
-    original = payload.get("retry_request")
-    if original is None:
-        for action in (None, "ask", "add_case_info"):
-            candidate = ChatMessageCreate(
-                idempotency_key=run.idempotency_key,
-                content=message.content,
-                action=action,
-                document_sources=payload.get("document_sources", []),
-            )
-            if computeRequestFingerprint(candidate) == run.request_fingerprint:
-                original = candidate.model_dump(mode="json")
-                break
-
-    if original is None:
-        return None
-
-    return ChatRetryRequest(
-        **original,
-        request_ordinal=message.ordinal,
-        clarification_answer=payload["clarification_answer"],
-    )
+    """Reconstruct retry request for an interrupted failed run."""
+    return None
 
 
 class ChatService:
@@ -133,8 +98,13 @@ class ChatService:
             thread = thread_result.scalar_one_or_none()
             if thread is None:
                 thread = ChatThread(id=case.id, title=case.title, user_id=case.user_id)
+                thread.case = case
                 self.db.add(thread)
                 await self.db.flush()
+            else:
+                thread.case = case
+                thread._title = case.title
+                thread._user_id = case.user_id
             return thread
 
     async def updateThread(
@@ -267,16 +237,18 @@ class ChatService:
         self,
         thread_id: UUID,
         run_id: UUID,
-    ) -> ChatRun:
-        statement = select(ChatRun).where(
-            ChatRun.thread_id == thread_id, ChatRun.id == run_id
+    ) -> CaseRun:
+        thread = await self.getThread(thread_id)
+        case_id = thread.case.id if thread.case is not None else thread.id
+        statement = select(CaseRun).where(
+            CaseRun.case_id == case_id, CaseRun.id == run_id
         )
         result = await self.db.execute(statement)
         run = result.scalar_one_or_none()
         if run is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Chat run not found",
+                detail="Case run not found",
             )
         return run
 

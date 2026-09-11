@@ -14,7 +14,7 @@ from app.models.case import Case
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult
 from app.models.chat import ChatMessage, ChatThread
-from app.models.report import ChatReport
+from app.models.report import CaseReport
 from app.schemas.reports import CaseReportCreate, ChatReportRead, StructuredReport
 from app.services.case_analysis.contracts import (
     CaseAdmittedSource,
@@ -38,14 +38,16 @@ from app.services.reports.report_validation import (
 )
 
 
-def _report_retrieval_context_id(report: ChatReport) -> str | None:
+def _report_retrieval_context_id(report: CaseReport) -> str | None:
+    if report.retrieval_context_id:
+        return report.retrieval_context_id
     if not isinstance(report.source_snapshot_json, dict):
         return None
     value = report.source_snapshot_json.get("retrieval_context_id")
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
-def serialize_chat_report(report: ChatReport) -> ChatReportRead:
+def serialize_chat_report(report: CaseReport) -> ChatReportRead:
     structured_report: StructuredReport | None = None
     if isinstance(report.structured_report, dict):
         structured_report = StructuredReport.model_validate(report.structured_report)
@@ -54,17 +56,15 @@ def serialize_chat_report(report: ChatReport) -> ChatReportRead:
         validation_errors = []
     return ChatReportRead(
         report_id=report.id,
-        thread_id=report.thread_id,
+        thread_id=report.case_id,
         version_number=report.version_number,
         idempotency_key=report.idempotency_key,
         source_snapshot_hash=report.source_snapshot_hash,
-        analysis_message_id=report.analysis_message_id,
+        analysis_message_id=None,
         case_id=report.case_id,
         analysis_result_id=report.analysis_result_id,
         evidence_snapshot_id=report.evidence_snapshot_id,
-        source_reference_type=(
-            "case_evidence" if report.analysis_result_id is not None else "legacy_chat"
-        ),
+        source_reference_type="case_evidence",
         retrieval_context_id=_report_retrieval_context_id(report),
         prompt_version=report.prompt_version,
         provider=report.provider,
@@ -108,7 +108,7 @@ def build_case_report_snapshot(
     return CaseReportInputSnapshot(
         case_id=case.id,
         thread_id=thread.id,
-        thread_title=thread.title,
+        thread_title=case.title,
         analysis_result_id=result.id,
         evidence_snapshot_id=snapshot.id,
         evidence_revision=snapshot.evidence_revision,
@@ -308,23 +308,22 @@ class CaseReportService:
             snapshot = build_case_report_snapshot(case, result, thread)
             snapshot_hash = source_snapshot_hash(snapshot)
             idempotency_key = request.idempotency_key or snapshot_hash
-            existing = await self._existing_report(thread.id, idempotency_key)
+            existing = await self._existing_report(case.id, idempotency_key)
             if existing is not None:
                 if existing.source_snapshot_hash != snapshot_hash:
                     raise ReportGenerationConflict("report_idempotency_conflict", "The idempotency key belongs to another Case report snapshot.")
                 return serialize_chat_report(existing)
             generation = await run_case_report_generation(snapshot)
-            report = ChatReport(
-                thread_id=thread.id,
+            retrieval_id = getattr(result, "retrieval_context_id", None)
+            report = CaseReport(
                 case_id=case.id,
                 analysis_result_id=result.id,
                 evidence_snapshot_id=result.snapshot_id,
-                version_number=await self._next_version(thread.id),
+                version_number=await self._next_version(case.id),
                 idempotency_key=idempotency_key,
                 source_snapshot_json=snapshot.model_dump(mode="json"),
                 source_snapshot_hash=snapshot_hash,
-                analysis_message_id=await self._analysis_message_id(thread.id, result.id),
-                retrieval_context_id=None,
+                retrieval_context_id=retrieval_id,
                 prompt_version=generation.prompt_version,
                 provider=generation.provider,
                 model=generation.model,
@@ -347,9 +346,9 @@ class CaseReportService:
     async def list_reports(self, case_id: UUID, user_id: UUID | None) -> list[ChatReportRead]:
         await self._owned_case(case_id, user_id)
         result = await self.db.execute(
-            select(ChatReport)
-            .where(ChatReport.case_id == case_id)
-            .order_by(ChatReport.version_number.desc())
+            select(CaseReport)
+            .where(CaseReport.case_id == case_id)
+            .order_by(CaseReport.version_number.desc())
         )
         return [serialize_chat_report(report) for report in result.scalars().all()]
 
@@ -404,8 +403,13 @@ class CaseReportService:
         thread = await self.db.scalar(select(ChatThread).where(ChatThread.id == case.id).with_for_update())
         if thread is None:
             thread = ChatThread(id=case.id, title=case.title, user_id=case.user_id)
+            thread.case = case
             self.db.add(thread)
             await self.db.flush()
+        else:
+            thread.case = case
+            thread._title = case.title
+            thread._user_id = case.user_id
         return thread
 
     async def _selected_result(self, case: Case, result_id: UUID | None) -> CaseAnalysisResult:
@@ -421,13 +425,13 @@ class CaseReportService:
             raise ReportNotFound("case_analysis_not_found", "The selected Case analysis was not found")
         return result
 
-    async def _existing_report(self, thread_id: UUID, key: str) -> ChatReport | None:
+    async def _existing_report(self, case_id: UUID, key: str) -> CaseReport | None:
         return await self.db.scalar(
-            select(ChatReport).where(ChatReport.thread_id == thread_id, ChatReport.idempotency_key == key)
+            select(CaseReport).where(CaseReport.case_id == case_id, CaseReport.idempotency_key == key)
         )
 
-    async def _next_version(self, thread_id: UUID) -> int:
-        current = await self.db.scalar(select(func.max(ChatReport.version_number)).where(ChatReport.thread_id == thread_id))
+    async def _next_version(self, case_id: UUID) -> int:
+        current = await self.db.scalar(select(func.max(CaseReport.version_number)).where(CaseReport.case_id == case_id))
         return (current or 0) + 1
 
     async def _analysis_message_id(self, thread_id: UUID, result_id: UUID) -> UUID | None:
@@ -448,10 +452,8 @@ class CaseReportService:
         report_id: UUID,
         *,
         load_thread: bool = False,
-    ) -> ChatReport:
-        statement = select(ChatReport).where(ChatReport.case_id == case_id, ChatReport.id == report_id)
-        if load_thread:
-            statement = statement.options(selectinload(ChatReport.thread))
+    ) -> CaseReport:
+        statement = select(CaseReport).where(CaseReport.case_id == case_id, CaseReport.id == report_id)
         report = await self.db.scalar(statement)
         if report is None:
             raise ReportNotFound("case_report_not_found", "Case report not found")

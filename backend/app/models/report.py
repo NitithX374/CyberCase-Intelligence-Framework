@@ -1,4 +1,4 @@
-"""Immutable report history scoped to a persisted chat thread."""
+"""Immutable report history scoped to a Case."""
 
 from __future__ import annotations
 
@@ -30,37 +30,37 @@ if TYPE_CHECKING:
     from app.models.case import Case
     from app.models.caseMaterials import CaseEvidenceSnapshot
     from app.models.caseRun import CaseAnalysisResult
+    from app.models.ragContext import RagContext
 
 
-class ChatReport(Base):
-    __tablename__ = "chat_reports"
+class CaseReport(Base):
+    __tablename__ = "case_reports"
     __table_args__ = (
-        PrimaryKeyConstraint("id", name="pk_chat_reports"),
+        PrimaryKeyConstraint("id", name="pk_case_reports"),
         UniqueConstraint(
-            "thread_id",
+            "case_id",
             "version_number",
-            name="uq_chat_reports_thread_id_version_number",
+            name="uq_case_reports_case_id_version_number",
         ),
         UniqueConstraint(
-            "thread_id",
+            "case_id",
             "idempotency_key",
-            name="uq_chat_reports_thread_id_idempotency_key",
+            name="uq_case_reports_case_id_idempotency_key",
         ),
         CheckConstraint(
             "version_number > 0",
-            name="ck_chat_reports_version_number_positive",
+            name="ck_case_reports_version_number_positive",
         ),
         CheckConstraint(
             "status IN ('completed', 'failed')",
-            name="ck_chat_reports_status",
+            name="ck_case_reports_status",
         ),
         CheckConstraint(
             "validation_status IN ('validated', 'failed')",
-            name="ck_chat_reports_validation_status",
+            name="ck_case_reports_validation_status",
         ),
-        Index("ix_chat_reports_thread_id_created_at", "thread_id", "created_at"),
-        Index("ix_chat_reports_case_id_created_at", "case_id", "created_at"),
-        Index("ix_chat_reports_analysis_result_id", "analysis_result_id"),
+        Index("ix_case_reports_case_id_created_at", "case_id", "created_at"),
+        Index("ix_case_reports_analysis_result_id", "analysis_result_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -68,14 +68,14 @@ class ChatReport(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
-    thread_id: Mapped[uuid.UUID] = mapped_column(
+    case_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
-            "chat_threads.id",
-            name="fk_chat_reports_thread_id_chat_threads",
-            ondelete="SET NULL",
+            "cases.id",
+            name="fk_case_reports_case_id_cases",
+            ondelete="CASCADE",
         ),
-        nullable=True,
+        nullable=False,
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -87,48 +87,30 @@ class ChatReport(Base):
         CHAR(64),
         nullable=False,
     )
-    analysis_message_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "chat_messages.id",
-            name="fk_chat_reports_analysis_message_id_chat_messages",
-            ondelete="SET NULL",
-        ),
-        nullable=True,
-    )
-    case_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "cases.id",
-            name="fk_chat_reports_case_id_cases",
-            ondelete="CASCADE",
-        ),
-        nullable=True,
-    )
-    analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(
+    analysis_result_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "case_analysis_results.id",
-            name="fk_chat_reports_analysis_result_id_case_analysis_results",
+            name="fk_case_reports_analysis_result_id_case_analysis_results",
             ondelete="RESTRICT",
         ),
-        nullable=True,
+        nullable=False,
     )
-    evidence_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
+    evidence_snapshot_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "case_evidence_snapshots.id",
-            name="fk_chat_reports_evidence_snapshot_id_case_evidence_snapshots",
+            name="fk_case_reports_evidence_snapshot_id_case_evidence_snapshots",
             ondelete="RESTRICT",
         ),
-        nullable=True,
+        nullable=False,
     )
     retrieval_context_id: Mapped[str | None] = mapped_column(
         String(160),
         ForeignKey(
             "rag_contexts.retrieval_context_id",
-            name="fk_chat_reports_retrieval_context_id_rag_contexts",
-            ondelete="CASCADE",
+            name="fk_case_reports_retrieval_context_id_rag_contexts",
+            ondelete="SET NULL",
         ),
         nullable=True,
     )
@@ -171,11 +153,26 @@ class ChatReport(Base):
     input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    thread = relationship("ChatThread", back_populates="reports")
-    analysis_message = relationship("ChatMessage")
-    case: Mapped["Case | None"] = relationship("Case", back_populates="reports")
-    analysis_result: Mapped["CaseAnalysisResult | None"] = relationship("CaseAnalysisResult")
-    evidence_snapshot: Mapped["CaseEvidenceSnapshot | None"] = relationship("CaseEvidenceSnapshot")
+    def __init__(self, **kwargs: object) -> None:
+        kwargs.pop("thread_id", None)
+        kwargs.pop("analysis_message_id", None)
+        super().__init__(**kwargs)
+
+    @property
+    def report_id(self) -> uuid.UUID:
+        return self.id
+
+    @property
+    def thread_id(self) -> uuid.UUID:
+        return self.case_id
+
+    case: Mapped["Case"] = relationship("Case", back_populates="reports")
+    analysis_result: Mapped["CaseAnalysisResult"] = relationship("CaseAnalysisResult")
+    evidence_snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
+    retrieval_context: Mapped["RagContext | None"] = relationship("RagContext")
 
 
-__all__ = ["ChatReport"]
+# Compatibility alias
+ChatReport = CaseReport
+
+__all__ = ["CaseReport", "ChatReport"]

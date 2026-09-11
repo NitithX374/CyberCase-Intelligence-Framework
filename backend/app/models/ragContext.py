@@ -1,13 +1,16 @@
-"""Durable retrieval context bound one-to-one to the chat run that produced it."""
+"""Durable retrieval context bound to the Case and CaseRun that produced it."""
 
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    CHAR,
     DateTime,
     ForeignKey,
+    Index,
     PrimaryKeyConstraint,
     String,
     Text,
@@ -20,6 +23,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
+if TYPE_CHECKING:
+    from app.models.case import Case
+    from app.models.caseMaterials import CaseEvidenceSnapshot
+    from app.models.caseRun import CaseRun
+
 
 class RagContext(Base):
     __tablename__ = "rag_contexts"
@@ -28,32 +36,60 @@ class RagContext(Base):
             "retrieval_context_id",
             name="pk_rag_contexts",
         ),
-        UniqueConstraint("run_id", name="uq_rag_contexts_run_id"),
+        UniqueConstraint("case_run_id", name="uq_rag_contexts_case_run_id"),
+        Index("ix_rag_contexts_case_id_created_at", "case_id", "created_at"),
+        Index("ix_rag_contexts_query_sha256", "query_sha256"),
     )
 
     retrieval_context_id: Mapped[str] = mapped_column(
         String(160),
         primary_key=True,
     )
-    thread_id: Mapped[uuid.UUID] = mapped_column(
+    case_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
-            "chat_threads.id",
-            name="fk_rag_contexts_thread_id_chat_threads",
+            "cases.id",
+            name="fk_rag_contexts_case_id_cases",
             ondelete="CASCADE",
         ),
         nullable=False,
     )
-    run_id: Mapped[uuid.UUID] = mapped_column(
+    case_run_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
-            "chat_runs.id",
-            name="fk_rag_contexts_run_id_chat_runs",
+            "case_runs.id",
+            name="fk_rag_contexts_case_run_id_case_runs",
             ondelete="CASCADE",
         ),
         nullable=False,
     )
-    context: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_snapshot_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "case_evidence_snapshots.id",
+            name="fk_rag_contexts_evidence_snapshot_id_case_evidence_snapshots",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+    query_text: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="",
+        server_default=text("''"),
+    )
+    query_sha256: Mapped[str] = mapped_column(
+        CHAR(64),
+        nullable=False,
+        default="",
+        server_default=text("''"),
+    )
+    context_text: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="",
+        server_default=text("''"),
+    )
     mitre_table: Mapped[list[dict[str, object]]] = mapped_column(
         JSONB,
         nullable=False,
@@ -65,7 +101,18 @@ class RagContext(Base):
         nullable=False,
         server_default=func.now(),
     )
-    run = relationship("ChatRun", back_populates="rag_context")
+
+    @property
+    def context(self) -> str:
+        return self.context_text
+
+    @context.setter
+    def context(self, value: str) -> None:
+        self.context_text = value
+
+    case: Mapped["Case"] = relationship("Case", back_populates="rag_contexts")
+    run: Mapped["CaseRun"] = relationship("CaseRun")
+    snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
 
 
 __all__ = ["RagContext"]

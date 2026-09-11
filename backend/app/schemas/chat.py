@@ -57,7 +57,7 @@ class ChatMessageCreate(BaseModel):
         min_length=1,
         max_length=255,
     )
-    action: Literal["ask", "add_case_info"] | None = None
+    action: Literal["ask"] | None = None
     response_language: Literal["thai", "english"] = "english"
     document_sources: list[CaseNarrativeDocumentSource] = Field(
         default_factory=list,
@@ -109,31 +109,12 @@ class ChatCaseLinkRead(BaseModel):
     case_id: UUID | None = None
 
 
-class ChatRunRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    thread_id: UUID
-    request_message_id: UUID
-    status: RunStatus
-    error_code: str | None
-    error_message: str | None
-    created_at: datetime
-    updated_at: datetime
-
-
-class ChatMessageAccepted(BaseModel):
-    message: ChatMessageRead
-    run: ChatRunRead
-
-
 class CaseChatMessageAccepted(BaseModel):
     message: ChatMessageRead
     run: CaseRunRead
 
 
 __all__ = [
-    "ChatMessageAccepted",
     "CaseNarrativeDocumentPageSpan",
     "CaseNarrativeDocumentSource",
     "CaseChatMessageAccepted",
@@ -141,7 +122,6 @@ __all__ = [
     "ChatMessageRead",
     "ChatCaseLinkRead",
     "ChatCaseLinkStatus",
-    "ChatRunRead",
     "ChatThreadCreate",
     "ChatThreadDetail",
     "ChatThreadRead",

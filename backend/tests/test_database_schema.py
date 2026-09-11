@@ -8,9 +8,8 @@ def test_schema_contains_only_product_runtime_tables() -> None:
         "users",
         "chat_threads",
         "chat_messages",
-        "chat_runs",
         "rag_contexts",
-        "chat_reports",
+        "case_reports",
         "case_documents",
         "document_extractions",
         "case_evidence_sources",
@@ -25,7 +24,8 @@ def test_schema_contains_only_product_runtime_tables() -> None:
 def test_case_state_columns_and_tables_are_absent() -> None:
     assert "case_state_versions" not in Base.metadata.tables
     assert "current_case_state_version_id" not in Base.metadata.tables["chat_threads"].c
-    assert "run_id" in Base.metadata.tables["rag_contexts"].c
+    assert "case_run_id" in Base.metadata.tables["rag_contexts"].c
+    assert "case_id" in Base.metadata.tables["rag_contexts"].c
     assert "case_state_version_id" not in Base.metadata.tables["rag_contexts"].c
 
 
@@ -36,7 +36,7 @@ def test_case_owns_one_shared_identity_chat_thread() -> None:
     assert ChatThread.case.property.uselist is False
     assert any(
         foreign_key.target_fullname == "cases.id"
-        for foreign_key in threads.c["id"].foreign_keys
+        for foreign_key in threads.c["case_id"].foreign_keys
     )
     assert cases.c["user_id"].nullable
     assert threads.c["id"].primary_key
@@ -57,33 +57,33 @@ def test_case_first_workflow_schema_is_case_owned() -> None:
     assert runs.c["clarification_id"].nullable
 
 
-def test_rag_context_is_bound_one_to_one_to_chat_run() -> None:
+def test_rag_context_is_bound_one_to_one_to_case_run() -> None:
     table = Base.metadata.tables["rag_contexts"]
     assert {str(target.column) for key in table.foreign_keys for target in [key]} >= {
-        "chat_runs.id",
-        "chat_threads.id",
+        "case_runs.id",
+        "cases.id",
+        "case_evidence_snapshots.id",
     }
     assert any(
-        constraint.name == "uq_rag_contexts_run_id"
+        constraint.name == "uq_rag_contexts_case_run_id"
         for constraint in table.constraints
     )
 
 
 def test_report_uses_analysis_and_retrieval_bindings() -> None:
-    table = Base.metadata.tables["chat_reports"]
+    table = Base.metadata.tables["case_reports"]
     columns = set(table.c.keys())
     assert {
-        "analysis_message_id",
         "case_id",
         "analysis_result_id",
         "evidence_snapshot_id",
         "retrieval_context_id",
     }.issubset(columns)
-    assert table.c["analysis_message_id"].nullable
-    assert table.c["thread_id"].nullable
-    assert table.c["case_id"].nullable
-    assert table.c["analysis_result_id"].nullable
-    assert table.c["evidence_snapshot_id"].nullable
-    assert table.c["retrieval_context_id"].nullable
+    assert table.c["case_id"].nullable is False
+    assert table.c["analysis_result_id"].nullable is False
+    assert table.c["evidence_snapshot_id"].nullable is False
+    assert table.c["retrieval_context_id"].nullable is True
+    assert "thread_id" not in columns
+    assert "analysis_message_id" not in columns
     assert "extraction_message_id" not in columns
     assert "extraction_version" not in columns

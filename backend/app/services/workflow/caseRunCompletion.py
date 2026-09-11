@@ -12,6 +12,7 @@ from app.models.case import Case
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult as PersistedAnalysisResult, CaseRun
 from app.models.chat import ChatMessage, ChatThread
+from app.models.ragContext import RagContext
 from app.schemas.messageMetadata import serialize_message_metadata
 from app.services.case_analysis.contracts import (
     CaseAdmittedSource,
@@ -306,6 +307,19 @@ async def complete_case_run(
             provider_metadata_json=provider_metadata,
         )
         db.add(result)
+        if augmentation is not None and trace.retrieval_context_id:
+            query_str = str(augmentation.get("query", augmentation.get("trigger_text", "")))
+            rag_context = RagContext(
+                retrieval_context_id=trace.retrieval_context_id,
+                case_id=case.id,
+                case_run_id=run.id,
+                evidence_snapshot_id=run.snapshot_id,
+                query_text=query_str,
+                query_sha256=hashlib.sha256(query_str.encode("utf-8")).hexdigest(),
+                context_text=str(augmentation.get("context", "")),
+                mitre_table=deepcopy(augmentation.get("mitre_table", [])),
+            )
+            db.add(rag_context)
         await db.flush()
 
         has_followup = output.followup_question is not None

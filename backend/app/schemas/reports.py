@@ -121,11 +121,12 @@ class CaseReportCreate(BaseModel):
         return normalized or None
 
 
-class ChatReportRead(BaseModel):
+class CaseReportRead(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     report_id: UUID
-    thread_id: UUID | None
+    id: UUID | None = None
+    thread_id: UUID | None = None
     version_number: int
     idempotency_key: str
     source_snapshot_hash: str
@@ -133,8 +134,8 @@ class ChatReportRead(BaseModel):
     case_id: UUID | None = None
     analysis_result_id: UUID | None = None
     evidence_snapshot_id: UUID | None = None
-    source_reference_type: Literal["legacy_chat", "case_evidence"] = "legacy_chat"
-    retrieval_context_id: str | None
+    source_reference_type: Literal["legacy_chat", "case_evidence"] = "case_evidence"
+    retrieval_context_id: str | None = None
     prompt_version: str
     provider: str
     model: str
@@ -153,8 +154,13 @@ class ChatReportRead(BaseModel):
     source_snapshot: dict[str, Any] | None = None
 
 
+# Compatibility alias
+ChatReportRead = CaseReportRead
+
+
 __all__ = [
     "CaseReportCreate",
+    "CaseReportRead",
     "ChatReportCreate",
     "ChatReportRead",
     "REPORT_SECTION_HEADINGS_BY_VERSION",

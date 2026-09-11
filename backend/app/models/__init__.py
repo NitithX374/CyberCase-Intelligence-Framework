@@ -10,9 +10,9 @@ from app.models.caseMaterials import (  # noqa: F401
     EvidenceSource,
 )
 from app.models.caseRun import CaseAnalysisResult, CaseRun  # noqa: F401
-from app.models.chat import ChatMessage, ChatRun, ChatThread  # noqa: F401
+from app.models.chat import ChatMessage, ChatThread  # noqa: F401
 from app.models.ragContext import RagContext  # noqa: F401
-from app.models.report import ChatReport  # noqa: F401
+from app.models.report import CaseReport, ChatReport  # noqa: F401
 from app.models.user import User  # noqa: F401
 
 __all__ = [
@@ -21,10 +21,10 @@ __all__ = [
     "CaseDocument",
     "CaseEvidenceSnapshot",
     "CaseAnalysisResult",
+    "CaseReport",
     "CaseRun",
     "ChatMessage",
     "ChatReport",
-    "ChatRun",
     "ChatThread",
     "DocumentExtraction",
     "EvidenceRevision",

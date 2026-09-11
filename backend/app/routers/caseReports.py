@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.reports import CaseReportCreate, ChatReportRead
+from app.schemas.reports import CaseReportCreate, CaseReportRead
 from app.services.auth.dependencies import get_current_user
 from app.services.reports.case_report_persistence import CaseReportService
 from app.services.reports.report_contracts import ReportServiceError
@@ -23,7 +23,7 @@ def _report_http_error(error: ReportServiceError) -> HTTPException:
     )
 
 
-@router.post("", response_model=ChatReportRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CaseReportRead, status_code=status.HTTP_201_CREATED)
 async def generate_case_report(
     case_id: UUID,
     request: CaseReportCreate,
@@ -37,7 +37,7 @@ async def generate_case_report(
         raise _report_http_error(error) from error
 
 
-@router.get("", response_model=list[ChatReportRead], status_code=status.HTTP_200_OK)
+@router.get("", response_model=list[CaseReportRead], status_code=status.HTTP_200_OK)
 async def list_case_reports(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -49,7 +49,7 @@ async def list_case_reports(
         raise _report_http_error(error) from error
 
 
-@router.get("/{report_id}", response_model=ChatReportRead, status_code=status.HTTP_200_OK)
+@router.get("/{report_id}", response_model=CaseReportRead, status_code=status.HTTP_200_OK)
 async def get_case_report(
     case_id: UUID,
     report_id: UUID,

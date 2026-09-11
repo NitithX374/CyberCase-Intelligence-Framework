@@ -9,18 +9,26 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
 
 # ── Engine ───────────────────────────────────────────────────────────────────
-engine = create_async_engine(
-    "postgresql+asyncpg://",
-    connect_args={
-        "host": settings.postgres_host,
-        "port": int(settings.postgres_port),
-        "user": settings.postgres_user,
-        "password": settings.postgres_password,
-        "database": settings.postgres_db,
-    },
-    echo=False,
-    pool_pre_ping=True,
-)
+if settings.database_url:
+    engine = create_async_engine(
+        settings.async_database_url,
+        echo=False,
+        pool_pre_ping=True,
+    )
+else:
+    engine = create_async_engine(
+        "postgresql+asyncpg://",
+        connect_args={
+            "host": settings.postgres_host,
+            "port": int(settings.postgres_port),
+            "user": settings.postgres_user,
+            "password": settings.postgres_password,
+            "database": settings.postgres_db,
+        },
+        echo=False,
+        pool_pre_ping=True,
+    )
+
 
 # ── Session factory ──────────────────────────────────────────────────────────
 async_session = async_sessionmaker(

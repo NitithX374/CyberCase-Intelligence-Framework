@@ -93,11 +93,11 @@ async def findCaseRunByIdempotencyKey(
     return message, run
 
 
-def buildChatRequestPayload(request: ChatMessageCreate, operation: str) -> dict[str, object]:
+def buildChatRequestPayload(request: ChatMessageCreate, operation: str = "ask") -> dict[str, object]:
     return {
         "operation": operation,
         "content": request.content.strip(),
-        "action": "ask" if operation == "ask" else "add_case_info",
+        "action": "ask",
         "response_language": request.response_language,
     }
 
@@ -133,22 +133,15 @@ async def createCaseChatMessageAndRun(
                 "clarification_missing",
                 "The Case has no pending clarification to answer",
             )
-        if request.action != "add_case_info":
-            raise CaseChatError(
-                "clarification_answer_required",
-                "Answer the pending clarification before asking another question",
-            )
         return await submitCaseClarification(db, case.id, user_id, clarification, request)
-    if request.action == "add_case_info":
-        answered = await find_answered_clarification(
-            db,
-            case_id=case.id,
-            request=buildClarificationRequest(request),
-        )
-        if answered is not None:
-            return await submitCaseClarification(db, case.id, user_id, answered, request)
-    operation = "analysis" if request.action == "add_case_info" else "ask"
-    expected_payload = buildChatRequestPayload(request, operation)
+    answered = await find_answered_clarification(
+        db,
+        case_id=case.id,
+        request=buildClarificationRequest(request),
+    )
+    if answered is not None:
+        return await submitCaseClarification(db, case.id, user_id, answered, request)
+    expected_payload = buildChatRequestPayload(request, "ask")
     existing = await findCaseRunByIdempotencyKey(db, case.id, request.idempotency_key, expected_payload)
     if existing is not None:
         try:
@@ -164,9 +157,7 @@ async def createCaseChatMessageAndRun(
     )
     if active is not None:
         raise CaseChatError("case_run_active", "Case already has an active analysis run")
-    if operation == "ask":
-        return await createCaseAsk(db, case, thread, request)
-    return await createCaseAddition(db, case, thread, request)
+    return await createCaseAsk(db, case, thread, request)
 
 
 async def submitCaseClarification(
@@ -189,61 +180,6 @@ async def submitCaseClarification(
     message = await db.get(ChatMessage, clarification.answer_message_id)
     if message is None:
         raise CaseChatError("clarification_message_missing", "Clarification answer message is missing")
-    return message, run
-
-
-async def createCaseAddition(
-    db: AsyncSession,
-    case: Case,
-    thread: ChatThread,
-    request: ChatMessageCreate,
-) -> tuple[ChatMessage, CaseRun]:
-    message = ChatMessage(
-        thread_id=thread.id,
-        ordinal=thread.next_message_ordinal,
-        role="user",
-        content=request.content.strip(),
-        message_kind="conversation",
-        metadata_json=serialize_message_metadata(
-            {"evidence_kind": "added_case_information", "analysis_kind": "case_material_addition"}
-        ),
-    )
-    db.add(message)
-    await db.flush()
-    source = await CaseMaterialsService(db).admitText(
-        case_id=case.id,
-        user_id=case.user_id,
-        source_kind="explicit_chat_addition",
-        exact_text=request.content,
-        provenance_json={
-            "origin": "explicit_chat_addition",
-            "origin_message_id": str(message.id),
-        },
-        source_metadata_json={"origin_message_id": str(message.id)},
-        origin_message_id=message.id,
-    )
-    message.metadata_json = serialize_message_metadata(
-        {
-            **message.metadata_json,
-            "case_evidence_source_id": str(source.id),
-            "case_evidence_revision": max(item.revision for item in source.revisions),
-        }
-    )
-    run = await enqueue_case_analysis(
-        db,
-        case_id=case.id,
-        user_id=case.user_id,
-        request=CaseAnalysisCreate(
-            idempotency_key=request.idempotency_key,
-            response_language=request.response_language,
-            expected_evidence_revision=case.evidence_revision,
-        ),
-        request_message_id=message.id,
-        request_payload_extra={"content": request.content.strip(), "action": "add_case_info"},
-    )
-    thread.next_message_ordinal += 1
-    thread.status = "processing"
-    thread.updated_at = datetime.now(timezone.utc)
     return message, run
 
 

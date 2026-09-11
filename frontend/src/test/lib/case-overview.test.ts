@@ -241,4 +241,53 @@ describe("case-overview view model builder", () => {
     expect(overview.findings).toEqual([]);
     expect(overview.gaps).toEqual([]);
   });
+
+  it("projects validated case_analysis_trace_v1 trace", () => {
+    const source = message("source-1", 1, "user", "Account A received transfer.", {
+      evidence_kind: "reviewed_document",
+    });
+    const analysis = message(
+      "analysis-v1",
+      2,
+      "assistant",
+      "Analysis response",
+      {
+        analysis_state_scope: "canonical_case_overview",
+        analysis_trace: {
+          version: "case_analysis_trace_v1",
+          validation_status: "validated",
+          analysis_mode: "case_overview",
+          summary: "A transfer occurred.",
+          claims: [{
+            claim_id: "A-01",
+            claim_type: "reported",
+            text: "Account A received transfer.",
+            epistemic_status: "reported",
+            supporting_source_message_ids: ["source-1"],
+            contradicting_source_message_ids: [],
+          }],
+          gaps: [{
+            gap_id: "G-01",
+            topic: "Destination",
+            status: "NOT_PROVIDED",
+            description: "Destination missing",
+            reason: "Unknown",
+            priority: "high",
+            askable: true,
+            affected_claim_ids: ["A-01"],
+          }],
+          mitre_associations: [],
+          evidence_sha256: "a".repeat(64),
+        },
+      },
+    );
+    const overview = buildCaseOverview([source, analysis], "answered");
+    expect(overview.contractVersion).toBe("case_analysis_trace_v1");
+    expect(overview.hasAnalysis).toBe(true);
+    expect(overview.incidentSummary).toBe("A transfer occurred.");
+    expect(overview.findings).toHaveLength(1);
+    expect(overview.findings[0].id).toBe("A-01");
+    expect(overview.gaps).toHaveLength(1);
+    expect(overview.gaps[0].id).toBe("G-01");
+  });
 });
