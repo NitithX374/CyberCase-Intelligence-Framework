@@ -6,7 +6,7 @@ from app.services.case_analysis.gapAssembly import (
     enrich_case_analysis_result,
 )
 from app.services.case_analysis.validation import AnalysisTraceStructureError
-from app.services.followup.schemas import GapAnalysis, GapItem
+from app.services.followup.contracts import GapAnalysis, GapItem
 
 
 def claim(claim_id: str, text: str) -> dict[str, object]:

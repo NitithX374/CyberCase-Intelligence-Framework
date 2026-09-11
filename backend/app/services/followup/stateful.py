@@ -9,7 +9,7 @@ from app.services.case_analysis.contracts import (
     AnalysisTraceV3,
 )
 from app.services.followup.contracts import answer_indicates_unavailable
-from app.services.followup.schemas import ClarificationExchange, GapAnalysis, GapItem
+from app.services.followup.contracts import ClarificationExchange, GapAnalysis, GapItem
 
 
 _PRIORITY_RANK = {"high": 0, "medium": 1}

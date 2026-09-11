@@ -18,7 +18,7 @@ from app.services.followup.prompts import (
     FOLLOWUP_PROMPT_VERSION,
     build_bounded_context,
 )
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     ClarificationExchange,
     GapAnalysis,
     FollowUpDecision,

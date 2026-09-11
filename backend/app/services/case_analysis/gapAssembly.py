@@ -17,7 +17,7 @@ from app.services.case_analysis.validation import (
     AnalysisTraceStructureError,
     validate_analysis_trace_v3,
 )
-from app.services.followup.schemas import GapAnalysis, GapItem
+from app.services.followup.contracts import GapAnalysis, GapItem
 
 _CLAIM_ID_PATTERN = re.compile(r"(?<![A-Z0-9])A-\d{2,}(?![A-Z0-9])", re.IGNORECASE)
 _TOKEN_PATTERN = re.compile(r"\w+", re.UNICODE)

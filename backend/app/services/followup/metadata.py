@@ -11,7 +11,7 @@ from app.services.followup.prompts import (
     GAP_ANALYSIS_PROMPT_VERSION,
     GAP_ANALYSIS_VERSION,
 )
-from app.services.followup.schemas import GapAnalysisResult
+from app.services.followup.contracts import GapAnalysisResult
 from app.services.llm.coreLlm import resolve_core_llm_target
 
 

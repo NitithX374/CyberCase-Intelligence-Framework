@@ -4,7 +4,7 @@ from app.models.chat import ChatMessage
 from app.services.chat.clarification_chain import reconstruct_clarification_chain
 from app.services.chat.raw_evidence import build_raw_evidence_snapshot
 from app.services.followup.context import build_bounded_context
-from app.services.followup.schemas import ClarificationExchange
+from app.services.followup.contracts import ClarificationExchange
 
 
 def test_raw_evidence_hash_ignores_workflow_context_and_assistant_question() -> None:

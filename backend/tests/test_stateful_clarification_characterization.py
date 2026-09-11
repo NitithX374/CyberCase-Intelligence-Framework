@@ -4,7 +4,7 @@ from uuid import uuid4
 from app.models.chat import ChatMessage
 from app.services.chat.clarification_chain import reconstruct_clarification_chain
 from app.services.followup.decision import evaluate_followup_outcome
-from app.services.followup.schemas import (
+from app.services.followup.contracts import (
     ClarificationExchange,
     FollowUpDecision,
     GapAnalysis,
