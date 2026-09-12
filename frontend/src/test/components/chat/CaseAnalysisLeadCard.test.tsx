@@ -102,4 +102,51 @@ describe("ChatTranscript with Lead Card", () => {
     // Historical publication message matching leadResult.id is omitted from transcript
     expect(screen.queryByText("Duplicate publication of analysis findings")).not.toBeInTheDocument();
   });
+
+  it("renders followup_question in transcript even when linked to leadResult.id", () => {
+    const followupQuestionMessage: PersistedChatMessage = {
+      id: "msg-followup-1",
+      thread_id: "thread-1",
+      ordinal: 3,
+      role: "assistant",
+      content: "What was the destination IP address for the exfiltration traffic?",
+      message_kind: "followup_question",
+      retrieval_context_id: null,
+      analysis_result_id: "analysis-result-1",
+      metadata_json: {
+        analysis_kind: "clarification_question",
+        analysis_result_id: "analysis-result-1",
+        chat_followup: {
+          kind: "clarification",
+          action: "ask_followup",
+          root_ordinal: 3,
+          round: 1,
+          selected_gap_detail: {
+            topic: "Destination IP",
+            status: "NOT_PROVIDED",
+            description: "Missing destination IP for exfiltration",
+            affects: "Technical attribution",
+            reason: "Required to verify C2 infrastructure",
+            priority: "high",
+            askable: true,
+          },
+        },
+      },
+      created_at: "2026-09-10T12:06:00Z",
+    };
+
+    render(
+      <ChatTranscript
+        messages={[followupQuestionMessage]}
+        isProcessing={false}
+        leadResult={sampleResult}
+        leadSnapshot={sampleSnapshot}
+      />,
+    );
+
+    // Followup question content is rendered
+    expect(screen.getByText("What was the destination IP address for the exfiltration traffic?")).toBeInTheDocument();
+    // Action card for the gap is rendered
+    expect(screen.getByText("Destination IP")).toBeInTheDocument();
+  });
 });

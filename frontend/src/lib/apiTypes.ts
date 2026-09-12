@@ -37,7 +37,7 @@ export type CaseChatMessageAccepted = {
 export type CaseNarrativeDocumentSource = Required<DocumentSource>;
 export type { CaseNarrativeDocumentPageSpan } from "./generated/caseTypes";
 export type PersistedChatMessage = Omit<GeneratedChatMessageRead, "message_kind" | "analysis_result_id"> & {
-  message_kind?: GeneratedChatMessageRead["message_kind"];
+  message_kind?: GeneratedChatMessageRead["message_kind"] | "followup_answer";
   analysis_result_id?: string | null;
 };
 export type ChatRun = ChatRunRead;

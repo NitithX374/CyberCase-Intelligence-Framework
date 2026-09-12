@@ -68,9 +68,27 @@ export function useChatSubmission({
           lastKnownMessageOrdinal: session.messages.reduce((ordinal, message) => Math.max(ordinal, message.ordinal), 0),
         };
         session.beginSubmission(submission, followUp);
-        const accepted = await createCaseChatMessage(
-          caseId, content, submission.key, selection.signal, action,
-        );
+        const pendingQuestion = isAnsweringFollowUp
+          ? [...session.messages].reverse().find((m) => m.message_kind === "followup_question")
+          : undefined;
+        const accepted = isAnsweringFollowUp
+          ? await createCaseChatMessage(
+              caseId,
+              content,
+              submission.key,
+              selection.signal,
+              action,
+              undefined,
+              "clarification_answer",
+              pendingQuestion?.id,
+            )
+          : await createCaseChatMessage(
+              caseId,
+              content,
+              submission.key,
+              selection.signal,
+              action,
+            );
         if (!session.isCurrentSelection(selection)) return;
         session.acceptSubmission(selection, submission.key, accepted);
 
