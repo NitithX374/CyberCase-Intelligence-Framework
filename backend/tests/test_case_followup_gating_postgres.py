@@ -34,9 +34,6 @@ async def _setup_case(factory) -> tuple[UUID, UUID]:
         case = Case(title="Followup Gating Case", user_id=None)
         db.add(case)
         await db.flush()
-        thread = ChatThread(case_id=case.id, title=case.title)
-        db.add(thread)
-        await db.flush()
         source = await CaseMaterialsService(db).admitText(
             case_id=case.id,
             user_id=None,
