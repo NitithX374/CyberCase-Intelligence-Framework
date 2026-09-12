@@ -39,6 +39,7 @@ class CaseReportTechnicalAugmentation(BaseModel):
     status: CaseTechnicalAugmentationStatus
     applicability: MitreApplicabilityRecord
     retrieval_context_id: str | None = None
+    retrieval_context_reused: bool = False
     mitre_table: list[dict[str, object]] = Field(default_factory=list, max_length=256)
     query_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     association_ids: list[str] = Field(default_factory=list, max_length=64)

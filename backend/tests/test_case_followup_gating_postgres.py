@@ -6,7 +6,6 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.models.case import Case
-from app.models.caseClarification import CaseClarification
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage, ChatThread
@@ -20,7 +19,10 @@ from app.services.case_analysis.contracts import (
     CaseEvidenceCitation,
 )
 from app.services.case_materials import CaseMaterialsService
-from app.services.followup.caseClarification import submit_clarification_answer
+from app.services.followup.caseClarification import (
+    get_owned_clarifications,
+    submit_clarification_answer,
+)
 from app.services.workflow.caseRunClaim import claimCaseRun
 from app.services.workflow.caseRunCompletion import complete_case_run
 from app.services.workflow.caseRunService import enqueue_case_analysis
@@ -141,8 +143,9 @@ def test_followup_gates_analysis_result_message_and_attaches_gap_why():
                 assert detail["priority"] == "high"
                 assert detail["askable"] is True
 
-                clarification = await db.scalar(select(CaseClarification).where(CaseClarification.case_id == case_id))
-                assert clarification is not None
+                clarifications = await get_owned_clarifications(db, case_id)
+                assert len(clarifications) == 1
+                clarification = clarifications[0]
                 assert clarification.state == "pending"
 
             # Step 2: Analyst submits clarification answer
@@ -188,9 +191,9 @@ def test_followup_gates_analysis_result_message_and_attaches_gap_why():
                 final_messages = list((await db.scalars(select(ChatMessage).where(ChatMessage.thread_id == thread.id).order_by(ChatMessage.ordinal))).all())
                 # Should have 2 messages in order:
                 # 1. followup_question (assistant)
-                # 2. clarification_answer (user clarification answer)
+                # 2. followup_answer (user clarification answer)
                 assert len(final_messages) == 2
-                assert [m.message_kind for m in final_messages] == ["followup_question", "clarification_answer"]
+                assert [m.message_kind for m in final_messages] == ["followup_question", "followup_answer"]
                 assert [m.role for m in final_messages] == ["assistant", "user"]
 
     asyncio.run(exercise())

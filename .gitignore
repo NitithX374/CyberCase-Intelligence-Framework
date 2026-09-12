@@ -162,6 +162,7 @@ deliverables/**/*.pdf
 # Experiments & Research Benchmarks
 # ==============================================================================
 backend/experiments/
+/evaluation/
 
 # The offline semantic-verification fixture is intentionally versioned.
 experiments/*

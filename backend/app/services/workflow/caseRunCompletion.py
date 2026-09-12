@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from copy import deepcopy
 from datetime import datetime, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,10 +22,7 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisTrace,
 )
 from app.services.case_analysis.validation import validate_case_trace
-from app.services.followup.caseClarification import (
-    create_pending_clarification,
-    supersede_prior_clarifications,
-)
+from app.services.followup.caseClarification import supersede_prior_clarifications
 
 
 def trace_source_ids(trace: CaseAnalysisTrace) -> list[str]:
@@ -279,7 +276,12 @@ async def complete_case_run(
         )
         db.add(result)
         if augmentation is not None and trace.retrieval_context_id:
-            existing_rag = await db.get(RagContext, trace.retrieval_context_id)
+            existing_rag = await db.scalar(
+                select(RagContext).where(
+                    (RagContext.retrieval_context_id == trace.retrieval_context_id)
+                    | (RagContext.case_run_id == run.id)
+                )
+            )
             if existing_rag is None:
                 query_str = str(augmentation.get("query", augmentation.get("trigger_text", "")))
                 rag_context = RagContext(
@@ -309,21 +311,17 @@ async def complete_case_run(
                 else None
             )
             clarification_meta = build_clarification_metadata(output, trace)
-            clarification = await create_pending_clarification(
-                db,
-                case_id=case.id,
-                result_id=result.id,
-                snapshot_id=run.snapshot_id,
-                question=output.followup_question,
-                metadata=clarification_meta,
-            )
+            gap_id = str(clarification_meta.get("gap_id") or "G-001")
+            topic = str(clarification_meta.get("topic") or "")
+            gap_key = str(clarification_meta.get("gap_key") or f"{gap_id}:{topic.lower()}")
+            followup_message_id = uuid4()
             followup_message_meta = build_followup_message_metadata(
                 result_id=result.id,
-                clarification_id=clarification.id,
+                clarification_id=followup_message_id,
                 snapshot_id=run.snapshot_id,
-                clarification_topic=clarification.topic,
-                gap_id=clarification.gap_id,
-                gap_key=clarification.gap_key,
+                clarification_topic=topic,
+                gap_id=gap_id,
+                gap_key=gap_key,
                 thread_ordinal=thread.next_message_ordinal,
                 augmentation_payload=augmentation_payload,
                 is_augmentation_present=augmentation is not None,
@@ -332,6 +330,7 @@ async def complete_case_run(
                 existing_followup=existing_followup,
             )
             question = ChatMessage(
+                id=followup_message_id,
                 thread_id=thread.id,
                 ordinal=thread.next_message_ordinal,
                 role="assistant",
@@ -342,7 +341,6 @@ async def complete_case_run(
             )
             db.add(question)
             await db.flush()
-            clarification.question_message_id = question.id
             thread.next_message_ordinal += 1
 
         await supersede_prior_clarifications(

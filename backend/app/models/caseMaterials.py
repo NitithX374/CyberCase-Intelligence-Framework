@@ -91,7 +91,7 @@ class EvidenceSource(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_case_evidence_sources"),
         CheckConstraint(
-            "source_kind IN ('reviewed_document', 'narrative', 'clarification_answer')",
+            "source_kind IN ('reviewed_document', 'narrative', 'followup_answer')",
             name="ck_case_evidence_sources_kind",
         ),
         Index("ix_case_evidence_sources_case_id_created_at", "case_id", "created_at"),

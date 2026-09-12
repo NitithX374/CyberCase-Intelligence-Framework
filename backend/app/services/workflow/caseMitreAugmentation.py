@@ -51,6 +51,7 @@ class CaseMitreAugmentation:
     context: CaseRagContextPayload | None
     associations: tuple[CaseMitreAssociation, ...]
     failure_code: str | None = None
+    reused: bool = False
 
     @property
     def retrieval_context_id(self) -> str | None:
@@ -66,6 +67,7 @@ class CaseMitreAugmentation:
             "status": self.status,
             "applicability": self.applicability.model_dump(mode="json"),
             "retrieval_context_id": self.retrieval_context_id,
+            "retrieval_context_reused": self.reused,
             "mitre_table": self.mitre_table,
             "query_sha256": hashlib.sha256(query.encode("utf-8")).hexdigest(),
             "association_ids": [item.association_id for item in self.associations],
@@ -88,6 +90,7 @@ async def run_case_mitre_augmentation(
     mapping_request=None,
     calls: list[dict[str, object]] | None = None,
     on_rag_validated=None,
+    reused_context: CaseRagContextPayload | None = None,
 ) -> CaseMitreAugmentation:
     try:
         evidence_sources = _case_evidence_sources(manifest)
@@ -104,26 +107,31 @@ async def run_case_mitre_augmentation(
     if applicability.decision == "SKIP":
         return CaseMitreAugmentation("not_applicable", applicability, None, ())
 
-    try:
-        response = await rag_request(input_text)
-        context = validated_case_rag_context(response)
-    except RagCallFailure as error:
-        return _failed(error.code, applicability)
-    except (ValueError, ValidationError):
-        return _failed("rag_invalid_response", applicability)
-    except Exception:
-        logger.exception("Case MITRE retrieval failed run_id=%s", run_id)
-        return _failed("rag_service_error", applicability)
-
-    if on_rag_validated is not None:
+    is_reused = False
+    if reused_context is not None:
+        context = reused_context
+        is_reused = True
+    else:
         try:
-            await on_rag_validated(context)
+            response = await rag_request(input_text)
+            context = validated_case_rag_context(response)
+        except RagCallFailure as error:
+            return _failed(error.code, applicability)
+        except (ValueError, ValidationError):
+            return _failed("rag_invalid_response", applicability)
         except Exception:
-            logger.exception("Case MITRE early persistence callback failed run_id=%s", run_id)
+            logger.exception("Case MITRE retrieval failed run_id=%s", run_id)
+            return _failed("rag_service_error", applicability)
+
+        if on_rag_validated is not None:
+            try:
+                await on_rag_validated(context)
+            except Exception:
+                logger.exception("Case MITRE early persistence callback failed run_id=%s", run_id)
 
     technique_rows = _technique_rows(context.mitre_table)
     if not context.retrieval_context_id or not technique_rows:
-        return CaseMitreAugmentation("insufficient_context", applicability, context, ())
+        return CaseMitreAugmentation("insufficient_context", applicability, context, (), reused=is_reused)
 
     try:
         associations = await (mapping_request or request_case_mitre_mapping)(
@@ -151,6 +159,7 @@ async def run_case_mitre_augmentation(
         applicability,
         context,
         tuple(valid_associations),
+        reused=is_reused,
     )
 
 

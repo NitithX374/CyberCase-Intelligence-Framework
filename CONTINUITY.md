@@ -2,6 +2,10 @@
 
 ## Snapshot
 
+- 2026-09-12 [USER/CODE/TOOL] Completed canonical backend/database cleanup on branch `gemini/canonical-dev-cleanup`. Eliminated standalone `case_clarifications` table and ORM model; unified follow-up question/answer flow through `ChatMessage` and `EvidenceSource`. Enforced `CaseRun` ownership of `CaseAnalysisResult` and `RagContext` (`case_run_id` UNIQUE, `ON DELETE CASCADE`). Implemented early `RagContext` persistence and retry reuse. Converged Alembic baseline `0001_canonical_case_system.py`, ORM models, and live PostgreSQL catalog to exactly 13 canonical tables with 0 drift. Verified aggregate deletion cascades across all 12 case-scoped tables. All 5 PostgreSQL integration suites (9 tests), full backend pytest (311 passed, 1 skipped), frontend Vitest (44 files, 185 passed), and Next.js production build pass cleanly.
+
+- 2026-09-12 [USER/CODE/TOOL] Ownership audit on current `gemini/canonical-dev-cleanup` at `9325e40` supersedes older checkout assumptions. Canonical rule: Case owns persistent state; CaseRun owns durable processing/artifacts. Report: docs/developer-handover/CASE_RUN_OWNERSHIP_AUDIT_2026-09-12.md covers all 14 tables, retrieval retry reuse gap, ORM/FK ownership mismatch and baseline drift. Schema tests 8 passed; live catalog/deletion unverified. Audit/proposal only; no application/migration edits.
+
 - 2026-09-12 [USER/TOOL] User requested local non-core artifacts be ignored. Added root patterns for dataset indexes, ad-hoc scripts, sample images, scratch OCR/render directories, and generated architecture preview pages; removed those already-tracked artifacts from the index without deleting local files. Core source and project documentation remain tracked.
 
 - 2026-09-12 [USER/TOOL] User explicitly authorized committing all current worktree changes. Commit `72e0b36` contains the full staged workspace delta and was pushed to `origin/codex/backend-architecture-simplification`; local HEAD matches the remote and the worktree is clean.
@@ -97,6 +101,7 @@
 
 ## Done (recent)
 
+- 2026-09-12 [CODE/TOOL] Executed canonical backend/database cleanup: Alembic baseline `0001_canonical_case_system.py` converged to exactly 13 product tables with 0 schema drift; eliminated `case_clarifications` in favor of `chat_messages` / `case_evidence_sources`; enforced `CaseRun` ownership of `CaseAnalysisResult` and `RagContext`; all 5 PostgreSQL integration suites (9 tests) passed; full backend 311 passed (1 skipped), frontend 185 passed, clean Next.js build.
 - 2026-09-10 [CODE] Implemented Case-first Checkpoints A-E: Case-owned materials/evidence/snapshots, CaseRun/results, clarification, lazy Chat publication, native readers, and result/snapshot-bound reports; `rag_service/**` is unchanged.
 - 2026-09-10 [TOOL] Passed the populated disposable 0001→0010 migration rehearsal, preserved report IDs/hashes, kept one legacy result mapping explicitly unresolved, verified optional Chat deletion preserves Case history, and destroyed the temporary database.
 - 2026-09-10 [TOOL] Real Docker PostgreSQL Case-first focused suite passed 13 tests covering concurrency, leases, atomicity, publication, clarification, recovery and reports; full backend passed 450 with one skipped test and two subtests.
@@ -170,16 +175,18 @@
 - D056 ACTIVE 2026-09-10 [CODE] Checkpoint A resolves Case/Materials/Analysis/Workflow/Chat/Clarification/Reporting ownership, optional Chat creation, one active CaseRun, immutable enqueue snapshots, evidence-bound legacy mapping, and no fabricated message IDs. Current findings and fixture strategy are in docs/developer-handover/CASE_FIRST_CHECKPOINT_A.md.
 - D057 ACTIVE 2026-09-10 [CODE] Case is the native aggregate and worker owner; Chat is optional transcript/ASK interaction. Native analysis publishes one immutable-result-linked assistant message lazily, while native source IDs/revisions and result snapshots remain authoritative.
 - D058 ACTIVE 2026-09-10 [TOOL] Live data had no provable legacy native result/source rows, so migration created no historical claims. Populated migration rehearsal preserved unresolved records explicitly, and optional Chat deletion is non-destructive to Case history.
+- D059 ACTIVE 2026-09-12 [USER/CODE] Canonical Case/CaseRun backend & database convergence on branch `gemini/canonical-dev-cleanup`: exactly 13 product tables in Alembic baseline `0001_canonical_case_system.py`; `case_clarifications` standalone table eliminated in favor of native `chat_messages` (`in_reply_to_message_id`, `message_kind="followup_question"|"followup_answer"`) and `case_evidence_sources` (`source_kind="followup_answer"`); `CaseAnalysisResult` (`fk_case_analysis_results_run_id` `ON DELETE CASCADE`) and `RagContext` (`case_run_id` UNIQUE, `ON DELETE CASCADE`) strictly owned by `CaseRun`; RAG retrieval persisted early upon validation and reused on run retry; aggregate deletion cascades cleanly across all 12 case-scoped tables.
 
 ## State (Done/Now/Next)
 
+- 2026-09-12 [CODE/TOOL] Done: Canonical backend/database cleanup implemented and verified on branch `gemini/canonical-dev-cleanup`. Exactly 13 product tables in baseline Alembic migration, 0 schema drift against PostgreSQL catalog and ORM models, and all 5 integration test suites green.
 - 2026-09-10 [CODE] Done: Case-first Checkpoints A-E are implemented; Case owns materials, evidence, snapshots, runs, results, clarification and reports, while Chat owns optional transcript interaction/publication.
 - 2026-09-10 [TOOL] Done: Checkpoint F schema/catalog, populated migration rehearsal, concurrency/atomicity evidence, coordinated Docker rebuild, and runtime health checks are complete; receipt is in `docs/developer-handover/CASE_FIRST_MIGRATION_AUDIT_2026-09-10.md`.
 - 2026-09-10 [TOOL] Done: live DB is at `0010_preserve_chat_reports (head)` with 2 Cases/2 primary Chats and zero native rows/orphan or active-run violations; no historical backfill was inferred.
 - 2026-09-10 [TOOL] Done: full backend/frontend validation and post-rebuild focused PostgreSQL validation pass; exact counts and unrelated lint limitations are recorded in the migration audit.
 - 2026-09-10 [TOOL] Done: final source/diff review passed; all Case-first touched code is at or below 300 lines, except two pre-existing unrelated frontend files, `git diff --check` passed, and `rag_service/**` remains untouched.
 - 2026-09-10 [TOOL] Historical in-app browser connector smoke remains unverified because it had no signed-in session; 2026-09-11 [TOOL] local Playwright authenticated E2E now certifies the Case flow with a disposable test account.
-- 2026-09-11 [ASSUMPTION] Next: keep the pre-existing dirty Case-first frontend batch separate; NLI qualification, multi-document clustering, and technical augmentation redesign remain deferred.
+- 2026-09-12 [ASSUMPTION] Next: staged commit to `gemini/canonical-dev-cleanup`; no unrelated frontend changes or new abstractions.
 
 ## Working set
 
@@ -198,6 +205,7 @@
 
 ## Receipts
 
+- 2026-09-12 [TOOL] Canonical backend cleanup verification: 5 PostgreSQL suites (9 tests: schema parity, RAG context retry reuse, CaseRun ownership deletion, case aggregate cascade deletion, simplified follow-up workflow) passed in 15.87s on local PostgreSQL :5433; full backend pytest passed 311, 1 skipped in 62.93s; frontend Vitest passed 44 files/185 tests in 86.69s; Next.js 16 production build compiled cleanly with TypeScript in 21.6s.
 - 2026-09-11 [TOOL] Playwright: `npm run e2e -- --workers=1` passed 2 tests in 1.2 minutes; the lifecycle spec passed separately in 1.3 minutes. Targeted CaseAnalysisLeadCard Vitest passed 2 tests, harness ESLint/syntax checks passed, and test discovery lists 2 tests. The harness uses installed Chrome (`channel: "chrome"`); Playwright-managed Chromium download stalled and was not used.
 - 2026-09-11 [TOOL] Backend E2E support fixes passed focused PostgreSQL tests (14), targeted missing-import tests (2), and split non-external certification (387 passed/1 skipped/2 subtests plus core provider 7 passed). Manual local-provider checks completed native analysis, report/PDF (HTTP 200), and Case Chat persistence.
 - 2026-09-10 [TOOL] Documentation checks: symbol index regenerated against current tree (673 files/3,307 symbols); migration audit and integration/project-direction links pass; frontend API-type check and route registration/build checks pass.

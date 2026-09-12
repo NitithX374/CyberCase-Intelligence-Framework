@@ -5,12 +5,12 @@ import pytest
 from sqlalchemy import func, select
 
 from app.models import Case, CaseAnalysisResult, CaseEvidenceSnapshot, CaseRun, ChatMessage, ChatThread
-from app.models.caseClarification import CaseClarification
 from app.models.caseMaterials import EvidenceSource
 from app.schemas.caseRuns import CaseAnalysisCreate
 from app.schemas.chat import ChatMessageCreate
 from app.services.case_materials import CaseMaterialsService
 from app.services.chat.caseChat import CaseChatError, createCaseChatMessageAndRun
+from app.services.followup.caseClarification import get_owned_clarifications
 from app.services.workflow.caseAskCompletion import completeCaseAsk
 from app.services.workflow.caseRunClaim import claimCaseRun
 from app.services.workflow.caseRunCompletion import complete_case_run
@@ -60,13 +60,17 @@ def test_explicit_clarification_intent_vs_normal_ask():
             async with factory() as db:
                 thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case_id))
                 assert thread.status == "awaiting_followup"
-                pending = await db.scalar(
-                    select(CaseClarification).where(
-                        CaseClarification.case_id == case_id,
-                        CaseClarification.state == "pending",
+                followup_msg = await db.scalar(
+                    select(ChatMessage).where(
+                        ChatMessage.thread_id == thread.id,
+                        ChatMessage.message_kind == "followup_question",
                     )
                 )
+                assert followup_msg is not None
+                clarifications = await get_owned_clarifications(db, case_id)
+                pending = next((c for c in clarifications if c.state == "pending"), None)
                 assert pending is not None
+                assert pending.id == followup_msg.id
                 initial_evidence_count = await db.scalar(select(func.count()).select_from(EvidenceSource))
                 assert initial_evidence_count == 1
 
@@ -89,7 +93,9 @@ def test_explicit_clarification_intent_vs_normal_ask():
 
             # Verify pending clarification is untouched and no new evidence admitted
             async with factory() as db:
-                pending_after_ask = await db.get(CaseClarification, pending.id)
+                clarifications_after_ask = await get_owned_clarifications(db, case_id)
+                pending_after_ask = next((c for c in clarifications_after_ask if c.id == pending.id), None)
+                assert pending_after_ask is not None
                 assert pending_after_ask.state == "pending"
                 evidence_count_after_ask = await db.scalar(select(func.count()).select_from(EvidenceSource))
                 assert evidence_count_after_ask == 1
@@ -161,13 +167,15 @@ def test_explicit_clarification_intent_vs_normal_ask():
                     user_id=None,
                     request=valid_clarif_req,
                 )
-                assert c_msg.message_kind == "clarification_answer"
+                assert c_msg.message_kind == "followup_answer"
+                assert c_msg.in_reply_to_message_id == pending.id
                 assert c_run.operation == "analysis"
-                assert c_run.clarification_id == pending.id
 
             # Verify clarification is now answered and new evidence source admitted
             async with factory() as db:
-                answered_clarif = await db.get(CaseClarification, pending.id)
+                clarifications_after_clarif = await get_owned_clarifications(db, case_id)
+                answered_clarif = next((c for c in clarifications_after_clarif if c.id == pending.id), None)
+                assert answered_clarif is not None
                 assert answered_clarif.state == "answered"
                 evidence_count_after_clarif = await db.scalar(select(func.count()).select_from(EvidenceSource))
                 assert evidence_count_after_clarif == 2

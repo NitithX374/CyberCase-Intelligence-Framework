@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import func, select
 
 from app.models import Case, CaseAnalysisResult, CaseRun, ChatMessage, ChatThread
-from app.models.caseClarification import CaseClarification
 from app.models.caseMaterials import CaseEvidenceSnapshot, EvidenceSource
 from app.schemas.caseClarifications import CaseClarificationAnswer
 from app.schemas.caseRuns import CaseAnalysisCreate
@@ -19,9 +18,8 @@ from app.services.case_materials import CaseMaterialsService
 from app.services.chat import CaseChatError, ChatService, createCaseChatMessageAndRun
 from app.services.followup.caseClarification import (
     CaseClarificationError,
-    create_pending_clarification,
+    get_owned_clarifications,
     submit_clarification_answer,
-    supersede_prior_clarifications,
 )
 from app.services.workflow.caseAskCompletion import completeCaseAsk
 from app.services.workflow.caseRunClaim import claimCaseRun
@@ -119,9 +117,9 @@ def test_case_publication_and_clarification_are_separate_and_idempotent():
             case_id, source_id = await _case_with_source(factory)
             await _complete_initial(factory, case_id, source_id)
             async with factory() as db:
-                clarification = await db.scalar(
-                    select(CaseClarification).where(CaseClarification.case_id == case_id)
-                )
+                clarifications = await get_owned_clarifications(db, case_id)
+                assert len(clarifications) == 1
+                clarification = clarifications[0]
                 messages = list((await db.scalars(select(ChatMessage).order_by(ChatMessage.ordinal))).all())
                 assert clarification is not None
                 assert [message.ordinal for message in messages] == [1]
@@ -164,21 +162,53 @@ def test_case_publication_and_clarification_are_separate_and_idempotent():
                 assert await db.scalar(select(func.count()).select_from(ChatMessage)) == 2
                 assert await db.scalar(select(CaseAnalysisResult.id).where(CaseAnalysisResult.id == result_id)) is not None
             async with factory() as db, db.begin():
-                stale = await create_pending_clarification(
-                    db,
-                    case_id=case_id,
-                    result_id=result_id,
-                    snapshot_id=(await db.scalar(select(CaseAnalysisResult.snapshot_id).where(CaseAnalysisResult.id == result_id))),
-                    question="What was the vehicle colour?",
-                    metadata={"gap_id": "G-02", "topic": "Vehicle colour detail", "gap_key": "vehicle_colour_detail"},
+                case = await db.get(Case, case_id)
+                snapshot_id = await db.scalar(select(CaseAnalysisResult.snapshot_id).where(CaseAnalysisResult.id == result_id))
+                new_run_id = uuid4()
+                new_result_id = uuid4()
+                db.add(
+                    CaseRun(
+                        id=new_run_id,
+                        case_id=case_id,
+                        operation="analysis",
+                        snapshot_id=snapshot_id,
+                        idempotency_key="stale-test-run",
+                        request_fingerprint="f" * 64,
+                        status="completed",
+                    )
                 )
-                await supersede_prior_clarifications(db, case_id=case_id, result_id=uuid4())
+                await db.flush()
+                db.add(
+                    CaseAnalysisResult(
+                        id=new_result_id,
+                        case_id=case_id,
+                        run_id=new_run_id,
+                        snapshot_id=snapshot_id,
+                        schema_version="case_analysis_trace_v1",
+                        status="validated",
+                        answer="New analysis",
+                        summary="New analysis",
+                    )
+                )
+                await db.flush()
+                case.latest_analysis_result_id = new_result_id
+                thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case_id))
+                unanswered_old_q = ChatMessage(
+                    thread_id=thread.id,
+                    ordinal=thread.next_message_ordinal,
+                    role="assistant",
+                    content="What was the vehicle model?",
+                    message_kind="followup_question",
+                    analysis_result_id=result_id,
+                )
+                db.add(unanswered_old_q)
+                thread.next_message_ordinal += 1
             async with factory() as db, db.begin():
                 with pytest.raises(CaseClarificationError, match="older analysis"):
                     await submit_clarification_answer(
                         db,
                         case_id=case_id,
-                        clarification_id=stale.id,
+                        clarification_id=unanswered_old_q.id,
                         user_id=None,
                         request=CaseClarificationAnswer(
                             answer="A stale answer.",

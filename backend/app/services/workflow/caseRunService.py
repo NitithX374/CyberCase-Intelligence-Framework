@@ -105,7 +105,6 @@ async def enqueue_case_analysis(
             **saved_payload,
         },
         pipeline_config=pipeline,
-        clarification_id=clarification_id,
     )
     db.add(run)
     await db.flush()

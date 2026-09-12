@@ -6,7 +6,6 @@ import pytest
 from sqlalchemy import select
 
 from app.models import Case, CaseRun
-from app.models.caseClarification import CaseClarification
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.schemas.caseClarifications import CaseClarificationAnswer
 from app.schemas.caseRuns import CaseAnalysisCreate
@@ -19,9 +18,10 @@ from app.services.case_analysis.contracts import (
 from app.services.case_materials import CaseMaterialsService
 from app.services.followup.caseClarification import (
     CaseClarificationError,
+    get_owned_clarifications,
+    load_case_clarification_exchanges,
     submit_clarification_answer,
 )
-from app.services.followup.caseClarification import load_case_clarification_exchanges
 from app.services.followup.contracts import FollowUpResolution
 from app.services.workflow.caseRunClaim import claimCaseRun
 from app.services.workflow.caseRunCompletion import complete_case_run
@@ -132,9 +132,9 @@ def test_case_followup_history_is_reconstructed_and_retry_is_bounded(monkeypatch
             case_id, source_id = await _case(factory)
             await _complete_initial(factory, case_id, source_id)
             async with factory() as db:
-                clarification = await db.scalar(
-                    select(CaseClarification).where(CaseClarification.case_id == case_id)
-                )
+                clarifications = await get_owned_clarifications(db, case_id)
+                assert len(clarifications) == 1
+                clarification = clarifications[0]
             answer_run_id, request = await _answer(factory, case_id, clarification.id)
             async with factory() as db:
                 exchanges = await load_case_clarification_exchanges(db, case_id)
@@ -183,9 +183,9 @@ def test_case_execution_passes_durable_exchanges_to_followup_policy(monkeypatch)
             case_id, source_id = await _case(factory)
             await _complete_initial(factory, case_id, source_id)
             async with factory() as db:
-                clarification = await db.scalar(
-                    select(CaseClarification).where(CaseClarification.case_id == case_id)
-                )
+                clarifications = await get_owned_clarifications(db, case_id)
+                assert len(clarifications) == 1
+                clarification = clarifications[0]
             answer_run_id, _ = await _answer(factory, case_id, clarification.id)
             captured = {}
 

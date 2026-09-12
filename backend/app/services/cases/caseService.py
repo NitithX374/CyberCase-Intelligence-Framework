@@ -3,13 +3,22 @@
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.case import Case
-from app.models.caseRun import CaseAnalysisResult
-from app.models.chat import ChatThread
+from app.models.caseMaterials import (
+    CaseDocument,
+    CaseEvidenceSnapshot,
+    DocumentExtraction,
+    EvidenceRevision,
+    EvidenceSource,
+)
+from app.models.report import CaseReport
+from app.models.caseRun import CaseAnalysisResult, CaseRun
+from app.models.chat import ChatMessage, ChatThread
+from app.models.ragContext import RagContext
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 
 
@@ -22,7 +31,17 @@ def serializeCase(case: Case) -> CaseRead:
         processing_status = "failed"
     else:
         processing_status = "idle"
-    has_pending_clarification = any(item.state == "pending" for item in case.clarifications)
+    has_pending_clarification = False
+    if thread and thread.messages:
+        answered_ids = {
+            m.in_reply_to_message_id
+            for m in thread.messages
+            if m.in_reply_to_message_id is not None
+        }
+        has_pending_clarification = any(
+            m.message_kind == "followup_question" and m.id not in answered_ids
+            for m in thread.messages
+        )
     status_value = "processing" if processing_status in {"queued", "running"} else (
         "failed" if processing_status == "failed" else
         "awaiting_followup" if has_pending_clarification else
@@ -96,9 +115,8 @@ class CaseService:
 
     async def listCases(self, user_id: UUID | None = None) -> list[CaseRead]:
         statement = select(Case).options(
-            selectinload(Case.chat_thread),
+            selectinload(Case.chat_thread).selectinload(ChatThread.messages),
             selectinload(Case.case_runs),
-            selectinload(Case.clarifications),
             selectinload(Case.latest_analysis_result).selectinload(CaseAnalysisResult.snapshot),
         ).order_by(Case.updated_at.desc())
         if user_id is None:
@@ -138,6 +156,33 @@ class CaseService:
     ) -> None:
         case = await self._loadCase(case_id, lock=True)
         self._verifyCaseAccess(case, user_id)
+        
+        # Delete case-owned entities in dependency order within transaction
+        await self.db.execute(delete(CaseReport).where(CaseReport.case_id == case.id))
+
+        thread_ids_subq = select(ChatThread.id).where(ChatThread.case_id == case.id)
+        await self.db.execute(delete(ChatMessage).where(ChatMessage.thread_id.in_(thread_ids_subq)))
+        await self.db.execute(delete(ChatThread).where(ChatThread.case_id == case.id))
+
+        await self.db.execute(
+            update(Case).where(Case.id == case.id).values(latest_analysis_result_id=None)
+        )
+        await self.db.execute(
+            update(CaseRun).where(CaseRun.case_id == case.id).values(context_analysis_result_id=None)
+        )
+        await self.db.execute(delete(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case.id))
+        await self.db.execute(delete(RagContext).where(RagContext.case_id == case.id))
+        await self.db.execute(delete(CaseRun).where(CaseRun.case_id == case.id))
+        await self.db.execute(delete(CaseEvidenceSnapshot).where(CaseEvidenceSnapshot.case_id == case.id))
+
+        source_ids_subq = select(EvidenceSource.id).where(EvidenceSource.case_id == case.id)
+        await self.db.execute(delete(EvidenceRevision).where(EvidenceRevision.source_id.in_(source_ids_subq)))
+        await self.db.execute(delete(EvidenceSource).where(EvidenceSource.case_id == case.id))
+
+        doc_ids_subq = select(CaseDocument.id).where(CaseDocument.case_id == case.id)
+        await self.db.execute(delete(DocumentExtraction).where(DocumentExtraction.document_id.in_(doc_ids_subq)))
+        await self.db.execute(delete(CaseDocument).where(CaseDocument.case_id == case.id))
+
         self.db.expunge_all()
         await self.db.execute(delete(Case).where(Case.id == case.id))
         await self.db.commit()
@@ -146,9 +191,8 @@ class CaseService:
         statement = (
             select(Case)
             .options(
-                selectinload(Case.chat_thread),
+                selectinload(Case.chat_thread).selectinload(ChatThread.messages),
                 selectinload(Case.case_runs),
-                selectinload(Case.clarifications),
                 selectinload(Case.latest_analysis_result).selectinload(CaseAnalysisResult.snapshot),
             )
             .where(Case.id == case_id)

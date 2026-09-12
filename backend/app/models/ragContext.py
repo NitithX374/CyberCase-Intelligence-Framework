@@ -111,7 +111,7 @@ class RagContext(Base):
         self.context_text = value
 
     case: Mapped["Case"] = relationship("Case", back_populates="rag_contexts")
-    run: Mapped["CaseRun"] = relationship("CaseRun")
+    run: Mapped["CaseRun"] = relationship("CaseRun", back_populates="rag_context")
     snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
 
 
