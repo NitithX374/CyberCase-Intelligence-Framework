@@ -2,6 +2,13 @@
 
 ## Snapshot
 
+- 2026-09-13 [USER/TOOL] ACTIVE: On `main` from baseline `2358da3`, the Case-workspace redesign is approved with three required proposal revisions now incorporated at `docs/superpowers/specs/2026-09-13-case-workspace-redesign.md`; implementation remains explicitly unauthorized. Unrelated `.agents/`, `skills-lock.json`, and concurrent ledger entries are user-owned and preserved.
+- 2026-09-13 [USER] UX DECISION: Supersedes the earlier Chat-centered layout. The workspace is `Sources | Case Work | Chat`: Analysis/Case Work owns the primary center surface, while Chat is a persistent/collapsible contextual right panel. English remains the default interface/output language, Thai is independently switchable, bilingual labels are not duplicated, and original sources retain their language.
+- 2026-09-13 [USER/CODE] UX DECISION: Phase 1 opens original PDFs/images in a shared Source/Report viewer; OCR text display, correction, side-by-side review, DOCX conversion, and analytical diffs are deferred. Stored original bytes need one small authenticated read-only content endpoint; no schema change.
+- 2026-09-13 [USER] UX DECISION: Progressive disclosure and the A-L state cycle are approved. Primary UI uses investigator-facing status and next actions in the selected locale; revision IDs, hashes, provider data, and raw metadata remain in details/history. Conflicting sources stay separately attributed; corrections later create preserved revisions.
+- 2026-09-13 [USER/CODE] UX DECISION: Conflicting independent evidence is an explicit Phase 1 Analysis scenario, not correction/supersession. S1 and S2 remain preserved; Analysis may show `CONFLICTING / NOT ESTABLISHED`, a linked reconciliation gap opens follow-up Chat, and the answer becomes S3 before re-analysis. Existing claim/gap/source-role contracts support this presentation.
+- 2026-09-13 [USER] DELIVERY DECISION: Phase 1 is gated as 1A Case-first shell/workflow and Intake/Materials consolidation; 1B viewer/citation targeting/multi-file UX; 1C localization/responsive/motion/accessibility polish. No implementation before revised proposal approval.
+
 - 2026-09-12 [USER/CODE/TOOL] Corrected follow-up question lifecycle and eliminated deferred/synthetic follow-up machinery on branch `gemini/canonical-dev-cleanup`:
   1. Headless pure workspace: If Case Analysis produces NO follow-up question, no `ChatThread` is created; the case remains fully headless (0 threads, 0 messages).
   2. Immediate conversational follow-up materialization: If Case Analysis produces a follow-up question, `complete_case_run` immediately creates/ensures the Case's single `ChatThread` and persists the question as a `ChatMessage(role="assistant", message_kind="followup_question", analysis_result_id=result.id)`.
@@ -128,6 +135,7 @@
 
 ## Done (recent)
 
+- 2026-09-13 [TOOL] Character-confusion banks completed for the two document-oriented selections under `evaluation/ocr_downstream`: plain-text ThaiOCRBench `Task=Full-page OCR` (197) plus `thai-ocr-evaluation` `category=document` (22), 219/219; and the literal ThaiOCRBench `Task=Document parsing` (211) plus the same 22, 233/233. Plain-text output is in `results/character_confusion_document_plaintext/`; literal document-task output is in `results/character_confusion_document/`. Small-image retries used target image dimension 1200; initial successes used 1800.
 - 2026-09-12 [CODE/TOOL] Executed canonical backend/database cleanup: Alembic baseline `0001_canonical_case_system.py` converged to exactly 13 product tables with 0 schema drift; eliminated `case_clarifications` in favor of `chat_messages` / `case_evidence_sources`; enforced `CaseRun` ownership of `CaseAnalysisResult` and `RagContext`; all 5 PostgreSQL integration suites (9 tests) passed; full backend 311 passed (1 skipped), frontend 185 passed, clean Next.js build.
 - 2026-09-10 [CODE] Implemented Case-first Checkpoints A-E: Case-owned materials/evidence/snapshots, CaseRun/results, clarification, lazy Chat publication, native readers, and result/snapshot-bound reports; `rag_service/**` is unchanged.
 - 2026-09-10 [TOOL] Passed the populated disposable 0001→0010 migration rehearsal, preserved report IDs/hashes, kept one legacy result mapping explicitly unresolved, verified optional Chat deletion preserves Case history, and destroyed the temporary database.
@@ -229,9 +237,11 @@
 - 2026-09-10 [TOOL] Docker Compose project `cybercaseframework`; services `cybercase-backend`, `cybercase-frontend`, `cybercase-postgres`, `cybercase-rag-service`
 - 2026-09-08 [CODE] backend/app/services/case_analysis/claim_anchored/; backend/app/services/workflow/pipeline_execution.py; backend/tests/test_claim_anchored_postgres.py
 - 2026-09-08 [CODE] frontend/src/lib/case-overview.ts; docker-compose.yml; backend/requirements.txt; attribute-first receipts
+- 2026-09-13 [CODE/TOOL] evaluation/ocr_downstream/confusion_dataset.py; confusion_text.py; confusion_alignment.py; run_character_confusion.py; results/character_confusion_document_plaintext/{selection_manifest.json,predictions.jsonl,confusion_bank.json,run_summary.json}
 
 ## Receipts
 
+- 2026-09-13 [TOOL] Typhoon character-confusion validation completed: plain-text selection 219/219 with combined CER 0.0755569850 (ThaiOCRBench 0.0756353707; thai-ocr-evaluation 0.0179948586); literal Document parsing selection 233/233 with combined CER 0.0993013638. Python compilation and `git diff --check` passed; evaluation artifacts remain ignored by `/evaluation/`.
 - 2026-09-12 [TOOL] Canonical backend cleanup verification: 5 PostgreSQL suites (9 tests: schema parity, RAG context retry reuse, CaseRun ownership deletion, case aggregate cascade deletion, simplified follow-up workflow) passed in 15.87s on local PostgreSQL :5433; full backend pytest passed 311, 1 skipped in 62.93s; frontend Vitest passed 44 files/185 tests in 86.69s; Next.js 16 production build compiled cleanly with TypeScript in 21.6s.
 - 2026-09-11 [TOOL] Playwright: `npm run e2e -- --workers=1` passed 2 tests in 1.2 minutes; the lifecycle spec passed separately in 1.3 minutes. Targeted CaseAnalysisLeadCard Vitest passed 2 tests, harness ESLint/syntax checks passed, and test discovery lists 2 tests. The harness uses installed Chrome (`channel: "chrome"`); Playwright-managed Chromium download stalled and was not used.
 - 2026-09-11 [TOOL] Backend E2E support fixes passed focused PostgreSQL tests (14), targeted missing-import tests (2), and split non-external certification (387 passed/1 skipped/2 subtests plus core provider 7 passed). Manual local-provider checks completed native analysis, report/PDF (HTTP 200), and Case Chat persistence.
