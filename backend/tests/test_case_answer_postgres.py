@@ -33,7 +33,7 @@ def test_chat_uses_pinned_analysis_without_reanalysis(monkeypatch, outcome):
                     db, case_id=case_id, user_id=None,
                     request=ChatMessageCreate(content="What vehicle?", idempotency_key="ask-test"),
                 )
-                result_id = run.context_analysis_result_id
+                result_id = question.analysis_result_id
             captured = []
 
             def handler(request):
@@ -111,15 +111,15 @@ def test_chat_rejects_corrupt_pinned_context_without_provider_calls(field, value
             async with factory() as db, db.begin():
                 db.add(ChatThread(id=case_id, title="Case Chat"))
             async with factory() as db, db.begin():
-                _, run = await createCaseChatMessageAndRun(
+                question, run = await createCaseChatMessageAndRun(
                     db,
                     case_id=case_id,
                     user_id=None,
                     request=ChatMessageCreate(content="What vehicle?", idempotency_key=f"corrupt-{field}"),
                 )
-                result = await db.get(CaseAnalysisResult, run.context_analysis_result_id)
+                result = await db.get(CaseAnalysisResult, question.analysis_result_id)
                 if field == "context_analysis_result_id":
-                    run.context_analysis_result_id = value
+                    question.analysis_result_id = value
                 else:
                     setattr(result, field, value)
 
@@ -155,7 +155,7 @@ def test_chat_rejects_cross_case_pinned_result_without_provider_calls():
             async with factory() as db, db.begin():
                 db.add(ChatThread(id=case_a, title="Case Chat A"))
             async with factory() as db, db.begin():
-                _, run = await createCaseChatMessageAndRun(
+                question, run = await createCaseChatMessageAndRun(
                     db,
                     case_id=case_a,
                     user_id=None,
@@ -164,7 +164,7 @@ def test_chat_rejects_cross_case_pinned_result_without_provider_calls():
                 result_b = await db.scalar(
                     select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_b)
                 )
-                run.context_analysis_result_id = result_b.id
+                question.analysis_result_id = result_b.id
 
             async def forbidden(**kwargs):
                 raise AssertionError("Cross-case Chat context must not reach a provider")

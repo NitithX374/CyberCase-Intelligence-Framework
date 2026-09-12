@@ -84,8 +84,6 @@ def buildCaseWithChat(
     thread = ChatThread(
         id=uuid4(),
         case_id=case_id,
-        title=title,
-        user_id=user_id,
     )
     case.chat_thread = thread
     return case, thread
@@ -166,9 +164,6 @@ class CaseService:
 
         await self.db.execute(
             update(Case).where(Case.id == case.id).values(latest_analysis_result_id=None)
-        )
-        await self.db.execute(
-            update(CaseRun).where(CaseRun.case_id == case.id).values(context_analysis_result_id=None)
         )
         await self.db.execute(delete(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case.id))
         await self.db.execute(delete(RagContext).where(RagContext.case_id == case.id))

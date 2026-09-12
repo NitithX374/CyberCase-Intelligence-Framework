@@ -97,14 +97,12 @@ class ChatService:
             )
             thread = thread_result.scalar_one_or_none()
             if thread is None:
-                thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
+                thread = ChatThread(case_id=case.id)
                 thread.case = case
                 self.db.add(thread)
                 await self.db.flush()
             else:
                 thread.case = case
-                thread._title = case.title
-                thread._user_id = case.user_id
             return thread
 
     async def updateThread(
@@ -170,18 +168,16 @@ class ChatService:
         self,
         user_id: UUID | None = None,
     ) -> list[ChatThread]:
+        statement = (
+            select(ChatThread)
+            .options(selectinload(ChatThread.case))
+            .join(Case, ChatThread.case_id == Case.id)
+        )
         if user_id is not None:
-            statement = (
-                select(ChatThread)
-                .where(ChatThread.user_id == user_id)
-                .order_by(ChatThread.updated_at.desc())
-            )
+            statement = statement.where(Case.user_id == user_id)
         else:
-            statement = (
-                select(ChatThread)
-                .where(ChatThread.user_id.is_(None))
-                .order_by(ChatThread.updated_at.desc())
-            )
+            statement = statement.where(Case.user_id.is_(None))
+        statement = statement.order_by(ChatThread.updated_at.desc())
 
         result = await self.db.execute(statement)
         return list(result.scalars().all())

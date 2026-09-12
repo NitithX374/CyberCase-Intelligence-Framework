@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.caseRun import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatMessage
+from app.models.chat import ChatMessage, ChatThread
 from app.services.case_analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisResult as AnalysisOutput,
@@ -57,9 +57,15 @@ async def loadCaseAnswerContext(
     db: AsyncSession, run_id: UUID, analysis_context: dict[str, object]
 ) -> dict[str, object]:
     run = await db.get(CaseRun, run_id)
-    if run is None or run.operation != "ask" or run.context_analysis_result_id is None:
-        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat has no pinned analysis result")
-    result = await db.get(CaseAnalysisResult, run.context_analysis_result_id)
+    if run is None or run.operation != "ask" or run.request_message_id is None or not isinstance(run.request_payload, Mapping):
+        raise CaseAnalysisFailure("case_ask_request_missing", "Pinned Chat question is unavailable")
+    message = await db.get(ChatMessage, run.request_message_id)
+    if message is None or message.analysis_result_id is None or message.role != "user":
+        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat question has no pinned analysis result")
+    thread = await db.get(ChatThread, message.thread_id)
+    if thread is None or thread.case_id != run.case_id:
+        raise CaseAnalysisFailure("case_ask_request_missing", "Pinned Chat question is unavailable")
+    result = await db.get(CaseAnalysisResult, message.analysis_result_id)
     if (
         result is None or result.case_id != run.case_id or result.snapshot_id != run.snapshot_id
         or result.status != "validated"
@@ -86,11 +92,6 @@ async def loadCaseAnswerContext(
         analysis_context.get("document_source_context", []),
         mitre_table=mitre_table,
     )
-    if run.request_message_id is None or not isinstance(run.request_payload, Mapping):
-        raise CaseAnalysisFailure("case_ask_request_missing", "Pinned Chat question is unavailable")
-    message = await db.get(ChatMessage, run.request_message_id)
-    if message is None or message.thread_id != run.case_id or message.role != "user":
-        raise CaseAnalysisFailure("case_ask_request_missing", "Pinned Chat question is unavailable")
     request_content = run.request_payload.get("content")
     if not isinstance(request_content, str) or message.content.strip() != request_content:
         raise CaseAnalysisFailure("case_ask_request_invalid", "Pinned Chat question changed")
@@ -99,7 +100,8 @@ async def loadCaseAnswerContext(
             ChatMessage.thread_id == message.thread_id,
             ChatMessage.ordinal < message.ordinal,
             ChatMessage.message_kind == "conversation",
-            ChatMessage.metadata_json["context_analysis_result_id"].astext == str(result.id),
+            (ChatMessage.analysis_result_id == result.id)
+            | (ChatMessage.metadata_json["context_analysis_result_id"].astext == str(result.id)),
         ).order_by(ChatMessage.ordinal.desc()).limit(12)
     )).all())
     return {

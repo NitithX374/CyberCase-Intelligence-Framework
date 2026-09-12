@@ -45,7 +45,9 @@ async def completeCaseAsk(
         request_message = await db.get(ChatMessage, run.request_message_id)
         if request_message is None or request_message.thread_id != thread.id or request_message.role != "user":
             raise CaseRunCompletionError("case_ask_request_missing", "Case ASK request message is missing")
-        context_result = await db.get(CaseAnalysisResult, run.context_analysis_result_id)
+        if request_message.analysis_result_id is None:
+            raise CaseRunCompletionError("case_ask_context_invalid", "Case ASK context result is missing from request message")
+        context_result = await db.get(CaseAnalysisResult, request_message.analysis_result_id)
         if (
             context_result is None
             or context_result.case_id != case.id
@@ -85,6 +87,8 @@ async def completeCaseAsk(
             content=output.answer.strip(),
             retrieval_context_id=trace.retrieval_context_id,
             message_kind="conversation",
+            analysis_result_id=None,
+            in_reply_to_message_id=request_message.id,
             metadata_json=serialize_message_metadata(
                 {
                     "analysis_kind": "question_answer",
@@ -108,21 +112,6 @@ async def completeCaseAsk(
         )
         db.add(message)
         thread.next_message_ordinal += 1
-        answered_subq = (
-            select(ChatMessage.in_reply_to_message_id)
-            .where(
-                ChatMessage.thread_id == thread.id,
-                ChatMessage.in_reply_to_message_id.is_not(None),
-            )
-        )
-        pending_followup = await db.scalar(
-            select(ChatMessage.id).where(
-                ChatMessage.thread_id == thread.id,
-                ChatMessage.message_kind == "followup_question",
-                ChatMessage.id.not_in(answered_subq),
-            )
-        )
-        thread.status = "awaiting_followup" if pending_followup is not None else "answered"
         thread.updated_at = now
         await db.flush()
     return True
