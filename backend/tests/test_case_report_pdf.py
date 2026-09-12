@@ -13,8 +13,6 @@ def test_case_report_pdf_preserves_snapshot_content_and_page_structure() -> None
     source_id = UUID("11111111-1111-1111-1111-111111111111")
     snapshot = CaseReportInputSnapshot(
         case_id=UUID("22222222-2222-2222-2222-222222222222"),
-        thread_id=UUID("33333333-3333-3333-3333-333333333333"),
-        thread_title="PDF regression fixture",
         analysis_result_id=UUID("44444444-4444-4444-4444-444444444444"),
         evidence_snapshot_id=UUID("55555555-5555-5555-5555-555555555555"),
         evidence_revision=1,

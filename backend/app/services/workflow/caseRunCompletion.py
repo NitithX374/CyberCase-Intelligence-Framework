@@ -303,11 +303,7 @@ async def complete_case_run(
 
         has_followup = output.followup_question is not None
         thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
-        if has_followup:
-            if thread is None:
-                thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
-                db.add(thread)
-                await db.flush()
+        if has_followup and thread is not None:
             followup_metadata_raw = output.followup_metadata or {}
             existing_followup = (
                 followup_metadata_raw.get("chat_followup")
@@ -353,7 +349,6 @@ async def complete_case_run(
             result_id=result.id,
         )
         if thread is not None:
-            thread.status = "awaiting_followup" if has_followup else "answered"
             thread.updated_at = now
         case.latest_analysis_result_id = result.id
         case.updated_at = now

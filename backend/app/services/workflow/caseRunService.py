@@ -148,6 +148,45 @@ async def get_latest_case_analysis(
     return case, analysis
 
 
+async def list_case_analysis_results(
+    db: AsyncSession,
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+) -> tuple[Case, list[CaseAnalysisResult]]:
+    case = await db.scalar(select(Case).where(Case.id == case_id, Case.user_id == user_id))
+    if case is None:
+        raise CaseRunError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
+    result = await db.execute(
+        select(CaseAnalysisResult)
+        .options(selectinload(CaseAnalysisResult.snapshot))
+        .where(CaseAnalysisResult.case_id == case_id)
+        .order_by(CaseAnalysisResult.created_at.desc())
+    )
+    return case, list(result.scalars().all())
+
+
+async def get_case_analysis_result(
+    db: AsyncSession,
+    *,
+    case_id: UUID,
+    result_id: UUID,
+    user_id: UUID | None,
+) -> tuple[Case, CaseAnalysisResult]:
+    case = await db.scalar(select(Case).where(Case.id == case_id, Case.user_id == user_id))
+    if case is None:
+        raise CaseRunError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
+    result = await db.execute(
+        select(CaseAnalysisResult)
+        .options(selectinload(CaseAnalysisResult.snapshot))
+        .where(CaseAnalysisResult.id == result_id, CaseAnalysisResult.case_id == case_id)
+    )
+    analysis = result.scalar_one_or_none()
+    if analysis is None:
+        raise CaseRunError("analysis_result_not_found", "Analysis result not found", status.HTTP_404_NOT_FOUND)
+    return case, analysis
+
+
 def analysis_freshness(case: Case, result: CaseAnalysisResult) -> str:
     if result.snapshot is None:
         return "missing"

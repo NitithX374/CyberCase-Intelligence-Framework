@@ -308,3 +308,47 @@ def test_case_run_timeout_and_startup_preserves_terminal_records(monkeypatch):
                 assert t_run.error_code == "case_run_timeout"
 
     asyncio.run(exercise())
+
+
+def test_list_and_get_case_analysis_results():
+    from app.services.workflow.caseRunService import get_case_analysis_result, list_case_analysis_results
+
+    async def exercise():
+        async with isolated_database() as factory:
+            case_id, source_id = await _case_with_source(factory)
+            run_id = await _enqueue(factory, case_id, "first-analysis")
+            async with factory() as db:
+                claimed = await claimCaseRun(db, run_id, "worker-1")
+                assert claimed is not None
+                snapshot = await db.get(CaseEvidenceSnapshot, claimed.snapshot_id)
+            async with factory() as db:
+                assert await complete_case_run(
+                    db,
+                    run_id,
+                    claimed.attempt_count,
+                    _output(snapshot, source_id),
+                )
+
+            async with factory() as db:
+                case, results = await list_case_analysis_results(db, case_id=case_id, user_id=None)
+                assert len(results) == 1
+                assert results[0].run_id == run_id
+
+                fetched_case, single = await get_case_analysis_result(
+                    db,
+                    case_id=case_id,
+                    result_id=results[0].id,
+                    user_id=None,
+                )
+                assert single.id == results[0].id
+
+                with pytest.raises(CaseRunError) as exc_info:
+                    await get_case_analysis_result(
+                        db,
+                        case_id=case_id,
+                        result_id=uuid4(),
+                        user_id=None,
+                    )
+                assert exc_info.value.code == "analysis_result_not_found"
+
+    asyncio.run(exercise())

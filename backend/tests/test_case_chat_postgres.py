@@ -115,6 +115,8 @@ def test_case_publication_and_clarification_are_separate_and_idempotent():
     async def exercise():
         async with isolated_database() as factory:
             case_id, source_id = await _case_with_source(factory)
+            async with factory() as db, db.begin():
+                db.add(ChatThread(case_id=case_id))
             await _complete_initial(factory, case_id, source_id)
             async with factory() as db:
                 clarifications = await get_owned_clarifications(db, case_id)
@@ -267,7 +269,13 @@ def test_case_ask_uses_case_run_without_new_result_or_evidence():
                 assert saved_run.status == "completed"
                 assert [message.role for message in messages] == ["user", "assistant"]
                 assert messages[1].metadata_json["analysis_state_scope"] == "response_scoped"
-                assert messages[1].analysis_result_id is None
+                assert messages[1].analysis_result_id == result_id
+                assert messages[0].metadata_json["analysis_freshness"] == "current"
+                assert messages[1].metadata_json["analysis_freshness"] == "current"
+                assert messages[1].metadata_json["has_newer_evidence"] is False
+                from app.services.cases.caseService import CaseService
+                serialized = await CaseService(db).getCase(case_id, user_id=None)
+                assert serialized.processing_status == "idle"
 
     asyncio.run(exercise())
 
@@ -303,6 +311,8 @@ def test_removing_chat_preserves_case_history():
     async def exercise():
         async with isolated_database() as factory:
             case_id, source_id = await _case_with_source(factory)
+            async with factory() as db, db.begin():
+                db.add(ChatThread(case_id=case_id))
             await _complete_initial(factory, case_id, source_id)
             async with factory() as db:
                 result = await db.scalar(select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_id))

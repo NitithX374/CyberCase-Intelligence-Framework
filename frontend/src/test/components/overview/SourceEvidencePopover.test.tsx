@@ -85,7 +85,7 @@ describe("SourceEvidencePopover component", () => {
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onNavigateToSource and closes when View in Chat is clicked", () => {
+  it("calls onNavigateToSource and closes when View in Materials is clicked", () => {
     const handleClose = vi.fn();
     const handleNavigate = vi.fn();
     const anchor = document.createElement("button");
@@ -100,7 +100,7 @@ describe("SourceEvidencePopover component", () => {
       />,
     );
 
-    const navBtn = screen.getByRole("button", { name: /View in Chat/i });
+    const navBtn = screen.getByRole("button", { name: /View in Materials/i });
     fireEvent.click(navBtn);
 
     expect(handleNavigate).toHaveBeenCalledWith("msg-1");

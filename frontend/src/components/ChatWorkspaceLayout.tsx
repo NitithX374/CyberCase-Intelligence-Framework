@@ -154,6 +154,7 @@ export function ChatWorkspaceLayout({
               onOpenMaterials={() => onViewChange("materials")}
               onOpenTechnicalContext={() => onViewChange("technical-context")}
               onNavigateToSource={onNavigateToSource}
+              onRunAnalysis={() => onSubmitCase({ title: undefined, description: "" })}
             />
           ) : activeWorkspaceView === "materials" ? (
             <CaseMaterialsView

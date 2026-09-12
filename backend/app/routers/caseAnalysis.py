@@ -19,8 +19,10 @@ from app.services.workflow.caseRunService import (
     CaseRunError,
     analysis_freshness,
     enqueue_case_analysis,
+    get_case_analysis_result,
     get_latest_case_analysis,
     get_owned_case_run,
+    list_case_analysis_results,
 )
 from app.services.workflow import process_case_run
 
@@ -75,6 +77,48 @@ async def get_latest_analysis(
         raise _case_run_http_error(error) from error
     if result is None:
         return None
+    payload = CaseAnalysisResultRead.model_validate(result)
+    return payload.model_copy(update={"freshness": analysis_freshness(case, result)})
+
+
+@router.get("/analysis/results", response_model=list[CaseAnalysisResultRead])
+async def list_analysis_results(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        case, results = await list_case_analysis_results(
+            db,
+            case_id=case_id,
+            user_id=user.id,
+        )
+    except CaseRunError as error:
+        raise _case_run_http_error(error) from error
+    return [
+        CaseAnalysisResultRead.model_validate(result).model_copy(
+            update={"freshness": analysis_freshness(case, result)}
+        )
+        for result in results
+    ]
+
+
+@router.get("/analysis/results/{result_id}", response_model=CaseAnalysisResultRead)
+async def get_analysis_result(
+    case_id: UUID,
+    result_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        case, result = await get_case_analysis_result(
+            db,
+            case_id=case_id,
+            result_id=result_id,
+            user_id=user.id,
+        )
+    except CaseRunError as error:
+        raise _case_run_http_error(error) from error
     payload = CaseAnalysisResultRead.model_validate(result)
     return payload.model_copy(update={"freshness": analysis_freshness(case, result)})
 

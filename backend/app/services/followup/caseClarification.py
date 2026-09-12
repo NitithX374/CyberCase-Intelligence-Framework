@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import status
 from sqlalchemy import select
@@ -32,11 +32,9 @@ class CaseClarificationError(Exception):
         self.status_code = status_code
 
 
-class CaseClarificationHistoryError(Exception):
+class CaseClarificationHistoryError(CaseClarificationError):
     def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
+        super().__init__(code, message)
 
 
 def answer_fingerprint(request: CaseClarificationAnswer) -> str:
@@ -224,11 +222,19 @@ async def get_owned_clarifications(
                     ans_msg = ans
                     break
 
-        origin_result_id = q_msg.analysis_result_id or (
-            UUID(str(q_meta["analysis_result_id"])) if "analysis_result_id" in q_meta else q_msg.id
-        )
-        origin_snap_str = q_meta.get("evidence_snapshot_id")
-        origin_snapshot_id = UUID(str(origin_snap_str)) if origin_snap_str else q_msg.id
+        origin_result_id = q_msg.analysis_result_id
+        if origin_result_id is None:
+            raise CaseClarificationHistoryError(
+                "clarification_context_invalid",
+                "Clarification question has no pinned analysis result",
+            )
+        origin_result = await db.get(CaseAnalysisResult, origin_result_id)
+        if origin_result is None or origin_result.case_id != case.id:
+            raise CaseClarificationHistoryError(
+                "clarification_context_invalid",
+                "Clarification question has an invalid analysis result",
+            )
+        origin_snapshot_id = origin_result.snapshot_id
         gap_id = str(q_meta.get("gap_id") or "G-001")
         topic = str(q_meta.get("topic") or q_meta.get("clarification_topic") or "")
         gap_key = str(q_meta.get("gap_key") or f"{gap_id}:{topic.lower()}")
@@ -305,6 +311,40 @@ async def submit_clarification_answer(
             question = q
             break
 
+    if question is None and case.latest_analysis_result_id is not None:
+        analysis = await db.get(CaseAnalysisResult, case.latest_analysis_result_id)
+        if analysis is not None and (analysis.id == clarification_id or str(analysis.id) == str(clarification_id)):
+            fq = (analysis.provider_metadata_json or {}).get("followup_question")
+            if fq and isinstance(fq, str) and fq.strip():
+                trace_json = analysis.trace_json if isinstance(analysis.trace_json, dict) else {}
+                gaps = trace_json.get("gaps", [])
+                gap_id = "G-001"
+                topic = ""
+                if gaps and isinstance(gaps, list) and isinstance(gaps[0], dict):
+                    gap_id = str(gaps[0].get("gap_id") or "G-001")
+                    topic = str(gaps[0].get("description") or "")
+                gap_key = f"{gap_id}:{topic.lower()}"
+                question = ChatMessage(
+                    id=uuid4(),
+                    thread_id=thread.id,
+                    ordinal=thread.next_message_ordinal,
+                    role="assistant",
+                    content=fq.strip(),
+                    message_kind="followup_question",
+                    analysis_result_id=analysis.id,
+                    metadata_json=serialize_message_metadata(
+                        {
+                            "clarification_id": str(clarification_id),
+                            "gap_id": gap_id,
+                            "topic": topic,
+                            "gap_key": gap_key,
+                        }
+                    ),
+                )
+                db.add(question)
+                thread.next_message_ordinal += 1
+                await db.flush()
+
     if question is None:
         raise CaseClarificationError("clarification_not_found", "Clarification not found", status.HTTP_404_NOT_FOUND)
 
@@ -353,6 +393,11 @@ async def submit_clarification_answer(
 
     if case.latest_analysis_result_id and question.analysis_result_id and case.latest_analysis_result_id != question.analysis_result_id:
         raise CaseClarificationError("clarification_superseded", "This clarification belongs to an older analysis")
+    if question.analysis_result_id is None:
+        raise CaseClarificationError("clarification_context_invalid", "This clarification has no pinned analysis result")
+    question_result = await db.get(CaseAnalysisResult, question.analysis_result_id)
+    if question_result is None or question_result.case_id != case.id:
+        raise CaseClarificationError("clarification_context_invalid", "This clarification has an invalid analysis result")
 
     active = await db.scalar(
         select(CaseRun.id).where(CaseRun.case_id == case.id, CaseRun.status.in_(("queued", "running")))
@@ -366,6 +411,7 @@ async def submit_clarification_answer(
         role="user",
         content=request.answer.strip(),
         message_kind="followup_answer",
+        analysis_result_id=question.analysis_result_id,
         in_reply_to_message_id=question.id,
         metadata_json=serialize_message_metadata(
             {

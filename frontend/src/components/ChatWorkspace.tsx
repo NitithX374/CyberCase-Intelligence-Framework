@@ -231,7 +231,7 @@ export function ChatWorkspace() {
       onSetDeleteCandidate={setDeleteCandidate}
       onCancelDelete={cancelDelete}
       onConfirmDelete={() => void confirmDelete()}
-      onNavigateToSource={() => { void actions.toggleChat(); }}
+      onNavigateToSource={() => { handleViewChange("materials"); }}
       onSubmitCase={actions.submitCase}
       onClearQueryError={clearWorkspaceError}
       onRetryQuery={retryWorkspace}

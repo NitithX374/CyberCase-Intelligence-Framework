@@ -2,6 +2,20 @@
 
 ## Snapshot
 
+- 2026-09-12 [USER/CODE/TOOL] Enforced Case Workspace Primacy across backend and frontend on branch `gemini/canonical-dev-cleanup`. Key architectural results:
+  1. Main Case Analysis runs headlessly without auto-instantiating `ChatThread`; pending follow-ups are preserved on `CaseClarification` and `CaseAnalysisResult.provider_metadata_json`.
+  2. `ensureThreadForCase` lazily materializes pending follow-up question messages with complete gap metadata and sets status to `awaiting_followup` when Chat is opened.
+  3. Decoupled `CaseReportInputSnapshot` and `CaseReportService` from `ChatThread` (removed `thread_id` and `thread_title`).
+  4. Scoped `Case.processing_status` in `serializeCase` strictly to `operation == "analysis"` runs; chat ask failures do not fail the case.
+  5. Implemented ASK freshness policy returning `analysis_freshness` (`current` vs `stale`), `snapshot_evidence_revision`, `case_evidence_revision`, and `has_newer_evidence`.
+  6. Added Case-scoped Analysis Results read endpoints `GET /cases/{case_id}/analysis/results` and `GET /cases/{case_id}/analysis/results/{result_id}`.
+  7. Frontend Case Workspace Primacy: redirected citation navigation `onNavigateToSource` to Materials; updated inspector buttons from "View in Chat ↗" to "View in Materials ↗"; added stale evidence warning badge and "Analyze latest evidence" CTA to `CaseOverviewView`.
+  8. Full verification: Backend pytest 314 passed (1 skipped), frontend Vitest 187 passed (44 files), Next.js production build compiled cleanly, ESLint 0 errors.
+
+- 2026-09-12 [USER/CODE] ACTIVE: User authorizes Luna/max scoped implementation of canonical ASK message lineage and protected request-message retention. Confirmed at 6c27cc6: assistant result FK is NULL, follow-up answer omits result FK, request FK uses SET NULL. Luna owns backend/migration/regression tests; parent reviews and validates. Preserve Case deletion and automatic Chat creation only when emitting follow-up; no redesign, deployment, or publishing requested.
+
+- 2026-09-12 [USER/CODE/TOOL] NotebookLM-like baseline UX audit at 6c27cc6: keep Case primary and one optional persistent ChatThread. Workspace/API already Case-owned; minimum gaps are multi-file upload UX, source review, explicit stale-analysis ASK behavior and independent source navigation. Reports accept absent Thread but retain optional chat metadata; analysis still creates Thread when follow-up occurs. No implementation authorized. Schema/headless test invocation: 8 passed, 1 skipped; live browser UX not tested this turn.
+
 - 2026-09-12 [USER/CODE/TOOL] Completed canonical Case Workspace cleanup and chat-residue eradication on branch `gemini/canonical-dev-cleanup`. Dropped `chat_threads.status` and `case_runs.context_analysis_result_id` via linear Alembic migration `0002_drop_chat_status_and_context_result`. Pinned ASK context resolution strictly to `CaseRun.request_message_id` -> `ChatMessage.analysis_result_id` -> `CaseAnalysisResult`. Decoupled Case Analysis and Report generation from Chat: headless operations run with zero ChatThread/ChatMessage dependencies. Dynamic `ChatThread.status` property computes state cleanly without column desynchronization. Full verification: backend pytest passed 312/312 tests (1 skipped), frontend Vitest passed 44/44 files (186/186 tests), and Alembic single-head parity verified.
 
 - 2026-09-12 [USER/CODE/TOOL] Adversarial relation audit at local/remote d73a62f: 13 tables, 29 live FK actions checked; proposed message-derived ASK binding with protected request lifetime, non-deferrable NO ACTION references and one-parent Case deletion. Current ASK/follow-up answer writers omit historical result FK; current deleteCase manually orders child deletion. Report: docs/developer-handover/DATABASE_RELATION_ADVERSARIAL_AUDIT_2026-09-12.md. 8 tests passed/4 skipped; temporary PostgreSQL NO ACTION cascade experiment passed and rolled back. Proposal only; implementation awaits approval.

@@ -15,8 +15,10 @@ class ChatDeleteServiceTests(unittest.IsolatedAsyncioTestCase):
         result.scalar_one_or_none.return_value = thread
         db = Mock()
         db.execute = AsyncMock(return_value=result)
+        db.scalar = AsyncMock(return_value=None)
         db.delete = AsyncMock()
         db.commit = AsyncMock()
+        db.rollback = AsyncMock()
 
         await ChatService(db).delete_thread(thread.id)
 

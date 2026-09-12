@@ -85,7 +85,7 @@ def test_build_case_report_snapshot_rejects_stale_analysis() -> None:
     result.snapshot = stale_snapshot
 
     with pytest.raises(ReportGenerationConflict) as exc_info:
-        build_case_report_snapshot(case, result, thread)
+        build_case_report_snapshot(case, result)
 
     assert exc_info.value.code == "case_analysis_stale"
     assert "evidence revision" in exc_info.value.message.lower()
@@ -150,7 +150,7 @@ def test_build_case_report_snapshot_rejects_evidence_revision_mismatch() -> None
     result.snapshot = mismatched_snapshot
 
     with pytest.raises(ReportGenerationConflict) as exc_info:
-        build_case_report_snapshot(case, result, thread)
+        build_case_report_snapshot(case, result)
 
     assert exc_info.value.code == "case_analysis_stale"
     assert "evidence revision" in exc_info.value.message.lower()
@@ -218,7 +218,7 @@ def test_build_case_report_snapshot_allows_current_analysis() -> None:
     )
     result.snapshot = current_snapshot
 
-    snapshot_report = build_case_report_snapshot(case, result, thread)
+    snapshot_report = build_case_report_snapshot(case, result)
     assert snapshot_report.evidence_revision == 1
     assert snapshot_report.analysis_result_id == analysis_id
 
