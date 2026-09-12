@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import status
 from sqlalchemy import select
@@ -148,39 +148,6 @@ async def get_owned_clarifications(
     case = await _owned_case(db, case_id, user_id)
     thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id))
     if thread is None:
-        if case.latest_analysis_result_id is not None:
-            analysis = await db.get(CaseAnalysisResult, case.latest_analysis_result_id)
-            if analysis is not None and isinstance(analysis.provider_metadata_json, dict):
-                fq = analysis.provider_metadata_json.get("followup_question")
-                if fq and isinstance(fq, str) and fq.strip():
-                    trace_json = analysis.trace_json if isinstance(analysis.trace_json, dict) else {}
-                    gaps = trace_json.get("gaps", [])
-                    gap_id = "G-001"
-                    topic = ""
-                    if gaps and isinstance(gaps, list) and isinstance(gaps[0], dict):
-                        gap_id = str(gaps[0].get("gap_id") or "G-001")
-                        topic = str(gaps[0].get("description") or "")
-                    return [
-                        CaseClarificationRead(
-                            id=analysis.id,
-                            case_id=case.id,
-                            origin_analysis_result_id=analysis.id,
-                            origin_snapshot_id=analysis.snapshot_id,
-                            gap_key=f"{gap_id}:{topic.lower()}",
-                            gap_id=gap_id,
-                            topic=topic,
-                            question=fq.strip(),
-                            metadata_json={},
-                            state="pending",
-                            answer_evidence_source_id=None,
-                            question_message_id=None,
-                            answer_message_id=None,
-                            answer_fingerprint=None,
-                            answered_at=None,
-                            created_at=analysis.created_at,
-                            updated_at=analysis.created_at,
-                        )
-                    ]
         return []
 
     q_result = await db.execute(
@@ -310,40 +277,6 @@ async def submit_clarification_answer(
         if q.id == clarification_id or q_meta.get("clarification_id") == str(clarification_id):
             question = q
             break
-
-    if question is None and case.latest_analysis_result_id is not None:
-        analysis = await db.get(CaseAnalysisResult, case.latest_analysis_result_id)
-        if analysis is not None and (analysis.id == clarification_id or str(analysis.id) == str(clarification_id)):
-            fq = (analysis.provider_metadata_json or {}).get("followup_question")
-            if fq and isinstance(fq, str) and fq.strip():
-                trace_json = analysis.trace_json if isinstance(analysis.trace_json, dict) else {}
-                gaps = trace_json.get("gaps", [])
-                gap_id = "G-001"
-                topic = ""
-                if gaps and isinstance(gaps, list) and isinstance(gaps[0], dict):
-                    gap_id = str(gaps[0].get("gap_id") or "G-001")
-                    topic = str(gaps[0].get("description") or "")
-                gap_key = f"{gap_id}:{topic.lower()}"
-                question = ChatMessage(
-                    id=uuid4(),
-                    thread_id=thread.id,
-                    ordinal=thread.next_message_ordinal,
-                    role="assistant",
-                    content=fq.strip(),
-                    message_kind="followup_question",
-                    analysis_result_id=analysis.id,
-                    metadata_json=serialize_message_metadata(
-                        {
-                            "clarification_id": str(clarification_id),
-                            "gap_id": gap_id,
-                            "topic": topic,
-                            "gap_key": gap_key,
-                        }
-                    ),
-                )
-                db.add(question)
-                thread.next_message_ordinal += 1
-                await db.flush()
 
     if question is None:
         raise CaseClarificationError("clarification_not_found", "Clarification not found", status.HTTP_404_NOT_FOUND)

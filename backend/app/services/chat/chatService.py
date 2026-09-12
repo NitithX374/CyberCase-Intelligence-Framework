@@ -99,44 +99,10 @@ class ChatService:
             )
             thread = thread_result.scalar_one_or_none()
             if thread is None:
-                thread = ChatThread(case_id=case.id)
+                thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
                 thread.case = case
                 self.db.add(thread)
                 await self.db.flush()
-                if case.latest_analysis_result_id is not None:
-                    analysis = await self.db.get(CaseAnalysisResult, case.latest_analysis_result_id)
-                    if analysis is not None and isinstance(analysis.provider_metadata_json, dict):
-                        fq = analysis.provider_metadata_json.get("followup_question")
-                        if fq and isinstance(fq, str) and fq.strip():
-                            trace_json = analysis.trace_json if isinstance(analysis.trace_json, dict) else {}
-                            gaps = trace_json.get("gaps", [])
-                            gap_id = "G-001"
-                            topic = ""
-                            if gaps and isinstance(gaps, list) and isinstance(gaps[0], dict):
-                                gap_id = str(gaps[0].get("gap_id") or "G-001")
-                                topic = str(gaps[0].get("description") or "")
-                            gap_key = f"{gap_id}:{topic.lower()}"
-                            msg_id = uuid4()
-                            question = ChatMessage(
-                                id=msg_id,
-                                thread_id=thread.id,
-                                ordinal=thread.next_message_ordinal,
-                                role="assistant",
-                                content=fq.strip(),
-                                message_kind="followup_question",
-                                analysis_result_id=analysis.id,
-                                metadata_json=serialize_message_metadata(
-                                    {
-                                        "clarification_id": str(msg_id),
-                                        "gap_id": gap_id,
-                                        "topic": topic,
-                                        "gap_key": gap_key,
-                                    }
-                                ),
-                            )
-                            self.db.add(question)
-                            thread.next_message_ordinal += 1
-                            await self.db.flush()
             else:
                 thread.case = case
             return thread

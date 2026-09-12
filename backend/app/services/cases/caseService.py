@@ -43,11 +43,6 @@ def serializeCase(case: Case) -> CaseRead:
             m.message_kind == "followup_question" and m.id not in answered_ids
             for m in thread.messages
         )
-    elif case.latest_analysis_result is not None:
-        meta = getattr(case.latest_analysis_result, "provider_metadata_json", None)
-        if isinstance(meta, dict):
-            fq = meta.get("followup_question")
-            has_pending_clarification = bool(fq and isinstance(fq, str) and fq.strip())
     status_value = "processing" if processing_status in {"queued", "running"} else (
         "failed" if processing_status == "failed" else
         "awaiting_followup" if has_pending_clarification else

@@ -2,6 +2,13 @@
 
 ## Snapshot
 
+- 2026-09-12 [USER/CODE/TOOL] Corrected follow-up question lifecycle and eliminated deferred/synthetic follow-up machinery on branch `gemini/canonical-dev-cleanup`:
+  1. Headless pure workspace: If Case Analysis produces NO follow-up question, no `ChatThread` is created; the case remains fully headless (0 threads, 0 messages).
+  2. Immediate conversational follow-up materialization: If Case Analysis produces a follow-up question, `complete_case_run` immediately creates/ensures the Case's single `ChatThread` and persists the question as a `ChatMessage(role="assistant", message_kind="followup_question", analysis_result_id=result.id)`.
+  3. Removed synthetic fallback machinery: Removed `provider_metadata_json` follow-up fallback from `serializeCase`, removed synthetic `CaseClarificationRead` construction in `get_owned_clarifications`, removed lazy follow-up question creation from `ensureThreadForCase`, and removed fallback message construction from `submit_clarification_answer`.
+  4. Stable clarification identity: Clarification questions directly reflect real persisted `ChatMessage` IDs; answering links `in_reply_to_message_id` and `analysis_result_id`, admits an `EvidenceSource(source_kind="followup_answer")` revision, and enqueues a new analysis run.
+  5. Full verification: Backend pytest 315 passed (1 skipped), frontend Vitest 187 passed (44 files), ESLint 0 errors, Next.js production build cleanly compiled.
+
 - 2026-09-12 [USER/CODE/TOOL] Enforced Case Workspace Primacy across backend and frontend on branch `gemini/canonical-dev-cleanup`. Key architectural results:
   1. Main Case Analysis runs headlessly without auto-instantiating `ChatThread`; pending follow-ups are preserved on `CaseClarification` and `CaseAnalysisResult.provider_metadata_json`.
   2. `ensureThreadForCase` lazily materializes pending follow-up question messages with complete gap metadata and sets status to `awaiting_followup` when Chat is opened.
