@@ -122,6 +122,13 @@ function isLeadAnalysisPublication(
   message: PersistedChatMessage,
   leadResultId: string,
 ): boolean {
+  if (
+    message.message_kind === "followup_question" ||
+    message.message_kind === "followup_answer" ||
+    message.message_kind === "clarification_answer"
+  ) {
+    return false;
+  }
   const metadata = message.metadata_json;
   const isResponseScopedAnswer = message.message_kind === "conversation" && (
     metadata?.analysis_kind === "question_answer" ||

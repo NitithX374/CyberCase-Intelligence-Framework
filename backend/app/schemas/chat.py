@@ -57,7 +57,7 @@ class ChatMessageCreate(BaseModel):
         min_length=1,
         max_length=255,
     )
-    action: Literal["ask"] | None = None
+    action: str | None = Field(default=None, description="Deprecated. Use intent instead.")
     intent: Literal["ask", "followup_answer", "clarification_answer"] = "ask"
     in_reply_to_message_id: UUID | None = None
     clarification_id: UUID | None = None
