@@ -1,3 +1,12 @@
+"""Chat thread deletion guard for the legacy compatibility endpoint.
+
+In the Case Workspace architecture, ChatThread has no independent user-facing lifecycle;
+it is scoped 0..1 to its parent Case and is destroyed when the Case is deleted (via CASCADE).
+This module provides defensive protection specifically for the legacy compatibility endpoint
+`DELETE /api/v1/chats/{thread_id}`, preventing DB referential integrity violations if legacy
+callers invoke it while retained Case runs reference thread messages.
+"""
+
 from __future__ import annotations
 
 from fastapi import HTTPException, status
