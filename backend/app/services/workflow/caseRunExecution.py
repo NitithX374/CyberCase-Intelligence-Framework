@@ -8,6 +8,8 @@ from copy import deepcopy
 from dataclasses import replace
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
+
 from app.config import settings
 from app.models.ragContext import RagContext
 from app.services.case_analysis import CaseAnalysisFailure, request_case_analysis
@@ -252,11 +254,29 @@ async def _attach_case_augmentation(
     if not isinstance(calls, list):
         raise CaseRunExecutionError("analysis_receipt_invalid", "Case analysis receipt calls are invalid")
 
+    existing_rag_context: CaseRagContextPayload | None = None
+    if session_factory is not None:
+        async with session_factory() as db:
+            existing_row = await db.scalar(
+                select(RagContext).where(RagContext.case_run_id == claimed.id)
+            )
+            if existing_row is not None:
+                existing_rag_context = CaseRagContextPayload(
+                    retrieval_context_id=existing_row.retrieval_context_id,
+                    context=existing_row.context_text,
+                    mitre_table=tuple(existing_row.mitre_table or []),
+                )
+
     async def _persist_rag_context(rag_payload: CaseRagContextPayload) -> None:
         if session_factory is None:
             return
         async with session_factory() as db, db.begin():
-            existing = await db.get(RagContext, rag_payload.retrieval_context_id)
+            existing = await db.scalar(
+                select(RagContext).where(
+                    (RagContext.case_run_id == claimed.id)
+                    | (RagContext.retrieval_context_id == rag_payload.retrieval_context_id)
+                )
+            )
             if existing is None:
                 query_str = claimed.input_text
                 db.add(
@@ -284,6 +304,7 @@ async def _attach_case_augmentation(
         mapping_request=mapping_request,
         calls=calls,
         on_rag_validated=_persist_rag_context,
+        reused_context=existing_rag_context,
     )
     sources = build_case_source_registry(context)
     merged_trace = merge_case_mitre_trace(

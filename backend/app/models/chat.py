@@ -158,6 +158,10 @@ class ChatMessage(Base):
             "role IN ('user', 'assistant')",
             name="ck_chat_messages_role",
         ),
+        CheckConstraint(
+            "message_kind IN ('conversation', 'followup_question', 'followup_answer')",
+            name="ck_chat_messages_message_kind",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -192,6 +196,11 @@ class ChatMessage(Base):
         ForeignKey("case_analysis_results.id", name="fk_chat_messages_analysis_result_id", ondelete="SET NULL"),
         nullable=True,
     )
+    in_reply_to_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("chat_messages.id", name="fk_chat_messages_in_reply_to_message_id", ondelete="SET NULL"),
+        nullable=True,
+    )
     metadata_json: Mapped[dict[str, object]] = mapped_column(
         JSONB,
         nullable=False,
@@ -205,6 +214,9 @@ class ChatMessage(Base):
     )
 
     thread: Mapped[ChatThread] = relationship(back_populates="messages")
+    in_reply_to_message: Mapped["ChatMessage | None"] = relationship(
+        "ChatMessage", remote_side=[id], foreign_keys=[in_reply_to_message_id]
+    )
 
 
 __all__ = ["ChatMessage", "ChatThread"]

@@ -17,12 +17,12 @@ def test_schema_contains_only_product_runtime_tables() -> None:
         "case_evidence_snapshots",
         "case_runs",
         "case_analysis_results",
-        "case_clarifications",
     }
 
 
 def test_case_state_columns_and_tables_are_absent() -> None:
     assert "case_state_versions" not in Base.metadata.tables
+    assert "case_clarifications" not in Base.metadata.tables
     assert "current_case_state_version_id" not in Base.metadata.tables["chat_threads"].c
     assert "case_run_id" in Base.metadata.tables["rag_contexts"].c
     assert "case_id" in Base.metadata.tables["rag_contexts"].c
@@ -52,9 +52,12 @@ def test_case_first_workflow_schema_is_case_owned() -> None:
     assert runs.c["request_message_id"].nullable
     assert runs.c["context_analysis_result_id"].nullable
     assert results.c["run_id"].nullable is False
+    assert any(fk.ondelete == "CASCADE" for fk in results.c["run_id"].foreign_keys)
     assert messages.c["analysis_result_id"].nullable
     assert messages.c["message_kind"].nullable is False
-    assert runs.c["clarification_id"].nullable
+    assert "in_reply_to_message_id" in messages.c
+    assert messages.c["in_reply_to_message_id"].nullable
+    assert "clarification_id" not in runs.c
 
 
 def test_rag_context_is_bound_one_to_one_to_case_run() -> None:

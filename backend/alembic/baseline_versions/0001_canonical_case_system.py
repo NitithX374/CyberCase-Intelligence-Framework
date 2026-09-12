@@ -1,10 +1,10 @@
 """Canonical Case System Baseline Migration.
 
-Defines the 14 product runtime tables for the CyberCase Framework:
+Defines the 13 product runtime tables for the CyberCase Framework:
 users, cases, case_documents, document_extractions, chat_threads,
 chat_messages, case_evidence_sources, case_evidence_revisions,
 case_evidence_snapshots, case_runs, case_analysis_results,
-case_clarifications, rag_contexts, case_reports.
+rag_contexts, case_reports.
 
 Revision ID: 0001_canonical_case_system
 Revises: None
@@ -130,14 +130,16 @@ def upgrade() -> None:
         sa.Column("retrieval_context_id", sa.String(length=160), nullable=True),
         sa.Column("message_kind", sa.String(length=32), server_default="conversation", nullable=False),
         sa.Column("analysis_result_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("in_reply_to_message_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("ordinal > 0", name="ck_chat_messages_ordinal_positive"),
         sa.CheckConstraint("role IN ('user', 'assistant')", name="ck_chat_messages_role"),
         sa.CheckConstraint(
-            "message_kind IN ('conversation', 'analysis_result', 'followup_question')",
+            "message_kind IN ('conversation', 'followup_question', 'followup_answer')",
             name="ck_chat_messages_message_kind",
         ),
+        sa.ForeignKeyConstraint(["in_reply_to_message_id"], ["chat_messages.id"], name="fk_chat_messages_in_reply_to_message_id", ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["thread_id"], ["chat_threads.id"], name="fk_chat_messages_thread_id_chat_threads", ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id", name="pk_chat_messages"),
         sa.UniqueConstraint("thread_id", "ordinal", name="uq_chat_messages_thread_id_ordinal"),
@@ -158,7 +160,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("archived_at", sa.DateTime(timezone=True), nullable=True),
         sa.CheckConstraint(
-            "source_kind IN ('reviewed_document', 'narrative', 'clarification_answer')",
+            "source_kind IN ('reviewed_document', 'narrative', 'followup_answer')",
             name="ck_case_evidence_sources_kind",
         ),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_evidence_sources_case_id", ondelete="CASCADE"),
@@ -178,14 +180,15 @@ def upgrade() -> None:
         sa.Column("exact_text", sa.Text(), nullable=False),
         sa.Column("text_sha256", sa.CHAR(length=64), nullable=False),
         sa.Column("provenance_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("admitted_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("archived_at", sa.DateTime(timezone=True), nullable=True),
         sa.CheckConstraint("revision > 0", name="ck_case_evidence_revisions_revision_positive"),
         sa.ForeignKeyConstraint(["extraction_id"], ["document_extractions.id"], name="fk_case_evidence_revisions_extraction_id", ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["source_id"], ["case_evidence_sources.id"], name="fk_case_evidence_revisions_source_id", ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id", name="pk_case_evidence_revisions"),
         sa.UniqueConstraint("source_id", "revision", name="uq_case_evidence_revisions_source_id_revision"),
     )
-    op.create_index("ix_case_evidence_revisions_source_id_created_at", "case_evidence_revisions", ["source_id", "created_at"])
+    op.create_index("ix_case_evidence_revisions_source_id_revision", "case_evidence_revisions", ["source_id", "revision"])
 
     # 9. case_evidence_snapshots
     op.create_table(
@@ -215,7 +218,6 @@ def upgrade() -> None:
         sa.Column("snapshot_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("request_message_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("context_analysis_result_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("clarification_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("idempotency_key", sa.String(length=255), nullable=False),
         sa.Column("request_fingerprint", sa.CHAR(length=64), nullable=False),
         sa.Column("request_payload", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
@@ -231,7 +233,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("attempt_count >= 0", name="ck_case_runs_attempt_count_nonnegative"),
-        sa.CheckConstraint("operation IN ('analysis', 'ask', 'clarification')", name="ck_case_runs_operation"),
+        sa.CheckConstraint("operation IN ('analysis', 'ask')", name="ck_case_runs_operation"),
         sa.CheckConstraint("status IN ('queued', 'running', 'completed', 'failed')", name="ck_case_runs_status"),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_runs_case_id", ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["snapshot_id"], ["case_evidence_snapshots.id"], name="fk_case_runs_snapshot_id", ondelete="RESTRICT"),
@@ -260,47 +262,14 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("status IN ('validated', 'legacy_unbound')", name="ck_case_analysis_results_status"),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_analysis_results_case_id", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["run_id"], ["case_runs.id"], name="fk_case_analysis_results_run_id", ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["run_id"], ["case_runs.id"], name="fk_case_analysis_results_run_id", ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["snapshot_id"], ["case_evidence_snapshots.id"], name="fk_case_analysis_results_snapshot_id", ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id", name="pk_case_analysis_results"),
         sa.UniqueConstraint("run_id", name="uq_case_analysis_results_run_id"),
     )
     op.create_index("ix_case_analysis_results_case_id_created_at", "case_analysis_results", ["case_id", "created_at"])
 
-    # 12. case_clarifications
-    op.create_table(
-        "case_clarifications",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("case_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("origin_analysis_result_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("origin_snapshot_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("gap_key", sa.String(length=255), nullable=False),
-        sa.Column("gap_id", sa.String(length=80), nullable=False),
-        sa.Column("topic", sa.String(length=500), nullable=False),
-        sa.Column("question", sa.Text(), nullable=False),
-        sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("state", sa.String(length=16), server_default=sa.text("'pending'"), nullable=False),
-        sa.Column("answer_evidence_source_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("question_message_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("answer_message_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("answer_fingerprint", sa.CHAR(length=64), nullable=True),
-        sa.Column("answered_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.CheckConstraint("state IN ('pending', 'answered', 'superseded')", name="ck_case_clarifications_state"),
-        sa.ForeignKeyConstraint(["answer_evidence_source_id"], ["case_evidence_sources.id"], name="fk_case_clarifications_answer_source_id", ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["answer_message_id"], ["chat_messages.id"], name="fk_case_clarifications_answer_message_id", ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_clarifications_case_id", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["origin_analysis_result_id"], ["case_analysis_results.id"], name="fk_case_clarifications_origin_result_id", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["origin_snapshot_id"], ["case_evidence_snapshots.id"], name="fk_case_clarifications_origin_snapshot_id", ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["question_message_id"], ["chat_messages.id"], name="fk_case_clarifications_question_message_id", ondelete="SET NULL"),
-        sa.PrimaryKeyConstraint("id", name="pk_case_clarifications"),
-        sa.UniqueConstraint("origin_analysis_result_id", "gap_key", name="uq_case_clarifications_origin_gap_key"),
-    )
-    op.create_index("ix_case_clarifications_case_id_created_at", "case_clarifications", ["case_id", "created_at"])
-    op.create_index("ix_case_clarifications_case_id_state", "case_clarifications", ["case_id", "state"])
-
-    # 13. rag_contexts
+    # 12. rag_contexts
     op.create_table(
         "rag_contexts",
         sa.Column("retrieval_context_id", sa.String(length=160), nullable=False),
@@ -321,7 +290,7 @@ def upgrade() -> None:
     op.create_index("ix_rag_contexts_case_id_created_at", "rag_contexts", ["case_id", "created_at"])
     op.create_index("ix_rag_contexts_query_sha256", "rag_contexts", ["query_sha256"])
 
-    # 14. case_reports
+    # 13. case_reports
     op.create_table(
         "case_reports",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -401,20 +370,11 @@ def upgrade() -> None:
         "case_analysis_results",
         ["context_analysis_result_id"],
         ["id"],
-        ondelete="SET NULL",
-    )
-    op.create_foreign_key(
-        "fk_case_runs_clarification_id",
-        "case_runs",
-        "case_clarifications",
-        ["clarification_id"],
-        ["id"],
-        ondelete="SET NULL",
+        ondelete="RESTRICT",
     )
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_case_runs_clarification_id", "case_runs", type_="foreignkey")
     op.drop_constraint("fk_case_runs_context_result_id", "case_runs", type_="foreignkey")
     op.drop_constraint("fk_case_runs_request_message_id", "case_runs", type_="foreignkey")
     op.drop_constraint("fk_chat_messages_analysis_result_id", "chat_messages", type_="foreignkey")
@@ -423,7 +383,6 @@ def downgrade() -> None:
 
     op.drop_table("case_reports")
     op.drop_table("rag_contexts")
-    op.drop_table("case_clarifications")
     op.drop_table("case_analysis_results")
     op.drop_table("case_runs")
     op.drop_table("case_evidence_snapshots")

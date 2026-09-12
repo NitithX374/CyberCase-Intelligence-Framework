@@ -29,12 +29,12 @@ def test_baseline_declares_only_canonical_tables() -> None:
         "case_evidence_snapshots",
         "case_runs",
         "case_analysis_results",
-        "case_clarifications",
         "rag_contexts",
         "case_reports",
         "chat_threads",
         "chat_messages",
     }
+    assert "case_clarifications" not in created
     assert "chat_runs" not in created
     assert "chat_reports" not in created
     assert "case_state_versions" not in source

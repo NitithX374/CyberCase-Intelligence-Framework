@@ -7,7 +7,6 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
-from app.models.caseClarification import CaseClarification
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage, ChatThread
@@ -109,13 +108,21 @@ async def completeCaseAsk(
         )
         db.add(message)
         thread.next_message_ordinal += 1
-        pending_clarification = await db.scalar(
-            select(CaseClarification.id).where(
-                CaseClarification.case_id == case.id,
-                CaseClarification.state == "pending",
+        answered_subq = (
+            select(ChatMessage.in_reply_to_message_id)
+            .where(
+                ChatMessage.thread_id == thread.id,
+                ChatMessage.in_reply_to_message_id.is_not(None),
             )
         )
-        thread.status = "awaiting_followup" if pending_clarification is not None else "answered"
+        pending_followup = await db.scalar(
+            select(ChatMessage.id).where(
+                ChatMessage.thread_id == thread.id,
+                ChatMessage.message_kind == "followup_question",
+                ChatMessage.id.not_in(answered_subq),
+            )
+        )
+        thread.status = "awaiting_followup" if pending_followup is not None else "answered"
         thread.updated_at = now
         await db.flush()
     return True

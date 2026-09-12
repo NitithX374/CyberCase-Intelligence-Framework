@@ -25,9 +25,9 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.case import Case
-    from app.models.caseClarification import CaseClarification
     from app.models.caseMaterials import CaseEvidenceSnapshot
     from app.models.chat import ChatMessage
+    from app.models.ragContext import RagContext
 
 
 class CaseRun(Base):
@@ -57,9 +57,6 @@ class CaseRun(Base):
     context_analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("case_analysis_results.id", name="fk_case_runs_context_result_id", ondelete="RESTRICT"), nullable=True
     )
-    clarification_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("case_clarifications.id", name="fk_case_runs_clarification_id", ondelete="SET NULL"), nullable=True
-    )
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     request_fingerprint: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     request_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
@@ -81,13 +78,17 @@ class CaseRun(Base):
     context_analysis_result: Mapped["CaseAnalysisResult | None"] = relationship(
         "CaseAnalysisResult", foreign_keys=[context_analysis_result_id]
     )
-    clarification: Mapped["CaseClarification | None"] = relationship(
-        "CaseClarification", back_populates="runs", foreign_keys=[clarification_id]
-    )
     analysis_result: Mapped["CaseAnalysisResult | None"] = relationship(
         "CaseAnalysisResult",
         back_populates="run",
         foreign_keys="CaseAnalysisResult.run_id",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    rag_context: Mapped["RagContext | None"] = relationship(
+        "RagContext",
+        back_populates="run",
         uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -108,7 +109,7 @@ class CaseAnalysisResult(Base):
         UUID(as_uuid=True), ForeignKey("cases.id", name="fk_case_analysis_results_case_id", ondelete="CASCADE"), nullable=False
     )
     run_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("case_runs.id", name="fk_case_analysis_results_run_id", ondelete="RESTRICT"), nullable=False
+        UUID(as_uuid=True), ForeignKey("case_runs.id", name="fk_case_analysis_results_run_id", ondelete="CASCADE"), nullable=False
     )
     snapshot_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("case_evidence_snapshots.id", name="fk_case_analysis_results_snapshot_id", ondelete="RESTRICT"), nullable=False

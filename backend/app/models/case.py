@@ -18,7 +18,6 @@ if TYPE_CHECKING:
         CaseEvidenceSnapshot,
         EvidenceSource,
     )
-    from app.models.caseClarification import CaseClarification
     from app.models.caseRun import CaseAnalysisResult, CaseRun
     from app.models.chat import ChatThread
     from app.models.ragContext import RagContext
@@ -42,7 +41,7 @@ class Case(Base):
     )
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", name="fk_cases_user_id", ondelete="CASCADE"),
+        ForeignKey("users.id", name="fk_cases_user_id", ondelete="SET NULL"),
         nullable=True,
     )
     title: Mapped[str] = mapped_column(
@@ -109,16 +108,9 @@ class Case(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    clarifications: Mapped[list["CaseClarification"]] = relationship(
-        "CaseClarification",
-        back_populates="case",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
     analysis_results: Mapped[list["CaseAnalysisResult"]] = relationship(
         "CaseAnalysisResult",
         back_populates="case",
-        cascade="all, delete-orphan",
         passive_deletes=True,
         foreign_keys="CaseAnalysisResult.case_id",
     )
@@ -130,7 +122,6 @@ class Case(Base):
     rag_contexts: Mapped[list["RagContext"]] = relationship(
         "RagContext",
         back_populates="case",
-        cascade="all, delete-orphan",
         passive_deletes=True,
     )
     reports: Mapped[list["CaseReport"]] = relationship(

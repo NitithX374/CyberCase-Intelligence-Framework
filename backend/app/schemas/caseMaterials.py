@@ -48,7 +48,7 @@ class EvidenceRevisionCreate(BaseModel):
 
 
 class CaseEvidenceCreate(EvidenceRevisionCreate):
-    source_kind: Literal["narrative", "clarification_answer", "explicit_chat_addition"] = "narrative"
+    source_kind: Literal["narrative", "followup_answer", "clarification_answer", "explicit_chat_addition"] = "narrative"
     source_metadata_json: dict[str, object] = Field(default_factory=dict)
 
 

@@ -11,12 +11,12 @@ from app.main import app
 from app.models import (
     Case,
     CaseAnalysisResult,
-    CaseClarification,
     CaseReport,
     CaseRun,
     ChatMessage,
     ChatThread,
     EvidenceSource,
+    RagContext,
 )
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.user import User
@@ -108,18 +108,27 @@ def test_delete_case_cascades_all_dependent_records_without_error(monkeypatch):
                 )
                 db.add(msg)
 
-                clarification = CaseClarification(
-                    id=uuid4(),
+                rag = RagContext(
+                    retrieval_context_id="test_rag_ctx_del",
                     case_id=case_id,
-                    origin_analysis_result_id=result_id,
-                    origin_snapshot_id=snapshot_id,
-                    gap_key="test_gap",
-                    gap_id="gap_1",
-                    topic="Account Details",
-                    question="Which account was used?",
-                    state="pending",
+                    case_run_id=run_id,
+                    evidence_snapshot_id=snapshot_id,
+                    query_text="test query",
+                    query_sha256="q" * 64,
+                    context_text="test context",
+                    mitre_table=[],
                 )
-                db.add(clarification)
+                db.add(rag)
+
+                q_msg = ChatMessage(
+                    thread_id=case_id,
+                    ordinal=2,
+                    role="assistant",
+                    content="Which account was used?",
+                    message_kind="followup_question",
+                    analysis_result_id=result_id,
+                )
+                db.add(q_msg)
 
                 report = CaseReport(
                     id=uuid4(),
@@ -145,8 +154,8 @@ def test_delete_case_cascades_all_dependent_records_without_error(monkeypatch):
                 assert await db.scalar(select(func.count()).select_from(CaseRun)) == 1
                 assert await db.scalar(select(func.count()).select_from(CaseAnalysisResult)) == 1
                 assert await db.scalar(select(func.count()).select_from(CaseReport)) == 1
-                assert await db.scalar(select(func.count()).select_from(CaseClarification)) == 1
-                assert await db.scalar(select(func.count()).select_from(ChatMessage)) == 1
+                assert await db.scalar(select(func.count()).select_from(RagContext)) == 1
+                assert await db.scalar(select(func.count()).select_from(ChatMessage)) == 2
                 assert await db.scalar(select(func.count()).select_from(CaseEvidenceSnapshot)) == 1
 
             # Delete case via service
@@ -159,7 +168,7 @@ def test_delete_case_cascades_all_dependent_records_without_error(monkeypatch):
                 assert await db.scalar(select(func.count()).select_from(CaseRun)) == 0
                 assert await db.scalar(select(func.count()).select_from(CaseAnalysisResult)) == 0
                 assert await db.scalar(select(func.count()).select_from(CaseReport)) == 0
-                assert await db.scalar(select(func.count()).select_from(CaseClarification)) == 0
+                assert await db.scalar(select(func.count()).select_from(RagContext)) == 0
                 assert await db.scalar(select(func.count()).select_from(ChatMessage)) == 0
                 assert await db.scalar(select(func.count()).select_from(ChatThread)) == 0
                 assert await db.scalar(select(func.count()).select_from(CaseEvidenceSnapshot)) == 0

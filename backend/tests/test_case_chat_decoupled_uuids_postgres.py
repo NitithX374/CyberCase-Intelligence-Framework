@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import select
 
 from app.models import Case, CaseAnalysisResult, CaseEvidenceSnapshot, CaseReport, CaseRun, ChatMessage, ChatThread
-from app.models.caseClarification import CaseClarification
 from app.schemas.caseRuns import CaseAnalysisCreate
 from app.schemas.chat import ChatMessageCreate
 from app.services.case_analysis.contracts import (
@@ -112,28 +111,19 @@ def test_case_and_chat_thread_work_with_distinct_uuids():
                 assert saved_thread is not None
                 assert saved_thread.id == thread.id
                 assert saved_thread.id != case.id
-                assert saved_thread.status == "awaiting_followup"
-
-                clarification = await db.scalar(
-                    select(CaseClarification).where(
-                        CaseClarification.case_id == case.id,
-                        CaseClarification.state == "pending",
-                    )
-                )
-                assert clarification is not None
-
                 messages = list((await db.scalars(
                     select(ChatMessage).where(ChatMessage.thread_id == thread.id)
                 )).all())
                 assert len(messages) == 1
                 assert messages[0].message_kind == "followup_question"
+                followup_msg = messages[0]
 
             # Submit clarification answer via Chat message endpoint with explicit intent
             answer_request = ChatMessageCreate(
                 content="It was navy blue.",
                 idempotency_key="clarif-answer-1",
                 intent="clarification_answer",
-                clarification_id=clarification.id,
+                clarification_id=followup_msg.id,
             )
             async with factory() as db, db.begin():
                 ans_msg, next_run = await createCaseChatMessageAndRun(

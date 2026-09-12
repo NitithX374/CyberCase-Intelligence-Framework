@@ -215,15 +215,20 @@ class CaseMaterialsService:
         source_metadata_json: dict[str, object] | None = None,
         origin_message_id: UUID | None = None,
     ) -> EvidenceSource:
-        if source_kind not in {"narrative", "clarification_answer", "explicit_chat_addition"}:
+        if source_kind not in {"narrative", "followup_answer", "clarification_answer", "explicit_chat_addition"}:
             raise CaseMaterialsError("evidence_source_kind_invalid", "Unsupported native evidence source kind")
+        persisted_kind = (
+            "followup_answer"
+            if source_kind in {"followup_answer", "clarification_answer"}
+            else "narrative"
+        )
         normalized_text = exact_text.strip()
         if not normalized_text:
             raise CaseMaterialsError("evidence_text_empty", "Admitted evidence text is empty")
         case = await self.getOwnedCase(case_id, user_id, lock=True)
         source = EvidenceSource(
             case_id=case.id,
-            source_kind=source_kind,
+            source_kind=persisted_kind,
             origin_message_id=origin_message_id,
             source_metadata_json=source_metadata_json or {},
         )
@@ -365,6 +370,7 @@ def _source_label(source: EvidenceSource) -> str:
         return f"DOCUMENT {source.document.filename}"
     return {
         "narrative": "CASE NARRATIVE",
+        "followup_answer": "FOLLOW-UP ANSWER",
         "clarification_answer": "CLARIFICATION ANSWER",
         "explicit_chat_addition": "ADDED CASE INFORMATION",
         "legacy_unbound": "LEGACY CASE MATERIAL",
