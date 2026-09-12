@@ -1,4 +1,4 @@
-﻿"""Database schema parity integration tests: Alembic baseline vs PostgreSQL catalog vs Base.metadata."""
+"""Database schema parity integration tests: Alembic baseline vs PostgreSQL catalog vs Base.metadata."""
 
 import asyncio
 import importlib.util
@@ -31,12 +31,20 @@ EXPECTED_CANONICAL_TABLES = {
 }
 
 
-def _load_migration_module():
-    path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../alembic/baseline_versions/0001_canonical_case_system.py"))
-    spec = importlib.util.spec_from_file_location("alembic_0001", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+def _load_migration_modules():
+    names = (
+        "0001_canonical_case_system.py",
+        "0002_drop_chat_status_and_context_result.py",
+        "0003_case_run_request_no_action.py",
+    )
+    modules = []
+    for index, name in enumerate(names, start=1):
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../alembic/baseline_versions", name))
+        spec = importlib.util.spec_from_file_location(f"alembic_{index}", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        modules.append(mod)
+    return modules
 
 
 def test_alembic_baseline_upgrade_matches_base_metadata():
@@ -50,7 +58,7 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
         engine = create_async_engine(
             url, connect_args={"server_settings": {"search_path": schema}}
         )
-        migration = _load_migration_module()
+        migrations = _load_migration_modules()
 
         try:
             async with admin_engine.begin() as conn:
@@ -62,8 +70,9 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     sync_conn.execute(text(f'SET search_path TO "{schema}"'))
                     ctx = MigrationContext.configure(sync_conn)
                     op = Operations(ctx)
-                    migration.op = op
-                    migration.upgrade()
+                    for migration in migrations:
+                        migration.op = op
+                        migration.upgrade()
 
                 await conn.run_sync(run_upgrade)
 
@@ -81,6 +90,7 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     for table_name in EXPECTED_CANONICAL_TABLES:
                         orm_table = Base.metadata.tables[table_name]
                         db_columns = {c["name"]: c for c in inspector.get_columns(table_name, schema=schema)}
+                        assert set(db_columns) == set(orm_table.c.keys())
                         for orm_col_name, orm_col in orm_table.c.items():
                             assert orm_col_name in db_columns, f"Column {table_name}.{orm_col_name} missing from DB"
                             db_col = db_columns[orm_col_name]
@@ -107,6 +117,27 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     assert snapshot_fk is not None
                     assert snapshot_fk.get("options", {}).get("ondelete") == "RESTRICT"
 
+                    request_fk = next(
+                        (fk for fk in cr_fks if fk["referred_table"] == "chat_messages"),
+                        None,
+                    )
+                    assert request_fk is not None
+                    assert request_fk.get("options", {}).get("ondelete") in (None, "NO ACTION")
+                    constraint_state = sync_conn.execute(
+                        text(
+                            """
+                            SELECT condeferrable, condeferred, confdeltype
+                            FROM pg_constraint
+                            JOIN pg_namespace ON pg_namespace.oid = pg_constraint.connamespace
+                            WHERE conname = :constraint_name AND nspname = :schema
+                            """
+                        ),
+                        {"constraint_name": "fk_case_runs_request_message_id", "schema": schema},
+                    ).mappings().one()
+                    assert constraint_state["condeferrable"] is False
+                    assert constraint_state["condeferred"] is False
+                    assert constraint_state["confdeltype"] in ("a", b"a")
+
                     # 3. Check unique constraints
                     rag_uniques = inspector.get_unique_constraints("rag_contexts", schema=schema)
                     assert any("case_run_id" in u["column_names"] for u in rag_uniques), "uq_rag_contexts_case_run_id missing"
@@ -126,8 +157,9 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     sync_conn.execute(text(f'SET search_path TO "{schema}"'))
                     ctx = MigrationContext.configure(sync_conn)
                     op = Operations(ctx)
-                    migration.op = op
-                    migration.downgrade()
+                    for migration in reversed(migrations):
+                        migration.op = op
+                        migration.downgrade()
 
                 await conn.run_sync(run_downgrade)
 

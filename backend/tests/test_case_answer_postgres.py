@@ -81,7 +81,7 @@ def test_chat_uses_pinned_analysis_without_reanalysis(monkeypatch, outcome):
                 assert saved.status == "completed"
                 assert len(messages) == 2
                 answer = messages[-1]
-                assert answer.analysis_result_id is None
+                assert answer.analysis_result_id == result_id
                 assert answer.metadata_json["answer_receipt"]["prompt_version"] == "case_chat_answer_v1"
                 assert answer.metadata_json["context_analysis_result_id"] == str(result_id)
                 claims = answer.metadata_json["analysis_trace"]["claims"]
@@ -205,6 +205,7 @@ def test_chat_answer_history_is_preceding_same_result_context_only(monkeypatch):
                             role="user" if index % 2 else "assistant",
                             content=f"history-{index}",
                             message_kind="conversation",
+                            analysis_result_id=result_id,
                             metadata_json=serialize_message_metadata(
                                 {"context_analysis_result_id": str(result_id)}
                             ),

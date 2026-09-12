@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database import commit_dependency_transaction
 from app.models.case import Case
-from app.models.caseRun import CaseRun
+from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage, ChatThread
 from app.schemas.chat import (
     ChatCaseLinkRead,
@@ -21,7 +21,9 @@ from app.schemas.chat import (
     ChatThreadCreate,
     ChatThreadUpdate,
 )
+from app.schemas.messageMetadata import serialize_message_metadata
 from app.services.cases.caseService import buildCaseWithChat
+from app.services.chat.threadDeletion import delete_chat_thread
 
 INTERRUPTED_CHAT_RUN_CODE = "chat_run_interrupted"
 
@@ -101,6 +103,40 @@ class ChatService:
                 thread.case = case
                 self.db.add(thread)
                 await self.db.flush()
+                if case.latest_analysis_result_id is not None:
+                    analysis = await self.db.get(CaseAnalysisResult, case.latest_analysis_result_id)
+                    if analysis is not None and isinstance(analysis.provider_metadata_json, dict):
+                        fq = analysis.provider_metadata_json.get("followup_question")
+                        if fq and isinstance(fq, str) and fq.strip():
+                            trace_json = analysis.trace_json if isinstance(analysis.trace_json, dict) else {}
+                            gaps = trace_json.get("gaps", [])
+                            gap_id = "G-001"
+                            topic = ""
+                            if gaps and isinstance(gaps, list) and isinstance(gaps[0], dict):
+                                gap_id = str(gaps[0].get("gap_id") or "G-001")
+                                topic = str(gaps[0].get("description") or "")
+                            gap_key = f"{gap_id}:{topic.lower()}"
+                            msg_id = uuid4()
+                            question = ChatMessage(
+                                id=msg_id,
+                                thread_id=thread.id,
+                                ordinal=thread.next_message_ordinal,
+                                role="assistant",
+                                content=fq.strip(),
+                                message_kind="followup_question",
+                                analysis_result_id=analysis.id,
+                                metadata_json=serialize_message_metadata(
+                                    {
+                                        "clarification_id": str(msg_id),
+                                        "gap_id": gap_id,
+                                        "topic": topic,
+                                        "gap_key": gap_key,
+                                    }
+                                ),
+                            )
+                            self.db.add(question)
+                            thread.next_message_ordinal += 1
+                            await self.db.flush()
             else:
                 thread.case = case
             return thread
@@ -161,8 +197,7 @@ class ChatService:
             )
         self.verifyThreadAccess(thread, user_id)
 
-        await self.db.delete(thread)
-        await self.db.commit()
+        await delete_chat_thread(self.db, thread)
 
     async def listThreads(
         self,

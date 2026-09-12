@@ -67,7 +67,7 @@ export function SourceEvidenceDrawer({ sourceRef, anchorElement, citationRole, o
           <footer className="border-t border-line px-5 py-3 sm:px-6">
             <button type="button" onClick={() => { onClose(); onNavigateToSource(sourceRef.id); }}
               className="min-h-9 text-xs font-semibold underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-primary">
-              View in Chat <span aria-hidden="true">↗</span>
+              View in Materials <span aria-hidden="true">↗</span>
             </button>
           </footer>
         )}

@@ -24,7 +24,8 @@ from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 
 def serializeCase(case: Case) -> CaseRead:
     thread = case.chat_thread
-    latest_run = max(case.case_runs, key=lambda run: run.created_at, default=None)
+    analysis_runs = [run for run in case.case_runs if run.operation == "analysis"]
+    latest_run = max(analysis_runs, key=lambda run: run.created_at, default=None)
     if latest_run is not None and latest_run.status in {"queued", "running"}:
         processing_status = latest_run.status
     elif latest_run is not None and latest_run.status == "failed":
@@ -42,6 +43,11 @@ def serializeCase(case: Case) -> CaseRead:
             m.message_kind == "followup_question" and m.id not in answered_ids
             for m in thread.messages
         )
+    elif case.latest_analysis_result is not None:
+        meta = getattr(case.latest_analysis_result, "provider_metadata_json", None)
+        if isinstance(meta, dict):
+            fq = meta.get("followup_question")
+            has_pending_clarification = bool(fq and isinstance(fq, str) and fq.strip())
     status_value = "processing" if processing_status in {"queued", "running"} else (
         "failed" if processing_status == "failed" else
         "awaiting_followup" if has_pending_clarification else
@@ -158,16 +164,17 @@ class CaseService:
         # Delete case-owned entities in dependency order within transaction
         await self.db.execute(delete(CaseReport).where(CaseReport.case_id == case.id))
 
-        thread_ids_subq = select(ChatThread.id).where(ChatThread.case_id == case.id)
-        await self.db.execute(delete(ChatMessage).where(ChatMessage.thread_id.in_(thread_ids_subq)))
-        await self.db.execute(delete(ChatThread).where(ChatThread.case_id == case.id))
-
         await self.db.execute(
             update(Case).where(Case.id == case.id).values(latest_analysis_result_id=None)
         )
         await self.db.execute(delete(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case.id))
         await self.db.execute(delete(RagContext).where(RagContext.case_id == case.id))
         await self.db.execute(delete(CaseRun).where(CaseRun.case_id == case.id))
+
+        thread_ids_subq = select(ChatThread.id).where(ChatThread.case_id == case.id)
+        await self.db.execute(delete(ChatMessage).where(ChatMessage.thread_id.in_(thread_ids_subq)))
+        await self.db.execute(delete(ChatThread).where(ChatThread.case_id == case.id))
+
         await self.db.execute(delete(CaseEvidenceSnapshot).where(CaseEvidenceSnapshot.case_id == case.id))
 
         source_ids_subq = select(EvidenceSource.id).where(EvidenceSource.case_id == case.id)

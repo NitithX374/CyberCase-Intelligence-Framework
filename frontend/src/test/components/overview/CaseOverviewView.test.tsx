@@ -71,7 +71,7 @@ describe("CaseOverviewView", () => {
     const sourceButtons = screen.getAllByRole("button", { name: /Case narrative/i });
     fireEvent.click(sourceButtons[0]);
     expect(screen.getByRole("dialog", { name: /Source Evidence/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /View in Chat/i }));
+    fireEvent.click(screen.getByRole("button", { name: /View in Materials/i }));
     expect(navigateToSource).toHaveBeenCalledWith("source-1");
     fireEvent.click(screen.getByRole("button", { name: "Ask about this case" }));
     expect(openChat).toHaveBeenCalledOnce();
@@ -243,5 +243,83 @@ describe("CaseOverviewView", () => {
     expect(proceedButton).toBeInTheDocument();
     fireEvent.click(proceedButton);
     expect(openChat).toHaveBeenCalledOnce();
+  });
+
+  it("renders stale analysis warning with Analyze latest evidence button when freshness is stale", () => {
+    const runAnalysis = vi.fn();
+    const staleResult = {
+      id: "analysis-stale",
+      case_id: "case-1",
+      run_id: "run-1",
+      snapshot_id: "snapshot-1",
+      schema_version: "v1",
+      status: "validated" as const,
+      answer: "Old analysis.",
+      summary: "Old summary.",
+      trace_json: {
+        version: "case_analysis_trace_v1",
+        validation_status: "validated",
+        analysis_mode: "case_overview",
+        evidence_sha256: "sha",
+        summary: "Old summary.",
+        claims: [],
+        gaps: [],
+        mitre_associations: [],
+      },
+      execution_receipt_json: {},
+      retrieval_context_id: null,
+      pipeline_config: {},
+      provider_metadata_json: {},
+      created_at: "2026-09-10T00:00:00Z",
+      freshness: "stale" as const,
+    };
+    const sourceId = "11111111-1111-4111-8111-111111111111";
+    const quote = "The suspect vehicle was observed at 14:32.";
+    const manifest = [{
+      exact_text: quote,
+      provenance: { origin: "analyst-authored" },
+      revision: 1,
+      source_id: sourceId,
+      source_kind: "narrative",
+      text_sha256: sha256Hex(quote),
+    }];
+    const inputText = `[CASE NARRATIVE · SOURCE ${sourceId} · REVISION 1]\n${quote}`;
+    const textSha = sha256Hex(inputText);
+    staleResult.trace_json.evidence_sha256 = textSha;
+    const snapshot = {
+      id: "snapshot-1",
+      case_id: "case-1",
+      evidence_revision: 1,
+      format_version: "case_evidence_snapshot_v1",
+      input_text: inputText,
+      text_sha256: textSha,
+      manifest_sha256: sha256Hex(JSON.stringify(manifest)),
+      manifest_json: manifest,
+      created_at: "2026-09-10T00:00:00Z",
+    };
+
+    render(
+      <CaseOverviewView
+        threadId="case-1"
+        threadTitle="Stale Case"
+        threadStatus="answered"
+        messages={[]}
+        onOpenChat={vi.fn()}
+        onOpenReport={vi.fn()}
+        nativeAnalysisResult={staleResult}
+        nativeEvidenceSnapshot={snapshot}
+        onRunAnalysis={runAnalysis}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Analysis is based on older evidence/i),
+    ).toBeInTheDocument();
+    const analyzeBtn = screen.getByRole("button", {
+      name: /Analyze latest evidence/i,
+    });
+    expect(analyzeBtn).toBeInTheDocument();
+    fireEvent.click(analyzeBtn);
+    expect(runAnalysis).toHaveBeenCalledOnce();
   });
 });

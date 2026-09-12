@@ -46,6 +46,7 @@ interface CaseOverviewViewProps {
   nativeAnalysisLoading?: boolean;
   nativeSnapshotLoading?: boolean;
   nativeRun?: CaseRunRead | null;
+  onRunAnalysis?: () => void;
 }
 
 export function CaseOverviewView({
@@ -63,11 +64,12 @@ export function CaseOverviewView({
   nativeEvidenceSnapshot,
   nativeRunStatus,
   nativeClarifications,
-  clarificationSubmittingId = null,
-  onAnswerClarification,
+  clarificationSubmittingId: _clarificationSubmittingId = null,
+  onAnswerClarification: _onAnswerClarification,
   nativeAnalysisLoading = false,
   nativeSnapshotLoading = false,
   nativeRun,
+  onRunAnalysis,
 }: CaseOverviewViewProps) {
   const [activeSourcePopover, setActiveSourcePopover] = useState<{
     sourceRef: SourceMessageRef;
@@ -173,7 +175,8 @@ export function CaseOverviewView({
         : { sourceRef, anchorElement, sourceKey, citationRole, analysisMessageId: overview.analysisMessageId },
     );
   };
-  const sourceNavigation = nativeMode ? undefined : onNavigateToSource;
+  const sourceNavigation = onNavigateToSource;
+  const isStale = nativeAnalysisResult?.freshness === "stale";
   const analysisKey = nativeAnalysisResult?.id ?? overview.analysisMessageId;
 
   return (
@@ -193,6 +196,29 @@ export function CaseOverviewView({
           onOpenReport={onOpenReport}
           onOpenMaterials={onOpenMaterials}
         />
+
+        {isStale && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-unresolved/40 bg-unresolved/10 px-4 py-3 text-xs text-ink"
+          >
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-unresolved" />
+              <span className="font-medium">
+                Analysis is based on older evidence. New case material was added after this analysis.
+              </span>
+            </div>
+            {onRunAnalysis && (
+              <button
+                type="button"
+                onClick={onRunAnalysis}
+                className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold"
+              >
+                Analyze latest evidence
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-9">
           <div className="contents lg:block lg:min-w-0 lg:space-y-8">

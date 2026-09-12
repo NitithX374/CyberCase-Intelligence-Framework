@@ -13,7 +13,6 @@ from app.config import settings
 from app.models.case import Case
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult
-from app.models.chat import ChatMessage, ChatThread
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportCreate, ChatReportRead, StructuredReport
 from app.services.case_analysis.contracts import (
@@ -88,7 +87,6 @@ def serialize_chat_report(report: CaseReport) -> ChatReportRead:
 def build_case_report_snapshot(
     case: Case,
     result: CaseAnalysisResult,
-    thread: ChatThread | None = None,
 ) -> CaseReportInputSnapshot:
     if result.case_id != case.id:
         raise ReportGenerationConflict("case_analysis_mismatch", "Analysis result does not belong to this Case")
@@ -108,8 +106,6 @@ def build_case_report_snapshot(
     return CaseReportInputSnapshot(
         case_id=case.id,
         case_title=case.title or "CyberCase Investigation",
-        thread_id=thread.id if thread is not None else None,
-        thread_title=case.title,
         analysis_result_id=result.id,
         evidence_snapshot_id=snapshot.id,
         evidence_revision=snapshot.evidence_revision,
@@ -304,9 +300,8 @@ class CaseReportService:
             raise ReportGenerationConflict("report_generation_disabled", "Report generation is disabled by backend configuration.")
         async with self.db.begin():
             case = await self._locked_case(case_id, user_id)
-            thread = await self.db.scalar(select(ChatThread).where(ChatThread.case_id == case.id))
             result = await self._selected_result(case, request.analysis_result_id)
-            snapshot = build_case_report_snapshot(case, result, thread)
+            snapshot = build_case_report_snapshot(case, result)
             snapshot_hash = source_snapshot_hash(snapshot)
             idempotency_key = request.idempotency_key or snapshot_hash
             existing = await self._existing_report(case.id, idempotency_key)
@@ -369,7 +364,7 @@ class CaseReportService:
         user_id: UUID | None,
     ) -> tuple[bytes, str]:
         await self._owned_case(case_id, user_id)
-        report = await self._report(case_id, report_id, load_thread=True)
+        report = await self._report(case_id, report_id)
         if report.status != "completed" or not isinstance(report.structured_report, dict):
             raise ReportGenerationConflict("report_pdf_requires_validated_report", "Only a completed validated report can be exported.")
         snapshot = CaseReportInputSnapshot.model_validate(report.source_snapshot_json)
@@ -400,19 +395,6 @@ class CaseReportService:
             raise ReportNotFound("case_not_found", "Case not found")
         return case
 
-    async def _locked_or_create_thread(self, case: Case) -> ChatThread:
-        thread = await self.db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
-        if thread is None:
-            thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
-            thread.case = case
-            self.db.add(thread)
-            await self.db.flush()
-        else:
-            thread.case = case
-            thread._title = case.title
-            thread._user_id = case.user_id
-        return thread
-
     async def _selected_result(self, case: Case, result_id: UUID | None) -> CaseAnalysisResult:
         selected_id = result_id or case.latest_analysis_result_id
         if selected_id is None:
@@ -439,8 +421,6 @@ class CaseReportService:
         self,
         case_id: UUID,
         report_id: UUID,
-        *,
-        load_thread: bool = False,
     ) -> CaseReport:
         statement = select(CaseReport).where(CaseReport.case_id == case_id, CaseReport.id == report_id)
         report = await self.db.scalar(statement)

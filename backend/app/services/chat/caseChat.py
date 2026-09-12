@@ -170,6 +170,11 @@ async def createCaseChatMessageAndRun(
         raise CaseChatError("case_ask_context_invalid", "Latest Case analysis context is invalid")
     if not isinstance(context_result.pipeline_config, dict) or not context_result.pipeline_config.get("version"):
         raise CaseChatError("case_ask_context_invalid", "Latest Case analysis configuration is unavailable")
+    analysis_freshness = (
+        "current"
+        if snapshot.evidence_revision == case.evidence_revision
+        else "stale"
+    )
     message = ChatMessage(
         thread_id=thread.id,
         ordinal=thread.next_message_ordinal,
@@ -183,6 +188,10 @@ async def createCaseChatMessageAndRun(
                 "analysis_state_scope": "response_scoped",
                 "context_analysis_result_id": str(context_result.id),
                 "evidence_snapshot_id": str(snapshot.id),
+                "analysis_freshness": analysis_freshness,
+                "snapshot_evidence_revision": snapshot.evidence_revision,
+                "case_evidence_revision": case.evidence_revision,
+                "has_newer_evidence": bool(case.evidence_revision > snapshot.evidence_revision),
                 "chat_action": {
                     "action": "ask",
                     "route": "case",

@@ -80,6 +80,11 @@ async def completeCaseAsk(
         )
         if completion.scalar_one_or_none() is None:
             return False
+        analysis_freshness = (
+            "current"
+            if snapshot.evidence_revision == case.evidence_revision
+            else "stale"
+        )
         message = ChatMessage(
             thread_id=thread.id,
             ordinal=thread.next_message_ordinal,
@@ -87,7 +92,7 @@ async def completeCaseAsk(
             content=output.answer.strip(),
             retrieval_context_id=trace.retrieval_context_id,
             message_kind="conversation",
-            analysis_result_id=None,
+            analysis_result_id=request_message.analysis_result_id,
             in_reply_to_message_id=request_message.id,
             metadata_json=serialize_message_metadata(
                 {
@@ -99,6 +104,10 @@ async def completeCaseAsk(
                     "evidence_source_ids": _trace_source_ids(trace),
                     "analysis_trace": trace.model_dump(mode="json"),
                     "answer_receipt": output.execution_receipt,
+                    "analysis_freshness": analysis_freshness,
+                    "snapshot_evidence_revision": snapshot.evidence_revision,
+                    "case_evidence_revision": case.evidence_revision,
+                    "has_newer_evidence": bool(case.evidence_revision > snapshot.evidence_revision),
                     "chat_action": {
                         "action": "ask",
                         "route": "case",

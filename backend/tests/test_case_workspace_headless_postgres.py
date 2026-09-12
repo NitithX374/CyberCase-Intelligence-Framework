@@ -124,3 +124,115 @@ def test_headless_case_workspace_never_instantiates_chat():
                 assert analysis_count == 1, f"Expected 1 CaseAnalysisResult, found {analysis_count}"
 
     asyncio.run(exercise())
+
+
+def test_headless_case_workspace_with_followup_never_instantiates_chat():
+    """Verify that analysis producing follow-up questions does NOT instantiate ChatThread or ChatMessage rows."""
+    from app.schemas.caseClarifications import CaseClarificationAnswer
+    from app.services.followup.caseClarification import get_owned_clarifications, submit_clarification_answer
+
+    async def exercise():
+        async with isolated_database() as factory:
+            case_id = uuid4()
+            user_id = None
+
+            # 1. Create Case
+            async with factory() as db, db.begin():
+                db.add(Case(id=case_id, title="Headless Workspace with Followup", user_id=user_id))
+
+            # 2. Add Document & Admit Evidence
+            async with factory() as db, db.begin():
+                materials = CaseMaterialsService(db)
+                doc = await materials.addDocument(
+                    case_id=case_id,
+                    user_id=user_id,
+                    filename="incident_report.txt",
+                    mime_type="text/plain",
+                    content=b"The witness reported a blue vehicle.",
+                    extraction={
+                        "provider": "test",
+                        "config_json": {},
+                        "extracted_text": "The witness reported a blue vehicle.",
+                        "provenance_json": {"pages": [{"page_number": 1}]},
+                        "warnings_json": [],
+                    },
+                )
+                source = await materials.admitExtraction(
+                    case_id=case_id,
+                    user_id=user_id,
+                    extraction_id=doc.extractions[0].id,
+                )
+                assert source is not None
+
+            # 3. Enqueue Case Analysis
+            async with factory() as db, db.begin():
+                run = await enqueue_case_analysis(
+                    db,
+                    case_id=case_id,
+                    user_id=user_id,
+                    request=CaseAnalysisCreate(idempotency_key="headless-analysis-followup-1"),
+                )
+
+            # 4. Worker claims and completes Analysis WITH follow-up
+            async with factory() as db:
+                claimed = await claimCaseRun(db, run.id, "worker-headless")
+                assert claimed is not None
+
+            async with factory() as db:
+                snapshot = await db.get(CaseEvidenceSnapshot, claimed.snapshot_id)
+                output = _output(snapshot, str(source.id), mode="case_overview", followup=True)
+
+            async with factory() as db:
+                completed = await complete_case_run(
+                    db,
+                    run.id,
+                    claimed.attempt_count,
+                    output,
+                )
+                assert completed is True
+
+            # 5. Verify Zero ChatThreads and Zero ChatMessages after analysis with follow-up
+            async with factory() as db:
+                thread_count = await db.scalar(
+                    select(func.count()).select_from(ChatThread).where(ChatThread.case_id == case_id)
+                )
+                message_count = await db.scalar(
+                    select(func.count()).select_from(ChatMessage)
+                )
+                analysis = await db.scalar(
+                    select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_id)
+                )
+                assert thread_count == 0, f"Expected 0 ChatThreads, found {thread_count}"
+                assert message_count == 0, f"Expected 0 ChatMessages, found {message_count}"
+                assert analysis is not None
+                assert analysis.provider_metadata_json.get("followup_question") is not None
+
+                # 6. Verify pending clarification is synthesized directly from analysis result
+                clarifications = await get_owned_clarifications(db, case_id=case_id)
+                assert len(clarifications) == 1
+                assert clarifications[0].state == "pending"
+                assert clarifications[0].question == output.followup_question.strip()
+                assert clarifications[0].origin_analysis_result_id == analysis.id
+
+            # 7. Submitting clarification answer works and creates thread/messages on demand
+            async with factory() as db, db.begin():
+                clarification_read, answer_run = await submit_clarification_answer(
+                    db,
+                    case_id=case_id,
+                    clarification_id=clarifications[0].id,
+                    user_id=user_id,
+                    request=CaseClarificationAnswer(
+                        answer="The suspect was wearing a dark jacket.",
+                        idempotency_key="clarification-answer-1",
+                    ),
+                )
+                assert clarification_read is not None
+                assert answer_run.status == "queued"
+
+            async with factory() as db:
+                thread_count = await db.scalar(
+                    select(func.count()).select_from(ChatThread).where(ChatThread.case_id == case_id)
+                )
+                assert thread_count == 1, "Thread should be created on demand when clarification is answered"
+
+    asyncio.run(exercise())

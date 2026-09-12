@@ -189,7 +189,7 @@ export function SourceEvidencePopover({
               }}
               className="font-bold text-primary hover:underline inline-flex items-center gap-1"
             >
-              <span>View in Chat</span>
+              <span>View in Materials</span>
               <span>↗</span>
             </button>
           </footer>

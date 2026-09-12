@@ -100,8 +100,7 @@ async def loadCaseAnswerContext(
             ChatMessage.thread_id == message.thread_id,
             ChatMessage.ordinal < message.ordinal,
             ChatMessage.message_kind == "conversation",
-            (ChatMessage.analysis_result_id == result.id)
-            | (ChatMessage.metadata_json["context_analysis_result_id"].astext == str(result.id)),
+            ChatMessage.analysis_result_id == result.id,
         ).order_by(ChatMessage.ordinal.desc()).limit(12)
     )).all())
     return {

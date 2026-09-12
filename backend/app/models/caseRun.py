@@ -52,7 +52,14 @@ class CaseRun(Base):
         UUID(as_uuid=True), ForeignKey("case_evidence_snapshots.id", name="fk_case_runs_snapshot_id", ondelete="RESTRICT"), nullable=False
     )
     request_message_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chat_messages.id", name="fk_case_runs_request_message_id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        ForeignKey(
+            "chat_messages.id",
+            name="fk_case_runs_request_message_id",
+            ondelete="NO ACTION",
+            deferrable=False,
+        ),
+        nullable=True,
     )
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     request_fingerprint: Mapped[str] = mapped_column(CHAR(64), nullable=False)
