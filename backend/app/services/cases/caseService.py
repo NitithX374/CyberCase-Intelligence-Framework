@@ -68,6 +68,7 @@ def serializeCase(case: Case) -> CaseRead:
         evidence_revision=case.evidence_revision,
         latest_analysis_result_id=case.latest_analysis_result_id,
         processing_status=processing_status,
+        has_pending_clarification=has_pending_clarification,
         analysis_freshness=freshness,
         active_run_id=(latest_run.id if latest_run is not None and latest_run.status in {"queued", "running"} else None),
         latest_run_id=latest_run.id if latest_run is not None else None,

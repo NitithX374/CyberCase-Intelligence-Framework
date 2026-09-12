@@ -158,7 +158,7 @@ function EmptyMaterials({ onOpenIntake }: { onOpenIntake?: () => void }) {
 
 function sourceLabel(kind: string): string {
   if (kind === "reviewed_document") return "Reviewed document";
-  if (kind === "clarification_answer") return "Clarification answer";
+  if (kind === "clarification_answer" || kind === "followup_answer") return "Clarification answer";
   if (kind === "explicit_chat_addition") return "Added case information";
   return "Case narrative";
 }

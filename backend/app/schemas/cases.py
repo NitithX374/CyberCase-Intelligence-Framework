@@ -35,6 +35,7 @@ class CaseRead(BaseModel):
     active_run_id: UUID | None = None
     latest_run_id: UUID | None = None
     processing_status: CaseProcessingStatus = "idle"
+    has_pending_clarification: bool = False
     analysis_freshness: CaseAnalysisFreshness = "missing"
     created_at: datetime
     updated_at: datetime

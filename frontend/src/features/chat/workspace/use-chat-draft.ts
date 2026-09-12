@@ -51,17 +51,30 @@ export function useChatDraft() {
     setState((current) => ({ ...current, queryError }));
   }, []);
   const selectDraft = useCallback((threadId: string) => {
+    const previousThreadId = draftThreadRef.current;
     draftThreadRef.current = threadId;
     if (pendingRef.current?.threadId !== threadId) pendingRef.current = readPendingSubmission(threadId);
     const pending = pendingRef.current;
-    setState((current) => ({
-      ...current,
-      input: pending?.threadId === threadId && pending.kind === "followup" ? pending.content : readAccountValue(`draft:${threadId}`) ?? "",
-      postAnswerAction: pending?.threadId === threadId ? pending.action ?? "ask" : readAccountValue(`action:${threadId}`) === "add_case_info" ? "add_case_info" : "ask",
-      pendingFollowUp: current.pendingFollowUp?.threadId === threadId ? current.pendingFollowUp : null,
-      queryError: pending?.threadId === threadId ? current.queryError : null,
-      activity: { phase: "querying", threadStatus: null },
-    }));
+    setState((current) => {
+      const persistedDraft = readAccountValue(`draft:${threadId}`) ?? "";
+      const isUnsavedNewDraft = previousThreadId === "new" && Boolean(current.input) && !persistedDraft;
+      const input = pending?.threadId === threadId && pending.kind === "followup"
+        ? pending.content
+        : isUnsavedNewDraft
+          ? current.input
+          : persistedDraft;
+      if (isUnsavedNewDraft) {
+        writeAccountValue(`draft:${threadId}`, current.input);
+      }
+      return {
+        ...current,
+        input,
+        postAnswerAction: pending?.threadId === threadId ? pending.action ?? "ask" : readAccountValue(`action:${threadId}`) === "add_case_info" ? "add_case_info" : "ask",
+        pendingFollowUp: current.pendingFollowUp?.threadId === threadId ? current.pendingFollowUp : null,
+        queryError: pending?.threadId === threadId ? current.queryError : null,
+        activity: pending ? { phase: "querying", threadStatus: "processing" } : null,
+      };
+    });
   }, []);
   const beginSubmission = useCallback((pending: PendingChatSubmission, followUp?: ActiveChatFollowUp) => {
     pendingRef.current = pending;
@@ -106,8 +119,11 @@ export function useChatDraft() {
       pendingRef.current = { ...pending, requestOrdinal };
       persistPendingSubmission(pendingRef.current);
     }
+    const isFollowup = pending?.kind === "followup";
     const completed = pending?.threadId === detail.id && requestOrdinal !== undefined &&
-      hasCompletedAssistantOutput(detail, requestOrdinal);
+      (isFollowup
+        ? (detail.status === "idle" || detail.status === "answered" || detail.status === "awaiting_followup")
+        : hasCompletedAssistantOutput(detail, requestOrdinal));
     if (completed) {
       pendingRef.current = null;
       removePendingSubmission(detail.id);

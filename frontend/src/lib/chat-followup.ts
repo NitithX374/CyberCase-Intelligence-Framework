@@ -125,6 +125,21 @@ function orderedMessages(
   );
 }
 
+export function isClarificationAnswer(message: PersistedChatMessage): boolean {
+  if (message.role !== "user") return false;
+  if (message.message_kind === "conversation") return false;
+  if (
+    message.message_kind === "followup_answer" ||
+    message.message_kind === "clarification_answer"
+  ) {
+    return true;
+  }
+  if (message.in_reply_to_message_id) {
+    return true;
+  }
+  return !message.message_kind;
+}
+
 export function latestUserAnswerBetween(
   persistedMessages: PersistedChatMessage[],
   questionOrdinal: number,
@@ -132,7 +147,7 @@ export function latestUserAnswerBetween(
 ): PersistedChatMessage | null {
   const candidates = orderedMessages(persistedMessages).filter(
     (message) =>
-      message.role === "user" &&
+      isClarificationAnswer(message) &&
       message.ordinal > questionOrdinal &&
       (nextAssistantOrdinal === undefined ||
         message.ordinal < nextAssistantOrdinal),
@@ -226,7 +241,7 @@ export function filterSupersededClarificationAnswers(
     );
     for (const candidate of ordered) {
       if (
-        candidate.role === "user" &&
+        isClarificationAnswer(candidate) &&
         candidate.ordinal > message.ordinal &&
         (nextAssistant === undefined ||
           candidate.ordinal < nextAssistant.ordinal) &&

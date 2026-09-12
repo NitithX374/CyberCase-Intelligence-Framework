@@ -64,7 +64,7 @@ export function ChatWorkspace() {
   });
   const {
     activeThreadId, getActiveThreadId, messages, input,
-    queryError, selectThread, clearSelection, changeInput,
+    queryError, selectThread, refreshThread, clearSelection, changeInput,
   } = session;
   const actions = useCaseWorkspaceActions({
     activeCaseId,
@@ -77,6 +77,24 @@ export function ChatWorkspace() {
     router,
     setActiveView,
   });
+
+  const latestAnalysisId = activeCase?.latest_analysis_result_id;
+  const lastRefreshedAnalysisRef = useRef<string | null>(null);
+  const lastCompletedRunRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isChatOpen || !activeCase?.chat_thread_id || !latestAnalysisId) return;
+    if (lastRefreshedAnalysisRef.current === latestAnalysisId) return;
+    lastRefreshedAnalysisRef.current = latestAnalysisId;
+    void refreshThread(activeCase.chat_thread_id);
+  }, [activeCase?.chat_thread_id, isChatOpen, latestAnalysisId, refreshThread]);
+
+  useEffect(() => {
+    if (!isChatOpen || !activeCase?.chat_thread_id || nativeRunStatus !== "completed" || !runId) return;
+    if (lastCompletedRunRef.current === runId) return;
+    lastCompletedRunRef.current = runId;
+    void refreshThread(activeCase.chat_thread_id);
+  }, [activeCase?.chat_thread_id, isChatOpen, nativeRunStatus, refreshThread, runId]);
 
   useEffect(() => {
     if (!activeCase) return;
@@ -117,6 +135,7 @@ export function ChatWorkspace() {
 
   const handleNewCase = useCallback(async () => {
     if (createMutation.isPending) return;
+    rootBootstrapDoneRef.current = true;
     setActiveView("intake");
     clearSelection();
     setIsChatOpen(false);
@@ -128,12 +147,16 @@ export function ChatWorkspace() {
     }
   }, [clearSelection, createMutation, router]);
 
+  const pendingClarification = caseData.clarifications.data?.find((c) => c.state === "pending");
+  const pendingClarificationId = pendingClarification?.id ?? pendingClarification?.question_message_id ?? null;
+
   const { submitContent } = useChatSubmission({
     session,
     cases,
     upsertCase,
     updateCase: (inputValue) => updateMutation.mutateAsync(inputValue),
     caseId: activeCaseId,
+    pendingClarificationId,
   });
   const { cancelDelete, confirmDelete } = useChatThreadDeletion({
     session,
