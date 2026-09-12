@@ -171,7 +171,7 @@ function resolvePageBinding(source: NativeSnapshotSource, citation: NativeCitati
 }
 
 function sourceTypeFor(kind: string): SourceMessageRef["sourceType"] {
-  if (kind === "clarification_answer") return "clarification_response";
+  if (kind === "clarification_answer" || kind === "followup_answer") return "clarification_response";
   if (kind === "explicit_chat_addition") return "additional_info";
   if (kind === "narrative" || kind === "reviewed_document") return "case_description";
   throw new Error("Unsupported native evidence source kind.");

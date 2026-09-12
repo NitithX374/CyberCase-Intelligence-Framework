@@ -40,6 +40,7 @@ export type CaseRead = {
     active_run_id?: string | null;
     latest_run_id?: string | null;
     processing_status: "idle" | "queued" | "running" | "failed";
+    has_pending_clarification?: boolean;
     analysis_freshness: "missing" | "current" | "stale";
     created_at: string;
     updated_at: string;

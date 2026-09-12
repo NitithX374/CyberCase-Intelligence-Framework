@@ -49,7 +49,6 @@ export function useChatThreadSelection({
     retry: false,
   });
   const detail = threadQuery.data;
-
   const getSelection = useCallback(() => selectionRef.current, []);
   const getActiveThreadId = useCallback(() => selectionRef.current?.threadId ?? null, []);
   const isCurrentSelection = useCallback((selection: ChatSelection) =>
@@ -68,9 +67,10 @@ export function useChatThreadSelection({
   }), [queryClient]);
 
   const applyThreadDetail = useCallback((thread: ChatThreadDetail, failureMessage?: string) => {
+    queryClient.setQueryData(chatQueryKeys.detail(thread.id), thread);
     upsertThread(thread);
     reconcile(thread, failureMessage);
-  }, [reconcile, upsertThread]);
+  }, [queryClient, reconcile, upsertThread]);
 
   const monitorCaseRun = useCallback((
     selection: ChatSelection,
@@ -106,8 +106,28 @@ export function useChatThreadSelection({
     }
   }, [queryClient]);
 
+  const refreshThread = useCallback(async (threadId?: string) => {
+    const targetId = threadId ?? activeThreadId;
+    if (!targetId || deletedThreadIds.current.has(targetId)) return;
+    const controller = new AbortController();
+    const selection = { threadId: targetId, signal: controller.signal };
+    try {
+      const thread = await readThread(selection);
+      if (deletedThreadIds.current.has(targetId)) return;
+      queryClient.setQueryData(chatQueryKeys.detail(targetId), thread);
+      applyThreadDetail(thread);
+    } catch (error) {
+      if (!isChatRequestCanceled(selection.signal, error)) {
+        failSelection(getApiErrorMessage(error, "The chat could not be loaded."));
+      }
+    }
+  }, [activeThreadId, applyThreadDetail, failSelection, queryClient, readThread]);
+
   const selectThread = useCallback(async (threadId: string) => {
     if (deletedThreadIds.current.has(threadId)) return;
+    if (selectionRef.current?.threadId === threadId && !selectionRef.current.signal.aborted) {
+      return;
+    }
     cancelSelection();
     const controller = new AbortController();
     const selection = { threadId, signal: controller.signal };
@@ -182,7 +202,7 @@ export function useChatThreadSelection({
     getPendingSubmission: draft.getPendingSubmission,
     beginSubmission: draft.beginSubmission,
     failSubmission: draft.failSubmission,
-    getSelection, getActiveThreadId, isCurrentSelection, selectThread,
+    getSelection, getActiveThreadId, isCurrentSelection, selectThread, refreshThread,
     monitorCaseRun, acceptSubmission, upsertThread,
     clearSelection, suspendThread, restoreThread, removeThread,
   };

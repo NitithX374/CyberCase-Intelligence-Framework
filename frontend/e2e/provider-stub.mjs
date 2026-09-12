@@ -56,6 +56,13 @@ function responseFor(body) {
   if (typeof content === "string" && content.includes("Return all relevant case-specific gaps")) {
     return { gaps: [] };
   }
+  if (system.includes("You phrase one backend-selected material gap")) {
+    return {
+      decision: "ask_followup",
+      selected_gap: "Workstation Owner",
+      question: "Which identification is correct: the primary operator or the secondary contractor?",
+    };
+  }
   if (system.includes("Answer only the current question")) {
     return {
       insufficient_context: false,
@@ -75,30 +82,68 @@ function responseFor(body) {
   if (!evidence || sourceIds.length === 0) {
     throw new Error("Unsupported E2E provider request");
   }
-  const sourceId = sourceIds[0];
-  const quote = evidence.split(/\]\n/).at(-1)?.trim() || evidence.trim();
+
+  const sectionRegex = /\[[^\]]*SOURCE\s+([0-9a-fA-F-]+)\s+·\s+REVISION\s+(\d+)\]\n([\s\S]*?)(?=(?:\n\n\[[^\]]*SOURCE|$))/g;
+  const sections = [];
+  let match;
+  while ((match = sectionRegex.exec(evidence)) !== null) {
+    sections.push({
+      sourceId: match[1],
+      revision: Number(match[2]),
+      quote: match[3].trim(),
+    });
+  }
+  if (sections.length === 0) {
+    const sourceId = sourceIds[0];
+    const quote = evidence.split(/\]\n/).at(-1)?.trim() || evidence.trim();
+    sections.push({ sourceId, revision: 1, quote });
+  }
+
+  const claims = sections.map((sec, idx) => ({
+    claim_id: `A-0${idx + 1}`,
+    claim_type: "reported",
+    text: sec.quote,
+    epistemic_status: "reported",
+    supporting_source_ids: [sec.sourceId],
+    contradicting_source_ids: [],
+    supporting_citations: [
+      {
+        source_id: sec.sourceId,
+        source_revision: sec.revision,
+        exact_quote: sec.quote,
+      },
+    ],
+    contradicting_citations: [],
+  }));
+
+  const hasClarificationAnswer = evidence.includes("FOLLOW-UP ANSWER") ||
+    evidence.includes("CLARIFICATION ANSWER") ||
+    sections.length > 1;
+
+  const gaps = (evidence.includes("needs-clarification") && !hasClarificationAnswer)
+    ? [
+        {
+          gap_id: "G-01",
+          topic: "Workstation Owner",
+          status: "AMBIGUOUS",
+          description: "Which identification is correct: the primary operator or the secondary contractor?",
+          reason: "Clarifying workstation ownership is required to substantiate findings.",
+          priority: "high",
+          askable: true,
+          affected_claim_ids: ["A-01"],
+        },
+      ]
+    : [];
+
   return {
     version: "case_analysis_trace_v1",
     answer: `Deterministic E2E analysis: ${evidence}`,
     summary: `Deterministic E2E summary: ${evidence}`,
-    claims: [
-      {
-        claim_id: "A-01",
-        claim_type: "reported",
-        text: quote,
-        epistemic_status: "reported",
-        supporting_source_ids: [sourceId],
-        contradicting_source_ids: [],
-        supporting_citations: [
-          {
-            source_id: sourceId,
-            source_revision: 1,
-            exact_quote: quote,
-          },
-        ],
-        contradicting_citations: [],
-      },
-    ],
+    involved_parties: [],
+    timeline: [],
+    impacts: [],
+    claims,
+    gaps,
     mitre_associations: [],
   };
 }
