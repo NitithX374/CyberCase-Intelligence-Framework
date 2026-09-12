@@ -129,7 +129,7 @@ def build_case_template_report(
     return StructuredReport(
         report_version="preliminary_analysis_report_v1",
         status="provisional_unverified",
-        title=snapshot.thread_title or "CyberCase Preliminary Analysis",
+        title=snapshot.case_title or snapshot.thread_title or "CyberCase Preliminary Analysis",
         sections=sections,
         claims=claims,
         limitations=limitations,

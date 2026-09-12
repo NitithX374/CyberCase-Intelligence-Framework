@@ -25,7 +25,7 @@ class CaseRunRead(BaseModel):
     operation: CaseRunOperation
     snapshot_id: UUID
     request_message_id: UUID | None
-    context_analysis_result_id: UUID | None
+    context_analysis_result_id: UUID | None = None
     clarification_id: UUID | None = None
     status: CaseRunStatus
     attempt_count: int

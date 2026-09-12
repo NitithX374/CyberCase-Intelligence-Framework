@@ -51,8 +51,9 @@ class CaseReportInputSnapshot(BaseModel):
 
     format_version: Literal["case_report_snapshot_v1"] = "case_report_snapshot_v1"
     case_id: UUID
-    thread_id: UUID
-    thread_title: str
+    case_title: str = "CyberCase Investigation"
+    thread_id: UUID | None = None
+    thread_title: str | None = None
     analysis_result_id: UUID
     evidence_snapshot_id: UUID
     evidence_revision: int = Field(ge=0)

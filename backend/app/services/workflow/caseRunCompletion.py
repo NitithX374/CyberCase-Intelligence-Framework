@@ -260,6 +260,10 @@ async def complete_case_run(
                     "technical_augmentation": deepcopy(augmentation),
                 }
             )
+        if output.followup_question:
+            provider_metadata["followup_question"] = output.followup_question.strip()
+            if output.followup_metadata:
+                provider_metadata["followup_metadata"] = deepcopy(output.followup_metadata)
         result = PersistedAnalysisResult(
             case_id=case.id,
             run_id=run.id,

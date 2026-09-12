@@ -88,7 +88,7 @@ def serialize_chat_report(report: CaseReport) -> ChatReportRead:
 def build_case_report_snapshot(
     case: Case,
     result: CaseAnalysisResult,
-    thread: ChatThread,
+    thread: ChatThread | None = None,
 ) -> CaseReportInputSnapshot:
     if result.case_id != case.id:
         raise ReportGenerationConflict("case_analysis_mismatch", "Analysis result does not belong to this Case")
@@ -107,7 +107,8 @@ def build_case_report_snapshot(
     sources = _snapshot_sources(snapshot)
     return CaseReportInputSnapshot(
         case_id=case.id,
-        thread_id=thread.id,
+        case_title=case.title or "CyberCase Investigation",
+        thread_id=thread.id if thread is not None else None,
         thread_title=case.title,
         analysis_result_id=result.id,
         evidence_snapshot_id=snapshot.id,
@@ -303,7 +304,7 @@ class CaseReportService:
             raise ReportGenerationConflict("report_generation_disabled", "Report generation is disabled by backend configuration.")
         async with self.db.begin():
             case = await self._locked_case(case_id, user_id)
-            thread = await self._locked_or_create_thread(case)
+            thread = await self.db.scalar(select(ChatThread).where(ChatThread.case_id == case.id))
             result = await self._selected_result(case, request.analysis_result_id)
             snapshot = build_case_report_snapshot(case, result, thread)
             snapshot_hash = source_snapshot_hash(snapshot)

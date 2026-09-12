@@ -72,9 +72,10 @@ class ChatThreadRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    case_id: UUID | None = None
     user_id: UUID | None = None
-    title: str
-    status: ThreadStatus
+    title: str = "New case"
+    status: ThreadStatus = "idle"
     created_at: datetime
     updated_at: datetime
 

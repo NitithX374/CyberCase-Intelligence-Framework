@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
-from app.models import Case, CaseAnalysisResult, CaseReport, ChatMessage
+from app.models import Case, CaseAnalysisResult, CaseReport, ChatMessage, ChatThread
 from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.schemas.caseRuns import CaseAnalysisCreate
 from app.schemas.reports import CaseReportCreate
@@ -175,6 +175,8 @@ def test_chat_removal_preserves_case_report_and_history():
         async with isolated_database() as factory:
             case_id, source_id = await _case_with_source(factory)
             result = await _complete(factory, case_id, source_id, "delete-report")
+            async with factory() as db, db.begin():
+                db.add(ChatThread(case_id=case_id, title="Case Chat"))
             async with factory() as db:
                 report = await CaseReportService(db).generate_report(
                     case_id,

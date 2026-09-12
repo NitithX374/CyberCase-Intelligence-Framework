@@ -111,12 +111,6 @@ async def createCaseChatMessageAndRun(
     if not request.content.strip():
         raise CaseChatError("case_chat_content_empty", "Case Chat message is empty", 422)
     case, thread = await lockCaseChat(db, case_id, user_id)
-    if request.document_sources:
-        raise CaseChatError(
-            "case_chat_document_sources_unsupported",
-            "Add documents from the Case materials workspace before analysis",
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        )
 
     if request.intent in ("followup_answer", "clarification_answer"):
         target_id = request.in_reply_to_message_id or request.clarification_id
@@ -138,7 +132,7 @@ async def createCaseChatMessageAndRun(
             raise CaseChatError(error.code, error.message, error.status_code) from error
         message = await db.get(ChatMessage, clarification_read.answer_message_id)
         if message is None:
-            raise CaseChatError("clarification_message_missing", "Clarification answer message is missing")
+            raise CaseChatError("case_chat_message_missing", "Clarification answer message is missing")
         return message, run
 
     expected_payload = buildChatRequestPayload(request, "ask")
@@ -157,15 +151,7 @@ async def createCaseChatMessageAndRun(
     )
     if active is not None:
         raise CaseChatError("case_run_active", "Case already has an active analysis run")
-    return await createCaseAsk(db, case, thread, request)
 
-
-async def createCaseAsk(
-    db: AsyncSession,
-    case: Case,
-    thread: ChatThread,
-    request: ChatMessageCreate,
-) -> tuple[ChatMessage, CaseRun]:
     context_result = await db.scalar(
         select(CaseAnalysisResult).where(
             CaseAnalysisResult.id == case.latest_analysis_result_id,
@@ -190,6 +176,7 @@ async def createCaseAsk(
         role="user",
         content=request.content.strip(),
         message_kind="conversation",
+        analysis_result_id=context_result.id,
         metadata_json=serialize_message_metadata(
             {
                 "analysis_kind": "question_request",
@@ -211,7 +198,6 @@ async def createCaseAsk(
     await db.flush()
     payload = {
         **buildChatRequestPayload(request, "ask"),
-        "context_analysis_result_id": str(context_result.id),
         "context_snapshot_id": str(snapshot.id),
     }
     run = CaseRun(
@@ -219,7 +205,6 @@ async def createCaseAsk(
         operation="ask",
         snapshot_id=snapshot.id,
         request_message_id=message.id,
-        context_analysis_result_id=context_result.id,
         idempotency_key=request.idempotency_key,
         request_fingerprint=case_run_fingerprint(
             {"request": payload, "snapshot_id": str(snapshot.id), "pipeline": context_result.pipeline_config}
@@ -229,7 +214,6 @@ async def createCaseAsk(
     )
     db.add(run)
     thread.next_message_ordinal += 1
-    thread.status = "processing"
     thread.updated_at = datetime.now(timezone.utc)
     await db.flush()
     return message, run

@@ -243,7 +243,7 @@ def test_case_ask_uses_case_run_without_new_result_or_evidence():
                 )
                 assert message.role == "user"
                 assert run.operation == "ask"
-                assert run.context_analysis_result_id == result_id
+                assert message.analysis_result_id == result_id
                 assert run.request_message_id == message.id
             async with factory() as db:
                 claimed = await claimCaseRun(db, run.id, "ask-worker")

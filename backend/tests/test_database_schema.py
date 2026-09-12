@@ -45,12 +45,14 @@ def test_case_owns_one_shared_identity_chat_thread() -> None:
 def test_case_first_workflow_schema_is_case_owned() -> None:
     cases = Base.metadata.tables["cases"]
     runs = Base.metadata.tables["case_runs"]
+    threads = Base.metadata.tables["chat_threads"]
     results = Base.metadata.tables["case_analysis_results"]
     messages = Base.metadata.tables["chat_messages"]
     assert cases.c["evidence_revision"].nullable is False
     assert cases.c["latest_analysis_result_id"].nullable
     assert runs.c["request_message_id"].nullable
-    assert runs.c["context_analysis_result_id"].nullable
+    assert "context_analysis_result_id" not in runs.c
+    assert "status" not in threads.c
     assert results.c["run_id"].nullable is False
     assert any(fk.ondelete == "CASCADE" for fk in results.c["run_id"].foreign_keys)
     assert messages.c["analysis_result_id"].nullable

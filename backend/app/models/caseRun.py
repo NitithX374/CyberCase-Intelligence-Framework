@@ -54,9 +54,6 @@ class CaseRun(Base):
     request_message_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chat_messages.id", name="fk_case_runs_request_message_id", ondelete="SET NULL"), nullable=True
     )
-    context_analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("case_analysis_results.id", name="fk_case_runs_context_result_id", ondelete="RESTRICT"), nullable=True
-    )
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     request_fingerprint: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     request_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
@@ -75,9 +72,6 @@ class CaseRun(Base):
     case: Mapped["Case"] = relationship("Case", back_populates="case_runs")
     snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
     request_message: Mapped["ChatMessage | None"] = relationship("ChatMessage")
-    context_analysis_result: Mapped["CaseAnalysisResult | None"] = relationship(
-        "CaseAnalysisResult", foreign_keys=[context_analysis_result_id]
-    )
     analysis_result: Mapped["CaseAnalysisResult | None"] = relationship(
         "CaseAnalysisResult",
         back_populates="run",

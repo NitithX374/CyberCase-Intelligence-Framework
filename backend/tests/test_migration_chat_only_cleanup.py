@@ -10,10 +10,14 @@ def test_migration_chain_is_clean_and_linear() -> None:
     migrations = sorted(BASELINE.glob("*.py"))
     assert [path.name for path in migrations] == [
         "0001_canonical_case_system.py",
+        "0002_drop_chat_status_and_context_result.py",
     ]
     baseline_source = migrations[0].read_text(encoding="utf-8")
     assert 'revision = "0001_canonical_case_system"' in baseline_source
     assert "down_revision = None" in baseline_source
+    mig2_source = migrations[1].read_text(encoding="utf-8")
+    assert 'revision = "0002_drop_chat_status_and_context_result"' in mig2_source
+    assert 'down_revision = "0001_canonical_case_system"' in mig2_source
 
 
 def test_baseline_declares_only_canonical_tables() -> None:

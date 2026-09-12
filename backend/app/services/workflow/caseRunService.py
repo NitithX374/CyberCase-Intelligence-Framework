@@ -98,7 +98,6 @@ async def enqueue_case_analysis(
         operation="analysis",
         snapshot_id=snapshot.id,
         request_message_id=request_message_id,
-        context_analysis_result_id=None,
         idempotency_key=request.idempotency_key,
         request_fingerprint=fingerprint,
         request_payload={

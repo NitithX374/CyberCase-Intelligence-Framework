@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
 from app.models.caseMaterials import CaseEvidenceSnapshot, EvidenceSource
-from app.models.caseRun import CaseRun
+from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage, ChatThread
 from app.schemas.caseClarifications import (
     CaseClarificationAnswer,
@@ -66,7 +66,7 @@ async def _owned_case(
 async def _locked_case_thread(db: AsyncSession, case: Case) -> ChatThread:
     thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
     if thread is None:
-        thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
+        thread = ChatThread(case_id=case.id)
         db.add(thread)
         await db.flush()
     return thread
@@ -150,6 +150,39 @@ async def get_owned_clarifications(
     case = await _owned_case(db, case_id, user_id)
     thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id))
     if thread is None:
+        if case.latest_analysis_result_id is not None:
+            analysis = await db.get(CaseAnalysisResult, case.latest_analysis_result_id)
+            if analysis is not None and isinstance(analysis.provider_metadata_json, dict):
+                fq = analysis.provider_metadata_json.get("followup_question")
+                if fq and isinstance(fq, str) and fq.strip():
+                    trace_json = analysis.trace_json if isinstance(analysis.trace_json, dict) else {}
+                    gaps = trace_json.get("gaps", [])
+                    gap_id = "G-001"
+                    topic = ""
+                    if gaps and isinstance(gaps, list) and isinstance(gaps[0], dict):
+                        gap_id = str(gaps[0].get("gap_id") or "G-001")
+                        topic = str(gaps[0].get("description") or "")
+                    return [
+                        CaseClarificationRead(
+                            id=analysis.id,
+                            case_id=case.id,
+                            origin_analysis_result_id=analysis.id,
+                            origin_snapshot_id=analysis.snapshot_id,
+                            gap_key=f"{gap_id}:{topic.lower()}",
+                            gap_id=gap_id,
+                            topic=topic,
+                            question=fq.strip(),
+                            metadata_json={},
+                            state="pending",
+                            answer_evidence_source_id=None,
+                            question_message_id=None,
+                            answer_message_id=None,
+                            answer_fingerprint=None,
+                            answered_at=None,
+                            created_at=analysis.created_at,
+                            updated_at=analysis.created_at,
+                        )
+                    ]
         return []
 
     q_result = await db.execute(
@@ -387,7 +420,6 @@ async def submit_clarification_answer(
         }
     )
     thread.next_message_ordinal += 1
-    thread.status = "processing"
     thread.updated_at = datetime.now(timezone.utc)
     await db.flush()
 
