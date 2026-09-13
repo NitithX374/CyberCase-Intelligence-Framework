@@ -14,6 +14,4 @@ async def guard_browser_request(request, call_next):
     return response
 
 
-guardBrowserRequest = guard_browser_request
-
-__all__ = ["guardBrowserRequest", "guard_browser_request"]
+__all__ = ["guard_browser_request"]

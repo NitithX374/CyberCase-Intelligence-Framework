@@ -1,8 +1,8 @@
-import type { ChatReportRead } from "@/lib/api";
+import type { CaseReport } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 
 interface ReportVersionSelectorProps {
-  reports: ChatReportRead[];
+  reports: CaseReport[];
   selectedReportId: string | null;
   onSelect: (reportId: string) => void;
 }

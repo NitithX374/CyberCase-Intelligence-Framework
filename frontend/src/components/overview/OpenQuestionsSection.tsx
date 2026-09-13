@@ -1,4 +1,4 @@
-import type { CaseGap } from "@/lib/case-overview";
+import type { CaseGap } from "@/lib/case-overview-contracts";
 
 const gapLabels: Record<CaseGap["status"], string> = {
   NOT_PROVIDED: "Not provided", EXPLICITLY_UNKNOWN: "Explicitly unknown",

@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   admitCaseDocument,
   admitCaseEvidence,
-  answerCaseClarification as submitCaseClarificationAnswer,
   ensureCaseChat,
   getApiErrorMessage,
   getCase,
@@ -18,7 +17,7 @@ import { sha256Hex } from "@/lib/sha256";
 import { caseQueryKeys } from "./useCaseQueries";
 import { useCaseAnalysisSubmission } from "./useCaseAnalysisSubmission";
 import { casePath } from "@/features/chat/routing/workspaceRoutes";
-import type { WorkspaceRouteView } from "@/components/common/types";
+import type { WorkspaceView } from "@/components/common/types";
 import type { ChatSession } from "@/features/chat/workspace/use-chat-thread-selection";
 
 interface UseCaseWorkspaceActionsOptions {
@@ -30,7 +29,7 @@ interface UseCaseWorkspaceActionsOptions {
   upsertCase: (caseRecord: CaseRead) => void;
   updateCase: (input: { caseId: string; title: string }) => Promise<CaseRead>;
   router: { push(path: string): void };
-  setActiveView: Dispatch<SetStateAction<WorkspaceRouteView>>;
+  setActiveView: Dispatch<SetStateAction<WorkspaceView>>;
 }
 
 export function useCaseWorkspaceActions({
@@ -49,9 +48,7 @@ export function useCaseWorkspaceActions({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [admittingExtractionId, setAdmittingExtractionId] = useState<string | null>(null);
-  const [answeringClarificationId, setAnsweringClarificationId] = useState<string | null>(null);
   const [pendingSubmission, setPendingSubmission] = useCaseAnalysisSubmission(activeCaseId);
-  const clarificationKeys = useRef(new Map<string, { answer: string; key: string }>());
 
   const invalidateCaseData = useCallback(async (caseId: string) => {
     await Promise.all([
@@ -112,40 +109,6 @@ export function useCaseWorkspaceActions({
       setAdmittingExtractionId(null);
     }
   }, [activeCaseId, admittingExtractionId, invalidateCaseData]);
-
-  const answerClarification = useCallback(async (clarificationId: string, answer: string) => {
-    if (!activeCaseId || answeringClarificationId !== null || !answer.trim()) return;
-    setActionError(null);
-    setAnsweringClarificationId(clarificationId);
-    const normalizedAnswer = answer.trim();
-    const previous = clarificationKeys.current.get(clarificationId);
-    const submission = previous?.answer === normalizedAnswer
-      ? previous
-      : { answer: normalizedAnswer, key: createIdempotencyKey() };
-    clarificationKeys.current.set(clarificationId, submission);
-    try {
-      const currentCase = activeCase ?? await getCase(activeCaseId);
-      const accepted = await submitCaseClarificationAnswer(activeCaseId, clarificationId, {
-        answer: normalizedAnswer,
-        idempotency_key: submission.key,
-        response_language: "english",
-      });
-      clarificationKeys.current.delete(clarificationId);
-      upsertCase({
-        ...currentCase,
-        status: "processing",
-        active_run_id: accepted.run.id,
-        latest_run_id: accepted.run.id,
-        processing_status: "queued",
-      });
-      queryClient.setQueryData(caseQueryKeys.run(activeCaseId, accepted.run.id), accepted.run);
-      await invalidateCaseData(activeCaseId);
-    } catch (error) {
-      setActionError(getApiErrorMessage(error, "The clarification answer could not be submitted."));
-    } finally {
-      setAnsweringClarificationId(null);
-    }
-  }, [activeCase, activeCaseId, answeringClarificationId, invalidateCaseData, queryClient, upsertCase]);
 
   const submitCase = useCallback(async ({ title, description }: CaseIntakeSubmission) => {
     if (!activeCaseId || isSubmitting) return;
@@ -220,11 +183,9 @@ export function useCaseWorkspaceActions({
     isSubmitting,
     isUploadingDocument,
     admittingExtractionId,
-    answeringClarificationId,
     toggleChat,
     uploadDocument,
     admitExtraction,
-    answerClarification,
     submitCase,
   };
 }

@@ -200,7 +200,6 @@ describe("chat submission lifecycle", () => {
       ...nativeReceipt.run,
       status: "completed",
     });
-    const legacyRunRead = vi.spyOn(api, "getChatRun");
     const { result } = renderSession("a");
     await act(async () => { await result.current.session.selectThread("a"); });
     await tick();
@@ -214,7 +213,6 @@ describe("chat submission lifecycle", () => {
       expect.any(AbortSignal), "ask",
     );
     expect(runRead).toHaveBeenCalledWith("a", nativeReceipt.run.id, expect.any(AbortSignal));
-    expect(legacyRunRead).not.toHaveBeenCalled();
     expect(result.current.session.messages).toEqual([request, message("a", 2, "assistant", "Answer")]);
   });
 });

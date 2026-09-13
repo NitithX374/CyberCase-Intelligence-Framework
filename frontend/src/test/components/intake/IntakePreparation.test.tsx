@@ -1,130 +1,102 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CaseIntakeView } from "@/components/intake/CaseIntakeView";
-import type { PersistedChatMessage } from "@/lib/api";
-import { resetDocumentIngestionState, setDocumentIngestionFile, setDocumentIngestionResult } from "@/lib/document-ingestion-store";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
-const evidence: PersistedChatMessage = {
-  id: "source", thread_id: "saved-case", ordinal: 1, role: "user",
-  content: "<table><tr><td>Reported amount</td><td>500</td></tr></table>",
-  retrieval_context_id: null, created_at: "2026-09-03T00:00:00Z",
-  metadata_json: { evidence_kind: "initial_case_narrative", document_sources: [{ document_id: "DOC-1", filename: "statement.pdf", page_count: 18 }] },
+import { CaseIntakeView } from "@/components/intake/CaseIntakeView";
+import type { CaseDocumentRead, EvidenceSourceRead } from "@/lib/api";
+
+const evidence: EvidenceSourceRead = {
+  id: "source-1",
+  case_id: "case-1",
+  source_kind: "narrative",
+  document_id: null,
+  origin_message_id: null,
+  source_metadata_json: {},
+  created_at: "2026-09-11T00:00:00Z",
+  archived_at: null,
+  revisions: [{
+    id: "revision-1",
+    source_id: "source-1",
+    revision: 1,
+    exact_text: "Admitted case material",
+    text_sha256: "hash",
+    provenance_json: {},
+    extraction_id: null,
+    admitted_at: "2026-09-11T00:00:00Z",
+    archived_at: null,
+  }],
 };
-const analysis: PersistedChatMessage = {
-  ...evidence, id: "analysis", ordinal: 2, role: "assistant", content: "Analysis response",
-  metadata_json: {
-    analysis_trace: {
-      version: "analysis_trace_v3", validation_status: "validated", analysis_mode: "case_overview",
-      summary: "The material reports an amount of 500.",
-      claims: ["A-01", "A-02"].map((claim_id) => ({
-        claim_id, text: `Finding ${claim_id}`, claim_type: "reported", epistemic_status: "reported",
-        supporting_source_message_ids: ["source"], contradicting_source_message_ids: [],
-      })),
-      gaps: [{ gap_id: "G-01", topic: "Date", description: "No date provided", reason: "Timing is unclear", status: "NOT_PROVIDED", priority: "high", askable: true }],
-    },
-  },
+
+const document: CaseDocumentRead = {
+  id: "document-1",
+  case_id: "case-1",
+  filename: "statement.pdf",
+  mime_type: "application/pdf",
+  size_bytes: 1024,
+  content_sha256: "hash",
+  created_at: "2026-09-11T00:00:00Z",
+  archived_at: null,
+  extractions: [{
+    id: "extraction-1",
+    document_id: "document-1",
+    revision: 1,
+    provider: "native_pdf",
+    extracted_text: "Reviewed statement",
+    text_sha256: "hash",
+    config_json: {},
+    provenance_json: {},
+    warnings_json: [],
+    created_at: "2026-09-11T00:00:00Z",
+  }],
 };
+
+function renderIntake(overrides: Partial<React.ComponentProps<typeof CaseIntakeView>> = {}) {
+  const props: React.ComponentProps<typeof CaseIntakeView> = {
+    caseId: "case-1",
+    documents: [],
+    evidence: [],
+    analysisResult: null,
+    run: null,
+    isSubmitting: false,
+    isCaseDataLoading: false,
+    isUploadingDocument: false,
+    admittingExtractionId: null,
+    onSubmitCase: vi.fn(),
+    onUploadDocument: vi.fn(),
+    onAdmitExtraction: vi.fn(),
+    ...overrides,
+  };
+  render(<CaseIntakeView {...props} />);
+  return props;
+}
 
 describe("Case preparation workflow", () => {
-  beforeEach(() => resetDocumentIngestionState());
-
-  it("allows native analysis from admitted evidence without another chat or narrative submission", () => {
-    const submit = vi.fn();
-    render(
-      <CaseIntakeView
-        nativeCaseId="case-1"
-        nativeEvidence={[{
-          id: "source-1",
-          case_id: "case-1",
-          source_kind: "narrative",
-          document_id: null,
-          origin_message_id: null,
-          source_metadata_json: {},
-          created_at: "2026-09-11T00:00:00Z",
-          archived_at: null,
-          revisions: [{
-            id: "revision-1",
-            source_id: "source-1",
-            revision: 1,
-            exact_text: "Admitted case material",
-            text_sha256: "hash",
-            provenance_json: {},
-            extraction_id: null,
-            admitted_at: "2026-09-11T00:00:00Z",
-            archived_at: null,
-          }],
-        }]}
-        isSubmitting={false}
-        nativeCaseDataLoading={false}
-        onSubmitCase={submit}
-        onUploadNativeDocument={vi.fn()}
-        onAdmitNativeExtraction={vi.fn()}
-      />,
-    );
+  it("starts native analysis from admitted Case evidence without another narrative", () => {
+    const onSubmitCase = vi.fn();
+    renderIntake({ evidence: [evidence], onSubmitCase });
 
     const analyzeButton = screen.getByRole("button", { name: /Analyze case/i });
     expect(analyzeButton).not.toBeDisabled();
     fireEvent.click(analyzeButton);
-    expect(submit).toHaveBeenCalledWith({ title: undefined, description: "" });
+    expect(onSubmitCase).toHaveBeenCalledWith({ title: undefined, description: "" });
   });
 
-  it("keeps native analysis disabled while saved case material is loading", () => {
-    render(
-      <CaseIntakeView
-        nativeCaseId="case-1"
-        isSubmitting={false}
-        nativeCaseDataLoading
-        onSubmitCase={vi.fn()}
-        onUploadNativeDocument={vi.fn()}
-        onAdmitNativeExtraction={vi.fn()}
-      />,
-    );
+  it("keeps analysis disabled while Case material is loading", () => {
+    renderIntake({ isCaseDataLoading: true });
 
     expect(screen.getByRole("status")).toHaveTextContent("Loading case material");
     expect(screen.getByRole("button", { name: /Analyze case/i })).toBeDisabled();
   });
 
-  it("shows real analysis fields and one primary continuation for a saved case", () => {
-    const onOverview = vi.fn();
-    render(<CaseIntakeView messages={[evidence, analysis]} threadStatus="answered" isSubmitting={false} onSubmitCase={vi.fn()} onOpenOverview={onOverview} onOpenChat={vi.fn()} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Analysis available");
-    expect(screen.getByLabelText("Case narrative text")).toHaveTextContent("Reported amount | 500");
-    const summary = screen.getByRole("region", { name: "Extracted case information" });
-    expect(within(summary).getByText("Findings").nextElementSibling).toHaveTextContent("2");
-    expect(within(summary).getByText("Evidence messages").nextElementSibling).toHaveTextContent("1");
-    expect(within(summary).getByText("Open questions").nextElementSibling).toHaveTextContent("1");
-    expect(screen.getByText("18 pages")).toBeInTheDocument();
-    expect(screen.queryByText("Entities")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Chat/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Analysis/ }));
-    expect(onOverview).toHaveBeenCalledOnce();
-  });
+  it("uses Case document upload and explicit extraction admission actions", () => {
+    const onUploadDocument = vi.fn();
+    const onAdmitExtraction = vi.fn();
+    renderIntake({ documents: [document], onUploadDocument, onAdmitExtraction });
 
-  it("does not manufacture extracted counts from a question-answer response", () => {
-    const questionResponse: PersistedChatMessage = { ...analysis, metadata_json: { ...analysis.metadata_json, analysis_state_scope: "response_scoped" } };
-    render(<CaseIntakeView messages={[evidence, questionResponse]} isSubmitting={false} onSubmitCase={vi.fn()} />);
-    expect(screen.getByText(/Findings and open questions become available after case analysis/)).toBeInTheDocument();
-    expect(screen.queryByText("Evidence messages")).not.toBeInTheDocument();
-  });
+    const file = new File(["pdf"], "new.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("Upload document"), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "Admit reviewed text" }));
 
-  it("keeps pending previews out of the saved case record", () => {
-    setDocumentIngestionFile(new File(["pdf"], "additional.pdf"), "saved-case");
-    setDocumentIngestionResult({ document_id: "DOC-2", filename: "additional.pdf", media_type: "application/pdf", extraction_method: "native_pdf", mode: "unified", full_text: "Additional information", pages: [], warnings: [] }, "saved-case");
-    const submit = vi.fn();
-    render(<CaseIntakeView messages={[evidence, analysis]} isSubmitting={false} onSubmitCase={submit} onOpenChat={vi.fn()} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Review required");
-    expect(screen.getByText(/has not been added to the saved case/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Use reviewed text" })).not.toBeInTheDocument();
-    expect(submit).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "statement.pdf" }));
-    expect(screen.getByLabelText("Case narrative text")).toHaveTextContent("Reported amount");
-  });
-
-  it.each([
-    ["processing", true, "Analyzing case…"],
-    ["failed", false, "Analysis needs attention"],
-  ] as const)("communicates the %s analysis state", (threadStatus, isSubmitting, expected) => {
-    render(<CaseIntakeView messages={[evidence]} threadStatus={threadStatus} isSubmitting={isSubmitting} onSubmitCase={vi.fn()} onOpenChat={vi.fn()} />);
-    expect(screen.getByRole("status")).toHaveTextContent(expected);
+    expect(onUploadDocument).toHaveBeenCalledWith(file);
+    expect(onAdmitExtraction).toHaveBeenCalledWith("document-1", "extraction-1");
   });
 });

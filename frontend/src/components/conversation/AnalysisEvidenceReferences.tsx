@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import type { PersistedChatMessage } from "@/lib/api";
-import type { SourceMessageRef } from "@/lib/case-overview";
+import type { SourceMessageRef } from "@/lib/case-overview-contracts";
 import { sourceReferencesForAnalysisMessage } from "@/lib/analysis-citations";
-import { SourceEvidencePopover } from "@/components/overview/SourceEvidencePopover";
+import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
 import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip";
 
 interface AnalysisEvidenceReferencesProps {
@@ -51,7 +51,7 @@ export function AnalysisEvidenceReferences({
         })}
       </div>
       {active && (
-        <SourceEvidencePopover
+        <SourceEvidenceDrawer
           sourceRef={active.source}
           anchorElement={active.anchor}
           onClose={() => setActive(null)}

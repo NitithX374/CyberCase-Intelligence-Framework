@@ -8,7 +8,7 @@ import {
   listCaseReports,
   type CaseAnalysisResultRead,
   type CaseRunRead,
-  type ChatReportRead,
+  type CaseReport,
 } from "@/lib/api";
 import { caseQueryKeys } from "@/hooks/useCaseQueries";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
@@ -39,12 +39,12 @@ export function CaseReportView({ caseId, caseTitle, analysisResult, runStatus, o
     mutationFn: (input: { resultId: string; idempotencyKey: string }) => generateCaseReport(caseId, { analysis_result_id: input.resultId, idempotency_key: input.idempotencyKey }),
     onSuccess: (report) => {
       pendingGenerationRef.current = null;
-      queryClient.setQueryData<ChatReportRead[]>(caseQueryKeys.reports(caseId), (current) => [report, ...(current ?? []).filter((item) => item.report_id !== report.report_id)]);
+      queryClient.setQueryData<CaseReport[]>(caseQueryKeys.reports(caseId), (current) => [report, ...(current ?? []).filter((item) => item.report_id !== report.report_id)]);
       setSelectedReportId(report.report_id);
     },
   });
   const downloadMutation = useMutation({
-    mutationFn: (report: ChatReportRead) => downloadCaseReportPdf(caseId, report.report_id),
+    mutationFn: (report: CaseReport) => downloadCaseReportPdf(caseId, report.report_id),
     onSuccess: (blob, report) => downloadPdf(blob, report.version_number),
   });
   const reports = reportsQuery.data ?? [];
@@ -92,7 +92,7 @@ export function CaseReportView({ caseId, caseTitle, analysisResult, runStatus, o
           {reports.length > 1 && <div className="mt-3 border-t border-line/60 pt-2"><ReportVersionSelector reports={reports} selectedReportId={selectedReport?.report_id ?? null} onSelect={setSelectedReportId} /></div>}
         </header>
 
-        {reportsQuery.isLoading ? <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-xs text-ink-muted">Loading Case report data…</div> : selectedReport ? <PersistedReportCard key={selectedReport.report_id} report={selectedReport} caseId={caseId} threadTitle={caseTitle} isDownloading={downloadMutation.isPending} onDownloadPdf={() => downloadMutation.mutate(selectedReport)} /> : <NoSavedReport canGenerate={canGenerate} isGenerating={generateMutation.isPending} onGenerate={() => void handleGenerate()} onOpenOverview={analysisResult ? onOpenOverview : onOpenChat} />}
+        {reportsQuery.isLoading ? <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-xs text-ink-muted">Loading Case report data…</div> : selectedReport ? <PersistedReportCard key={selectedReport.report_id} report={selectedReport} caseId={caseId} caseTitle={caseTitle} isDownloading={downloadMutation.isPending} onDownloadPdf={() => downloadMutation.mutate(selectedReport)} /> : <NoSavedReport canGenerate={canGenerate} isGenerating={generateMutation.isPending} onGenerate={() => void handleGenerate()} onOpenOverview={analysisResult ? onOpenOverview : onOpenChat} />}
       </div>
       <MeaningfulErrorModal isOpen={Boolean(activeError)} error={activeError} onClose={() => { generateMutation.reset(); downloadMutation.reset(); }} onRetry={handleRetry} />
     </section>

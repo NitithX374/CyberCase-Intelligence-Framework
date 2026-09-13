@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import type { SourceMessageRef } from "@/lib/case-overview";
+import type { SourceMessageRef } from "@/lib/case-overview-contracts";
 import { formatEvidenceCitationText } from "@/lib/evidence-citation";
 import { SourceEvidenceContent } from "@/components/evidence/SourceEvidenceContent";
 import { Icon } from "@/components/common/icons";

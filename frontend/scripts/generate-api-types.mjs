@@ -51,12 +51,9 @@ export const SCHEMA_GROUPS = Object.freeze({
   chatTypes: [
     "ChatActionMetadata",
     "ChatCaseLinkRead",
-    "ChatMessageAccepted",
     "ChatMessageCreate",
     "ChatMessageRead",
-    "ChatReportRead",
     "ChatRetryRequest",
-    "ChatRunRead",
     "ChatThreadDetail",
     "ChatThreadRead",
     "FollowUpMetadata",
@@ -65,6 +62,7 @@ export const SCHEMA_GROUPS = Object.freeze({
   ],
   reportTypes: [
     "CaseReportCreate",
+    "CaseReportRead",
     "ReportClaim",
     "ReportSection",
     "StructuredReport",

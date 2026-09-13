@@ -21,6 +21,8 @@ function message(
     role,
     content,
     retrieval_context_id: null,
+    message_kind: role === "user" ? "clarification_answer" : "conversation",
+    analysis_result_id: null,
     metadata_json,
     created_at: `2026-07-31T12:00:${String(ordinal).padStart(2, "0")}Z`,
   };
@@ -31,13 +33,17 @@ function clarification(
   content: string,
   round: number,
 ): PersistedChatMessage {
-  return message(ordinal, "assistant", content, {
-    chat_followup: {
-      kind: "clarification",
-      root_ordinal: 1,
-      round,
+  return {
+    ...message(ordinal, "assistant", content),
+    message_kind: "followup_question",
+    metadata_json: {
+      chat_followup: {
+        kind: "clarification",
+        root_ordinal: 1,
+        round,
+      },
     },
-  });
+  };
 }
 
 describe("chat follow-up projection", () => {

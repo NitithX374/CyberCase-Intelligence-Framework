@@ -83,15 +83,8 @@ def build_auth_cookie_options() -> dict[str, Any]:
     }
 
 
-buildAuthCookieOptions = build_auth_cookie_options
-getOrCreateDevUser = get_or_create_dev_user
-getOrCreateOAuthUser = get_or_create_oauth_user
-
 __all__ = [
-    "buildAuthCookieOptions",
     "build_auth_cookie_options",
-    "getOrCreateDevUser",
-    "getOrCreateOAuthUser",
     "get_or_create_dev_user",
     "get_or_create_oauth_user",
 ]

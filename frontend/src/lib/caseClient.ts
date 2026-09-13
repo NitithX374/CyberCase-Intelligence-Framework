@@ -3,8 +3,6 @@ import type {
   CaseAnalysisAccepted,
   CaseAnalysisCreate,
   CaseAnalysisResultRead,
-  CaseClarificationAccepted,
-  CaseClarificationAnswer,
   CaseClarificationRead,
   CaseDocumentRead,
   CaseEvidenceCreate,
@@ -13,13 +11,14 @@ import type {
   CaseReportCreate,
   CaseRunRead,
   EvidenceSourceRead,
-  ChatReportRead,
+  CaseReport,
   CaseChatMessageAccepted,
-  CaseNarrativeDocumentSource,
   ChatMessageAction,
-  ChatThreadDetail,
+  ChatThreadRead,
 } from "./apiTypes";
 import { getApiBaseUrl } from "./apiClient";
+import { normalizeCaseReport } from "./case-report";
+import type { CaseReportRead } from "./generated/reportTypes";
 
 export const createCaseChatMessage = async (
   caseId: string,
@@ -27,7 +26,6 @@ export const createCaseChatMessage = async (
   idempotencyKey: string,
   signal?: AbortSignal,
   action?: ChatMessageAction,
-  documentSources?: CaseNarrativeDocumentSource[],
   intent?: "ask" | "clarification_answer",
   clarificationId?: string,
 ): Promise<CaseChatMessageAccepted> => {
@@ -39,21 +37,7 @@ export const createCaseChatMessage = async (
       ...(action ? { action } : {}),
       ...(intent ? { intent } : {}),
       ...(clarificationId ? { clarification_id: clarificationId } : {}),
-      ...(documentSources?.length
-        ? { document_sources: documentSources }
-        : {}),
     },
-    { signal },
-  );
-  return response.data;
-};
-
-export const getCaseChat = async (
-  caseId: string,
-  signal?: AbortSignal,
-): Promise<ChatThreadDetail> => {
-  const response = await axios.get<ChatThreadDetail>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat`,
     { signal },
   );
   return response.data;
@@ -228,8 +212,8 @@ export const getCaseEvidenceSnapshot = async (
 export const ensureCaseChat = async (
   caseId: string,
   signal?: AbortSignal,
-): Promise<import("./apiTypes").ChatThreadRead> => {
-  const response = await axios.post<import("./apiTypes").ChatThreadRead>(
+): Promise<ChatThreadRead> => {
+  const response = await axios.post<ChatThreadRead>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat`,
     {},
     { signal },
@@ -248,42 +232,28 @@ export const listCaseClarifications = async (
   return response.data;
 };
 
-export const answerCaseClarification = async (
-  caseId: string,
-  clarificationId: string,
-  request: CaseClarificationAnswer,
-  signal?: AbortSignal,
-): Promise<CaseClarificationAccepted> => {
-  const response = await axios.post<CaseClarificationAccepted>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/clarifications/${encodeURIComponent(clarificationId)}/answers`,
-    request,
-    { signal, timeout: 30_000 },
-  );
-  return response.data;
-};
-
 export const listCaseReports = async (
   caseId: string,
   signal?: AbortSignal,
-): Promise<ChatReportRead[]> => {
-  const response = await axios.get<ChatReportRead[]>(
+): Promise<CaseReport[]> => {
+  const response = await axios.get<CaseReportRead[]>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports`,
     { signal },
   );
-  return response.data;
+  return response.data.map(normalizeCaseReport);
 };
 
 export const generateCaseReport = async (
   caseId: string,
   request: CaseReportCreate,
   signal?: AbortSignal,
-): Promise<ChatReportRead> => {
-  const response = await axios.post<ChatReportRead>(
+): Promise<CaseReport> => {
+  const response = await axios.post<CaseReportRead>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports`,
     request,
     { signal, timeout: 120_000 },
   );
-  return response.data;
+  return normalizeCaseReport(response.data);
 };
 
 export const downloadCaseReportPdf = async (

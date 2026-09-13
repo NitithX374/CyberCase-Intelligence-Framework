@@ -4,7 +4,7 @@ import type { EvidencePage, SourceMessageRef } from "@/lib/case-overview-contrac
 import { formatPageReference } from "@/lib/evidence-citation";
 import { sha256Hex } from "@/lib/sha256";
 
-export interface NativeSnapshotSource {
+export interface CaseSnapshotSource {
   id: string;
   kind: string;
   revision: number;
@@ -15,7 +15,7 @@ export interface NativeSnapshotSource {
   filename: string | null;
 }
 
-export interface NativeCitation {
+export interface CaseCitation {
   sourceId: string;
   sourceRevision: number;
   exactQuote: string;
@@ -24,12 +24,12 @@ export interface NativeCitation {
   pageNumbers: number[];
 }
 
-interface NativePageBinding {
+interface CasePageBinding {
   pages: EvidencePage[];
   pageNumbers: number[];
 }
 
-export function parseNativeSnapshot(snapshot: CaseEvidenceSnapshotRead): NativeSnapshotSource[] {
+export function parseCaseSnapshot(snapshot: CaseEvidenceSnapshotRead): CaseSnapshotSource[] {
   if (snapshot.format_version !== "case_evidence_snapshot_v1") throw new Error("Unsupported evidence snapshot format.");
   if (sha256Hex(snapshot.input_text) !== snapshot.text_sha256) throw new Error("Evidence snapshot text hash does not match.");
   if (!matchesManifestHash(snapshot.manifest_json, snapshot.manifest_sha256)) throw new Error("Evidence snapshot manifest hash does not match.");
@@ -39,7 +39,7 @@ export function parseNativeSnapshot(snapshot: CaseEvidenceSnapshotRead): NativeS
   return sources;
 }
 
-function parseSnapshotSource(value: unknown): NativeSnapshotSource {
+function parseSnapshotSource(value: unknown): CaseSnapshotSource {
   const entry = asRecord(value);
   const id = asString(entry?.source_id);
   const kind = asString(entry?.source_kind);
@@ -63,11 +63,11 @@ function parseSnapshotSource(value: unknown): NativeSnapshotSource {
   };
 }
 
-export function parseNativeCitations(
+export function parseCaseCitations(
   value: unknown,
   sourceIds: string[],
-  sources: NativeSnapshotSource[],
-): NativeCitation[] {
+  sources: CaseSnapshotSource[],
+): CaseCitation[] {
   return asArray(value).map((item) => {
     const citation = asRecord(item);
     const rawPages = asArray(citation?.page_numbers);
@@ -104,8 +104,8 @@ export function parseNativeCitations(
 
 export function sourceRefs(
   ids: string[],
-  citations: NativeCitation[],
-  sources: NativeSnapshotSource[],
+  citations: CaseCitation[],
+  sources: CaseSnapshotSource[],
 ): SourceMessageRef[] {
   return ids.flatMap((id) => {
     const source = sources.find((candidate) => candidate.id === id);
@@ -115,7 +115,7 @@ export function sourceRefs(
   });
 }
 
-function buildSourceRef(source: NativeSnapshotSource, citation: NativeCitation | null): SourceMessageRef {
+function buildSourceRef(source: CaseSnapshotSource, citation: CaseCitation | null): SourceMessageRef {
   const pageBinding = citation ? resolvePageBinding(source, citation) : null;
   const sourceType = sourceTypeFor(source.kind);
   const documentLabel = source.filename ? `${source.filename} · ` : "";
@@ -138,7 +138,7 @@ function buildSourceRef(source: NativeSnapshotSource, citation: NativeCitation |
   };
 }
 
-function resolvePageBinding(source: NativeSnapshotSource, citation: NativeCitation): NativePageBinding | null {
+function resolvePageBinding(source: CaseSnapshotSource, citation: CaseCitation): CasePageBinding | null {
   if (!citation.documentId || !citation.filename || citation.pageNumbers.length === 0) return null;
   if (source.documentId !== citation.documentId || source.filename !== citation.filename) return null;
   const spans = asArray(source.provenance.pages).flatMap((value, index, values) => {

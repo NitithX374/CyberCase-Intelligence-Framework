@@ -1,9 +1,9 @@
 import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
 import { asArray, asRecord, asString, asStringArray } from "@/lib/case-overview-parsing";
 import type { CaseGap, ClaimType, EpistemicStatus, GapPriority, GapStatus } from "@/lib/case-overview-contracts";
-import { parseNativeCitations, type NativeCitation, type NativeSnapshotSource } from "./case-overview-native-source";
+import { parseCaseCitations, type CaseCitation, type CaseSnapshotSource } from "./case-overview-source";
 
-export interface NativeTraceClaim {
+export interface CaseTraceClaim {
   claimId: string;
   claimType: ClaimType;
   text: string;
@@ -11,22 +11,22 @@ export interface NativeTraceClaim {
   reasoningSummary: string | null;
   supportingIds: string[];
   contradictingIds: string[];
-  supportingCitations: NativeCitation[];
-  contradictingCitations: NativeCitation[];
+  supportingCitations: CaseCitation[];
+  contradictingCitations: CaseCitation[];
 }
 
-export interface NativeTraceAssociation {
+export interface CaseTraceAssociation {
   id: string;
   techniqueId: string;
   claimIds: string[];
   reason: string;
 }
 
-export interface ParsedNativeTrace {
+export interface ParsedCaseTrace {
   summary: string;
-  claims: NativeTraceClaim[];
+  claims: CaseTraceClaim[];
   gaps: CaseGap[];
-  associations: NativeTraceAssociation[];
+  associations: CaseTraceAssociation[];
   retrievalContextId: string | null;
 }
 
@@ -35,11 +35,11 @@ const epistemicStatuses = new Set<EpistemicStatus>(["reported", "suspected", "co
 const gapStatuses = new Set<GapStatus>(["NOT_PROVIDED", "EXPLICITLY_UNKNOWN", "AMBIGUOUS", "CONFLICTING"]);
 const gapPriorities = new Set<GapPriority>(["high", "medium", "low"]);
 
-export function parseNativeTrace(
+export function parseCaseTrace(
   result: CaseAnalysisResultRead,
   snapshot: CaseEvidenceSnapshotRead,
-  sources: NativeSnapshotSource[],
-): ParsedNativeTrace {
+  sources: CaseSnapshotSource[],
+): ParsedCaseTrace {
   const trace = asRecord(result.trace_json);
   if (!trace || trace.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated" || trace.analysis_mode !== "case_overview") throw new Error("The saved Case analysis trace is unavailable or unsupported.");
   if (trace.evidence_sha256 !== snapshot.text_sha256) throw new Error("Analysis is not bound to this evidence snapshot.");
@@ -59,7 +59,7 @@ export function parseNativeTrace(
   };
 }
 
-function parseClaim(value: unknown, sources: NativeSnapshotSource[]): NativeTraceClaim {
+function parseClaim(value: unknown, sources: CaseSnapshotSource[]): CaseTraceClaim {
   const claim = asRecord(value);
   const claimId = asString(claim?.claim_id);
   const claimType = asString(claim?.claim_type) as ClaimType;
@@ -78,8 +78,8 @@ function parseClaim(value: unknown, sources: NativeSnapshotSource[]): NativeTrac
     reasoningSummary: asString(claim?.reasoning_summary) || null,
     supportingIds,
     contradictingIds,
-    supportingCitations: parseNativeCitations(claim?.supporting_citations, supportingIds, sources),
-    contradictingCitations: parseNativeCitations(claim?.contradicting_citations, contradictingIds, sources),
+    supportingCitations: parseCaseCitations(claim?.supporting_citations, supportingIds, sources),
+    contradictingCitations: parseCaseCitations(claim?.contradicting_citations, contradictingIds, sources),
   };
 }
 
@@ -96,7 +96,7 @@ function parseGap(value: unknown): CaseGap {
   return { id: gapId, topic, status, description, affectedClaimIds: asStringArray(gap?.affected_claim_ids), reason, priority, askable };
 }
 
-function parseAssociation(value: unknown): NativeTraceAssociation {
+function parseAssociation(value: unknown): CaseTraceAssociation {
   const association = asRecord(value);
   const id = asString(association?.association_id);
   const techniqueId = asString(association?.technique_id);

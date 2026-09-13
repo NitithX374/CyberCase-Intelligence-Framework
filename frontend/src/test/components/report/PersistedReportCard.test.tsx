@@ -3,10 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PersistedReportCard } from "@/components/report/PersistedReportCard";
-import type { ChatReportRead } from "@/lib/api";
+import type { CaseReport } from "@/lib/api";
 import * as api from "@/lib/api";
 
-function sampleReport(): ChatReportRead {
+function sampleReport(): CaseReport {
   return {
     report_id: "report-1",
     thread_id: "thread-1",
@@ -14,6 +14,7 @@ function sampleReport(): ChatReportRead {
     idempotency_key: "report-request-1",
     source_snapshot_hash: "snapshot-1",
     analysis_message_id: "analysis-message-1",
+    source_reference_type: "case_evidence",
     retrieval_context_id: "retrieval-1",
     prompt_version: "deterministic_raw_evidence_report_v1",
     provider: "deterministic",
@@ -40,6 +41,7 @@ function sampleReport(): ChatReportRead {
           text: "A login event was reported.",
           support_type: "user_reported",
           source_message_ids: ["message-1"],
+          source_evidence_ids: [],
           mitre_technique_ids: [],
         },
       ],
@@ -74,14 +76,14 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
 
   it("renders the real PDF viewer iframe and does not include claim inspector", async () => {
     const fakeBlob = new Blob(["%PDF-1.4 test"], { type: "application/pdf" });
-    vi.spyOn(api, "downloadChatReportPdf").mockResolvedValue(fakeBlob);
+    vi.spyOn(api, "downloadCaseReportPdf").mockResolvedValue(fakeBlob);
 
     render(
       <QueryClientProvider client={queryClient}>
         <PersistedReportCard
           report={sampleReport()}
-          threadId="thread-1"
-          threadTitle="Investigation"
+          caseId="case-1"
+          caseTitle="Investigation"
           isDownloading={false}
           onDownloadPdf={vi.fn()}
         />
@@ -105,35 +107,31 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
 
   it("shows MeaningfulErrorModal on PDF preview failure without raw inline error and retries preview", async () => {
     const downloadSpy = vi
-      .spyOn(api, "downloadChatReportPdf")
+      .spyOn(api, "downloadCaseReportPdf")
       .mockRejectedValue(new Error("timeout of 15000ms exceeded"));
 
     render(
       <QueryClientProvider client={queryClient}>
         <PersistedReportCard
           report={sampleReport()}
-          threadId="thread-1"
-          threadTitle="Investigation"
+          caseId="case-1"
+          caseTitle="Investigation"
           isDownloading={false}
           onDownloadPdf={vi.fn()}
         />
       </QueryClientProvider>,
     );
 
-    // Modal appears with plain-language title
     expect(
       await screen.findByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/ระบบยังไม่สามารถยืนยันผลลัพธ์ได้ในขณะนี้/)).toBeInTheDocument();
 
-    // Raw technical details are in disclosure
     expect(screen.getByText("Technical details")).toBeInTheDocument();
     expect(screen.getByText(/timeout of 15000ms exceeded/)).toBeInTheDocument();
 
-    // Primary placeholder is quiet and non-raw
     expect(screen.getByText("ไม่สามารถแสดงตัวอย่าง PDF ได้")).toBeInTheDocument();
 
-    // Retry invokes downloadChatReportPdf refetch
     const retryBtn = screen.getByRole("button", { name: "โหลดตัวอย่าง PDF ใหม่" });
     fireEvent.click(retryBtn);
     await waitFor(() => {
@@ -155,8 +153,8 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
       <QueryClientProvider client={queryClient}>
         <PersistedReportCard
           report={failedReport}
-          threadId="thread-1"
-          threadTitle="Investigation"
+          caseId="case-1"
+          caseTitle="Investigation"
           isDownloading={false}
           onDownloadPdf={vi.fn()}
         />
@@ -168,7 +166,6 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
       screen.getByText("Validation schema mismatch occurred during report generation."),
     ).toBeInTheDocument();
 
-    // Failure code and raw validation errors are inside details
     expect(screen.getByText("Technical details")).toBeInTheDocument();
     expect(screen.getByText("REPORT_SYNTHESIS_FAILED")).toBeInTheDocument();
     expect(screen.getByText("Missing timeline anchor.")).toBeInTheDocument();

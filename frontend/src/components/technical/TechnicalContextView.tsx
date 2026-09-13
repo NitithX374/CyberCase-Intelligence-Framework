@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, PersistedChatMessage } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
-import { SourceEvidencePopover } from "@/components/overview/SourceEvidencePopover";
-import type { SourceMessageRef } from "@/lib/case-overview";
+import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
+import type { SourceMessageRef } from "@/lib/case-overview-contracts";
 import {
-  buildNativeTechnicalContext,
   buildTechnicalContext,
   type RetrievedTechnicalContextCard,
   type TechnicalContextCard,
@@ -15,9 +14,8 @@ import {
 } from "@/lib/technicalContext";
 
 interface TechnicalContextViewProps {
-  messages: PersistedChatMessage[];
-  nativeAnalysisResult?: CaseAnalysisResultRead | null;
-  nativeEvidenceSnapshot?: CaseEvidenceSnapshotRead | null;
+  analysisResult: CaseAnalysisResultRead | null;
+  evidenceSnapshot: CaseEvidenceSnapshotRead | null;
   onOpenIntake?: () => void;
   onNavigateToSource?: (messageId: string) => void;
 }
@@ -181,18 +179,13 @@ function ContextStatus({ data }: { data: TechnicalContextData }) {
 }
 
 export function TechnicalContextView({
-  messages,
-  nativeAnalysisResult,
-  nativeEvidenceSnapshot,
+  analysisResult,
+  evidenceSnapshot,
   onOpenIntake,
   onNavigateToSource,
 }: TechnicalContextViewProps) {
-  const isNativeContext = nativeAnalysisResult !== undefined || nativeEvidenceSnapshot !== undefined;
-  const contextData =
-    isNativeContext
-      ? buildNativeTechnicalContext(nativeAnalysisResult ?? null, nativeEvidenceSnapshot ?? null)
-      : buildTechnicalContext(messages);
-  const [activePopover, setActivePopover] = useState<{
+  const contextData = buildTechnicalContext(analysisResult, evidenceSnapshot);
+  const [activeSource, setActiveSource] = useState<{
     source: SourceMessageRef;
     element: HTMLElement;
   } | null>(null);
@@ -200,16 +193,16 @@ export function TechnicalContextView({
 
   const handleSelectSource = (source: SourceMessageRef, element: HTMLElement, key: string) => {
     if (activeSourceKey === key) {
-      setActivePopover(null);
+      setActiveSource(null);
       setActiveSourceKey(null);
       return;
     }
-    setActivePopover({ source, element });
+    setActiveSource({ source, element });
     setActiveSourceKey(key);
   };
 
-  const handleClosePopover = () => {
-    setActivePopover(null);
+  const handleCloseSource = () => {
+    setActiveSource(null);
     setActiveSourceKey(null);
   };
 
@@ -232,7 +225,7 @@ export function TechnicalContextView({
             <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-mitre/10 text-mitre">
               <Icon name="technical" className="h-5 w-5" />
             </span>
-            <h2 className="mt-4 text-sm font-extrabold text-ink">{isNativeContext ? statusMessage(contextData).title : contextData.status === "invalid_trace" ? "Technical context cannot be validated." : "No relevant MITRE ATT&CK context is currently available."}</h2>
+            <h2 className="mt-4 text-sm font-extrabold text-ink">{statusMessage(contextData).title}</h2>
             <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-ink-muted">{statusMessage(contextData).body}</p>
             {contextData.failureCode && <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-critical">Failure code: {contextData.failureCode}</p>}
             {onOpenIntake && (
@@ -271,11 +264,11 @@ export function TechnicalContextView({
         )}
       </div>
 
-      {activePopover && (
-        <SourceEvidencePopover
-          sourceRef={activePopover.source}
-          anchorElement={activePopover.element}
-          onClose={handleClosePopover}
+      {activeSource && (
+        <SourceEvidenceDrawer
+          sourceRef={activeSource.source}
+          anchorElement={activeSource.element}
+          onClose={handleCloseSource}
           onNavigateToSource={onNavigateToSource}
         />
       )}

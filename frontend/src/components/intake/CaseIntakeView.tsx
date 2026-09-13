@@ -1,113 +1,79 @@
 "use client";
 
+import { useMemo, type FormEvent } from "react";
+
+import { Icon } from "@/components/common/icons";
+import { StatusPill } from "@/components/common/StatusPill";
 import { useAccountState } from "@/hooks/use-account-state";
-import { useMemo, useState, type FormEvent } from "react";
-import type { CaseAnalysisResultRead, CaseDocumentRead, CaseIntakeSubmission, CaseRunRead, EvidenceSourceRead, PersistedChatMessage, ThreadStatus } from "@/lib/api";
-import { bindCaseNarrativeDocumentSource, type CaseNarrativeDraft } from "@/lib/case-narrative-document";
-import { isCaseEvidenceMessage } from "@/lib/case-evidence";
-import { buildCaseOverview } from "@/lib/case-overview";
-import { intakeMaterials, intakeStatus } from "@/lib/case-intake-model";
-import { useDocumentIngestion } from "@/lib/document-ingestion-store";
-import { DocumentIngestionPreview } from "./DocumentIngestionPreview";
-import { DocumentIngestionResult } from "./DocumentIngestionResult";
-import { CaseIntakeFiles } from "./CaseIntakeFiles";
-import { ExtractedTextPreview } from "./ExtractedTextPreview";
-import { IntakeNarrativeForm } from "./IntakeNarrativeForm";
-import { intakeReadableText } from "@/lib/intake-readable-text";
-import type { CaseOverviewData } from "@/lib/case-overview";
-import { CaseFirstIntakeView } from "./CaseFirstIntakeView";
+import type {
+  CaseAnalysisResultRead,
+  CaseDocumentRead,
+  CaseIntakeSubmission,
+  CaseRunRead,
+  EvidenceSourceRead,
+} from "@/lib/api";
 
 interface CaseIntakeViewProps {
-  caseKey?: string;
-  threadId?: string | null;
-  threadStatus?: ThreadStatus | null;
+  caseId: string;
+  documents: CaseDocumentRead[];
+  evidence: EvidenceSourceRead[];
+  analysisResult: CaseAnalysisResultRead | null;
+  run: CaseRunRead | null;
   isSubmitting: boolean;
+  isCaseDataLoading: boolean;
   error?: string | null;
+  isUploadingDocument: boolean;
+  admittingExtractionId: string | null;
   onSubmitCase: (data: CaseIntakeSubmission) => void;
-  messages?: PersistedChatMessage[];
+  onUploadDocument: (file: File) => void;
+  onAdmitExtraction: (documentId: string, extractionId: string) => void;
   onOpenOverview?: () => void;
   onOpenChat?: () => void;
   onOpenMaterials?: () => void;
-  nativeCaseId?: string;
-  nativeDocuments?: CaseDocumentRead[];
-  nativeEvidence?: EvidenceSourceRead[];
-  nativeAnalysisResult?: CaseAnalysisResultRead | null;
-  nativeRun?: CaseRunRead | null;
-  nativeCaseDataLoading?: boolean;
-  nativeIsUploadingDocument?: boolean;
-  nativeAdmittingExtractionId?: string | null;
-  onUploadNativeDocument?: (file: File) => void;
-  onAdmitNativeExtraction?: (documentId: string, extractionId: string) => void;
 }
 
-export function CaseIntakeView(props: CaseIntakeViewProps) {
-  if (props.nativeCaseId) {
-    return (
-      <CaseFirstIntakeView
-        caseId={props.nativeCaseId}
-        documents={props.nativeDocuments ?? []}
-        evidence={props.nativeEvidence ?? []}
-        analysisResult={props.nativeAnalysisResult ?? null}
-        run={props.nativeRun ?? null}
-        isSubmitting={props.isSubmitting}
-        isCaseDataLoading={props.nativeCaseDataLoading ?? false}
-        error={props.error}
-        isUploadingDocument={props.nativeIsUploadingDocument ?? false}
-        admittingExtractionId={props.nativeAdmittingExtractionId ?? null}
-        onSubmitCase={props.onSubmitCase}
-        onUploadDocument={props.onUploadNativeDocument!}
-        onAdmitExtraction={props.onAdmitNativeExtraction!}
-        onOpenOverview={props.onOpenOverview}
-        onOpenChat={props.onOpenChat}
-        onOpenMaterials={props.onOpenMaterials}
-      />
-    );
-  }
-  const caseKey = (props.caseKey ?? props.threadId ?? props.messages?.[0]?.thread_id ?? "draft").trim() || "draft";
-  return <CaseIntakeContent key={caseKey} {...props} caseKey={caseKey} />;
-}
-
-function CaseIntakeContent({
-  caseKey, threadId, threadStatus, isSubmitting, error, onSubmitCase, messages = [],
-  onOpenOverview, onOpenChat, onOpenMaterials,
-}: CaseIntakeViewProps & { caseKey: string }) {
-  const [title, setTitle] = useAccountState(`intake:${caseKey}:title`, "");
-  const [description, setDescription] = useAccountState(`intake:${caseKey}:description`, "");
-  const [documentDraft, setDocumentDraft] = useAccountState<CaseNarrativeDraft | null>(`intake:${caseKey}:source`, null);
-  const [includeSource, setIncludeSource] = useAccountState(`intake:${caseKey}:include-source`, true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const ingestion = useDocumentIngestion(caseKey);
-  const evidence = messages.filter(isCaseEvidenceMessage);
+export function CaseIntakeView({
+  caseId,
+  documents,
+  evidence,
+  analysisResult,
+  run,
+  isSubmitting,
+  isCaseDataLoading,
+  error,
+  isUploadingDocument,
+  admittingExtractionId,
+  onSubmitCase,
+  onUploadDocument,
+  onAdmitExtraction,
+  onOpenOverview,
+  onOpenChat,
+  onOpenMaterials,
+}: CaseIntakeViewProps) {
+  const [title, setTitle] = useAccountState(`case-intake:${caseId}:title`, "");
+  const [description, setDescription] = useAccountState(`case-intake:${caseId}:description`, "");
+  const admittedExtractionIds = useMemo(
+    () => new Set(evidence.flatMap((source) => source.revisions?.map((revision) => revision.extraction_id).filter(Boolean) ?? [])),
+    [evidence],
+  );
   const hasEvidence = evidence.length > 0;
-  const overview = useMemo(() => buildCaseOverview(messages, threadStatus), [messages, threadStatus]);
-  const materials = intakeMaterials(messages, ingestion, hasEvidence ? undefined : documentDraft?.source);
-  const selected = materials.find((item) => item.id === selectedId);
-  const unreviewed = materials.some((item) => item.pending);
-  const status = intakeStatus({
-    ingestion, hasEvidence, hasAnalysis: overview.hasAnalysis, isSubmitting,
-    hasNarrative: Boolean(description.trim()), hasUnreviewedMaterial: unreviewed,
-    failed: Boolean(error) || threadStatus === "failed",
-  });
-  const canSubmit = Boolean(description.trim()) && !isSubmitting && !ingestion.isProcessing && !unreviewed;
-  const showSavedPreview = hasEvidence && ingestion.result && (!selected || selected.pending);
-  const nextAction = isSubmitting ? onOpenChat : overview.hasAnalysis ? onOpenOverview : onOpenChat;
-  const nextLabel = isSubmitting ? "View analysis progress"
-    : overview.hasAnalysis ? "Continue to Analysis" : "Open analysis in Chat";
+  const isFailed = run?.status === "failed";
+  const isBusy = isSubmitting || isCaseDataLoading;
+  const canSubmit = !isBusy && Boolean(description.trim() || hasEvidence);
+  const status = isSubmitting
+    ? "Analysis in progress"
+    : isCaseDataLoading
+      ? "Loading case material"
+      : isFailed
+        ? "Analysis failed"
+        : analysisResult
+          ? analysisResult.freshness === "stale" ? "New material needs analysis" : "Analysis available"
+          : hasEvidence ? "Ready for analysis" : "Add case material";
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSubmit) return;
-    const narrative = description.trim();
-    onSubmitCase({
-      title: title.trim() || undefined,
-      description: narrative,
-      documentSources: documentDraft && includeSource ? [bindCaseNarrativeDocumentSource(documentDraft, narrative)] : undefined,
-    });
-  };
-  const useDocument = (draft: CaseNarrativeDraft) => {
-    setDescription(draft.text);
-    setDocumentDraft(draft);
-    setIncludeSource(true);
+    onSubmitCase({ title: title.trim() || undefined, description: description.trim() });
   };
 
   return (
@@ -118,106 +84,82 @@ function CaseIntakeContent({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="section-eyebrow">CASE INTAKE</p>
-                <h1 className="mt-1 text-xl font-bold tracking-tight text-ink sm:text-2xl">Case preparation</h1>
-                {threadId && <p className="mt-1 text-[11px] text-ink-muted">Case {threadId.slice(0, 8)}</p>}
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-ink sm:text-2xl">Prepare case analysis</h1>
+                <p className="mt-1 text-[11px] text-ink-muted">Case {caseId.slice(0, 8)} · Case-owned workflow</p>
               </div>
               <div role="status" aria-live="polite" className="max-w-sm text-xs leading-relaxed text-ink-secondary">
-                <p className="font-semibold text-ink">{status.label}</p>
-                <p className="mt-1">{status.detail}</p>
+                <p className="font-semibold text-ink">{status}</p>
+                <p className="mt-1">Documents and admitted evidence are stored independently of Chat.</p>
               </div>
             </div>
-            <p aria-label="Preparation progress" className="text-[11px] leading-relaxed text-ink-secondary">
-              {materials.length ? `${materials.length} ${materials.length === 1 ? "document" : "documents"}` : "Written narrative"}
-              {" · "}
-              {ingestion.isProcessing ? "Text extraction in progress"
-                : ingestion.error ? "Text extraction failed"
-                  : ingestion.result ? "Text extraction complete"
-                    : ingestion.fileName ? "Awaiting extraction"
-                      : materials.some((item) => item.pageCount !== null) ? "Document text submitted" : "No extraction needed"}
-              {" · "}
-              {unreviewed ? "Review pending" : hasEvidence ? "Narrative submitted" : documentDraft ? "Text reviewed" : "Review before submitting"}
-            </p>
+            {error && <p role="alert" className="border-l-2 border-critical pl-3 text-xs text-ink">{error}</p>}
           </header>
+
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
-            <div className="min-w-0 space-y-5">
-              {hasEvidence ? showSavedPreview ? (
-                <section className="workspace-card min-w-0 space-y-4 p-5 sm:p-6">
-                  <DocumentIngestionResult result={ingestion.result!} />
-                  <div className="border-t border-line pt-4 text-xs leading-relaxed text-ink-secondary">
-                    <p>This document is a preview and has not been added to the saved case. Use Add case information in Chat to submit additional material.</p>
-                    {onOpenChat && <button type="button" onClick={onOpenChat} className="mt-2 min-h-9 underline underline-offset-4">Add information in Chat →</button>}
+            <form id="case-first-intake-form" onSubmit={handleSubmit} className="workspace-card min-w-0 space-y-5 p-5 sm:p-6">
+              <div>
+                <h2 className="text-base font-bold text-ink">Case information</h2>
+                <p className="mt-1 text-xs text-ink-secondary">Add a narrative, or analyze the evidence already admitted to this Case.</p>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="case-first-title-input" className="text-xs font-semibold text-ink">Case title <span className="font-normal text-ink-muted">· Optional</span></label>
+                <input id="case-first-title-input" value={title} onChange={(event) => setTitle(event.target.value)} disabled={isBusy} placeholder="A short name for this case" className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm outline-none focus:border-ink disabled:bg-surface-nested" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="case-first-description-input" className="text-xs font-semibold text-ink">Case narrative or additional information</label>
+                <textarea id="case-first-description-input" rows={9} value={description} onChange={(event) => setDescription(event.target.value)} disabled={isBusy} placeholder="Describe what happened, who was involved, and any dates or details available in the case material." className="block max-h-96 min-h-52 w-full resize-y rounded-lg border border-line bg-canvas p-4 text-sm leading-7 text-ink outline-none placeholder:text-ink-muted focus:border-ink disabled:bg-surface-nested" />
+              </div>
+              {evidence.length > 0 && (
+                <section className="border-t border-line pt-4" aria-labelledby="admitted-intake-heading">
+                  <h3 id="admitted-intake-heading" className="text-xs font-semibold text-ink">Currently admitted</h3>
+                  <div className="mt-3 space-y-3">
+                    {evidence.map((source) => {
+                      const revision = [...(source.revisions ?? [])].sort((left, right) => right.revision - left.revision)[0];
+                      return revision ? <div key={source.id} className="border-l-2 border-evidence/35 pl-3 text-xs text-ink-secondary"><p>{sourceLabel(source.source_kind)} · revision {revision.revision}</p><p className="mt-1 line-clamp-3 whitespace-pre-wrap">{revision.exact_text}</p></div> : null;
+                    })}
                   </div>
                 </section>
-              ) : (
-                <ExistingCaseRecord message={selected?.messageId ? evidence.find((message) => message.id === selected.messageId) : evidence[0]} text={selected?.text ?? undefined} filename={selected?.filename} />
-              ) : (
-                <IntakeNarrativeForm title={title} description={description} draft={documentDraft}
-                  result={ingestion.result} disabled={isSubmitting} sourceLinked={includeSource}
-                  onTitle={setTitle} onDescription={setDescription} onUseDocument={useDocument}
-                  onRemoveSource={() => setIncludeSource(false)} onSubmit={handleSubmit} />
               )}
-              <ExtractedCaseSummary overview={overview} sourceCount={evidence.length} onReview={onOpenOverview} />
-            </div>
-            <CaseIntakeFiles materials={materials} selectedId={selected?.id ?? (showSavedPreview ? ingestion.result?.document_id ?? null : null)}
-              onSelect={(material) => setSelectedId(material.id)} onOpenMaterials={hasEvidence ? onOpenMaterials : undefined}>
-              <DocumentIngestionPreview caseKey={caseKey} disabled={isSubmitting} showResult={false} />
-            </CaseIntakeFiles>
+            </form>
+
+            <aside className="min-w-0 space-y-4 lg:sticky lg:top-5">
+              <h2 className="text-sm font-bold text-ink">Documents</h2>
+              <label className="inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink hover:border-line-strong hover:bg-surface-hover has-[:disabled]:cursor-wait has-[:disabled]:opacity-60">
+                <Icon name="intake" className="h-4 w-4" />
+                {isUploadingDocument ? "Saving document…" : "Upload document"}
+                <input type="file" accept=".pdf,.docx,.png,.jpg,.jpeg" disabled={isUploadingDocument || isBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) onUploadDocument(file); event.currentTarget.value = ""; }} className="sr-only" />
+              </label>
+              {documents.length === 0 ? <p className="border-t border-line pt-4 text-xs leading-relaxed text-ink-muted">No saved documents. You can start with a written narrative.</p> : (
+                <ul className="divide-y divide-line border-y border-line">
+                  {documents.map((document) => {
+                    const extraction = [...(document.extractions ?? [])].sort((left, right) => right.revision - left.revision)[0];
+                    const admitted = extraction ? admittedExtractionIds.has(extraction.id) : false;
+                    return <li key={document.id} className="space-y-2 py-3"><p className="break-words text-xs font-semibold text-ink">{document.filename}</p><p className="text-[11px] text-ink-secondary">{extraction ? `Extraction ${extraction.revision} · ${extraction.provider}` : "No extraction"}</p>{extraction && !admitted && !document.archived_at && <button type="button" disabled={admittingExtractionId !== null || isBusy} onClick={() => onAdmitExtraction(document.id, extraction.id)} className="min-h-8 text-[11px] font-semibold text-ink underline underline-offset-4 disabled:cursor-wait disabled:opacity-60">{admittingExtractionId === extraction.id ? "Admitting…" : "Admit reviewed text"}</button>}<StatusPill>{document.archived_at ? "Archived" : admitted ? "Admitted" : "Review required"}</StatusPill></li>;
+                  })}
+                </ul>
+              )}
+              {onOpenMaterials && <button type="button" onClick={onOpenMaterials} className="min-h-8 text-xs text-ink-secondary underline underline-offset-4 hover:text-ink">Open all case materials →</button>}
+            </aside>
           </div>
         </div>
       </div>
       <footer className="shrink-0 border-t border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-7 lg:px-9">
-          <p className="text-[11px] text-ink-muted">{hasEvidence ? "Submitted narrative saved" : "Draft · Not yet submitted"}</p>
-          {hasEvidence ? (
-            nextAction && <button type="button" onClick={nextAction} className="btn-primary min-h-10 rounded-lg">{nextLabel} →</button>
-          ) : (
-            <button type="submit" form="intake-narrative-form" disabled={!canSubmit} className="btn-primary min-h-10 rounded-lg">
-              {isSubmitting ? "Analyzing case…" : "Analyze case"} →
-            </button>
-          )}
+          <p className="text-[11px] text-ink-muted">{isCaseDataLoading ? "Loading saved case material…" : hasEvidence ? `${evidence.length} admitted source${evidence.length === 1 ? "" : "s"}` : "No admitted evidence yet — add a narrative or admit reviewed text"}</p>
+          <div className="flex flex-wrap gap-2">
+            {analysisResult && onOpenOverview && <button type="button" onClick={onOpenOverview} className="btn-secondary min-h-10 rounded-lg">View analysis</button>}
+            {onOpenChat && <button type="button" onClick={onOpenChat} className="btn-secondary min-h-10 rounded-lg">Open Chat</button>}
+            <button type="submit" form="case-first-intake-form" disabled={!canSubmit} className="btn-primary min-h-10 rounded-lg disabled:cursor-not-allowed">{isSubmitting ? "Analyzing case…" : analysisResult ? "Analyze latest material" : "Analyze case"} →</button>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
 
-export function ExistingCaseRecord({ message, text, filename }: {
-  message?: PersistedChatMessage;
-  text?: string;
-  filename?: string;
-}) {
-  return (
-    <section className="workspace-card min-w-0 space-y-4 p-5 sm:p-6">
-      <div>
-        <h2 className="text-base font-bold text-ink">Case information</h2>
-        <p className="mt-1 break-words text-xs text-ink-secondary">{filename ?? "Submitted case narrative"}</p>
-        {message && <p className="mt-1 text-[11px] text-ink-muted">Submitted {new Date(message.created_at).toLocaleString("en-GB")}</p>}
-      </div>
-      <ExtractedTextPreview key={filename ?? message?.id} text={text ?? message?.content ?? ""} label="Case narrative" />
-    </section>
-  );
-}
-
-export function ExtractedCaseSummary({ overview, sourceCount, onReview }: {
-  overview: CaseOverviewData;
-  sourceCount: number;
-  onReview?: () => void;
-}) {
-  return (
-    <section aria-labelledby="extracted-case-heading" className="border-t border-line pt-5">
-      <h2 id="extracted-case-heading" className="text-sm font-bold text-ink">Extracted case information</h2>
-      {overview.hasAnalysis ? (
-        <>
-          <p className="mt-1 text-[11px] text-ink-muted">From the latest completed case analysis.</p>
-          <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-ink-secondary">{intakeReadableText(overview.incidentSummary)}</p>
-          <dl className="mt-4 grid grid-cols-3 gap-3 text-xs">
-            <div><dt className="text-ink-muted">Findings</dt><dd className="mt-1 font-semibold">{overview.findings.length}</dd></div>
-            <div><dt className="text-ink-muted">Evidence messages</dt><dd className="mt-1 font-semibold">{sourceCount}</dd></div>
-            <div><dt className="text-ink-muted">Open questions</dt><dd className="mt-1 font-semibold">{overview.gaps.length}</dd></div>
-          </dl>
-          {onReview && <button type="button" onClick={onReview} className="mt-3 min-h-9 text-xs text-ink-secondary underline underline-offset-4 hover:text-ink">Review extracted information →</button>}
-        </>
-      ) : <p className="mt-2 text-xs leading-relaxed text-ink-muted">Findings and open questions become available after case analysis. Document extraction prepares the text only.</p>}
-    </section>
-  );
+function sourceLabel(kind: string): string {
+  if (kind === "reviewed_document") return "Reviewed document";
+  if (kind === "clarification_answer") return "Clarification answer";
+  if (kind === "explicit_chat_addition") return "Added case information";
+  return "Case narrative";
 }

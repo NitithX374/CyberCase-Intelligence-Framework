@@ -88,8 +88,7 @@ export function useChatSubmission({
           : undefined;
         const targetClarificationId =
           pendingQuestion?.id ??
-          pendingClarificationId ??
-          followUp?.questionMessageId;
+          pendingClarificationId;
         const accepted = isAnsweringFollowUp
           ? await createCaseChatMessage(
               caseId,
@@ -97,9 +96,8 @@ export function useChatSubmission({
               submission.key,
               selection.signal,
               action,
-              undefined,
               "clarification_answer",
-              targetClarificationId,
+              targetClarificationId ?? undefined,
             )
           : await createCaseChatMessage(
               caseId,

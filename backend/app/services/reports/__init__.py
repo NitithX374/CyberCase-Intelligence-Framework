@@ -28,9 +28,6 @@ from app.services.reports.report_validation import (
     validate_case_structured_report,
 )
 
-ReportService = CaseReportService
-ReportGenerationError = ReportServiceError
-
 __all__ = [
     "CaseReportInputSnapshot",
     "CaseReportService",
@@ -38,10 +35,8 @@ __all__ = [
     "CaseReportTechnicalAugmentation",
     "CaseTechnicalAugmentationStatus",
     "ReportGenerationConflict",
-    "ReportGenerationError",
     "ReportNotFound",
     "ReportRunResult",
-    "ReportService",
     "ReportServiceError",
     "ReportValidationError",
     "build_case_template_report",

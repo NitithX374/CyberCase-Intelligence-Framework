@@ -9,13 +9,13 @@ import {
   type ChatThreadDetail,
   type ChatThreadRead,
 } from "@/lib/api";
-import type { RunPhase, WorkspaceRouteView, WorkspaceView } from "@/components/common/types";
+import type { RunPhase, WorkspaceView } from "@/components/common/types";
 import { chatTranscriptMessages } from "@/lib/chat-followup";
 import { ChatWorkspaceLayout } from "@/components/ChatWorkspaceLayout";
 import { useCaseMutations, useCaseWorkspaceQueries, useCases } from "@/hooks/useCaseQueries";
 import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
 import { chatQueryKeys } from "@/hooks/useChatQueries";
-import { casePath, chatRouteState } from "@/features/chat/routing/workspaceRoutes";
+import { casePath, caseRouteState } from "@/features/chat/routing/workspaceRoutes";
 import { useChatSubmission } from "@/features/chat/runs/useChatSubmission";
 import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
 import { useChatThreadDeletion } from "@/features/chat/workspace/use-chat-thread-deletion";
@@ -26,9 +26,9 @@ export function ChatWorkspace() {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const routeState = chatRouteState(pathname);
+  const routeState = caseRouteState(pathname);
   const routeCaseId = routeState.caseId;
-  const [activeView, setActiveView] = useState<WorkspaceRouteView>(routeState.view);
+  const [activeView, setActiveView] = useState<WorkspaceView>(routeState.view);
   const [activeViewPathname, setActiveViewPathname] = useState(pathname);
   if (activeViewPathname !== pathname) {
     setActiveViewPathname(pathname);
@@ -51,8 +51,8 @@ export function ChatWorkspace() {
     runId,
     activeCase?.chat_thread_id,
   );
-  const nativeResult = caseData.analysis.data ?? null;
-  const nativeRunStatus = runQuery.data?.status ?? caseRunStatus(activeCase);
+  const analysisResult = caseData.analysis.data ?? null;
+  const runStatus = runQuery.data?.status ?? caseRunStatus(activeCase);
 
   const cacheUpsertCaseFromChat = useCallback((thread: ChatThreadRead) => {
     queryClient.setQueryData<ChatThreadDetail>(chatQueryKeys.detail(thread.id), (current) =>
@@ -63,7 +63,7 @@ export function ChatWorkspace() {
     cacheUpsertThread: cacheUpsertCaseFromChat,
   });
   const {
-    activeThreadId, getActiveThreadId, messages, input,
+    getActiveThreadId, messages, input,
     queryError, selectThread, refreshThread, clearSelection, changeInput,
   } = session;
   const actions = useCaseWorkspaceActions({
@@ -90,11 +90,11 @@ export function ChatWorkspace() {
   }, [activeCase?.chat_thread_id, isChatOpen, latestAnalysisId, refreshThread]);
 
   useEffect(() => {
-    if (!isChatOpen || !activeCase?.chat_thread_id || nativeRunStatus !== "completed" || !runId) return;
+    if (!isChatOpen || !activeCase?.chat_thread_id || runStatus !== "completed" || !runId) return;
     if (lastCompletedRunRef.current === runId) return;
     lastCompletedRunRef.current = runId;
     void refreshThread(activeCase.chat_thread_id);
-  }, [activeCase?.chat_thread_id, isChatOpen, nativeRunStatus, refreshThread, runId]);
+  }, [activeCase?.chat_thread_id, isChatOpen, runStatus, refreshThread, runId]);
 
   useEffect(() => {
     if (!activeCase) return;
@@ -136,11 +136,11 @@ export function ChatWorkspace() {
   const handleNewCase = useCallback(async () => {
     if (createMutation.isPending) return;
     rootBootstrapDoneRef.current = true;
-    setActiveView("intake");
     clearSelection();
     setIsChatOpen(false);
     try {
       const caseRecord = await createMutation.mutateAsync();
+      setActiveView("intake");
       router.push(casePath(caseRecord.id, "intake"));
     } catch {
       return;
@@ -202,8 +202,8 @@ export function ChatWorkspace() {
     if (actions.actionError) actions.clearActionError();
     else handleRetryQuery();
   }, [actions, handleRetryQuery]);
-  const workspaceThreadStatus = nativeThreadStatus(activeCase, nativeRunStatus);
-  const workspacePhase = determineCaseRunPhase(nativeRunStatus, nativeResult?.status === "validated");
+  const workspaceThreadStatus = caseThreadStatus(activeCase, runStatus);
+  const workspacePhase = determineCaseRunPhase(runStatus, analysisResult?.status === "validated");
   const casesError = casesQuery.error
     ? getApiErrorMessage(casesQuery.error, "Saved cases could not be loaded.")
     : createMutation.error
@@ -216,9 +216,7 @@ export function ChatWorkspace() {
     <ChatWorkspaceLayout
       activeCase={activeCase}
       activeCaseId={activeCaseId}
-      chatThreadId={activeThreadId}
       activeView={activeView}
-      activeWorkspaceView={activeView}
       cases={cases}
       casesLoading={casesQuery.isLoading}
       casesError={casesError}
@@ -230,20 +228,19 @@ export function ChatWorkspace() {
       input={input}
       visibleMessages={visibleMessages}
       messages={messages}
-      nativeDocuments={caseData.documents.data ?? []}
-      nativeEvidence={caseData.evidence.data ?? []}
-      nativeAnalysisResult={nativeResult}
-      nativeEvidenceSnapshot={caseData.snapshot.data ?? null}
-      nativeRun={runQuery.data ?? null}
-      nativeRunStatus={nativeRunStatus}
-      nativeClarifications={caseData.clarifications.data ?? []}
-      clarificationSubmittingId={actions.answeringClarificationId}
-      nativeAnalysisLoading={caseData.analysis.isLoading}
-      nativeAnalysisSubmitting={actions.isSubmitting}
-      nativeCaseDataLoading={caseData.documents.isLoading || caseData.evidence.isLoading || caseData.analysis.isLoading}
-      nativeSnapshotLoading={caseData.snapshot.isLoading}
-      nativeIsUploadingDocument={actions.isUploadingDocument}
-      nativeAdmittingExtractionId={actions.admittingExtractionId}
+      documents={caseData.documents.data ?? []}
+      evidence={caseData.evidence.data ?? []}
+      analysisResult={analysisResult}
+      evidenceSnapshot={caseData.snapshot.data ?? null}
+      run={runQuery.data ?? null}
+      runStatus={runStatus}
+      clarifications={caseData.clarifications.data ?? []}
+      analysisLoading={caseData.analysis.isLoading}
+      analysisSubmitting={actions.isSubmitting}
+      caseDataLoading={caseData.documents.isLoading || caseData.evidence.isLoading || caseData.analysis.isLoading}
+      snapshotLoading={caseData.snapshot.isLoading}
+      isUploadingDocument={actions.isUploadingDocument}
+      admittingExtractionId={actions.admittingExtractionId}
       deleteCandidate={deleteCandidate}
       onSelectCase={(caseId) => void handleSelectCase(caseId)}
       onNewCase={() => void handleNewCase()}
@@ -260,9 +257,8 @@ export function ChatWorkspace() {
       onRetryQuery={retryWorkspace}
       isChatOpen={isChatOpen}
       onToggleChat={() => void actions.toggleChat()}
-      onUploadNativeDocument={(file) => void actions.uploadDocument(file)}
-      onAdmitNativeExtraction={(documentId, extractionId) => void actions.admitExtraction(documentId, extractionId)}
-      onAnswerClarification={(clarificationId, answer) => void actions.answerClarification(clarificationId, answer)}
+      onUploadDocument={(file) => void actions.uploadDocument(file)}
+      onAdmitExtraction={(documentId, extractionId) => void actions.admitExtraction(documentId, extractionId)}
     />
   );
 }
@@ -272,7 +268,7 @@ function caseRunStatus(caseRecord: CaseRead | null): "queued" | "running" | "fai
   return status === "queued" || status === "running" || status === "failed" ? status : null;
 }
 
-function nativeThreadStatus(caseRecord: CaseRead | null, runStatus: string | null) {
+function caseThreadStatus(caseRecord: CaseRead | null, runStatus: string | null) {
   if (runStatus === "queued" || runStatus === "running") return "processing" as const;
   if (runStatus === "failed") return "failed" as const;
   return caseRecord?.status ?? null;

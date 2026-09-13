@@ -1,5 +1,4 @@
 import type { CaseNarrativeDocumentSource, DocumentSourceMetadata } from "./caseTypes";
-import type { StructuredReport } from "./reportTypes";
 
 export type ChatActionMetadata = {
     action?: "initial_analysis" | "ask" | "add_case_info";
@@ -18,16 +17,12 @@ export type ChatCaseLinkRead = {
     case_id?: string | null;
 };
 
-export type ChatMessageAccepted = {
-    message: ChatMessageRead;
-    run: ChatRunRead;
-};
-
 export type ChatMessageCreate = {
     content: string;
     idempotency_key: string;
-    action?: ("ask" | "add_case_info") | null;
-    intent?: "ask" | "clarification_answer";
+    action?: string | null;
+    intent: "ask" | "followup_answer" | "clarification_answer";
+    in_reply_to_message_id?: string | null;
     clarification_id?: string | null;
     response_language: "thai" | "english";
     document_sources?: CaseNarrativeDocumentSource[];
@@ -40,69 +35,29 @@ export type ChatMessageRead = {
     role: "user" | "assistant";
     content: string;
     retrieval_context_id: string | null;
-    message_kind: "conversation" | "clarification_answer" | "followup_question";
+    message_kind: "conversation" | "followup_question" | "followup_answer" | "clarification_answer";
     analysis_result_id: string | null;
+    in_reply_to_message_id?: string | null;
     metadata_json: MessageMetadata;
     created_at: string;
-};
-
-export type ChatReportRead = {
-    report_id: string;
-    thread_id: string | null;
-    version_number: number;
-    idempotency_key: string;
-    source_snapshot_hash: string;
-    analysis_message_id?: string | null;
-    case_id?: string | null;
-    analysis_result_id?: string | null;
-    evidence_snapshot_id?: string | null;
-    source_reference_type: "legacy_chat" | "case_evidence";
-    retrieval_context_id: string | null;
-    prompt_version: string;
-    provider: string;
-    model: string;
-    decoding_settings: {
-        [key: string]: unknown;
-    };
-    persistence_status: "completed" | "failed";
-    validation_status: "validated" | "failed";
-    report: StructuredReport | null;
-    validation_errors: string[];
-    failure_code: string | null;
-    failure_message: string | null;
-    created_at: string;
-    finished_at: string | null;
-    latency_ms: number | null;
-    input_tokens: number | null;
-    output_tokens: number | null;
-    source_snapshot?: {
-        [key: string]: unknown;
-    } | null;
 };
 
 export type ChatRetryRequest = {
     content: string;
     idempotency_key: string;
-    action?: ("ask" | "add_case_info") | null;
+    action?: string | null;
+    intent: "ask" | "followup_answer" | "clarification_answer";
+    in_reply_to_message_id?: string | null;
+    clarification_id?: string | null;
     response_language: "thai" | "english";
     document_sources?: CaseNarrativeDocumentSource[];
     request_ordinal: number;
     clarification_answer: boolean;
 };
 
-export type ChatRunRead = {
-    id: string;
-    thread_id: string;
-    request_message_id: string;
-    status: "queued" | "running" | "completed" | "failed";
-    error_code: string | null;
-    error_message: string | null;
-    created_at: string;
-    updated_at: string;
-};
-
 export type ChatThreadDetail = {
     id: string;
+    case_id?: string | null;
     user_id?: string | null;
     title: string;
     status: "idle" | "processing" | "awaiting_followup" | "answered" | "failed";
@@ -114,6 +69,7 @@ export type ChatThreadDetail = {
 
 export type ChatThreadRead = {
     id: string;
+    case_id?: string | null;
     user_id?: string | null;
     title: string;
     status: "idle" | "processing" | "awaiting_followup" | "answered" | "failed";
@@ -154,7 +110,6 @@ export type MessageMetadata = {
     };
     analysis_kind?: string;
     analysis_state_scope?: "canonical_case_overview" | "response_scoped";
-    canonical_case_state?: boolean;
     evidence_sha256?: string;
     source_message_ids?: string[];
     analysis_trace?: {

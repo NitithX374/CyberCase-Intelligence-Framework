@@ -18,6 +18,8 @@ function message(
     role: "user",
     content,
     retrieval_context_id: null,
+    message_kind: "conversation",
+    analysis_result_id: null,
     metadata_json: {
       evidence_kind: "initial_case_narrative",
       document_sources: documentSources,

@@ -55,24 +55,24 @@ class ChatOwnershipServiceTests(unittest.IsolatedAsyncioTestCase):
         guest_thread = ChatThread(id=uuid4(), title="Guest Thread", user_id=None)
 
         # User A accessing own thread -> OK
-        service._verify_thread_access(thread_a, user_a)
+        service.verify_thread_access(thread_a, user_a)
 
         # User B accessing User A thread -> 404
         with self.assertRaises(HTTPException) as exc:
-            service._verify_thread_access(thread_a, user_b)
+            service.verify_thread_access(thread_a, user_b)
         self.assertEqual(exc.exception.status_code, 404)
 
         # Guest accessing User A thread -> 404
         with self.assertRaises(HTTPException) as exc:
-            service._verify_thread_access(thread_a, None)
+            service.verify_thread_access(thread_a, None)
         self.assertEqual(exc.exception.status_code, 404)
 
         # Guest accessing Guest thread -> OK
-        service._verify_thread_access(guest_thread, None)
+        service.verify_thread_access(guest_thread, None)
 
         # User A accessing Guest thread -> 404 (strict scoping)
         with self.assertRaises(HTTPException) as exc:
-            service._verify_thread_access(guest_thread, user_a)
+            service.verify_thread_access(guest_thread, user_a)
         self.assertEqual(exc.exception.status_code, 404)
 
     async def test_chat_service_update_and_delete_ownership(self):
@@ -171,12 +171,7 @@ def test_api_chat_thread_ownership_routes(client, mock_db):
 
     # Scenario 3: User A gets their own thread -> 200
     fastapi_app.dependency_overrides[get_optional_user] = lambda: user_a
-    with patch(
-        "app.services.chat.chatService.findRetryRequest",
-        new_callable=AsyncMock,
-    ) as mock_retry:
-        mock_retry.return_value = None
-        res = client.get(f"/api/v1/chats/{thread_a.id}")
-        assert res.status_code == 200
-        assert res.json()["title"] == "Thread A"
-        assert res.json()["user_id"] == str(user_a.id)
+    res = client.get(f"/api/v1/chats/{thread_a.id}")
+    assert res.status_code == 200
+    assert res.json()["title"] == "Thread A"
+    assert res.json()["user_id"] == str(user_a.id)

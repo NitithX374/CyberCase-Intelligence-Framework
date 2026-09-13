@@ -99,8 +99,6 @@ def _extract_llm_json(raw: str) -> dict[str, object]:
     ]
 
 
-extractLlmText = _extract_llm_text
-extractLlmJson = _extract_llm_json
 from app.services.followup.contracts import (
     GapAnalysis,
     GapAnalysisResult,
@@ -206,23 +204,12 @@ def normalizeQuestion(question: str) -> str:
     return " ".join(normalized.strip().split())
 
 
-# Backward compatibility aliases
-_coerce_gap_analysis_result = coerceGapAnalysisResult
-_normalize_gap_analysis_semantics = normalizeGapAnalysisSemantics
-_gap_reason_code = resolveGapReasonCode
-_coerce_policy_result = coercePolicyResult
-_safe_token_count = countTokensSafely
-_followup_failure_code = resolveFollowupFailureCode
-_normalized_question = normalizeQuestion
-
 __all__ = [
     "_extract_llm_json",
     "_extract_llm_text",
     "coerceGapAnalysisResult",
     "coercePolicyResult",
     "countTokensSafely",
-    "extractLlmJson",
-    "extractLlmText",
     "normalizeGapAnalysisSemantics",
     "normalizeQuestion",
     "resolveFollowupFailureCode",

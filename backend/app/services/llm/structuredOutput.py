@@ -167,16 +167,9 @@ def _require_all_object_properties(value: object) -> None:
     value["required"] = list(properties.keys())
 
 
-anthropicJsonSchema = anthropic_json_schema
-structuredOutputRequestOptions = structured_output_request_options
-structuredOutputSchema = structured_output_schema
-
 __all__ = [
     "StructuredOutputFeature",
-    "anthropicJsonSchema",
     "anthropic_json_schema",
-    "structuredOutputRequestOptions",
-    "structuredOutputSchema",
     "structured_output_request_options",
     "structured_output_schema",
 ]

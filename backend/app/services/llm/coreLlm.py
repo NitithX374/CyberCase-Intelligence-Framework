@@ -82,12 +82,9 @@ def resolve_core_llm_target(
     )
 
 
-resolveCoreLlmTarget = resolve_core_llm_target
-
 __all__ = [
     "CoreLlmConfigurationError",
     "CoreLlmProvider",
     "CoreLlmTarget",
-    "resolveCoreLlmTarget",
     "resolve_core_llm_target",
 ]

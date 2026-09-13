@@ -25,16 +25,13 @@ from app.schemas.reports import (
 from app.services.auth.dependencies import get_current_user
 from app.services.chat import (
     CaseChatError,
-    ChatMessageService,
     ChatService,
     createCaseChatMessageAndRun,
 )
 from app.services.reports import (
     CaseReportService,
     ReportGenerationConflict,
-    ReportGenerationError,
     ReportNotFound,
-    ReportService,
     ReportServiceError,
 )
 from app.services.workflow import process_case_run
@@ -183,11 +180,11 @@ async def get_chat_run(
 ):
     chat_service = ChatService(db)
     await chat_service.get_thread(thread_id, user_id=user.id)
-    service = ChatMessageService(db)
+    service = ChatService(db)
     return await service.get_run(thread_id, run_id)
 
 
-def _report_http_exception(error: ReportGenerationError) -> HTTPException:
+def _report_http_exception(error: ReportServiceError) -> HTTPException:
     status_code = (
         status.HTTP_404_NOT_FOUND
         if "not found" in error.message.lower()

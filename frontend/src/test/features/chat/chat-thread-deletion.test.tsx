@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
 import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
 import { useChatThreadDeletion } from "@/features/chat/workspace/use-chat-thread-deletion";
-import { deferred, thread, tick } from "./chat-session-test-support";
+import { caseRecord, deferred, thread, tick } from "./chat-session-test-support";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -21,17 +21,11 @@ function renderDeletion(deleteThread: (id: string) => Promise<void>) {
     <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   const hook = renderHook(() => {
     const session = useChatThreadSelection({ cacheUpsertThread: upsert });
-    const [candidate, setCandidate] = useState<api.CaseRead | null>({
-      ...thread("a"),
-      chat_thread_id: "a",
-    });
+    const [candidate, setCandidate] = useState<api.CaseRead | null>(caseRecord("a"));
     const deletion = useChatThreadDeletion({
       session, deleteCandidate: candidate, setDeleteCandidate: setCandidate,
       deletingCaseId: null, activeView: "overview",
-      cases: [
-        { ...thread("a"), chat_thread_id: "a" },
-        { ...thread("b"), chat_thread_id: "b" },
-      ],
+      cases: [caseRecord("a"), caseRecord("b")],
       deleteCase: deleteThread, router,
     });
     return { session, deletion };

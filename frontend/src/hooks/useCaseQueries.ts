@@ -20,7 +20,6 @@ import {
   type CaseDocumentRead,
   type CaseEvidenceSnapshotRead,
   type EvidenceSourceRead,
-  type ChatThreadRead,
 } from "@/lib/api";
 import { chatQueryKeys } from "./useChatQueries";
 
@@ -78,22 +77,6 @@ export function useCaseWorkspaceQueries(
     retry: false,
   });
   return { documents, evidence, analysis, snapshot, clarifications };
-}
-
-/**
- * @deprecated Synthesizing CaseRead from ChatThreadRead violates Case-ownership architecture.
- * Deprecated as part of Pragmatic Lean hotfix separating Case Analysis from Chat Q&A.
- */
-export function caseFromChatThread(thread: ChatThreadRead): CaseRead {
-  return {
-    id: thread.id,
-    user_id: thread.user_id ?? null,
-    title: thread.title,
-    status: thread.status,
-    chat_thread_id: thread.id,
-    created_at: thread.created_at,
-    updated_at: thread.updated_at,
-  };
 }
 
 export function useCases() {

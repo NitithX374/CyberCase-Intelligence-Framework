@@ -99,6 +99,8 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
         role: "user",
         content: "Check this **user message** with `code`.",
         retrieval_context_id: null,
+        message_kind: "conversation",
+        analysis_result_id: null,
         metadata_json: {},
         created_at: "2026-07-29T12:00:00Z",
       },
@@ -109,6 +111,8 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
         role: "assistant",
         content: "Here is **assistant response** with `code`.",
         retrieval_context_id: null,
+        message_kind: "conversation",
+        analysis_result_id: null,
         metadata_json: {},
         created_at: "2026-07-29T12:00:05Z",
       },
@@ -147,6 +151,8 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
         role: "assistant",
         content: "Do you have authentication logs?",
         retrieval_context_id: null,
+        message_kind: "followup_question",
+        analysis_result_id: null,
         metadata_json: {
           chat_followup: {
             kind: "clarification",

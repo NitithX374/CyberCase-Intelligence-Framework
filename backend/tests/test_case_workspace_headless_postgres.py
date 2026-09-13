@@ -242,7 +242,7 @@ def test_case_analysis_followup_creates_thread_and_binds_question():
                 assert clarifications[0].state == "pending"
 
                 # Case E: Re-opening Chat after follow-up creation must NOT create duplicate follow-up questions
-                reopened_thread = await ChatService(db).ensureThreadForCase(case_id, user_id)
+                reopened_thread = await ChatService(db).ensure_thread_for_case(case_id, user_id)
                 assert reopened_thread.id == thread.id
                 messages_after_reopen = list((await db.scalars(
                     select(ChatMessage).where(ChatMessage.thread_id == thread.id).order_by(ChatMessage.ordinal)

@@ -16,9 +16,7 @@ import type { ChatWorkspaceLayoutProps } from "@/features/chat/workspace/chat-wo
 export function ChatWorkspaceLayout({
   activeCase,
   activeCaseId,
-  chatThreadId,
   activeView,
-  activeWorkspaceView,
   cases,
   casesLoading,
   casesError,
@@ -30,20 +28,19 @@ export function ChatWorkspaceLayout({
   input,
   visibleMessages,
   messages,
-  nativeDocuments,
-  nativeEvidence,
-  nativeAnalysisResult,
-  nativeEvidenceSnapshot,
-  nativeRun,
-  nativeRunStatus,
-  nativeClarifications,
-  clarificationSubmittingId = null,
-  nativeAnalysisLoading = false,
-  nativeAnalysisSubmitting = false,
-  nativeCaseDataLoading = false,
-  nativeSnapshotLoading = false,
-  nativeIsUploadingDocument = false,
-  nativeAdmittingExtractionId = null,
+  documents,
+  evidence,
+  analysisResult,
+  evidenceSnapshot,
+  run,
+  runStatus,
+  clarifications,
+  analysisLoading,
+  analysisSubmitting,
+  caseDataLoading,
+  snapshotLoading,
+  isUploadingDocument,
+  admittingExtractionId,
   deleteCandidate,
   onSelectCase,
   onNewCase,
@@ -60,9 +57,8 @@ export function ChatWorkspaceLayout({
   onRetryQuery,
   isChatOpen = true,
   onToggleChat,
-  onUploadNativeDocument,
-  onAdmitNativeExtraction,
-  onAnswerClarification,
+  onUploadDocument,
+  onAdmitExtraction,
 }: ChatWorkspaceLayoutProps) {
   const displayCaseTitle =
     !activeCase?.title
@@ -77,7 +73,6 @@ export function ChatWorkspaceLayout({
 
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-ink">
-      {/* 1. Left Sidebar Navigation */}
       <WorkspaceSidebar
         cases={cases}
         activeCaseId={activeCaseId}
@@ -91,7 +86,6 @@ export function ChatWorkspaceLayout({
         onViewChange={onViewChange}
       />
 
-      {/* 2. Middle Work Area (WorkspaceHeader on top, Document view scrollable below) */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceHeader
           activeCase={activeCase}
@@ -110,44 +104,37 @@ export function ChatWorkspaceLayout({
         />
 
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-canvas">
-          {activeWorkspaceView === "intake" ? (
+          {activeView === "intake" ? activeCaseId ? (
             <CaseIntakeView
-              caseKey={activeCaseId ?? "draft"}
-              threadId={chatThreadId}
-              threadStatus={threadStatus}
-              isSubmitting={nativeAnalysisSubmitting || phase === "querying" || phase === "analyzing"}
-              error={queryError ?? (nativeRun?.status === "failed" ? (nativeRun.error_message || "The case analysis failed.") : null)}
-              nativeCaseDataLoading={nativeCaseDataLoading}
+              caseId={activeCaseId}
+              isSubmitting={analysisSubmitting || phase === "querying" || phase === "analyzing"}
+              error={queryError ?? (run?.status === "failed" ? (run.error_message || "The case analysis failed.") : null)}
+              isCaseDataLoading={caseDataLoading}
               onSubmitCase={onSubmitCase}
-              messages={messages}
-              nativeCaseId={activeCaseId ?? undefined}
-              nativeDocuments={nativeDocuments ?? []}
-              nativeEvidence={nativeEvidence ?? []}
-              nativeAnalysisResult={nativeAnalysisResult}
-              nativeRun={nativeRun}
-              nativeIsUploadingDocument={nativeIsUploadingDocument}
-              nativeAdmittingExtractionId={nativeAdmittingExtractionId}
-              onUploadNativeDocument={onUploadNativeDocument}
-              onAdmitNativeExtraction={onAdmitNativeExtraction}
+              documents={documents}
+              evidence={evidence}
+              analysisResult={analysisResult}
+              run={run}
+              isUploadingDocument={isUploadingDocument}
+              admittingExtractionId={admittingExtractionId}
+              onUploadDocument={onUploadDocument}
+              onAdmitExtraction={onAdmitExtraction}
               onOpenOverview={() => onViewChange("overview")}
               onOpenChat={handleOpenChat}
               onOpenMaterials={() => onViewChange("materials")}
             />
-          ) : activeWorkspaceView === "overview" ? (
+          ) : null : activeView === "overview" ? (
             <CaseOverviewView
               threadId={activeCaseId}
               threadTitle={displayCaseTitle}
               threadStatus={threadStatus ?? "idle"}
-              messages={messages}
-              nativeAnalysisResult={nativeAnalysisResult}
-              nativeEvidenceSnapshot={nativeEvidenceSnapshot}
-              nativeRunStatus={nativeRunStatus}
-              nativeRun={nativeRun}
-              nativeClarifications={nativeClarifications}
-              clarificationSubmittingId={clarificationSubmittingId}
-              onAnswerClarification={onAnswerClarification}
-              nativeAnalysisLoading={nativeAnalysisLoading}
-              nativeSnapshotLoading={nativeSnapshotLoading}
+              analysisResult={analysisResult}
+              evidenceSnapshot={evidenceSnapshot}
+              runStatus={runStatus}
+              run={run}
+              clarifications={clarifications}
+              analysisLoading={analysisLoading}
+              snapshotLoading={snapshotLoading}
               onOpenChat={handleOpenChat}
               onOpenReport={() => onViewChange("report")}
               onOpenIntake={() => onViewChange("intake")}
@@ -156,34 +143,32 @@ export function ChatWorkspaceLayout({
               onNavigateToSource={onNavigateToSource}
               onRunAnalysis={() => onSubmitCase({ title: undefined, description: "" })}
             />
-          ) : activeWorkspaceView === "materials" ? (
+          ) : activeView === "materials" ? (
             <CaseMaterialsView
-              messages={messages}
-              nativeDocuments={nativeDocuments ?? []}
-              nativeEvidence={nativeEvidence ?? []}
-              isUploadingDocument={nativeIsUploadingDocument}
-              admittingExtractionId={nativeAdmittingExtractionId}
-              onUploadDocument={onUploadNativeDocument}
-              onAdmitExtraction={onAdmitNativeExtraction}
+              documents={documents}
+              evidence={evidence}
+              isUploading={isUploadingDocument}
+              admittingExtractionId={admittingExtractionId}
+              onUploadDocument={onUploadDocument}
+              onAdmitExtraction={onAdmitExtraction}
               onOpenChat={handleOpenChat}
               onOpenIntake={() => onViewChange("intake")}
             />
-          ) : activeWorkspaceView === "technical-context" ? (
+          ) : activeView === "technical-context" ? (
             <TechnicalContextView
-              messages={messages}
-              nativeAnalysisResult={nativeAnalysisResult}
-              nativeEvidenceSnapshot={nativeEvidenceSnapshot}
+              analysisResult={analysisResult}
+              evidenceSnapshot={evidenceSnapshot}
               onOpenIntake={() => onViewChange("intake")}
               onNavigateToSource={onNavigateToSource}
             />
           ) : (
             activeCaseId ? (
               <CaseReportView
-                key={`${activeCaseId}:${nativeAnalysisResult?.id ?? "empty"}`}
+                key={`${activeCaseId}:${analysisResult?.id ?? "empty"}`}
                 caseId={activeCaseId}
                 caseTitle={displayCaseTitle}
-                analysisResult={nativeAnalysisResult ?? null}
-                runStatus={nativeRunStatus ?? null}
+                analysisResult={analysisResult}
+                runStatus={runStatus}
                 onOpenChat={handleOpenChat}
                 onOpenOverview={() => onViewChange("overview")}
               />
@@ -201,9 +186,9 @@ export function ChatWorkspaceLayout({
         visibleMessages={visibleMessages}
         threadStatus={threadStatus}
         input={input}
-        hasAnalysisContext={nativeAnalysisResult?.status === "validated"}
-        leadResult={nativeAnalysisResult}
-        leadSnapshot={nativeEvidenceSnapshot}
+        hasAnalysisContext={analysisResult?.status === "validated"}
+        leadResult={analysisResult}
+        leadSnapshot={evidenceSnapshot}
         onViewChange={onViewChange}
         onInputChange={onInputChange}
         onSubmit={onSubmit}
@@ -225,7 +210,7 @@ export function ChatWorkspaceLayout({
             })
             : null
         }
-        onClose={onClearQueryError ?? (() => { })}
+        onClose={onClearQueryError}
         onRetry={onRetryQuery}
       />
     </div>

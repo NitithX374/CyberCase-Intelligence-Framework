@@ -36,7 +36,6 @@ describe("chat session selection", () => {
   it("loads a processing Case Chat without starting the retired ChatRun poll", async () => {
     const processing = thread("a", "processing");
     const reads = vi.spyOn(api, "getChatThread").mockResolvedValue(processing);
-    const runRead = vi.spyOn(api, "getChatRun");
     const { result, queryClient } = renderSession();
     await act(async () => { await result.current.session.selectThread("a"); });
     await tick();
@@ -44,7 +43,6 @@ describe("chat session selection", () => {
     expect(result.current.session.messages).toEqual(processing.messages);
     expect(queryClient.getQueryData(chatQueryKeys.detail("a"))).toEqual(processing);
     expect(reads).toHaveBeenCalledTimes(1);
-    expect(runRead).not.toHaveBeenCalled();
   });
 
   it("stops Case Chat selection on unmount and cancels the pending HTTP request", async () => {

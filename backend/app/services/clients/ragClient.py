@@ -80,14 +80,9 @@ def map_rag_response(response: QueryResponse) -> dict[str, object]:
     }
 
 
-mapRagResponse = map_rag_response
-requestRag = request_rag
-
 __all__ = [
     "RAG_HTTP_TIMEOUT_SECONDS",
     "RagCallFailure",
-    "mapRagResponse",
     "map_rag_response",
-    "requestRag",
     "request_rag",
 ]
