@@ -69,12 +69,7 @@ async def get_current_user(
     return user
 
 
-getCurrentUser = get_current_user
-getOptionalUser = get_optional_user
-
 __all__ = [
-    "getCurrentUser",
-    "getOptionalUser",
     "get_current_user",
     "get_optional_user",
 ]

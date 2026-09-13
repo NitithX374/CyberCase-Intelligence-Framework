@@ -1,7 +1,7 @@
 import type {
   MitreExplainedCard,
   TechnicalContextStatus,
-} from "@/lib/case-overview";
+} from "@/lib/case-overview-contracts";
 import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
 
 interface MitreExplainedSimplyProps {

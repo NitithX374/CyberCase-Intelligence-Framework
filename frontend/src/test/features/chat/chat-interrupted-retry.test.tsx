@@ -43,6 +43,8 @@ describe("Case Chat interrupted recovery", () => {
         content: "Historical narrative",
         idempotency_key: "legacy-key",
         action: null,
+        intent: "ask",
+        response_language: "english",
         request_ordinal: 1,
         clarification_answer: false,
         document_sources: [],

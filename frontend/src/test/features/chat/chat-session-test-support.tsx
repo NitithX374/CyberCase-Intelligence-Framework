@@ -9,13 +9,14 @@ import { useChatSubmission } from "@/features/chat/runs/useChatSubmission";
 export function message(threadId: string, ordinal: number, role: "user" | "assistant", content: string = role): PersistedChatMessage {
   return {
     id: `${threadId}-${ordinal}`, thread_id: threadId, ordinal, role, content,
+    message_kind: "conversation", analysis_result_id: null,
     metadata_json: {}, retrieval_context_id: null, created_at: "2026-09-05T00:00:00Z",
   };
 }
 
 export function thread(id = "a", status: ThreadStatus = "idle", messages: PersistedChatMessage[] = []): ChatThreadDetail {
   return {
-    id, title: "Saved case", status, messages,
+    id, title: "Saved case", status, messages, retry_request: null,
     created_at: "2026-09-05T00:00:00Z", updated_at: "2026-09-05T00:00:00Z",
   };
 }
@@ -26,6 +27,10 @@ export function caseRecord(id = "a", status: ThreadStatus = "idle"): CaseRead {
     title: "Saved case",
     status,
     chat_thread_id: id,
+    evidence_revision: 1,
+    processing_status: status === "processing" ? "running" : "idle",
+    has_pending_clarification: status === "awaiting_followup",
+    analysis_freshness: "current",
     created_at: "2026-09-05T00:00:00Z",
     updated_at: "2026-09-05T00:00:00Z",
   };

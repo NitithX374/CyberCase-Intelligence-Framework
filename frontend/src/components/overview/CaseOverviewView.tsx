@@ -1,18 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Icon } from "@/components/common/icons";
-import type { CaseAnalysisResultRead, CaseClarificationRead, CaseEvidenceSnapshotRead, CaseRunRead, PersistedChatMessage, ThreadStatus } from "@/lib/api";
-import { buildCaseOverview, type SourceMessageRef } from "@/lib/case-overview";
-import { buildNativeCaseOverview } from "@/lib/caseOverviewNative";
+import type { CaseAnalysisResultRead, CaseClarificationRead, CaseEvidenceSnapshotRead, CaseRunRead, ThreadStatus } from "@/lib/api";
+import type { SourceMessageRef } from "@/lib/case-overview-contracts";
+import { buildCaseOverview } from "@/lib/case-overview-builder";
 import { CaseOverviewHeader } from "./CaseOverviewHeader";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import { MitreExplainedSimply } from "./MitreExplainedSimply";
 import { OpenQuestionsSection } from "./OpenQuestionsSection";
-import { SourceEvidenceDrawer } from "./SourceEvidenceDrawer";
+import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
 import { OverviewStatusRail } from "./OverviewStatusRail";
 import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
 import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
+import { CaseOverviewState } from "./CaseOverviewState";
 
 export function OverviewSummarySection({ summary }: { summary: string }) {
   if (!summary) return null;
@@ -25,27 +25,23 @@ export function OverviewSummarySection({ summary }: { summary: string }) {
     </section>
   );
 }
-
 interface CaseOverviewViewProps {
   threadId: string | null;
   threadTitle: string;
   threadStatus: ThreadStatus;
-  messages: PersistedChatMessage[];
   onOpenChat: () => void;
   onOpenReport: () => void;
   onOpenIntake?: () => void;
   onOpenMaterials?: () => void;
   onOpenTechnicalContext?: () => void;
   onNavigateToSource?: (messageId: string) => void;
-  nativeAnalysisResult?: CaseAnalysisResultRead | null;
-  nativeEvidenceSnapshot?: CaseEvidenceSnapshotRead | null;
-  nativeRunStatus?: CaseRunRead["status"] | null;
-  nativeClarifications?: CaseClarificationRead[];
-  clarificationSubmittingId?: string | null;
-  onAnswerClarification?: (clarificationId: string, answer: string) => void;
-  nativeAnalysisLoading?: boolean;
-  nativeSnapshotLoading?: boolean;
-  nativeRun?: CaseRunRead | null;
+  analysisResult: CaseAnalysisResultRead | null;
+  evidenceSnapshot: CaseEvidenceSnapshotRead | null;
+  runStatus: CaseRunRead["status"] | null;
+  clarifications: CaseClarificationRead[];
+  analysisLoading: boolean;
+  snapshotLoading: boolean;
+  run: CaseRunRead | null;
   onRunAnalysis?: () => void;
 }
 
@@ -53,40 +49,35 @@ export function CaseOverviewView({
   threadId,
   threadTitle,
   threadStatus,
-  messages,
   onOpenChat,
   onOpenReport,
   onOpenIntake,
   onOpenMaterials,
   onOpenTechnicalContext,
   onNavigateToSource,
-  nativeAnalysisResult,
-  nativeEvidenceSnapshot,
-  nativeRunStatus,
-  nativeClarifications,
-  clarificationSubmittingId: _clarificationSubmittingId = null,
-  onAnswerClarification: _onAnswerClarification,
-  nativeAnalysisLoading = false,
-  nativeSnapshotLoading = false,
-  nativeRun,
+  analysisResult,
+  evidenceSnapshot,
+  runStatus,
+  clarifications,
+  analysisLoading,
+  snapshotLoading,
+  run,
   onRunAnalysis,
 }: CaseOverviewViewProps) {
-  const [activeSourcePopover, setActiveSourcePopover] = useState<{
+  const [activeSource, setActiveSource] = useState<{
     sourceRef: SourceMessageRef;
     anchorElement: HTMLElement;
     sourceKey: string;
     citationRole?: "supporting" | "conflicting";
-    analysisMessageId: string | null;
   } | null>(null);
-  const nativeMode = nativeAnalysisResult !== undefined || nativeEvidenceSnapshot !== undefined || nativeRunStatus !== undefined || nativeClarifications !== undefined;
-  const overview = useMemo(() => nativeMode
-    ? buildNativeCaseOverview(nativeAnalysisResult ?? null, nativeEvidenceSnapshot ?? null, nativeRunStatus ?? null)
-    : buildCaseOverview(messages, threadStatus),
-  [messages, nativeAnalysisResult, nativeEvidenceSnapshot, nativeMode, nativeRunStatus, threadStatus]);
+  const overview = useMemo(
+    () => buildCaseOverview(analysisResult, evidenceSnapshot, runStatus),
+    [analysisResult, evidenceSnapshot, runStatus],
+  );
 
-  if (!threadId || (!nativeMode && messages.length === 0)) {
+  if (!threadId) {
     return (
-      <OverviewState
+      <CaseOverviewState
         eyebrow="CASE OVERVIEW"
         title="No Case Material Yet"
         description="Add a case narrative or document in Intake to begin."
@@ -97,20 +88,20 @@ export function CaseOverviewView({
     );
   }
 
-  if (nativeMode && nativeAnalysisLoading && !nativeAnalysisResult) {
-    return <OverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and its evidence snapshot." actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} processing />;
+  if (analysisLoading && !analysisResult) {
+    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and its evidence snapshot." actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} processing />;
   }
 
-  if (nativeMode && nativeSnapshotLoading && nativeAnalysisResult) {
-    return <OverviewState title="Loading Case evidence…" description="Restoring the exact evidence snapshot used by this analysis." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenChat} processing />;
+  if (snapshotLoading && analysisResult) {
+    return <CaseOverviewState title="Loading Case evidence…" description="Restoring the exact evidence snapshot used by this analysis." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenChat} processing />;
   }
 
-  if (nativeMode && nativeRunStatus === "failed" && !nativeAnalysisResult) {
+  if (runStatus === "failed" && !analysisResult) {
     return (
-      <OverviewState
+      <CaseOverviewState
         eyebrow="CASE OVERVIEW"
         title="Analysis Failed"
-        description={nativeRun?.error_message || "The case analysis failed to complete. Return to Intake to verify the admitted material and retry."}
+        description={run?.error_message || "The case analysis failed to complete. Return to Intake to verify the admitted material and retry."}
         actionLabel="Open Intake"
         onAction={onOpenIntake ?? onOpenChat}
         actionIcon="intake"
@@ -118,12 +109,12 @@ export function CaseOverviewView({
     );
   }
 
-  const pendingClarification = nativeClarifications?.find((item) => item.state === "pending");
+  const pendingClarification = clarifications.find((item) => item.state === "pending");
   const isAwaitingFollowup = threadStatus === "awaiting_followup" || Boolean(pendingClarification);
   if (isAwaitingFollowup) {
     const question = pendingClarification?.question?.trim();
     return (
-      <OverviewState
+      <CaseOverviewState
         eyebrow={pendingClarification?.topic ? `CLARIFICATION NEEDED · ${pendingClarification.topic}` : "CLARIFICATION NEEDED"}
         title="Analysis Needs More Information"
         description={question ? `The case analysis requires additional details: "${question}" Please proceed to Chat to follow up.` : "The case analysis requires additional details to proceed. Please proceed to Chat to follow up."}
@@ -135,12 +126,12 @@ export function CaseOverviewView({
   }
 
   if (overview.unavailableReason) {
-    return <OverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the admitted Case material.`} actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} actionIcon="intake" />;
+    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the admitted Case material.`} actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} actionIcon="intake" />;
   }
 
   if (!overview.hasAnalysis && overview.isProcessing) {
     return (
-      <OverviewState
+      <CaseOverviewState
         title="Analyzing Case Material…"
         description="CyberCase is building the case summary, findings, and open questions from the submitted material."
         actionLabel="View Progress"
@@ -152,7 +143,7 @@ export function CaseOverviewView({
 
   if (!overview.hasAnalysis) {
     return (
-      <OverviewState
+      <CaseOverviewState
         eyebrow="CASE OVERVIEW"
         title="Analysis Required"
         description="This case has material but no completed case-level analysis yet. Return to Intake to run the analysis."
@@ -169,15 +160,15 @@ export function CaseOverviewView({
     sourceKey: string,
     citationRole?: "supporting" | "conflicting",
   ) => {
-    setActiveSourcePopover((current) =>
+    setActiveSource((current) =>
       current?.sourceKey === sourceKey
         ? null
-        : { sourceRef, anchorElement, sourceKey, citationRole, analysisMessageId: overview.analysisMessageId },
+        : { sourceRef, anchorElement, sourceKey, citationRole },
     );
   };
   const sourceNavigation = onNavigateToSource;
-  const isStale = nativeAnalysisResult?.freshness === "stale";
-  const analysisKey = nativeAnalysisResult?.id ?? overview.analysisMessageId;
+  const isStale = analysisResult?.freshness === "stale";
+  const analysisKey = analysisResult?.id ?? "case-analysis";
 
   return (
     <div
@@ -229,18 +220,17 @@ export function CaseOverviewView({
                 findings={overview.findings}
                 onNavigateToSource={sourceNavigation}
                 onSelectSource={handleSelectSource}
-                activeSourceKey={activeSourcePopover?.sourceKey ?? null}
+                activeSourceKey={activeSource?.sourceKey ?? null}
               />
             </div>
           </div>
 
           <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5 lg:border-l lg:border-line lg:pl-5">
             <OverviewStatusRail
-              messages={messages}
               overview={overview}
-              nativeAnalysisResult={nativeAnalysisResult}
-              nativeEvidenceSnapshot={nativeEvidenceSnapshot}
-              nativeRunStatus={nativeRunStatus}
+              result={analysisResult}
+              snapshot={evidenceSnapshot}
+              runStatus={runStatus}
             />
             <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
             <div className="order-5 min-w-0">
@@ -254,63 +244,15 @@ export function CaseOverviewView({
         </div>
       </div>
 
-      {activeSourcePopover && activeSourcePopover.analysisMessageId === overview.analysisMessageId && (
+      {activeSource && (
         <SourceEvidenceDrawer
-          sourceRef={activeSourcePopover.sourceRef}
-          anchorElement={activeSourcePopover.anchorElement}
-          onClose={() => setActiveSourcePopover(null)}
+          sourceRef={activeSource.sourceRef}
+          anchorElement={activeSource.anchorElement}
+          onClose={() => setActiveSource(null)}
           onNavigateToSource={sourceNavigation}
-          citationRole={activeSourcePopover.citationRole}
+          citationRole={activeSource.citationRole}
         />
       )}
-    </div>
-  );
-}
-
-interface OverviewStateProps {
-  eyebrow?: string;
-  title: string;
-  description: string;
-  actionLabel: string;
-  onAction: () => void;
-  actionIcon?: "chat" | "intake";
-  processing?: boolean;
-}
-
-function OverviewState({
-  eyebrow,
-  title,
-  description,
-  actionLabel,
-  onAction,
-  actionIcon,
-  processing,
-}: OverviewStateProps) {
-  return (
-    <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-6 text-center sm:p-10">
-      <div className="workspace-card max-w-md space-y-3 p-8">
-        {processing ? (
-          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-evidence/10 text-evidence">
-            <span className="h-2.5 w-2.5 rounded-full bg-evidence motion-safe:animate-ping motion-reduce:animate-none" />
-          </div>
-        ) : eyebrow ? (
-          <p className="section-eyebrow">{eyebrow}</p>
-        ) : null}
-        <h2 className="text-base font-extrabold tracking-tight text-ink sm:text-lg">
-          {title}
-        </h2>
-        <p className="text-xs leading-relaxed text-ink-secondary">{description}</p>
-        <div className="pt-3">
-          <button
-            type="button"
-            onClick={onAction}
-            className="btn-primary inline-flex items-center gap-2 rounded-lg"
-          >
-            {actionIcon && <Icon name={actionIcon} className="h-3.5 w-3.5" />}
-            {actionLabel}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

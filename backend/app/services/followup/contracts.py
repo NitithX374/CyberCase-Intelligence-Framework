@@ -51,9 +51,6 @@ def build_gap_analysis_claim_transport(
     return [claim.model_dump(mode="json") for claim in transported]
 
 
-buildGapAnalysisClaimTransport = build_gap_analysis_claim_transport
-
-
 GapStatus = Literal[
     "NOT_PROVIDED",
     "EXPLICITLY_UNKNOWN",
@@ -376,5 +373,4 @@ __all__ = [
     "GapStatus",
     "answer_indicates_unavailable",
     "build_gap_analysis_claim_transport",
-    "buildGapAnalysisClaimTransport",
 ]

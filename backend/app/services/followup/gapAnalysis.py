@@ -13,10 +13,10 @@ import httpx
 
 from app.config import settings
 from app.services.followup.helpers import (
-    _coerce_gap_analysis_result,
+    coerceGapAnalysisResult,
     _extract_llm_json,
     _extract_llm_text,
-    _followup_failure_code,
+    resolveFollowupFailureCode,
 )
 from app.services.followup.metadata import (
     empty_gap_analysis_trace,
@@ -211,7 +211,7 @@ async def run_gap_analysis_stage(
             analysis_context=analysis_context,
             analysis_claims=analysis_claims,
         )
-        result = _coerce_gap_analysis_result(
+        result = coerceGapAnalysisResult(
             raw_result,
             elapsed_ms=round((time.perf_counter() - started) * 1000, 3),
         )
@@ -233,7 +233,7 @@ async def run_gap_analysis_stage(
         )
     except Exception as error:
         elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-        failure_code = _followup_failure_code(error)
+        failure_code = resolveFollowupFailureCode(error)
         logger.warning(
             "Chat gap analysis failed open source_run_id=%s failure_code=%s error=%s",
             source_run_id,
@@ -254,14 +254,10 @@ async def run_gap_analysis_stage(
         )
 
 
-runGapAnalysisStage = run_gap_analysis_stage
-
-
 __all__ = [
     "AnthropicGapAnalysis",
     "GapStageResult",
     "GAP_ANALYSIS_PROMPT_VERSION",
     "GAP_ANALYSIS_VERSION",
-    "runGapAnalysisStage",
     "run_gap_analysis_stage",
 ]

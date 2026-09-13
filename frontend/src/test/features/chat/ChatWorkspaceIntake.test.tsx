@@ -42,6 +42,9 @@ describe("ChatWorkspace Intake submission integration", () => {
       status: "idle",
       chat_thread_id: null,
       evidence_revision: 0,
+      processing_status: "idle",
+      has_pending_clarification: false,
+      analysis_freshness: "missing",
       created_at: "2026-08-24T06:00:00Z",
       updated_at: "2026-08-24T06:00:00Z",
     };
@@ -105,6 +108,9 @@ describe("ChatWorkspace Intake submission integration", () => {
       status: "idle",
       chat_thread_id: null,
       evidence_revision: 0,
+      processing_status: "idle",
+      has_pending_clarification: false,
+      analysis_freshness: "missing",
       created_at: "2026-08-24T06:00:00Z",
       updated_at: "2026-08-24T06:00:00Z",
     };

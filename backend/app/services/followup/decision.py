@@ -17,10 +17,10 @@ from app.services.followup.contracts import (
     FollowUpPolicy,
 )
 from app.services.followup.helpers import (
-    _coerce_policy_result as coerce_policy_result,
-    _followup_failure_code as followup_failure_code,
-    _gap_reason_code as gap_reason_code,
-    _normalized_question as normalized_question,
+    coercePolicyResult,
+    normalizeQuestion,
+    resolveFollowupFailureCode,
+    resolveGapReasonCode,
 )
 from app.services.followup.metadata import (
     empty_gap_analysis_trace,
@@ -230,11 +230,11 @@ async def evaluate_followup_outcome(
         else:
             raw_result = await active_policy.decide(**policy_kwargs)
         elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-        result = coerce_policy_result(raw_result, elapsed_ms=elapsed_ms)
+        result = coercePolicyResult(raw_result, elapsed_ms=elapsed_ms)
         decision = result.decision
     except Exception as exc:
         elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-        failure_code = followup_failure_code(exc)
+        failure_code = resolveFollowupFailureCode(exc)
         logger.warning(
             "Chat follow-up policy failed open source_run_id=%s failure_code=%s error=%s",
             source_run_id,
@@ -273,9 +273,9 @@ async def evaluate_followup_outcome(
             provider=result.provider,
             model=result.model,
         )
-    normalized_decision_question = normalized_question(decision.question)
+    normalized_decision_question = normalizeQuestion(decision.question)
     if any(
-        normalized_question(exchange.question) == normalized_decision_question
+        normalizeQuestion(exchange.question) == normalized_decision_question
         for exchange in clarification_exchanges
     ):
         return proceed_resolution(
@@ -293,7 +293,7 @@ async def evaluate_followup_outcome(
     return ask_resolution(
         selected_gap=candidate,
         question=decision.question,
-        reason_code=gap_reason_code(candidate),
+        reason_code=resolveGapReasonCode(candidate),
         stop_reason="ask_followup",
         decision_source="provider_question_realizer",
         policy_decision=decision.decision,
@@ -305,6 +305,4 @@ async def evaluate_followup_outcome(
     )
 
 
-evaluateFollowupOutcome = evaluate_followup_outcome
-
-__all__ = ["evaluateFollowupOutcome", "evaluate_followup_outcome"]
+__all__ = ["evaluate_followup_outcome"]

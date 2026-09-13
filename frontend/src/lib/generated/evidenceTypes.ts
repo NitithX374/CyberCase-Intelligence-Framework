@@ -3,7 +3,7 @@ export type CaseEvidenceCreate = {
     provenance_json?: {
         [key: string]: unknown;
     };
-    source_kind: "narrative" | "clarification_answer" | "explicit_chat_addition";
+    source_kind: "narrative" | "followup_answer" | "clarification_answer" | "explicit_chat_addition";
     source_metadata_json?: {
         [key: string]: unknown;
     };

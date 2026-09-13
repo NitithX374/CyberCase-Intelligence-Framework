@@ -12,6 +12,8 @@ const messages: PersistedChatMessage[] = [
     role: "user",
     content: "Investigate this PowerShell event.",
     retrieval_context_id: null,
+    message_kind: "conversation",
+    analysis_result_id: null,
     metadata_json: { evidence_kind: "initial_case_narrative" },
     created_at: "2026-08-23T00:00:00Z",
   },
@@ -22,6 +24,8 @@ const messages: PersistedChatMessage[] = [
     role: "assistant",
     content: "Which affected host produced this event?",
     retrieval_context_id: "retrieval-1",
+    message_kind: "followup_question",
+    analysis_result_id: null,
     metadata_json: {
       chat_followup: {
         kind: "clarification",

@@ -1,20 +1,14 @@
 import axios from "axios";
+import type {
+  AuthTokenResponse,
+  ChatThreadDetail,
+  DevLoginPayload,
+  UserProfile,
+} from "./apiTypes";
+import { normalizeChatThreadDetail } from "./chat-api-adapter";
+import type { ChatThreadDetail as ChatThreadDetailWire } from "./generated/chatTypes";
 
 axios.defaults.withCredentials = true;
-
-import type {
-  ChatMessageAccepted,
-  ChatMessageAction,
-  ChatCaseLinkRead,
-  CaseNarrativeDocumentSource,
-  ChatReportRead,
-  ChatRun,
-  ChatThreadDetail,
-  ChatThreadRead,
-  UserProfile,
-  AuthTokenResponse,
-  DevLoginPayload,
-} from "./apiTypes";
 
 const CHAT_POLL_REQUEST_TIMEOUT_MS = 15_000;
 
@@ -30,162 +24,25 @@ export function getApiBaseUrl(): string {
   }
 
   if (!url.startsWith("http")) {
-    url = "https://" + url;
+    url = `https://${url}`;
   }
 
   if (!url.endsWith("/api/v1") && !url.endsWith("/api/v1/")) {
-    url = url.endsWith("/") ? url + "api/v1" : url + "/api/v1";
+    url = url.endsWith("/") ? `${url}api/v1` : `${url}/api/v1`;
   }
 
   return url;
 }
 
-export const listChatThreads = async (
-  signal?: AbortSignal,
-): Promise<ChatThreadRead[]> => {
-  const response = await axios.get<ChatThreadRead[]>(`${getApiBaseUrl()}/chats`, {
-    signal,
-  });
-  return response.data;
-};
-
-export const createChatThread = async (
-  title: string = "New case",
-  signal?: AbortSignal,
-): Promise<ChatThreadRead> => {
-  const response = await axios.post<ChatThreadRead>(
-    `${getApiBaseUrl()}/chats`,
-    { title },
-    { signal },
-  );
-  return response.data;
-};
-
 export const getChatThread = async (
   threadId: string,
   signal?: AbortSignal,
 ): Promise<ChatThreadDetail> => {
-  const response = await axios.get<ChatThreadDetail>(
+  const response = await axios.get<ChatThreadDetailWire>(
     `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}`,
     { signal, timeout: CHAT_POLL_REQUEST_TIMEOUT_MS },
   );
-  return response.data;
-};
-
-export const getChatCaseLink = async (
-  threadId: string,
-  signal?: AbortSignal,
-): Promise<ChatCaseLinkRead> => {
-  const response = await axios.get<ChatCaseLinkRead>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/case-link`,
-    { signal },
-  );
-  return response.data;
-};
-
-export const updateChatThread = async (
-  threadId: string,
-  title: string,
-  signal?: AbortSignal,
-): Promise<ChatThreadRead> => {
-  const response = await axios.patch<ChatThreadRead>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}`,
-    { title },
-    { signal },
-  );
-  return response.data;
-};
-
-export const deleteChatThread = async (
-  threadId: string,
-  signal?: AbortSignal,
-): Promise<void> => {
-  await axios.delete(`${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}`, {
-    signal,
-  });
-};
-
-export const createChatMessage = async (
-  threadId: string,
-  content: string,
-  idempotencyKey: string,
-  signal?: AbortSignal,
-  action?: ChatMessageAction,
-  documentSources?: CaseNarrativeDocumentSource[],
-): Promise<ChatMessageAccepted> => {
-  const response = await axios.post<ChatMessageAccepted>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/messages`,
-    {
-      content,
-      idempotency_key: idempotencyKey,
-      ...(action ? { action } : {}),
-      ...(documentSources?.length
-        ? { document_sources: documentSources }
-        : {}),
-    },
-    { signal },
-  );
-  return response.data;
-};
-
-export const getChatRun = async (
-  threadId: string,
-  runId: string,
-  signal?: AbortSignal,
-): Promise<ChatRun> => {
-  const response = await axios.get<ChatRun>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/runs/${encodeURIComponent(runId)}`,
-    { signal, timeout: CHAT_POLL_REQUEST_TIMEOUT_MS },
-  );
-  return response.data;
-};
-
-export const listChatReports = async (
-  threadId: string,
-  signal?: AbortSignal,
-): Promise<ChatReportRead[]> => {
-  const response = await axios.get<ChatReportRead[]>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/reports`,
-    { signal },
-  );
-  return response.data;
-};
-
-export const getChatReport = async (
-  threadId: string,
-  reportId: string,
-  signal?: AbortSignal,
-): Promise<ChatReportRead> => {
-  const response = await axios.get<ChatReportRead>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/reports/${encodeURIComponent(reportId)}`,
-    { signal },
-  );
-  return response.data;
-};
-
-export const downloadChatReportPdf = async (
-  threadId: string,
-  reportId: string,
-  signal?: AbortSignal,
-): Promise<Blob> => {
-  const response = await axios.get<Blob>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/reports/${encodeURIComponent(reportId)}/pdf`,
-    { signal, responseType: "blob", timeout: 120_000 },
-  );
-  return response.data;
-};
-
-export const generateChatReport = async (
-  threadId: string,
-  idempotencyKey?: string,
-  signal?: AbortSignal,
-): Promise<ChatReportRead> => {
-  const response = await axios.post<ChatReportRead>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}/reports`,
-    idempotencyKey ? { idempotency_key: idempotencyKey } : {},
-    { signal, timeout: 120_000 },
-  );
-  return response.data;
+  return normalizeChatThreadDetail(response.data);
 };
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -233,16 +90,6 @@ export const getSession = async (
   return response.data;
 };
 
-export const getCurrentUser = async (
-  signal?: AbortSignal,
-): Promise<UserProfile> => {
-  const response = await axios.get<UserProfile>(
-    `${getApiBaseUrl()}/auth/me`,
-    { signal },
-  );
-  return response.data;
-};
-
 export const devLogin = async (
   payload: DevLoginPayload,
   signal?: AbortSignal,
@@ -266,11 +113,10 @@ export const logout = async (
   return response.data;
 };
 
-export const getOAuthLoginUrl = (provider: "google" = "google", redirect?: string): string => {
+export const getOAuthLoginUrl = (
+  provider: "google" = "google",
+  redirect?: string,
+): string => {
   const base = `${getApiBaseUrl()}/auth/login/${provider}`;
-  if (redirect) {
-    return `${base}?redirect=${encodeURIComponent(redirect)}`;
-  }
-  return base;
+  return redirect ? `${base}?redirect=${encodeURIComponent(redirect)}` : base;
 };
-

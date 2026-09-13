@@ -1,4 +1,4 @@
-import type { SourceMessageRef } from "@/lib/case-overview";
+import type { SourceMessageRef } from "@/lib/case-overview-contracts";
 import { HighlightedEvidenceText } from "./HighlightedEvidenceText";
 
 export function SourceEvidenceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {

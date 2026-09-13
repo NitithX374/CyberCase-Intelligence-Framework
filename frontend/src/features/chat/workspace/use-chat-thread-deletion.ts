@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import type { CaseRead } from "@/lib/api";
-import type { WorkspaceRouteView } from "@/components/common/types";
+import type { WorkspaceView } from "@/components/common/types";
 import { casePath } from "../routing/workspaceRoutes";
 import type { ChatSession } from "./use-chat-thread-selection";
 
@@ -10,7 +10,7 @@ interface UseChatThreadDeletionOptions {
   session: ChatSession;
   deleteCandidate: CaseRead | null;
   deletingCaseId: string | null;
-  activeView: WorkspaceRouteView;
+  activeView: WorkspaceView;
   activeCaseId?: string | null;
   isChatOpen?: boolean;
   cases: CaseRead[];

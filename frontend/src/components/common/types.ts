@@ -13,14 +13,6 @@ export type WorkspaceView =
   | "technical-context"
   | "report";
 
-export type WorkspaceRouteView = WorkspaceView;
-
-export function workspaceViewForRoute(
-  view: WorkspaceRouteView,
-): WorkspaceView {
-  return view;
-}
-
 export const workspaceViewLabels: Record<WorkspaceView, string> = {
   intake: "Intake",
   overview: "Overview",

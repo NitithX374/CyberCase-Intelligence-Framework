@@ -1,20 +1,20 @@
 import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
 import type { CaseFinding, CaseOverviewData, MitreExplainedCard, TechnicalContextStatus } from "@/lib/case-overview-contracts";
 import { asRecord, asString } from "@/lib/case-overview-parsing";
-import { parseNativeSnapshot, sourceRefs, type NativeSnapshotSource } from "./case-overview-native-source";
-import { parseNativeTrace, type NativeTraceAssociation, type NativeTraceClaim } from "./case-overview-native-trace";
+import { parseCaseSnapshot, sourceRefs, type CaseSnapshotSource } from "./case-overview-source";
+import { parseCaseTrace, type CaseTraceAssociation, type CaseTraceClaim } from "./case-overview-trace";
 
-export function buildNativeCaseOverview(
+export function buildCaseOverview(
   result: CaseAnalysisResultRead | null,
   snapshot: CaseEvidenceSnapshotRead | null,
   runStatus: string | null,
 ): CaseOverviewData {
   const isProcessing = runStatus === "queued" || runStatus === "running";
-  if (!result) return emptyNativeOverview(isProcessing);
-  if (!snapshot) return unavailableNativeOverview(isProcessing, "The saved Case evidence snapshot is not available yet.");
+  if (!result) return emptyCaseOverview(isProcessing);
+  if (!snapshot) return unavailableCaseOverview(isProcessing, "The saved Case evidence snapshot is not available yet.");
   try {
-    const sources = parseNativeSnapshot(snapshot);
-    const trace = parseNativeTrace(result, snapshot, sources);
+    const sources = parseCaseSnapshot(snapshot);
+    const trace = parseCaseTrace(result, snapshot, sources);
     const findings = trace.claims.map((claim) => toFinding(claim, trace.associations, sources));
     return {
       hasAnalysis: true,
@@ -24,16 +24,14 @@ export function buildNativeCaseOverview(
       gaps: trace.gaps,
       mitreContext: buildMitreCards(trace.associations, findings),
       technicalContextStatus: technicalContextStatus(trace.associations, trace.retrievalContextId, result),
-      analysisMessageId: null,
-      contractVersion: "case_native",
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "The saved Case analysis format is invalid.";
-    return unavailableNativeOverview(isProcessing, reason);
+    return unavailableCaseOverview(isProcessing, reason);
   }
 }
 
-function emptyNativeOverview(isProcessing: boolean): CaseOverviewData {
+function emptyCaseOverview(isProcessing: boolean): CaseOverviewData {
   return {
     hasAnalysis: false,
     isProcessing,
@@ -42,19 +40,17 @@ function emptyNativeOverview(isProcessing: boolean): CaseOverviewData {
     gaps: [],
     mitreContext: [],
     technicalContextStatus: "hidden",
-    analysisMessageId: null,
-    contractVersion: "case_native",
   };
 }
 
-export function unavailableNativeOverview(isProcessing: boolean, reason: string): CaseOverviewData {
-  return { ...emptyNativeOverview(isProcessing), unavailableReason: reason };
+function unavailableCaseOverview(isProcessing: boolean, reason: string): CaseOverviewData {
+  return { ...emptyCaseOverview(isProcessing), unavailableReason: reason };
 }
 
 function toFinding(
-  claim: NativeTraceClaim,
-  associations: NativeTraceAssociation[],
-  sources: NativeSnapshotSource[],
+  claim: CaseTraceClaim,
+  associations: CaseTraceAssociation[],
+  sources: CaseSnapshotSource[],
 ): CaseFinding {
   return {
     id: claim.claimId,
@@ -73,7 +69,7 @@ function toFinding(
   };
 }
 
-function buildMitreCards(associations: NativeTraceAssociation[], findings: CaseFinding[]): MitreExplainedCard[] {
+function buildMitreCards(associations: CaseTraceAssociation[], findings: CaseFinding[]): MitreExplainedCard[] {
   const claimText = new Map(findings.map((finding) => [finding.id, finding.text]));
   return associations.map((association) => ({
     techniqueId: association.techniqueId,
@@ -86,7 +82,7 @@ function buildMitreCards(associations: NativeTraceAssociation[], findings: CaseF
 }
 
 function technicalContextStatus(
-  associations: NativeTraceAssociation[],
+  associations: CaseTraceAssociation[],
   retrievalContextId: string | null,
   result: CaseAnalysisResultRead,
 ): TechnicalContextStatus {

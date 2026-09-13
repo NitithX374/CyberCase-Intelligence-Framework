@@ -18,7 +18,4 @@ def verify_password(password: str, stored: str) -> bool:
     return secrets.compare_digest(digest.hex(), expected)
 
 
-hashPassword = hash_password
-verifyPassword = verify_password
-
-__all__ = ["hashPassword", "hash_password", "verifyPassword", "verify_password"]
+__all__ = ["hash_password", "verify_password"]

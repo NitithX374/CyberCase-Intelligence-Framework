@@ -17,6 +17,8 @@ function message(
     role,
     content,
     retrieval_context_id: null,
+    message_kind: "conversation",
+    analysis_result_id: null,
     metadata_json: metadata,
     created_at: "2026-09-01T00:00:00Z",
   };

@@ -18,6 +18,8 @@ function makeUserMessage(
     role: "user",
     content,
     retrieval_context_id: null,
+    message_kind: "conversation",
+    analysis_result_id: null,
     metadata_json: metadata,
     created_at: "2026-08-24T06:00:00Z",
   };
@@ -35,6 +37,8 @@ function makeAssistantMessage(
     role: "assistant",
     content,
     retrieval_context_id: "rc-1",
+    message_kind: "conversation",
+    analysis_result_id: null,
     metadata_json: metadata,
     created_at: "2026-08-24T06:01:00Z",
   };

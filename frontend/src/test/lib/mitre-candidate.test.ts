@@ -11,6 +11,8 @@ function message(metadataOverrides: Record<string, unknown> = {}): PersistedChat
     role: "assistant",
     content: "Grounded analysis.",
     retrieval_context_id: "retrieval-1",
+    message_kind: "conversation",
+    analysis_result_id: null,
     created_at: "2026-08-20T00:00:00Z",
     metadata_json: {
       mitre_table: [

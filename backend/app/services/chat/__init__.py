@@ -1,13 +1,7 @@
 """Chat Thread and Message Domain Services."""
 
 from app.services.chat.chatService import (
-    ChatMessageService,
     ChatService,
-    INTERRUPTED_CHAT_RUN_CODE,
-    computeRequestFingerprint,
-    findRetryRequest,
-    historical_request_fingerprint,
-    read_retry_request,
 )
 from app.services.chat.clarification_chain import (
     ClarificationChain,
@@ -15,7 +9,6 @@ from app.services.chat.clarification_chain import (
 )
 
 __all__ = [
-    "ChatMessageService",
     "CaseChatError",
     "ChatService",
     "createCaseChatMessageAndRun",

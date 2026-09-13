@@ -1,6 +1,6 @@
 "use client";
 
-import type { SourceMessageRef } from "@/lib/case-overview";
+import type { SourceMessageRef } from "@/lib/case-overview-contracts";
 import { formatEvidenceCitationText } from "@/lib/evidence-citation";
 
 interface EvidenceCitationChipProps {

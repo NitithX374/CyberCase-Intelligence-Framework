@@ -19,7 +19,6 @@ from app.services.auth.dependencies import get_current_user
 from app.services.cases import CaseService
 from app.services.chat import (
     CaseChatError,
-    ChatMessageService,
     ChatService,
     createCaseChatMessageAndRun,
 )
@@ -91,7 +90,7 @@ async def get_case_chat_run(
 ):
     chat_service = ChatService(db)
     thread = await chat_service.ensure_thread_for_case(case_id, user_id=user.id)
-    service = ChatMessageService(db)
+    service = ChatService(db)
     return await service.get_run(thread.id, run_id)
 
 

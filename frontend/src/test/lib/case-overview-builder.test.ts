@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
-import { buildNativeCaseOverview } from "@/lib/caseOverviewNative";
+import { buildCaseOverview } from "@/lib/case-overview-builder";
 import { sha256Hex } from "@/lib/sha256";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
@@ -68,20 +68,18 @@ function fixture(): { result: CaseAnalysisResultRead; snapshot: CaseEvidenceSnap
   return { result, snapshot };
 }
 
-describe("native Case overview", () => {
+describe("Case overview projection", () => {
   it("renders claims from the persisted snapshot without message identifiers", () => {
     const { result, snapshot } = fixture();
-    const overview = buildNativeCaseOverview(result, snapshot, "completed");
+    const overview = buildCaseOverview(result, snapshot, "completed");
     const source = overview.findings[0].supportingSources[0];
-    expect(overview.contractVersion).toBe("case_native");
     expect(overview.incidentSummary).toContain("blue vehicle");
     expect(source).toMatchObject({ id: sourceId, ordinal: 1, isNativeEvidence: true, exactQuote: quote });
-    expect(overview.analysisMessageId).toBeNull();
   });
 
   it("fails closed when the persisted manifest hash is invalid", () => {
     const { result, snapshot } = fixture();
-    const overview = buildNativeCaseOverview(result, { ...snapshot, manifest_sha256: "0".repeat(64) }, "completed");
+    const overview = buildCaseOverview(result, { ...snapshot, manifest_sha256: "0".repeat(64) }, "completed");
     expect(overview.hasAnalysis).toBe(false);
     expect(overview.unavailableReason).toMatch(/manifest hash/i);
   });
@@ -153,7 +151,7 @@ describe("native Case overview", () => {
         }],
       },
     };
-    const overview = buildNativeCaseOverview(docResult, snapshot, "completed");
+    const overview = buildCaseOverview(docResult, snapshot, "completed");
     expect(overview.hasAnalysis).toBe(true);
     expect(overview.findings).toHaveLength(1);
     expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
@@ -217,7 +215,7 @@ describe("native Case overview", () => {
         }],
       },
     };
-    const overview = buildNativeCaseOverview(docResult, snapshot, "completed");
+    const overview = buildCaseOverview(docResult, snapshot, "completed");
     expect(overview.hasAnalysis).toBe(true);
     expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
   });

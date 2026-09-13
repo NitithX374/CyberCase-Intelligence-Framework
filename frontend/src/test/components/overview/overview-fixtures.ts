@@ -8,6 +8,8 @@ export function sourceMessage(id: string, ordinal: number, content: string): Per
     role: "user",
     content,
     retrieval_context_id: null,
+    message_kind: "conversation",
+    analysis_result_id: null,
     metadata_json: {
       evidence_kind: ordinal === 1 ? "initial_case_narrative" : "clarification_answer",
     },
@@ -23,6 +25,8 @@ export function analysisMessage(cyber = true): PersistedChatMessage {
     role: "assistant",
     content: "Rendered narrative is separate from the structured trace.",
     retrieval_context_id: cyber ? "context-1" : null,
+    message_kind: "conversation",
+    analysis_result_id: null,
     metadata_json: {
       analysis_kind: "grounded_main_analysis",
       analysis_state_scope: "canonical_case_overview",

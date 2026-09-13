@@ -4,26 +4,23 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
   downloadCaseReportPdf,
-  downloadChatReportPdf,
-  type ChatReportRead,
+  type CaseReport,
 } from "@/lib/api";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
 import { toUserFacingError } from "@/lib/user-facing-error";
 
 interface PersistedReportCardProps {
-  report: ChatReportRead;
-  threadId?: string;
-  caseId?: string;
-  threadTitle: string;
+  report: CaseReport;
+  caseId: string;
+  caseTitle: string;
   isDownloading: boolean;
   onDownloadPdf: () => void;
 }
 
 export function PersistedReportCard({
   report,
-  threadId,
   caseId,
-  threadTitle,
+  caseTitle,
   isDownloading,
   onDownloadPdf,
 }: PersistedReportCardProps) {
@@ -45,7 +42,7 @@ export function PersistedReportCard({
             </span>
           </div>
           <h2 className="mt-1 text-lg font-bold tracking-tight text-ink sm:text-xl">
-            {report.report?.title ?? threadTitle}
+            {report.report?.title ?? caseTitle}
           </h2>
           {report.source_reference_type === "case_evidence" && report.analysis_result_id && report.evidence_snapshot_id && (
             <p className="mt-2 max-w-2xl break-all text-[10px] leading-relaxed text-ink-muted">
@@ -70,10 +67,9 @@ export function PersistedReportCard({
         <ReportFailure report={report} />
       ) : (
         <ReportPdfViewer
-          threadId={threadId}
           caseId={caseId}
           reportId={report.report_id}
-          title={report.report.title ?? threadTitle}
+          title={report.report.title ?? caseTitle}
         />
       )}
     </article>
@@ -81,13 +77,11 @@ export function PersistedReportCard({
 }
 
 function ReportPdfViewer({
-  threadId,
   caseId,
   reportId,
   title,
 }: {
-  threadId?: string;
-  caseId?: string;
+  caseId: string;
   reportId: string;
   title: string;
 }) {
@@ -99,12 +93,8 @@ function ReportPdfViewer({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["report-pdf-blob", caseId ? "case" : "chat", caseId ?? threadId, reportId],
-    queryFn: () => {
-      if (caseId) return downloadCaseReportPdf(caseId, reportId);
-      if (threadId) return downloadChatReportPdf(threadId, reportId);
-      throw new Error("A report source scope is required.");
-    },
+    queryKey: ["case-report-pdf-blob", caseId, reportId],
+    queryFn: () => downloadCaseReportPdf(caseId, reportId),
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -204,7 +194,7 @@ function ReportPdfViewer({
   );
 }
 
-function ReportFailure({ report }: { report: ChatReportRead }) {
+function ReportFailure({ report }: { report: CaseReport }) {
   return (
     <div className="rounded-lg border border-line bg-surface p-5 text-xs space-y-3">
       <div className="flex items-center gap-2 text-accent">

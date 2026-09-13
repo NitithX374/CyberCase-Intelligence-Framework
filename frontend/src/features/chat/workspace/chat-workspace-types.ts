@@ -2,7 +2,6 @@ import type { FormEvent } from "react";
 
 import type {
   RunPhase,
-  WorkspaceRouteView,
   WorkspaceView,
 } from "@/components/common/types";
 import type {
@@ -33,9 +32,7 @@ export interface PendingChatSubmission {
 export interface ChatWorkspaceLayoutProps {
   activeCase: CaseRead | null;
   activeCaseId: string | null;
-  chatThreadId: string | null;
-  activeView: WorkspaceRouteView;
-  activeWorkspaceView: WorkspaceRouteView;
+  activeView: WorkspaceView;
   cases: CaseRead[];
   casesLoading: boolean;
   casesError: string | null;
@@ -47,20 +44,19 @@ export interface ChatWorkspaceLayoutProps {
   input: string;
   visibleMessages: PersistedChatMessage[];
   messages: PersistedChatMessage[];
-  nativeDocuments?: CaseDocumentRead[];
-  nativeEvidence?: EvidenceSourceRead[];
-  nativeAnalysisResult?: CaseAnalysisResultRead | null;
-  nativeEvidenceSnapshot?: CaseEvidenceSnapshotRead | null;
-  nativeRun?: CaseRunRead | null;
-  nativeRunStatus?: CaseRunRead["status"] | null;
-  nativeClarifications?: CaseClarificationRead[];
-  clarificationSubmittingId?: string | null;
-  nativeAnalysisLoading?: boolean;
-  nativeAnalysisSubmitting?: boolean;
-  nativeCaseDataLoading?: boolean;
-  nativeSnapshotLoading?: boolean;
-  nativeIsUploadingDocument?: boolean;
-  nativeAdmittingExtractionId?: string | null;
+  documents: CaseDocumentRead[];
+  evidence: EvidenceSourceRead[];
+  analysisResult: CaseAnalysisResultRead | null;
+  evidenceSnapshot: CaseEvidenceSnapshotRead | null;
+  run: CaseRunRead | null;
+  runStatus: CaseRunRead["status"] | null;
+  clarifications: CaseClarificationRead[];
+  analysisLoading: boolean;
+  analysisSubmitting: boolean;
+  caseDataLoading: boolean;
+  snapshotLoading: boolean;
+  isUploadingDocument: boolean;
+  admittingExtractionId: string | null;
   deleteCandidate: CaseRead | null;
   onSelectCase: (caseId: string) => void;
   onNewCase: () => void;
@@ -73,12 +69,11 @@ export interface ChatWorkspaceLayoutProps {
   onConfirmDelete: () => void;
   onNavigateToSource?: (messageId: string) => void;
   onSubmitCase: (data: CaseIntakeSubmission) => void;
-  onClearQueryError?: () => void;
+  onClearQueryError: () => void;
   onRetryQuery?: () => void;
   isChatOpen?: boolean;
   onToggleChat?: () => void;
-  onUploadNativeDocument?: (file: File) => void;
-  onAdmitNativeExtraction?: (documentId: string, extractionId: string) => void;
-  onAnswerClarification?: (clarificationId: string, answer: string) => void;
+  onUploadDocument: (file: File) => void;
+  onAdmitExtraction: (documentId: string, extractionId: string) => void;
 }
 

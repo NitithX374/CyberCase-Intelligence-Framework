@@ -84,8 +84,8 @@ export type CaseRunRead = {
     operation: "analysis" | "ask";
     snapshot_id: string;
     request_message_id: string | null;
-    context_analysis_result_id: string | null;
-    clarification_id: string | null;
+    context_analysis_result_id?: string | null;
+    clarification_id?: string | null;
     status: "queued" | "running" | "completed" | "failed";
     attempt_count: number;
     error_code: string | null;

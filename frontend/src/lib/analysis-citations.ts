@@ -4,9 +4,8 @@ import {
   asArray,
   asRecord,
   asStringArray,
-  mapSourceMessageIds,
-  parseEvidenceCitations,
 } from "@/lib/case-overview-parsing";
+import { mapSourceMessageIds, parseEvidenceCitations } from "@/lib/evidence-citation";
 
 export interface AnalysisSourceReference {
   role: "supporting" | "conflicting";
