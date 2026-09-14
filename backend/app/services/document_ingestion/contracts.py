@@ -134,11 +134,6 @@ class DocumentPage(BaseModel):
     full_text: str = ""
     layout_markdown: str | None = None
 
-    @computed_field
-    @property
-    def text_sha256(self) -> str:
-        return hashlib.sha256(self.merged_text.strip().encode("utf-8")).hexdigest()
-
 
 class IngestedDocument(BaseModel):
     document_id: str

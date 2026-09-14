@@ -33,8 +33,6 @@ export const SCHEMA_GROUPS = Object.freeze({
   ],
   evidenceTypes: [
     "CaseEvidenceCreate",
-    "CaseEvidenceSnapshotRead",
-    "EvidenceRevisionRead",
     "EvidenceSourceRead",
   ],
   runTypes: [

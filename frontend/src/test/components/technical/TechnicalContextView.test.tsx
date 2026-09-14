@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TechnicalContextView } from "@/components/technical/TechnicalContextView";
 import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
-import { sha256Hex } from "@/lib/sha256";
 import { mockNativeDialog } from "../overview/mock-native-dialog";
 
 mockNativeDialog();
@@ -22,7 +21,6 @@ function technicalProjection(): {
     revision: 1,
     source_id: sourceId,
     source_kind: "narrative",
-    text_sha256: sha256Hex(exactQuote),
   }];
   const snapshot: CaseEvidenceSnapshotRead = {
     id: snapshotId,
@@ -31,15 +29,13 @@ function technicalProjection(): {
     format_version: "case_evidence_snapshot_v1",
     manifest_json: manifest,
     input_text: exactQuote,
-    text_sha256: sha256Hex(exactQuote),
-    manifest_sha256: sha256Hex(JSON.stringify(manifest)),
     created_at: "2026-09-10T00:00:00Z",
   };
   const result: CaseAnalysisResultRead = {
     id: "44444444-4444-4444-8444-444444444444",
     case_id: caseId,
     run_id: "55555555-5555-4555-8555-555555555555",
-    snapshot_id: snapshotId,
+    evidence_revision: 1,
     schema_version: "case_analysis_result_v1",
     status: "validated",
     answer: exactQuote,
@@ -48,7 +44,7 @@ function technicalProjection(): {
       version: "case_analysis_trace_v1",
       validation_status: "validated",
       analysis_mode: "case_overview",
-      evidence_sha256: snapshot.text_sha256,
+      evidence_sha256: "test-hash",
       summary: exactQuote,
       claims: [{
         claim_id: "A-01",

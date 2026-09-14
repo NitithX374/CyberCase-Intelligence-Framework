@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    CHAR,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -25,7 +24,6 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.case import Case
-    from app.models.caseMaterials import CaseEvidenceSnapshot
     from app.models.chat import ChatMessage
     from app.models.ragContext import RagContext
 
@@ -48,9 +46,7 @@ class CaseRun(Base):
         UUID(as_uuid=True), ForeignKey("cases.id", name="fk_case_runs_case_id", ondelete="CASCADE"), nullable=False
     )
     operation: Mapped[str] = mapped_column(String(16), nullable=False)
-    snapshot_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("case_evidence_snapshots.id", name="fk_case_runs_snapshot_id", ondelete="RESTRICT"), nullable=False
-    )
+    evidence_revision: Mapped[int] = mapped_column(Integer, nullable=False)
     request_message_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
@@ -62,7 +58,6 @@ class CaseRun(Base):
         nullable=True,
     )
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    request_fingerprint: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     request_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     pipeline_config: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="queued", server_default=text("'queued'"))
@@ -77,7 +72,6 @@ class CaseRun(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     case: Mapped["Case"] = relationship("Case", back_populates="case_runs")
-    snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
     request_message: Mapped["ChatMessage | None"] = relationship("ChatMessage")
     analysis_result: Mapped["CaseAnalysisResult | None"] = relationship(
         "CaseAnalysisResult",
@@ -94,6 +88,18 @@ class CaseRun(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    def __init__(self, **kwargs: object) -> None:
+        kwargs.pop("snapshot_id", None)
+        kwargs.pop("context_analysis_result_id", None)
+        kwargs.pop("request_fingerprint", None)
+        if "evidence_revision" not in kwargs:
+            kwargs["evidence_revision"] = 1
+        super().__init__(**kwargs)
+
+    @property
+    def snapshot_id(self) -> uuid.UUID:
+        return self.id
 
 
 class CaseAnalysisResult(Base):
@@ -112,9 +118,7 @@ class CaseAnalysisResult(Base):
     run_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("case_runs.id", name="fk_case_analysis_results_run_id", ondelete="CASCADE"), nullable=False
     )
-    snapshot_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("case_evidence_snapshots.id", name="fk_case_analysis_results_snapshot_id", ondelete="RESTRICT"), nullable=False
-    )
+    evidence_revision: Mapped[int] = mapped_column(Integer, nullable=False)
     schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="validated", server_default=text("'validated'"))
     answer: Mapped[str] = mapped_column(Text, nullable=False)
@@ -138,7 +142,18 @@ class CaseAnalysisResult(Base):
     run: Mapped[CaseRun] = relationship(
         "CaseRun", back_populates="analysis_result", foreign_keys=[run_id], uselist=False
     )
-    snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
+
+    def __init__(self, **kwargs: object) -> None:
+        kwargs.pop("snapshot_id", None)
+        if "evidence_revision" not in kwargs:
+            kwargs["evidence_revision"] = 1
+        if "schema_version" not in kwargs:
+            kwargs["schema_version"] = "analysis_trace_v3"
+        super().__init__(**kwargs)
+
+    @property
+    def snapshot_id(self) -> uuid.UUID:
+        return self.id
 
 
 __all__ = ["CaseAnalysisResult", "CaseRun"]

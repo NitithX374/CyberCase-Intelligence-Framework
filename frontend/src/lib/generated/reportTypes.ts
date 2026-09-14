@@ -6,22 +6,13 @@ export type CaseReportCreate = {
 export type CaseReportRead = {
     report_id: string;
     id?: string | null;
-    thread_id?: string | null;
-    version_number: number;
-    idempotency_key: string;
-    source_snapshot_hash: string;
-    analysis_message_id?: string | null;
     case_id?: string | null;
     analysis_result_id?: string | null;
-    evidence_snapshot_id?: string | null;
+    version_number: number;
+    idempotency_key: string;
     source_reference_type: "legacy_chat" | "case_evidence";
     retrieval_context_id?: string | null;
     prompt_version: string;
-    provider: string;
-    model: string;
-    decoding_settings: {
-        [key: string]: unknown;
-    };
     persistence_status: "completed" | "failed";
     validation_status: "validated" | "failed";
     report: StructuredReport | null;
@@ -33,9 +24,6 @@ export type CaseReportRead = {
     latency_ms: number | null;
     input_tokens: number | null;
     output_tokens: number | null;
-    source_snapshot?: {
-        [key: string]: unknown;
-    } | null;
 };
 
 export type ReportClaim = {

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChatWorkspace } from "@/components/ChatWorkspace";
 import * as api from "@/lib/api";
 
-let mockPathname = "/chat/thread-test-123/intake";
+let mockPathname = "/case/case-test-123/intake";
 const mockPush = vi.fn((path: string) => {
   mockPathname = path;
 });
@@ -16,13 +16,17 @@ vi.mock("next/navigation", () => ({
     prefetch: vi.fn(),
   }),
   usePathname: () => mockPathname,
+  useParams: () => {
+    const segments = mockPathname.split("/").filter(Boolean);
+    return { caseId: segments[1] ?? "case-test-123" };
+  },
 }));
 
 describe("ChatWorkspace Intake submission integration", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    mockPathname = "/chat/thread-test-123/intake";
+    mockPathname = "/case/case-test-123/intake";
     mockPush.mockClear();
     queryClient = new QueryClient({
       defaultOptions: {
@@ -128,7 +132,7 @@ describe("ChatWorkspace Intake submission integration", () => {
       id: "run-101",
       case_id: caseId,
       operation: "analysis",
-      snapshot_id: "snapshot-101",
+      evidence_revision: 1,
       request_message_id: null,
       context_analysis_result_id: null,
       clarification_id: null,

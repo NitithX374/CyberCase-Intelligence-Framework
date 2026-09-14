@@ -5,28 +5,22 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
-from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage, ChatThread
 from app.schemas.caseClarifications import CaseClarificationAnswer
-from app.schemas.caseRuns import CaseAnalysisCreate
 from app.schemas.chat import ChatMessageCreate
 from app.schemas.messageMetadata import serialize_message_metadata
-from app.services.case_materials import CaseMaterialsService
 from app.services.followup.caseClarification import (
     CaseClarificationError,
-    find_answered_clarification,
     submit_clarification_answer,
 )
 from app.services.workflow.caseRunService import (
     CaseRunError,
-    case_run_fingerprint,
     case_run_fingerprint_matches,
-    enqueue_case_analysis,
     requeue_failed_case_run,
 )
 
@@ -47,14 +41,7 @@ async def lockCaseChat(
     case = await db.scalar(select(Case).where(Case.id == case_id).with_for_update())
     if case is None or case.user_id != user_id:
         raise CaseChatError("case_not_found", "Case not found", 404)
-    thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
-    if thread is None:
-        raise CaseChatError(
-            "chat_not_open",
-            "Open Chat from the Case before sending a message",
-            404,
-        )
-    return case, thread
+    return case, case.chat_thread
 
 
 async def findCaseRunByIdempotencyKey(
@@ -110,7 +97,7 @@ async def createCaseChatMessageAndRun(
 ) -> tuple[ChatMessage, CaseRun]:
     if not request.content.strip():
         raise CaseChatError("case_chat_content_empty", "Case Chat message is empty", 422)
-    case, thread = await lockCaseChat(db, case_id, user_id)
+    case, _ = await lockCaseChat(db, case_id, user_id)
 
     if request.intent in ("followup_answer", "clarification_answer"):
         target_id = request.in_reply_to_message_id or request.clarification_id
@@ -165,19 +152,24 @@ async def createCaseChatMessageAndRun(
             "Analyze the Case before asking a Chat question",
             status.HTTP_412_PRECONDITION_FAILED,
         )
-    snapshot = await db.get(CaseEvidenceSnapshot, context_result.snapshot_id)
-    if snapshot is None or snapshot.case_id != case.id:
-        raise CaseChatError("case_ask_context_invalid", "Latest Case analysis context is invalid")
     if not isinstance(context_result.pipeline_config, dict) or not context_result.pipeline_config.get("version"):
         raise CaseChatError("case_ask_context_invalid", "Latest Case analysis configuration is unavailable")
     analysis_freshness = (
         "current"
-        if snapshot.evidence_revision == case.evidence_revision
+        if context_result.evidence_revision == case.evidence_revision
         else "stale"
     )
+    next_ordinal = (
+        await db.scalar(
+            select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
+                ChatMessage.case_id == case.id
+            )
+        )
+        + 1
+    )
     message = ChatMessage(
-        thread_id=thread.id,
-        ordinal=thread.next_message_ordinal,
+        case_id=case.id,
+        ordinal=next_ordinal,
         role="user",
         content=request.content.strip(),
         message_kind="conversation",
@@ -187,11 +179,10 @@ async def createCaseChatMessageAndRun(
                 "analysis_kind": "question_request",
                 "analysis_state_scope": "response_scoped",
                 "context_analysis_result_id": str(context_result.id),
-                "evidence_snapshot_id": str(snapshot.id),
                 "analysis_freshness": analysis_freshness,
-                "snapshot_evidence_revision": snapshot.evidence_revision,
+                "evidence_revision": context_result.evidence_revision,
                 "case_evidence_revision": case.evidence_revision,
-                "has_newer_evidence": bool(case.evidence_revision > snapshot.evidence_revision),
+                "has_newer_evidence": bool(case.evidence_revision > context_result.evidence_revision),
                 "chat_action": {
                     "action": "ask",
                     "route": "case",
@@ -207,23 +198,18 @@ async def createCaseChatMessageAndRun(
     await db.flush()
     payload = {
         **buildChatRequestPayload(request, "ask"),
-        "context_snapshot_id": str(snapshot.id),
     }
     run = CaseRun(
         case_id=case.id,
         operation="ask",
-        snapshot_id=snapshot.id,
+        evidence_revision=case.evidence_revision,
         request_message_id=message.id,
         idempotency_key=request.idempotency_key,
-        request_fingerprint=case_run_fingerprint(
-            {"request": payload, "snapshot_id": str(snapshot.id), "pipeline": context_result.pipeline_config}
-        ),
         request_payload=payload,
         pipeline_config=deepcopy(context_result.pipeline_config),
     )
     db.add(run)
-    thread.next_message_ordinal += 1
-    thread.updated_at = datetime.now(timezone.utc)
+    case.updated_at = datetime.now(timezone.utc)
     await db.flush()
     return message, run
 

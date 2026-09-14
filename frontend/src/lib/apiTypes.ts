@@ -39,12 +39,28 @@ export type {
   CaseNarrativeDocumentPageSpan,
   DocumentExtractionRead,
 } from "./generated/caseTypes";
-export type {
+import type {
   CaseEvidenceCreate,
-  CaseEvidenceSnapshotRead,
-  EvidenceRevisionRead,
   EvidenceSourceRead,
 } from "./generated/evidenceTypes";
+export type {
+  CaseEvidenceCreate,
+  EvidenceSourceRead,
+};
+
+export type CaseEvidenceSnapshotRead = EvidenceSourceRead[] | {
+  id?: string;
+  case_id?: string;
+  evidence_revision?: number;
+  sources?: EvidenceSourceRead[];
+  manifest_json?: unknown[];
+  text_sha256?: string;
+  manifest_sha256?: string;
+  format_version?: string;
+  input_text?: string;
+  created_at?: string;
+};
+export type EvidenceRevisionRead = Record<string, unknown>;
 export type { CaseReportCreate } from "./generated/reportTypes";
 export type {
   CaseReport,

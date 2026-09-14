@@ -235,7 +235,6 @@ def _analysis_context(claimed: ClaimedCaseRun) -> dict[str, object]:
         "source_reference_type": "case_evidence_source",
         "_source_text_by_source_id": dict(claimed.source_text_by_id),
         "document_source_context": document_context,
-        "_evidence_sha256": claimed.text_sha256,
         "_analysis_pipeline": dict(claimed.pipeline_config),
     }
 
@@ -284,9 +283,7 @@ async def _attach_case_augmentation(
                         retrieval_context_id=rag_payload.retrieval_context_id,
                         case_id=claimed.case_id,
                         case_run_id=claimed.id,
-                        evidence_snapshot_id=claimed.snapshot_id,
                         query_text=query_str,
-                        query_sha256=hashlib.sha256(query_str.encode("utf-8")).hexdigest(),
                         context_text=str(rag_payload.context),
                         mitre_table=list(rag_payload.mitre_table),
                     )
@@ -344,7 +341,6 @@ async def _attach_case_followup(
         analysis_claims=claims,
         canonical_trace=output.trace,
         canonical_state_required=True,
-        evidence_sha256=claimed.text_sha256,
     )
     if resolution.question is None:
         return output

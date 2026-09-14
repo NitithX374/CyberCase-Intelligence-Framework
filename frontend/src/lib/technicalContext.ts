@@ -1,4 +1,4 @@
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
+import type { CaseAnalysisResultRead } from "@/lib/api";
 import { type SourceMessageRef } from "@/lib/case-overview-contracts";
 import { parseCaseSnapshot, sourceRefs, type CaseSnapshotSource } from "@/lib/case-overview-source";
 import { parseCaseTrace, type CaseTraceAssociation, type CaseTraceClaim } from "@/lib/case-overview-trace";
@@ -65,7 +65,7 @@ interface TechnicalAugmentation {
 
 export function buildTechnicalContext(
   result: CaseAnalysisResultRead | null,
-  snapshot: CaseEvidenceSnapshotRead | null,
+  snapshot: unknown | null,
 ): TechnicalContextData {
   if (!result || !snapshot) return emptyTechnicalContext("unavailable", "case_analysis_unavailable");
   let sources: CaseSnapshotSource[];

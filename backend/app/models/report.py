@@ -1,4 +1,4 @@
-"""Immutable report history scoped to a Case."""
+"""Report history scoped to a Case and bound to a CaseAnalysisResult."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    CHAR,
     CheckConstraint,
     DateTime,
     Float,
@@ -28,7 +27,6 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.case import Case
-    from app.models.caseMaterials import CaseEvidenceSnapshot
     from app.models.caseRun import CaseAnalysisResult
     from app.models.ragContext import RagContext
 
@@ -79,28 +77,11 @@ class CaseReport(Base):
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    source_snapshot_json: Mapped[dict[str, object]] = mapped_column(
-        JSONB,
-        nullable=False,
-    )
-    source_snapshot_hash: Mapped[str] = mapped_column(
-        CHAR(64),
-        nullable=False,
-    )
     analysis_result_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
             "case_analysis_results.id",
             name="fk_case_reports_analysis_result_id_case_analysis_results",
-            ondelete="RESTRICT",
-        ),
-        nullable=False,
-    )
-    evidence_snapshot_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "case_evidence_snapshots.id",
-            name="fk_case_reports_evidence_snapshot_id_case_evidence_snapshots",
             ondelete="RESTRICT",
         ),
         nullable=False,
@@ -115,14 +96,6 @@ class CaseReport(Base):
         nullable=True,
     )
     prompt_version: Mapped[str] = mapped_column(String(120), nullable=False)
-    provider: Mapped[str] = mapped_column(String(80), nullable=False)
-    model: Mapped[str] = mapped_column(String(160), nullable=False)
-    decoding_settings: Mapped[dict[str, object]] = mapped_column(
-        JSONB,
-        nullable=False,
-        default=dict,
-        server_default=text("'{}'::jsonb"),
-    )
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     validation_status: Mapped[str] = mapped_column(
         String(16),
@@ -156,6 +129,9 @@ class CaseReport(Base):
     def __init__(self, **kwargs: object) -> None:
         kwargs.pop("thread_id", None)
         kwargs.pop("analysis_message_id", None)
+        kwargs.pop("evidence_snapshot_id", None)
+        kwargs.pop("source_snapshot_hash", None)
+        kwargs.pop("source_snapshot_json", None)
         super().__init__(**kwargs)
 
     @property
@@ -166,9 +142,12 @@ class CaseReport(Base):
     def thread_id(self) -> uuid.UUID:
         return self.case_id
 
+    @property
+    def evidence_snapshot_id(self) -> uuid.UUID:
+        return self.id
+
     case: Mapped["Case"] = relationship("Case", back_populates="reports")
     analysis_result: Mapped["CaseAnalysisResult"] = relationship("CaseAnalysisResult")
-    evidence_snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
     retrieval_context: Mapped["RagContext | None"] = relationship("RagContext")
 
 

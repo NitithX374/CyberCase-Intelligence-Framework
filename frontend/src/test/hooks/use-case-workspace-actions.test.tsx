@@ -46,7 +46,7 @@ const acceptedRun: CaseRunRead = {
   id: "run-1",
   case_id: "case-1",
   operation: "analysis",
-  snapshot_id: "snapshot-1",
+  evidence_revision: 1,
   request_message_id: null,
   context_analysis_result_id: null,
   clarification_id: null,

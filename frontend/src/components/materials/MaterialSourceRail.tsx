@@ -49,8 +49,12 @@ export function MaterialSourceRail({
         ) : (
           <ul className="space-y-1">
             {documents.map((document) => {
-              const extraction = [...(document.extractions ?? [])].sort((left, right) => right.revision - left.revision)[0];
-              const admitted = extraction ? admittedExtractionIds.has(extraction.id) : false;
+              const extraction = [...(document.extractions ?? [])].sort(
+                (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+              )[0];
+              const admitted = extraction
+                ? admittedExtractionIds.has(extraction.id) || admittedExtractionIds.has(document.id)
+                : false;
               const selected = document.id === selectedDocumentId;
               return (
                 <li key={document.id}>

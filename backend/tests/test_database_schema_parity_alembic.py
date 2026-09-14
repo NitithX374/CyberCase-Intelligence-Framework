@@ -17,13 +17,10 @@ import app.models  # Ensure all models are registered on Base.metadata
 EXPECTED_CANONICAL_TABLES = {
     "cases",
     "users",
-    "chat_threads",
     "chat_messages",
     "case_documents",
     "document_extractions",
     "case_evidence_sources",
-    "case_evidence_revisions",
-    "case_evidence_snapshots",
     "case_runs",
     "case_analysis_results",
     "rag_contexts",
@@ -34,8 +31,6 @@ EXPECTED_CANONICAL_TABLES = {
 def _load_migration_modules():
     names = (
         "0001_canonical_case_system.py",
-        "0002_drop_chat_status_and_context_result.py",
-        "0003_case_run_request_no_action.py",
     )
     modules = []
     for index, name in enumerate(names, start=1):
@@ -85,6 +80,9 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     assert tables == EXPECTED_CANONICAL_TABLES, f"Tables mismatch: {tables ^ EXPECTED_CANONICAL_TABLES}"
                     assert "case_clarifications" not in tables
                     assert "case_state_versions" not in tables
+                    assert "chat_threads" not in tables
+                    assert "case_evidence_snapshots" not in tables
+                    assert "case_evidence_revisions" not in tables
 
                     # 1. Compare columns against Base.metadata
                     for table_name in EXPECTED_CANONICAL_TABLES:
@@ -111,12 +109,8 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     assert rag_run_fk is not None, "FK from rag_contexts to case_runs missing"
                     assert rag_run_fk.get("options", {}).get("ondelete") == "CASCADE"
 
-                    # case_runs.snapshot_id -> RESTRICT
+                    # case_runs.request_message_id -> chat_messages (NO ACTION)
                     cr_fks = inspector.get_foreign_keys("case_runs", schema=schema)
-                    snapshot_fk = next((fk for fk in cr_fks if fk["referred_table"] == "case_evidence_snapshots"), None)
-                    assert snapshot_fk is not None
-                    assert snapshot_fk.get("options", {}).get("ondelete") == "RESTRICT"
-
                     request_fk = next(
                         (fk for fk in cr_fks if fk["referred_table"] == "chat_messages"),
                         None,

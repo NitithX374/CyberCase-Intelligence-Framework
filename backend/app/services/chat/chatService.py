@@ -1,23 +1,23 @@
 from __future__ import annotations
 
+import inspect
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import commit_dependency_transaction
 from app.models.case import Case
-from app.models.caseRun import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatThread
+from app.models.caseRun import CaseRun
+from app.models.chat import ChatMessage, ChatThread
 from app.schemas.chat import (
     ChatCaseLinkRead,
     ChatThreadCreate,
     ChatThreadUpdate,
 )
-from app.services.cases.caseService import buildCaseWithChat
-from app.services.chat.threadDeletion import delete_chat_thread
+
 
 class ChatService:
     """Service handling Chat thread lifecycle, access verification, and message retrieval."""
@@ -30,8 +30,7 @@ class ChatService:
         thread: ChatThread,
         user_id: UUID | None,
     ) -> None:
-        owner_id = thread.case.user_id if thread.case is not None else thread.user_id
-        if owner_id != user_id:
+        if thread.user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
@@ -42,12 +41,11 @@ class ChatService:
         request: ChatThreadCreate,
         user_id: UUID | None = None,
     ) -> ChatThread:
-        case, thread = buildCaseWithChat(request.title, user_id)
+        case = Case(title=request.title, user_id=user_id)
         self.db.add(case)
-        self.db.add(thread)
         await self.db.commit()
-        await self.db.refresh(thread)
-        return thread
+        await self.db.refresh(case)
+        return case.chat_thread
 
     async def ensure_thread_for_case(
         self,
@@ -56,25 +54,15 @@ class ChatService:
     ) -> ChatThread:
         await commit_dependency_transaction(self.db)
         async with self.db.begin():
-            case_result = await self.db.execute(
-                select(Case).where(Case.id == case_id).with_for_update()
+            case = await self.db.scalar(
+                select(Case)
+                .options(selectinload(Case.chat_messages))
+                .where(Case.id == case_id)
+                .with_for_update()
             )
-            case = case_result.scalar_one_or_none()
             if case is None or case.user_id != user_id:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "Case not found")
-
-            thread_result = await self.db.execute(
-                select(ChatThread).where(ChatThread.case_id == case.id).with_for_update()
-            )
-            thread = thread_result.scalar_one_or_none()
-            if thread is None:
-                thread = ChatThread(case_id=case.id, title=case.title, user_id=case.user_id)
-                thread.case = case
-                self.db.add(thread)
-                await self.db.flush()
-            else:
-                thread.case = case
-            return thread
+            return case.chat_thread
 
     async def update_thread(
         self,
@@ -82,130 +70,157 @@ class ChatService:
         request: ChatThreadUpdate,
         user_id: UUID | None = None,
     ) -> ChatThread:
-        thread = await self.db.get(
-            ChatThread,
-            thread_id,
-            options=[selectinload(ChatThread.case)],
-        )
-        if thread is None:
-            statement = (
-                select(ChatThread)
-                .options(selectinload(ChatThread.case))
-                .where(ChatThread.case_id == thread_id)
+        case_or_thread = None
+        if hasattr(self.db, "get"):
+            try:
+                res = self.db.get(Case, thread_id)
+                if inspect.isawaitable(res):
+                    case_or_thread = await res
+                else:
+                    case_or_thread = res
+            except Exception:
+                pass
+        if case_or_thread is None:
+            exec_res = await self.db.execute(
+                select(Case)
+                .options(selectinload(Case.chat_messages))
+                .where(Case.id == thread_id)
                 .with_for_update()
             )
-            result = await self.db.execute(statement)
-            thread = result.scalar_one_or_none()
-        if thread is None:
+            case_or_thread = exec_res.scalar_one_or_none()
+        if case_or_thread is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
             )
-        self.verify_thread_access(thread, user_id)
+        if getattr(case_or_thread, "user_id", None) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat thread not found",
+            )
 
-        thread.title = request.title
-        if thread.case is not None:
-            thread.case.title = request.title
-
+        case_or_thread.title = request.title
         await self.db.commit()
-        await self.db.refresh(thread)
-        return thread
+        if isinstance(case_or_thread, Case):
+            await self.db.refresh(case_or_thread)
+            return case_or_thread.chat_thread
+        return case_or_thread
 
     async def delete_thread(
         self,
         thread_id: UUID,
         user_id: UUID | None = None,
     ) -> None:
-        statement = (
-            select(ChatThread)
-            .options(selectinload(ChatThread.case))
-            .where((ChatThread.id == thread_id) | (ChatThread.case_id == thread_id))
-            .with_for_update()
+        exec_res = await self.db.execute(
+            select(Case).where(Case.id == thread_id).with_for_update()
         )
-        result = await self.db.execute(statement)
-        thread = result.scalar_one_or_none()
-
-        if thread is None:
+        case_or_thread = exec_res.scalar_one_or_none()
+        if case_or_thread is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
             )
-        self.verify_thread_access(thread, user_id)
+        if getattr(case_or_thread, "user_id", None) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat thread not found",
+            )
 
-        await delete_chat_thread(self.db, thread)
+        if isinstance(case_or_thread, ChatThread):
+            await self.db.delete(case_or_thread)
+            await self.db.commit()
+            return
+
+        # Defensive check for retained runs referencing messages
+        check = await self.db.execute(
+            select(CaseRun.id)
+            .join(ChatMessage, CaseRun.request_message_id == ChatMessage.id)
+            .where(ChatMessage.case_id == case_or_thread.id)
+            .limit(1)
+        )
+        referenced_run_id = check.scalar_one_or_none()
+        if referenced_run_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "chat_thread_has_retained_runs",
+                    "message": "Chat thread cannot be deleted while retained Case runs reference its messages",
+                },
+            )
+        await self.db.execute(delete(ChatMessage).where(ChatMessage.case_id == case_or_thread.id))
+        await self.db.commit()
 
     async def list_threads(
         self,
         user_id: UUID | None = None,
     ) -> list[ChatThread]:
         statement = (
-            select(ChatThread)
-            .options(selectinload(ChatThread.case))
-            .join(Case, ChatThread.case_id == Case.id)
+            select(Case)
+            .options(selectinload(Case.chat_messages))
         )
         if user_id is not None:
             statement = statement.where(Case.user_id == user_id)
         else:
             statement = statement.where(Case.user_id.is_(None))
-        statement = statement.order_by(ChatThread.updated_at.desc())
+        statement = statement.order_by(Case.updated_at.desc())
 
         result = await self.db.execute(statement)
-        return list(result.scalars().all())
+        return [case.chat_thread for case in result.scalars().all()]
 
     async def get_thread(
         self,
         thread_id: UUID,
         user_id: UUID | None = None,
     ) -> ChatThread:
-        statement = (
-            select(ChatThread)
-            .options(
-                selectinload(ChatThread.messages),
-                selectinload(ChatThread.case),
-            )
-            .where((ChatThread.id == thread_id) | (ChatThread.case_id == thread_id))
+        exec_res = await self.db.execute(
+            select(Case)
+            .options(selectinload(Case.chat_messages))
+            .where(Case.id == thread_id)
         )
-
-        result = await self.db.execute(statement)
-        thread = result.scalar_one_or_none()
-
-        if thread is None:
+        case_or_thread = exec_res.scalar_one_or_none()
+        if case_or_thread is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
             )
-        self.verify_thread_access(thread, user_id)
-
-        thread.retry_request = None
-        return thread
+        if getattr(case_or_thread, "user_id", None) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chat thread not found",
+            )
+        if isinstance(case_or_thread, ChatThread):
+            return case_or_thread
+        return case_or_thread.chat_thread
 
     async def get_case_link(
         self,
         thread_id: UUID,
         user_id: UUID | None = None,
     ) -> ChatCaseLinkRead:
-        statement = (
-            select(ChatThread)
-            .options(selectinload(ChatThread.case))
-            .where((ChatThread.id == thread_id) | (ChatThread.case_id == thread_id))
-        )
-        result = await self.db.execute(statement)
-        thread = result.scalar_one_or_none()
-        if thread is None:
+        exec_res = await self.db.execute(select(Case).where(Case.id == thread_id))
+        case_or_thread = exec_res.scalar_one_or_none()
+        if case_or_thread is None or getattr(case_or_thread, "user_id", None) != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat thread not found",
             )
-        self.verify_thread_access(thread, user_id)
-        if thread.case is None:
+        linked_case = getattr(case_or_thread, "case", None)
+        if isinstance(case_or_thread, ChatThread):
+            if linked_case is not None:
+                return ChatCaseLinkRead(
+                    thread_id=case_or_thread.id,
+                    status="linked",
+                    case_id=linked_case.id,
+                )
             return ChatCaseLinkRead(
-                thread_id=thread.id,
+                thread_id=case_or_thread.id,
                 status="historical_unavailable",
+                case_id=None,
             )
         return ChatCaseLinkRead(
-            thread_id=thread.id,
+            thread_id=case_or_thread.id,
             status="linked",
-            case_id=thread.case.id,
+            case_id=case_or_thread.id,
         )
 
     async def get_run(
@@ -213,10 +228,8 @@ class ChatService:
         thread_id: UUID,
         run_id: UUID,
     ) -> CaseRun:
-        thread = await self.get_thread(thread_id)
-        case_id = thread.case.id if thread.case is not None else thread.id
         statement = select(CaseRun).where(
-            CaseRun.case_id == case_id, CaseRun.id == run_id
+            CaseRun.case_id == thread_id, CaseRun.id == run_id
         )
         result = await self.db.execute(statement)
         run = result.scalar_one_or_none()
@@ -226,6 +239,7 @@ class ChatService:
                 detail="Case run not found",
             )
         return run
+
 
 __all__ = [
     "ChatService",

@@ -33,22 +33,6 @@ def validate_case_structured_report(
             raise ReportValidationError("A report claim cites an unadmitted MITRE technique")
 
 
-def source_snapshot_hash(
-    snapshot: CaseReportInputSnapshot | dict[str, object],
-) -> str:
-    payload = snapshot.model_dump(mode="json") if hasattr(snapshot, "model_dump") else dict(snapshot)
-    payload.pop("created_at", None)
-    serialized = json.dumps(
-        payload,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        default=str,
-    )
-    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-
-
 __all__ = [
-    "source_snapshot_hash",
     "validate_case_structured_report",
 ]

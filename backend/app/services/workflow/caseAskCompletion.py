@@ -3,15 +3,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
-from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatMessage, ChatThread
+from app.models.chat import ChatMessage
 from app.schemas.messageMetadata import serialize_message_metadata
 from app.services.case_analysis.contracts import CaseAnalysisTrace
+from app.services.case_materials import assembleCaseEvidence
 from app.services.chat.caseAnswer import ANSWER_VERSION
 from app.services.workflow.caseRunCompletion import (
     CaseRunCompletionError,
@@ -39,11 +39,8 @@ async def completeCaseAsk(
             return False
         if run.operation != "ask" or run.request_message_id is None:
             raise CaseRunCompletionError("case_ask_run_invalid", "Case ASK run is incomplete")
-        thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
-        if thread is None:
-            raise CaseRunCompletionError("case_chat_missing", "Case Chat thread is missing")
         request_message = await db.get(ChatMessage, run.request_message_id)
-        if request_message is None or request_message.thread_id != thread.id or request_message.role != "user":
+        if request_message is None or request_message.case_id != case.id or request_message.role != "user":
             raise CaseRunCompletionError("case_ask_request_missing", "Case ASK request message is missing")
         if request_message.analysis_result_id is None:
             raise CaseRunCompletionError("case_ask_context_invalid", "Case ASK context result is missing from request message")
@@ -51,13 +48,11 @@ async def completeCaseAsk(
         if (
             context_result is None
             or context_result.case_id != case.id
-            or context_result.snapshot_id != run.snapshot_id
         ):
             raise CaseRunCompletionError("case_ask_context_invalid", "Case ASK context result is invalid")
-        snapshot = await db.get(CaseEvidenceSnapshot, run.snapshot_id)
-        if snapshot is None or snapshot.case_id != case.id:
-            raise CaseRunCompletionError("case_snapshot_missing", "Pinned Case evidence snapshot is missing")
-        trace = _validated_output(output, snapshot)
+
+        assembled = await assembleCaseEvidence(db, case_id=case.id, user_id=None)
+        trace = _validated_output(output, assembled)
         if trace.analysis_mode != "question_answer":
             raise CaseRunCompletionError("case_ask_trace_invalid", "Case ASK output is not response-scoped")
         completion = await db.execute(
@@ -82,12 +77,20 @@ async def completeCaseAsk(
             return False
         analysis_freshness = (
             "current"
-            if snapshot.evidence_revision == case.evidence_revision
+            if run.evidence_revision == case.evidence_revision
             else "stale"
         )
+        next_ordinal = (
+            await db.scalar(
+                select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
+                    ChatMessage.case_id == case.id
+                )
+            )
+            + 1
+        )
         message = ChatMessage(
-            thread_id=thread.id,
-            ordinal=thread.next_message_ordinal,
+            case_id=case.id,
+            ordinal=next_ordinal,
             role="assistant",
             content=output.answer.strip(),
             retrieval_context_id=trace.retrieval_context_id,
@@ -99,15 +102,13 @@ async def completeCaseAsk(
                     "analysis_kind": "question_answer",
                     "analysis_state_scope": "response_scoped",
                     "context_analysis_result_id": str(context_result.id),
-                    "evidence_snapshot_id": str(run.snapshot_id),
-                    "evidence_sha256": trace.evidence_sha256,
                     "evidence_source_ids": _trace_source_ids(trace),
                     "analysis_trace": trace.model_dump(mode="json"),
                     "answer_receipt": output.execution_receipt,
                     "analysis_freshness": analysis_freshness,
-                    "snapshot_evidence_revision": snapshot.evidence_revision,
+                    "evidence_revision": run.evidence_revision,
                     "case_evidence_revision": case.evidence_revision,
-                    "has_newer_evidence": bool(case.evidence_revision > snapshot.evidence_revision),
+                    "has_newer_evidence": bool(case.evidence_revision > run.evidence_revision),
                     "chat_action": {
                         "action": "ask",
                         "route": "case",
@@ -120,8 +121,7 @@ async def completeCaseAsk(
             ),
         )
         db.add(message)
-        thread.next_message_ordinal += 1
-        thread.updated_at = now
+        case.updated_at = now
         await db.flush()
     return True
 

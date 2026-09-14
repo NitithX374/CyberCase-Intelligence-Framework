@@ -8,7 +8,7 @@ const sampleResult: CaseAnalysisResultRead = {
   id: "analysis-result-1",
   case_id: "case-123",
   run_id: "run-123",
-  snapshot_id: "snapshot-123",
+  evidence_revision: 1,
   schema_version: "analysis_trace_v3",
   status: "validated",
   summary: "Initial compromise occurred via spearphishing attachment delivering malware.",

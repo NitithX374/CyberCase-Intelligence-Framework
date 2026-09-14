@@ -23,7 +23,7 @@ class CaseRunRead(BaseModel):
     id: UUID
     case_id: UUID
     operation: CaseRunOperation
-    snapshot_id: UUID
+    evidence_revision: int
     request_message_id: UUID | None
     context_analysis_result_id: UUID | None = None
     clarification_id: UUID | None = None
@@ -43,7 +43,7 @@ class CaseAnalysisResultRead(BaseModel):
     id: UUID
     case_id: UUID
     run_id: UUID
-    snapshot_id: UUID
+    evidence_revision: int
     schema_version: str
     status: Literal["validated", "legacy_unbound"]
     answer: str

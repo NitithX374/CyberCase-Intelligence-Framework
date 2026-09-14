@@ -8,7 +8,6 @@ import {
   createCase,
   deleteCase,
   getCaseAnalysis,
-  getCaseEvidenceSnapshot,
   listCaseClarifications,
   listCaseDocuments,
   listCaseEvidence,
@@ -18,7 +17,6 @@ import {
   type CaseAnalysisResultRead,
   type CaseClarificationRead,
   type CaseDocumentRead,
-  type CaseEvidenceSnapshotRead,
   type EvidenceSourceRead,
 } from "@/lib/api";
 import { chatQueryKeys } from "./useChatQueries";
@@ -30,7 +28,6 @@ export const caseQueryKeys = {
   documents: (caseId: string) => [...caseQueryKeys.case(caseId), "documents"] as const,
   evidence: (caseId: string) => [...caseQueryKeys.case(caseId), "evidence"] as const,
   analysis: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis"] as const,
-  snapshot: (caseId: string, snapshotId: string) => [...caseQueryKeys.case(caseId), "snapshots", snapshotId] as const,
   clarifications: (caseId: string) => [...caseQueryKeys.case(caseId), "clarifications"] as const,
   run: (caseId: string, runId: string) => [...caseQueryKeys.case(caseId), "runs", runId] as const,
   reports: (caseId: string) => [...caseQueryKeys.case(caseId), "reports"] as const,
@@ -42,41 +39,48 @@ function sortCases(cases: CaseRead[]): CaseRead[] {
   );
 }
 
-export function useCaseWorkspaceQueries(
-  caseId: string | null,
-) {
-  const enabled = caseId !== null;
-  const documents = useQuery<CaseDocumentRead[]>({
+export function useCaseDocuments(caseId: string | null) {
+  return useQuery<CaseDocumentRead[]>({
     queryKey: caseQueryKeys.documents(caseId ?? "none"),
     queryFn: ({ signal }) => listCaseDocuments(caseId!, signal),
-    enabled,
+    enabled: caseId !== null,
     retry: false,
   });
-  const evidence = useQuery<EvidenceSourceRead[]>({
+}
+
+export function useCaseEvidence(caseId: string | null) {
+  return useQuery<EvidenceSourceRead[]>({
     queryKey: caseQueryKeys.evidence(caseId ?? "none"),
     queryFn: ({ signal }) => listCaseEvidence(caseId!, signal),
-    enabled,
+    enabled: caseId !== null,
     retry: false,
   });
-  const analysis = useQuery<CaseAnalysisResultRead | null>({
+}
+
+export function useCaseAnalysis(caseId: string | null) {
+  return useQuery<CaseAnalysisResultRead | null>({
     queryKey: caseQueryKeys.analysis(caseId ?? "none"),
     queryFn: ({ signal }) => getCaseAnalysis(caseId!, signal),
-    enabled,
+    enabled: caseId !== null,
     retry: false,
   });
-  const snapshot = useQuery<CaseEvidenceSnapshotRead>({
-    queryKey: caseQueryKeys.snapshot(caseId ?? "none", analysis.data?.snapshot_id ?? "none"),
-    queryFn: ({ signal }) => getCaseEvidenceSnapshot(caseId!, analysis.data!.snapshot_id, signal),
-    enabled: enabled && analysis.data?.snapshot_id !== undefined,
-    retry: false,
-  });
-  const clarifications = useQuery<CaseClarificationRead[]>({
+}
+
+export function useCaseClarifications(caseId: string | null) {
+  return useQuery<CaseClarificationRead[]>({
     queryKey: caseQueryKeys.clarifications(caseId ?? "none"),
     queryFn: ({ signal }) => listCaseClarifications(caseId!, signal),
-    enabled,
+    enabled: caseId !== null,
     retry: false,
   });
-  return { documents, evidence, analysis, snapshot, clarifications };
+}
+
+export function useCaseWorkspaceQueries(caseId: string | null) {
+  const documents = useCaseDocuments(caseId);
+  const evidence = useCaseEvidence(caseId);
+  const analysis = useCaseAnalysis(caseId);
+  const clarifications = useCaseClarifications(caseId);
+  return { documents, evidence, analysis, clarifications };
 }
 
 export function useCases() {
@@ -115,20 +119,15 @@ export function useCaseMutations() {
   });
   const deleteMutation = useMutation({
     mutationFn: (caseId: string) => deleteCase(caseId),
-    onSuccess: (_value, caseId) => {
+    onSuccess: (_deleted, deletedCaseId) => {
       queryClient.setQueryData<CaseRead[]>(
         caseQueryKeys.cases(),
-        (current) => (current ?? []).filter((item) => item.id !== caseId),
+        (current) => (current ?? []).filter((item) => item.id !== deletedCaseId),
       );
-      queryClient.removeQueries({ queryKey: caseQueryKeys.case(caseId) });
-      queryClient.removeQueries({ queryKey: chatQueryKeys.thread(caseId) });
+      queryClient.removeQueries({ queryKey: caseQueryKeys.case(deletedCaseId) });
+      queryClient.removeQueries({ queryKey: chatQueryKeys.thread(deletedCaseId) });
     },
   });
 
-  return {
-    upsertCase,
-    createMutation,
-    updateMutation,
-    deleteMutation,
-  };
+  return { createMutation, updateMutation, deleteMutation, upsertCase };
 }

@@ -9,17 +9,12 @@ import * as api from "@/lib/api";
 function sampleReport(): CaseReport {
   return {
     report_id: "report-1",
-    thread_id: "thread-1",
+    case_id: "case-1",
     version_number: 1,
     idempotency_key: "report-request-1",
-    source_snapshot_hash: "snapshot-1",
-    analysis_message_id: "analysis-message-1",
+    analysis_result_id: "analysis-result-1",
     source_reference_type: "case_evidence",
-    retrieval_context_id: "retrieval-1",
     prompt_version: "deterministic_raw_evidence_report_v1",
-    provider: "deterministic",
-    model: "template",
-    decoding_settings: {},
     persistence_status: "completed",
     validation_status: "validated",
     report: {

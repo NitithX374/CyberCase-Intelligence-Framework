@@ -35,20 +35,28 @@ export function caseRecord(id = "a", status: ThreadStatus = "idle"): CaseRead {
     updated_at: "2026-09-05T00:00:00Z",
   };
 }
-
-export function caseAccepted(
+export function caseAccepted(
   request: PersistedChatMessage,
   operation: "analysis" | "ask" = "analysis",
 ): CaseChatMessageAccepted {
   return {
     message: request,
     run: {
-      id: "run-1", case_id: request.thread_id, operation,
-      snapshot_id: "snapshot-1", request_message_id: request.id,
+      id: "run-1",
+      case_id: request.thread_id,
+      operation,
+      evidence_revision: 1,
+      request_message_id: request.id,
       context_analysis_result_id: operation === "ask" ? "result-1" : null,
-      clarification_id: null, status: "running", attempt_count: 0,
-      error_code: null, error_message: null, created_at: request.created_at,
-      started_at: null, finished_at: null, updated_at: request.created_at,
+      clarification_id: null,
+      status: "running",
+      attempt_count: 0,
+      error_code: null,
+      error_message: null,
+      created_at: request.created_at,
+      started_at: null,
+      finished_at: null,
+      updated_at: request.created_at,
     },
   };
 }

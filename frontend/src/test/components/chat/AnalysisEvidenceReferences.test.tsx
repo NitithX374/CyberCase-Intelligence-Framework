@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { PersistedChatMessage } from "@/lib/api";
 import { AnalysisEvidenceReferences } from "@/components/conversation/AnalysisEvidenceReferences";
-import { sha256Hex } from "@/lib/sha256";
 
 function message(
   id: string,
@@ -75,7 +74,7 @@ describe("AnalysisEvidenceReferences", () => {
           page_number: 4,
           start_offset: 0,
           end_offset: supportingContent.length,
-          text_sha256: sha256Hex(supportingContent),
+          text_sha256: "hash",
         }],
       }],
     });
@@ -88,7 +87,7 @@ describe("AnalysisEvidenceReferences", () => {
           page_number: 5,
           start_offset: 0,
           end_offset: conflictingContent.length,
-          text_sha256: sha256Hex(conflictingContent),
+          text_sha256: "hash",
         }],
       }],
     });

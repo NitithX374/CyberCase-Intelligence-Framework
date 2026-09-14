@@ -184,3 +184,4 @@ experiments/ctinexus_extraction_benchmark/**/__pycache__/
 experiments/ctinexus_extraction_benchmark/**/*.pyc
 experiments/representation_analysis/outputs/
 
+.codex-remote-attachments/

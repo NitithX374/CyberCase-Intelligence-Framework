@@ -10,9 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.models.case import Case
 from app.models.caseMaterials import (
     CaseDocument,
-    CaseEvidenceSnapshot,
     DocumentExtraction,
-    EvidenceRevision,
     EvidenceSource,
 )
 from app.models.report import CaseReport
@@ -49,16 +47,8 @@ def serializeCase(case: Case) -> CaseRead:
         "answered" if case.latest_analysis_result is not None else
         "idle"
     )
-    freshness = "missing"
-    if (
-        case.latest_analysis_result is not None
-        and case.latest_analysis_result.snapshot is not None
-    ):
-        freshness = (
-            "current"
-            if case.latest_analysis_result.snapshot.evidence_revision == case.evidence_revision
-            else "stale"
-        )
+    from app.services.workflow.caseRunService import analysis_freshness
+    freshness = analysis_freshness(case, case.latest_analysis_result)
     return CaseRead(
         id=case.id,
         user_id=case.user_id,
@@ -83,12 +73,7 @@ def buildCaseWithChat(
 ) -> tuple[Case, ChatThread]:
     case_id = uuid4()
     case = Case(id=case_id, title=title, user_id=user_id)
-    thread = ChatThread(
-        id=uuid4(),
-        case_id=case_id,
-    )
-    case.chat_thread = thread
-    return case, thread
+    return case, case.chat_thread
 
 
 class CaseService:
@@ -115,9 +100,9 @@ class CaseService:
 
     async def listCases(self, user_id: UUID | None = None) -> list[CaseRead]:
         statement = select(Case).options(
-            selectinload(Case.chat_thread).selectinload(ChatThread.messages),
+            selectinload(Case.chat_messages),
             selectinload(Case.case_runs),
-            selectinload(Case.latest_analysis_result).selectinload(CaseAnalysisResult.snapshot),
+            selectinload(Case.latest_analysis_result),
         ).order_by(Case.updated_at.desc())
         if user_id is None:
             statement = statement.where(Case.user_id.is_(None))
@@ -144,8 +129,6 @@ class CaseService:
         case = await self._loadCase(case_id, lock=True)
         self._verifyCaseAccess(case, user_id)
         case.title = request.title
-        if case.chat_thread is not None:
-            case.chat_thread.title = request.title
         await self.db.commit()
         return await self.getCase(case_id, user_id=user_id)
 
@@ -156,7 +139,7 @@ class CaseService:
     ) -> None:
         case = await self._loadCase(case_id, lock=True)
         self._verifyCaseAccess(case, user_id)
-        
+
         # Delete case-owned entities in dependency order within transaction
         await self.db.execute(delete(CaseReport).where(CaseReport.case_id == case.id))
 
@@ -166,15 +149,7 @@ class CaseService:
         await self.db.execute(delete(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case.id))
         await self.db.execute(delete(RagContext).where(RagContext.case_id == case.id))
         await self.db.execute(delete(CaseRun).where(CaseRun.case_id == case.id))
-
-        thread_ids_subq = select(ChatThread.id).where(ChatThread.case_id == case.id)
-        await self.db.execute(delete(ChatMessage).where(ChatMessage.thread_id.in_(thread_ids_subq)))
-        await self.db.execute(delete(ChatThread).where(ChatThread.case_id == case.id))
-
-        await self.db.execute(delete(CaseEvidenceSnapshot).where(CaseEvidenceSnapshot.case_id == case.id))
-
-        source_ids_subq = select(EvidenceSource.id).where(EvidenceSource.case_id == case.id)
-        await self.db.execute(delete(EvidenceRevision).where(EvidenceRevision.source_id.in_(source_ids_subq)))
+        await self.db.execute(delete(ChatMessage).where(ChatMessage.case_id == case.id))
         await self.db.execute(delete(EvidenceSource).where(EvidenceSource.case_id == case.id))
 
         doc_ids_subq = select(CaseDocument.id).where(CaseDocument.case_id == case.id)
@@ -189,9 +164,9 @@ class CaseService:
         statement = (
             select(Case)
             .options(
-                selectinload(Case.chat_thread).selectinload(ChatThread.messages),
+                selectinload(Case.chat_messages),
                 selectinload(Case.case_runs),
-                selectinload(Case.latest_analysis_result).selectinload(CaseAnalysisResult.snapshot),
+                selectinload(Case.latest_analysis_result),
             )
             .where(Case.id == case_id)
         )

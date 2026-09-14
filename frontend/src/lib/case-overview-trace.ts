@@ -1,4 +1,4 @@
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
+import type { CaseAnalysisResultRead } from "@/lib/api";
 import { asArray, asRecord, asString, asStringArray } from "@/lib/case-overview-parsing";
 import type { CaseGap, ClaimType, EpistemicStatus, GapPriority, GapStatus } from "@/lib/case-overview-contracts";
 import { parseCaseCitations, type CaseCitation, type CaseSnapshotSource } from "./case-overview-source";
@@ -37,12 +37,11 @@ const gapPriorities = new Set<GapPriority>(["high", "medium", "low"]);
 
 export function parseCaseTrace(
   result: CaseAnalysisResultRead,
-  snapshot: CaseEvidenceSnapshotRead,
+  snapshot: unknown,
   sources: CaseSnapshotSource[],
 ): ParsedCaseTrace {
   const trace = asRecord(result.trace_json);
-  if (!trace || trace.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated" || trace.analysis_mode !== "case_overview") throw new Error("The saved Case analysis trace is unavailable or unsupported.");
-  if (trace.evidence_sha256 !== snapshot.text_sha256) throw new Error("Analysis is not bound to this evidence snapshot.");
+  if (!trace || (trace.version !== "case_analysis_trace_v1" && trace.version !== "analysis_trace_v2") || trace.validation_status !== "validated" || trace.analysis_mode !== "case_overview") throw new Error("The saved Case analysis trace is unavailable or unsupported.");
   const claims = asArray(trace.claims).map((claim) => parseClaim(claim, sources));
   const gaps = asArray(trace.gaps).map(parseGap);
   const associations = asArray(trace.mitre_associations).map(parseAssociation);
@@ -109,4 +108,3 @@ function parseAssociation(value: unknown): CaseTraceAssociation {
 function invalidSummary(): string {
   throw new Error("Analysis summary is empty.");
 }
-

@@ -14,14 +14,12 @@ from app.schemas.caseMaterials import (
     AdmitExtractionRequest,
     CaseDocumentRead,
     CaseEvidenceCreate,
-    CaseEvidenceSnapshotRead,
     EvidenceSourceRead,
 )
 from app.services.auth.dependencies import get_current_user
 from app.services.case_materials import (
     CaseMaterialsError,
     CaseMaterialsService,
-    buildCaseEvidenceSnapshot,
     getOwnedDocumentContent,
 )
 from app.services.document_ingestion import DocumentIngestionError
@@ -167,23 +165,6 @@ async def list_case_evidence(
         raise _materials_http_error(error) from error
 
 
-@router.get("/evidence/snapshots/{snapshot_id}", response_model=CaseEvidenceSnapshotRead)
-async def get_case_evidence_snapshot(
-    case_id: UUID,
-    snapshot_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        return await CaseMaterialsService(db).getEvidenceSnapshot(
-            case_id=case_id,
-            user_id=user.id,
-            snapshot_id=snapshot_id,
-        )
-    except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
-
-
 @router.post("/evidence", response_model=EvidenceSourceRead, status_code=status.HTTP_201_CREATED)
 async def add_case_evidence(
     case_id: UUID,
@@ -243,20 +224,6 @@ async def archive_case_evidence(
                 user_id=user.id,
                 source_id=source_id,
             )
-    except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
-
-
-@router.post("/evidence/snapshot", response_model=CaseEvidenceSnapshotRead, status_code=status.HTTP_201_CREATED)
-async def create_case_evidence_snapshot(
-    case_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        await commit_dependency_transaction(db)
-        async with db.begin():
-            return await buildCaseEvidenceSnapshot(db, case_id=case_id, user_id=user.id)
     except CaseMaterialsError as error:
         raise _materials_http_error(error) from error
 

@@ -69,7 +69,6 @@ class CaseMitreAugmentation:
             "retrieval_context_id": self.retrieval_context_id,
             "retrieval_context_reused": self.reused,
             "mitre_table": self.mitre_table,
-            "query_sha256": hashlib.sha256(query.encode("utf-8")).hexdigest(),
             "association_ids": [item.association_id for item in self.associations],
         }
         if self.failure_code is not None:

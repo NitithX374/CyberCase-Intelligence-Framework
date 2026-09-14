@@ -49,7 +49,7 @@ class CaseAdmittedSource:
     source_id: str
     revision: int
     content: str
-    content_sha256: str
+    content_sha256: str | None = None
 
 
 def build_case_source_registry(
@@ -91,7 +91,6 @@ def build_case_source_registry(
                 source_id=source_id,
                 revision=revision,
                 content=content,
-                content_sha256=hashlib.sha256(content.encode("utf-8")).hexdigest(),
             )
         )
     return tuple(sources)
@@ -379,7 +378,7 @@ class CaseAnalysisTrace(BaseModel):
     mitre_associations: list[CaseMitreAssociation] = Field(
         default_factory=list, max_length=64
     )
-    evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evidence_sha256: str | None = Field(default=None)
     retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
 
 

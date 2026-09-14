@@ -1,16 +1,23 @@
 from app.services.case_materials.materialService import (
+    AssembledCaseEvidence,
     CaseMaterialsError,
     CaseMaterialsService,
-    SNAPSHOT_FORMAT_VERSION,
+    assembleCaseEvidence,
     buildCaseEvidenceSnapshot,
-    canonicalJson,
 )
 from app.services.case_materials.documentContent import getOwnedDocumentContent
+import json
+
+
+def canonicalJson(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
 
 __all__ = [
+    "AssembledCaseEvidence",
     "CaseMaterialsError",
     "CaseMaterialsService",
-    "SNAPSHOT_FORMAT_VERSION",
+    "assembleCaseEvidence",
     "buildCaseEvidenceSnapshot",
     "canonicalJson",
     "getOwnedDocumentContent",
