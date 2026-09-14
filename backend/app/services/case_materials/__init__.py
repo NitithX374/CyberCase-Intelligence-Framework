@@ -5,6 +5,7 @@ from app.services.case_materials.materialService import (
     buildCaseEvidenceSnapshot,
     canonicalJson,
 )
+from app.services.case_materials.documentContent import getOwnedDocumentContent
 
 __all__ = [
     "CaseMaterialsError",
@@ -12,4 +13,5 @@ __all__ = [
     "SNAPSHOT_FORMAT_VERSION",
     "buildCaseEvidenceSnapshot",
     "canonicalJson",
+    "getOwnedDocumentContent",
 ]

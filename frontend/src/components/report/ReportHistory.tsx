@@ -16,8 +16,8 @@ export function ReportVersionSelector({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5" aria-label="Report version history">
-      <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-ink-muted mr-1">
-        Versions:
+      <span className="mr-1 text-[10px] font-medium text-ink-muted">
+        Versions
       </span>
       {reports.map((report) => {
         const isSelected = report.report_id === selectedReportId;
@@ -26,10 +26,10 @@ export function ReportVersionSelector({
             key={report.report_id}
             type="button"
             onClick={() => onSelect(report.report_id)}
-            className={`rounded px-2.5 py-1 text-xs font-bold transition-colors ${
+            className={`border-b-2 px-1 py-1 text-xs font-semibold transition-colors ${
               isSelected
-                ? "bg-primary text-ivory shadow-xs"
-                : "border border-line bg-surface text-ink hover:border-ink hover:bg-surface-hover"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-muted hover:border-line-strong hover:text-ink"
             }`}
           >
             <span>v{report.version_number}</span>
@@ -55,30 +55,28 @@ export function NoSavedReport({
   onOpenOverview?: () => void;
 }) {
   return (
-    <div className="workspace-card mx-auto my-8 max-w-2xl space-y-4 p-6 text-center sm:p-8">
-      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-nested text-ink-secondary">
-        <Icon name="report" className="h-5 w-5" />
-      </div>
+    <div className="mx-auto my-8 max-w-2xl border-y border-line py-8 text-center">
+      <Icon name="report" className="mx-auto h-5 w-5 text-ink-muted" />
       <div>
-        <h2 className="text-base font-extrabold tracking-tight text-ink sm:text-lg">
+        <h2 className="mt-3 text-base font-semibold tracking-tight text-ink sm:text-lg">
           {canGenerate
             ? "No Saved Report for This Case"
             : "Case Intake Required · ยังไม่มีข้อมูลสำนวนคดี"}
         </h2>
-        <p className="mt-1 text-xs leading-relaxed text-ink-secondary">
+        <p className="mx-auto mt-1 max-w-xl text-xs leading-relaxed text-ink-secondary">
           {canGenerate
             ? "A preliminary case analysis report can be compiled from submitted case material and optional external technical context when applicable."
             : "กรุณากรอกรายละเอียดสำนวนคดีในหน้า Case Intake เพื่อให้ระบบประมวลผลก่อนสร้างรายงานวิเคราะห์คดี"}
         </p>
       </div>
 
-      <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3 pt-5">
         {canGenerate ? (
           <button
             type="button"
             onClick={onGenerate}
             disabled={isGenerating}
-            className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-lg"
+            className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-md"
           >
             {isGenerating ? (
               <>
@@ -93,7 +91,7 @@ export function NoSavedReport({
           <button
             type="button"
             onClick={onOpenOverview}
-            className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-lg"
+            className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-md"
           >
             <Icon name="intake" className="h-3.5 w-3.5" />
             <span>Go to Case Intake · เปิดสำนวนคดี</span>

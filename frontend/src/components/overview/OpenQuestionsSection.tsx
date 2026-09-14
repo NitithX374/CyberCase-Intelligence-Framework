@@ -31,7 +31,7 @@ export function OpenQuestionsSection({ gaps, onOpenChat }: {
       {gaps.some((gap) => gap.askable) && onOpenChat && (
         <button type="button" onClick={onOpenChat}
           className="mt-3 min-h-9 text-xs font-semibold underline decoration-line-strong underline-offset-4 hover:decoration-ink focus-visible:ring-2 focus-visible:ring-primary">
-          Clarify in Chat <span aria-hidden="true">→</span>
+          Answer in Ask
         </button>
       )}
     </section>

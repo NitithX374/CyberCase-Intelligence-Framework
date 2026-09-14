@@ -20,6 +20,7 @@ interface ChatTranscriptProps {
   leadResult?: CaseAnalysisResultRead | null;
   leadSnapshot?: CaseEvidenceSnapshotRead | null;
   onOpenOverview?: () => void;
+  onNavigateToSource?: (messageId: string) => void;
 }
 
 export function ChatTranscript({
@@ -28,27 +29,48 @@ export function ChatTranscript({
   leadResult,
   leadSnapshot,
   onOpenOverview,
+  onNavigateToSource,
 }: ChatTranscriptProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const displayMessages = leadResult
     ? messages.filter((message) => !isLeadAnalysisPublication(message, leadResult.id))
     : messages;
+  const initialMessageIdsRef = useRef<Set<string> | null>(null);
+  const leadResultIdRef = useRef<string | null>(leadResult?.id ?? null);
+  const hasClarificationUpdate = messages.some((message) =>
+    message.role === "user" &&
+    (message.message_kind === "followup_answer" || message.message_kind === "clarification_answer") &&
+    messageCreatedBeforeResult(message.created_at, leadResult?.created_at),
+  );
 
   useEffect(() => {
+    if (leadResultIdRef.current !== (leadResult?.id ?? null)) {
+      leadResultIdRef.current = leadResult?.id ?? null;
+      initialMessageIdsRef.current = messages.length > 0 ? new Set(messages.map((message) => message.id)) : null;
+      return;
+    }
+    if (!initialMessageIdsRef.current) {
+      if (messages.length === 0) return;
+      initialMessageIdsRef.current = new Set(messages.map((message) => message.id));
+      return;
+    }
+    const hasNewMessage = messages.some((message) => !initialMessageIdsRef.current?.has(message.id));
+    if (!hasNewMessage && !isProcessing) return;
+    initialMessageIdsRef.current = new Set(messages.map((message) => message.id));
     bottomRef.current?.scrollIntoView?.({ behavior: "smooth" });
-  }, [displayMessages.length, isProcessing]);
+  }, [isProcessing, leadResult?.id, messages]);
 
   if (displayMessages.length === 0 && !leadResult) {
     return (
       <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-8 text-center">
-        <div className="workspace-card max-w-md space-y-3 p-8">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-nested text-ink-secondary">
+        <div className="max-w-md space-y-3 border-l-2 border-evidence/50 px-5 py-2 text-left">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-evidence/10 text-evidence">
             <Icon name="chat" className="h-5 w-5" />
           </div>
-          <h3 className="text-base font-extrabold tracking-tight text-ink">Case Discussion</h3>
+          <h3 className="text-base font-bold tracking-tight text-ink">Ask about this case</h3>
           <p className="text-xs leading-relaxed text-ink-secondary">
-            Ask about the current case analysis or add information that should become part of the case material.
+            Ask about the current Case Analysis Result or add information that should become part of the case material.
           </p>
         </div>
       </div>
@@ -61,31 +83,36 @@ export function ChatTranscript({
         <CaseAnalysisLeadCard
           result={leadResult}
           snapshot={leadSnapshot}
+          isUpdated={hasClarificationUpdate}
           onOpenOverview={onOpenOverview}
         />
       )}
       {displayMessages.length === 0 && leadResult && (
-        <div className="rounded-xl border border-line bg-surface/40 p-4 text-center text-xs text-ink-muted">
+        <div className="rounded-md border border-line bg-surface/40 p-4 text-center text-xs text-ink-muted">
           Ask a question below to explore the case analysis or review details.
         </div>
       )}
       {displayMessages.map((message) => {
         const isUser = message.role === "user";
+        const isClarificationQuestion = message.message_kind === "followup_question";
+        const isClarificationAnswer = message.message_kind === "followup_answer" || message.message_kind === "clarification_answer";
         const followUpGap = followUpGapDetailForMessage(message);
         const mitreCandidates = isUser ? null : mitreCandidatesForMessage(message);
         return (
           <article key={message.id} className="border-b border-line py-5 first:pt-1 last:border-b-0">
-            <header className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
-              <span className={isUser ? "text-ink" : "text-accent"}>
-                {isUser ? "Submitted material" : "CyberCase analysis"}
+            <header className="flex items-center gap-2 text-[11px] font-semibold text-ink-muted">
+              <span className={isUser ? "text-ink" : isClarificationQuestion ? "text-unresolved" : "text-evidence"}>
+                {messageLabel(message, isClarificationQuestion, isClarificationAnswer)}
               </span>
             </header>
 
             <div
               className={`mt-3 ${
                 isUser
-                  ? "ml-auto max-w-[90%] rounded-xl bg-primary px-4 py-3 text-ivory sm:max-w-[78%] sm:px-5"
-                  : "border-l-2 border-line-strong pl-4 pr-1 sm:pl-5"
+                  ? "ml-auto max-w-[90%] rounded-md bg-primary px-4 py-3 text-ivory sm:max-w-[82%] sm:px-5"
+                  : isClarificationQuestion
+                    ? "border-l-2 border-unresolved bg-unresolved/5 pl-4 pr-3 sm:pl-5"
+                    : "border-l-2 border-evidence/50 pl-4 pr-1 sm:pl-5"
               }`}
             >
               {isUser ? (
@@ -96,6 +123,7 @@ export function ChatTranscript({
                   <AnalysisEvidenceReferences
                     analysisMessage={message}
                     messages={messages}
+                    onNavigateToSource={onNavigateToSource}
                   />
                   {followUpGap && <FollowUpActionCard detail={followUpGap} />}
                   {mitreCandidates && <MitreCandidatePanel candidates={mitreCandidates} />}
@@ -116,6 +144,28 @@ export function ChatTranscript({
       <div ref={bottomRef} aria-hidden="true" />
     </div>
   );
+}
+
+function messageCreatedBeforeResult(messageCreatedAt: string, resultCreatedAt: string | undefined): boolean {
+  if (!resultCreatedAt) return false;
+  const messageTime = Date.parse(messageCreatedAt);
+  const resultTime = Date.parse(resultCreatedAt);
+  return Number.isFinite(messageTime) && Number.isFinite(resultTime) && messageTime <= resultTime;
+}
+
+function messageLabel(
+  message: PersistedChatMessage,
+  isClarificationQuestion: boolean,
+  isClarificationAnswer: boolean,
+): string {
+  if (message.role === "user") {
+    if (isClarificationAnswer) return "You · Case information";
+    if (message.metadata_json.evidence_kind === "initial_case_narrative" || message.metadata_json.evidence_kind === "added_case_information") {
+      return "You · Case information";
+    }
+    return "You";
+  }
+  return isClarificationQuestion ? "CyberCase · One more detail" : "CyberCase";
 }
 
 function isLeadAnalysisPublication(

@@ -8,8 +8,8 @@ export function FollowUpActionCard({
   detail: ChatFollowUpGapDetail;
 }) {
   return (
-    <aside className="mt-4 overflow-hidden rounded-2xl border border-unresolved/30 bg-unresolved/5">
-      <div className="border-l-4 border-unresolved px-4 py-3.5 sm:px-5">
+    <aside className="mt-4 overflow-hidden rounded-lg border border-unresolved/30 bg-unresolved/5">
+      <div className="border-l-2 border-unresolved px-4 py-3.5 sm:px-5">
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill tone="attention">Needs clarification</StatusPill>
           <span className="text-[11px] font-medium text-ink-secondary">
@@ -18,7 +18,7 @@ export function FollowUpActionCard({
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+            <p className="text-[10px] font-semibold tracking-[0.04em] text-ink-muted">
               What remains unclear
             </p>
             <p className="mt-1 text-xs leading-relaxed text-ink">
@@ -27,7 +27,7 @@ export function FollowUpActionCard({
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+            <p className="text-[10px] font-semibold tracking-[0.04em] text-ink-muted">
               Why this matters
             </p>
             <p className="mt-1 text-xs leading-relaxed text-ink-secondary">{detail.reason}</p>

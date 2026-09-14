@@ -93,8 +93,8 @@ describe("Case preparation workflow", () => {
     renderIntake({ documents: [document], onUploadDocument, onAdmitExtraction });
 
     const file = new File(["pdf"], "new.pdf", { type: "application/pdf" });
-    fireEvent.change(screen.getByLabelText("Upload document"), { target: { files: [file] } });
-    fireEvent.click(screen.getByRole("button", { name: "Admit reviewed text" }));
+    fireEvent.change(screen.getByLabelText("Add files"), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "Admit text" }));
 
     expect(onUploadDocument).toHaveBeenCalledWith(file);
     expect(onAdmitExtraction).toHaveBeenCalledWith("document-1", "extraction-1");

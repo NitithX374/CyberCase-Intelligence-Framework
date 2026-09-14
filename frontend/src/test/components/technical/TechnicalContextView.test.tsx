@@ -97,7 +97,7 @@ describe("TechnicalContextView", () => {
     const openIntake = vi.fn();
     render(<TechnicalContextView analysisResult={null} evidenceSnapshot={null} onOpenIntake={openIntake} />);
     expect(screen.getByText("Technical augmentation outcome is unavailable")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Go to Case Intake/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Go to Intake/i }));
     expect(openIntake).toHaveBeenCalledOnce();
   });
 

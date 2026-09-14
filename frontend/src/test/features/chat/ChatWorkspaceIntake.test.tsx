@@ -67,10 +67,10 @@ describe("ChatWorkspace Intake submission integration", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Case information/i)).toBeInTheDocument();
     });
 
-    const descInput = screen.getByLabelText(/Case narrative/i) as HTMLTextAreaElement;
+    const descInput = screen.getByLabelText(/Case information/i) as HTMLTextAreaElement;
     const titleInput = screen.getByLabelText(/Case title/i) as HTMLInputElement;
     const submitBtn = screen.getByRole("button", { name: /Analyze case/i });
 
@@ -90,7 +90,7 @@ describe("ChatWorkspace Intake submission integration", () => {
       expect(screen.getAllByText(/failed to submit case description/i).length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Case information/i)).toBeInTheDocument();
     expect(descInput.value).toBe(
       "PowerShell connected to 198.51.100.23 and downloaded payload.",
     );
@@ -151,10 +151,10 @@ describe("ChatWorkspace Intake submission integration", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Case narrative/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Case information/i)).toBeInTheDocument();
     });
 
-    const descInput = screen.getByLabelText(/Case narrative/i) as HTMLTextAreaElement;
+    const descInput = screen.getByLabelText(/Case information/i) as HTMLTextAreaElement;
     const submitBtn = screen.getByRole("button", { name: /Analyze case/i });
 
     fireEvent.change(descInput, {

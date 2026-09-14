@@ -3,45 +3,42 @@
 @theme {
     --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 
-    /* 60% — PAPER / BACKGROUND */
-    --color-paper: #F6F3EA;
-    --color-paper-raised: #FCFAF5;
-    --color-background: #F6F3EA;
-    --color-canvas: #F6F3EA;
-    --color-surface: #FCFAF5;
-    --color-sidebar: #EEEAE0;
-    --color-workspace: #F6F3EA;
+    --color-paper: #F3F6F1;
+    --color-paper-raised: #FFFFFF;
+    --color-background: #F3F6F1;
+    --color-canvas: #F3F6F1;
+    --color-surface: #FFFFFF;
+    --color-sidebar: #F8FBF8;
+    --color-workspace: #F3F6F1;
 
-    /* 30% — NEUTRAL STRUCTURE */
-    --color-ink: #262522;
-    --color-ink-secondary: #68645D;
-    --color-ink-muted: #68645D;
-    --color-ink-disabled: #858178;
-    --color-neutral: #68645D;
-    --color-stone: #E4DED2;
-    --color-border: #D5CEC1;
-    --color-line: #D5CEC1;
-    --color-line-strong: #BBB6A9;
-    --color-surface-nested: #E4DED2;
-    --color-surface-hover: #EBE5D9;
-    --color-subdued: #E4DED2;
-    --color-control-disabled: #E4DED2;
+    --color-ink: #26352F;
+    --color-ink-secondary: #64736B;
+    --color-ink-muted: #718078;
+    --color-ink-disabled: #9AA79F;
+    --color-neutral: #718078;
+    --color-stone: #E0E9E2;
+    --color-border: #D5E0D8;
+    --color-line: #D5E0D8;
+    --color-line-strong: #A7B9AC;
+    --color-surface-nested: #EFF5F0;
+    --color-surface-hover: #E8F1EB;
+    --color-subdued: #E0E9E2;
+    --color-control-disabled: #DDE6DF;
 
-    /* 10% — BRAND ACCENT */
-    --color-accent: #9A4438;
-    --color-accent-soft: #F2E3DE;
-    --color-accent-strong: #7F342B;
-    --color-primary: #262522;
-    --color-secondary: #3A3A3A;
-    --color-charcoal-hover: #3A3834;
-    --color-charcoal-pressed: #1A1917;
-    --color-ivory: #FCFAF5;
+    --color-accent: #2E6B52;
+    --color-accent-soft: #E8F1EB;
+    --color-accent-strong: #245640;
+    --color-primary: #26352F;
+    --color-secondary: #3E5147;
+    --color-charcoal-hover: #314A3D;
+    --color-charcoal-pressed: #1D2B25;
+    --color-ivory: #FFFFFF;
 
     /* SEMANTIC ANNOTATIONS (Annotations only, never large surfaces) */
-    --color-evidence: #356C8A;
+    --color-evidence: #2E6B52;
     --color-mitre: #6654A3;
-    --color-unresolved: #A66A20;
-    --color-established: #4F725B;
+    --color-unresolved: #9B6A36;
+    --color-established: #2E6B52;
     --color-critical: #9A4438;
     --color-danger: #9A4438;
 }
@@ -91,20 +88,20 @@ body {
 }
 
 @utility workspace-card {
-    @apply rounded-2xl border border-line bg-surface shadow-[0_1px_3px_rgba(39,39,39,0.04)];
+    @apply rounded-md border border-line bg-surface;
 }
 
 @utility section-eyebrow {
-    @apply font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink-muted;
+    @apply text-[10px] font-semibold text-ink-muted;
 }
 
 @utility mono-label {
-    @apply font-mono text-[10px] font-bold uppercase tracking-wider text-ink-muted;
+    @apply font-mono text-[10px] font-semibold tracking-wider text-ink-muted;
 }
 
 ::selection {
-    background: #F2E3DE;
-    color: #262522;
+    background: #E8F1EB;
+    color: #26352F;
 }
 
 :where(a, button, select):focus-visible {

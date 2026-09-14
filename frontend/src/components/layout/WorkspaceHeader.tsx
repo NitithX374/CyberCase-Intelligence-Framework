@@ -1,13 +1,9 @@
 import Link from "next/link";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
-import type { CaseRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import { UserProfileMenu } from "@/components/common/UserProfileMenu";
-import {
-  workspaceViewLabels,
-  type RunPhase,
-  type WorkspaceView,
-} from "@/components/common/types";
+import type { CaseRead } from "@/lib/api";
+import { workspaceViewDescriptions, type RunPhase, type WorkspaceView } from "@/components/common/types";
 
 interface WorkspaceHeaderProps {
   activeCase: CaseRead | null;
@@ -25,14 +21,22 @@ interface WorkspaceHeaderProps {
   onToggleChat?: () => void;
 }
 
-const phasePresentation: Record<RunPhase, { label: string }> = {
-  idle: { label: "Ready" },
-  querying: { label: "Processing" },
-  awaiting_followup: { label: "Your input is needed" },
-  analyzing: { label: "Validating" },
-  ready: { label: "Complete" },
-  error: { label: "Error" },
+const phasePresentation: Record<RunPhase, string> = {
+  idle: "Ready",
+  querying: "Processing",
+  awaiting_followup: "Input needed",
+  analyzing: "Analyzing",
+  ready: "Analysis available",
+  error: "Needs attention",
 };
+
+const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
+  { view: "intake", label: "Intake" },
+  { view: "overview", label: "Overview" },
+  { view: "materials", label: "Materials" },
+  { view: "technical-context", label: "Technical" },
+  { view: "report", label: "Report" },
+];
 
 export function WorkspaceHeader({
   activeCase,
@@ -49,141 +53,143 @@ export function WorkspaceHeader({
   isChatOpen = true,
   onToggleChat,
 }: WorkspaceHeaderProps) {
-  const displayCaseTitle =
-    !activeCase?.title
-      ? "New case"
-      : activeCase.title;
-  const currentPhase = phasePresentation[phase];
+  const displayCaseTitle = activeCase?.title || "New case";
 
   return (
-    <header className="shrink-0 border-b border-line bg-surface px-4 py-3 sm:px-6 md:px-8 md:py-3.5">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="shrink-0 border-b border-line bg-surface">
+      <div className="flex min-h-14 items-center gap-3 px-4 sm:px-5 lg:px-6">
         <Link
           href="/"
           aria-label="CyberCase home"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg outline-none transition-opacity hover:opacity-75 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:ring-accent md:hidden"
         >
-          <CyberCaseLogo size={36} />
+          <CyberCaseLogo size={30} />
         </Link>
+
         <div className="min-w-0 flex-1">
-          <div className="hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-ink-muted sm:flex">
-            <span>Case file</span>
-            <span aria-hidden="true">/</span>
-            <span>{workspaceViewLabels[activeView]}</span>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h1 className="truncate text-[15px] font-semibold tracking-[-0.015em] text-ink sm:text-base">
+              {displayCaseTitle}
+            </h1>
+            <span className="hidden shrink-0 items-center gap-1.5 text-[10px] font-medium text-ink-muted sm:inline-flex">
+              <span className={`h-1.5 w-1.5 rounded-full ${phaseDotClass(phase)}`} aria-hidden="true" />
+              {phasePresentation[phase]}
+            </span>
           </div>
-          <p className="truncate text-sm font-extrabold tracking-[-0.02em] text-ink sm:mt-0.5 sm:text-base">
-            {displayCaseTitle}
-          </p>
-          {activeView !== "intake" && (
-            <div className="mt-1 flex items-center gap-2 text-[10px] font-medium text-ink-secondary">
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  phase === "error"
-                    ? "bg-critical"
-                    : phase === "querying" || phase === "analyzing"
-                      ? "bg-evidence motion-safe:animate-pulse motion-reduce:animate-none"
-                      : phase === "awaiting_followup"
-                        ? "bg-unresolved"
-                        : "bg-established"
-                }`}
-                aria-hidden="true"
-              />
-              <span>{currentPhase.label}</span>
-            </div>
-          )}
+          <p className="mt-0.5 truncate text-[10px] text-ink-muted sm:hidden">{phasePresentation[phase]}</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {onToggleChat && (
-            <button
-              type="button"
-              onClick={onToggleChat}
-              aria-label={isChatOpen ? "Close chat" : "Open chat"}
-              title={isChatOpen ? "Close chat" : "Open chat"}
-              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all focus-visible:ring-2 focus-visible:ring-primary ${
-                isChatOpen
-                  ? "border-primary bg-primary text-ivory shadow-xs"
-                  : "border-line bg-canvas text-ink hover:border-line-strong hover:bg-surface-hover"
-              }`}
+        <div className="hidden items-center gap-1.5 md:flex">
+          {cases.length > 1 && (
+            <select
+              value={activeCaseId ?? ""}
+              onChange={(event) => event.target.value && onSelectCase(event.target.value)}
+              aria-label="Select saved case"
+              className="h-8 max-w-52 rounded-md border border-line bg-surface px-2.5 text-[11px] font-medium text-ink outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <Icon name="chat" className="h-4 w-4" />
-              <span className="hidden sm:inline">Chat</span>
-              {phase === "awaiting_followup" && (
-                <span
-                  className="h-2 w-2 rounded-full bg-unresolved motion-safe:animate-ping"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
+              <option value="">Select case</option>
+              {cases.map((caseRecord) => <option key={caseRecord.id} value={caseRecord.id}>{caseRecord.title}</option>)}
+            </select>
+          )}
+          <IconAction label="New case" icon="plus" disabled={creatingCase} onClick={onNewCase} />
+          {activeCase && (
+            <IconAction
+              label={`Delete ${displayCaseTitle}`}
+              icon="trash"
+              disabled={deletingCaseId !== null}
+              onClick={() => onRequestDelete(activeCase)}
+            />
           )}
         </div>
-      </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:hidden">
-        <label className="sr-only" htmlFor="mobile-workspace-view">
-          Select workspace
-        </label>
-        <select
-          id="mobile-workspace-view"
-          value={activeView}
-          onChange={(event) => onViewChange(event.target.value as WorkspaceView)}
-          aria-label="Select workspace"
-          className="min-h-10 min-w-0 rounded-lg border border-line bg-canvas px-3 text-xs font-bold text-ink outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <option value="intake">Intake</option>
-          <option value="overview">Overview</option>
-          <option value="materials">Case Materials</option>
-          <option value="technical-context">Technical Context</option>
-          <option value="report">Report</option>
-        </select>
-        <label className="sr-only" htmlFor="mobile-saved-case">
-          Select saved case
-        </label>
-        <select
-          id="mobile-saved-case"
-          value={activeCaseId ?? ""}
-          onChange={(event) => {
-            if (event.target.value) onSelectCase(event.target.value);
-          }}
-          aria-label="Select saved case"
-          className="min-h-10 min-w-0 rounded-lg border border-line bg-canvas px-3 text-xs font-bold text-ink outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <option value="">Select case</option>
-          {cases.map((caseRecord) => (
-            <option key={caseRecord.id} value={caseRecord.id}>
-              {caseRecord.title}
-            </option>
-          ))}
-        </select>
-        <div className="flex gap-2">
+        {onToggleChat && (
           <button
             type="button"
-            onClick={onNewCase}
-            disabled={creatingCase}
-            aria-label="New case"
-            title="New case"
-            className="flex min-h-10 min-w-10 flex-1 items-center justify-center rounded-lg border border-line bg-canvas text-ink outline-none transition-colors hover:border-line-strong hover:bg-surface-hover active:bg-surface-nested focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
+            onClick={onToggleChat}
+            aria-label={isChatOpen ? "Close Ask" : "Open Ask"}
+            title={isChatOpen ? "Close Ask" : "Open Ask"}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              isChatOpen ? "border-accent bg-accent-soft text-accent" : "border-line text-ink hover:bg-surface-hover"
+            }`}
           >
-            <Icon name="plus" className="h-4 w-4" />
+            <Icon name="chat" className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Ask</span>
+            {phase === "awaiting_followup" && <span className="h-1.5 w-1.5 rounded-full bg-unresolved" aria-hidden="true" />}
           </button>
-          {activeCase && (
-            <button
-              type="button"
-              onClick={() => onRequestDelete(activeCase)}
-              disabled={deletingCaseId !== null}
-              aria-label={`Delete ${displayCaseTitle}`}
-              title={`Delete ${displayCaseTitle}`}
-              className="flex min-h-10 min-w-10 flex-1 items-center justify-center rounded-lg border border-line bg-canvas text-ink-secondary outline-none transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
-            >
-              <Icon name="trash" className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        )}
+
+        <details className="relative md:hidden">
+          <summary aria-label="Open account menu" className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent">
+            <Icon name="account" className="h-4 w-4" />
+          </summary>
+          <div className="absolute right-0 top-10 z-50 w-64 border border-line bg-surface p-3 shadow-lg">
+            <UserProfileMenu />
+          </div>
+        </details>
       </div>
 
-      <div className="mt-2.5 border-t border-line/60 pt-2 md:hidden">
-        <UserProfileMenu />
+      <div className="flex min-h-11 items-center gap-2 border-t border-line/70 px-4 md:hidden">
+        {cases.length > 1 && (
+          <select
+            value={activeCaseId ?? ""}
+            onChange={(event) => event.target.value && onSelectCase(event.target.value)}
+            aria-label="Select saved case"
+            className="h-8 min-w-0 flex-1 rounded-md border border-line bg-surface px-2.5 text-[11px] font-medium text-ink outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <option value="">Select case</option>
+            {cases.map((caseRecord) => <option key={caseRecord.id} value={caseRecord.id}>{caseRecord.title}</option>)}
+          </select>
+        )}
+        {cases.length <= 1 && <span className="flex-1 text-[10px] text-ink-muted">Case workspace</span>}
+        <IconAction label="New case" icon="plus" disabled={creatingCase} onClick={onNewCase} />
+        {activeCase && <IconAction label={`Delete ${displayCaseTitle}`} icon="trash" disabled={deletingCaseId !== null} onClick={() => onRequestDelete(activeCase)} />}
       </div>
+
+      <nav aria-label="Case workspace views" role="tablist" className="flex min-h-10 gap-5 overflow-x-auto px-4 text-[11px] sm:px-5 lg:px-6">
+        {workspaceTabs.map((item) => {
+          const selected = item.view === activeView;
+          return (
+            <button
+              key={item.view}
+              id={`workspace-tab-${item.view}`}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`workspace-${item.view}-panel`}
+              tabIndex={selected ? 0 : -1}
+              title={workspaceViewDescriptions[item.view]}
+              onClick={() => onViewChange(item.view)}
+              className={`shrink-0 border-b-2 px-0.5 pt-1 font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                selected ? "border-accent text-accent" : "border-transparent text-ink-muted hover:text-ink"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
     </header>
   );
+}
+
+function IconAction({ label, icon, disabled, onClick }: { label: string; icon: "plus" | "trash"; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex h-8 w-8 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-40"
+    >
+      <Icon name={icon} className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+function phaseDotClass(phase: RunPhase): string {
+  if (phase === "error") return "bg-critical";
+  if (phase === "awaiting_followup") return "bg-unresolved";
+  if (phase === "querying" || phase === "analyzing") return "bg-evidence motion-safe:animate-pulse";
+  return "bg-established";
 }

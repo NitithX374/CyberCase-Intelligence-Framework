@@ -28,7 +28,7 @@ describe("WorkspaceSidebar", () => {
     },
   ];
 
-  it("renders the 5 case workspace tabs and does not include deleted Investigation Issues or chat tab", () => {
+  it("renders the compact CaseFleet-style workspace rail", () => {
     render(
       <WorkspaceSidebar
         cases={sampleCases}
@@ -44,27 +44,17 @@ describe("WorkspaceSidebar", () => {
       />,
     );
 
-    // Section title
-    expect(screen.getByText("Case")).toBeInTheDocument();
-
-    // 5 Tabs
-    expect(screen.getByRole("tab", { name: /Intake/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Overview/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Case Materials/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Technical Context/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Report/i })).toBeInTheDocument();
-
-    // Chat is docked in Copilot, not in the sidebar tabs
-    expect(screen.queryByRole("tab", { name: /^Chat$/i })).not.toBeInTheDocument();
-
-    // Investigation Issues is deleted
-    expect(screen.queryByRole("tab", { name: /Investigation Issues/i })).not.toBeInTheDocument();
-
-    // New case button exists
     expect(screen.getByRole("button", { name: /New case/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cases" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Case analysis" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Case materials" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Technical context" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Case report" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Chat$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Investigation Issues/i)).not.toBeInTheDocument();
   });
 
-  it("triggers onViewChange when a tab is clicked", () => {
+  it("opens saved cases and routes through rail shortcuts", () => {
     const handleViewChange = vi.fn();
 
     render(
@@ -82,8 +72,12 @@ describe("WorkspaceSidebar", () => {
       />,
     );
 
-    const materialsTab = screen.getByRole("tab", { name: /Case Materials/i });
-    fireEvent.click(materialsTab);
+    fireEvent.click(screen.getByRole("button", { name: "Cases" }));
+    expect(screen.getByRole("region", { name: "Saved cases" })).toBeInTheDocument();
+    expect(screen.getByText("คดีการบุกรุกเว็บเซิร์ฟเวอร์")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Case materials" }));
     expect(handleViewChange).toHaveBeenCalledWith("materials");
+    expect(screen.queryByRole("region", { name: "Saved cases" })).not.toBeInTheDocument();
   });
 });
