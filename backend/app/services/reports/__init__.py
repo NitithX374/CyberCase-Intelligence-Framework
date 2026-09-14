@@ -24,7 +24,6 @@ from app.services.reports.report_contracts import (
     ReportValidationError,
 )
 from app.services.reports.report_validation import (
-    source_snapshot_hash,
     validate_case_structured_report,
 )
 
@@ -46,6 +45,5 @@ __all__ = [
     "render_case_report_pdf",
     "run_case_report_generation",
     "serialize_chat_report",
-    "source_snapshot_hash",
     "validate_case_structured_report",
 ]

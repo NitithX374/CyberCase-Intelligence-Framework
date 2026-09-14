@@ -4,7 +4,6 @@ export type CaseDocumentRead = {
     filename: string;
     mime_type: string;
     size_bytes: number;
-    content_sha256: string;
     archived_at: string | null;
     created_at: string;
     extractions?: DocumentExtractionRead[];
@@ -14,7 +13,7 @@ export type CaseNarrativeDocumentPageSpan = {
     page_number: number;
     start_offset: number;
     end_offset: number;
-    text_sha256: string;
+    text_sha256?: string | null;
 };
 
 export type CaseNarrativeDocumentSource = {
@@ -49,13 +48,11 @@ export type CaseRead = {
 export type DocumentExtractionRead = {
     id: string;
     document_id: string;
-    revision: number;
     provider: string;
     config_json: {
         [key: string]: unknown;
     };
     extracted_text: string;
-    text_sha256: string;
     provenance_json: {
         [key: string]: unknown;
     };

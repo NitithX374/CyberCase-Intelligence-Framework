@@ -79,7 +79,7 @@ def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_
     pages = provenance["pages"]
     assert pages[0]["start_offset"] == 0
     assert pages[0]["end_offset"] == pages[1]["start_offset"]
-    assert pages[0]["text_sha256"] == hashlib.sha256(content[: pages[0]["end_offset"]].encode()).hexdigest()
+    assert "text_sha256" not in pages[0]
     context = [{
         "source_id": "s1",
         "documents": [{

@@ -18,7 +18,7 @@ export type CaseAnalysisResultRead = {
     id: string;
     case_id: string;
     run_id: string;
-    snapshot_id: string;
+    evidence_revision: number;
     schema_version: string;
     status: "validated" | "legacy_unbound";
     answer: string;
@@ -82,7 +82,7 @@ export type CaseRunRead = {
     id: string;
     case_id: string;
     operation: "analysis" | "ask";
-    snapshot_id: string;
+    evidence_revision: number;
     request_message_id: string | null;
     context_analysis_result_id?: string | null;
     clarification_id?: string | null;

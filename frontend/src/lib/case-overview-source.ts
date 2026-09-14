@@ -1,15 +1,13 @@
-import type { CaseEvidenceSnapshotRead } from "@/lib/api";
+import type { EvidenceSourceRead } from "@/lib/api";
 import { asArray, asRecord, asString } from "@/lib/case-overview-parsing";
 import type { EvidencePage, SourceMessageRef } from "@/lib/case-overview-contracts";
 import { formatPageReference } from "@/lib/evidence-citation";
-import { sha256Hex } from "@/lib/sha256";
 
 export interface CaseSnapshotSource {
   id: string;
   kind: string;
   revision: number;
   text: string;
-  textSha256: string;
   provenance: Record<string, unknown>;
   documentId: string | null;
   filename: string | null;
@@ -29,36 +27,53 @@ interface CasePageBinding {
   pageNumbers: number[];
 }
 
-export function parseCaseSnapshot(snapshot: CaseEvidenceSnapshotRead): CaseSnapshotSource[] {
-  if (snapshot.format_version !== "case_evidence_snapshot_v1") throw new Error("Unsupported evidence snapshot format.");
-  if (sha256Hex(snapshot.input_text) !== snapshot.text_sha256) throw new Error("Evidence snapshot text hash does not match.");
-  if (!matchesManifestHash(snapshot.manifest_json, snapshot.manifest_sha256)) throw new Error("Evidence snapshot manifest hash does not match.");
-  const sources = snapshot.manifest_json.map(parseSnapshotSource);
-  if (!sources.length) throw new Error("Evidence snapshot has no admitted sources.");
-  if (new Set(sources.map((source) => source.id)).size !== sources.length) throw new Error("Evidence snapshot has duplicate source IDs.");
-  return sources;
+export function parseCaseSnapshot(snapshot: unknown): CaseSnapshotSource[] {
+  if (Array.isArray(snapshot)) {
+    return snapshot.map((item) => parseEvidenceSource(item as EvidenceSourceRead));
+  }
+  const record = asRecord(snapshot);
+  const manifest = asArray(record?.manifest_json);
+  if (manifest.length > 0) {
+    const sources = manifest.map(parseSnapshotSource);
+    if (new Set(sources.map((source) => source.id)).size !== sources.length) throw new Error("Evidence snapshot has duplicate source IDs.");
+    return sources;
+  }
+  if (Array.isArray(record?.sources)) {
+    return record.sources.map(parseSnapshotSource);
+  }
+  return [];
+}
+
+export function parseEvidenceSource(source: EvidenceSourceRead): CaseSnapshotSource {
+  const document = (source as unknown as { document?: { filename?: string | null } }).document;
+  return {
+    id: source.id,
+    kind: source.source_kind,
+    revision: 1,
+    text: source.exact_text || "",
+    provenance: (source.provenance_json as Record<string, unknown>) || {},
+    documentId: source.document_id || null,
+    filename: document?.filename || null,
+  };
 }
 
 function parseSnapshotSource(value: unknown): CaseSnapshotSource {
   const entry = asRecord(value);
-  const id = asString(entry?.source_id);
-  const kind = asString(entry?.source_kind);
-  const revision = entry?.revision;
-  const text = typeof entry?.exact_text === "string" ? entry.exact_text : "";
-  const textSha256 = asString(entry?.text_sha256);
-  const provenance = asRecord(entry?.provenance);
-  if (!id || !kind || typeof revision !== "number" || !Number.isInteger(revision) || revision < 1 || !text || !/^[0-9a-f]{64}$/.test(textSha256) || !provenance) {
+  const id = asString(entry?.source_id ?? entry?.id);
+  const kind = asString(entry?.source_kind ?? entry?.kind);
+  const revision = typeof entry?.revision === "number" ? entry.revision : 1;
+  const text = typeof entry?.exact_text === "string" ? entry.exact_text : (typeof entry?.text === "string" ? entry.text : "");
+  const provenance = asRecord(entry?.provenance ?? entry?.provenance_json) ?? {};
+  if (!id || !kind || !text) {
     throw new Error("Evidence snapshot source binding is incomplete.");
   }
-  if (sha256Hex(text) !== textSha256) throw new Error("Evidence snapshot source hash does not match.");
   return {
     id,
     kind,
     revision,
     text,
-    textSha256,
     provenance,
-    documentId: asString(entry?.document_id) || null,
+    documentId: asString(entry?.document_id ?? entry?.documentId) || null,
     filename: asString(entry?.filename) || null,
   };
 }
@@ -76,18 +91,18 @@ export function parseCaseCitations(
     }
     const parsed = {
       sourceId: asString(citation?.source_id),
-      sourceRevision: citation?.source_revision,
+      sourceRevision: typeof citation?.source_revision === "number" ? citation.source_revision : 1,
       exactQuote: typeof citation?.exact_quote === "string" ? citation.exact_quote : "",
       documentId: asString(citation?.document_id) || null,
       filename: asString(citation?.filename) || null,
       pageNumbers: rawPages,
     };
-    if (!sourceIds.includes(parsed.sourceId) || !Number.isInteger(parsed.sourceRevision) || !parsed.exactQuote || parsed.exactQuote.trim() !== parsed.exactQuote) {
+    if (!sourceIds.includes(parsed.sourceId) || !parsed.exactQuote || parsed.exactQuote.trim() !== parsed.exactQuote) {
       throw new Error("Analysis citation is invalid.");
     }
     const source = sources.find((candidate) => candidate.id === parsed.sourceId);
     const occurrences = source ? quoteOccurrences(source.text, parsed.exactQuote) : [];
-    if (!source || source.revision !== parsed.sourceRevision || occurrences.length === 0) {
+    if (!source || occurrences.length === 0) {
       throw new Error("Analysis citation is not bound to the snapshot.");
     }
     const citationObj = { ...parsed, sourceRevision: parsed.sourceRevision as number };
@@ -146,10 +161,9 @@ function resolvePageBinding(source: CaseSnapshotSource, citation: CaseCitation):
     const pageNumber = span?.page_number;
     const start = span?.start_offset;
     const end = span?.end_offset;
-    const hash = asString(span?.text_sha256);
     const previous = index > 0 ? asRecord(values[index - 1]) : null;
     const previousEnd = previous?.end_offset;
-    const valid = isInteger(pageNumber) && isInteger(start) && isInteger(end) && end > start && start >= 0 && end <= source.text.length && (!isInteger(previousEnd) || start >= previousEnd) && /^[0-9a-f]{64}$/.test(hash) && sha256Hex(source.text.slice(start, end)) === hash;
+    const valid = isInteger(pageNumber) && isInteger(start) && isInteger(end) && end > start && start >= 0 && end <= source.text.length && (!isInteger(previousEnd) || start >= previousEnd);
     return valid ? [{ pageNumber, start, end }] : [];
   });
   const occurrences = quoteOccurrences(source.text, citation.exactQuote);
@@ -214,25 +228,4 @@ function isPositiveInteger(value: unknown): value is number {
   return isInteger(value) && value > 0;
 }
 
-function matchesManifestHash(manifestJson: unknown, expectedHash: string): boolean {
-  if (!/^[0-9a-f]{64}$/.test(expectedHash)) return false;
-  return sha256Hex(canonicalJson(manifestJson, false)) === expectedHash || sha256Hex(canonicalJson(manifestJson, true)) === expectedHash;
-}
-
-function canonicalJson(value: unknown, formatFloatBbox = false, parentKey = ""): string {
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item, formatFloatBbox, parentKey)).join(",")}]`;
-  if (value !== null && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key], formatFloatBbox, key)}`).join(",")}}`;
-  }
-  if (typeof value === "number") {
-    if (formatFloatBbox && Number.isInteger(value) && (parentKey === "x0" || parentKey === "y0" || parentKey === "x1" || parentKey === "y1")) {
-      return value.toFixed(1);
-    }
-    return JSON.stringify(value);
-  }
-  const serialized = JSON.stringify(value);
-  if (serialized === undefined) throw new Error("Evidence snapshot contains an unsupported value.");
-  return serialized;
-}
-
+__all_exports: ;

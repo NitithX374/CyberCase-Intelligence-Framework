@@ -12,8 +12,12 @@ export function OverviewStatusRail({
   snapshot: CaseEvidenceSnapshotRead | null;
   runStatus: CaseRunRead["status"] | null;
 }) {
-  const sourceEntries = snapshot?.manifest_json.filter(isManifestEntry) ?? [];
-  const documentNames = uniqueDocumentNames(sourceEntries);
+  const sourceEntries = Array.isArray(snapshot)
+    ? snapshot
+    : (snapshot && "manifest_json" in snapshot && Array.isArray((snapshot as Record<string, unknown>).manifest_json)
+      ? ((snapshot as Record<string, unknown>).manifest_json as Record<string, unknown>[]).filter(isManifestEntry)
+      : []);
+  const documentNames = uniqueDocumentNames(sourceEntries as Record<string, unknown>[]);
   const citedSourceCount = new Set(
     overview.findings.flatMap((finding) => [
       ...finding.supportingSources.map((source) => source.id),
@@ -26,7 +30,18 @@ export function OverviewStatusRail({
       <dl className="grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-4 sm:divide-y-0">
         <Metric label="Analysis state" value={freshnessLabel(result)} tone={result?.freshness === "stale" ? "attention" : "positive"} />
         <Metric label="Completed" value={formatAnalysisDate(result?.created_at)} />
-        <Metric label="Evidence revision" value={snapshot ? String(snapshot.evidence_revision) : "Unavailable"} />
+        <Metric
+          label={Array.isArray(snapshot) ? "Sources" : "Evidence revision"}
+          value={
+            !snapshot
+              ? "Unavailable"
+              : Array.isArray(snapshot)
+                ? String(snapshot.length)
+                : "evidence_revision" in snapshot && snapshot.evidence_revision !== undefined
+                  ? String(snapshot.evidence_revision)
+                  : "Unavailable"
+          }
+        />
         <Metric label="Cited sources" value={String(citedSourceCount)} />
       </dl>
 
@@ -45,7 +60,17 @@ export function OverviewStatusRail({
             <RecordRow label="Analysis kind" value="Case overview" />
             <RecordRow label="Format" value="Case native" />
             <RecordRow label="Result" value={result?.id ?? "Unavailable"} mono />
-            <RecordRow label="Snapshot" value={snapshot?.id ?? "Unavailable"} mono />
+            <RecordRow
+              label="Evidence"
+              value={
+                Array.isArray(snapshot)
+                  ? `${snapshot.length} sources`
+                  : snapshot && "id" in snapshot && snapshot.id
+                    ? String((snapshot as Record<string, unknown>).id)
+                    : "Unavailable"
+              }
+              mono
+            />
             {documentNames.length > 0 && <RecordRow label="Documents" value={documentNames.join(", ")} />}
           </dl>
         </details>

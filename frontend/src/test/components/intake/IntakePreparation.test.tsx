@@ -10,20 +10,10 @@ const evidence: EvidenceSourceRead = {
   source_kind: "narrative",
   document_id: null,
   origin_message_id: null,
+  exact_text: "Admitted case material",
   source_metadata_json: {},
   created_at: "2026-09-11T00:00:00Z",
   archived_at: null,
-  revisions: [{
-    id: "revision-1",
-    source_id: "source-1",
-    revision: 1,
-    exact_text: "Admitted case material",
-    text_sha256: "hash",
-    provenance_json: {},
-    extraction_id: null,
-    admitted_at: "2026-09-11T00:00:00Z",
-    archived_at: null,
-  }],
 };
 
 const document: CaseDocumentRead = {
@@ -32,16 +22,13 @@ const document: CaseDocumentRead = {
   filename: "statement.pdf",
   mime_type: "application/pdf",
   size_bytes: 1024,
-  content_sha256: "hash",
   created_at: "2026-09-11T00:00:00Z",
   archived_at: null,
   extractions: [{
     id: "extraction-1",
     document_id: "document-1",
-    revision: 1,
     provider: "native_pdf",
     extracted_text: "Reviewed statement",
-    text_sha256: "hash",
     config_json: {},
     provenance_json: {},
     warnings_json: [],

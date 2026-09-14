@@ -8,7 +8,6 @@ import type {
   CaseEvidenceSnapshotRead,
   CaseRunRead,
 } from "@/lib/api";
-import { sha256Hex } from "@/lib/sha256";
 import { mockNativeDialog } from "./mock-native-dialog";
 
 mockNativeDialog();
@@ -29,7 +28,6 @@ function caseProjection(options: { technical?: boolean; page?: boolean; stale?: 
           end_offset: text.length,
           page_number: 4,
           start_offset: 0,
-          text_sha256: sha256Hex(text),
         }],
       }
     : { origin: "analyst-authored" };
@@ -41,7 +39,6 @@ function caseProjection(options: { technical?: boolean; page?: boolean; stale?: 
     revision: 1,
     source_id: sourceId,
     source_kind: options.page ? "reviewed_document" : "narrative",
-    text_sha256: sha256Hex(text),
   }];
   const snapshot: CaseEvidenceSnapshotRead = {
     id: snapshotId,
@@ -50,8 +47,6 @@ function caseProjection(options: { technical?: boolean; page?: boolean; stale?: 
     format_version: "case_evidence_snapshot_v1",
     manifest_json: manifest,
     input_text: text,
-    text_sha256: sha256Hex(text),
-    manifest_sha256: sha256Hex(JSON.stringify(manifest)),
     created_at: "2026-09-10T00:00:00Z",
   };
   const locator = options.page
@@ -61,7 +56,7 @@ function caseProjection(options: { technical?: boolean; page?: boolean; stale?: 
     id: analysisId,
     case_id: caseId,
     run_id: "55555555-5555-4555-8555-555555555555",
-    snapshot_id: snapshotId,
+    evidence_revision: 1,
     schema_version: "case_analysis_result_v1",
     status: "validated",
     answer: text,
@@ -70,7 +65,7 @@ function caseProjection(options: { technical?: boolean; page?: boolean; stale?: 
       version: "case_analysis_trace_v1",
       validation_status: "validated",
       analysis_mode: "case_overview",
-      evidence_sha256: snapshot.text_sha256,
+      evidence_sha256: "test-hash",
       summary: "The submitted material establishes a reported transaction.",
       claims: [{
         claim_id: "A-01",
@@ -150,7 +145,7 @@ function failedRun(): CaseRunRead {
     id: "55555555-5555-4555-8555-555555555555",
     case_id: caseId,
     operation: "analysis",
-    snapshot_id: snapshotId,
+    evidence_revision: 1,
     request_message_id: null,
     context_analysis_result_id: null,
     clarification_id: null,

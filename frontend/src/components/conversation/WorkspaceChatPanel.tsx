@@ -56,7 +56,13 @@ export function WorkspaceChatPanel({
 
   if (!isOpen) return null;
 
-  const evidenceRevisionLabel = leadSnapshot ? ` · Evidence revision ${leadSnapshot.evidence_revision}` : "";
+  const evidenceRevisionLabel = leadSnapshot
+    ? Array.isArray(leadSnapshot)
+      ? ` · ${leadSnapshot.length} sources`
+      : "evidence_revision" in leadSnapshot && leadSnapshot.evidence_revision !== undefined
+        ? ` · Evidence revision ${leadSnapshot.evidence_revision}`
+        : ""
+    : "";
   const contextLabel = leadResult
     ? leadResult.freshness === "stale"
       ? `Using older analysis${evidenceRevisionLabel}`

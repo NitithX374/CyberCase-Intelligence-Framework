@@ -39,7 +39,7 @@ export function MaterialPreviewViewport({
       <header className="flex min-h-12 flex-wrap items-center gap-3 border-b border-line px-3 sm:px-4">
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-xs font-semibold text-ink">{document?.filename ?? "Select a source"}</h2>
-          {document && extraction && <p className="truncate text-[10px] text-ink-muted">Extraction revision {extraction.revision} · {extraction.provider}</p>}
+          {document && extraction && <p className="truncate text-[10px] text-ink-muted">{extraction.provider}</p>}
         </div>
 
         <div role="tablist" aria-label="Source representation" className="flex h-8 items-end gap-4">
@@ -145,7 +145,7 @@ function SystemOcrPreview({ extraction }: { extraction: DocumentExtractionRead |
     <div role="tabpanel" aria-label="System OCR" className="h-full overflow-auto p-4 sm:p-6">
       <article className="mx-auto min-h-full max-w-4xl border border-line bg-surface px-5 py-6 sm:px-8 sm:py-8">
         <div className="mb-5 flex items-center justify-between border-b border-line pb-3 text-[10px] text-ink-muted">
-          <span>System OCR · revision {extraction.revision}</span>
+          <span>System OCR · {extraction.provider}</span>
           {extraction.warnings_json.length > 0 && <span className="text-unresolved">{extraction.warnings_json.length} warning{extraction.warnings_json.length === 1 ? "" : "s"}</span>}
         </div>
         <p className="whitespace-pre-wrap break-words text-sm leading-7 text-ink">{extraction.extracted_text}</p>

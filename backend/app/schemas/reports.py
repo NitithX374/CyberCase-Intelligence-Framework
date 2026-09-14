@@ -1,4 +1,4 @@
-"""Typed report output and chat-report API contracts."""
+"""Typed report output and report API contracts."""
 
 from __future__ import annotations
 
@@ -126,20 +126,13 @@ class CaseReportRead(BaseModel):
 
     report_id: UUID
     id: UUID | None = None
-    thread_id: UUID | None = None
-    version_number: int
-    idempotency_key: str
-    source_snapshot_hash: str
-    analysis_message_id: UUID | None = None
     case_id: UUID | None = None
     analysis_result_id: UUID | None = None
-    evidence_snapshot_id: UUID | None = None
+    version_number: int
+    idempotency_key: str
     source_reference_type: Literal["legacy_chat", "case_evidence"] = "case_evidence"
     retrieval_context_id: str | None = None
     prompt_version: str
-    provider: str
-    model: str
-    decoding_settings: dict[str, Any]
     persistence_status: ReportPersistenceStatus
     validation_status: ReportValidationStatus
     report: StructuredReport | None
@@ -151,7 +144,6 @@ class CaseReportRead(BaseModel):
     latency_ms: float | None
     input_tokens: int | None
     output_tokens: int | None
-    source_snapshot: dict[str, Any] | None = None
 
 
 # Compatibility alias

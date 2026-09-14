@@ -1,9 +1,9 @@
-"""Persistent chat threads and messages."""
+"""Persistent chat messages and thread compatibility view."""
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
@@ -28,144 +28,14 @@ if TYPE_CHECKING:
     from app.models.case import Case
 
 
-class ChatThread(Base):
-    __tablename__ = "chat_threads"
-    __table_args__ = (
-        PrimaryKeyConstraint("id", name="pk_chat_threads"),
-        UniqueConstraint("case_id", name="uq_chat_threads_case_id"),
-        CheckConstraint(
-            "next_message_ordinal > 0",
-            name="ck_chat_threads_next_message_ordinal_positive",
-        ),
-        Index("ix_chat_threads_case_id", "case_id"),
-        Index("ix_chat_threads_updated_at", "updated_at"),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "cases.id",
-            name="fk_chat_threads_case_id_cases",
-            ondelete="CASCADE",
-        ),
-        nullable=False,
-    )
-    next_message_ordinal: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=1,
-        server_default=text("1"),
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-    def __init__(self, **kwargs: Any) -> None:
-        title = kwargs.pop("title", None)
-        user_id = kwargs.pop("user_id", None)
-        status = kwargs.pop("status", None)
-        if "case_id" not in kwargs and "id" in kwargs:
-            kwargs["case_id"] = kwargs["id"]
-        if "id" not in kwargs:
-            kwargs["id"] = uuid.uuid4()
-        super().__init__(**kwargs)
-        self._title = title or "New case"
-        self._user_id = user_id
-        self._status = status or "idle"
-
-    @property
-    def user_id(self) -> uuid.UUID | None:
-        if self.case is not None and self.case.user_id is not None:
-            return self.case.user_id
-        return getattr(self, "_user_id", None)
-
-    @user_id.setter
-    def user_id(self, val: uuid.UUID | None) -> None:
-        self._user_id = val
-        if self.case is not None:
-            self.case.user_id = val
-
-    @property
-    def title(self) -> str:
-        if self.case is not None and self.case.title:
-            return self.case.title
-        return getattr(self, "_title", "New case")
-
-    @title.setter
-    def title(self, val: str) -> None:
-        self._title = val
-        if self.case is not None:
-            self.case.title = val
-
-    @property
-    def status(self) -> str:
-        explicit = getattr(self, "_status", None)
-        if explicit and explicit != "idle":
-            return explicit
-        messages = self.__dict__.get("messages", [])
-        if messages:
-            answered_ids = {
-                m.in_reply_to_message_id
-                for m in messages
-                if getattr(m, "in_reply_to_message_id", None) is not None
-            }
-            has_pending = any(
-                getattr(m, "message_kind", None) == "followup_question" and m.id not in answered_ids
-                for m in messages
-            )
-            if has_pending:
-                return "awaiting_followup"
-        case = self.__dict__.get("case")
-        if case is not None and getattr(case, "latest_analysis_result_id", None) is not None:
-            return "answered"
-        return explicit or "idle"
-
-    @status.setter
-    def status(self, val: Any) -> None:
-        self._status = str(val) if val is not None else "idle"
-
-    messages: Mapped[list[ChatMessage]] = relationship(
-        back_populates="thread",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        order_by="ChatMessage.ordinal",
-        lazy="selectin",
-    )
-    case: Mapped["Case | None"] = relationship(
-        "Case",
-        back_populates="chat_thread",
-        foreign_keys=[case_id],
-        uselist=False,
-        lazy="selectin",
-    )
-
-
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_chat_messages"),
         UniqueConstraint(
-            "thread_id",
+            "case_id",
             "ordinal",
-            name="uq_chat_messages_thread_id_ordinal",
-        ),
-        UniqueConstraint(
-            "thread_id",
-            "id",
-            name="uq_chat_messages_thread_id_id",
+            name="uq_chat_messages_case_id_ordinal",
         ),
         CheckConstraint(
             "ordinal > 0",
@@ -179,6 +49,7 @@ class ChatMessage(Base):
             "message_kind IN ('conversation', 'followup_question', 'followup_answer')",
             name="ck_chat_messages_message_kind",
         ),
+        Index("ix_chat_messages_case_id_ordinal", "case_id", "ordinal"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -186,11 +57,11 @@ class ChatMessage(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
-    thread_id: Mapped[uuid.UUID] = mapped_column(
+    case_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
-            "chat_threads.id",
-            name="fk_chat_messages_thread_id_chat_threads",
+            "cases.id",
+            name="fk_chat_messages_case_id_cases",
             ondelete="CASCADE",
         ),
         nullable=False,
@@ -230,10 +101,80 @@ class ChatMessage(Base):
         server_default=func.now(),
     )
 
-    thread: Mapped[ChatThread] = relationship(back_populates="messages")
+    case: Mapped["Case"] = relationship(
+        "Case",
+        back_populates="chat_messages",
+        foreign_keys=[case_id],
+    )
     in_reply_to_message: Mapped["ChatMessage | None"] = relationship(
         "ChatMessage", remote_side=[id], foreign_keys=[in_reply_to_message_id]
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        if "case_id" not in kwargs and "thread_id" in kwargs:
+            kwargs["case_id"] = kwargs.pop("thread_id")
+        super().__init__(**kwargs)
+
+    @property
+    def thread_id(self) -> uuid.UUID:
+        return self.case_id
+
+    @thread_id.setter
+    def thread_id(self, val: uuid.UUID) -> None:
+        self.case_id = val
+
+
+class ChatThread:
+    """In-memory compatibility view of a Case's chat state."""
+
+    def __init__(
+        self,
+        id: uuid.UUID | None = None,
+        case_id: uuid.UUID | None = None,
+        title: str = "New case",
+        user_id: uuid.UUID | None = None,
+        next_message_ordinal: int = 1,
+        case: Case | None = None,
+        messages: list[ChatMessage] | None = None,
+        status: str = "idle",
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        **kwargs: Any,
+    ) -> None:
+        self.id = id or case_id or uuid.uuid4()
+        self.case_id = case_id or self.id
+        self.title = title
+        self.user_id = user_id
+        self.next_message_ordinal = next_message_ordinal
+        self.case = case
+        self.messages = messages if messages is not None else []
+        self._status = status
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.updated_at = updated_at or datetime.now(timezone.utc)
+
+    @property
+    def status(self) -> str:
+        if self._status and self._status != "idle":
+            return self._status
+        if self.messages:
+            answered_ids = {
+                m.in_reply_to_message_id
+                for m in self.messages
+                if getattr(m, "in_reply_to_message_id", None) is not None
+            }
+            has_pending = any(
+                getattr(m, "message_kind", None) == "followup_question" and m.id not in answered_ids
+                for m in self.messages
+            )
+            if has_pending:
+                return "awaiting_followup"
+        if self.case is not None and getattr(self.case, "latest_analysis_result_id", None) is not None:
+            return "answered"
+        return self._status or "idle"
+
+    @status.setter
+    def status(self, val: Any) -> None:
+        self._status = str(val) if val is not None else "idle"
 
 
 __all__ = ["ChatMessage", "ChatThread"]

@@ -5,7 +5,6 @@ import {
   mapSourceMessageIds,
   parseEvidenceCitations,
 } from "@/lib/evidence-citation";
-import { sha256Hex } from "@/lib/sha256";
 
 function message(
   content: string,
@@ -35,7 +34,6 @@ function documentForPages(pages: Array<[number, string]>): Record<string, unknow
       page_number: pageNumber,
       start_offset: offset,
       end_offset: offset + text.length,
-      text_sha256: sha256Hex(text),
     };
     offset += text.length + 2;
     return span;
@@ -59,15 +57,6 @@ function citation(exactQuote: string, pageNumbers: number[]) {
 }
 
 describe("evidence citation projection", () => {
-  it("matches the standard SHA-256 digest", () => {
-    expect(sha256Hex("Native narrative")).toBe(
-      "e03d63dc82d71733cb48672c9606ff40af6519f20e5e14291572ebb78fddef7d",
-    );
-    expect(sha256Hex("บัญชีได้รับเงินจำนวน 52,000 บาท")).toBe(
-      "679c5f9ef5581800349ba6b465363f6e28682bbc902c720cef6c42927179439c",
-    );
-  });
-
   it("admits an exact quote on one validated document page", () => {
     const content = "Page four: received 52,000 baht.";
     const source = message(content, [documentForPages([[4, content]])]);
@@ -112,23 +101,6 @@ describe("evidence citation projection", () => {
     expect(formatEvidenceCitationText(nonConsecutive)).toBe("pp. 4, 7");
   });
 
-  it("falls back to a narrative source when a page hash is stale", () => {
-    const content = "Page four: received 52,000 baht.";
-    const document = documentForPages([[4, content]]);
-    const pageSpans = document.page_spans as Record<string, unknown>[];
-    pageSpans[0].text_sha256 = "0".repeat(64);
-    const source = message(content, [document]);
-    const [ref] = mapSourceMessageIds(
-      [source.id],
-      [source],
-      parseEvidenceCitations([citation("received 52,000 baht", [4])]),
-    );
-
-    expect(ref.pageNumbers).toEqual([]);
-    expect(ref.filename).toBeNull();
-    expect(ref.label).toBe("Reviewed case narrative");
-    expect(ref.displayContent).toContain("received 52,000 baht");
-  });
 
   it("falls back when the document locator is incomplete", () => {
     const content = "Page four: received 52,000 baht.";

@@ -214,9 +214,7 @@ def _metadata_table(
     rows = [
         ("Case", str(snapshot.case_id)),
         ("Analysis result", str(snapshot.analysis_result_id)),
-        ("Evidence snapshot", f"{snapshot.evidence_snapshot_id} · revision {snapshot.evidence_revision}"),
-        ("Evidence text SHA-256", snapshot.evidence_sha256),
-        ("Evidence manifest SHA-256", snapshot.manifest_sha256),
+        ("Evidence revision", str(snapshot.evidence_revision)),
     ]
     table = Table(
         [[Paragraph(paragraph_text(label), styles["meta_label"]), Paragraph(paragraph_text(value), styles["meta_value"])] for label, value in rows],
@@ -243,10 +241,8 @@ def _claim_story(
     report: StructuredReport,
     styles: dict[str, ParagraphStyle],
 ) -> list[object]:
-    if not report.claims:
-        return []
     story: list[object] = [
-        Paragraph("Claim source bindings", styles["section_heading"]),
+        Paragraph("Key findings and source binding", styles["section_heading"]),
         Spacer(1, 2 * mm),
     ]
     for claim in report.claims:
@@ -266,7 +262,7 @@ def _source_story(
     styles: dict[str, ParagraphStyle],
 ) -> list[object]:
     story: list[object] = [
-        Paragraph("Evidence snapshot sources", styles["section_heading"]),
+        Paragraph("Admitted case sources", styles["section_heading"]),
         Spacer(1, 2 * mm),
     ]
     for source in snapshot.sources:

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
-import { sha256Hex } from "@/lib/sha256";
 import { buildTechnicalContext } from "@/lib/technicalContext";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
@@ -22,7 +21,6 @@ function technicalContextFixture(
     revision: 1,
     source_id: sourceId,
     source_kind: "narrative",
-    text_sha256: sha256Hex(exactQuote),
   }];
   const snapshot: CaseEvidenceSnapshotRead = {
     id: snapshotId,
@@ -31,8 +29,6 @@ function technicalContextFixture(
     format_version: "case_evidence_snapshot_v1",
     manifest_json: manifest,
     input_text: exactQuote,
-    text_sha256: sha256Hex(exactQuote),
-    manifest_sha256: sha256Hex(JSON.stringify(manifest)),
     created_at: "2026-09-10T00:00:00Z",
   };
   const retrievalContextId = status === "not_applicable" ? null : "retrieval-native-1";
@@ -48,7 +44,7 @@ function technicalContextFixture(
     id: resultId,
     case_id: caseId,
     run_id: "55555555-5555-4555-8555-555555555555",
-    snapshot_id: snapshotId,
+    evidence_revision: 1,
     schema_version: "case_analysis_result_v1",
     status: "validated",
     answer: exactQuote,
@@ -57,7 +53,7 @@ function technicalContextFixture(
       version: "case_analysis_trace_v1",
       validation_status: "validated",
       analysis_mode: "case_overview",
-      evidence_sha256: snapshot.text_sha256,
+      evidence_sha256: "test-hash",
       summary: exactQuote,
       claims: [{
         claim_id: "A-01",
@@ -130,7 +126,7 @@ describe("buildTechnicalContext", () => {
 
   it("withholds context when the persisted trace binding is invalid", () => {
     const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
-    fixture.result.trace_json = { ...(fixture.result.trace_json ?? {}), evidence_sha256: "0".repeat(64) };
+    fixture.result.trace_json = { ...(fixture.result.trace_json ?? {}), validation_status: "failed" };
     const result = buildTechnicalContext(fixture.result, fixture.snapshot);
     expect(result.status).toBe("invalid_trace");
     expect(result.failureCode).toBe("invalid_trace");

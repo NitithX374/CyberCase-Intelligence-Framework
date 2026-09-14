@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import hashlib
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Mapping
 from uuid import UUID
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
-from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseRun
-from app.services.case_materials import canonicalJson
+from app.services.case_materials import CaseMaterialsError, assembleCaseEvidence
 from app.services.workflow.caseRunService import ClaimedCaseRun
 
 
@@ -40,7 +37,7 @@ async def claimCaseRun(
             .returning(
                 CaseRun.id,
                 CaseRun.case_id,
-                CaseRun.snapshot_id,
+                CaseRun.evidence_revision,
                 CaseRun.operation,
                 CaseRun.attempt_count,
                 CaseRun.pipeline_config,
@@ -54,69 +51,40 @@ async def claimCaseRun(
         if case is None:
             await _fail_claimed_run(db, row["id"], row["attempt_count"], now, "case_not_found", "Case is missing")
             return None
-        snapshot = await db.get(CaseEvidenceSnapshot, row["snapshot_id"])
-        if snapshot is None or snapshot.case_id != case.id:
-            await _fail_claimed_run(
-                db,
-                row["id"],
-                row["attempt_count"],
-                now,
-                "case_snapshot_missing",
-                "Pinned Case evidence snapshot is missing",
-            )
-            return None
         try:
-            manifest = validateSnapshotManifest(snapshot)
-        except ValueError as error:
-            await _fail_claimed_run(
-                db,
-                row["id"],
-                row["attempt_count"],
-                now,
-                "case_snapshot_invalid",
-                str(error),
-            )
+            assembled = await assembleCaseEvidence(db, case_id=row["case_id"], user_id=None)
+        except CaseMaterialsError as error:
+            await _fail_claimed_run(db, row["id"], row["attempt_count"], now, error.code, error.message)
             return None
+
+        manifest = tuple(
+            {
+                "source_id": str(s.id),
+                "exact_text": s.exact_text,
+                "provenance": s.provenance_json,
+                "source_kind": s.source_kind,
+                "document_id": str(s.document_id) if s.document_id else None,
+                "filename": s.document.filename if s.document else None,
+                "revision": 1,
+            }
+            for s in assembled.active_sources
+        )
+        source_ids = tuple(str(s.id) for s in assembled.active_sources)
+        source_text_by_id = {str(s.id): s.exact_text for s in assembled.active_sources}
+
         return ClaimedCaseRun(
             id=row["id"],
             case_id=row["case_id"],
-            snapshot_id=snapshot.id,
+            evidence_revision=row["evidence_revision"],
             attempt_count=row["attempt_count"],
             operation=row["operation"],
-            input_text=snapshot.input_text,
-            text_sha256=snapshot.text_sha256,
+            input_text=assembled.input_text,
             manifest=manifest,
-            source_ids=tuple(str(item["source_id"]) for item in manifest),
-            source_text_by_id={str(item["source_id"]): str(item["exact_text"]) for item in manifest},
+            source_ids=source_ids,
+            source_text_by_id=source_text_by_id,
             pipeline_config=deepcopy(row["pipeline_config"]),
             request_payload=deepcopy(row["request_payload"]),
         )
-
-
-def validateSnapshotManifest(snapshot: CaseEvidenceSnapshot) -> tuple[dict[str, object], ...]:
-    if hashlib.sha256(snapshot.input_text.encode("utf-8")).hexdigest() != snapshot.text_sha256:
-        raise ValueError("Pinned snapshot text hash is invalid")
-    if hashlib.sha256(canonicalJson(snapshot.manifest_json).encode("utf-8")).hexdigest() != snapshot.manifest_sha256:
-        raise ValueError("Pinned snapshot manifest hash is invalid")
-    if not isinstance(snapshot.manifest_json, list) or not snapshot.manifest_json:
-        raise ValueError("Pinned snapshot manifest is empty")
-    manifest: list[dict[str, object]] = []
-    source_ids: set[str] = set()
-    for item in snapshot.manifest_json:
-        if not isinstance(item, Mapping):
-            raise ValueError("Pinned snapshot manifest entry is invalid")
-        source_id = item.get("source_id")
-        exact_text = item.get("exact_text")
-        text_hash = item.get("text_sha256")
-        if not all(isinstance(value, str) and value.strip() for value in (source_id, exact_text, text_hash)):
-            raise ValueError("Pinned snapshot source reference is incomplete")
-        if source_id in source_ids:
-            raise ValueError("Pinned snapshot contains duplicate source IDs")
-        if hashlib.sha256(exact_text.encode("utf-8")).hexdigest() != text_hash:
-            raise ValueError("Pinned snapshot source text hash is invalid")
-        source_ids.add(source_id)
-        manifest.append(dict(item))
-    return tuple(manifest)
 
 
 async def _fail_claimed_run(
@@ -145,4 +113,10 @@ async def _fail_claimed_run(
         )
     )
 
-__all__ = ["claimCaseRun", "validateSnapshotManifest"]
+
+claim_case_run = claimCaseRun
+
+__all__ = [
+    "claimCaseRun",
+    "claim_case_run",
+]

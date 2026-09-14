@@ -33,14 +33,25 @@ export function CaseMaterialsView({
   const [previewMode, setPreviewMode] = useState<MaterialPreviewMode>("original");
 
   const admittedExtractionIds = useMemo(
-    () => new Set(evidence.flatMap((source) => source.revisions?.flatMap((revision) => revision.extraction_id ? [revision.extraction_id] : []) ?? [])),
+    () =>
+      new Set(
+        evidence.flatMap((source) => {
+          const prov = source.provenance_json as Record<string, unknown> | undefined;
+          const extractionId = prov?.extraction_id as string | undefined;
+          return [extractionId, source.document_id].filter(Boolean) as string[];
+        }),
+      ),
     [evidence],
   );
   const selectedDocument = documents.find((document) => document.id === selectedDocumentId) ?? documents[0] ?? null;
   const selectedExtraction = selectedDocument
-    ? [...(selectedDocument.extractions ?? [])].sort((left, right) => right.revision - left.revision)[0] ?? null
+    ? [...(selectedDocument.extractions ?? [])].sort(
+        (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+      )[0] ?? null
     : null;
-  const selectedExtractionIsAdmitted = selectedExtraction ? admittedExtractionIds.has(selectedExtraction.id) : false;
+  const selectedExtractionIsAdmitted = selectedExtraction
+    ? admittedExtractionIds.has(selectedExtraction.id) || (selectedDocument?.id ? admittedExtractionIds.has(selectedDocument.id) : false)
+    : false;
 
   return (
     <div

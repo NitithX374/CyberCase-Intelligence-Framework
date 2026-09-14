@@ -46,7 +46,14 @@ export function CaseIntakeView({
   const [title, setTitle] = useAccountState(`case-intake:${caseId}:title`, "");
   const [description, setDescription] = useAccountState(`case-intake:${caseId}:description`, "");
   const admittedExtractionIds = useMemo(
-    () => new Set(evidence.flatMap((source) => source.revisions?.map((revision) => revision.extraction_id).filter(Boolean) ?? [])),
+    () =>
+      new Set(
+        evidence.flatMap((source) => {
+          const prov = source.provenance_json as Record<string, unknown> | undefined;
+          const extractionId = prov?.extraction_id as string | undefined;
+          return [extractionId, source.document_id].filter(Boolean) as string[];
+        }),
+      ),
     [evidence],
   );
   const hasEvidence = evidence.length > 0;
@@ -109,18 +116,24 @@ export function CaseIntakeView({
               </div>
               <div className="divide-y divide-line">
                 {documents.map((document) => {
-                  const extraction = [...(document.extractions ?? [])].sort((left, right) => right.revision - left.revision)[0];
-                  const admitted = extraction ? admittedExtractionIds.has(extraction.id) : false;
+                  const extraction = [...(document.extractions ?? [])].sort(
+                    (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+                  )[0];
+                  const admitted = extraction
+                    ? admittedExtractionIds.has(extraction.id) || admittedExtractionIds.has(document.id)
+                    : false;
                   return (
                     <article key={document.id} className="grid gap-3 px-3 py-3.5 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.7fr)_auto] sm:items-center sm:gap-4">
                       <p className="break-words text-xs font-semibold text-ink">{document.filename}</p>
-                      <p className="text-[11px] text-ink-secondary">{extraction ? `Revision ${extraction.revision} · ${extraction.provider}` : "Not available"}</p>
+                      <p className="text-[11px] text-ink-secondary">{extraction ? extraction.provider : "Not available"}</p>
                       <StatusPill tone={admitted ? "positive" : "attention"}>{document.archived_at ? "Archived" : admitted ? "Admitted" : "Review required"}</StatusPill>
                       {extraction && !admitted && !document.archived_at ? (
                         <button type="button" disabled={admittingExtractionId !== null || isBusy} onClick={() => onAdmitExtraction(document.id, extraction.id)} className="w-fit text-[11px] font-semibold text-accent underline decoration-accent/30 underline-offset-4 disabled:opacity-50">
                           {admittingExtractionId === extraction.id ? "Admitting…" : "Admit text"}
                         </button>
-                      ) : <span className="text-[11px] text-ink-muted">—</span>}
+                      ) : (
+                        <span className="text-[11px] text-ink-muted">{document.archived_at ? "Archived" : "Included"}</span>
+                      )}
                     </article>
                   );
                 })}
@@ -137,15 +150,12 @@ export function CaseIntakeView({
               <span className="text-xs text-ink-muted">{evidence.length} source{evidence.length === 1 ? "" : "s"}</span>
             </div>
             <div className="divide-y divide-line border-y border-line">
-              {evidence.map((source) => {
-                const revision = [...(source.revisions ?? [])].sort((left, right) => right.revision - left.revision)[0];
-                return revision ? (
-                  <article key={source.id} className="grid gap-2 py-3.5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4">
-                    <p className="text-xs font-medium text-ink-secondary">{sourceLabel(source.source_kind)} · revision {revision.revision}</p>
-                    <p className="line-clamp-3 whitespace-pre-wrap text-xs leading-5 text-ink">{revision.exact_text}</p>
-                  </article>
-                ) : null;
-              })}
+              {evidence.map((source) => (
+                <article key={source.id} className="grid gap-2 py-3.5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4">
+                  <p className="text-xs font-medium text-ink-secondary">{sourceLabel(source.source_kind)}</p>
+                  <p className="line-clamp-3 whitespace-pre-wrap text-xs leading-5 text-ink">{source.exact_text}</p>
+                </article>
+              ))}
             </div>
           </section>
         )}

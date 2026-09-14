@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
 import { buildCaseOverview } from "@/lib/case-overview-builder";
-import { sha256Hex } from "@/lib/sha256";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const caseId = "22222222-2222-4222-8222-222222222222";
@@ -15,7 +14,6 @@ function fixture(): { result: CaseAnalysisResultRead; snapshot: CaseEvidenceSnap
     revision: 1,
     source_id: sourceId,
     source_kind: "narrative",
-    text_sha256: sha256Hex(quote),
   }];
   const inputText = `[CASE NARRATIVE · SOURCE ${sourceId} · REVISION 1]\n${quote}`;
   const snapshot: CaseEvidenceSnapshotRead = {
@@ -25,15 +23,13 @@ function fixture(): { result: CaseAnalysisResultRead; snapshot: CaseEvidenceSnap
     format_version: "case_evidence_snapshot_v1",
     manifest_json: manifest,
     input_text: inputText,
-    text_sha256: sha256Hex(inputText),
-    manifest_sha256: sha256Hex(JSON.stringify(manifest)),
     created_at: "2026-09-10T00:00:00Z",
   };
   const result: CaseAnalysisResultRead = {
     id: "44444444-4444-4444-8444-444444444444",
     case_id: caseId,
     run_id: "55555555-5555-4555-8555-555555555555",
-    snapshot_id: snapshotId,
+    evidence_revision: 1,
     schema_version: "case_analysis_result_v1",
     status: "validated",
     answer: quote,
@@ -42,7 +38,6 @@ function fixture(): { result: CaseAnalysisResultRead; snapshot: CaseEvidenceSnap
       version: "case_analysis_trace_v1",
       validation_status: "validated",
       analysis_mode: "case_overview",
-      evidence_sha256: snapshot.text_sha256,
       summary: "The submitted material identifies a blue vehicle.",
       claims: [{
         claim_id: "A-01",
@@ -77,14 +72,7 @@ describe("Case overview projection", () => {
     expect(source).toMatchObject({ id: sourceId, ordinal: 1, isNativeEvidence: true, exactQuote: quote });
   });
 
-  it("fails closed when the persisted manifest hash is invalid", () => {
-    const { result, snapshot } = fixture();
-    const overview = buildCaseOverview(result, { ...snapshot, manifest_sha256: "0".repeat(64) }, "completed");
-    expect(overview.hasAnalysis).toBe(false);
-    expect(overview.unavailableReason).toMatch(/manifest hash/i);
-  });
-
-  it("verifies manifest hash when OCR bounding boxes were serialized with floats in Python", () => {
+  it("renders overview with OCR document sources", () => {
     const documentQuote = "Defendant was seen at the scene.";
     const manifest = [{
       document_id: "DOC-001",
@@ -99,20 +87,12 @@ describe("Case overview projection", () => {
             bbox: { x0: 0, x1: 1000, y0: 0, y1: 500 },
           }],
           start_offset: 0,
-          text_sha256: sha256Hex(documentQuote),
         }],
       },
       revision: 1,
       source_id: sourceId,
       source_kind: "reviewed_document",
-      text_sha256: sha256Hex(documentQuote),
     }];
-    const pythonSerializedManifest = JSON.stringify(manifest)
-      .replace('"x0":0', '"x0":0.0')
-      .replace('"x1":1000', '"x1":1000.0')
-      .replace('"y0":0', '"y0":0.0')
-      .replace('"y1":500', '"y1":500.0');
-    const pythonManifestSha256 = sha256Hex(pythonSerializedManifest);
 
     const snapshot: CaseEvidenceSnapshotRead = {
       id: snapshotId,
@@ -121,8 +101,6 @@ describe("Case overview projection", () => {
       format_version: "case_evidence_snapshot_v1",
       manifest_json: manifest,
       input_text: `[DOCUMENT report.pdf · SOURCE ${sourceId} · REVISION 1]\n${documentQuote}`,
-      text_sha256: sha256Hex(`[DOCUMENT report.pdf · SOURCE ${sourceId} · REVISION 1]\n${documentQuote}`),
-      manifest_sha256: pythonManifestSha256,
       created_at: "2026-09-10T00:00:00Z",
     };
     const { result } = fixture();
@@ -130,7 +108,6 @@ describe("Case overview projection", () => {
       ...result,
       trace_json: {
         ...result.trace_json,
-        evidence_sha256: snapshot.text_sha256,
         claims: [{
           claim_id: "A-01",
           claim_type: "reported",
@@ -170,13 +147,11 @@ describe("Case overview projection", () => {
           end_offset: fullText.length,
           page_number: 1,
           start_offset: 0,
-          text_sha256: sha256Hex(fullText),
         }],
       },
       revision: 1,
       source_id: sourceId,
       source_kind: "reviewed_document",
-      text_sha256: sha256Hex(fullText),
     }];
     const snapshot: CaseEvidenceSnapshotRead = {
       id: snapshotId,
@@ -185,8 +160,6 @@ describe("Case overview projection", () => {
       format_version: "case_evidence_snapshot_v1",
       manifest_json: manifest,
       input_text: `[DOCUMENT report.pdf · SOURCE ${sourceId} · REVISION 1]\n${fullText}`,
-      text_sha256: sha256Hex(`[DOCUMENT report.pdf · SOURCE ${sourceId} · REVISION 1]\n${fullText}`),
-      manifest_sha256: sha256Hex(JSON.stringify(manifest)),
       created_at: "2026-09-10T00:00:00Z",
     };
     const { result } = fixture();
@@ -194,7 +167,6 @@ describe("Case overview projection", () => {
       ...result,
       trace_json: {
         ...result.trace_json,
-        evidence_sha256: snapshot.text_sha256,
         claims: [{
           claim_id: "A-01",
           claim_type: "reported",
@@ -217,6 +189,7 @@ describe("Case overview projection", () => {
     };
     const overview = buildCaseOverview(docResult, snapshot, "completed");
     expect(overview.hasAnalysis).toBe(true);
+    expect(overview.findings).toHaveLength(1);
     expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
   });
 });

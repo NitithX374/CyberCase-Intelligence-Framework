@@ -1,4 +1,3 @@
-import hashlib
 import re
 from collections.abc import Mapping
 
@@ -112,20 +111,17 @@ def validatePageSpans(value: object, content: str) -> list[tuple[int, int, int]]
         page = item.get("page_number")
         start = item.get("start_offset")
         end = item.get("end_offset")
-        expected_hash = item.get("text_sha256")
         if not all(isinstance(part, int) for part in (page, start, end)):
             break
         if (
-            not isinstance(expected_hash, str)
-            or start < 0
+            start < 0
             or end > len(content)
             or start >= end
+            or page < 1
+            or page > MAX_SUPPORTED_DOCUMENT_PAGES
         ):
             break
         if page in seen_pages or start < previous_end:
-            break
-        actual_hash = hashlib.sha256(content[start:end].encode("utf-8")).hexdigest()
-        if actual_hash != expected_hash:
             break
         seen_pages.add(page)
         previous_end = end

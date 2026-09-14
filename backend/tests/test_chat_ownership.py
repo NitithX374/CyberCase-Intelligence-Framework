@@ -32,7 +32,9 @@ class ChatOwnershipServiceTests(unittest.IsolatedAsyncioTestCase):
         guest_thread = await service.create_thread(ChatThreadCreate(title="Guest Thread"))
         self.assertEqual(guest_thread.title, "Guest Thread")
         self.assertIsNone(guest_thread.user_id)
-        db.add.assert_called_with(guest_thread)
+        added_case = db.add.call_args[0][0]
+        self.assertEqual(added_case.title, "Guest Thread")
+        self.assertIsNone(added_case.user_id)
 
         # 2. User creation
         user_id = uuid4()

@@ -15,11 +15,10 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.caseMaterials import (
         CaseDocument,
-        CaseEvidenceSnapshot,
         EvidenceSource,
     )
     from app.models.caseRun import CaseAnalysisResult, CaseRun
-    from app.models.chat import ChatThread
+    from app.models.chat import ChatMessage
     from app.models.ragContext import RagContext
     from app.models.report import CaseReport
     from app.models.user import User
@@ -73,13 +72,41 @@ class Case(Base):
         onupdate=func.now(),
     )
 
-    chat_thread: Mapped["ChatThread | None"] = relationship(
-        "ChatThread",
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        "ChatMessage",
         back_populates="case",
-        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
+        order_by="ChatMessage.ordinal",
+        lazy="selectin",
     )
+
+    @property
+    def chat_thread(self) -> Any:
+        from app.models.chat import ChatThread
+
+        messages = getattr(self, "chat_messages", None) or []
+        next_ordinal = (
+            max((m.ordinal for m in messages), default=0) + 1
+            if messages
+            else 1
+        )
+        return ChatThread(
+            id=self.id,
+            case_id=self.id,
+            title=self.title,
+            user_id=self.user_id,
+            next_message_ordinal=next_ordinal,
+            case=self,
+            messages=messages,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
+
+    @chat_thread.setter
+    def chat_thread(self, val: Any) -> None:
+        pass
+
     user: Mapped["User | None"] = relationship(
         "User",
         back_populates="cases",
@@ -92,12 +119,6 @@ class Case(Base):
     )
     evidence_sources: Mapped[list["EvidenceSource"]] = relationship(
         "EvidenceSource",
-        back_populates="case",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    evidence_snapshots: Mapped[list["CaseEvidenceSnapshot"]] = relationship(
-        "CaseEvidenceSnapshot",
         back_populates="case",
         cascade="all, delete-orphan",
         passive_deletes=True,

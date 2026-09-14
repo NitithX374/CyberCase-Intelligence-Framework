@@ -13,12 +13,12 @@ DocumentConfidenceStatus = Literal["reported", "not_reported", "not_applicable"]
 
 
 class CaseNarrativeDocumentPageSpan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     page_number: int = Field(ge=1, le=500)
     start_offset: int = Field(ge=0, le=2_000_000)
     end_offset: int = Field(ge=1, le=2_000_000)
-    text_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    text_sha256: str | None = None
 
     @model_validator(mode="after")
     def validate_offsets(self) -> "CaseNarrativeDocumentPageSpan":

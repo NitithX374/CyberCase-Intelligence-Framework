@@ -98,7 +98,6 @@ def bind_exact_page_spans(
             break
         page["start_offset"] = start
         page["end_offset"] = end
-        page["text_sha256"] = hashlib.sha256(exact_text[start:end].encode("utf-8")).hexdigest()
         bound_pages[page_index] = page
     if bound_pages:
         output["pages"] = [

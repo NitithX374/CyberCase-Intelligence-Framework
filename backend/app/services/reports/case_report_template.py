@@ -80,9 +80,7 @@ def build_case_template_report(
     limitations = [
         "รายงานนี้เป็นรายงานสรุปผลการวิเคราะห์เบื้องต้น (Provisional / Unverified)",
         f"Analysis result: {snapshot.analysis_result_id}",
-        f"Evidence snapshot: {snapshot.evidence_snapshot_id} (revision {snapshot.evidence_revision})",
-        f"Evidence text SHA-256: {snapshot.evidence_sha256}",
-        f"Evidence manifest SHA-256: {snapshot.manifest_sha256}",
+        f"Evidence revision: {snapshot.evidence_revision}",
         "แหล่งอ้างอิงของรายงานใช้ Case evidence source/revision โดยตรง ไม่ใช้รหัสข้อความสนทนาแทนหลักฐาน",
         *_technical_limitations(snapshot),
     ]

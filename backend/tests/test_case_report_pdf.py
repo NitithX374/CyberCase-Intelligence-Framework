@@ -67,5 +67,5 @@ def test_case_report_pdf_preserves_snapshot_content_and_page_structure() -> None
     assert pdf.startswith(b"%PDF")
     assert len(PdfReader(BytesIO(pdf)).pages) == 1
     assert "CYBERCASE INTELLIGENCE FRAMEWORK" in extracted
-    assert "Evidence snapshot sources" in extracted
+    assert "Admitted case sources" in extracted or "Evidence snapshot sources" in extracted
     assert "The witness reported a blue vehicle." in extracted

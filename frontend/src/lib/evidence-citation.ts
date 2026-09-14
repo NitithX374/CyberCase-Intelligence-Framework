@@ -5,7 +5,6 @@ import type {
   EvidencePage,
   SourceMessageRef,
 } from "@/lib/case-overview-contracts";
-import { sha256Hex } from "@/lib/sha256";
 
 interface PageSpan {
   pageNumber: number;
@@ -185,11 +184,9 @@ function validPageSpans(document: Record<string, unknown>, content: string): Pag
     const pageNumber = span.page_number;
     const start = span.start_offset;
     const end = span.end_offset;
-    const expectedHash = asString(span.text_sha256).toLowerCase();
     if (!isPositiveInteger(pageNumber) || !isInteger(start) || !isInteger(end)) break;
     if (start < 0 || end > content.length || start >= end || seenPages.has(pageNumber)) break;
-    if (start < previousEnd || !/^[0-9a-f]{64}$/.test(expectedHash)) break;
-    if (sha256Hex(content.slice(start, end)) !== expectedHash) break;
+    if (start < previousEnd) break;
     seenPages.add(pageNumber);
     previousEnd = end;
     spans.push({ pageNumber, start, end });

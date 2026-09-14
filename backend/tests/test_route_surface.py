@@ -53,8 +53,6 @@ def test_health_chat_and_nested_report_api_routes_are_registered() -> None:
         ("POST", "/api/v1/cases/{case_id}/evidence"),
         ("POST", "/api/v1/cases/{case_id}/evidence/{source_id}/revisions"),
         ("POST", "/api/v1/cases/{case_id}/evidence/{source_id}/archive"),
-        ("POST", "/api/v1/cases/{case_id}/evidence/snapshot"),
-        ("GET", "/api/v1/cases/{case_id}/evidence/snapshots/{snapshot_id}"),
         ("GET", "/api/v1/cases/{case_id}/analysis"),
         ("GET", "/api/v1/cases/{case_id}/analysis/results"),
         ("GET", "/api/v1/cases/{case_id}/analysis/results/{result_id}"),

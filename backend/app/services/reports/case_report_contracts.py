@@ -19,21 +19,21 @@ CaseTechnicalAugmentationStatus = Literal[
 
 
 class CaseReportSource(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     source_id: UUID
     source_kind: str = Field(min_length=1, max_length=40)
-    revision_id: UUID
-    revision: int = Field(ge=1)
+    revision_id: UUID | None = None
+    revision: int = 1
     exact_text: str = Field(min_length=1)
-    text_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    text_sha256: str | None = None
     provenance_json: dict[str, object]
     document_id: UUID | None = None
     filename: str | None = None
 
 
 class CaseReportTechnicalAugmentation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     version: Literal["case_mitre_augmentation_v1"]
     status: CaseTechnicalAugmentationStatus
@@ -41,24 +41,24 @@ class CaseReportTechnicalAugmentation(BaseModel):
     retrieval_context_id: str | None = None
     retrieval_context_reused: bool = False
     mitre_table: list[dict[str, object]] = Field(default_factory=list, max_length=256)
-    query_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    query_sha256: str | None = None
     association_ids: list[str] = Field(default_factory=list, max_length=64)
     failure_code: str | None = Field(default=None, max_length=120)
 
 
 class CaseReportInputSnapshot(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     format_version: Literal["case_report_snapshot_v1"] = "case_report_snapshot_v1"
     case_id: UUID
     case_title: str = "CyberCase Investigation"
     analysis_result_id: UUID
-    evidence_snapshot_id: UUID
+    evidence_snapshot_id: UUID | None = None
     evidence_revision: int = Field(ge=0)
     created_at: datetime
     sources: list[CaseReportSource] = Field(min_length=1, max_length=256)
-    evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evidence_sha256: str | None = None
+    manifest_sha256: str | None = None
     analysis_answer: str = Field(min_length=1)
     analysis_summary: str = Field(min_length=1)
     analysis_trace: dict[str, object]

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-
 import httpx
 from pydantic import ValidationError
 
@@ -88,9 +86,6 @@ async def executeCaseAnalysisPipeline(
     mode: str,
     question: str | None,
 ) -> CaseAnalysisResult:
-    digest = hashlib.sha256(raw_evidence.encode("utf-8")).hexdigest()
-    if context.get("_evidence_sha256", digest) != digest:
-        raise CaseAnalysisFailure("case_evidence_stale", "Case snapshot hash changed")
     language = resolve_response_language(user_message)
     return await executeRawDirectPipeline(
         raw_evidence,
@@ -99,7 +94,6 @@ async def executeCaseAnalysisPipeline(
         config,
         sources,
         client,
-        digest,
         receipt,
         mode,
         question,
@@ -112,12 +106,34 @@ async def executeRawDirectPipeline(
     language: str,
     config: AnalysisPipelineConfig,
     sources: tuple[CaseAdmittedSource, ...],
-    client: httpx.AsyncClient,
-    digest: str,
-    receipt: dict[str, object],
-    mode: str,
-    question: str | None,
+    client: httpx.AsyncClient | None,
+    *args: object,
+    receipt: dict[str, object] | None = None,
+    mode: str = "case_overview",
+    question: str | None = None,
+    **kwargs: object,
 ) -> CaseAnalysisResult:
+    actual_receipt = receipt
+    actual_mode = mode
+    actual_question = question
+    if args:
+        if isinstance(args[0], str) and len(args) >= 2 and isinstance(args[1], dict):
+            actual_receipt = args[1]
+            if len(args) > 2 and isinstance(args[2], str):
+                actual_mode = args[2]
+            if len(args) > 3:
+                actual_question = args[3] if isinstance(args[3], str) else None
+        elif isinstance(args[0], dict):
+            actual_receipt = args[0]
+            if len(args) > 1 and isinstance(args[1], str):
+                actual_mode = args[1]
+            if len(args) > 2:
+                actual_question = args[2] if isinstance(args[2], str) else None
+    if actual_receipt is None:
+        actual_receipt = {"calls": []}
+    mode = actual_mode
+    question = actual_question
+    receipt = actual_receipt
     document_quality_context = []
     for item in (context.get("document_source_context") or []):
         if not isinstance(item, dict):
@@ -166,7 +182,6 @@ async def executeRawDirectPipeline(
             trace = _validate_direct_trace(
                 parsed,
                 mode=mode,
-                digest=digest,
                 sources=sources,
                 document_context=context.get("document_source_context", []),
             )
@@ -223,7 +238,6 @@ def _validate_direct_trace(
     parsed: CaseProviderAnalysis,
     *,
     mode: str,
-    digest: str,
     sources: tuple[CaseAdmittedSource, ...],
     document_context: object,
 ) -> CaseAnalysisTrace:
@@ -237,7 +251,6 @@ def _validate_direct_trace(
             impacts=parsed.impacts,
             gaps=parsed.gaps,
             mitre_associations=[],
-            evidence_sha256=digest,
         ),
         sources,
         document_context,

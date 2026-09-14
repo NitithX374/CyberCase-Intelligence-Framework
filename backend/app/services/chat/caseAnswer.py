@@ -23,7 +23,6 @@ from app.services.case_analysis.contracts import (
 from app.services.case_analysis.pipelineConfig import read_pipeline
 from app.services.case_analysis.providerStage import request_stage, resolve_target
 from app.services.case_analysis.validation import validate_case_trace
-from app.services.case_materials import canonicalJson
 
 ANSWER_VERSION = "case_chat_answer_v1"
 ANSWER_PROMPT = """Answer only the current question about the supplied completed Case analysis.
@@ -62,21 +61,16 @@ async def loadCaseAnswerContext(
     message = await db.get(ChatMessage, run.request_message_id)
     if message is None or message.analysis_result_id is None or message.role != "user":
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat question has no pinned analysis result")
-    thread = await db.get(ChatThread, message.thread_id)
-    if thread is None or thread.case_id != run.case_id:
+    if message.case_id != run.case_id:
         raise CaseAnalysisFailure("case_ask_request_missing", "Pinned Chat question is unavailable")
     result = await db.get(CaseAnalysisResult, message.analysis_result_id)
     if (
-        result is None or result.case_id != run.case_id or result.snapshot_id != run.snapshot_id
-        or result.status != "validated"
+        result is None or result.case_id != run.case_id or result.status != "validated"
     ):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Pinned Chat analysis is unavailable")
     trace = _parse_trace(result.trace_json, "Pinned Chat analysis trace is invalid")
-    evidence_sha256 = analysis_context.get("_evidence_sha256")
-    if not isinstance(evidence_sha256, str):
-        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat evidence binding is unavailable")
-    if trace.analysis_mode != "case_overview" or trace.evidence_sha256 != evidence_sha256:
-        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis does not match its evidence snapshot")
+    if trace.analysis_mode != "case_overview":
+        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis does not match overview mode")
     metadata = result.provider_metadata_json
     if not isinstance(metadata, Mapping):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Pinned Chat analysis metadata is invalid")
@@ -97,7 +91,7 @@ async def loadCaseAnswerContext(
         raise CaseAnalysisFailure("case_ask_request_invalid", "Pinned Chat question changed")
     history = list((await db.scalars(
         select(ChatMessage).where(
-            ChatMessage.thread_id == message.thread_id,
+            ChatMessage.case_id == message.case_id,
             ChatMessage.ordinal < message.ordinal,
             ChatMessage.message_kind == "conversation",
             ChatMessage.analysis_result_id == result.id,
@@ -105,7 +99,7 @@ async def loadCaseAnswerContext(
     )).all())
     return {
         "analysis_result_id": str(result.id),
-        "snapshot_id": str(run.snapshot_id),
+        "evidence_revision": run.evidence_revision,
         "analysis_summary": result.summary,
         "trace": trace.model_dump(mode="json"),
         "question": message.content,
@@ -130,19 +124,14 @@ async def generateCaseAnswer(
     if not isinstance(context, Mapping):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is invalid")
     trace = _parse_trace(context.get("trace"), "Chat analysis trace is invalid")
-    evidence_sha256 = analysis_context.get("_evidence_sha256")
-    if not isinstance(evidence_sha256, str) or trace.evidence_sha256 != evidence_sha256:
-        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis does not match its evidence snapshot")
     question = context.get("question")
     summary = context.get("analysis_summary")
     analysis_result_id = context.get("analysis_result_id")
-    snapshot_id = context.get("snapshot_id")
     history = context.get("history")
     if (
         not isinstance(question, str) or not question.strip()
         or not isinstance(summary, str)
         or not isinstance(analysis_result_id, str)
-        or not isinstance(snapshot_id, str)
         or not isinstance(history, list)
     ):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is incomplete")
@@ -159,8 +148,6 @@ async def generateCaseAnswer(
     receipt = {
         "prompt_version": ANSWER_VERSION,
         "context_analysis_result_id": analysis_result_id,
-        "evidence_snapshot_id": snapshot_id,
-        "context_sha256": hashlib.sha256(canonicalJson(content).encode("utf-8")).hexdigest(),
         "history_message_ids": [item["id"] for item in normalized_history],
         "calls": calls,
     }

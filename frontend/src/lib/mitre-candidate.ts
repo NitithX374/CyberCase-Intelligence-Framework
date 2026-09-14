@@ -139,10 +139,9 @@ function isValidatedTrace(
   const analysisMode = trace?.analysis_mode;
   return Boolean(
     trace &&
-      trace.version === "analysis_trace_v2" &&
+      (trace.version === "analysis_trace_v2" || trace.version === "case_analysis_trace_v1") &&
       (analysisMode === "case_overview" || analysisMode === "question_answer") &&
       requiredString(trace.retrieval_context_id) &&
-      requiredString(trace.evidence_sha256)?.match(/^[0-9a-f]{64}$/) &&
       trace.validation_status === "validated"
   );
 }

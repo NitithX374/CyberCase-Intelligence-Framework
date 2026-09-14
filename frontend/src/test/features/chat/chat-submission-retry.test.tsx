@@ -178,7 +178,7 @@ describe("chat submission lifecycle", () => {
         id: "case-run-1",
         case_id: "a",
         operation: "ask",
-        snapshot_id: "snapshot-1",
+        evidence_revision: 1,
         request_message_id: request.id,
         context_analysis_result_id: "result-1",
         clarification_id: null,

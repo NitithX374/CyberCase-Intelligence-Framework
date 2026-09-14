@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
-from app.models.caseMaterials import CaseEvidenceSnapshot, EvidenceSource
+from app.models.caseMaterials import EvidenceSource
 from app.models.caseRun import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatMessage, ChatThread
+from app.models.chat import ChatMessage
 from app.schemas.caseClarifications import (
     CaseClarificationAnswer,
     CaseClarificationRead,
@@ -38,11 +37,7 @@ class CaseClarificationHistoryError(CaseClarificationError):
 
 
 def answer_fingerprint(request: CaseClarificationAnswer) -> str:
-    payload = {
-        "answer": request.answer.strip(),
-        "response_language": request.response_language,
-    }
-    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    return f"{request.answer.strip()}:{request.response_language}"
 
 
 async def _owned_case(
@@ -61,27 +56,14 @@ async def _owned_case(
     return case
 
 
-async def _locked_case_thread(db: AsyncSession, case: Case) -> ChatThread:
-    thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id).with_for_update())
-    if thread is None:
-        thread = ChatThread(case_id=case.id)
-        db.add(thread)
-        await db.flush()
-    return thread
-
-
 async def load_case_clarification_exchanges(
     db: AsyncSession,
     case_id: UUID,
 ) -> tuple[ClarificationExchange, ...]:
-    thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case_id))
-    if thread is None:
-        return ()
-
     result = await db.execute(
         select(ChatMessage)
         .where(
-            ChatMessage.thread_id == thread.id,
+            ChatMessage.case_id == case_id,
             ChatMessage.role == "user",
             ChatMessage.message_kind.in_(("followup_answer", "clarification_answer")),
         )
@@ -100,7 +82,7 @@ async def load_case_clarification_exchanges(
             question_msg = await db.scalar(
                 select(ChatMessage)
                 .where(
-                    ChatMessage.thread_id == thread.id,
+                    ChatMessage.case_id == case_id,
                     ChatMessage.ordinal < ans_msg.ordinal,
                     ChatMessage.role == "assistant",
                     ChatMessage.message_kind == "followup_question",
@@ -115,16 +97,6 @@ async def load_case_clarification_exchanges(
         topic = str(q_meta.get("topic") or q_meta.get("clarification_topic") or "")
         gap_key = str(q_meta.get("gap_key") or f"{gap_id}:{topic.lower()}")
 
-        snapshot_id_str = q_meta.get("evidence_snapshot_id")
-        snapshot_sha = ""
-        if snapshot_id_str:
-            try:
-                snap = await db.get(CaseEvidenceSnapshot, UUID(str(snapshot_id_str)))
-                if snap:
-                    snapshot_sha = snap.text_sha256
-            except Exception:
-                pass
-
         exchanges.append(
             ClarificationExchange(
                 question=question_msg.content,
@@ -132,7 +104,7 @@ async def load_case_clarification_exchanges(
                 gap_id=gap_id,
                 gap_topic=topic,
                 gap_key=gap_key,
-                evidence_sha256=snapshot_sha,
+                evidence_sha256="",
                 question_message_id=str(question_msg.id),
                 answer_message_id=str(ans_msg.id),
             )
@@ -146,14 +118,11 @@ async def get_owned_clarifications(
     user_id: UUID | None = None,
 ) -> list[CaseClarificationRead]:
     case = await _owned_case(db, case_id, user_id)
-    thread = await db.scalar(select(ChatThread).where(ChatThread.case_id == case.id))
-    if thread is None:
-        return []
 
     q_result = await db.execute(
         select(ChatMessage)
         .where(
-            ChatMessage.thread_id == thread.id,
+            ChatMessage.case_id == case.id,
             ChatMessage.role == "assistant",
             ChatMessage.message_kind == "followup_question",
         )
@@ -166,7 +135,7 @@ async def get_owned_clarifications(
     a_result = await db.execute(
         select(ChatMessage)
         .where(
-            ChatMessage.thread_id == thread.id,
+            ChatMessage.case_id == case.id,
             ChatMessage.role == "user",
             ChatMessage.message_kind.in_(("followup_answer", "clarification_answer")),
         )
@@ -201,7 +170,6 @@ async def get_owned_clarifications(
                 "clarification_context_invalid",
                 "Clarification question has an invalid analysis result",
             )
-        origin_snapshot_id = origin_result.snapshot_id
         gap_id = str(q_meta.get("gap_id") or "G-001")
         topic = str(q_meta.get("topic") or q_meta.get("clarification_topic") or "")
         gap_key = str(q_meta.get("gap_key") or f"{gap_id}:{topic.lower()}")
@@ -231,7 +199,7 @@ async def get_owned_clarifications(
                 id=clarification_id,
                 case_id=case.id,
                 origin_analysis_result_id=origin_result_id,
-                origin_snapshot_id=origin_snapshot_id,
+                origin_snapshot_id=UUID("00000000-0000-0000-0000-000000000000"),
                 gap_key=gap_key,
                 gap_id=gap_id,
                 topic=topic,
@@ -259,12 +227,11 @@ async def submit_clarification_answer(
     request: CaseClarificationAnswer,
 ) -> tuple[CaseClarificationRead, CaseRun]:
     case = await _owned_case(db, case_id, user_id, lock=True)
-    thread = await _locked_case_thread(db, case)
 
     q_result = await db.execute(
         select(ChatMessage)
         .where(
-            ChatMessage.thread_id == thread.id,
+            ChatMessage.case_id == case.id,
             ChatMessage.role == "assistant",
             ChatMessage.message_kind == "followup_question",
         )
@@ -284,7 +251,7 @@ async def submit_clarification_answer(
     existing_answer = await db.scalar(
         select(ChatMessage)
         .where(
-            ChatMessage.thread_id == thread.id,
+            ChatMessage.case_id == case.id,
             ChatMessage.role == "user",
             ChatMessage.message_kind.in_(("followup_answer", "clarification_answer")),
             ChatMessage.in_reply_to_message_id == question.id,
@@ -338,9 +305,17 @@ async def submit_clarification_answer(
     if active is not None:
         raise CaseClarificationError("case_run_active", "Case already has an active analysis run")
 
+    next_ordinal = (
+        await db.scalar(
+            select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
+                ChatMessage.case_id == case.id
+            )
+        )
+        + 1
+    )
     message = ChatMessage(
-        thread_id=thread.id,
-        ordinal=thread.next_message_ordinal,
+        case_id=case.id,
+        ordinal=next_ordinal,
         role="user",
         content=request.answer.strip(),
         message_kind="followup_answer",
@@ -360,6 +335,7 @@ async def submit_clarification_answer(
 
     try:
         from app.services.workflow.caseRunService import enqueue_case_analysis
+        from app.schemas.caseRuns import CaseAnalysisCreate
 
         source = await CaseMaterialsService(db).admitText(
             case_id=case.id,
@@ -381,7 +357,11 @@ async def submit_clarification_answer(
             db,
             case_id=case.id,
             user_id=user_id,
-            request=request.model_copy(update={"expected_evidence_revision": case.evidence_revision}),
+            request=CaseAnalysisCreate(
+                idempotency_key=request.idempotency_key,
+                response_language=request.response_language,
+                expected_evidence_revision=case.evidence_revision,
+            ),
             request_message_id=message.id,
             request_payload_extra={
                 "content": request.answer.strip(),
@@ -395,11 +375,10 @@ async def submit_clarification_answer(
         {
             **message.metadata_json,
             "case_evidence_source_id": str(source.id),
-            "case_evidence_revision": max(item.revision for item in source.revisions),
+            "case_evidence_revision": case.evidence_revision,
         }
     )
-    thread.next_message_ordinal += 1
-    thread.updated_at = datetime.now(timezone.utc)
+    case.updated_at = datetime.now(timezone.utc)
     await db.flush()
 
     read_items = await get_owned_clarifications(db, case_id=case.id, user_id=user_id)

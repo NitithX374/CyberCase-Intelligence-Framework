@@ -66,7 +66,18 @@ export function CaseAnalysisLeadCard({
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3 sm:grid-cols-4">
           <Metric label="Findings" value={String(findingCount)} />
           <Metric label="Open questions" value={String(openQuestionCount)} />
-          <Metric label="Evidence revision" value={snapshot ? String(snapshot.evidence_revision) : "—"} />
+          <Metric
+            label={Array.isArray(snapshot) ? "Sources" : "Evidence revision"}
+            value={
+              !snapshot
+                ? "—"
+                : Array.isArray(snapshot)
+                  ? String(snapshot.length)
+                  : "evidence_revision" in snapshot && snapshot.evidence_revision !== undefined
+                    ? String(snapshot.evidence_revision)
+                    : "—"
+            }
+          />
           <Metric label="Analysis state" value={freshnessLabel} emphasis={result.freshness === "stale" ? "attention" : "positive"} />
         </dl>
         <p className="text-[10px] leading-relaxed text-ink-muted">Ask uses this persisted result. Ordinary questions do not change evidence.</p>

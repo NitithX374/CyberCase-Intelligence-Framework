@@ -6,7 +6,6 @@ import type {
   CaseClarificationRead,
   CaseDocumentRead,
   CaseEvidenceCreate,
-  CaseEvidenceSnapshotRead,
   CaseRead,
   CaseReportCreate,
   CaseRunRead,
@@ -204,18 +203,6 @@ export const getCaseRun = async (
 ): Promise<CaseRunRead> => {
   const response = await axios.get<CaseRunRead>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/runs/${encodeURIComponent(runId)}`,
-    { signal, timeout: 15_000 },
-  );
-  return response.data;
-};
-
-export const getCaseEvidenceSnapshot = async (
-  caseId: string,
-  snapshotId: string,
-  signal?: AbortSignal,
-): Promise<CaseEvidenceSnapshotRead> => {
-  const response = await axios.get<CaseEvidenceSnapshotRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/evidence/snapshots/${encodeURIComponent(snapshotId)}`,
     { signal, timeout: 15_000 },
   );
   return response.data;

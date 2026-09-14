@@ -44,9 +44,9 @@ export function PersistedReportCard({
           <h2 className="mt-1 text-lg font-bold tracking-tight text-ink sm:text-xl">
             {report.report?.title ?? caseTitle}
           </h2>
-          {report.source_reference_type === "case_evidence" && report.analysis_result_id && report.evidence_snapshot_id && (
+          {report.source_reference_type === "case_evidence" && report.analysis_result_id && (
             <p className="mt-2 max-w-2xl break-all text-[10px] leading-relaxed text-ink-muted">
-              Bound to Case analysis {report.analysis_result_id} and evidence snapshot {report.evidence_snapshot_id}.
+              Bound to Case analysis {report.analysis_result_id}.
             </p>
           )}
         </div>

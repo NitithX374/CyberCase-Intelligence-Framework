@@ -13,7 +13,6 @@ import {
   type CaseIntakeSubmission,
   type CaseRead,
 } from "@/lib/api";
-import { sha256Hex } from "@/lib/sha256";
 import { caseQueryKeys } from "./useCaseQueries";
 import { useCaseAnalysisSubmission } from "./useCaseAnalysisSubmission";
 import { casePath } from "@/features/chat/routing/workspaceRoutes";
@@ -23,19 +22,19 @@ import type { ChatSession } from "@/features/chat/workspace/use-chat-thread-sele
 interface UseCaseWorkspaceActionsOptions {
   activeCaseId: string | null;
   activeCase: CaseRead | null;
-  isChatOpen: boolean;
-  setIsChatOpen: Dispatch<SetStateAction<boolean>>;
-  session: ChatSession;
+  isChatOpen?: boolean;
+  setIsChatOpen?: Dispatch<SetStateAction<boolean>>;
+  session?: ChatSession;
   upsertCase: (caseRecord: CaseRead) => void;
   updateCase: (input: { caseId: string; title: string }) => Promise<CaseRead>;
   router: { push(path: string): void };
-  setActiveView: Dispatch<SetStateAction<WorkspaceView>>;
+  setActiveView?: Dispatch<SetStateAction<WorkspaceView>>;
 }
 
 export function useCaseWorkspaceActions({
   activeCaseId,
   activeCase,
-  isChatOpen,
+  isChatOpen = false,
   setIsChatOpen,
   session,
   upsertCase,
@@ -61,9 +60,10 @@ export function useCaseWorkspaceActions({
   }, [queryClient]);
 
   const toggleChat = useCallback(async () => {
+    if (!setIsChatOpen) return;
     if (isChatOpen) {
       setIsChatOpen(false);
-      session.clearSelection();
+      session?.clearSelection();
       return;
     }
     setActionError(null);
@@ -75,7 +75,7 @@ export function useCaseWorkspaceActions({
         const current = activeCase ?? await getCase(activeCaseId);
         upsertCase({ ...current, chat_thread_id: threadId });
       }
-      await session.selectThread(threadId);
+      await session?.selectThread(threadId);
     } catch (error) {
       setIsChatOpen(false);
       setActionError(getApiErrorMessage(error, "The Case Chat could not be opened."));
@@ -88,13 +88,13 @@ export function useCaseWorkspaceActions({
     setIsUploadingDocument(true);
     try {
       await uploadCaseDocument(activeCaseId, file);
-      await invalidateCaseData(activeCaseId);
+      await queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(activeCaseId) });
     } catch (error) {
       setActionError(getApiErrorMessage(error, "The document could not be saved."));
     } finally {
       setIsUploadingDocument(false);
     }
-  }, [activeCaseId, invalidateCaseData, isUploadingDocument]);
+  }, [activeCaseId, isUploadingDocument, queryClient]);
 
   const admitExtraction = useCallback(async (documentId: string, extractionId: string) => {
     if (!activeCaseId || admittingExtractionId !== null) return;
@@ -102,13 +102,16 @@ export function useCaseWorkspaceActions({
     setAdmittingExtractionId(extractionId);
     try {
       await admitCaseDocument(activeCaseId, documentId, extractionId);
-      await invalidateCaseData(activeCaseId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(activeCaseId) }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(activeCaseId) }),
+      ]);
     } catch (error) {
       setActionError(getApiErrorMessage(error, "The reviewed document text could not be admitted."));
     } finally {
       setAdmittingExtractionId(null);
     }
-  }, [activeCaseId, admittingExtractionId, invalidateCaseData]);
+  }, [activeCaseId, admittingExtractionId, queryClient]);
 
   const submitCase = useCallback(async ({ title, description }: CaseIntakeSubmission) => {
     if (!activeCaseId || isSubmitting) return;
@@ -116,10 +119,10 @@ export function useCaseWorkspaceActions({
     setIsSubmitting(true);
     const normalizedTitle = title?.trim() || undefined;
     const normalizedDescription = description.trim();
-    const inputFingerprint = sha256Hex(JSON.stringify({
+    const inputFingerprint = JSON.stringify({
       title: normalizedTitle ?? null,
       description: normalizedDescription,
-    }));
+    });
     let submission = pendingSubmission?.inputFingerprint === inputFingerprint
       ? pendingSubmission
       : {
@@ -168,7 +171,7 @@ export function useCaseWorkspaceActions({
       });
       queryClient.setQueryData(caseQueryKeys.run(activeCaseId, accepted.run.id), accepted.run);
       await invalidateCaseData(activeCaseId);
-      setActiveView("overview");
+      if (setActiveView) setActiveView("overview");
       router.push(casePath(activeCaseId, "overview"));
     } catch (error) {
       setActionError(getApiErrorMessage(error, "The Case analysis could not be started."));

@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    CHAR,
     DateTime,
     ForeignKey,
     Index,
@@ -25,7 +24,6 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.case import Case
-    from app.models.caseMaterials import CaseEvidenceSnapshot
     from app.models.caseRun import CaseRun
 
 
@@ -38,7 +36,6 @@ class RagContext(Base):
         ),
         UniqueConstraint("case_run_id", name="uq_rag_contexts_case_run_id"),
         Index("ix_rag_contexts_case_id_created_at", "case_id", "created_at"),
-        Index("ix_rag_contexts_query_sha256", "query_sha256"),
     )
 
     retrieval_context_id: Mapped[str] = mapped_column(
@@ -63,23 +60,8 @@ class RagContext(Base):
         ),
         nullable=False,
     )
-    evidence_snapshot_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "case_evidence_snapshots.id",
-            name="fk_rag_contexts_evidence_snapshot_id_case_evidence_snapshots",
-            ondelete="RESTRICT",
-        ),
-        nullable=False,
-    )
     query_text: Mapped[str] = mapped_column(
         Text,
-        nullable=False,
-        default="",
-        server_default=text("''"),
-    )
-    query_sha256: Mapped[str] = mapped_column(
-        CHAR(64),
         nullable=False,
         default="",
         server_default=text("''"),
@@ -112,7 +94,6 @@ class RagContext(Base):
 
     case: Mapped["Case"] = relationship("Case", back_populates="rag_contexts")
     run: Mapped["CaseRun"] = relationship("CaseRun", back_populates="rag_context")
-    snapshot: Mapped["CaseEvidenceSnapshot"] = relationship("CaseEvidenceSnapshot")
 
 
 __all__ = ["RagContext"]

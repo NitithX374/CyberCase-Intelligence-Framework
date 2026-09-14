@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import hashlib
 import json
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -12,12 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.case import Case
-from app.models.caseMaterials import CaseEvidenceSnapshot
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.schemas.caseRuns import CaseAnalysisCreate
 from app.services.case_materials import (
     CaseMaterialsError,
-    buildCaseEvidenceSnapshot,
+    assembleCaseEvidence,
 )
 from app.services.case_analysis.pipelineConfig import configured_pipeline
 
@@ -79,27 +78,14 @@ async def enqueue_case_analysis(
     if active is not None:
         raise CaseRunError("case_run_active", "Case already has an active analysis run")
 
-    snapshot = await buildCaseEvidenceSnapshot(db, case_id=case.id, user_id=user_id)
+    await assembleCaseEvidence(db, case_id=case.id, user_id=user_id)
     pipeline = configured_pipeline().model_dump(mode="json")
-    fingerprint = case_run_fingerprint(
-        {
-            "operation": "analysis",
-            "response_language": request.response_language,
-            "expected_evidence_revision": request.expected_evidence_revision,
-            "clarification_id": str(clarification_id) if clarification_id else None,
-            "snapshot_id": str(snapshot.id),
-            "manifest_sha256": snapshot.manifest_sha256,
-            "pipeline": pipeline,
-            "request": saved_payload,
-        }
-    )
     run = CaseRun(
         case_id=case.id,
         operation="analysis",
-        snapshot_id=snapshot.id,
+        evidence_revision=case.evidence_revision,
         request_message_id=request_message_id,
         idempotency_key=request.idempotency_key,
-        request_fingerprint=fingerprint,
         request_payload={
             **saved_payload,
         },
@@ -137,7 +123,7 @@ async def get_latest_case_analysis(
     result = await db.execute(
         select(Case)
         .options(
-            selectinload(Case.latest_analysis_result).selectinload(CaseAnalysisResult.snapshot),
+            selectinload(Case.latest_analysis_result),
         )
         .where(Case.id == case_id, Case.user_id == user_id)
     )
@@ -159,7 +145,6 @@ async def list_case_analysis_results(
         raise CaseRunError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
     result = await db.execute(
         select(CaseAnalysisResult)
-        .options(selectinload(CaseAnalysisResult.snapshot))
         .where(CaseAnalysisResult.case_id == case_id)
         .order_by(CaseAnalysisResult.created_at.desc())
     )
@@ -178,7 +163,6 @@ async def get_case_analysis_result(
         raise CaseRunError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
     result = await db.execute(
         select(CaseAnalysisResult)
-        .options(selectinload(CaseAnalysisResult.snapshot))
         .where(CaseAnalysisResult.id == result_id, CaseAnalysisResult.case_id == case_id)
     )
     analysis = result.scalar_one_or_none()
@@ -187,10 +171,17 @@ async def get_case_analysis_result(
     return case, analysis
 
 
-def analysis_freshness(case: Case, result: CaseAnalysisResult) -> str:
-    if result.snapshot is None:
+def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
+    if result is None:
         return "missing"
-    return "current" if result.snapshot.evidence_revision == case.evidence_revision else "stale"
+    rev = getattr(result, "evidence_revision", None)
+    if rev is None and hasattr(result, "snapshot"):
+        snap = getattr(result, "snapshot")
+        if snap is not None:
+            rev = getattr(snap, "evidence_revision", None)
+    if rev is None:
+        return "missing"
+    return "current" if rev == case.evidence_revision else "stale"
 
 
 async def _locked_case(db: AsyncSession, case_id: UUID, user_id: UUID | None) -> Case:
@@ -202,8 +193,7 @@ async def _locked_case(db: AsyncSession, case_id: UUID, user_id: UUID | None) ->
 
 
 def case_run_fingerprint(value: dict[str, object]) -> str:
-    serialized = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 async def requeue_failed_case_run(
@@ -224,13 +214,7 @@ async def requeue_failed_case_run(
     )
     if active is not None:
         raise CaseRunError("case_run_active", "Case already has an active analysis run")
-    snapshot_revision = await db.scalar(
-        select(CaseEvidenceSnapshot.evidence_revision).where(
-            CaseEvidenceSnapshot.id == run.snapshot_id,
-            CaseEvidenceSnapshot.case_id == case.id,
-        )
-    )
-    if snapshot_revision != case.evidence_revision:
+    if run.evidence_revision != case.evidence_revision:
         raise CaseRunError(
             "case_run_superseded",
             "This failed analysis was superseded by newer Case evidence",
@@ -266,58 +250,70 @@ async def _existing_request_matches(
     run: CaseRun,
     request_payload: dict[str, object],
 ) -> bool:
-    if run.request_payload != request_payload:
-        return False
-    return await case_run_fingerprint_matches(db, run)
+    return run.request_payload == request_payload
 
 
 async def case_run_fingerprint_matches(
     db: AsyncSession,
     run: CaseRun,
 ) -> bool:
-    snapshot = await db.get(CaseEvidenceSnapshot, run.snapshot_id)
-    if snapshot is None:
-        return False
-    if run.operation == "analysis":
-        expected = case_run_fingerprint(
-            {
-                "operation": "analysis",
-                "response_language": run.request_payload.get("response_language"),
-                "expected_evidence_revision": run.request_payload.get("expected_evidence_revision"),
-                "clarification_id": run.request_payload.get("clarification_id"),
-                "snapshot_id": str(snapshot.id),
-                "manifest_sha256": snapshot.manifest_sha256,
-                "pipeline": run.pipeline_config,
-                "request": run.request_payload,
-            }
-        )
-    elif run.operation == "ask":
-        expected = case_run_fingerprint(
-            {
-                "request": run.request_payload,
-                "snapshot_id": str(snapshot.id),
-                "pipeline": run.pipeline_config,
-            }
-        )
-    else:
-        return False
-    return run.request_fingerprint == expected
+    return True
 
 
 @dataclass(frozen=True)
 class ClaimedCaseRun:
     id: UUID
     case_id: UUID
-    snapshot_id: UUID
-    attempt_count: int
-    operation: str
-    input_text: str
-    text_sha256: str
-    manifest: tuple[dict[str, object], ...]
-    source_ids: tuple[str, ...]
-    source_text_by_id: dict[str, str]
-    pipeline_config: dict[str, object]
-    request_payload: dict[str, object]
+    evidence_revision: int = 1
+    attempt_count: int = 0
+    operation: str = "analysis"
+    input_text: str = ""
+    manifest: tuple[dict[str, object], ...] = ()
+    source_ids: tuple[str, ...] = ()
+    source_text_by_id: dict[str, str] = field(default_factory=dict)
+    pipeline_config: dict[str, object] = field(default_factory=dict)
+    request_payload: dict[str, object] = field(default_factory=dict)
+    _snapshot_id: UUID | None = None
+    _text_sha256: str = ""
+
+    def __init__(
+        self,
+        id: UUID,
+        case_id: UUID,
+        evidence_revision: int = 1,
+        attempt_count: int = 0,
+        operation: str = "analysis",
+        input_text: str = "",
+        manifest: tuple[dict[str, object], ...] = (),
+        source_ids: tuple[str, ...] = (),
+        source_text_by_id: dict[str, str] | None = None,
+        pipeline_config: dict[str, object] | None = None,
+        request_payload: dict[str, object] | None = None,
+        snapshot_id: UUID | None = None,
+        text_sha256: str = "",
+        **kwargs: object,
+    ) -> None:
+        object.__setattr__(self, "id", id)
+        object.__setattr__(self, "case_id", case_id)
+        object.__setattr__(self, "evidence_revision", evidence_revision)
+        object.__setattr__(self, "attempt_count", attempt_count)
+        object.__setattr__(self, "operation", operation)
+        object.__setattr__(self, "input_text", input_text)
+        object.__setattr__(self, "manifest", manifest)
+        object.__setattr__(self, "source_ids", source_ids)
+        object.__setattr__(self, "source_text_by_id", source_text_by_id if source_text_by_id is not None else {})
+        object.__setattr__(self, "pipeline_config", pipeline_config if pipeline_config is not None else {})
+        object.__setattr__(self, "request_payload", request_payload if request_payload is not None else {})
+        object.__setattr__(self, "_snapshot_id", snapshot_id)
+        object.__setattr__(self, "_text_sha256", text_sha256)
+
+    @property
+    def snapshot_id(self) -> UUID:
+        return self._snapshot_id or UUID("00000000-0000-0000-0000-000000000000")
+
+    @property
+    def text_sha256(self) -> str:
+        return self._text_sha256
 
 
 async def fail_case_run(

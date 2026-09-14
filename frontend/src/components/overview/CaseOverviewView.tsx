@@ -194,7 +194,7 @@ export function CaseOverviewView({
               <span className="h-2 w-2 shrink-0 rounded-full bg-unresolved" />
               <div>
                 <p className="font-semibold">Analysis is based on older evidence.</p>
-                <p className="mt-0.5 text-ink-secondary">New case material was added after this analysis{evidenceSnapshot ? ` · Evidence revision ${evidenceSnapshot.evidence_revision}` : ""}.</p>
+                <p className="mt-0.5 text-ink-secondary">New case material was added after this analysis.</p>
               </div>
             </div>
             {onRunAnalysis && (
