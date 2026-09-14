@@ -12,40 +12,103 @@ export function OverviewStatusRail({
   snapshot: CaseEvidenceSnapshotRead | null;
   runStatus: CaseRunRead["status"] | null;
 }) {
-  const sourceEntries = snapshot?.manifest_json.filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry)) ?? [];
-  const documentMap = new Map<string, string>();
-  for (const entry of sourceEntries) {
-    const id = String(entry.document_id ?? "");
-    const filename = String(entry.filename ?? "");
-    if (id && filename) documentMap.set(id, filename);
-  }
-  const documents = [...documentMap.entries()];
-  const citedSourceCount = new Set(overview.findings.flatMap((finding) => [...finding.supportingSources, ...finding.contradictingSources].map((source) => source.id))).size;
+  const sourceEntries = snapshot?.manifest_json.filter(isManifestEntry) ?? [];
+  const documentNames = uniqueDocumentNames(sourceEntries);
+  const citedSourceCount = new Set(
+    overview.findings.flatMap((finding) => [
+      ...finding.supportingSources.map((source) => source.id),
+      ...finding.contradictingSources.map((source) => source.id),
+    ]),
+  ).size;
 
   return (
-    <div className="order-2 min-w-0 space-y-5 lg:order-1">
-      <section aria-labelledby="overview-analysis-heading" className="space-y-2">
-        <h2 id="overview-analysis-heading" className="text-sm font-semibold text-ink">Analysis</h2>
-        {result?.created_at && <time dateTime={result.created_at} className="block text-xs leading-5 text-ink-secondary">{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(result.created_at))}</time>}
-        {runStatus === "queued" || runStatus === "running" ? <p className="border-l-2 border-evidence/50 pl-3 text-xs leading-5 text-ink-secondary">A new Case analysis is running. The saved result below remains available.</p> : null}
-        {runStatus === "failed" && result ? <p className="border-l-2 border-critical/50 pl-3 text-xs leading-5 text-ink-secondary">The latest Case run failed. The last successful result remains displayed.</p> : null}
-        {result?.freshness === "stale" && <p className="border-l-2 border-unresolved/50 pl-3 text-xs leading-5 text-ink-secondary">New case material was added after this analysis.</p>}
-        <details className="text-xs text-ink-secondary">
-          <summary className="w-fit cursor-pointer py-1 underline decoration-line-strong underline-offset-4 focus-visible:ring-2 focus-visible:ring-primary">Analysis record</summary>
-          <dl className="mt-3 space-y-2 border-l border-line pl-3">
-            <div className="flex justify-between gap-3"><dt>Analysis kind</dt><dd>Case overview</dd></div>
-            <div className="flex justify-between gap-3"><dt>Format</dt><dd>Case native</dd></div>
-            {result && <div className="flex justify-between gap-3"><dt>Result</dt><dd className="max-w-[9rem] truncate font-mono">{result.id}</dd></div>}
-            {snapshot && <div className="flex justify-between gap-3"><dt>Snapshot</dt><dd className="max-w-[9rem] truncate font-mono">{snapshot.id}</dd></div>}
-            <div className="flex justify-between gap-3"><dt>Evidence entries cited</dt><dd>{citedSourceCount}</dd></div>
+    <section aria-label="Analysis provenance" className="border-y border-line">
+      <dl className="grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-4 sm:divide-y-0">
+        <Metric label="Analysis state" value={freshnessLabel(result)} tone={result?.freshness === "stale" ? "attention" : "positive"} />
+        <Metric label="Completed" value={formatAnalysisDate(result?.created_at)} />
+        <Metric label="Evidence revision" value={snapshot ? String(snapshot.evidence_revision) : "Unavailable"} />
+        <Metric label="Cited sources" value={String(citedSourceCount)} />
+      </dl>
+
+      <RunNotice runStatus={runStatus} hasSavedResult={Boolean(result)} isStale={result?.freshness === "stale"} />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-3 py-2.5 text-[11px] text-ink-muted sm:px-4">
+        <p>
+          {sourceEntries.length} evidence {sourceEntries.length === 1 ? "entry" : "entries"}
+          {documentNames.length > 0 ? ` across ${documentNames.length} ${documentNames.length === 1 ? "document" : "documents"}` : ""}
+        </p>
+        <details className="relative">
+          <summary className="cursor-pointer list-none font-medium text-ink-secondary underline decoration-line-strong underline-offset-4 focus-visible:ring-2 focus-visible:ring-accent">
+            Analysis record
+          </summary>
+          <dl className="absolute right-0 top-7 z-20 w-72 space-y-2 border border-line bg-surface p-3 text-[10px] shadow-lg">
+            <RecordRow label="Analysis kind" value="Case overview" />
+            <RecordRow label="Format" value="Case native" />
+            <RecordRow label="Result" value={result?.id ?? "Unavailable"} mono />
+            <RecordRow label="Snapshot" value={snapshot?.id ?? "Unavailable"} mono />
+            {documentNames.length > 0 && <RecordRow label="Documents" value={documentNames.join(", ")} />}
           </dl>
         </details>
-      </section>
-      <section aria-labelledby="overview-materials-heading" className="space-y-3 border-t border-line pt-4">
-        <h2 id="overview-materials-heading" className="text-sm font-semibold text-ink">Materials</h2>
-        <p className="text-xs text-ink-secondary">{sourceEntries.length} evidence {sourceEntries.length === 1 ? "entry" : "entries"}{documents.length > 0 && ` · ${documents.length} ${documents.length === 1 ? "document" : "documents"}`}</p>
-        {documents.length > 0 && <ul className="space-y-2 text-xs leading-5 text-ink-secondary">{documents.map(([id, filename]) => <li key={id} className="[overflow-wrap:anywhere]">{filename}</li>)}</ul>}
-      </section>
+      </div>
+    </section>
+  );
+}
+
+function Metric({ label, value, tone }: { label: string; value: string; tone?: "positive" | "attention" }) {
+  return (
+    <div className="min-w-0 px-3 py-3 sm:px-4">
+      <dt className="text-[10px] text-ink-muted">{label}</dt>
+      <dd className={`mt-1 truncate text-xs font-semibold ${tone === "positive" ? "text-established" : tone === "attention" ? "text-unresolved" : "text-ink"}`} title={value}>
+        {value}
+      </dd>
     </div>
   );
+}
+
+function RunNotice({ runStatus, hasSavedResult, isStale }: { runStatus: CaseRunRead["status"] | null; hasSavedResult: boolean; isStale: boolean }) {
+  const message = runStatus === "queued" || runStatus === "running"
+    ? "A new Case analysis is running. The saved result remains available."
+    : runStatus === "failed" && hasSavedResult
+      ? "The latest run failed. The last successful result remains displayed."
+      : isStale
+        ? "New Case material was added after this analysis."
+        : null;
+  if (!message) return null;
+  return <p className="border-t border-line px-3 py-2.5 text-[11px] text-ink-secondary sm:px-4">{message}</p>;
+}
+
+function RecordRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
+      <dt className="text-ink-muted">{label}</dt>
+      <dd className={`break-words text-ink ${mono ? "font-mono" : ""}`}>{value}</dd>
+    </div>
+  );
+}
+
+function isManifestEntry(entry: unknown): entry is Record<string, unknown> {
+  return Boolean(entry) && typeof entry === "object" && !Array.isArray(entry);
+}
+
+function uniqueDocumentNames(entries: Record<string, unknown>[]): string[] {
+  const names = new Set<string>();
+  for (const entry of entries) {
+    const filename = String(entry.filename ?? "").trim();
+    if (filename) names.add(filename);
+  }
+  return [...names];
+}
+
+function freshnessLabel(result: CaseAnalysisResultRead | null): string {
+  if (!result) return "Unavailable";
+  if (result.freshness === "current") return "Current";
+  if (result.freshness === "stale") return "Older evidence";
+  return "Unavailable";
+}
+
+function formatAnalysisDate(value: string | undefined): string {
+  if (!value) return "Unavailable";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unavailable";
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }

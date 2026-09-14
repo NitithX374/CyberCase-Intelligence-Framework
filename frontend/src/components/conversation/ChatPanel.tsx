@@ -14,6 +14,7 @@ interface ChatPanelProps {
   leadSnapshot?: CaseEvidenceSnapshotRead | null;
   onOpenOverview?: () => void;
   onOpenIntake?: () => void;
+  onNavigateToSource?: (messageId: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
@@ -28,6 +29,7 @@ export function ChatPanel({
   leadSnapshot,
   onOpenOverview,
   onOpenIntake,
+  onNavigateToSource,
   onInputChange,
   onSubmit,
 }: ChatPanelProps) {
@@ -36,7 +38,7 @@ export function ChatPanel({
   const isComposerDisabled = isProcessing || (!isAwaitingClarification && !hasAnalysisContext);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-canvas">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ChatTranscript
           messages={messages}
@@ -44,15 +46,16 @@ export function ChatPanel({
           leadResult={leadResult}
           leadSnapshot={leadSnapshot}
           onOpenOverview={onOpenOverview}
+          onNavigateToSource={onNavigateToSource}
         />
       </div>
 
       <div className="shrink-0 border-t border-line bg-surface px-3.5 pb-3.5 pt-3 md:px-4 md:pb-4">
         <div className="mx-auto w-full max-w-4xl">
           {isAwaitingClarification ? (
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-unresolved/30 bg-unresolved/5 px-3 py-2 text-xs text-ink">
-              <span className="font-semibold text-unresolved">Clarification needed</span>
-              <span className="text-ink-secondary">Provide your answer below to resume the case analysis.</span>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-l-2 border-unresolved bg-unresolved/5 px-3 py-2 text-xs text-ink">
+              <span className="font-semibold text-unresolved">CyberCase needs one more detail<span className="sr-only">Clarification needed</span></span>
+              <span className="text-ink-secondary">Answer below to update the Case analysis.</span>
             </div>
           ) : !hasAnalysisContext ? (
             <ChatBoundaryNotice
@@ -68,9 +71,7 @@ export function ChatPanel({
             onSubmit={onSubmit}
             placeholder={isAwaitingClarification ? "Type your answer to the clarification question…" : undefined}
           />
-          <p className="mt-2 text-center text-[10px] leading-relaxed text-ink-muted">
-            Press Ctrl+Enter or click Send to submit.
-          </p>
+          <p className="mt-2 text-center text-[10px] leading-relaxed text-ink-muted">Ctrl+Enter to send.</p>
         </div>
       </div>
     </div>
@@ -137,7 +138,7 @@ function ChatComposer({
 
   return (
     <form ref={formRef} onSubmit={onSubmit} className="relative w-full">
-      <div className="relative flex items-center gap-2 rounded-2xl border border-line-strong bg-canvas py-2 pl-4 pr-2 shadow-[0_1px_3px_rgba(39,39,39,0.04)] transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+      <div className="relative flex items-center gap-2 rounded-md border border-line-strong bg-surface py-2 pl-3 pr-2 transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
         <label htmlFor="chat-composer-input" className="sr-only">
           Chat message
         </label>
@@ -156,7 +157,7 @@ function ChatComposer({
           type="submit"
           disabled={isSubmitting || !input.trim()}
           aria-label="Send message"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-ivory outline-none transition-[background-color,transform] hover:bg-charcoal-hover active:scale-95 active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled disabled:hover:scale-100"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-ivory outline-none transition-[background-color,transform] hover:bg-charcoal-hover active:scale-95 active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled disabled:hover:scale-100"
         >
           <Icon name="send" className="h-3.5 w-3.5" />
         </button>

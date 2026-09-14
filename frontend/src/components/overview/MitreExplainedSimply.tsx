@@ -60,7 +60,7 @@ export function MitreExplainedSimply({
           onClick={onOpenTechnicalContext}
           className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-mitre transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-primary"
         >
-          View technical context <span aria-hidden="true">→</span>
+          View technical context
         </button>
       )}
     </section>

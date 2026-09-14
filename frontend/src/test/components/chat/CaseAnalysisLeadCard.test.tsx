@@ -45,7 +45,7 @@ describe("CaseAnalysisLeadCard", () => {
       />,
     );
 
-    expect(screen.getByText("Grounded Case Analysis")).toBeInTheDocument();
+    expect(screen.getByText("Analysis Result")).toBeInTheDocument();
     expect(screen.getByText("Validated")).toBeInTheDocument();
     expect(
       screen.getByText("Initial compromise occurred via spearphishing attachment delivering malware."),
@@ -96,7 +96,7 @@ describe("ChatTranscript with Lead Card", () => {
     );
 
     // Lead card is rendered
-    expect(screen.getByText("Grounded Case Analysis")).toBeInTheDocument();
+    expect(screen.getByText("Analysis Result")).toBeInTheDocument();
 
     // Regular QA message is rendered
     expect(screen.getByText("What malware family was identified?")).toBeInTheDocument();

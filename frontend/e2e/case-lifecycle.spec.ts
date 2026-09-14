@@ -53,7 +53,7 @@ test.describe("case lifecycle", () => {
     await expect(page.getByText(narrative, { exact: true })).toBeVisible();
 
     await page.locator("#workspace-tab-report").click();
-    await expect(page.getByRole("heading", { name: "Case Analysis Report" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Report" })).toBeVisible();
     await page.getByRole("button", { name: "Generate report" }).first().click();
     await expect(page.getByRole("article", { name: "Persisted report" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: "Download PDF" })).toBeVisible();

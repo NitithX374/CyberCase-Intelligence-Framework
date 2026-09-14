@@ -32,7 +32,7 @@ export function PersistedReportCard({
       <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-bold tracking-wider text-ink-muted uppercase">
+            <span className="font-mono text-[10px] font-semibold tracking-wider text-ink-muted">
               Version {report.version_number} · Saved
             </span>
             <span className="text-[10px] font-semibold text-ink-muted">
@@ -131,7 +131,7 @@ function ReportPdfViewer({
     return (
       <div
         aria-label="Loading PDF preview"
-        className="flex h-[750px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-center text-ink-secondary"
+        className="flex h-[750px] w-full flex-col items-center justify-center border-y border-line bg-surface p-6 text-center text-ink-secondary"
       >
         <div
           className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
@@ -150,7 +150,7 @@ function ReportPdfViewer({
       <>
         <div
           aria-label="PDF Preview Unavailable"
-          className="flex h-[400px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-line bg-surface p-6 text-center space-y-3"
+          className="flex h-[400px] w-full flex-col items-center justify-center space-y-3 border-y border-line bg-surface p-6 text-center"
         >
           <p className="text-xs font-semibold text-ink">ไม่สามารถแสดงตัวอย่าง PDF ได้</p>
           <p className="text-[11px] text-ink-secondary">
@@ -183,7 +183,7 @@ function ReportPdfViewer({
   return (
     <div
       aria-label="PDF Document Viewer"
-      className="overflow-hidden rounded-lg border border-line bg-surface shadow-xs"
+      className="overflow-hidden border border-line bg-surface"
     >
       <iframe
         src={`${pdfUrl}#toolbar=1&navpanes=0`}
@@ -196,7 +196,7 @@ function ReportPdfViewer({
 
 function ReportFailure({ report }: { report: CaseReport }) {
   return (
-    <div className="rounded-lg border border-line bg-surface p-5 text-xs space-y-3">
+    <div className="space-y-3 border-y border-line py-5 text-xs">
       <div className="flex items-center gap-2 text-accent">
         <span className="font-bold text-sm">ไม่สามารถจัดทำรายงานฉบับนี้ได้</span>
       </div>

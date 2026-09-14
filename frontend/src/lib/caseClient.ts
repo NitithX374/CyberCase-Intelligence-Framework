@@ -108,6 +108,18 @@ export const listCaseDocuments = async (
   return response.data;
 };
 
+export const fetchCaseDocumentContent = async (
+  caseId: string,
+  documentId: string,
+  signal?: AbortSignal,
+): Promise<Blob> => {
+  const response = await axios.get<Blob>(
+    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(documentId)}/content`,
+    { signal, responseType: "blob", timeout: 120_000 },
+  );
+  return response.data;
+};
+
 export const listCaseEvidence = async (
   caseId: string,
   signal?: AbortSignal,

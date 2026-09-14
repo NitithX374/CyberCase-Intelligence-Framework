@@ -10,11 +10,13 @@ import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip
 interface AnalysisEvidenceReferencesProps {
   analysisMessage: PersistedChatMessage;
   messages: PersistedChatMessage[];
+  onNavigateToSource?: (messageId: string) => void;
 }
 
 export function AnalysisEvidenceReferences({
   analysisMessage,
   messages,
+  onNavigateToSource,
 }: AnalysisEvidenceReferencesProps) {
   const references = sourceReferencesForAnalysisMessage(analysisMessage, messages);
   const [active, setActive] = useState<{
@@ -27,7 +29,7 @@ export function AnalysisEvidenceReferences({
 
   return (
     <div className="mt-4 border-t border-line/70 pt-3">
-      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-muted">
+      <p className="text-[10px] font-semibold tracking-[0.04em] text-ink-muted">
         Evidence references
       </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -56,6 +58,7 @@ export function AnalysisEvidenceReferences({
           anchorElement={active.anchor}
           onClose={() => setActive(null)}
           citationRole={active.role}
+          onNavigateToSource={onNavigateToSource}
         />
       )}
     </div>

@@ -44,12 +44,12 @@ export function SourceEvidenceDrawer({ sourceRef, anchorElement, citationRole, o
         const bounds = event.currentTarget.getBoundingClientRect();
         if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
       }}
-      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-full max-w-full overflow-hidden border-l border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-ink/20 sm:w-[30rem]"
+      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-full max-w-full overflow-hidden border-l border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-ink/20 sm:w-[360px]"
     >
       <div className="flex h-full min-h-0 flex-col">
         <header className="flex items-start justify-between gap-4 border-b border-line p-5 sm:p-6">
           <div className="min-w-0 space-y-2">
-            <p className="text-xs text-ink-secondary">{citationRole === "conflicting" ? "Conflicting source" : "Source evidence"}</p>
+            <p className="text-[11px] font-semibold tracking-[0.04em] text-ink-secondary">{citationRole === "conflicting" ? "Conflicting source" : "Source evidence"}</p>
             <h2 id={titleId} className="text-base font-semibold [overflow-wrap:anywhere]">
               <span className="sr-only">Source Evidence: </span>{sourceTitle}
             </h2>
@@ -66,7 +66,7 @@ export function SourceEvidenceDrawer({ sourceRef, anchorElement, citationRole, o
         {onNavigateToSource && (
           <footer className="border-t border-line px-5 py-3 sm:px-6">
             <button type="button" onClick={() => { onClose(); onNavigateToSource(sourceRef.id); }}
-              className="min-h-9 text-xs font-semibold underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-primary">
+              className="min-h-9 text-xs font-semibold text-evidence underline underline-offset-4 hover:text-accent-strong focus-visible:ring-2 focus-visible:ring-primary">
               View in Materials <span aria-hidden="true">↗</span>
             </button>
           </footer>

@@ -69,7 +69,7 @@ describe("ChatPanel boundaries", () => {
     expect(screen.getByText("affected host")).toBeInTheDocument();
     const composer = screen.getByLabelText("Chat message");
     expect(screen.getByText("Clarification needed")).toBeInTheDocument();
-    expect(screen.getByText(/Provide your answer below to resume the case analysis/i)).toBeInTheDocument();
+    expect(screen.getByText(/Answer below to update the Case analysis/i)).toBeInTheDocument();
     expect(composer).not.toBeDisabled();
     expect(screen.getByRole("button", { name: "Send message" })).not.toBeDisabled();
 

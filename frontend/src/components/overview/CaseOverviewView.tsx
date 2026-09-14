@@ -78,7 +78,7 @@ export function CaseOverviewView({
   if (!threadId) {
     return (
       <CaseOverviewState
-        eyebrow="CASE OVERVIEW"
+        eyebrow="Case overview"
         title="No Case Material Yet"
         description="Add a case narrative or document in Intake to begin."
         actionLabel="Open Intake"
@@ -99,7 +99,7 @@ export function CaseOverviewView({
   if (runStatus === "failed" && !analysisResult) {
     return (
       <CaseOverviewState
-        eyebrow="CASE OVERVIEW"
+        eyebrow="Case overview"
         title="Analysis Failed"
         description={run?.error_message || "The case analysis failed to complete. Return to Intake to verify the admitted material and retry."}
         actionLabel="Open Intake"
@@ -115,7 +115,7 @@ export function CaseOverviewView({
     const question = pendingClarification?.question?.trim();
     return (
       <CaseOverviewState
-        eyebrow={pendingClarification?.topic ? `CLARIFICATION NEEDED · ${pendingClarification.topic}` : "CLARIFICATION NEEDED"}
+        eyebrow={pendingClarification?.topic ? `Clarification needed · ${pendingClarification.topic}` : "Clarification needed"}
         title="Analysis Needs More Information"
         description={question ? `The case analysis requires additional details: "${question}" Please proceed to Chat to follow up.` : "The case analysis requires additional details to proceed. Please proceed to Chat to follow up."}
         actionLabel="Proceed to Chat"
@@ -144,7 +144,7 @@ export function CaseOverviewView({
   if (!overview.hasAnalysis) {
     return (
       <CaseOverviewState
-        eyebrow="CASE OVERVIEW"
+        eyebrow="Case overview"
         title="Analysis Required"
         description="This case has material but no completed case-level analysis yet. Return to Intake to run the analysis."
         actionLabel="Open Intake"
@@ -175,15 +175,12 @@ export function CaseOverviewView({
       id="workspace-overview-panel"
       role="tabpanel"
       aria-label="Case Overview"
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface"
     >
-      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
+      <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
         <CaseOverviewHeader
           key={threadId}
-          threadId={threadId}
-          threadStatus={threadStatus}
           threadTitle={threadTitle}
-          onOpenChat={onOpenChat}
           onOpenReport={onOpenReport}
           onOpenMaterials={onOpenMaterials}
         />
@@ -191,19 +188,20 @@ export function CaseOverviewView({
         {isStale && (
           <div
             role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-unresolved/40 bg-unresolved/10 px-4 py-3 text-xs text-ink"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-unresolved/40 bg-unresolved/10 px-4 py-3 text-xs text-ink"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <span className="h-2 w-2 shrink-0 rounded-full bg-unresolved" />
-              <span className="font-medium">
-                Analysis is based on older evidence. New case material was added after this analysis.
-              </span>
+              <div>
+                <p className="font-semibold">Analysis is based on older evidence.</p>
+                <p className="mt-0.5 text-ink-secondary">New case material was added after this analysis{evidenceSnapshot ? ` · Evidence revision ${evidenceSnapshot.evidence_revision}` : ""}.</p>
+              </div>
             </div>
             {onRunAnalysis && (
               <button
                 type="button"
                 onClick={onRunAnalysis}
-                className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold"
+                className="btn-primary rounded-md px-3 py-1.5 text-xs font-semibold"
               >
                 Analyze latest evidence
               </button>
@@ -211,37 +209,30 @@ export function CaseOverviewView({
           </div>
         )}
 
-        <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-9">
-          <div className="contents lg:block lg:min-w-0 lg:space-y-8">
-            <OverviewSummarySection summary={overview.incidentSummary} />
-            <div className="order-3 min-w-0">
-              <CaseFindingsSection
-                key={analysisKey}
-                findings={overview.findings}
-                onNavigateToSource={sourceNavigation}
-                onSelectSource={handleSelectSource}
-                activeSourceKey={activeSource?.sourceKey ?? null}
-              />
-            </div>
-          </div>
+        <OverviewStatusRail
+          overview={overview}
+          result={analysisResult}
+          snapshot={evidenceSnapshot}
+          runStatus={runStatus}
+        />
 
-          <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5 lg:border-l lg:border-line lg:pl-5">
-            <OverviewStatusRail
-              overview={overview}
-              result={analysisResult}
-              snapshot={evidenceSnapshot}
-              runStatus={runStatus}
-            />
-            <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
-            <div className="order-5 min-w-0">
-              <MitreExplainedSimply
-                techniques={overview.mitreContext}
-                status={overview.technicalContextStatus}
-                onOpenTechnicalContext={onOpenTechnicalContext}
-              />
-            </div>
-          </aside>
-        </div>
+        <OverviewSummarySection summary={overview.incidentSummary} />
+
+        <CaseFindingsSection
+          key={analysisKey}
+          findings={overview.findings}
+          onNavigateToSource={sourceNavigation}
+          onSelectSource={handleSelectSource}
+          activeSourceKey={activeSource?.sourceKey ?? null}
+        />
+
+        <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
+
+        <MitreExplainedSimply
+          techniques={overview.mitreContext}
+          status={overview.technicalContextStatus}
+          onOpenTechnicalContext={onOpenTechnicalContext}
+        />
       </div>
 
       {activeSource && (

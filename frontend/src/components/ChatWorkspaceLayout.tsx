@@ -72,7 +72,7 @@ export function ChatWorkspaceLayout({
   };
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-canvas text-ink">
+    <div className="flex h-dvh overflow-hidden bg-surface text-ink">
       <WorkspaceSidebar
         cases={cases}
         activeCaseId={activeCaseId}
@@ -86,7 +86,7 @@ export function ChatWorkspaceLayout({
         onViewChange={onViewChange}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
         <WorkspaceHeader
           activeCase={activeCase}
           activeCaseId={activeCaseId}
@@ -103,7 +103,7 @@ export function ChatWorkspaceLayout({
           onToggleChat={onToggleChat}
         />
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-canvas">
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
           {activeView === "intake" ? activeCaseId ? (
             <CaseIntakeView
               caseId={activeCaseId}
@@ -145,6 +145,7 @@ export function ChatWorkspaceLayout({
             />
           ) : activeView === "materials" ? (
             <CaseMaterialsView
+              caseId={activeCaseId ?? ""}
               documents={documents}
               evidence={evidence}
               isUploading={isUploadingDocument}
@@ -190,6 +191,7 @@ export function ChatWorkspaceLayout({
         leadResult={analysisResult}
         leadSnapshot={evidenceSnapshot}
         onViewChange={onViewChange}
+        onNavigateToSource={onNavigateToSource}
         onInputChange={onInputChange}
         onSubmit={onSubmit}
         onToggleChat={onToggleChat}
@@ -220,9 +222,9 @@ export function ChatWorkspaceLayout({
 function ReportEmptyState() {
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-1 items-center justify-center px-6 py-12">
-      <div className="rounded-2xl border border-line bg-panel px-6 py-8 text-center shadow-sm">
+      <div className="border-y border-line px-6 py-8 text-center">
         <h1 className="text-lg font-semibold text-ink">Select a Case to view its report</h1>
-        <p className="mt-2 text-sm text-muted">Reports are generated from a persisted Case analysis.</p>
+        <p className="mt-2 text-sm text-ink-muted">Reports are generated from a persisted Case analysis.</p>
       </div>
     </section>
   );

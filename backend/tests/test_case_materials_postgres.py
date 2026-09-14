@@ -2,11 +2,17 @@ import asyncio
 import hashlib
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import select
 
 from app.models import Case
 from app.models.caseMaterials import CaseDocument
-from app.services.case_materials import CaseMaterialsService, buildCaseEvidenceSnapshot
+from app.services.case_materials import (
+    CaseMaterialsError,
+    CaseMaterialsService,
+    buildCaseEvidenceSnapshot,
+    getOwnedDocumentContent,
+)
 from run_recovery_support import isolated_database
 
 
@@ -96,6 +102,20 @@ def test_case_materials_are_revisioned_and_snapshots_are_reproducible():
                     select(CaseDocument).where(CaseDocument.case_id == case_id)
                 )
                 assert saved_document.content_bytes == b"original bytes"
+                loaded_document = await getOwnedDocumentContent(
+                    db,
+                    case_id=case_id,
+                    document_id=saved_document.id,
+                    user_id=None,
+                )
+                assert loaded_document.content_bytes == b"original bytes"
+                with pytest.raises(CaseMaterialsError, match="Document not found"):
+                    await getOwnedDocumentContent(
+                        db,
+                        case_id=uuid4(),
+                        document_id=saved_document.id,
+                        user_id=None,
+                    )
 
     asyncio.run(exercise())
 

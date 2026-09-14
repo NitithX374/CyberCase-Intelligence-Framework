@@ -16,17 +16,17 @@ export function WorkspaceSectionHeader({
   aside,
 }: WorkspaceSectionHeaderProps) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-3">
+    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-2.5">
       <div className="min-w-0">
         {eyebrow && <p className="section-eyebrow">{eyebrow}</p>}
         <h2
           id={headingId}
-          className="mt-1 text-lg font-extrabold tracking-[-0.025em] text-ink sm:text-xl"
+          className={`${eyebrow ? "mt-1" : ""} text-sm font-semibold tracking-[-0.01em] text-ink`}
         >
           {title}
         </h2>
         {description && (
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-secondary">
+          <p className="mt-1 max-w-2xl text-[11px] leading-5 text-ink-secondary">
             {description}
           </p>
         )}

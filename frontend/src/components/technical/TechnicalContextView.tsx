@@ -45,19 +45,19 @@ function TechnicalItem({
 
       {item.shortPlainMeaning && (
         <div className="space-y-1">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">ความหมายโดยย่อ</h3>
+          <h3 className="text-[11px] font-semibold text-ink-muted">Plain-language meaning</h3>
           <p className="text-xs leading-relaxed text-ink-secondary">{item.shortPlainMeaning}</p>
         </div>
       )}
 
       <div className="space-y-1">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">เหตุผลการเชื่อมโยงเชิงวิเคราะห์</h3>
+        <h3 className="text-[11px] font-semibold text-ink-muted">Analytical relevance</h3>
         <p className="text-xs leading-relaxed text-ink">{item.whyRelevantHere}</p>
       </div>
 
       {item.caseBasisSources.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-[11px] text-ink-muted">แหล่งข้อมูล:</span>
+          <span className="text-[11px] text-ink-muted">Case source:</span>
           {item.caseBasisSources.map((source) => {
             const buttonKey = `${item.techniqueId}-source-${source.id}`;
             const isActive = activeSourceKey === buttonKey;
@@ -89,11 +89,11 @@ function TechnicalItem({
               setIsDefinitionOpen((open) => !open);
             }}
           >
-            <span>คำอธิบายทางเทคนิค</span>
+            <span>Technical definition</span>
             <Icon name="chevron" className="h-3 w-3 transition-transform group-open:rotate-180" />
           </summary>
           {isDefinitionOpen && (
-            <p className="mt-2 rounded-lg border border-line bg-canvas/60 p-3 text-xs leading-relaxed text-ink-secondary select-text">
+            <p className="mt-2 border-l-2 border-mitre/30 pl-3 text-xs leading-relaxed text-ink-secondary select-text">
               {item.fullTechnicalDefinition}
             </p>
           )}
@@ -125,7 +125,7 @@ function RetrievedOnlyItem({ item }: { item: RetrievedTechnicalContextCard }) {
             <span>Technical definition</span>
             <Icon name="chevron" className="h-3 w-3" />
           </summary>
-          {isDefinitionOpen && <p className="mt-2 rounded-lg border border-line bg-canvas/60 p-3 text-xs leading-relaxed text-ink-secondary select-text">{item.fullTechnicalDefinition}</p>}
+          {isDefinitionOpen && <p className="mt-2 border-l-2 border-mitre/30 pl-3 text-xs leading-relaxed text-ink-secondary select-text">{item.fullTechnicalDefinition}</p>}
         </details>
       )}
     </article>
@@ -207,40 +207,39 @@ export function TechnicalContextView({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-canvas">
-      <div className="mx-auto w-full max-w-4xl space-y-7 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
-        <header className="border-b border-line pb-5">
-          <p className="section-eyebrow">OPTIONAL TECHNICAL CONTEXT</p>
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-2xl font-extrabold tracking-[-0.035em] text-ink sm:text-3xl">MITRE ATT&amp;CK Context</h1>
+    <div id="workspace-technical-context-panel" role="tabpanel" aria-label="Technical Context" className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface">
+      <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
+          <div>
+            <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">Technical context</h2>
+            <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">
+              External technical augmentation derived from the Case analysis. It is not admitted Case evidence.
+            </p>
           </div>
-          <p className="mt-2 text-xs font-bold text-ink-secondary">External technical reference · not case evidence</p>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-muted">
-            MITRE ATT&amp;CK is used here to help explain technical behavior described in the case. การเชื่อมโยงเป็นข้อเสนอเชิงวิเคราะห์ ไม่ใช่ข้อเท็จจริงจากคดี
-          </p>
+          <span className="rounded-md border border-mitre/25 bg-mitre/5 px-2.5 py-1.5 text-[10px] font-semibold text-mitre">MITRE ATT&amp;CK</span>
         </header>
 
         {!contextData.hasContext ? (
-          <div className="workspace-card p-10 text-center sm:p-12">
-            <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-mitre/10 text-mitre">
+          <div className="border-y border-line p-10 text-center sm:p-12">
+            <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-md bg-mitre/10 text-mitre">
               <Icon name="technical" className="h-5 w-5" />
             </span>
             <h2 className="mt-4 text-sm font-extrabold text-ink">{statusMessage(contextData).title}</h2>
             <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-ink-muted">{statusMessage(contextData).body}</p>
             {contextData.failureCode && <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-critical">Failure code: {contextData.failureCode}</p>}
             {onOpenIntake && (
-              <button type="button" onClick={onOpenIntake} className="btn-primary mt-5 inline-flex items-center gap-2 rounded-lg">
+              <button type="button" onClick={onOpenIntake} className="btn-primary mt-5 inline-flex items-center gap-2 rounded-md">
                 <Icon name="intake" className="h-3.5 w-3.5" />
-                Go to Case Intake · เปิดสำนวนคดี
+                Go to Intake
               </button>
             )}
           </div>
         ) : (
-          <section className="workspace-card px-4 sm:px-6">
+          <section className="border-y border-line px-4 sm:px-6">
             <ContextStatus data={contextData} />
             {contextData.techniques.length > 0 && (
               <div className="divide-y divide-line/70">
-                <div className="px-0 pt-5 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">Validated Case mappings</div>
+                <div className="px-0 pt-5 text-[11px] font-semibold tracking-[0.04em] text-ink-muted">Validated Case mappings</div>
                 {contextData.techniques.map((item) => (
                   <TechnicalItem
                     key={item.associationId}
@@ -253,7 +252,7 @@ export function TechnicalContextView({
             )}
             {contextData.retrievedOnlyTechniques.length > 0 && (
               <div className="mt-2 border-t border-line/70">
-                <div className="pt-5 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-muted">Retrieved-only technical context</div>
+                <div className="pt-5 text-[11px] font-semibold tracking-[0.04em] text-ink-muted">Retrieved-only technical context</div>
                 <p className="mt-1 text-xs leading-relaxed text-ink-muted">These rows came from external retrieval and have no validated Case association or evidence citation.</p>
                 <div className="divide-y divide-line/70 pt-2">
                   {contextData.retrievedOnlyTechniques.map((item) => <RetrievedOnlyItem key={item.techniqueId} item={item} />)}
