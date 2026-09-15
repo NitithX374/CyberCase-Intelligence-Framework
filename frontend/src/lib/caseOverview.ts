@@ -76,14 +76,15 @@ export function buildCaseOverview(
     const sources = parseCaseEvidence(evidenceSources);
     const trace = parseCaseTrace(result, sources);
     const findings = trace.claims.map((claim) => toFinding(claim, trace.associations, sources));
+    const ragCards = buildRagCards(result);
     return {
       hasAnalysis: true,
       isProcessing,
       incidentSummary: trace.summary,
       findings,
       gaps: trace.gaps,
-      mitreContext: buildMitreCards(trace.associations, findings),
-      technicalContextStatus: technicalContextStatus(trace.associations, trace.retrievalContextId, result),
+      mitreContext: trace.associations.length ? buildMitreCards(trace.associations, findings) : ragCards,
+      technicalContextStatus: technicalContextStatus(trace.associations, trace.retrievalContextId, result, ragCards.length),
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "The saved Case analysis format is invalid.";
@@ -143,15 +144,37 @@ function buildMitreCards(associations: CaseTraceAssociation[], findings: CaseFin
   }));
 }
 
+function buildRagCards(result: CaseAnalysisResultRead): MitreExplainedCard[] {
+  const augmentation = asRecord(result.provider_metadata_json.technical_augmentation);
+  if (asString(augmentation?.status) !== "retrieved_from_rag") return [];
+  const seen = new Set<string>();
+  return asArray(augmentation?.mitre_table).flatMap((value) => {
+    const row = asRecord(value);
+    const techniqueId = asString(row?.technique_id) || asString(row?.name);
+    if (!techniqueId || seen.has(techniqueId)) return [];
+    seen.add(techniqueId);
+    return [{
+      techniqueId,
+      techniqueName: asString(row?.name) || techniqueId,
+      description: asString(row?.description),
+      caseAssociationReason: "Accepted directly from the RAG service as external technical context; not Case evidence.",
+      isExternalContext: true as const,
+      linkedClaimTexts: [],
+    }];
+  });
+}
+
 function technicalContextStatus(
   associations: CaseTraceAssociation[],
   retrievalContextId: string | null,
   result: CaseAnalysisResultRead,
+  ragRowCount: number,
 ): TechnicalContextStatus {
   if (associations.length) return "available";
   const augmentation = asRecord(result.provider_metadata_json.technical_augmentation);
   const augmentationStatus = asString(augmentation?.status);
   if (augmentationStatus === "failed") return "unavailable";
+  if (augmentationStatus === "retrieved_from_rag") return ragRowCount ? "retrieved_from_rag" : "no_matches";
   if (augmentationStatus === "insufficient_context" || augmentationStatus === "retrieved_without_supported_match") return "no_matches";
   if (augmentationStatus === "not_applicable") return "hidden";
   const ragAttempt = asRecord(result.provider_metadata_json.rag_attempt);

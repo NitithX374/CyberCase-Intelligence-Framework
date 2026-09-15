@@ -7,7 +7,6 @@ from dataclasses import replace
 from sqlalchemy import select
 
 from app.models.rag_context import RagContext
-from app.services.case_analysis.pipeline_config import read_pipeline
 from app.services.case_materials import build_rag_query
 from app.services.workflow.case_mitre_augmentation import (
     CaseRagContextPayload,
@@ -29,14 +28,8 @@ async def attach_case_augmentation(
     claimed: ClaimedCaseRun,
     applicability_gate,
     rag_request,
-    mapping_request,
     session_factory: Callable | None = None,
 ):
-    config = read_pipeline(claimed.pipeline_config)
-    calls = output.execution_receipt.get("calls", []) if isinstance(output.execution_receipt, dict) else []
-    if not isinstance(calls, list):
-        raise CaseRunExecutionError("analysis_receipt_invalid", "Case analysis receipt calls are invalid")
-
     existing_rag_context: CaseRagContextPayload | None = None
     if session_factory is not None:
         async with session_factory() as db:
@@ -75,12 +68,8 @@ async def attach_case_augmentation(
     augmentation = await run_case_mitre_augmentation(
         run_id=claimed.id,
         source_bundle=claimed.source_bundle,
-        base_trace=output.trace,
-        config=config,
         applicability_gate=applicability_gate,
         rag_request=rag_request,
-        mapping_request=mapping_request,
-        calls=calls,
         on_rag_validated=persist_rag_context,
         reused_context=existing_rag_context,
     )

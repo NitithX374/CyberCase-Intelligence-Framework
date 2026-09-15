@@ -16,6 +16,7 @@ export type GapPriority = "high" | "medium" | "low";
 export type TechnicalContextStatus =
   | "hidden"
   | "available"
+  | "retrieved_from_rag"
   | "unavailable"
   | "no_matches";
 

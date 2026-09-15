@@ -6,6 +6,7 @@ import { parseCaseTrace } from "@/lib/caseOverview";
 export type TechnicalContextStatus =
   | "not_applicable"
   | "insufficient_context"
+  | "retrieved_from_rag"
   | "retrieved_with_matches"
   | "retrieved_without_supported_match"
   | "failed"
@@ -120,6 +121,7 @@ function parseTechnicalAugmentation(
   }
   if (retrievalContextId !== trace.retrievalContextId) throw new Error("Retrieval context is not bound to the analysis trace.");
   if (rawStatus === "retrieved_with_matches" && (!retrievalContextId || !trace.associations.length)) throw new Error("Technical augmentation match status is incomplete.");
+  if (rawStatus === "retrieved_from_rag" && (!retrievalContextId || !rows.length || trace.associations.length)) throw new Error("Technical augmentation RAG status is incomplete.");
   if (rawStatus === "retrieved_without_supported_match" && trace.associations.length) throw new Error("Technical augmentation no-match status has associations.");
   if (rawStatus === "failed" && (!asString(value.failure_code) || trace.associations.length)) throw new Error("Technical augmentation failure status is incomplete.");
   if (rawStatus === "not_applicable" && (rows.length || retrievalContextId || trace.associations.length)) throw new Error("Non-applicable technical augmentation has retrieved context.");
@@ -134,7 +136,7 @@ function parseTechnicalAugmentation(
 }
 
 function isAugmentationStatus(value: string): value is AugmentationStatus {
-  return value === "not_applicable" || value === "insufficient_context" || value === "retrieved_with_matches" || value === "retrieved_without_supported_match" || value === "failed";
+  return value === "not_applicable" || value === "insufficient_context" || value === "retrieved_from_rag" || value === "retrieved_with_matches" || value === "retrieved_without_supported_match" || value === "failed";
 }
 
 function mappedCard(
@@ -174,8 +176,8 @@ function mitreRows(value: unknown): MitreRow[] {
   const seen = new Set<string>();
   for (const rawRow of asArray(value)) {
     const row = asRecord(rawRow);
-    const id = asString(row?.technique_id);
-    if (!isTechniqueId(id) || seen.has(id)) continue;
+    const id = asString(row?.technique_id) || asString(row?.name);
+    if (!id || seen.has(id)) continue;
     seen.add(id);
     rows.push({ id, name: asString(row?.name), tactic: asString(row?.tactic), description: asString(row?.description) });
   }
@@ -226,10 +228,6 @@ function extractShortPlainMeaning(description: string): string {
   if (!clean) return "คำอธิบายพฤติกรรมตามกรอบมาตรฐาน MITRE ATT&CK";
   const firstSentence = clean.split(/(?<=[.!?])\s+|\n+/)[0] ?? clean;
   return firstSentence.length > 200 ? `${firstSentence.slice(0, 197)}...` : firstSentence;
-}
-
-function isTechniqueId(value: string): boolean {
-  return /^T\d{4}(?:\.\d{3})?$/.test(value);
 }
 
 export { emptyTechnicalContext };

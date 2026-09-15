@@ -103,7 +103,7 @@ function TechnicalItem({
   );
 }
 
-function RetrievedOnlyItem({ item }: { item: RetrievedTechnicalContextCard }) {
+function RetrievedOnlyItem({ item, acceptedFromRag }: { item: RetrievedTechnicalContextCard; acceptedFromRag: boolean }) {
   const [isDefinitionOpen, setIsDefinitionOpen] = useState(false);
   return (
     <article className="space-y-3 py-4 first:pt-2 last:pb-2">
@@ -112,7 +112,9 @@ function RetrievedOnlyItem({ item }: { item: RetrievedTechnicalContextCard }) {
         <h3 className="text-sm font-extrabold text-ink">{item.techniqueName}</h3>
       </div>
       {item.tactic && <p className="text-xs font-medium text-ink-muted">{item.tactic}</p>}
-      <p className="text-[11px] font-semibold text-ink-muted">Retrieved-only context · no validated Case mapping</p>
+      <p className="text-[11px] font-semibold text-ink-muted">
+        {acceptedFromRag ? "RAG-accepted external context · no Case evidence mapping" : "Retrieved-only context · no validated Case mapping"}
+      </p>
       {item.fullTechnicalDefinition && (
         <details open={isDefinitionOpen} className="border-t border-line/70 pt-3">
           <summary
@@ -150,6 +152,10 @@ function statusMessage(data: TechnicalContextData): { title: string; body: strin
     retrieved_without_supported_match: {
       title: "MITRE context retrieved without a supported Case match",
       body: "The retrieved rows are external context only. None was validated as a Case association.",
+    },
+    retrieved_from_rag: {
+      title: `${data.retrievedOnlyCount} RAG technical reference${data.retrievedOnlyCount === 1 ? "" : "s"} accepted`,
+      body: "All rows returned by the RAG service are shown as external technical context. No Case evidence mapping is asserted.",
     },
     failed: {
       title: `Technical augmentation failed${stage}`,
@@ -252,10 +258,14 @@ export function TechnicalContextView({
             )}
             {contextData.retrievedOnlyTechniques.length > 0 && (
               <div className="mt-2 border-t border-line/70">
-                <div className="pt-5 text-[11px] font-semibold tracking-[0.04em] text-ink-muted">Retrieved-only technical context</div>
-                <p className="mt-1 text-xs leading-relaxed text-ink-muted">These rows came from external retrieval and have no validated Case association or evidence citation.</p>
+                <div className="pt-5 text-[11px] font-semibold tracking-[0.04em] text-ink-muted">
+                  {contextData.status === "retrieved_from_rag" ? "RAG-provided technical context" : "Retrieved-only technical context"}
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+                  {contextData.status === "retrieved_from_rag" ? "These rows came directly from the RAG service and are external context, not Case evidence." : "These rows came from external retrieval and have no validated Case association or evidence citation."}
+                </p>
                 <div className="divide-y divide-line/70 pt-2">
-                  {contextData.retrievedOnlyTechniques.map((item) => <RetrievedOnlyItem key={item.techniqueId} item={item} />)}
+                  {contextData.retrievedOnlyTechniques.map((item) => <RetrievedOnlyItem key={item.techniqueId} item={item} acceptedFromRag={contextData.status === "retrieved_from_rag"} />)}
                 </div>
               </div>
             )}

@@ -11,7 +11,7 @@ const caseId = "22222222-2222-4222-8222-222222222222";
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const analysisId = "44444444-4444-4444-8444-444444444444";
 
-function caseProjection(options: { technical?: boolean; page?: boolean; stale?: boolean } = {}): { result: CaseAnalysisResultRead; evidenceSources: EvidenceSourceRead[] } {
+function caseProjection(options: { technical?: boolean; rag?: boolean; page?: boolean; stale?: boolean } = {}): { result: CaseAnalysisResultRead; evidenceSources: EvidenceSourceRead[] } {
   const text = options.page ? "Page 4: received 52,000 baht." : "The reporting party named Account A.";
   const exactQuote = options.page ? "received 52,000 baht" : text;
   const evidenceSources: EvidenceSourceRead[] = [{
@@ -54,12 +54,26 @@ function caseProjection(options: { technical?: boolean; page?: boolean; stale?: 
       }],
       gaps: [{ gap_id: "G-01", topic: "Incident time", status: "NOT_PROVIDED", description: "The incident time is missing.", affected_claim_ids: ["A-01"], reason: "Timing affects chronology.", priority: "high", askable: true }],
       mitre_associations: options.technical ? [{ association_id: "MA-01", technique_id: "T1059.001", claim_ids: ["A-01"], reason: "The evidence describes PowerShell activity.", status: "candidate_only", support_role: "external_technical_context" }] : [],
-      retrieval_context_id: options.technical ? "retrieval-1" : null,
+      retrieval_context_id: options.technical || options.rag ? "retrieval-1" : null,
     },
     execution_receipt_json: {},
     retrieval_context_id: options.technical ? "retrieval-1" : null,
     pipeline_config: {},
-    provider_metadata_json: options.technical ? {} : { technical_augmentation: { status: "not_applicable" } },
+    provider_metadata_json: options.rag
+      ? {
+          technical_augmentation: {
+            version: "case_mitre_augmentation_v1",
+            status: "retrieved_from_rag",
+            applicability: { decision: "RETRIEVE", source_message_ids: [sourceId], trigger_text: [text] },
+            retrieval_context_id: "retrieval-1",
+            mitre_table: [
+              { technique_id: "T1059.001", name: "PowerShell", tactic: "Execution", description: "Command and scripting interpreter." },
+              { technique_id: "S0096", name: "Systeminfo", entity_type: "Software", tactic: "", description: "System information utility." },
+            ],
+            association_ids: [],
+          },
+        }
+      : options.technical ? {} : { technical_augmentation: { status: "not_applicable" } },
     created_at: "2026-09-10T00:00:00Z",
     freshness: options.stale ? "stale" : "current",
   };
@@ -136,6 +150,14 @@ describe("CaseOverviewView", () => {
     render(<CaseOverviewView {...renderProps(technical.result, technical.evidenceSources)} />);
     expect(screen.getByRole("heading", { name: /External Cyber Reference/i })).toBeInTheDocument();
     expect(screen.getAllByText(/T1059.001/).length).toBeGreaterThan(0);
+  });
+
+  it("shows every RAG row without requiring a Case association", () => {
+    const technical = caseProjection({ rag: true });
+    render(<CaseOverviewView {...renderProps(technical.result, technical.evidenceSources)} />);
+    expect(screen.getByRole("heading", { name: /External Cyber Reference/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/T1059.001/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/S0096/).length).toBeGreaterThan(0);
   });
 
   it("renders the failed run state without an analysis result", () => {

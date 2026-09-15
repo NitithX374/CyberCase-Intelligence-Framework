@@ -28,7 +28,7 @@ export function MitreExplainedSimply({
       <WorkspaceSectionHeader
         headingId="overview-mitre-heading"
         title="External Cyber Reference"
-        description="MITRE ATT&CK patterns associated with these findings."
+        description={status === "retrieved_from_rag" ? "All RAG-provided technical references for this Case." : "MITRE ATT&CK patterns associated with these findings."}
       />
 
       <div className="divide-y divide-line/70 pt-1">

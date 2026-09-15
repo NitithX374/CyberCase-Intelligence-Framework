@@ -85,7 +85,6 @@ async def execute_case_run(
     answer_request=generate_case_answer,
     applicability_gate=None,
     rag_request=None,
-    mapping_request=None,
 ) -> None:
     async with session_factory() as db:
         claimed = await claim_case_run(db, run_id)
@@ -100,7 +99,6 @@ async def execute_case_run(
                 answer_request=answer_request,
                 applicability_gate=applicability_gate,
                 rag_request=rag_request,
-                mapping_request=mapping_request,
             )
         async with session_factory() as db:
             if claimed.operation == "ask":
@@ -151,7 +149,6 @@ async def execute_claimed_work(
     answer_request,
     applicability_gate,
     rag_request,
-    mapping_request,
 ) -> AnalysisOutput:
     clarification_exchanges = ()
     if claimed.operation == "analysis":
@@ -194,9 +191,8 @@ async def execute_claimed_work(
             claimed,
             applicability_gate,
             rag_request,
-            mapping_request,
             session_factory=session_factory,
-    )
+        )
     if claimed.operation == "analysis" and isinstance(output.trace, CaseAnalysisTrace):
         output = await attach_case_followup(
             output,
@@ -283,14 +279,12 @@ async def process_case_run(run_id: UUID) -> None:
     from app.database import async_session
     from app.services.case_analysis.mitre_applicability_gate import evaluate_mitre_applicability
     from app.services.clients.rag_client import request_rag
-    from app.services.workflow.case_mitre_augmentation import request_case_mitre_mapping
 
     await execute_case_run(
         run_id,
         session_factory=async_session,
         applicability_gate=evaluate_mitre_applicability,
         rag_request=request_rag,
-        mapping_request=request_case_mitre_mapping,
     )
 
 

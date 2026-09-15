@@ -14,6 +14,7 @@ from app.services.case_analysis.mitre_applicability_gate import MitreApplicabili
 CaseTechnicalAugmentationStatus = Literal[
     "not_applicable",
     "insufficient_context",
+    "retrieved_from_rag",
     "retrieved_with_matches",
     "retrieved_without_supported_match",
     "failed",
