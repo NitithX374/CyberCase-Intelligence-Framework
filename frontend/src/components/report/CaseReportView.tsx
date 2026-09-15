@@ -14,7 +14,6 @@ import { caseQueryKeys } from "@/hooks/useCaseQueries";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
 import { toUserFacingError, type UserFacingError } from "@/lib/user-facing-error";
 import { PersistedReportCard } from "./PersistedReportCard";
-import { NoSavedReport, ReportVersionSelector } from "./ReportHistory";
 import { Icon } from "@/components/common/icons";
 
 interface CaseReportViewProps {
@@ -22,11 +21,10 @@ interface CaseReportViewProps {
   caseTitle: string;
   analysisResult: CaseAnalysisResultRead | null;
   runStatus: CaseRunRead["status"] | null;
-  onOpenChat: () => void;
   onOpenOverview: () => void;
 }
 
-export function CaseReportView({ caseId, caseTitle, analysisResult, runStatus, onOpenChat, onOpenOverview }: CaseReportViewProps) {
+export function CaseReportView({ caseId, caseTitle, analysisResult, runStatus, onOpenOverview }: CaseReportViewProps) {
   const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const pendingGenerationRef = useRef<{ caseId: string; resultId: string; idempotencyKey: string } | null>(null);
@@ -91,7 +89,7 @@ export function CaseReportView({ caseId, caseTitle, analysisResult, runStatus, o
           {reports.length > 1 && <div className="mt-3 border-t border-line/60 pt-2"><ReportVersionSelector reports={reports} selectedReportId={selectedReport?.report_id ?? null} onSelect={setSelectedReportId} /></div>}
         </header>
 
-        {reportsQuery.isLoading ? <div className="flex h-64 items-center justify-center border-y border-line p-6 text-xs text-ink-muted">Loading Case report data…</div> : selectedReport ? <PersistedReportCard key={selectedReport.report_id} report={selectedReport} caseId={caseId} caseTitle={caseTitle} isDownloading={downloadMutation.isPending} onDownloadPdf={() => downloadMutation.mutate(selectedReport)} /> : <NoSavedReport canGenerate={canGenerate} isGenerating={generateMutation.isPending} onGenerate={() => void handleGenerate()} onOpenOverview={analysisResult ? onOpenOverview : onOpenChat} />}
+        {reportsQuery.isLoading ? <div className="flex h-64 items-center justify-center border-y border-line p-6 text-xs text-ink-muted">Loading Case report data…</div> : selectedReport ? <PersistedReportCard key={selectedReport.report_id} report={selectedReport} caseId={caseId} caseTitle={caseTitle} isDownloading={downloadMutation.isPending} onDownloadPdf={() => downloadMutation.mutate(selectedReport)} /> : <NoSavedReport canGenerate={canGenerate} isGenerating={generateMutation.isPending} onGenerate={() => void handleGenerate()} onOpenOverview={onOpenOverview} />}
       </div>
       <MeaningfulErrorModal isOpen={Boolean(activeError)} error={activeError} onClose={() => { generateMutation.reset(); downloadMutation.reset(); }} onRetry={handleRetry} />
     </section>
@@ -112,4 +110,77 @@ function downloadPdf(blob: Blob, versionNumber: number): void {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(blobUrl);
+}
+
+function ReportVersionSelector({
+  reports,
+  selectedReportId,
+  onSelect,
+}: {
+  reports: CaseReport[];
+  selectedReportId: string | null;
+  onSelect: (reportId: string) => void;
+}) {
+  if (reports.length <= 1) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" aria-label="Report version history">
+      <span className="mr-1 text-[10px] font-medium text-ink-muted">Versions</span>
+      {reports.map((report) => {
+        const isSelected = report.report_id === selectedReportId;
+        return (
+          <button
+            key={report.report_id}
+            type="button"
+            onClick={() => onSelect(report.report_id)}
+            className={`border-b-2 px-1 py-1 text-xs font-semibold transition-colors ${isSelected ? "border-accent text-accent" : "border-transparent text-ink-muted hover:border-line-strong hover:text-ink"}`}
+          >
+            <span>v{report.version_number}</span>
+            {report.persistence_status === "failed" && <span className="ml-1 text-[9px] font-normal text-red-400">(failed)</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function NoSavedReport({
+  canGenerate,
+  isGenerating,
+  onGenerate,
+  onOpenOverview,
+}: {
+  canGenerate: boolean;
+  isGenerating: boolean;
+  onGenerate: () => void;
+  onOpenOverview?: () => void;
+}) {
+  return (
+    <div className="mx-auto my-8 max-w-2xl border-y border-line py-8 text-center">
+      <Icon name="report" className="mx-auto h-5 w-5 text-ink-muted" />
+      <div>
+        <h2 className="mt-3 text-base font-semibold tracking-tight text-ink sm:text-lg">
+          {canGenerate ? "No Saved Report for This Case" : "Case Intake Required · ยังไม่มีข้อมูลสำนวนคดี"}
+        </h2>
+        <p className="mx-auto mt-1 max-w-xl text-xs leading-relaxed text-ink-secondary">
+          {canGenerate
+            ? "A preliminary case analysis report can be compiled from submitted case material and optional external technical context when applicable."
+            : "กรุณากรอกรายละเอียดสำนวนคดีในหน้า Case Intake เพื่อให้ระบบประมวลผลก่อนสร้างรายงานวิเคราะห์คดี"}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-3 pt-5">
+        {canGenerate ? (
+          <button type="button" onClick={onGenerate} disabled={isGenerating} className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-md">
+            {isGenerating ? <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ivory/30 border-t-ivory" /><span>Generating report...</span></> : <span>Generate report</span>}
+          </button>
+        ) : (
+          <button type="button" onClick={onOpenOverview} className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-md">
+            <Icon name="intake" className="h-3.5 w-3.5" />
+            <span>Go to Case Intake · เปิดสำนวนคดี</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }

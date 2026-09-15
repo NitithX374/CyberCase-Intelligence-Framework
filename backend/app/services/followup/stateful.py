@@ -86,7 +86,7 @@ def exhausted_gap_keys(
         key
         for exchange in exchanges
         if exchange.answer.strip()
-        for key in [_exchange_gap_key(exchange)]
+        for key in [exchange_gap_key(exchange)]
         if key is not None
     }
 
@@ -98,7 +98,7 @@ def unavailable_gap_keys(
         key
         for exchange in exchanges
         if answer_indicates_unavailable(exchange.answer)
-        for key in [_exchange_gap_key(exchange)]
+        for key in [exchange_gap_key(exchange)]
         if key is not None
     }
 
@@ -122,7 +122,7 @@ def select_next_gap(
         candidates,
         key=lambda item: (
             _PRIORITY_RANK[item[1].priority],
-            0 if _has_claim_links(item[1]) else 1,
+            0 if has_claim_links(item[1]) else 1,
             item[0],
         ),
     )[1]
@@ -139,7 +139,7 @@ def followup_context(
     return context
 
 
-def _exchange_gap_key(exchange: ClarificationExchange) -> str | None:
+def exchange_gap_key(exchange: ClarificationExchange) -> str | None:
     if exchange.gap_key:
         return exchange.gap_key
     if exchange.gap_topic:
@@ -147,7 +147,7 @@ def _exchange_gap_key(exchange: ClarificationExchange) -> str | None:
     return None
 
 
-def _has_claim_links(gap: CaseAnalysisGap) -> bool:
+def has_claim_links(gap: CaseAnalysisGap) -> bool:
     return bool(gap.affected_claim_ids)
 
 

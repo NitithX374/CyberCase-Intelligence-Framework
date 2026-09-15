@@ -34,7 +34,7 @@ class PdfInspection:
     pages: list[PdfPageInspection]
 
 
-def _normalize_text(text: str) -> str:
+def normalize_text(text: str) -> str:
     lines = [" ".join(line.split()) for line in text.replace("\x00", "").splitlines()]
     return "\n".join(line for line in lines if line)
 
@@ -43,25 +43,25 @@ def split_native_blocks(text: str) -> list[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
-def _is_printable(character: str) -> bool:
+def is_printable(character: str) -> bool:
     return character.isspace() or not unicodedata.category(character).startswith("C")
 
 
-def _is_meaningful(character: str) -> bool:
+def is_meaningful(character: str) -> bool:
     category = unicodedata.category(character)
     return character.isalpha() or character.isdigit() or category.startswith("M")
 
 
-def _has_usable_text(
+def has_usable_text(
     text: str, width: float, height: float, policy: NativeTextPolicy
 ) -> bool:
     compact = [character for character in text if not character.isspace()]
     if not compact:
         return False
-    printable_ratio = sum(_is_printable(character) for character in compact) / len(
+    printable_ratio = sum(is_printable(character) for character in compact) / len(
         compact
     )
-    meaningful = [character for character in compact if _is_meaningful(character)]
+    meaningful = [character for character in compact if is_meaningful(character)]
     meaningful_ratio = len(meaningful) / len(compact)
     square_inches = max((width * height) / math.pow(72, 2), 1)
     density = len(compact) / square_inches
@@ -97,10 +97,10 @@ def inspect_pdf(
     pages = []
     for page_number, page in enumerate(reader.pages, start=1):
         try:
-            text = _normalize_text(page.extract_text() or "")
+            text = normalize_text(page.extract_text() or "")
             width = float(page.mediabox.width)
             height = float(page.mediabox.height)
-            usable = _has_usable_text(text, width, height, policy)
+            usable = has_usable_text(text, width, height, policy)
             pages.append(PdfPageInspection(page_number, text, usable))
         except Exception:
             pages.append(

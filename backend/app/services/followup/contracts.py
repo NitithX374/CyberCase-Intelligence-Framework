@@ -163,7 +163,7 @@ _UNAVAILABLE_ANSWER_PHRASES = (
 )
 
 
-def _answer_indicates_unavailable(answer: str) -> bool:
+def answer_indicates_unavailable(answer: str) -> bool:
     normalized = unicodedata.normalize("NFKC", answer)
     normalized = " ".join(normalized.split()).casefold()
     if not normalized:
@@ -190,8 +190,6 @@ def _answer_indicates_unavailable(answer: str) -> bool:
             return True
     return False
 
-
-answer_indicates_unavailable = _answer_indicates_unavailable
 
 __all__ = [
     "ClarificationExchange",

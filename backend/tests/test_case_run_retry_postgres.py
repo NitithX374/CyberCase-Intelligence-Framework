@@ -19,7 +19,7 @@ async def _case_with_source(factory: async_sessionmaker):
     case_id = uuid4()
     async with factory() as db, db.begin():
         db.add(Case(id=case_id, title="Retry safeguards"))
-        await CaseMaterialsService(db).admitText(
+        await CaseMaterialsService(db).add_evidence_text(
             case_id=case_id,
             user_id=None,
             source_kind="narrative",

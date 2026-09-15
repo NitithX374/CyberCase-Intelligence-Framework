@@ -17,7 +17,7 @@ function caseProjection(options: { technical?: boolean; page?: boolean; stale?: 
   const evidenceSources: EvidenceSourceRead[] = [{
     id: sourceId,
     case_id: caseId,
-    source_kind: options.page ? "reviewed_document" : "narrative",
+    source_kind: options.page ? "document" : "narrative",
     document_id: options.page ? "DOC-1" : null,
     origin_message_id: null,
     exact_text: text,
@@ -72,7 +72,6 @@ function renderOverview(overrides: Partial<ComponentProps<typeof CaseOverviewVie
     caseId,
     caseTitle: "Transfer Review",
     chatStatus: "answered",
-    onOpenChat: vi.fn(),
     onOpenReport: vi.fn(),
     analysisResult: projection.result,
     evidenceSources: projection.evidenceSources,
@@ -146,8 +145,7 @@ describe("CaseOverviewView", () => {
     expect(screen.getByText("Case analysis extraction failed.")).toBeInTheDocument();
   });
 
-  it("routes a pending clarification to Chat", () => {
-    const openChat = vi.fn();
+  it("shows the pending clarification from the Case analysis", () => {
     const clarification: CaseClarificationRead = {
       id: "66666666-6666-4666-8666-666666666666",
       case_id: caseId,
@@ -166,10 +164,10 @@ describe("CaseOverviewView", () => {
       created_at: "2026-09-10T01:00:00Z",
       updated_at: "2026-09-10T01:00:00Z",
     };
-    renderOverview({ chatStatus: "awaiting_followup", clarifications: [clarification], onOpenChat: openChat });
+    renderOverview({ chatStatus: "awaiting_followup", clarifications: [clarification] });
     expect(screen.getByText("Analysis Needs More Information")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Proceed to Chat" }));
-    expect(openChat).toHaveBeenCalledOnce();
+    expect(screen.getByText(/Open Ask from the workspace header/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Proceed to Chat" })).not.toBeInTheDocument();
   });
 
   it("offers reanalysis when the canonical result is stale", () => {
@@ -187,7 +185,6 @@ function renderProps(result: CaseAnalysisResultRead, evidenceSources: EvidenceSo
     caseId,
     caseTitle: "Transfer Review",
     chatStatus: "answered",
-    onOpenChat: vi.fn(),
     onOpenReport: vi.fn(),
     analysisResult: result,
     evidenceSources,

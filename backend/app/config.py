@@ -80,23 +80,12 @@ class LLMProviderConfig(BaseModel):
     rag_service_url: str = "http://rag-service:8001"
 
 
-# ── 4. LLM Token Budgeting & Context Windows ─────────────────────────────────
-class LLMTokenBudgetConfig(BaseModel):
-    chat_model_context_tokens: int = 128_000
-    chat_max_input_tokens: int = 100_000
-    chat_reserved_output_tokens: int = 4_000
-    chat_safety_margin_tokens: int = 12_000
-
-
 # ── 5. Follow-up Question Realization ────────────────────────────────────────
 class FollowupPolicyConfig(BaseModel):
     chat_followup_policy_enabled: bool = True
     chat_followup_policy_model: str = "openai/gpt-5.6-luna"
     chat_followup_policy_timeout_seconds: float = 45.0
     chat_followup_policy_max_output_tokens: int = 2_048
-    chat_followup_policy_max_user_chars: int = 400_000
-    chat_followup_question_max_chars: int = 4_000
-    chat_followup_combined_query_max_chars: int = 400_000
     chat_followup_max_rounds: int = Field(default=2, ge=1, le=16)
 
 
@@ -108,18 +97,11 @@ class CaseAnalysisConfig(BaseModel):
     case_run_failure_persistence_timeout_seconds: float = Field(default=5.0, gt=0)
     chat_ask_model: str = "openai/gpt-5.6-luna"
     chat_ask_timeout_seconds: float = 120.0
-    chat_ask_max_output_tokens: int = 16_384
-    chat_ask_max_input_chars: int = 400_000
-    analysis_input_mode: Literal["raw_direct"] = "raw_direct"
 
 
 # ── 7. Persisted Report Generation ───────────────────────────────────────────
 class ReportConfig(BaseModel):
     chat_report_enabled: bool = True
-    chat_report_max_input_chars: int = 100_000
-    chat_report_max_text_chars: int = 8_000
-    chat_report_max_claims: int = 128
-    chat_report_max_limitations: int = 48
 
 
 # ── 8. Document Ingestion & OCR Recognition ──────────────────────────────────
@@ -131,9 +113,6 @@ class DocumentIngestionConfig(BaseModel):
     document_ingestion_max_pages: int = Field(default=50, ge=1, le=500)
     document_ingestion_max_image_pixels: int = Field(default=40_000_000, ge=1)
     document_ingestion_render_longest_edge: int = Field(default=1_800, ge=512, le=4096)
-    document_recognizer: Literal["typhoon"] = "typhoon"
-    document_mixed_region_policy: Literal["unified", "review"] = "unified"
-    document_unknown_region_policy: Literal["unified", "review"] = "unified"
     document_recognition_timeout_seconds: float = Field(default=60.0, gt=0)
     typhoon_ocr_api_key: str = Field(
         default="",
@@ -163,7 +142,6 @@ class Settings(
     CORSConfig,
     AuthConfig,
     LLMProviderConfig,
-    LLMTokenBudgetConfig,
     FollowupPolicyConfig,
     CaseAnalysisConfig,
     ReportConfig,
@@ -195,7 +173,6 @@ __all__ = [
     "DocumentIngestionConfig",
     "FollowupPolicyConfig",
     "LLMProviderConfig",
-    "LLMTokenBudgetConfig",
     "ReportConfig",
     "Settings",
     "settings",

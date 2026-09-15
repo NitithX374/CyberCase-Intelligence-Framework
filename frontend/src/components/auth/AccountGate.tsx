@@ -17,15 +17,12 @@ export function AccountGate({ children }: { children: ReactNode }) {
     // If authenticated user visits login or register, redirect them to their workspace
     if (isAuthPage && !isLoading && user) {
       const savedRoute = localStorage.getItem(`cybercase:${user.id}:route`);
-      const targetRoute =
-        savedRoute && (savedRoute.startsWith("/case/") || savedRoute.startsWith("/chat/"))
-          ? savedRoute
-          : "/case";
+      const targetRoute = savedRoute?.startsWith("/case/") ? savedRoute : "/case";
       router.replace(targetRoute);
       return;
     }
 
-    // If unauthenticated user tries to access protected routes (e.g. /chat), redirect to login
+    // If unauthenticated user tries to access a protected route, redirect to login
     if (!isPublicPage && !isLoading && !user && !sessionError) {
       const redirectTarget = encodeURIComponent(pathname);
       router.replace(`/login?redirect=${redirectTarget}`);

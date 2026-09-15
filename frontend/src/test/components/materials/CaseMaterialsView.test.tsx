@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import { CaseMaterialsView } from "@/components/materials/CaseMaterialsView";
-import type { CaseDocumentRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseDocumentRead } from "@/lib/api";
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
@@ -12,19 +12,6 @@ vi.mock("@/lib/api", async (importOriginal) => {
     fetchCaseDocumentContent: vi.fn().mockResolvedValue(new Blob(["original"])),
   };
 });
-
-const evidence: EvidenceSourceRead = {
-  id: "source-1",
-  case_id: "case-1",
-  source_kind: "reviewed_document",
-  document_id: "document-1",
-  origin_message_id: null,
-  exact_text: "Reviewed statement",
-  provenance_json: { extraction_id: "extraction-1" },
-  source_metadata_json: {},
-  created_at: "2026-09-11T00:00:00Z",
-  archived_at: null,
-};
 
 const document: CaseDocumentRead = {
   id: "document-1",
@@ -38,7 +25,7 @@ const document: CaseDocumentRead = {
     id: "extraction-1",
     document_id: "document-1",
     provider: "native_pdf",
-    extracted_text: "Reviewed statement",
+    extracted_text: "Received statement",
     config_json: {},
     provenance_json: {},
     warnings_json: [],
@@ -63,11 +50,8 @@ function renderMaterials(overrides: Partial<React.ComponentProps<typeof CaseMate
   const props: React.ComponentProps<typeof CaseMaterialsView> = {
     caseId: "case-1",
     documents: [],
-    evidence: [],
     isUploading: false,
-    admittingExtractionId: null,
     onUploadDocument: vi.fn(),
-    onAdmitExtraction: vi.fn(),
     ...overrides,
   };
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -75,22 +59,20 @@ function renderMaterials(overrides: Partial<React.ComponentProps<typeof CaseMate
   return props;
 }
 
-describe("CaseMaterialsView", () => {
+  describe("CaseMaterialsView", () => {
   it("switches between a source file and its System OCR output", () => {
-    const onAdmitExtraction = vi.fn();
-    renderMaterials({ documents: [document], onAdmitExtraction });
+    renderMaterials({ documents: [document] });
 
     expect(screen.getAllByText("statement.pdf")).toHaveLength(2);
     expect(screen.getByRole("tab", { name: "Original File" })).toHaveAttribute("aria-selected", "true");
     fireEvent.click(screen.getByRole("tab", { name: "System OCR" }));
-    expect(screen.getByText("Reviewed statement")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Admit OCR" }));
-    expect(onAdmitExtraction).toHaveBeenCalledWith("document-1", "extraction-1");
+    expect(screen.getByText("Received statement")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Admit OCR" })).not.toBeInTheDocument();
   });
 
-  it("shows the admission state without duplicating evidence text in the source rail", () => {
-    renderMaterials({ documents: [document], evidence: [evidence] });
-    expect(screen.getByText("Admitted")).toBeInTheDocument();
+  it("shows the received state without duplicating evidence text in the source rail", () => {
+    renderMaterials({ documents: [document] });
+    expect(screen.getByText("Received")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Admit OCR" })).not.toBeInTheDocument();
   });
 

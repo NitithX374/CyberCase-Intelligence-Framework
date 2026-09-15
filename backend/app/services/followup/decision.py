@@ -14,10 +14,10 @@ from app.services.followup.contracts import (
     FollowUpResolution,
 )
 from app.services.followup.helpers import (
-    coercePolicyResult,
-    normalizeQuestion,
-    resolveFollowupFailureCode,
-    resolveGapReasonCode,
+    coerce_policy_result,
+    normalize_question,
+    resolve_followup_failure_code,
+    resolve_gap_reason_code,
 )
 from app.services.followup.metadata import followup_metadata
 from app.services.followup.policy import AnthropicFollowUpPolicy
@@ -110,10 +110,10 @@ async def evaluate_followup_outcome(
         else:
             raw_result = await active_policy.decide(**policy_kwargs)
         elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-        result = coercePolicyResult(raw_result, elapsed_ms=elapsed_ms)
+        result = coerce_policy_result(raw_result, elapsed_ms=elapsed_ms)
     except Exception as error:
         elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-        failure_code = resolveFollowupFailureCode(error)
+        failure_code = resolve_followup_failure_code(error)
         logger.warning(
             "Chat follow-up policy failed open source_run_id=%s failure_code=%s error=%s",
             source_run_id,
@@ -154,8 +154,8 @@ async def evaluate_followup_outcome(
             **common_metadata,
         )
 
-    normalized_question = normalizeQuestion(decision.question)
-    if any(normalizeQuestion(exchange.question) == normalized_question for exchange in clarification_exchanges):
+    normalized_question = normalize_question(decision.question)
+    if any(normalize_question(exchange.question) == normalized_question for exchange in clarification_exchanges):
         return resolution(
             action="proceed",
             reason_code="duplicate_question",
@@ -166,11 +166,10 @@ async def evaluate_followup_outcome(
 
     return resolution(
         action="ask_followup",
-        reason_code=resolveGapReasonCode(candidate),
+        reason_code=resolve_gap_reason_code(candidate),
         stop_reason="ask_followup",
         question=decision.question,
         metadata_question=decision.question,
-        decision="ask_followup",
         decision_source="provider_question_realizer",
         policy_decision=decision.decision,
         selected_gap=candidate.topic,

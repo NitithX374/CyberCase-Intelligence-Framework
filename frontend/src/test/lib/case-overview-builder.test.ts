@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
-import { buildCaseOverview } from "@/lib/case-overview-builder";
+import { buildCaseOverview } from "@/lib/caseOverview";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const caseId = "22222222-2222-4222-8222-222222222222";
@@ -69,7 +69,7 @@ describe("Case overview projection", () => {
 
   it("renders overview with OCR document evidence", () => {
     const documentQuote = "Defendant was seen at the scene.";
-    const documentEvidence = evidence(documentQuote, "reviewed_document", {
+    const documentEvidence = evidence(documentQuote, "document", {
       document_id: "DOC-001",
       provenance_json: {
         pages: [{ end_offset: documentQuote.length, page_number: 1, start_offset: 0 }],
@@ -91,7 +91,7 @@ describe("Case overview projection", () => {
   it("supports repeated quotes when page binding is unambiguous", () => {
     const repeatedQuote = "Suspicious vehicle reported.";
     const fullText = `${repeatedQuote}\nSome intermediate text.\n${repeatedQuote}`;
-    const documentEvidence = evidence(fullText, "reviewed_document", {
+    const documentEvidence = evidence(fullText, "document", {
       document_id: "DOC-001",
       provenance_json: { pages: [{ end_offset: fullText.length, page_number: 1, start_offset: 0 }] },
       source_metadata_json: { filename: "report.pdf" },

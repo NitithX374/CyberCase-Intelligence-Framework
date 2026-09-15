@@ -19,7 +19,7 @@ from app.services.document_ingestion.provenance import (
 )
 
 
-def _iter_document_blocks(document: DocumentObject):
+def iter_document_blocks(document: DocumentObject):
     for child in document.element.body.iterchildren():
         if isinstance(child, CT_P):
             yield Paragraph(child, document)
@@ -27,7 +27,7 @@ def _iter_document_blocks(document: DocumentObject):
             yield Table(child, document)
 
 
-def _table_text(table: Table) -> str:
+def table_text(table: Table) -> str:
     rows = []
     for row in table.rows:
         cells = [" ".join(cell.text.split()) for cell in row.cells]
@@ -45,8 +45,8 @@ def parse_docx(
         raise InvalidDocumentError("The DOCX file could not be parsed.") from error
 
     texts = []
-    for item in _iter_document_blocks(document):
-        text = item.text if isinstance(item, Paragraph) else _table_text(item)
+    for item in iter_document_blocks(document):
+        text = item.text if isinstance(item, Paragraph) else table_text(item)
         normalized = text.strip()
         if normalized:
             texts.append(normalized)

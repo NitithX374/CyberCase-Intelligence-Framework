@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def _extract_token_from_request(request: Request) -> str | None:
+def extract_token_from_request(request: Request) -> str | None:
     """Extract token from Authorization header or HTTP-only auth cookie."""
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
@@ -34,7 +34,7 @@ async def get_optional_user(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User | None:
     """Resolve current user if a valid token exists, otherwise return None."""
-    token = _extract_token_from_request(request)
+    token = extract_token_from_request(request)
     if not token:
         return None
 

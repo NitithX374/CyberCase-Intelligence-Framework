@@ -1,4 +1,4 @@
-"""HTTP contracts for Case materials and currently admitted evidence."""
+"""HTTP contracts for Case materials and received evidence."""
 
 from __future__ import annotations
 
@@ -35,10 +35,6 @@ class CaseDocumentRead(BaseModel):
     extractions: list[DocumentExtractionRead] = Field(default_factory=list)
 
 
-class AdmitExtractionRequest(BaseModel):
-    extraction_id: UUID
-
-
 class CaseEvidenceCreate(BaseModel):
     exact_text: str = Field(min_length=1, max_length=400_000)
     provenance_json: dict[str, object] = Field(default_factory=dict)
@@ -62,7 +58,6 @@ class EvidenceSourceRead(BaseModel):
 
 
 __all__ = [
-    "AdmitExtractionRequest",
     "CaseDocumentRead",
     "CaseEvidenceCreate",
     "DocumentExtractionRead",

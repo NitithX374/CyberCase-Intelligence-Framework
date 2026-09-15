@@ -154,13 +154,13 @@ def test_technical_case_calls_rag_and_persists_case_claim_mapping():
         assert result.status == "retrieved_with_matches"
         assert result.retrieval_context_id == "retrieval-case-1"
         assert result.associations == (_association(),)
-        from app.services.case_analysis.contracts import CaseAdmittedSource
+        from app.services.case_analysis.contracts import CaseEvidenceSource
 
         merged = merge_case_mitre_trace(
             trace,
             result,
             (
-                CaseAdmittedSource(
+                CaseEvidenceSource(
                     source_id,
                     manifest[0]["exact_text"],
                 ),

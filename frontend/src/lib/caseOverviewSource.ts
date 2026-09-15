@@ -1,29 +1,37 @@
 import type { EvidenceSourceRead } from "@/lib/api";
-import { asArray, asRecord, asString } from "@/lib/case-overview-parsing";
-import type { EvidencePage, SourceMessageRef } from "@/lib/case-overview-contracts";
-import { formatPageReference } from "@/lib/evidence-citation";
+import type { EvidencePage, SourceMessageRef, CaseCitation, CaseEvidenceSource } from "./caseOverviewTypes";
 
-export interface CaseEvidenceSource {
-  id: string;
-  kind: string;
-  ordinal: number;
-  text: string;
-  provenance: Record<string, unknown>;
-  documentId: string | null;
-  filename: string | null;
+export function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
-export interface CaseCitation {
-  sourceId: string;
-  exactQuote: string;
-  documentId: string | null;
-  filename: string | null;
-  pageNumbers: number[];
+export function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
-interface CasePageBinding {
-  pages: EvidencePage[];
-  pageNumbers: number[];
+export function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export function asStringArray(value: unknown): string[] {
+  return asArray(value).map(asString).filter(Boolean);
+}
+
+export function formatPageReference(pageNumbers: number[]): string {
+  if (pageNumbers.length === 1) return `p. ${pageNumbers[0]}`;
+  return `pp. ${formatPageList(pageNumbers)}`;
+}
+
+export function formatEvidenceCitationText(
+  sourceRef: Pick<SourceMessageRef, "label" | "pageNumbers" | "sourceType" | "isNativeEvidence">,
+): string {
+  if (sourceRef.pageNumbers.length > 0) return formatPageReference(sourceRef.pageNumbers);
+  if (sourceRef.isNativeEvidence) return sourceRef.label;
+  if (sourceRef.sourceType === "case_description") return "Case narrative";
+  if (sourceRef.sourceType === "clarification_response") return "Clarification";
+  return sourceRef.label;
 }
 
 export function parseCaseEvidence(evidenceSources: EvidenceSourceRead[]): CaseEvidenceSource[] {
@@ -124,6 +132,11 @@ function buildSourceRef(source: CaseEvidenceSource, citation: CaseCitation | nul
   };
 }
 
+interface CasePageBinding {
+  pages: EvidencePage[];
+  pageNumbers: number[];
+}
+
 function resolvePageBinding(source: CaseEvidenceSource, citation: CaseCitation): CasePageBinding | null {
   if (!citation.documentId || !citation.filename || citation.pageNumbers.length === 0) return null;
   if (source.documentId !== citation.documentId || source.filename !== citation.filename) return null;
@@ -157,7 +170,7 @@ function resolvePageBinding(source: CaseEvidenceSource, citation: CaseCitation):
 
 function sourceTypeFor(kind: string): SourceMessageRef["sourceType"] {
   if (kind === "followup_answer") return "clarification_response";
-  if (kind === "narrative" || kind === "reviewed_document") return "case_description";
+  if (kind === "narrative" || kind === "document") return "case_description";
   throw new Error("Unsupported native evidence source kind.");
 }
 
@@ -195,4 +208,9 @@ function isInteger(value: unknown): value is number {
 
 function isPositiveInteger(value: unknown): value is number {
   return isInteger(value) && value > 0;
+}
+
+function formatPageList(pageNumbers: number[]): string {
+  const consecutive = pageNumbers.every((page, index) => index === 0 || page === pageNumbers[index - 1] + 1);
+  return consecutive ? `${pageNumbers[0]}–${pageNumbers[pageNumbers.length - 1]}` : pageNumbers.join(", ");
 }

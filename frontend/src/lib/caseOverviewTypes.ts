@@ -90,3 +90,48 @@ export interface CaseOverviewData {
   technicalContextStatus: TechnicalContextStatus;
   unavailableReason?: string;
 }
+
+export interface CaseEvidenceSource {
+  id: string;
+  kind: string;
+  ordinal: number;
+  text: string;
+  provenance: Record<string, unknown>;
+  documentId: string | null;
+  filename: string | null;
+}
+
+export interface CaseCitation {
+  sourceId: string;
+  exactQuote: string;
+  documentId: string | null;
+  filename: string | null;
+  pageNumbers: number[];
+}
+
+export interface CaseTraceClaim {
+  claimId: string;
+  claimType: ClaimType;
+  text: string;
+  epistemicStatus: EpistemicStatus;
+  reasoningSummary: string | null;
+  supportingIds: string[];
+  contradictingIds: string[];
+  supportingCitations: CaseCitation[];
+  contradictingCitations: CaseCitation[];
+}
+
+export interface CaseTraceAssociation {
+  id: string;
+  techniqueId: string;
+  claimIds: string[];
+  reason: string;
+}
+
+export interface ParsedCaseTrace {
+  summary: string;
+  claims: CaseTraceClaim[];
+  gaps: CaseGap[];
+  associations: CaseTraceAssociation[];
+  retrievalContextId: string | null;
+}

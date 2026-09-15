@@ -60,7 +60,7 @@ async def load_case_clarification_exchanges(
             continue
 
         metadata = question_message.metadata_json if isinstance(question_message.metadata_json, dict) else {}
-        identity = _followup_identity(metadata)
+        identity = followup_identity(metadata)
         if identity is None:
             continue
         gap_id, topic, gap_key = identity
@@ -109,7 +109,7 @@ async def get_owned_clarifications(
         .order_by(ChatMessage.ordinal)
     )
     answer_messages = list(answer_result.scalars().all())
-    answer_source_by_message_id = await _answer_sources_by_message_id(db, answer_messages)
+    answer_source_by_message_id = await answer_sources_by_message_id(db, answer_messages)
     answers_by_question = {
         answer.in_reply_to_message_id: answer
         for answer in answer_messages
@@ -146,7 +146,7 @@ async def get_owned_clarifications(
                 "Clarification question has an invalid analysis result",
             )
 
-        identity = _followup_identity(metadata)
+        identity = followup_identity(metadata)
         if identity is None:
             raise CaseClarificationHistoryError(
                 "clarification_context_invalid",
@@ -191,7 +191,7 @@ async def get_owned_clarifications(
     return clarifications
 
 
-def _followup_identity(
+def followup_identity(
     metadata: dict[str, object],
 ) -> tuple[str, str, str] | None:
     followup = metadata.get("chat_followup")
@@ -205,7 +205,7 @@ def _followup_identity(
     return gap_id.strip(), topic.strip(), gap_key.strip()
 
 
-async def _answer_sources_by_message_id(
+async def answer_sources_by_message_id(
     db: AsyncSession,
     answer_messages: list[ChatMessage],
 ) -> dict[UUID, UUID]:

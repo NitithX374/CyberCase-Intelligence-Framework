@@ -3,8 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { CaseReportView } from "@/components/report/CaseReportView";
-import { useCaseAnalysis, useCases } from "@/hooks/useCaseQueries";
-import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
+import { useCaseAnalysis, useCases, useCaseRunPolling } from "@/hooks/useCaseQueries";
 import { casePath } from "@/features/chat/routing/workspaceRoutes";
 
 export default function ReportPage() {
@@ -35,8 +34,7 @@ export default function ReportPage() {
       caseTitle={activeCase?.title || "New case"}
       analysisResult={analysisQuery.data ?? null}
       runStatus={runStatus}
-      onOpenChat={() => {}}
-      onOpenOverview={() => router.push(casePath(caseId, "overview"))}
+      onOpenOverview={() => router.push(casePath(caseId, activeCase?.latest_analysis_result_id ? "overview" : "intake"))}
     />
   );
 }

@@ -1,14 +1,25 @@
 import re
 from dataclasses import dataclass
 
+from fastapi import UploadFile
+
+from app.config import settings
 from app.services.document_ingestion.contracts import (
+    BoundingBox,
+    ContentRole,
     DocumentBlock,
     DocumentPage,
+    DocumentRegion,
     ExtractionMethod,
     IngestedDocument,
     IngestionMode,
+    RecognitionCandidate,
+    RecognitionMethod,
+    RecognizedContent,
     RoutingSummary,
+    RegionType,
     SourceType,
+    VerificationStatus,
 )
 from app.services.document_ingestion.detection import DocumentKind, detect_document
 from app.services.document_ingestion.errors import (
@@ -26,11 +37,15 @@ from app.services.document_ingestion.provenance import (
     build_blocks,
     build_document_id,
     build_native_regions,
+    build_region_id,
 )
-from app.services.document_ingestion.recognition import DocumentRecognizer, RenderedPage
-from app.services.document_ingestion.recognizedRegion import build_unified_region
-from app.services.document_ingestion.regionPipeline import RegionRecognitionPipeline
+from app.services.document_ingestion.recognition import (
+    DocumentRecognizer,
+    RecognizedPage,
+    RenderedPage,
+)
 from app.services.document_ingestion.rendering import (
+    image_dimensions,
     normalize_image,
     render_pdf_page,
 )
@@ -50,12 +65,10 @@ class DocumentIngestionService:
         recognizer: DocumentRecognizer,
         limits: DocumentIngestionLimits,
         native_text_policy: NativeTextPolicy | None = None,
-        region_pipeline: RegionRecognitionPipeline | None = None,
     ) -> None:
         self._recognizer = recognizer
         self._limits = limits
         self._native_text_policy = native_text_policy or NativeTextPolicy()
-        self._region_pipeline = region_pipeline
 
     async def ingest(
         self,
@@ -63,18 +76,18 @@ class DocumentIngestionService:
         filename: str,
         mode: IngestionMode = IngestionMode.UNIFIED,
     ) -> IngestedDocument:
-        self._validate_content(content)
+        self.validate_content(content)
         detected = detect_document(content)
         document_id = build_document_id(content)
-        safe_filename = self._safe_filename(filename)
+        safe_filename = self.safe_filename(filename)
 
         if detected.kind == DocumentKind.DOCX:
             pages, warnings = parse_docx(content, document_id)
             method = ExtractionMethod.NATIVE_DOCX
         elif detected.kind == DocumentKind.PDF:
-            pages, warnings, method = await self._ingest_pdf(content, document_id, mode)
+            pages, warnings, method = await self.ingest_pdf(content, document_id)
         else:
-            pages, warnings = await self._ingest_image(content, document_id, mode)
+            pages, warnings = await self.ingest_image(content, document_id)
             method = ExtractionMethod.DOCUMENT_RECOGNITION
 
         full_text = "\n\n".join(page.merged_text for page in pages if page.merged_text)
@@ -89,7 +102,7 @@ class DocumentIngestionService:
             warnings=warnings,
         )
 
-    def _validate_content(self, content: bytes) -> None:
+    def validate_content(self, content: bytes) -> None:
         if not content:
             raise InvalidDocumentError("The uploaded document is empty.")
         if len(content) > self._limits.max_bytes:
@@ -98,11 +111,10 @@ class DocumentIngestionService:
                 f"The document exceeds the {self._limits.max_bytes}-byte ingestion limit.",
             )
 
-    async def _ingest_pdf(
+    async def ingest_pdf(
         self,
         content: bytes,
         document_id: str,
-        mode: IngestionMode,
     ) -> tuple[list[DocumentPage], list[str], ExtractionMethod]:
         inspection = inspect_pdf(
             content,
@@ -118,7 +130,7 @@ class DocumentIngestionService:
                 warnings.append(inspected_page.warning)
             if inspected_page.usable_native_text:
                 pages.append(
-                    self._native_page(
+                    self.native_page(
                         document_id,
                         inspected_page.page_number,
                         split_native_blocks(inspected_page.text),
@@ -139,7 +151,7 @@ class DocumentIngestionService:
                     self._limits.render_longest_edge,
                 ),
             )
-            page, page_warnings = await self._process_rendered_page(rendered, mode)
+            page, page_warnings = await self.process_rendered_page(rendered)
             pages.append(page)
             warnings.extend(page_warnings)
 
@@ -151,37 +163,27 @@ class DocumentIngestionService:
             method = ExtractionMethod.DOCUMENT_RECOGNITION
         return pages, warnings, method
 
-    async def _ingest_image(
+    async def ingest_image(
         self,
         content: bytes,
         document_id: str,
-        mode: IngestionMode,
     ) -> tuple[list[DocumentPage], list[str]]:
         image_bytes = normalize_image(
             content,
             self._limits.render_longest_edge,
             self._limits.max_image_pixels,
         )
-        page, warnings = await self._process_rendered_page(
-            RenderedPage(document_id, 1, image_bytes), mode
-        )
+        page, warnings = await self.process_rendered_page(RenderedPage(document_id, 1, image_bytes))
         return [page], warnings
 
-    async def _process_rendered_page(
+    async def process_rendered_page(
         self,
         rendered_page: RenderedPage,
-        mode: IngestionMode,
     ) -> tuple[DocumentPage, list[str]]:
-        if mode == IngestionMode.ROUTED:
-            if self._region_pipeline is None:
-                raise InvalidDocumentError(
-                    "Region-aware ingestion is not configured for this service."
-                )
-            return await self._region_pipeline.process(rendered_page)
-        page, warning = await self._recognize_page(rendered_page)
+        page, warning = await self.recognize_page(rendered_page)
         return page, [warning] if warning else []
 
-    async def _recognize_page(
+    async def recognize_page(
         self,
         rendered_page: RenderedPage,
     ) -> tuple[DocumentPage, str | None]:
@@ -224,7 +226,7 @@ class DocumentIngestionService:
         ), None
 
     @staticmethod
-    def _native_page(
+    def native_page(
         document_id: str,
         page_number: int,
         texts: list[str],
@@ -242,6 +244,88 @@ class DocumentIngestionService:
         )
 
     @staticmethod
-    def _safe_filename(filename: str) -> str:
+    def safe_filename(filename: str) -> str:
         safe_filename = filename.replace("\\", "/").split("/")[-1].strip()
         return (safe_filename or "document")[:255]
+
+
+def build_unified_region(
+    page: RenderedPage, recognized: RecognizedPage
+) -> DocumentRegion:
+    width, height = image_dimensions(page.image_bytes)
+    generated = [
+        RecognizedContent(
+            text=description,
+            content_role=ContentRole.GENERATED_VISUAL_DESCRIPTION,
+            verification_status=VerificationStatus.NON_AUTHORITATIVE,
+        )
+        for description in recognized.generated_visual_descriptions
+    ]
+    candidate = RecognitionCandidate(
+        recognition_method=RecognitionMethod.UNIFIED,
+        recognizer=recognized.recognizer,
+        text=recognized.text,
+        confidence=recognized.confidence,
+        words=recognized.words,
+        content_role=ContentRole.TRANSCRIBED_TEXT,
+        verification_status=VerificationStatus.MACHINE_READ,
+    )
+    return DocumentRegion(
+        region_id=build_region_id(page.document_id, page.page_number, 1),
+        page_number=page.page_number,
+        bbox=BoundingBox(x0=0, y0=0, x1=width, y1=height),
+        region_type=RegionType.UNKNOWN,
+        recognition_method=RecognitionMethod.UNIFIED,
+        recognizer=recognized.recognizer,
+        text=recognized.text,
+        recognition_confidence=recognized.confidence,
+        words=recognized.words,
+        verification_status=VerificationStatus.MACHINE_READ,
+        content_role=ContentRole.TRANSCRIBED_TEXT,
+        candidates=[candidate],
+        selected_candidate_index=0,
+        generated_contents=generated,
+    )
+
+
+def build_document_recognizer() -> DocumentRecognizer:
+    from app.services.document_ingestion.recognition.typhoon import (
+        TyphoonDocumentRecognizer,
+        TyphoonRecognizerConfig,
+    )
+
+    return TyphoonDocumentRecognizer(
+        TyphoonRecognizerConfig(
+            api_key=settings.typhoon_ocr_api_key,
+            base_url=settings.typhoon_ocr_base_url,
+            model=settings.typhoon_ocr_model,
+            timeout_seconds=settings.document_recognition_timeout_seconds,
+            target_image_dimension=settings.document_ingestion_render_longest_edge,
+        )
+    )
+
+
+def build_document_ingestion_service() -> DocumentIngestionService:
+    return DocumentIngestionService(
+        build_document_recognizer(),
+        DocumentIngestionLimits(
+            max_bytes=settings.document_ingestion_max_bytes,
+            max_pages=settings.document_ingestion_max_pages,
+            max_image_pixels=settings.document_ingestion_max_image_pixels,
+            render_longest_edge=settings.document_ingestion_render_longest_edge,
+        ),
+    )
+
+
+async def read_limited(upload: UploadFile) -> bytes:
+    chunks = []
+    total_bytes = 0
+    while chunk := await upload.read(1024 * 1024):
+        total_bytes += len(chunk)
+        if total_bytes > settings.document_ingestion_max_bytes:
+            raise DocumentLimitError(
+                "document_size_limit_exceeded",
+                f"The document exceeds the {settings.document_ingestion_max_bytes}-byte ingestion limit.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)

@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CaseAnalysisResultRead, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
 import {
   followUpGapDetailForMessage,
 } from "@/lib/chat-followup";
+import type { SourceMessageRef } from "@/lib/caseOverviewTypes";
+import { buildCaseOverview } from "@/lib/caseOverview";
+import { asArray, asRecord, asStringArray, parseCaseCitations, parseCaseEvidence, sourceRefs } from "@/lib/caseOverviewSource";
 import { Icon } from "@/components/common/icons";
 import { StatusPill } from "@/components/common/StatusPill";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
-import { AnalysisEvidenceReferences } from "./AnalysisEvidenceReferences";
-import { FollowUpActionCard } from "./FollowUpActionCard";
-import { CaseAnalysisLeadCard } from "./CaseAnalysisLeadCard";
+import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
+import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip";
 
 interface ChatTranscriptProps {
   messages: PersistedChatMessage[];
@@ -175,4 +177,150 @@ function isLeadAnalysisPublication(
     return false;
   }
   return message.analysis_result_id === leadResultId;
+}
+
+function CaseAnalysisLeadCard({
+  result,
+  evidenceSources,
+  isUpdated = false,
+  onOpenOverview,
+}: {
+  result: CaseAnalysisResultRead;
+  evidenceSources?: EvidenceSourceRead[] | null;
+  isUpdated?: boolean;
+  onOpenOverview?: () => void;
+}) {
+  const summaryText = result.summary?.trim() || result.answer?.trim() || "";
+  const isValidated = result.status === "validated";
+  const overview = useMemo(() => buildCaseOverview(result, evidenceSources ?? null, null), [result, evidenceSources]);
+  const findingCount = overview.hasAnalysis ? overview.findings.length : 0;
+  const openQuestionCount = overview.hasAnalysis ? overview.gaps.length : 0;
+  const freshnessLabel = result.freshness === "stale"
+    ? "Based on older evidence"
+    : result.freshness === "current"
+      ? "Current"
+      : "Freshness unavailable";
+
+  return (
+    <aside aria-label="Analysis Result" className="mb-5 overflow-hidden rounded-md border border-line bg-surface p-4 sm:p-5">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-ink">Analysis Result</span>
+          {isValidated && <span className="inline-flex items-center gap-1 rounded-full bg-established/10 px-2 py-0.5 text-[10px] font-semibold text-established"><span className="h-1.5 w-1.5 rounded-full bg-established" />Validated</span>}
+        </div>
+        {onOpenOverview && <button type="button" onClick={onOpenOverview} aria-label="View full Case Overview" className="text-[11px] font-semibold text-evidence transition-colors hover:text-accent-strong hover:underline">Open full analysis</button>}
+      </header>
+
+      <div className="mt-4 space-y-4">
+        <div><h3 className="text-sm font-bold text-ink">{isUpdated ? "Updated analysis" : "Analysis complete"}</h3></div>
+        <div className="text-sm leading-relaxed text-ink"><ChatMessageMarkdown content={summaryText} /></div>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3 sm:grid-cols-4">
+          <Metric label="Findings" value={String(findingCount)} />
+          <Metric label="Open questions" value={String(openQuestionCount)} />
+          <Metric label="Evidence revision" value={String(result.evidence_revision)} />
+          <Metric label="Analysis state" value={freshnessLabel} emphasis={result.freshness === "stale" ? "attention" : "positive"} />
+        </dl>
+        <p className="text-[10px] leading-relaxed text-ink-muted">Ask uses this persisted result. Ordinary questions do not change evidence.</p>
+      </div>
+    </aside>
+  );
+}
+
+function Metric({ label, value, emphasis }: { label: string; value: string; emphasis?: "positive" | "attention" }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-medium text-ink-muted">{label}</dt>
+      <dd className={`mt-1 truncate text-xs font-bold ${emphasis === "attention" ? "text-unresolved" : emphasis === "positive" ? "text-established" : "text-ink"}`}>{value}</dd>
+    </div>
+  );
+}
+
+interface AnalysisSourceReference {
+  role: "supporting" | "conflicting";
+  source: SourceMessageRef;
+}
+
+function sourceReferencesForAnalysisMessage(
+  analysisMessage: PersistedChatMessage,
+  evidenceSources: EvidenceSourceRead[],
+): AnalysisSourceReference[] {
+  if (analysisMessage.role !== "assistant") return [];
+  const trace = asRecord(analysisMessage.metadata_json.analysis_trace);
+  if (trace?.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated") return [];
+  const sources = parseCaseEvidence(evidenceSources);
+  const references = asArray(trace.claims).flatMap((value) => {
+    const claim = asRecord(value);
+    if (!claim) return [];
+    const supportingIds = asStringArray(claim.supporting_source_ids);
+    const contradictingIds = asStringArray(claim.contradicting_source_ids);
+    return [
+      ...sourceRefs(supportingIds, parseCaseCitations(claim.supporting_citations, supportingIds, sources), sources).map((source) => ({ role: "supporting" as const, source })),
+      ...sourceRefs(contradictingIds, parseCaseCitations(claim.contradicting_citations, contradictingIds, sources), sources).map((source) => ({ role: "conflicting" as const, source })),
+    ];
+  });
+  const unique = new Map<string, AnalysisSourceReference>();
+  for (const reference of references) {
+    const key = [reference.role, reference.source.id, reference.source.exactQuote ?? "", reference.source.pageNumbers.join(",")].join(":");
+    if (!unique.has(key)) unique.set(key, reference);
+  }
+  return [...unique.values()].slice(0, 12);
+}
+
+function AnalysisEvidenceReferences({
+  analysisMessage,
+  evidenceSources,
+  onNavigateToSource,
+}: {
+  analysisMessage: PersistedChatMessage;
+  evidenceSources: EvidenceSourceRead[];
+  onNavigateToSource?: (messageId: string) => void;
+}) {
+  const references = sourceReferencesForAnalysisMessage(analysisMessage, evidenceSources);
+  const [active, setActive] = useState<{
+    key: string;
+    source: SourceMessageRef;
+    anchor: HTMLElement;
+    role: "supporting" | "conflicting";
+  } | null>(null);
+  if (references.length === 0) return null;
+
+  return (
+    <div className="mt-4 border-t border-line/70 pt-3">
+      <p className="text-[10px] font-semibold tracking-[0.04em] text-ink-muted">Evidence references</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {references.map((reference, index) => {
+          const key = `${reference.role}-${reference.source.id}-${index}`;
+          return (
+            <EvidenceCitationChip
+              key={key}
+              sourceRef={reference.source}
+              sourceKey={key}
+              isActive={active?.key === key}
+              citationRole={reference.role}
+              onSelect={(source, anchor, sourceKey) => setActive((current) => current?.key === sourceKey ? null : { key: sourceKey, source, anchor, role: reference.role })}
+            />
+          );
+        })}
+      </div>
+      {active && <SourceEvidenceDrawer sourceRef={active.source} anchorElement={active.anchor} onClose={() => setActive(null)} citationRole={active.role} onNavigateToSource={onNavigateToSource} />}
+    </div>
+  );
+}
+
+function FollowUpActionCard({ detail }: { detail: NonNullable<ReturnType<typeof followUpGapDetailForMessage>> }) {
+  return (
+    <aside className="mt-4 overflow-hidden rounded-lg border border-unresolved/30 bg-unresolved/5">
+      <div className="border-l-2 border-unresolved px-4 py-3.5 sm:px-5">
+        <div className="flex flex-wrap items-center gap-2"><StatusPill tone="attention">Needs clarification</StatusPill><span className="text-[11px] font-medium text-ink-secondary">Your answer can improve the current analysis.</span></div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div><p className="text-[10px] font-semibold tracking-[0.04em] text-ink-muted">What remains unclear</p><p className="mt-1 text-xs leading-relaxed text-ink"><strong className="font-bold">{detail.topic}</strong><span>:</span> {detail.description}</p></div>
+          <div><p className="text-[10px] font-semibold tracking-[0.04em] text-ink-muted">Why this matters</p><p className="mt-1 text-xs leading-relaxed text-ink-secondary">{detail.reason}</p></div>
+        </div>
+      </div>
+      <details className="group border-t border-unresolved/20 px-4 py-2.5 sm:px-5">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-bold text-ink outline-none marker:hidden focus-visible:ring-2 focus-visible:ring-primary"><span>Why is CyberCase asking this?</span><Icon name="chevron" className="h-3.5 w-3.5 text-ink-muted transition-transform duration-150 group-open:rotate-180" /></summary>
+        <p className="pt-2 text-[11px] leading-relaxed text-ink-secondary">{detail.affects}</p>
+      </details>
+    </aside>
+  );
 }

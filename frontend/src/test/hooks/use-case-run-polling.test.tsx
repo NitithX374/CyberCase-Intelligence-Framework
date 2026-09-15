@@ -3,8 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
-import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
-import { caseQueryKeys } from "@/hooks/useCaseQueries";
+import { caseQueryKeys, useCaseRunPolling } from "@/hooks/useCaseQueries";
 
 function createWrapper(queryClient: QueryClient) {
   return function Wrapper({ children }: PropsWithChildren) {

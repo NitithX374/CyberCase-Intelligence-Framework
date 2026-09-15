@@ -66,7 +66,7 @@ def anthropic_json_schema(model: type[BaseModel]) -> dict[str, Any]:
     structured-output grammar and closes object schemas recursively.
     """
 
-    normalized = _normalize_schema(model.model_json_schema())
+    normalized = normalize_schema(model.model_json_schema())
     if not isinstance(normalized, dict):
         raise TypeError("Pydantic model schema must be a JSON object")
     return normalized
@@ -83,7 +83,7 @@ def structured_output_schema(
         return anthropic_json_schema(model)
     if provider == "openrouter":
         schema = anthropic_json_schema(model)
-        _require_all_object_properties(schema)
+        require_all_object_properties(schema)
         return schema
     raise ValueError(f"Unsupported core LLM provider: {provider!r}")
 
@@ -120,9 +120,9 @@ def structured_output_request_options(
     raise ValueError(f"Unsupported core LLM provider: {provider!r}")
 
 
-def _normalize_schema(value: object) -> object:
+def normalize_schema(value: object) -> object:
     if isinstance(value, list):
-        return [_normalize_schema(item) for item in value]
+        return [normalize_schema(item) for item in value]
     if not isinstance(value, Mapping):
         return value
 
@@ -133,7 +133,7 @@ def _normalize_schema(value: object) -> object:
             continue
         if key_text == "format" and child not in _ANTHROPIC_SUPPORTED_STRING_FORMATS:
             continue
-        normalized[key_text] = _normalize_schema(child)
+        normalized[key_text] = normalize_schema(child)
 
     # Keep an explicitly open mapping (for example a bounded delta value)
     # open. Pydantic emits ``additionalProperties: true`` for dict fields;
@@ -146,16 +146,16 @@ def _normalize_schema(value: object) -> object:
     return normalized
 
 
-def _require_all_object_properties(value: object) -> None:
+def require_all_object_properties(value: object) -> None:
     if isinstance(value, list):
         for item in value:
-            _require_all_object_properties(item)
+            require_all_object_properties(item)
         return
     if not isinstance(value, dict):
         return
 
     for child in value.values():
-        _require_all_object_properties(child)
+        require_all_object_properties(child)
 
     if value.get("type") != "object":
         return

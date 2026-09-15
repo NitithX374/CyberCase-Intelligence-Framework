@@ -1,16 +1,21 @@
 import unittest
 from unittest.mock import patch
 
-from app.services.case_analysis.caseAnalysis import executeRawDirectPipeline
+import httpx
+import pytest
+
+from app.services.case_analysis.caseAnalysis import execute_raw_direct_pipeline
 from app.services.case_analysis.contracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
     CaseAnalysisClaim,
+    CaseAnalysisFailure,
     CaseEvidenceCitation,
     CaseProviderAnalysis,
 )
 from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
 from app.services.case_analysis.prompts import case_system_prompt
 from app.services.case_analysis.evidenceQuoteResolver import find_aligned_quote
+from app.services.case_analysis.caseAnalysisResponseParser import validate_response_payload
 
 
 def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
@@ -74,7 +79,7 @@ def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
 
 class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
     async def test_provenance_failure_gets_one_corrective_provider_pass(self) -> None:
-        source = CaseAdmittedSource(
+        source = CaseEvidenceSource(
             source_id="s1",
             content="The report was submitted.",
         )
@@ -86,10 +91,10 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
 
         raw_evidence = "[SOURCE s1]\nThe report was submitted."
         with patch(
-            "app.services.case_analysis.caseAnalysis.requestAnalysisStage",
+            "app.services.case_analysis.caseAnalysis.request_analysis_stage",
             new=request_stage,
         ):
-            result = await executeRawDirectPipeline(
+            result = await execute_raw_direct_pipeline(
                 raw_evidence,
                 {
                     "document_source_context": [],
@@ -111,3 +116,14 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             result.execution_receipt["validation_retry"],
             {"reason": "case_trace_conflicting_source_role"},
         )
+
+
+@pytest.mark.parametrize(
+    ("status_code", "error_code"),
+    [(504, "analysis_provider_timeout"), (503, "analysis_provider_down")],
+)
+def test_provider_status_errors_keep_timeout_specificity(status_code: int, error_code: str) -> None:
+    with pytest.raises(CaseAnalysisFailure) as raised:
+        validate_response_payload(httpx.Response(status_code, json={"error": "failed"}))
+
+    assert raised.value.code == error_code

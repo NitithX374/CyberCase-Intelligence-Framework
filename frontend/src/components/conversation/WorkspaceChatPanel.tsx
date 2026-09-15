@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type FormEvent } from "react";
-import { ChatPanel } from "@/components/conversation/ChatPanel";
-import { EmptyChatIntakeNotice } from "@/components/common/CaseRequiredState";
+import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { Icon } from "@/components/common/icons";
 import type {
   CaseAnalysisResultRead,
@@ -14,6 +12,7 @@ import type {
   RunPhase,
   WorkspaceView,
 } from "@/components/common/types";
+import { ChatTranscript } from "./ChatTranscript";
 
 interface WorkspaceChatPanelProps {
   isOpen: boolean;
@@ -121,21 +120,109 @@ export function WorkspaceChatPanel({
             <EmptyChatIntakeNotice onOpenIntake={() => onViewChange("intake")} />
           </div>
         )}
-        <ChatPanel
-          messages={visibleMessages}
-          input={input}
-          chatStatus={chatStatus}
-          phase={phase}
-          hasAnalysisContext={hasAnalysisContext}
-          leadResult={leadResult}
-          evidenceSources={evidenceSources}
-          onOpenOverview={() => onViewChange("overview")}
-          onOpenIntake={() => onViewChange("intake")}
-          onNavigateToSource={onNavigateToSource}
-          onInputChange={onInputChange}
-          onSubmit={onSubmit}
-        />
+        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ChatTranscript
+              messages={visibleMessages}
+              isProcessing={phase === "querying" || phase === "analyzing"}
+              leadResult={leadResult}
+              evidenceSources={evidenceSources}
+              onOpenOverview={() => onViewChange("overview")}
+              onNavigateToSource={onNavigateToSource}
+            />
+          </div>
+
+          <div className="shrink-0 border-t border-line bg-surface px-3.5 pb-3.5 pt-3 md:px-4 md:pb-4">
+            <div className="mx-auto w-full max-w-4xl">
+              {chatStatus === "awaiting_followup" ? (
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-l-2 border-unresolved bg-unresolved/5 px-3 py-2 text-xs text-ink">
+                  <span className="font-semibold text-unresolved">CyberCase needs one more detail<span className="sr-only">Clarification needed</span></span>
+                  <span className="text-ink-secondary">Answer below to update the Case analysis.</span>
+                </div>
+              ) : !hasAnalysisContext ? (
+                <ChatBoundaryNotice
+                  message="Complete the Case analysis from Intake before using Chat. Chat will not start analysis."
+                  actionLabel="Open Case Intake"
+                  onAction={() => onViewChange("intake")}
+                />
+              ) : null}
+              <ChatComposer
+                input={input}
+                isSubmitting={phase === "querying" || phase === "analyzing" || (chatStatus !== "awaiting_followup" && !hasAnalysisContext)}
+                onInputChange={onInputChange}
+                onSubmit={onSubmit}
+                placeholder={chatStatus === "awaiting_followup" ? "Type your answer to the clarification question…" : undefined}
+              />
+              <p className="mt-2 text-center text-[10px] leading-relaxed text-ink-muted">Ctrl+Enter to send.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
+  );
+}
+
+function EmptyChatIntakeNotice({ onOpenIntake }: { onOpenIntake: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 text-xs text-ink-secondary">
+      <p className="truncate">ยังไม่ได้บันทึกรายละเอียดสำนวนคดี — เริ่มที่หน้า Intake เพื่อให้ระบบจัดทำภาพรวมคดี</p>
+      <button type="button" onClick={onOpenIntake} className="shrink-0 text-[11px] font-bold text-ink hover:text-accent hover:underline">เปิด Case Intake →</button>
+    </div>
+  );
+}
+
+function ChatBoundaryNotice({ message, actionLabel, onAction }: { message: string; actionLabel: string; onAction?: () => void }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-ink-secondary">
+      <span>{message}</span>
+      {onAction && <button type="button" onClick={onAction} className="font-bold text-ink underline decoration-line underline-offset-2 hover:text-accent">{actionLabel}</button>}
+    </div>
+  );
+}
+
+function ChatComposer({ input, isSubmitting, onInputChange, onSubmit, placeholder }: {
+  input: string;
+  isSubmitting: boolean;
+  onInputChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  placeholder?: string;
+}) {
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 24), 160)}px`;
+  }, [input]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      formRef.current?.requestSubmit();
+    }
+  };
+
+  return (
+    <form ref={formRef} onSubmit={onSubmit} className="relative w-full">
+      <div className="relative flex items-center gap-2 rounded-md border border-line-strong bg-surface py-2 pl-3 pr-2 transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+        <label htmlFor="chat-composer-input" className="sr-only">Chat message</label>
+        <textarea
+          ref={textareaRef}
+          id="chat-composer-input"
+          rows={1}
+          value={input}
+          disabled={isSubmitting}
+          onKeyDown={handleKeyDown}
+          onChange={(event) => onInputChange(event.target.value)}
+          placeholder={placeholder ?? "Ask a question about the completed Case analysis…"}
+          className="max-h-[160px] min-h-6 flex-1 resize-none border-none bg-transparent py-0.5 text-xs leading-snug text-ink outline-none shadow-none placeholder:text-ink-muted focus:border-none focus:outline-none focus:ring-0 focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 disabled:text-ink-disabled sm:text-sm"
+        />
+        <button type="submit" disabled={isSubmitting || !input.trim()} aria-label="Send message" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-ivory outline-none transition-[background-color,transform] hover:bg-charcoal-hover active:scale-95 active:bg-charcoal-pressed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled disabled:hover:scale-100">
+          <Icon name="send" className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </form>
   );
 }

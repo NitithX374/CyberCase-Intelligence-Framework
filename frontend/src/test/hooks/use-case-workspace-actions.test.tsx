@@ -11,8 +11,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
   return {
     ...actual,
-    admitCaseEvidence: vi.fn(),
-    admitCaseDocument: vi.fn(),
+    addCaseEvidence: vi.fn(),
 
     getCase: vi.fn(),
     startCaseAnalysis: vi.fn(),
@@ -36,7 +35,7 @@ const initialCase: CaseRead = {
   updated_at: "2026-09-10T01:00:00Z",
 };
 
-const admittedCase: CaseRead = {
+const receivedCase: CaseRead = {
   ...initialCase,
   evidence_revision: 1,
 };
@@ -67,16 +66,16 @@ describe("useCaseWorkspaceActions", () => {
     localStorage.clear();
     localStorage.setItem("cybercase:account", "analyst-a");
     vi.mocked(api.getCase).mockReset();
-    vi.mocked(api.admitCaseEvidence).mockReset();
+    vi.mocked(api.addCaseEvidence).mockReset();
     vi.mocked(api.startCaseAnalysis).mockReset();
-    vi.mocked(api.getCase).mockResolvedValueOnce(initialCase).mockResolvedValue(admittedCase);
-    vi.mocked(api.admitCaseEvidence).mockResolvedValue({} as Awaited<ReturnType<typeof api.admitCaseEvidence>>);
+    vi.mocked(api.getCase).mockResolvedValueOnce(initialCase).mockResolvedValue(receivedCase);
+    vi.mocked(api.addCaseEvidence).mockResolvedValue({} as Awaited<ReturnType<typeof api.addCaseEvidence>>);
     vi.mocked(api.startCaseAnalysis)
       .mockRejectedValueOnce(new Error("request timed out"))
       .mockResolvedValue({ run: acceptedRun });
   });
 
-  it("reuses the admitted evidence and logical Analyze identity after an uncertain response", async () => {
+  it("reuses the received evidence and logical Analyze identity after an uncertain response", async () => {
     const session = {
       clearSelection: vi.fn(),
       selectCaseChat: vi.fn(),
@@ -84,7 +83,6 @@ describe("useCaseWorkspaceActions", () => {
     const { result } = renderHook(
       () => useCaseWorkspaceActions({
         activeCaseId: "case-1",
-        activeCase: initialCase,
         isChatOpen: false,
         setIsChatOpen: vi.fn(),
         session,
@@ -96,7 +94,7 @@ describe("useCaseWorkspaceActions", () => {
       { wrapper },
     );
 
-    const submission = { title: "Incident review", description: "The witness reported a blue vehicle." };
+    const submission = { title: "Incident review", description: "พยานรายงานว่าพบรถสีน้ำเงิน" };
     await act(async () => {
       await result.current.submitCase(submission);
     });
@@ -105,11 +103,12 @@ describe("useCaseWorkspaceActions", () => {
       await result.current.submitCase(submission);
     });
 
-    expect(api.admitCaseEvidence).toHaveBeenCalledOnce();
+    expect(api.addCaseEvidence).toHaveBeenCalledOnce();
     expect(api.startCaseAnalysis).toHaveBeenCalledTimes(2);
     const firstRequest = vi.mocked(api.startCaseAnalysis).mock.calls[0]?.[1];
     const secondRequest = vi.mocked(api.startCaseAnalysis).mock.calls[1]?.[1];
     expect(secondRequest?.idempotency_key).toBe(firstRequest?.idempotency_key);
+    expect(firstRequest?.response_language).toBe("thai");
     expect(firstRequest?.expected_evidence_revision).toBe(1);
     expect(secondRequest?.expected_evidence_revision).toBe(1);
   });

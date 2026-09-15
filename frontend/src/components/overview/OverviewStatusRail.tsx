@@ -1,5 +1,5 @@
 import type { CaseAnalysisResultRead, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
-import type { CaseOverviewData } from "@/lib/case-overview-contracts";
+import type { CaseOverviewData } from "@/lib/caseOverviewTypes";
 
 export function OverviewStatusRail({
   overview,

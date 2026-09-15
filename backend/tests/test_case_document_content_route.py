@@ -26,7 +26,7 @@ def test_document_content_response_preserves_original_bytes(monkeypatch) -> None
             filename="case file.pdf",
         )
 
-    monkeypatch.setattr(caseMaterials, "getOwnedDocumentContent", get_document)
+    monkeypatch.setattr(caseMaterials, "get_owned_document_content", get_document)
     response = asyncio.run(
         caseMaterials.get_case_document_content(
             case_id,
@@ -46,7 +46,7 @@ def test_document_content_route_hides_unowned_documents(monkeypatch) -> None:
     async def reject_document(db, **kwargs):
         raise CaseMaterialsError("document_not_found", "Document not found", 404)
 
-    monkeypatch.setattr(caseMaterials, "getOwnedDocumentContent", reject_document)
+    monkeypatch.setattr(caseMaterials, "get_owned_document_content", reject_document)
 
     with pytest.raises(HTTPException) as error:
         asyncio.run(

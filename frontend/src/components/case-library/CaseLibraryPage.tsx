@@ -7,9 +7,7 @@ import { Icon } from "@/components/common/icons";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
 import { getApiErrorMessage, type CaseRead } from "@/lib/api";
 import { useCaseMutations, useCases } from "@/hooks/useCaseQueries";
-import { CaseLibraryCard, NewCaseCard } from "./CaseLibraryCard";
-import { CaseLibraryToolbar, type CaseLibraryViewMode } from "./CaseLibraryToolbar";
-import { caseDestination, caseStatusLabel, formatCaseDate, sortCases, type CaseLibrarySort } from "./caseLibraryFormatters";
+import { casePath } from "@/features/chat/routing/workspaceRoutes";
 
 export function CaseLibraryPage() {
   const router = useRouter();
@@ -143,4 +141,194 @@ function CaseLibraryEmptyState({ creating, onNewCase }: { creating: boolean; onN
 
 function NoMatchingCases({ query, onClear }: { query: string; onClear: () => void }) {
   return <div className="mt-8 border-y border-line py-10 text-center"><p className="text-sm font-semibold text-ink">No cases match “{query}”</p><button type="button" onClick={onClear} className="mt-3 text-xs font-semibold text-accent underline underline-offset-4 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent">Clear search</button></div>;
+}
+
+type CaseLibrarySort = "recent" | "oldest" | "title";
+type CaseLibraryViewMode = "grid" | "list";
+
+const statusLabels: Record<CaseRead["status"], string> = {
+  idle: "Ready to begin",
+  processing: "Analysis in progress",
+  awaiting_followup: "Input needed",
+  answered: "Analysis available",
+  failed: "Needs attention",
+};
+
+function caseDestination(caseRecord: CaseRead): string {
+  return casePath(caseRecord.id, caseRecord.latest_analysis_result_id ? "overview" : "intake");
+}
+
+function caseStatusLabel(caseRecord: CaseRead): string {
+  if (caseRecord.analysis_freshness === "stale") return "Needs re-analysis";
+  return statusLabels[caseRecord.status];
+}
+
+function caseStatusTone(caseRecord: CaseRead): "neutral" | "positive" | "attention" | "critical" {
+  if (caseRecord.analysis_freshness === "stale" || caseRecord.status === "awaiting_followup") return "attention";
+  if (caseRecord.status === "failed") return "critical";
+  if (caseRecord.status === "answered") return "positive";
+  return "neutral";
+}
+
+function formatCaseDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function sortCases(cases: CaseRead[], sort: CaseLibrarySort): CaseRead[] {
+  return [...cases].sort((left, right) => {
+    if (sort === "title") return left.title.localeCompare(right.title);
+    const dateDifference = Date.parse(right.updated_at) - Date.parse(left.updated_at);
+    return sort === "recent" ? dateDifference : -dateDifference;
+  });
+}
+
+interface CaseLibraryToolbarProps {
+  query: string;
+  sort: CaseLibrarySort;
+  viewMode: CaseLibraryViewMode;
+  resultCount: number;
+  creating: boolean;
+  onQueryChange: (value: string) => void;
+  onSortChange: (value: CaseLibrarySort) => void;
+  onViewModeChange: (value: CaseLibraryViewMode) => void;
+  onNewCase: () => void;
+}
+
+function CaseLibraryToolbar({
+  query,
+  sort,
+  viewMode,
+  resultCount,
+  creating,
+  onQueryChange,
+  onSortChange,
+  onViewModeChange,
+  onNewCase,
+}: CaseLibraryToolbarProps) {
+  return (
+    <div className="flex flex-col gap-3 border-y border-line py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+        <label className="relative min-w-52 flex-1 sm:max-w-xs">
+          <span className="sr-only">Search cases</span>
+          <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search cases"
+            className="h-9 w-full rounded-md border border-line bg-surface pl-9 pr-3 text-xs text-ink outline-none placeholder:text-ink-muted hover:border-line-strong focus:border-accent focus:ring-2 focus:ring-accent/20"
+          />
+        </label>
+        <label className="flex h-9 items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-xs text-ink-secondary">
+          <span className="sr-only">Sort cases</span>
+          <span aria-hidden="true">Sort</span>
+          <select
+            value={sort}
+            onChange={(event) => onSortChange(event.target.value as CaseLibrarySort)}
+            className="bg-transparent font-semibold text-ink outline-none"
+            aria-label="Sort cases"
+          >
+            <option value="recent">Recently updated</option>
+            <option value="oldest">Oldest first</option>
+            <option value="title">Title</option>
+          </select>
+        </label>
+        <span className="text-[11px] text-ink-muted" aria-live="polite">
+          {resultCount} {resultCount === 1 ? "case" : "cases"}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 sm:justify-end">
+        <div className="flex items-center rounded-md border border-line bg-surface p-0.5" role="group" aria-label="Case layout">
+          <button
+            type="button"
+            aria-label="Grid view"
+            aria-pressed={viewMode === "grid"}
+            onClick={() => onViewModeChange("grid")}
+            className={`flex h-8 w-8 items-center justify-center rounded outline-none focus-visible:ring-2 focus-visible:ring-accent ${viewMode === "grid" ? "bg-accent-soft text-accent" : "text-ink-muted hover:bg-surface-hover hover:text-ink"}`}
+          >
+            <Icon name="overview" className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="List view"
+            aria-pressed={viewMode === "list"}
+            onClick={() => onViewModeChange("list")}
+            className={`flex h-8 w-8 items-center justify-center rounded outline-none focus-visible:ring-2 focus-visible:ring-accent ${viewMode === "list" ? "bg-accent-soft text-accent" : "text-ink-muted hover:bg-surface-hover hover:text-ink"}`}
+          >
+            <Icon name="list" className="h-4 w-4" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onNewCase}
+          disabled={creating}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3.5 text-xs font-bold text-ivory outline-none transition-colors hover:bg-charcoal-hover focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:opacity-60"
+        >
+          <Icon name="plus" className="h-3.5 w-3.5" />
+          {creating ? "Creating…" : "New case"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CaseLibraryCard({ caseRecord, viewMode }: { caseRecord: CaseRead; viewMode: CaseLibraryViewMode }) {
+  const tone = caseStatusTone(caseRecord);
+  const toneClass = {
+    neutral: "bg-ink-muted",
+    positive: "bg-established",
+    attention: "bg-unresolved",
+    critical: "bg-critical",
+  }[tone];
+
+  return (
+    <article className={`group border border-line bg-surface transition-colors hover:border-line-strong hover:bg-surface-hover ${viewMode === "list" ? "rounded-md" : "rounded-md"}`}>
+      <Link
+        href={caseDestination(caseRecord)}
+        className={`block outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${viewMode === "list" ? "px-4 py-3.5 sm:px-5" : "min-h-48 p-4 sm:p-5"}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="inline-flex items-center gap-2 text-[10px] font-semibold text-ink-muted">
+            <span className={`h-1.5 w-1.5 rounded-full ${toneClass}`} aria-hidden="true" />
+            {caseStatusLabel(caseRecord)}
+          </span>
+          <span className="shrink-0 text-[10px] text-ink-muted">{formatCaseDate(caseRecord.updated_at)}</span>
+        </div>
+
+        <div className={viewMode === "list" ? "mt-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between" : "mt-8"}>
+          <h3 className="max-w-xl truncate text-base font-semibold tracking-[-0.015em] text-ink sm:text-lg" title={caseRecord.title}>{caseRecord.title}</h3>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-ink-secondary transition-colors group-hover:text-accent">Open case <Icon name="external" className="h-3 w-3" /></span>
+        </div>
+
+        <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-muted ${viewMode === "list" ? "mt-2" : "mt-6 border-t border-line/70 pt-3"}`}>
+          <span>Evidence revision {caseRecord.evidence_revision}</span>
+          <span aria-hidden="true">·</span>
+          <span>{caseRecord.analysis_freshness === "current" ? "Current analysis" : caseRecord.analysis_freshness === "stale" ? "Older analysis" : "Analysis unavailable"}</span>
+        </div>
+      </Link>
+    </article>
+  );
+}
+
+function NewCaseCard({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  return (
+    <article className="rounded-md border border-dashed border-line-strong bg-surface">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className="flex min-h-48 w-full flex-col items-center justify-center gap-3 p-5 text-center text-ink outline-none transition-colors hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent"><Icon name="plus" className="h-5 w-5" /></span>
+        <span className="text-sm font-semibold">Create a new case</span>
+        <span className="max-w-48 text-[11px] leading-5 text-ink-muted">Start a new evidence-bound investigation.</span>
+      </button>
+    </article>
+  );
 }

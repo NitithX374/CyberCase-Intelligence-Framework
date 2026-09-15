@@ -19,7 +19,7 @@ class DetectedDocument:
     media_type: str
 
 
-def _is_docx(content: bytes) -> bool:
+def is_docx(content: bytes) -> bool:
     try:
         with ZipFile(BytesIO(content)) as archive:
             return "word/document.xml" in archive.namelist()
@@ -34,7 +34,7 @@ def detect_document(content: bytes) -> DetectedDocument:
         return DetectedDocument(DocumentKind.PNG, "image/png")
     if content.startswith(b"\xff\xd8\xff"):
         return DetectedDocument(DocumentKind.JPEG, "image/jpeg")
-    if content.startswith(b"PK") and _is_docx(content):
+    if content.startswith(b"PK") and is_docx(content):
         return DetectedDocument(
             DocumentKind.DOCX,
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

@@ -3,10 +3,11 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   createCase,
   deleteCase,
+  getCaseRun,
   getCaseAnalysis,
   listCaseClarifications,
   listCaseDocuments,
@@ -18,12 +19,14 @@ import {
   type CaseClarificationRead,
   type CaseDocumentRead,
   type EvidenceSourceRead,
+  type CaseRunRead,
 } from "@/lib/api";
 
 export const caseQueryKeys = {
   all: ["cases"] as const,
   cases: () => [...caseQueryKeys.all, "list"] as const,
   case: (caseId: string) => [...caseQueryKeys.all, caseId] as const,
+  chat: (caseId: string) => [...caseQueryKeys.case(caseId), "chat"] as const,
   documents: (caseId: string) => [...caseQueryKeys.case(caseId), "documents"] as const,
   evidence: (caseId: string) => [...caseQueryKeys.case(caseId), "evidence"] as const,
   analysis: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis"] as const,
@@ -82,6 +85,44 @@ export function useCases() {
   });
 }
 
+export function useCaseRunPolling(
+  caseId: string | null,
+  runId: string | null | undefined,
+  caseChatId: string | null | undefined,
+) {
+  const queryClient = useQueryClient();
+  const lastInvalidated = useRef<string | null>(null);
+  const query = useQuery<CaseRunRead>({
+    queryKey: caseQueryKeys.run(caseId ?? "none", runId ?? "none"),
+    queryFn: ({ signal }) => getCaseRun(caseId!, runId!, signal),
+    enabled: Boolean(caseId && runId),
+    retry: false,
+    refetchInterval: (currentQuery) => {
+      const status = currentQuery.state.data?.status;
+      return status === "queued" || status === "running" ? 1500 : false;
+    },
+  });
+
+  useEffect(() => {
+    const status = query.data?.status;
+    if (!caseId || !runId || (status !== "completed" && status !== "failed")) return;
+    const attemptCount = query.data?.attempt_count ?? 0;
+    const invalidationKey = `${runId}:${attemptCount}:${status}`;
+    if (lastInvalidated.current === invalidationKey) return;
+    lastInvalidated.current = invalidationKey;
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() });
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId) });
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) });
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.clarifications(caseId) });
+    if (caseChatId) {
+      void queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseChatId), exact: true, type: "all" });
+    }
+  }, [caseChatId, caseId, query.data?.status, query.data?.attempt_count, queryClient, runId]);
+
+  return query;
+}
+
 export function useCaseMutations() {
   const queryClient = useQueryClient();
 
@@ -116,7 +157,7 @@ export function useCaseMutations() {
         (current) => (current ?? []).filter((item) => item.id !== deletedCaseId),
       );
       queryClient.removeQueries({ queryKey: caseQueryKeys.case(deletedCaseId) });
-      queryClient.removeQueries({ queryKey: ["chat", "cases", deletedCaseId] });
+      queryClient.removeQueries({ queryKey: caseQueryKeys.chat(deletedCaseId) });
     },
   });
 

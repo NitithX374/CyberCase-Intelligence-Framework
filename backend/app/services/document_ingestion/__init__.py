@@ -3,6 +3,9 @@ from app.services.document_ingestion.errors import DocumentIngestionError
 from app.services.document_ingestion.service import (
     DocumentIngestionLimits,
     DocumentIngestionService,
+    build_document_ingestion_service,
+    build_document_recognizer,
+    read_limited,
 )
 
 __all__ = [
@@ -11,4 +14,7 @@ __all__ = [
     "DocumentIngestionService",
     "IngestedDocument",
     "IngestionMode",
+    "build_document_ingestion_service",
+    "build_document_recognizer",
+    "read_limited",
 ]

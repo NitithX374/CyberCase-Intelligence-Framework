@@ -13,19 +13,14 @@ from app.models.chat import ChatMessage
 from app.models.ragContext import RagContext
 from app.schemas.messageMetadata import serialize_message_metadata
 from app.services.case_analysis.contracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
+    CaseAnalysisGap,
     CaseAnalysisFailure,
     CaseAnalysisResult as AnalysisOutput,
     CaseAnalysisTrace,
 )
 from app.services.case_analysis.validation import validate_case_trace
-from app.services.case_materials import AssembledCaseEvidence, assembleCaseEvidence
-from app.services.workflow.caseRunCompletionMetadata import (
-    build_clarification_metadata,
-    build_followup_message_metadata,
-    mitre_table_from_output,
-    technical_augmentation,
-)
+from app.services.case_materials import AssembledCaseEvidence, assemble_case_evidence
 
 
 class CaseRunCompletionError(Exception):
@@ -33,6 +28,113 @@ class CaseRunCompletionError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def technical_augmentation(output: AnalysisOutput) -> dict[str, object] | None:
+    receipt = output.execution_receipt
+    value = receipt.get("technical_augmentation") if isinstance(receipt, dict) else None
+    return value if isinstance(value, dict) else None
+
+
+def mitre_table_from_output(output: AnalysisOutput) -> list[dict[str, object]]:
+    value = (technical_augmentation(output) or {}).get("mitre_table", [])
+    return [dict(item) for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def build_clarification_metadata(
+    output: AnalysisOutput,
+    trace: CaseAnalysisTrace,
+) -> dict[str, object]:
+    metadata = deepcopy(output.followup_metadata or {})
+    if not metadata.get("gap_id") or not metadata.get("topic") or not metadata.get("gap_key"):
+        gap = next((item for item in trace.gaps if item.askable), None)
+        if gap is not None:
+            metadata.setdefault("gap_id", gap.gap_id)
+            metadata.setdefault("topic", gap.topic)
+            metadata.setdefault("gap_key", f"{gap.gap_id}:{gap.topic.strip().lower()}")
+    return metadata
+
+
+def build_selected_gap_detail(
+    clarification_topic: str,
+    gap: CaseAnalysisGap | None,
+    existing_detail: dict[str, object] | None = None,
+) -> dict[str, object]:
+    existing = existing_detail or {}
+    topic = str(existing.get("topic") or (gap.topic if gap else clarification_topic)).strip()
+    gap_status = str(existing.get("status") or (gap.status if gap else "NOT_PROVIDED"))
+    if gap_status not in {"NOT_PROVIDED", "EXPLICITLY_UNKNOWN", "AMBIGUOUS", "CONFLICTING"}:
+        gap_status = "NOT_PROVIDED"
+    description = str(
+        existing.get("description")
+        or (gap.description if gap else f"Additional investigative information is required for {topic}.")
+    ).strip()
+    reason = str(
+        existing.get("reason")
+        or (gap.reason if gap else f"Clarifying {topic.lower()} is required to substantiate findings.")
+    ).strip()
+
+    raw_affects = str(existing.get("affects") or "").strip()
+    if raw_affects and raw_affects != "case-level context" and not raw_affects.startswith("A-"):
+        affects = raw_affects
+    elif gap and gap.affected_claim_ids:
+        affects = f"Clarifying {topic.lower()} addresses missing investigative evidence for: {', '.join(gap.affected_claim_ids)}."
+    elif raw_affects:
+        affects = f"Clarifying {topic.lower()} addresses missing investigative evidence for: {raw_affects}."
+    else:
+        affects = f"Clarifying this information helps establish facts and complete the case analysis for {topic.lower()}."
+
+    priority = str(existing.get("priority") or (gap.priority if gap else "high")).lower()
+    if priority not in {"high", "medium", "low"}:
+        priority = "high"
+
+    askable = bool(existing.get("askable", gap.askable if gap else True))
+
+    return {
+        "topic": topic,
+        "status": gap_status,
+        "description": description,
+        "affects": affects,
+        "reason": reason,
+        "priority": priority,
+        "askable": askable,
+    }
+
+
+def build_followup_message_metadata(
+    *,
+    clarification_topic: str,
+    gap_id: str,
+    gap_key: str,
+    thread_ordinal: int,
+    trace: CaseAnalysisTrace,
+    existing_followup: dict[str, object] | None = None,
+) -> dict[str, object]:
+    gap = next(
+        (
+            item for item in trace.gaps
+            if item.gap_id == gap_id or item.topic.strip().lower() == clarification_topic.strip().lower()
+        ),
+        next((item for item in trace.gaps if item.askable), None),
+    )
+    existing_detail = existing_followup.get("selected_gap_detail") if isinstance(existing_followup, dict) else None
+    existing_detail_dict = existing_detail if isinstance(existing_detail, dict) else None
+    selected_gap_detail = build_selected_gap_detail(clarification_topic, gap, existing_detail_dict)
+    topic = str(selected_gap_detail["topic"])
+
+    chat_followup: dict[str, object] = {
+        "root_ordinal": thread_ordinal,
+        "round": 1,
+        "gap_id": gap_id,
+        "gap_key": gap_key,
+        "topic": topic,
+        "selected_gap_detail": selected_gap_detail,
+    }
+
+    return {
+        "action": "follow_up",
+        "chat_followup": chat_followup,
+    }
 
 
 async def complete_case_run(
@@ -50,19 +152,18 @@ async def complete_case_run(
         if case is None:
             return False
         run = await db.scalar(select(CaseRun).where(CaseRun.id == run_id).with_for_update())
-        if not _owns_run(run, case.id, claimed_attempt):
+        if not owns_run(run, case.id, claimed_attempt):
             return False
 
         if run.evidence_revision != case.evidence_revision:
-            await _mark_superseded(run, now)
+            await mark_superseded(run, now)
             return False
-        assembled = await assembleCaseEvidence(db, case_id=case.id, user_id=None)
-        trace = _validated_output(output, assembled)
+        assembled = await assemble_case_evidence(db, case_id=case.id, user_id=None)
+        trace = validated_output(output, assembled)
         if run.evidence_revision != case.evidence_revision:
-            await _mark_superseded(run, now)
+            await mark_superseded(run, now)
             return False
         augmentation = technical_augmentation(output)
-        augmentation_payload = augmentation or {}
         completion = await db.execute(
             update(CaseRun)
             .where(
@@ -179,7 +280,7 @@ async def complete_case_run(
     return True
 
 
-async def _mark_superseded(
+async def mark_superseded(
     run: CaseRun,
     finished_at: datetime,
 ) -> None:
@@ -190,7 +291,7 @@ async def _mark_superseded(
     run.updated_at = finished_at
 
 
-def _owns_run(run: CaseRun | None, case_id: UUID, claimed_attempt: int) -> bool:
+def owns_run(run: CaseRun | None, case_id: UUID, claimed_attempt: int) -> bool:
     return bool(
         run is not None
         and run.case_id == case_id
@@ -199,7 +300,7 @@ def _owns_run(run: CaseRun | None, case_id: UUID, claimed_attempt: int) -> bool:
     )
 
 
-def _validated_output(
+def validated_output(
     output: AnalysisOutput,
     assembled: AssembledCaseEvidence,
 ) -> CaseAnalysisTrace:
@@ -209,7 +310,7 @@ def _validated_output(
     if not output.answer.strip():
         raise CaseRunCompletionError("analysis_answer_missing", "Case analysis answer is empty")
     sources = tuple(
-        CaseAdmittedSource(
+        CaseEvidenceSource(
             str(s.id),
             s.exact_text,
         )
@@ -237,6 +338,11 @@ def _validated_output(
         raise CaseRunCompletionError(error.code, error.message) from error
 
 
-completeCaseRun = complete_case_run
-
-__all__ = ["CaseRunCompletionError", "completeCaseRun", "complete_case_run"]
+__all__ = [
+    "CaseRunCompletionError",
+    "build_clarification_metadata",
+    "build_followup_message_metadata",
+    "complete_case_run",
+    "mitre_table_from_output",
+    "technical_augmentation",
+]

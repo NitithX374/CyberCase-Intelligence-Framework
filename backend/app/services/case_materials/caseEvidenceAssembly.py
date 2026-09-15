@@ -12,7 +12,7 @@ from app.models.caseMaterials import EvidenceSource
 from app.services.case_materials.materialService import CaseMaterialsError
 
 
-def _source_label(source: EvidenceSource) -> str:
+def source_label(source: EvidenceSource) -> str:
     if source.document is not None:
         return f"DOCUMENT {source.document.filename}"
     return {
@@ -28,7 +28,7 @@ class AssembledCaseEvidence:
     evidence_revision: int
 
 
-async def assembleCaseEvidence(
+async def assemble_case_evidence(
     db: AsyncSession,
     *,
     case_id: UUID,
@@ -49,13 +49,13 @@ async def assembleCaseEvidence(
         if source.archived_at is not None:
             continue
         if not source.exact_text.strip():
-            raise CaseMaterialsError("evidence_text_empty", "Admitted evidence text is empty")
+            raise CaseMaterialsError("evidence_text_empty", "Case evidence text is empty")
         selected.append(source)
     if not selected:
-        raise CaseMaterialsError("case_evidence_missing", "Add and admit case material before analysis")
+        raise CaseMaterialsError("case_evidence_missing", "Add Case material before analysis")
 
     input_text = "\n\n".join(
-        f"[{_source_label(source)} · SOURCE {source.id}]\n{source.exact_text.strip()}"
+        f"[{source_label(source)} · SOURCE {source.id}]\n{source.exact_text.strip()}"
         for source in selected
     )
     return AssembledCaseEvidence(
@@ -65,4 +65,4 @@ async def assembleCaseEvidence(
     )
 
 
-__all__ = ["AssembledCaseEvidence", "assembleCaseEvidence"]
+__all__ = ["AssembledCaseEvidence", "assemble_case_evidence"]

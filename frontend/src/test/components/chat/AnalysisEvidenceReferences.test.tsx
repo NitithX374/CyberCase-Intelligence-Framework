@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
-import { AnalysisEvidenceReferences } from "@/components/conversation/AnalysisEvidenceReferences";
+import { ChatTranscript } from "@/components/conversation/ChatTranscript";
 
 function message(
   id: string,
@@ -47,7 +47,7 @@ function evidenceSource(
   };
 }
 
-describe("AnalysisEvidenceReferences", () => {
+describe("ChatTranscript evidence references", () => {
   it("shows a narrative citation without inventing a page number", () => {
     const source = evidenceSource(
       "source-1",
@@ -74,10 +74,7 @@ describe("AnalysisEvidenceReferences", () => {
     });
 
     render(
-      <AnalysisEvidenceReferences
-        analysisMessage={analysis}
-        evidenceSources={[source]}
-      />,
+      <ChatTranscript messages={[analysis]} isProcessing={false} evidenceSources={[source]} />,
     );
     expect(screen.getByRole("button", { name: "Source source-1" })).toBeInTheDocument();
     expect(screen.queryByText(/p\. 1/i)).not.toBeInTheDocument();
@@ -86,7 +83,7 @@ describe("AnalysisEvidenceReferences", () => {
   });
 
   it("shows page-first supporting and conflicting references", () => {
-    const supporting = evidenceSource("source-1", "Page 4 records the transfer.", "reviewed_document", "DOC-1", "statement.pdf", 4);
+    const supporting = evidenceSource("source-1", "Page 4 records the transfer.", "document", "DOC-1", "statement.pdf", 4);
     const conflicting = evidenceSource("source-2", "Page 5 disputes the transfer.", "followup_answer", "DOC-2", "rebuttal.pdf", 5);
     const analysis = message("analysis-1", "assistant", "Case analysis", {
       analysis_trace: {
@@ -102,10 +99,7 @@ describe("AnalysisEvidenceReferences", () => {
     });
 
     render(
-      <AnalysisEvidenceReferences
-        analysisMessage={analysis}
-        evidenceSources={[supporting, conflicting]}
-      />,
+      <ChatTranscript messages={[analysis]} isProcessing={false} evidenceSources={[supporting, conflicting]} />,
     );
 
     expect(screen.getByRole("button", { name: "p. 4" })).toBeInTheDocument();

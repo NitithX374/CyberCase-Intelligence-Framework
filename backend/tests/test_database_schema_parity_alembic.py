@@ -12,7 +12,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.database import Base
-import app.models  # Ensure all models are registered on Base.metadata
+import app.models  # noqa: F401
 
 EXPECTED_CANONICAL_TABLES = {
     "cases",
@@ -31,6 +31,8 @@ EXPECTED_CANONICAL_TABLES = {
 def _load_migration_modules():
     names = (
         "0001_canonical_case_system.py",
+        "0002_case_run_active_index.py",
+        "0003_received_case_material.py",
     )
     modules = []
     for index, name in enumerate(names, start=1):
@@ -138,6 +140,14 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
 
                     res_uniques = inspector.get_unique_constraints("case_analysis_results", schema=schema)
                     assert any("run_id" in u["column_names"] for u in res_uniques), "uq_case_analysis_results_run_id missing"
+
+                    case_run_indexes = inspector.get_indexes("case_runs", schema=schema)
+                    assert any(
+                        index["name"] == "ux_case_runs_one_active_per_case"
+                        and index["unique"]
+                        and index["column_names"] == ["case_id"]
+                        for index in case_run_indexes
+                    ), "ux_case_runs_one_active_per_case missing"
 
                     # 4. Check chat_messages.in_reply_to_message_id exists
                     msg_cols = {c["name"] for c in inspector.get_columns("chat_messages", schema=schema)}

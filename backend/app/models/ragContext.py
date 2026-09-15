@@ -84,14 +84,6 @@ class RagContext(Base):
         server_default=func.now(),
     )
 
-    @property
-    def context(self) -> str:
-        return self.context_text
-
-    @context.setter
-    def context(self, value: str) -> None:
-        self.context_text = value
-
     case: Mapped["Case"] = relationship("Case", back_populates="rag_contexts")
     run: Mapped["CaseRun"] = relationship("CaseRun", back_populates="rag_context")
 

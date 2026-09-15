@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -54,8 +55,6 @@ class RecognitionResult:
     warning: str | None = None
     words: list[OCRWord] = field(default_factory=list)
 
-
-import re
 
 _FIGURE_PATTERN = re.compile(
     r"<figure\b[^>]*>(.*?)</figure>", re.DOTALL | re.IGNORECASE

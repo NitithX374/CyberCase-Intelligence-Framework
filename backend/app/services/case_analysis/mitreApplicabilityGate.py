@@ -11,8 +11,9 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator, ValidationError
 
 from app.config import settings
-from app.services.case_analysis.caseAnalysisResponseParser import extractVisibleText
-from app.services.chat.raw_evidence import RawEvidenceSource
+from app.services.case_analysis.caseAnalysisResponseParser import extract_visible_text
+from dataclasses import dataclass
+
 from app.services.llm.coreLlm import resolve_core_llm_target
 from app.services.llm.structuredOutput import (
     structured_output_request_options,
@@ -20,6 +21,13 @@ from app.services.llm.structuredOutput import (
 )
 
 logger = logging.getLogger("app.chat")
+
+
+@dataclass(frozen=True)
+class RawEvidenceSource:
+    message_id: UUID
+    content: str
+    document_sources: tuple[dict[str, object], ...] = ()
 
 MITRE_APPLICABILITY_GATE_VERSION = "mitre_applicability_v1"
 MitreApplicabilityDecision = Literal["SKIP", "RETRIEVE"]
@@ -166,11 +174,11 @@ def skipped_mitre_applicability(
     )
 
 
-def _normalize(value: str) -> str:
+def normalize_text(value: str) -> str:
     return unicodedata.normalize("NFKC", value)
 
 
-def validateMitreApplicability(
+def validate_mitre_applicability(
     payload: object,
     evidence_sources: Sequence[RawEvidenceSource],
 ) -> MitreApplicabilityRecord:
@@ -187,7 +195,7 @@ def validateMitreApplicability(
         return skipped_mitre_applicability("mitre_applicability_invalid_grounding")
 
     source_text_by_id = {
-        str(source.message_id): _normalize(source.content)
+        str(source.message_id): normalize_text(source.content)
         for source in evidence_sources
     }
     cited_ids = provider_result.source_message_ids
@@ -196,7 +204,7 @@ def validateMitreApplicability(
 
     matched_source_ids: set[str] = set()
     for trigger in provider_result.trigger_text:
-        normalized_trigger = _normalize(trigger)
+        normalized_trigger = normalize_text(trigger)
         matching_ids = {
             source_id
             for source_id in cited_ids
@@ -257,7 +265,7 @@ class MitreApplicabilityGate:
             },
         }
         if self._client is not None:
-            response = await self._post(
+            response = await self.post(
                 self._client,
                 target.messages_url,
                 target.headers,
@@ -267,19 +275,19 @@ class MitreApplicabilityGate:
             async with httpx.AsyncClient(
                 timeout=max(0.01, settings.chat_ask_timeout_seconds)
             ) as client:
-                response = await self._post(
+                response = await self.post(
                     client,
                     target.messages_url,
                     target.headers,
                     request_payload,
                 )
-        return validateMitreApplicability(
-            _parse_provider_response(response),
+        return validate_mitre_applicability(
+            parse_provider_response(response),
             evidence_sources,
         )
 
     @staticmethod
-    async def _post(
+    async def post(
         client: httpx.AsyncClient,
         url: str,
         headers: dict[str, str],
@@ -299,7 +307,7 @@ class MitreApplicabilityGate:
             ) from error
 
 
-async def evaluateMitreApplicability(
+async def evaluate_mitre_applicability(
     *,
     source_run_id: UUID,
     evidence_sources: Sequence[RawEvidenceSource],
@@ -332,7 +340,7 @@ async def evaluateMitreApplicability(
     return skipped_mitre_applicability(failure_code)
 
 
-def _parse_provider_response(response: httpx.Response) -> dict[str, object]:
+def parse_provider_response(response: httpx.Response) -> dict[str, object]:
     if not 200 <= response.status_code < 300:
         raise MitreApplicabilityFailure(
             "mitre_applicability_provider_error",
@@ -357,7 +365,7 @@ def _parse_provider_response(response: httpx.Response) -> dict[str, object]:
             "MITRE applicability provider did not return a complete object",
         )
 
-    raw_text = extractVisibleText(payload).strip()
+    raw_text = extract_visible_text(payload).strip()
     try:
         parsed = json.loads(raw_text)
     except (TypeError, ValueError) as error:
@@ -374,10 +382,6 @@ def _parse_provider_response(response: httpx.Response) -> dict[str, object]:
     return parsed
 
 
-# Backward-compatibility aliases
-validate_mitre_applicability = validateMitreApplicability
-evaluate_mitre_applicability = evaluateMitreApplicability
-
 __all__ = [
     "MITRE_APPLICABILITY_GATE_VERSION",
     "MITRE_APPLICABILITY_INPUT_MAX_CHARS",
@@ -389,9 +393,8 @@ __all__ = [
     "MitreApplicabilityRecord",
     "ProviderMitreApplicability",
     "build_mitre_applicability_prompt",
-    "evaluateMitreApplicability",
     "evaluate_mitre_applicability",
+    "RawEvidenceSource",
     "skipped_mitre_applicability",
-    "validateMitreApplicability",
     "validate_mitre_applicability",
 ]

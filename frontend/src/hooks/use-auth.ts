@@ -7,7 +7,7 @@ import {
   getOAuthLoginUrl,
   type DevLoginPayload,
 } from "@/lib/api";
-import { chatQueryKeys } from "./useChatQueries";
+import { caseQueryKeys } from "./useCaseQueries";
 
 export const authQueryKeys = {
   all: ["auth"] as const,
@@ -51,7 +51,7 @@ export function useAuth({ enabled = true }: { enabled?: boolean } = {}) {
     mutationFn: (payload: DevLoginPayload) => devLogin(payload),
     onSuccess: (data) => {
       queryClient.setQueryData(authQueryKeys.session(), data.user);
-      queryClient.invalidateQueries({ queryKey: chatQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: caseQueryKeys.all });
     },
   });
 

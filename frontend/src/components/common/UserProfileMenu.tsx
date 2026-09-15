@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { SignOutDialog } from "@/components/common/SignOutDialog";
+import { SignOutDialog } from "@/components/common/DeleteDialog";
 
 export function UserProfileMenu() {
   const { user, isLoading, logout, isLoggingOut } = useAuth();

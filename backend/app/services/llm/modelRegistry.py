@@ -85,5 +85,4 @@ def resolve_openrouter_model(model_name_or_alias: str | None) -> str:
     if "/" in cleaned:
         return cleaned
 
-    # Fallback to default if unknown alias
-    return DEFAULT_OPENROUTER_MODEL
+    raise ValueError(f"Unknown OpenRouter model alias: {model_name_or_alias}")

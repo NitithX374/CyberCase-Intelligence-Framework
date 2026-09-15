@@ -1,19 +1,32 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.services.case_analysis.analysisContractUtils import (
-    CaseClaimType,
-    CaseEpistemicStatus,
-    _format_identifier,
-)
+CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
+CaseEpistemicStatus = Literal[
+    "reported",
+    "suspected",
+    "contradicted",
+    "not_established",
+    "unknown",
+    "not_confirmed",
+]
+CaseAnalysisMode = Literal["case_overview", "question_answer"]
+
+
+def normalize_identifier(value: object, prefix: str, aliases: str) -> object:
+    if not isinstance(value, str):
+        return value
+    match = re.fullmatch(rf"(?:{aliases})[-_]?([0-9]+)", value.strip(), re.I)
+    return f"{prefix}-{int(match[1]):02d}" if match else value
 
 
 @dataclass(frozen=True)
-class CaseAdmittedSource:
+class CaseEvidenceSource:
     source_id: str
     content: str
 
@@ -79,7 +92,7 @@ class CaseGeneratedUnit(BaseModel):
     @classmethod
     def normalize_claim_ids(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
-            return tuple(_format_identifier(item, "A", "A|claim|c") for item in value)
+            return tuple(normalize_identifier(item, "A", "A|claim|c") for item in value)
         return value
 
     @field_validator("text")
@@ -107,7 +120,7 @@ class CaseAnalysisClaim(BaseModel):
     @field_validator("claim_id", mode="before")
     @classmethod
     def normalize_claim_id(cls, value: object) -> object:
-        return _format_identifier(value, "A", "A|claim|c")
+        return normalize_identifier(value, "A", "A|claim|c")
 
     @field_validator("text", "reasoning_summary")
     @classmethod
@@ -143,20 +156,23 @@ class CaseAnalysisGap(BaseModel):
     @field_validator("gap_id", mode="before")
     @classmethod
     def normalize_gap_id(cls, value: object) -> object:
-        return _format_identifier(value, "G", "G|gap")
+        return normalize_identifier(value, "G", "G|gap")
 
     @field_validator("affected_claim_ids", mode="before")
     @classmethod
     def normalize_affected_claim_ids(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
-            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
         return value
 
 
 __all__ = [
-    "CaseAdmittedSource",
+    "CaseEvidenceSource",
+    "CaseAnalysisMode",
     "CaseAnalysisClaim",
     "CaseAnalysisGap",
+    "CaseClaimType",
     "CaseEvidenceCitation",
+    "CaseEpistemicStatus",
     "CaseGeneratedUnit",
 ]

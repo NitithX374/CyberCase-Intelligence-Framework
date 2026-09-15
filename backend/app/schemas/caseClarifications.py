@@ -6,8 +6,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.caseRuns import CaseRunRead
-
 ClarificationState = Literal["pending", "answered", "superseded"]
 
 
@@ -38,13 +36,7 @@ class CaseClarificationAnswer(BaseModel):
     response_language: Literal["thai", "english"] = "english"
 
 
-class CaseClarificationAccepted(BaseModel):
-    clarification: CaseClarificationRead
-    run: CaseRunRead
-
-
 __all__ = [
-    "CaseClarificationAccepted",
     "CaseClarificationAnswer",
     "CaseClarificationRead",
     "ClarificationState",

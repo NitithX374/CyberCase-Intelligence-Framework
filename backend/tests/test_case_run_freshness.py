@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.services.cases.caseService import serializeCase
+from app.services.cases.caseService import serialize_case
 from app.services.workflow.caseRunService import analysis_freshness
 
 
@@ -29,7 +29,7 @@ def test_case_serialization_reports_result_freshness_without_snapshot_state() ->
         updated_at=now,
     )
 
-    serialized = serializeCase(case)
+    serialized = serialize_case(case)
 
     assert serialized.analysis_freshness == "current"
     assert serialized.status == "answered"

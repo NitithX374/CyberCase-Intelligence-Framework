@@ -8,7 +8,6 @@ from reportlab.pdfgen import canvas
 
 from app.services.document_ingestion.contracts import (
     ExtractionMethod,
-    IngestionMode,
     SourceType,
 )
 from app.services.document_ingestion.errors import (
@@ -101,7 +100,7 @@ def test_text_pdf_does_not_trigger_recognition() -> None:
     native_text = "This is reliable native investigation dossier text 1234567890. " * 6
     result = asyncio.run(
         _service(recognizer).ingest(
-            _pdf_bytes([native_text]), "native.pdf", IngestionMode.ROUTED
+            _pdf_bytes([native_text]), "native.pdf"
         )
     )
 

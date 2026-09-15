@@ -4,8 +4,8 @@ import httpx
 from pydantic import ValidationError
 
 from app.services.case_analysis.contracts import (
-    AnalysisMode,
-    CaseAdmittedSource,
+    CaseEvidenceSource,
+    CaseAnalysisMode,
     CaseAnalysisFailure,
     CaseAnalysisResult,
     CaseAnalysisTrace,
@@ -13,7 +13,7 @@ from app.services.case_analysis.contracts import (
     build_case_source_registry,
     resolve_response_language,
 )
-from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
+from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig, read_pipeline
 from app.services.case_analysis.providerStage import request_stage, resolve_target
 from app.services.case_analysis.prompts import (
     CASE_TRACE_CORRECTION_PROMPT,
@@ -40,29 +40,30 @@ async def analyze_case(
     }
     try:
         sources = build_case_source_registry(analysis_context)
+        language = resolve_response_language(user_message)
         if client is not None:
-            return await executeCaseAnalysisPipeline(
+            return await execute_raw_direct_pipeline(
                 raw_evidence,
                 analysis_context,
-                user_message,
+                language,
                 config,
                 sources,
                 client,
-                receipt,
-                mode,
-                question,
+                receipt=receipt,
+                mode=mode,
+                question=question,
             )
         async with httpx.AsyncClient() as owned_client:
-            return await executeCaseAnalysisPipeline(
+            return await execute_raw_direct_pipeline(
                 raw_evidence,
                 analysis_context,
-                user_message,
+                language,
                 config,
                 sources,
                 owned_client,
-                receipt,
-                mode,
-                question,
+                receipt=receipt,
+                mode=mode,
+                question=question,
             )
     except CaseAnalysisFailure as error:
         receipt["failure_code"] = error.code
@@ -75,37 +76,12 @@ async def analyze_case(
         ) from error
 
 
-async def executeCaseAnalysisPipeline(
-    raw_evidence: str,
-    context: dict[str, object],
-    user_message: object,
-    config: AnalysisPipelineConfig,
-    sources: tuple[CaseAdmittedSource, ...],
-    client: httpx.AsyncClient,
-    receipt: dict[str, object],
-    mode: str,
-    question: str | None,
-) -> CaseAnalysisResult:
-    language = resolve_response_language(user_message)
-    return await executeRawDirectPipeline(
-        raw_evidence,
-        context,
-        language,
-        config,
-        sources,
-        client,
-        receipt=receipt,
-        mode=mode,
-        question=question,
-    )
-
-
-async def executeRawDirectPipeline(
+async def execute_raw_direct_pipeline(
     raw_evidence: str,
     context: dict[str, object],
     language: str,
     config: AnalysisPipelineConfig,
-    sources: tuple[CaseAdmittedSource, ...],
+    sources: tuple[CaseEvidenceSource, ...],
     client: httpx.AsyncClient | None,
     *,
     receipt: dict[str, object],
@@ -146,7 +122,7 @@ async def executeRawDirectPipeline(
     if document_quality_context:
         request_content["document_quality_context"] = document_quality_context
 
-    parsed = await requestAnalysisStage(
+    parsed = await request_analysis_stage(
         client,
         config,
         "direct",
@@ -157,7 +133,7 @@ async def executeRawDirectPipeline(
     )
     for correction_attempt in range(_DIRECT_TRACE_MAX_CORRECTIONS + 1):
         try:
-            trace = _validate_direct_trace(
+            trace = validate_direct_trace(
                 parsed,
                 mode=mode,
                 sources=sources,
@@ -174,7 +150,7 @@ async def executeRawDirectPipeline(
                 {"attempt": correction_attempt + 1, "reason": error.code}
             )
             receipt.setdefault("validation_retry", {"reason": error.code})
-            parsed = await requestAnalysisStage(
+            parsed = await request_analysis_stage(
                 client,
                 config,
                 "direct_correction",
@@ -211,11 +187,11 @@ _DIRECT_TRACE_CORRECTION_CODES = frozenset(
 _DIRECT_TRACE_MAX_CORRECTIONS = 2
 
 
-def _validate_direct_trace(
+def validate_direct_trace(
     parsed: CaseProviderAnalysis,
     *,
     mode: str,
-    sources: tuple[CaseAdmittedSource, ...],
+    sources: tuple[CaseEvidenceSource, ...],
     document_context: object,
 ) -> CaseAnalysisTrace:
     return validate_case_trace(
@@ -234,7 +210,7 @@ def _validate_direct_trace(
     )
 
 
-async def requestAnalysisStage(
+async def request_analysis_stage(
     client: httpx.AsyncClient,
     config: AnalysisPipelineConfig,
     stage: str,
@@ -258,47 +234,9 @@ async def requestAnalysisStage(
     )
 
 
-class MainCaseAnalysisService:
-    """Run internal analysis without retrieval, persistence, or state mutation."""
-
-    def __init__(self, *, client: httpx.AsyncClient | None = None) -> None:
-        self._client = client
-
-    async def analyze(
-        self,
-        *,
-        mode: AnalysisMode,
-        raw_evidence: str,
-        analysis_context: dict[str, object] | None,
-        question: str | None,
-        user_message: object,
-    ) -> CaseAnalysisResult:
-        validated_mode, validated_question = validate_analysis_request(
-            mode,
-            question,
-        )
-        from app.services.case_analysis.pipelineConfig import read_pipeline
-
-        context = analysis_context or {}
-        if context.get("source_reference_type") != "case_evidence_source":
-            raise CaseAnalysisFailure(
-                "case_sources_invalid",
-                "Main Case Analysis requires admitted Case evidence",
-            )
-        return await analyze_case(
-            raw_evidence=raw_evidence,
-            analysis_context=context,
-            user_message=user_message,
-            config=read_pipeline(context.get("_analysis_pipeline")),
-            mode=validated_mode,
-            question=validated_question,
-            client=self._client,
-        )
-
-
 async def request_case_analysis(
     *,
-    mode: AnalysisMode,
+    mode: CaseAnalysisMode,
     raw_evidence: str,
     analysis_context: dict[str, object] | None,
     question: str | None,
@@ -306,20 +244,26 @@ async def request_case_analysis(
     client: httpx.AsyncClient | None = None,
 ) -> CaseAnalysisResult:
     validated_mode, validated_question = validate_analysis_request(mode, question)
-    return await MainCaseAnalysisService(client=client).analyze(
-        mode=validated_mode,
+    context = analysis_context or {}
+    if context.get("source_reference_type") != "case_evidence_source":
+        raise CaseAnalysisFailure(
+            "case_sources_invalid",
+            "Main Case Analysis requires Case evidence",
+        )
+    return await analyze_case(
         raw_evidence=raw_evidence,
-        analysis_context=analysis_context,
-        question=validated_question,
+        analysis_context=context,
         user_message=user_message,
+        config=read_pipeline(context.get("_analysis_pipeline")),
+        question=validated_question,
+        mode=validated_mode,
+        client=client,
     )
 
 
 __all__ = [
-    "MainCaseAnalysisService",
     "analyze_case",
-    "executeCaseAnalysisPipeline",
-    "executeRawDirectPipeline",
-    "requestAnalysisStage",
+    "execute_raw_direct_pipeline",
+    "request_analysis_stage",
     "request_case_analysis",
 ]

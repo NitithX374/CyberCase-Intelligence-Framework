@@ -33,13 +33,10 @@ export const SCHEMA_GROUPS = Object.freeze({
     "EvidenceSourceRead",
   ],
   runTypes: [
-    "AdmitExtractionRequest",
     "CaseAnalysisAccepted",
     "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
     "CaseChatMessageAccepted",
-    "CaseClarificationAccepted",
-    "CaseClarificationAnswer",
     "CaseClarificationRead",
     "CaseRunRead",
   ],
@@ -60,13 +57,10 @@ export const SCHEMA_GROUPS = Object.freeze({
 });
 
 export const LEGACY_GENERATED_FILES = Object.freeze([
-  "AdmitExtractionRequest.ts",
   "CaseAnalysisAccepted.ts",
   "CaseAnalysisCreate.ts",
   "CaseAnalysisResultRead.ts",
   "CaseChatMessageAccepted.ts",
-  "CaseClarificationAccepted.ts",
-  "CaseClarificationAnswer.ts",
   "CaseClarificationRead.ts",
   "CaseDocumentRead.ts",
   "CaseEvidenceCreate.ts",

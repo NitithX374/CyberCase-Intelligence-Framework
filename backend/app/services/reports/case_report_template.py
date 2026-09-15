@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 
-from app.schemas.reports import StructuredReport
 from app.services.case_analysis.contracts import CaseAnalysisTrace
 from app.services.reports.case_report_content import (
     build_case_report_claims,
@@ -11,10 +10,11 @@ from app.services.reports.case_report_content import (
 )
 from app.services.reports.case_report_contracts import (
     CaseReportInput,
+    ReportRunResult,
     native_source_ids,
+    validate_case_structured_report,
 )
-from app.services.reports.report_contracts import ReportRunResult
-from app.services.reports.report_validation import validate_case_structured_report
+from app.schemas.reports import StructuredReport
 
 CASE_REPORT_PROMPT_VERSION = "deterministic_case_readable_report_v2"
 

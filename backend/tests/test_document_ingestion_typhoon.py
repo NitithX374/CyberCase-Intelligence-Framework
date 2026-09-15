@@ -2,12 +2,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from app.routers import documentIngestion as router
+from app.services.document_ingestion.service import build_document_recognizer
 from app.services.document_ingestion.recognition.typhoon import TyphoonDocumentRecognizer
 
 
-def test_typhoon_router_loads_without_optional_google_packages(monkeypatch):
-    monkeypatch.setenv("DOCUMENT_RECOGNIZER", "typhoon")
+def test_typhoon_recognizer_loads_without_optional_google_packages():
     script = """
 import importlib.abc
 import sys
@@ -18,9 +17,9 @@ class NoGooglePackages(importlib.abc.MetaPathFinder):
             raise ModuleNotFoundError("Google packages intentionally unavailable")
 
 sys.meta_path.insert(0, NoGooglePackages())
-from app.routers.documentIngestion import _build_recognizer
+from app.services.document_ingestion.service import build_document_recognizer
 from app.services.document_ingestion.recognition.typhoon import TyphoonDocumentRecognizer
-assert isinstance(_build_recognizer(), TyphoonDocumentRecognizer)
+assert isinstance(build_document_recognizer(), TyphoonDocumentRecognizer)
 """
     backend_root = str(Path(__file__).resolve().parent.parent)
     result = subprocess.run(
@@ -34,5 +33,5 @@ assert isinstance(_build_recognizer(), TyphoonDocumentRecognizer)
 
 
 def test_recognizer_is_typhoon():
-    recognizer = router._build_recognizer()
+    recognizer = build_document_recognizer()
     assert isinstance(recognizer, TyphoonDocumentRecognizer)

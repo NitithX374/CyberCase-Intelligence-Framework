@@ -1,7 +1,7 @@
 import { act, cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
-import { chatQueryKeys } from "@/hooks/useChatQueries";
+import { caseQueryKeys } from "@/hooks/useCaseQueries";
 import { readAccountValue } from "@/lib/account-storage";
 import { caseAccepted, deferred, message, renderSession, caseChat, tick } from "./chat-session-test-support";
 
@@ -27,8 +27,11 @@ describe("chat submission lifecycle", () => {
     const { result } = renderSession();
     await act(async () => { await result.current.session.selectCaseChat("a"); });
     await tick();
-    act(() => result.current.submitContent("Stole Phone B", "message"));
+    act(() => result.current.session.changeInput("Stole Phone B"));
     await tick();
+    act(() => result.current.submitMessage({ preventDefault: vi.fn() } as unknown as Parameters<typeof result.current.submitMessage>[0]));
+    await tick();
+    expect(send.mock.calls[0][1]).toBe("Stole Phone B");
     expect(send.mock.calls[0][4]).toBe("followup_answer");
   });
   it("reuses the idempotency key after a lost receipt and clears the draft only after persisted output", async () => {
@@ -56,7 +59,7 @@ describe("chat submission lifecycle", () => {
     await tick();
     expect(send.mock.calls[1][2]).toBe(key);
     expect(result.current.session.messages).toEqual([request]);
-    expect(queryClient.getQueryData<api.CaseChatDetail>(chatQueryKeys.detail("a"))?.messages).toEqual([request]);
+    expect(queryClient.getQueryData<api.CaseChatDetail>(caseQueryKeys.chat("a"))?.messages).toEqual([request]);
     await tick(1000);
     expect(result.current.session.input).toBe("");
     expect(result.current.session.getPendingSubmission()).toBeNull();

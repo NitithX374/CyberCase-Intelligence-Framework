@@ -1,7 +1,7 @@
 import { act, cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
-import { chatQueryKeys } from "@/hooks/useChatQueries";
+import { caseQueryKeys } from "@/hooks/useCaseQueries";
 import { deferred, message, renderSession, caseChat, tick } from "./chat-session-test-support";
 
 beforeEach(() => { vi.useFakeTimers(); });
@@ -30,7 +30,7 @@ describe("chat session selection", () => {
     });
     await tick();
     expect(result.current.session.messages[0].content).toBe("Current");
-    expect(queryClient.getQueryData<api.CaseChatDetail>(chatQueryKeys.detail("a"))?.messages[0].content).toBe("Current");
+    expect(queryClient.getQueryData<api.CaseChatDetail>(caseQueryKeys.chat("a"))?.messages[0].content).toBe("Current");
   });
 
   it("loads a processing Case Chat without starting the retired ChatRun poll", async () => {
@@ -41,7 +41,7 @@ describe("chat session selection", () => {
     await tick();
     expect(result.current.session.chatStatus).toBe("processing");
     expect(result.current.session.messages).toEqual(processing.messages);
-    expect(queryClient.getQueryData(chatQueryKeys.detail("a"))).toEqual(processing);
+    expect(queryClient.getQueryData(caseQueryKeys.chat("a"))).toEqual(processing);
     expect(reads).toHaveBeenCalledTimes(1);
   });
 

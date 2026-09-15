@@ -20,7 +20,7 @@ from app.models.ragContext import RagContext
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 
 
-def serializeCase(case: Case) -> CaseRead:
+def serialize_case(case: Case) -> CaseRead:
     analysis_runs = [run for run in case.case_runs if run.operation == "analysis"]
     latest_run = max(analysis_runs, key=lambda run: run.created_at, default=None)
     if latest_run is not None and latest_run.status in {"queued", "running"}:
@@ -70,14 +70,14 @@ class CaseService:
         self.db = db
 
     @staticmethod
-    def _verifyCaseAccess(case: Case, user_id: UUID | None) -> None:
+    def verify_case_access(case: Case, user_id: UUID | None) -> None:
         if case.user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Case not found",
             )
 
-    async def createCase(
+    async def create_case(
         self,
         request: CaseCreate,
         user_id: UUID | None = None,
@@ -85,9 +85,9 @@ class CaseService:
         case = Case(title=request.title, user_id=user_id)
         self.db.add(case)
         await self.db.commit()
-        return await self.getCase(case.id, user_id=user_id)
+        return await self.get_case(case.id, user_id=user_id)
 
-    async def listCases(self, user_id: UUID | None = None) -> list[CaseRead]:
+    async def list_cases(self, user_id: UUID | None = None) -> list[CaseRead]:
         statement = select(Case).options(
             selectinload(Case.chat_messages),
             selectinload(Case.case_runs),
@@ -98,36 +98,36 @@ class CaseService:
         else:
             statement = statement.where(Case.user_id == user_id)
         result = await self.db.execute(statement)
-        return [serializeCase(case) for case in result.scalars().all()]
+        return [serialize_case(case) for case in result.scalars().all()]
 
-    async def getCase(
+    async def get_case(
         self,
         case_id: UUID,
         user_id: UUID | None = None,
     ) -> CaseRead:
-        case = await self._loadCase(case_id)
-        self._verifyCaseAccess(case, user_id)
-        return serializeCase(case)
+        case = await self.load_case(case_id)
+        self.verify_case_access(case, user_id)
+        return serialize_case(case)
 
-    async def updateCase(
+    async def update_case(
         self,
         case_id: UUID,
         request: CaseUpdate,
         user_id: UUID | None = None,
     ) -> CaseRead:
-        case = await self._loadCase(case_id, lock=True)
-        self._verifyCaseAccess(case, user_id)
+        case = await self.load_case(case_id, lock=True)
+        self.verify_case_access(case, user_id)
         case.title = request.title
         await self.db.commit()
-        return await self.getCase(case_id, user_id=user_id)
+        return await self.get_case(case_id, user_id=user_id)
 
-    async def deleteCase(
+    async def delete_case(
         self,
         case_id: UUID,
         user_id: UUID | None = None,
     ) -> None:
-        case = await self._loadCase(case_id, lock=True)
-        self._verifyCaseAccess(case, user_id)
+        case = await self.load_case(case_id, lock=True)
+        self.verify_case_access(case, user_id)
 
         # Delete case-owned entities in dependency order within transaction
         await self.db.execute(delete(CaseReport).where(CaseReport.case_id == case.id))
@@ -149,7 +149,7 @@ class CaseService:
         await self.db.execute(delete(Case).where(Case.id == case.id))
         await self.db.commit()
 
-    async def _loadCase(self, case_id: UUID, *, lock: bool = False) -> Case:
+    async def load_case(self, case_id: UUID, *, lock: bool = False) -> Case:
         statement = (
             select(Case)
             .options(
@@ -171,4 +171,4 @@ class CaseService:
         return case
 
 
-__all__ = ["CaseService", "serializeCase"]
+__all__ = ["CaseService", "serialize_case"]

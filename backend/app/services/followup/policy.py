@@ -9,7 +9,7 @@ import httpx
 
 from app.config import settings
 from app.services.case_analysis.contracts import CaseAnalysisGap
-from app.services.followup.helpers import _extract_llm_json, _extract_llm_text
+from app.services.followup.helpers import extract_llm_json, extract_llm_text
 from app.services.followup.prompts import (
     FOLLOWUP_POLICY_SCHEMA,
     FOLLOWUP_POLICY_SYSTEM,
@@ -79,7 +79,7 @@ class AnthropicFollowUpPolicy:
 
         started = time.perf_counter()
         if client is not None:
-            result = await self._post(
+            result = await self.post(
                 client,
                 target.messages_url,
                 request_payload,
@@ -89,7 +89,7 @@ class AnthropicFollowUpPolicy:
             async with httpx.AsyncClient(
                 timeout=settings.chat_followup_policy_timeout_seconds
             ) as owned_client:
-                result = await self._post(
+                result = await self.post(
                     owned_client,
                     target.messages_url,
                     request_payload,
@@ -105,7 +105,7 @@ class AnthropicFollowUpPolicy:
         )
 
     @staticmethod
-    async def _post(
+    async def post(
         client: httpx.AsyncClient,
         messages_url: str,
         request_payload: dict[str, object],
@@ -123,13 +123,13 @@ class AnthropicFollowUpPolicy:
         stop_reason = response_payload.get("stop_reason")
         if stop_reason == "refusal":
             raise ValueError("Core LLM follow-up policy was refused by provider")
-        raw_text = _extract_llm_text(response_payload)
+        raw_text = extract_llm_text(response_payload)
         if not raw_text.strip():
             raise ValueError(
                 f"Core LLM follow-up policy content is malformed or empty (stop_reason={stop_reason})"
             )
         try:
-            parsed = _extract_llm_json(raw_text)
+            parsed = extract_llm_json(raw_text)
         except Exception as exc:
             if stop_reason in {"max_tokens", "length", "pause_turn"}:
                 raise ValueError(
@@ -140,12 +140,12 @@ class AnthropicFollowUpPolicy:
         usage_dict = usage if isinstance(usage, dict) else {}
         return FollowUpPolicyResult(
             decision=FollowUpDecision.model_validate(parsed),
-            input_tokens=_nonnegative_int(usage_dict.get("input_tokens")),
-            output_tokens=_nonnegative_int(usage_dict.get("output_tokens")),
+            input_tokens=nonnegative_int(usage_dict.get("input_tokens")),
+            output_tokens=nonnegative_int(usage_dict.get("output_tokens")),
         )
 
 
-def _nonnegative_int(value: object) -> int | None:
+def nonnegative_int(value: object) -> int | None:
     if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
         return value
     return None

@@ -1,7 +1,7 @@
-from app.services.case_materials.documentContent import getOwnedDocumentContent
+from app.services.case_materials.documentContent import get_owned_document_content
 from app.services.case_materials.caseEvidenceAssembly import (
     AssembledCaseEvidence,
-    assembleCaseEvidence,
+    assemble_case_evidence,
 )
 from app.services.case_materials.materialService import (
     CaseMaterialsError,
@@ -12,6 +12,6 @@ __all__ = [
     "AssembledCaseEvidence",
     "CaseMaterialsError",
     "CaseMaterialsService",
-    "assembleCaseEvidence",
-    "getOwnedDocumentContent",
+    "assemble_case_evidence",
+    "get_owned_document_content",
 ]

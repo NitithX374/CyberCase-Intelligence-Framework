@@ -14,11 +14,17 @@ from app.services.workflow.caseMitreAugmentation import (
     merge_case_mitre_trace,
     run_case_mitre_augmentation,
 )
-from app.services.workflow.caseRunErrors import CaseRunExecutionError
 from app.services.workflow.caseRunService import ClaimedCaseRun
 
 
-def buildAnalysisContext(claimed: ClaimedCaseRun) -> dict[str, object]:
+class CaseRunExecutionError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def build_analysis_context(claimed: ClaimedCaseRun) -> dict[str, object]:
     document_context = []
     for entry in claimed.manifest:
         provenance = entry.get("provenance")
@@ -59,7 +65,7 @@ def buildAnalysisContext(claimed: ClaimedCaseRun) -> dict[str, object]:
     }
 
 
-async def attachCaseAugmentation(
+async def attach_case_augmentation(
     output,
     claimed: ClaimedCaseRun,
     applicability_gate,
@@ -67,7 +73,7 @@ async def attachCaseAugmentation(
     mapping_request,
     session_factory: Callable | None = None,
 ):
-    context = buildAnalysisContext(claimed)
+    context = build_analysis_context(claimed)
     config = read_pipeline(claimed.pipeline_config)
     calls = output.execution_receipt.get("calls", []) if isinstance(output.execution_receipt, dict) else []
     if not isinstance(calls, list):
@@ -86,7 +92,7 @@ async def attachCaseAugmentation(
                     mitre_table=tuple(existing_row.mitre_table or []),
                 )
 
-    async def persistRagContext(rag_payload: CaseRagContextPayload) -> None:
+    async def persist_rag_context(rag_payload: CaseRagContextPayload) -> None:
         if session_factory is None:
             return
         async with session_factory() as db, db.begin():
@@ -118,7 +124,7 @@ async def attachCaseAugmentation(
         rag_request=rag_request,
         mapping_request=mapping_request,
         calls=calls,
-        on_rag_validated=persistRagContext,
+        on_rag_validated=persist_rag_context,
         reused_context=existing_rag_context,
     )
     merged_trace = merge_case_mitre_trace(
@@ -132,4 +138,4 @@ async def attachCaseAugmentation(
     return replace(output, trace=merged_trace, execution_receipt=receipt)
 
 
-__all__ = ["attachCaseAugmentation", "buildAnalysisContext"]
+__all__ = ["attach_case_augmentation", "build_analysis_context"]

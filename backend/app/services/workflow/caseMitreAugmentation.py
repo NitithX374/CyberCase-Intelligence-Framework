@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from app.schemas.rag import QueryResponse
 from app.services.case_analysis.contracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisTrace,
@@ -21,13 +21,13 @@ from app.services.case_analysis.contracts import (
 from app.services.case_analysis.mitreApplicabilityGate import (
     MitreApplicabilityRecord,
     evaluate_mitre_applicability,
+    RawEvidenceSource,
     skipped_mitre_applicability,
 )
 from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
 from app.services.case_analysis.providerStage import request_stage, resolve_target
 from app.services.case_analysis.prompts import CASE_MITRE_MAPPING_PROMPT
 from app.services.case_analysis.validation import validate_case_trace
-from app.services.chat.raw_evidence import RawEvidenceSource
 from app.services.clients.ragClient import RagCallFailure, request_rag
 
 
@@ -90,17 +90,17 @@ async def run_case_mitre_augmentation(
     reused_context: CaseRagContextPayload | None = None,
 ) -> CaseMitreAugmentation:
     try:
-        evidence_sources = _case_evidence_sources(manifest)
+        evidence_sources = case_evidence_sources(manifest)
     except ValueError as error:
-        return _failed("case_source_invalid", str(error))
+        return failed_augmentation("case_source_invalid", str(error))
 
-    applicability = await _evaluate_gate(
+    applicability = await evaluate_gate(
         run_id,
         evidence_sources,
         applicability_gate,
     )
     if applicability.failure_code is not None:
-        return _failed(applicability.failure_code, applicability)
+        return failed_augmentation(applicability.failure_code, applicability)
     if applicability.decision == "SKIP":
         return CaseMitreAugmentation("not_applicable", applicability, None, ())
 
@@ -113,12 +113,12 @@ async def run_case_mitre_augmentation(
             response = await rag_request(input_text)
             context = validated_case_rag_context(response)
         except RagCallFailure as error:
-            return _failed(error.code, applicability)
+            return failed_augmentation(error.code, applicability)
         except (ValueError, ValidationError):
-            return _failed("rag_invalid_response", applicability)
+            return failed_augmentation("rag_invalid_response", applicability)
         except Exception:
             logger.exception("Case MITRE retrieval failed run_id=%s", run_id)
-            return _failed("rag_service_error", applicability)
+            return failed_augmentation("rag_service_error", applicability)
 
         if on_rag_validated is not None:
             try:
@@ -126,7 +126,7 @@ async def run_case_mitre_augmentation(
             except Exception:
                 logger.exception("Case MITRE early persistence callback failed run_id=%s", run_id)
 
-    technique_rows = _technique_rows(context.mitre_table)
+    technique_rows = technique_rows_for_context(context.mitre_table)
     if not context.retrieval_context_id or not technique_rows:
         return CaseMitreAugmentation("insufficient_context", applicability, context, (), reused=is_reused)
 
@@ -138,17 +138,17 @@ async def run_case_mitre_augmentation(
             config=config,
             calls=calls if calls is not None else [],
         )
-        valid_associations = _validate_associations(
+        valid_associations = validate_associations(
             associations,
             base_trace.claims,
             applicability,
             technique_rows,
         )
     except (CaseAnalysisFailure, ValidationError, ValueError):
-        return _failed("mitre_mapping_invalid", applicability, context)
+        return failed_augmentation("mitre_mapping_invalid", applicability, context)
     except Exception:
         logger.exception("Case MITRE mapping failed run_id=%s", run_id)
-        return _failed("mitre_mapping_error", applicability, context)
+        return failed_augmentation("mitre_mapping_error", applicability, context)
 
     status = "retrieved_with_matches" if valid_associations else "retrieved_without_supported_match"
     return CaseMitreAugmentation(
@@ -163,7 +163,7 @@ async def run_case_mitre_augmentation(
 def merge_case_mitre_trace(
     trace: CaseAnalysisTrace,
     augmentation: CaseMitreAugmentation,
-    sources: tuple[CaseAdmittedSource, ...],
+    sources: tuple[CaseEvidenceSource, ...],
     document_context: object,
 ) -> CaseAnalysisTrace:
     merged = trace.model_copy(
@@ -205,14 +205,14 @@ async def request_case_mitre_mapping(
         "external_mitre_table": list(context.mitre_table),
     }
     if client is not None:
-        parsed = await _request_mapping(client, config, content, calls)
+        parsed = await request_mapping(client, config, content, calls)
     else:
         async with httpx.AsyncClient() as owned_client:
-            parsed = await _request_mapping(owned_client, config, content, calls)
+            parsed = await request_mapping(owned_client, config, content, calls)
     return tuple(parsed.associations)
 
 
-async def _request_mapping(
+async def request_mapping(
     client: httpx.AsyncClient,
     config: AnalysisPipelineConfig,
     content: dict[str, object],
@@ -230,7 +230,7 @@ async def _request_mapping(
     )
 
 
-async def _evaluate_gate(run_id, sources, gate):
+async def evaluate_gate(run_id, sources, gate):
     try:
         result = await gate(source_run_id=run_id, evidence_sources=sources)
         return MitreApplicabilityRecord.model_validate(result)
@@ -239,7 +239,7 @@ async def _evaluate_gate(run_id, sources, gate):
         return skipped_mitre_applicability("mitre_applicability_provider_error")
 
 
-def _case_evidence_sources(
+def case_evidence_sources(
     manifest: Sequence[Mapping[str, object]],
 ) -> tuple[RawEvidenceSource, ...]:
     sources: list[RawEvidenceSource] = []
@@ -258,7 +258,7 @@ def _case_evidence_sources(
             RawEvidenceSource(
                 message_id=message_id,
                 content=text,
-                document_sources=tuple(_document_source_metadata(entry)),
+                document_sources=tuple(document_source_metadata(entry)),
             )
         )
     if not sources:
@@ -266,7 +266,7 @@ def _case_evidence_sources(
     return tuple(sources)
 
 
-def _document_source_metadata(entry: Mapping[str, object]) -> list[dict[str, object]]:
+def document_source_metadata(entry: Mapping[str, object]) -> list[dict[str, object]]:
     document_id = entry.get("document_id")
     filename = entry.get("filename")
     provenance = entry.get("provenance")
@@ -276,17 +276,17 @@ def _document_source_metadata(entry: Mapping[str, object]) -> list[dict[str, obj
     return [{"document_id": document_id, "filename": filename, "page_spans": pages if isinstance(pages, list) else []}]
 
 
-def _technique_rows(rows: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+def technique_rows_for_context(rows: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
     return [
         dict(row)
         for row in rows
         if isinstance(row, Mapping)
         and isinstance(row.get("technique_id"), str)
-        and _is_technique_id(row["technique_id"])
+        and is_technique_id(row["technique_id"])
     ]
 
 
-def _validate_associations(
+def validate_associations(
     associations: Sequence[CaseMitreAssociation],
     claims: Sequence[CaseAnalysisClaim],
     applicability: MitreApplicabilityRecord,
@@ -314,7 +314,7 @@ def _validate_associations(
     return validated
 
 
-def _is_technique_id(value: str) -> bool:
+def is_technique_id(value: str) -> bool:
     if len(value) not in {5, 9} or not value.startswith("T"):
         return False
     if len(value) == 5:
@@ -322,7 +322,7 @@ def _is_technique_id(value: str) -> bool:
     return value[1:5].isdigit() and value[5] == "." and value[6:].isdigit()
 
 
-def _failed(
+def failed_augmentation(
     code: str,
     applicability: MitreApplicabilityRecord | str,
     context: CaseRagContextPayload | None = None,

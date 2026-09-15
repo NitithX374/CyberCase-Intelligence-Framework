@@ -9,7 +9,7 @@ test.describe("case lifecycle", () => {
     await page.request.delete(`${apiBaseUrl}/cases/${match[1]}`);
   });
 
-  test("registers, analyzes, reviews, reports, downloads, and asks", async ({ page }) => {
+  test("registers, receives, analyzes, reports, downloads, and asks", async ({ page }) => {
     const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const caseTitle = `Playwright case ${unique}`;
     const narrative = `The operator reported a suspicious login from workstation ${unique}.`;
@@ -20,18 +20,15 @@ test.describe("case lifecycle", () => {
     await page.getByLabel("Password").fill("E2E-Playwright-Password-123!");
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(/\/case$/, { timeout: 30_000 });
-    await expect(page.getByText("No saved cases yet.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "No saved cases yet" })).toBeVisible();
 
-    const sidebar = page.locator("aside").first();
-    await sidebar.getByRole("button", { name: "New case", exact: true }).click();
-    await expect(sidebar.getByRole("button", { name: /^New case,/ })).toBeVisible();
-    await sidebar.getByRole("button", { name: /^New case,/ }).click();
-    await expect(page).toHaveURL(/\/case\/[^/]+\/(?:intake|overview)$/);
+    await page.getByRole("button", { name: "Create your first case", exact: true }).click();
+    await expect(page).toHaveURL(/\/case\/[^/]+\/(?:intake|overview)$/, { timeout: 45_000 });
     if (page.url().endsWith("/overview")) await page.locator("#workspace-tab-intake").click();
     await expect(page).toHaveURL(/\/case\/[^/]+\/intake$/);
-    await expect(page.getByRole("heading", { name: "Prepare case analysis" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Case preparation" })).toBeVisible();
     await page.getByLabel(/Case title/).fill(caseTitle);
-    await page.getByLabel("Case narrative or additional information").fill(narrative);
+    await page.getByLabel("Case information", { exact: true }).fill(narrative);
     await page.getByRole("button", { name: /Analyze case/ }).click();
     await expect(page).toHaveURL(/\/case\/[^/]+\/overview$/);
 
@@ -49,11 +46,11 @@ test.describe("case lifecycle", () => {
     await expect(page.getByText(narrative, { exact: true })).toBeVisible();
 
     await page.locator("#workspace-tab-materials").click();
-    await expect(page.getByRole("heading", { name: "Saved case material" })).toBeVisible();
-    await expect(page.getByText(narrative, { exact: true })).toBeVisible();
+    await expect(page.getByRole("tabpanel", { name: "Case Materials" })).toBeVisible();
+    await expect(page.getByText("No source files yet.", { exact: true })).toBeVisible();
 
     await page.locator("#workspace-tab-report").click();
-    await expect(page.getByRole("heading", { name: "Report" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Report", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Generate report" }).first().click();
     await expect(page.getByRole("article", { name: "Persisted report" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: "Download PDF" })).toBeVisible();
@@ -63,8 +60,8 @@ test.describe("case lifecycle", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/^CyberCase-Report-v\d+\.pdf$/);
 
-    await page.getByRole("button", { name: "Open chat" }).click();
-    const chat = page.getByRole("complementary", { name: "Case Chat Assistant" });
+    await page.getByRole("button", { name: "Open Ask" }).click();
+    const chat = page.getByRole("complementary", { name: "Ask about this case" });
     await expect(chat).toBeVisible();
     const composerInput = chat.getByLabel("Chat message");
     await expect(composerInput).toBeEnabled({ timeout: 15_000 });
@@ -86,14 +83,11 @@ test.describe("case lifecycle", () => {
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(/\/case$/, { timeout: 30_000 });
 
-    const sidebar = page.locator("aside").first();
-    await sidebar.getByRole("button", { name: "New case", exact: true }).click();
-    await expect(sidebar.getByRole("button", { name: /^New case,/ })).toBeVisible();
-    await sidebar.getByRole("button", { name: /^New case,/ }).click();
-    await expect(page).toHaveURL(/\/case\/[^/]+\/(?:intake|overview)$/);
+    await page.getByRole("button", { name: "Create your first case", exact: true }).click();
+    await expect(page).toHaveURL(/\/case\/[^/]+\/(?:intake|overview)$/, { timeout: 45_000 });
     if (page.url().endsWith("/overview")) await page.locator("#workspace-tab-intake").click();
     await page.getByLabel(/Case title/).fill(caseTitle);
-    await page.getByLabel("Case narrative or additional information").fill(narrative);
+    await page.getByLabel("Case information", { exact: true }).fill(narrative);
     await page.getByRole("button", { name: /Analyze case/ }).click();
     await expect(page).toHaveURL(/\/case\/[^/]+\/overview$/);
 
@@ -110,8 +104,8 @@ test.describe("case lifecycle", () => {
     await expect(page.getByText("Clarification needed", { exact: false })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Which identification is correct: the primary operator or the secondary contractor?")).toBeVisible();
 
-    await page.getByRole("button", { name: "Open chat" }).click();
-    const chat = page.getByRole("complementary", { name: "Case Chat Assistant" });
+    await page.getByRole("button", { name: "Open Ask" }).click();
+    const chat = page.getByRole("complementary", { name: "Ask about this case" });
     await expect(chat).toBeVisible();
 
     await expect(chat.getByText("Which identification is correct: the primary operator or the secondary contractor?").first()).toBeVisible({ timeout: 10_000 });

@@ -13,8 +13,8 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import settings
 from app.services.case_analysis.caseAnalysisResponseParser import (
-    extractVisibleText,
-    validateResponsePayload,
+    extract_visible_text,
+    validate_response_payload,
 )
 from app.services.case_analysis.contracts import CaseAnalysisFailure
 from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
@@ -107,8 +107,8 @@ async def request_stage(
             json=payload,
             timeout=config.timeout_seconds,
         )
-        decoded = validateResponsePayload(response)
-        result = schema.model_validate_json(extractVisibleText(decoded))
+        decoded = validate_response_payload(response)
+        result = schema.model_validate_json(extract_visible_text(decoded))
         receipt["status"] = "completed"
         return result
     except httpx.TimeoutException as error:

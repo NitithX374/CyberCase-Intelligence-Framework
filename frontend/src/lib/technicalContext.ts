@@ -1,8 +1,7 @@
 import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
-import { type SourceMessageRef } from "@/lib/case-overview-contracts";
-import { parseCaseEvidence, sourceRefs, type CaseEvidenceSource } from "@/lib/case-overview-source";
-import { parseCaseTrace, type CaseTraceAssociation, type CaseTraceClaim } from "@/lib/case-overview-trace";
-import { asArray, asRecord, asString } from "@/lib/case-overview-parsing";
+import { type SourceMessageRef, type CaseEvidenceSource, type CaseTraceAssociation, type CaseTraceClaim } from "@/lib/caseOverviewTypes";
+import { asArray, asRecord, asString, parseCaseEvidence, sourceRefs } from "@/lib/caseOverviewSource";
+import { parseCaseTrace } from "@/lib/caseOverview";
 
 export type TechnicalContextStatus =
   | "not_applicable"

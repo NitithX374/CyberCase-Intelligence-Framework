@@ -83,14 +83,13 @@ function responseFor(body) {
     throw new Error("Unsupported E2E provider request");
   }
 
-  const sectionRegex = /\[[^\]]*SOURCE\s+([0-9a-fA-F-]+)\s+·\s+REVISION\s+(\d+)\]\n([\s\S]*?)(?=(?:\n\n\[[^\]]*SOURCE|$))/g;
+  const sectionRegex = /\[[^\]]*SOURCE\s+([0-9a-fA-F-]+)\]\n([\s\S]*?)(?=(?:\n\n\[[^\]]*SOURCE|$))/g;
   const sections = [];
   let match;
   while ((match = sectionRegex.exec(evidence)) !== null) {
     sections.push({
       sourceId: match[1],
-      revision: Number(match[2]),
-      quote: match[3].trim(),
+      quote: match[2].trim(),
     });
   }
   if (sections.length === 0) {
@@ -109,7 +108,6 @@ function responseFor(body) {
     supporting_citations: [
       {
         source_id: sec.sourceId,
-        source_revision: sec.revision,
         exact_quote: sec.quote,
       },
     ],

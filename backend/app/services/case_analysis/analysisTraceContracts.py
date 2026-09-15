@@ -4,8 +4,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.services.case_analysis.analysisContractUtils import CaseAnalysisMode, _format_identifier
-from app.services.case_analysis.analysisEvidenceContracts import CaseAnalysisClaim, CaseAnalysisGap
+from app.services.case_analysis.analysisEvidenceContracts import (
+    CaseAnalysisClaim,
+    CaseAnalysisGap,
+    CaseAnalysisMode,
+    normalize_identifier,
+)
 
 
 class CaseInvolvedParty(BaseModel):
@@ -27,7 +31,7 @@ class CaseInvolvedParty(BaseModel):
     @classmethod
     def normalize_claim_ids(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
-            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
         return value
 
     @field_validator("claim_ids")
@@ -58,7 +62,7 @@ class CaseTimelineItem(BaseModel):
     @classmethod
     def normalize_claim_ids(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
-            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
         return value
 
     @field_validator("claim_ids")
@@ -88,7 +92,7 @@ class CaseImpactItem(BaseModel):
     @classmethod
     def normalize_claim_ids(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
-            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
         return value
 
     @field_validator("claim_ids")
@@ -113,13 +117,13 @@ class CaseMitreAssociation(BaseModel):
     @field_validator("association_id", mode="before")
     @classmethod
     def normalize_association_id(cls, value: object) -> object:
-        return _format_identifier(value, "MA", "MA|assoc|association")
+        return normalize_identifier(value, "MA", "MA|assoc|association")
 
     @field_validator("claim_ids", mode="before")
     @classmethod
     def normalize_claim_ids(cls, value: object) -> object:
         if isinstance(value, (list, tuple)):
-            return [_format_identifier(item, "A", "A|claim|c") for item in value]
+            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
         return value
 
 

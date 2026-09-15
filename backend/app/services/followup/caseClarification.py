@@ -143,7 +143,7 @@ async def submit_clarification_answer(
         from app.services.workflow.caseRunService import enqueue_case_analysis
         from app.schemas.caseRuns import CaseAnalysisCreate
 
-        await CaseMaterialsService(db).admitText(
+        await CaseMaterialsService(db).add_evidence_text(
             case_id=case.id,
             user_id=user_id,
             source_kind="followup_answer",

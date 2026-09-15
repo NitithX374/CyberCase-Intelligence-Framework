@@ -11,14 +11,18 @@ import {
 } from "@/lib/api";
 import type { RunPhase, WorkspaceView } from "@/components/common/types";
 import { chatTranscriptMessages } from "@/lib/chat-followup";
-import { useCaseMutations, useCases } from "@/hooks/useCaseQueries";
-import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
-import { chatQueryKeys } from "@/hooks/useChatQueries";
+import {
+  caseQueryKeys,
+  useCaseAnalysis,
+  useCaseEvidence,
+  useCaseMutations,
+  useCases,
+  useCaseRunPolling,
+} from "@/hooks/useCaseQueries";
 import { casePath, caseRouteState } from "@/features/chat/routing/workspaceRoutes";
 import { useCaseChatSubmission } from "@/features/chat/runs/useCaseChatSubmission";
 import { useCaseChatSelection } from "@/features/chat/workspace/use-case-chat-selection";
 import { useCaseDeletion } from "@/features/chat/workspace/use-case-deletion";
-import { useWorkspaceSubmissionActions } from "@/features/chat/workspace/use-workspace-submission-actions";
 import { WorkspaceHeader } from "@/components/layout/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/layout/WorkspaceSidebar";
 import { WorkspaceChatPanel } from "@/components/conversation/WorkspaceChatPanel";
@@ -44,6 +48,8 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   const [chatActionError, setChatActionError] = useState<string | null>(null);
 
   const casesQuery = useCases();
+  const analysisQuery = useCaseAnalysis(caseId ?? null);
+  const evidenceQuery = useCaseEvidence(caseId ?? null);
   const { upsertCase, createMutation, deleteMutation } = useCaseMutations();
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
   const activeCase = cases.find((c) => c.id === caseId) ?? null;
@@ -58,7 +64,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
 
   const cacheUpsertCaseFromChat = useCallback(
     (chat: CaseChatRead) => {
-      queryClient.setQueryData<CaseChatDetail>(chatQueryKeys.detail(chat.case_id), (current) =>
+      queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(chat.case_id), (current) =>
         current ? { ...current, ...chat } : undefined,
       );
     },
@@ -155,7 +161,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     [caseId, router],
   );
 
-  const { submitContent } = useCaseChatSubmission({
+  const { clearQueryError: handleClearQueryError, retryQuery: handleRetryQuery, submitMessage: handleSubmit } = useCaseChatSubmission({
     session,
     cases,
     upsertCase,
@@ -176,15 +182,6 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   });
 
   const visibleMessages = chatTranscriptMessages(messages);
-  const {
-    clearQueryError: handleClearQueryError,
-    retryQuery: handleRetryQuery,
-    submitMessage: handleSubmit,
-  } = useWorkspaceSubmissionActions({
-    session,
-    submitContent,
-  });
-
   const visibleWorkspaceError = chatActionError ?? queryError;
   const clearWorkspaceError = useCallback(() => {
     setChatActionError(null);
@@ -246,6 +243,8 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
         chatStatus={workspaceChatStatus}
         input={input}
         hasAnalysisContext={Boolean(activeCase?.latest_analysis_result_id)}
+        leadResult={analysisQuery.data ?? null}
+        evidenceSources={evidenceQuery.data ?? []}
         onViewChange={handleViewChange}
         onNavigateToSource={() => handleViewChange("materials")}
         onInputChange={changeInput}

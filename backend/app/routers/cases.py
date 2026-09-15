@@ -15,10 +15,10 @@ from app.schemas.chat import (
 )
 from app.services.auth.dependencies import get_current_user
 from app.services.cases import CaseService
-from app.services.chat import (
+from app.services.chat.caseChat import (
     CaseChatError,
-    createCaseChatMessageAndRun,
-    getCaseChat,
+    create_case_chat_message_and_run,
+    get_case_chat as get_case_chat_service,
 )
 from app.services.workflow import process_case_run
 
@@ -31,7 +31,13 @@ async def get_case_chat(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await getCaseChat(db, case_id=case_id, user_id=user.id)
+    try:
+        return await get_case_chat_service(db, case_id=case_id, user_id=user.id)
+    except CaseChatError as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail={"code": error.code, "message": error.message},
+        ) from error
 
 
 @router.post(
@@ -49,7 +55,7 @@ async def create_case_chat_message(
     await commit_dependency_transaction(db)
     try:
         async with db.begin():
-            message, run = await createCaseChatMessageAndRun(
+            message, run = await create_case_chat_message_and_run(
                 db,
                 case_id=case_id,
                 user_id=user.id,
@@ -69,7 +75,7 @@ async def list_cases(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await CaseService(db).listCases(user_id=user.id)
+    return await CaseService(db).list_cases(user_id=user.id)
 
 
 @router.get("/{case_id}", response_model=CaseRead, status_code=status.HTTP_200_OK)
@@ -78,7 +84,7 @@ async def get_case(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await CaseService(db).getCase(case_id, user_id=user.id)
+    return await CaseService(db).get_case(case_id, user_id=user.id)
 
 
 @router.post("", response_model=CaseRead, status_code=status.HTTP_201_CREATED)
@@ -87,7 +93,7 @@ async def create_case(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await CaseService(db).createCase(request, user_id=user.id)
+    return await CaseService(db).create_case(request, user_id=user.id)
 
 
 @router.patch("/{case_id}", response_model=CaseRead, status_code=status.HTTP_200_OK)
@@ -97,7 +103,7 @@ async def update_case(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await CaseService(db).updateCase(case_id, request, user_id=user.id)
+    return await CaseService(db).update_case(case_id, request, user_id=user.id)
 
 
 @router.delete("/{case_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -106,5 +112,5 @@ async def delete_case(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Response:
-    await CaseService(db).deleteCase(case_id, user_id=user.id)
+    await CaseService(db).delete_case(case_id, user_id=user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

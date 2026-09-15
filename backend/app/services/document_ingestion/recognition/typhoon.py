@@ -34,7 +34,7 @@ class TyphoonRecognizerConfig:
     target_image_dimension: int
 
 
-def _prepare_messages(image_bytes: bytes, target_image_dimension: int):
+def prepare_messages(image_bytes: bytes, target_image_dimension: int):
     try:
         from typhoon_ocr import prepare_ocr_messages
     except ImportError as error:
@@ -62,7 +62,7 @@ class TyphoonDocumentRecognizer:
         self._config = config
 
     async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
-        text, descriptions, provider_output = await self._request(page.image_bytes)
+        text, descriptions, provider_output = await self.request(page.image_bytes)
         return RecognizedPage(
             text=text,
             recognizer=self._config.model,
@@ -72,7 +72,7 @@ class TyphoonDocumentRecognizer:
         )
 
     async def recognize(self, region: RenderedRegion) -> RecognitionResult:
-        text, descriptions, provider_output = await self._request(region.image_bytes)
+        text, descriptions, provider_output = await self.request(region.image_bytes)
         return RecognitionResult(
             text=text,
             recognition_method=RecognitionMethod.OCR,
@@ -82,14 +82,14 @@ class TyphoonDocumentRecognizer:
             raw_provider_output=provider_output,
         )
 
-    async def _request(self, image_bytes: bytes) -> tuple[str, list[str], Any]:
+    async def request(self, image_bytes: bytes) -> tuple[str, list[str], Any]:
         if not self._config.api_key:
             raise RecognitionConfigurationError(
                 "TYPHOON_OCR_API_KEY is required for document recognition."
             )
         try:
             messages = await asyncio.to_thread(
-                _prepare_messages,
+                prepare_messages,
                 image_bytes,
                 self._config.target_image_dimension,
             )
@@ -100,7 +100,7 @@ class TyphoonDocumentRecognizer:
                 "Typhoon OCR could not prepare the document image."
             ) from error
 
-        provider_output = await self._post(messages)
+        provider_output = await self.post(messages)
         try:
             raw_text = provider_output["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError, TypeError, ValueError, AttributeError) as error:
@@ -112,7 +112,7 @@ class TyphoonDocumentRecognizer:
         text, descriptions = separate_generated_visual_descriptions(raw_text)
         return text, descriptions, provider_output
 
-    async def _post(self, messages: list[dict[str, Any]]) -> Any:
+    async def post(self, messages: list[dict[str, Any]]) -> Any:
         payload = {
             "model": self._config.model,
             "messages": messages,

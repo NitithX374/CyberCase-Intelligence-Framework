@@ -11,12 +11,12 @@ logger = logging.getLogger("app.case_analysis")
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text"})
 
 
-def extractTextValue(value: object) -> str:
+def extract_text_value(value: object) -> str:
     """Recursively extract raw text values from provider block payload."""
     if isinstance(value, str):
         return value
     if isinstance(value, list):
-        return "".join(extractTextValue(item) for item in value)
+        return "".join(extract_text_value(item) for item in value)
     if not isinstance(value, Mapping):
         return ""
 
@@ -33,34 +33,34 @@ def extractTextValue(value: object) -> str:
         return text
 
     nested_content = value.get("content")
-    nested = extractTextValue(nested_content)
+    nested = extract_text_value(nested_content)
     if nested:
         return nested
 
     message = value.get("message")
-    return extractTextValue(message)
+    return extract_text_value(message)
 
 
-def extractVisibleText(payload: Mapping[str, object]) -> str:
+def extract_visible_text(payload: Mapping[str, object]) -> str:
     """Extract visible assistant text across supported provider response shapes."""
     direct_output = payload.get("output_text")
     if isinstance(direct_output, str):
         return direct_output
 
     content = payload.get("content")
-    answer = extractTextValue(content)
+    answer = extract_text_value(content)
     if answer:
         return answer
 
     choices = payload.get("choices")
     if isinstance(choices, list):
-        return extractTextValue(choices)
+        return extract_text_value(choices)
 
     output = payload.get("output")
-    return extractTextValue(output)
+    return extract_text_value(output)
 
 
-def logResponseShape(status_code: int, payload: Mapping[str, object]) -> None:
+def log_response_shape(status_code: int, payload: Mapping[str, object]) -> None:
     """Log provider shape metadata without logging prompts or answer text."""
     content = payload.get("content")
     block_types = []
@@ -84,8 +84,13 @@ def logResponseShape(status_code: int, payload: Mapping[str, object]) -> None:
     )
 
 
-def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
+def validate_response_payload(response: httpx.Response) -> dict[str, object]:
     """Validate HTTP response payload from analysis provider."""
+    if response.status_code in {408, 429, 504}:
+        raise CaseAnalysisFailure(
+            "analysis_provider_timeout",
+            "The post-answer analysis provider timed out",
+        )
     if response.status_code >= 500:
         raise CaseAnalysisFailure(
             "analysis_provider_down",
@@ -95,11 +100,6 @@ def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
         raise CaseAnalysisFailure(
             "analysis_provider_unauthorized",
             "The post-answer analysis provider credentials are invalid",
-        )
-    if response.status_code in {408, 429, 504}:
-        raise CaseAnalysisFailure(
-            "analysis_provider_timeout",
-            "The post-answer analysis provider timed out",
         )
     if response.status_code != 200:
         raise CaseAnalysisFailure(
@@ -121,7 +121,7 @@ def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
             "The post-answer analysis provider response was invalid",
         )
 
-    logResponseShape(response.status_code, response_payload)
+    log_response_shape(response.status_code, response_payload)
 
     if isinstance(response_payload.get("error"), dict):
         raise CaseAnalysisFailure(
@@ -151,8 +151,8 @@ def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
 
 
 __all__ = [
-    "extractTextValue",
-    "extractVisibleText",
-    "logResponseShape",
-    "validateResponsePayload",
+    "extract_text_value",
+    "extract_visible_text",
+    "log_response_shape",
+    "validate_response_payload",
 ]

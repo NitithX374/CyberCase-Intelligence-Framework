@@ -38,23 +38,3 @@ class RecognitionProviderError(DocumentRecognitionError):
 
 class RecognitionResponseError(DocumentRecognitionError):
     code = "document_recognition_invalid_response"
-
-
-class DocumentSegmentationError(Exception):
-    code = "document_segmentation_failed"
-
-
-class SegmentationConfigurationError(DocumentSegmentationError):
-    code = "document_segmenter_not_configured"
-
-
-class SegmentationTimeoutError(DocumentSegmentationError):
-    code = "document_segmentation_timeout"
-
-
-class SegmentationProviderError(DocumentSegmentationError):
-    code = "document_segmentation_provider_error"
-
-
-class SegmentationResponseError(DocumentSegmentationError):
-    code = "document_segmentation_invalid_response"

@@ -10,7 +10,7 @@ const evidence: EvidenceSourceRead = {
   source_kind: "narrative",
   document_id: null,
   origin_message_id: null,
-  exact_text: "Admitted case material",
+  exact_text: "Received case material",
   source_metadata_json: {},
   created_at: "2026-09-11T00:00:00Z",
   archived_at: null,
@@ -28,7 +28,7 @@ const document: CaseDocumentRead = {
     id: "extraction-1",
     document_id: "document-1",
     provider: "native_pdf",
-    extracted_text: "Reviewed statement",
+    extracted_text: "Received statement",
     config_json: {},
     provenance_json: {},
     warnings_json: [],
@@ -46,10 +46,8 @@ function renderIntake(overrides: Partial<React.ComponentProps<typeof CaseIntakeV
     isSubmitting: false,
     isCaseDataLoading: false,
     isUploadingDocument: false,
-    admittingExtractionId: null,
     onSubmitCase: vi.fn(),
     onUploadDocument: vi.fn(),
-    onAdmitExtraction: vi.fn(),
     ...overrides,
   };
   render(<CaseIntakeView {...props} />);
@@ -57,7 +55,7 @@ function renderIntake(overrides: Partial<React.ComponentProps<typeof CaseIntakeV
 }
 
 describe("Case preparation workflow", () => {
-  it("starts native analysis from admitted Case evidence without another narrative", () => {
+  it("starts native analysis from received Case evidence without another narrative", () => {
     const onSubmitCase = vi.fn();
     renderIntake({ evidence: [evidence], onSubmitCase });
 
@@ -74,16 +72,15 @@ describe("Case preparation workflow", () => {
     expect(screen.getByRole("button", { name: /Analyze case/i })).toBeDisabled();
   });
 
-  it("uses Case document upload and explicit extraction admission actions", () => {
+  it("receives Case documents after upload without a separate admission action", () => {
     const onUploadDocument = vi.fn();
-    const onAdmitExtraction = vi.fn();
-    renderIntake({ documents: [document], onUploadDocument, onAdmitExtraction });
+    renderIntake({ documents: [document], onUploadDocument });
 
     const file = new File(["pdf"], "new.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByLabelText("Add files"), { target: { files: [file] } });
-    fireEvent.click(screen.getByRole("button", { name: "Admit text" }));
 
     expect(onUploadDocument).toHaveBeenCalledWith(file);
-    expect(onAdmitExtraction).toHaveBeenCalledWith("document-1", "extraction-1");
+    expect(screen.getByText("Received")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Admit text" })).not.toBeInTheDocument();
   });
 });
