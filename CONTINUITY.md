@@ -3,7 +3,8 @@
 ## Snapshot
 
 - 2026-09-14 [USER] Approved the CyberCase compatibility-ghost cutover: preserve Case-owned evidence, analysis, follow-up, Chat, report, and optional MITRE behavior; remove snapshot/SHA/ChatThread/standalone Gap Analysis/fake lease compatibility.
-- 2026-09-14 [CODE] Current checkout is `main` at baseline `50edf7e`; implementation is intentionally uncommitted and no push, deploy, or live database migration is authorized.
+- 2026-09-14 [CODE] Superseded on 2026-09-15: checkout was `main` at baseline `50edf7e`; implementation was intentionally uncommitted and no push, deploy, or live database migration was authorized.
+- 2026-09-15 [TOOL] Current checkout is `main` at `8fcff59`, matching `origin/main`; the implementation commit is published, with no deploy or live database migration performed.
 - 2026-09-14 [CODE] Canonical evidence state is `Case.evidence_revision`; `CaseRun` captures that revision and no result may become current unless the revision is unchanged before assembly and before persistence.
 - 2026-09-14 [CODE] Authoritative evidence remains raw user-admitted `EvidenceSource` content with existing exact-quote/document/page provenance; assistant, chat, and MITRE context remain non-authoritative.
 - 2026-09-14 [CODE] Chat is Case-owned `ChatMessage`; there is no persisted `ChatThread` aggregate or `/api/v1/chats` route surface.
@@ -46,7 +47,8 @@
 - 2026-09-14 [TOOL] Incident: live Case `47b3be55-ee99-438d-b2ec-fa6f3531f765` report POST/PDF return 409 because persisted analysis trace still has removed `source_revision`/`evidence_sha256` fields; revisions are both 2, so this is not a revision mismatch.
 - 2026-09-14 [CODE] Done: `/case` is now a NotebookLM-inspired Case Library with latest-case continuation, search, sort, grid/list views, empty/error states, and explicit New Case navigation.
 - 2026-09-15 [CODE] Done: Case Library remains frontend-only; `useCaseChatSubmission` is the cleaned live Case Chat boundary; legacy evidence/chat aliases and report-only forensic framing are removed from the wire contract; report 409 diagnosis remains unchanged; readable Jinja2 HTML/PDF presentation is implemented and no live data mutation was performed.
-- 2026-09-15 [USER] Next: review the Case Library and new report preview in the running app; no commit, push, or deployment has been performed.
+- 2026-09-15 [USER] Next: review the Case Library and new report preview in the running app; implementation is published, with no deploy or live database migration performed.
+- 2026-09-15 [TOOL] Published: commit `8fcff59` is on `main` and `origin/main`; user-owned instruction, translation, and output files remain intentionally outside version control.
 
 ## Working set
 
@@ -84,3 +86,4 @@
 - 2026-09-15 [TOOL] Report cleanup verification: backend `162 passed, 4 skipped`; frontend `30 files/99 tests`; generated API types, TypeScript, API drift, production build, compileall, strict-contract smoke, and diff checks passed; lint retained only the two pre-existing warnings.
 - 2026-09-15 [CODE] Retired `research/render_sample_report.py` after confirming it was a broken historical sample with no production caller and full-forensics-only output; historical handover references remain intentionally untouched.
 - 2026-09-15 [TOOL] Readable report presentation verification: backend `165 passed, 4 skipped, 2 subtests`; frontend `30 files/99 tests`; focused presentation tests `3 passed`; scoped Ruff, TypeScript, production build, compileall, route checks, and diff checks passed; lint retains only the two pre-existing warnings.
+- 2026-09-15 [TOOL] `git ls-remote origin refs/heads/main` verified SHA `8fcff59` after the implementation push.
