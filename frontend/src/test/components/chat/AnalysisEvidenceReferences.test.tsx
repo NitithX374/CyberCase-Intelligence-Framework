@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
 import { AnalysisEvidenceReferences } from "@/components/conversation/AnalysisEvidenceReferences";
 
 function message(
@@ -11,7 +11,7 @@ function message(
 ): PersistedChatMessage {
   return {
     id,
-    thread_id: "thread-1",
+    case_id: "caseChat-1",
     ordinal: role === "user" ? 1 : 2,
     role,
     content,
@@ -23,23 +23,46 @@ function message(
   };
 }
 
+function evidenceSource(
+  id: string,
+  exactText: string,
+  sourceKind: string,
+  documentId: string | null = null,
+  filename: string | null = null,
+  pageNumber: number | null = null,
+): EvidenceSourceRead {
+  return {
+    id,
+    case_id: "caseChat-1",
+    source_kind: sourceKind,
+    document_id: documentId,
+    origin_message_id: null,
+    exact_text: exactText,
+    provenance_json: pageNumber === null
+      ? {}
+      : { pages: [{ page_number: pageNumber, start_offset: 0, end_offset: exactText.length }] },
+    source_metadata_json: filename ? { filename } : {},
+    created_at: "2026-09-01T00:00:00Z",
+    archived_at: null,
+  };
+}
+
 describe("AnalysisEvidenceReferences", () => {
   it("shows a narrative citation without inventing a page number", () => {
-    const source = message(
+    const source = evidenceSource(
       "source-1",
-      "user",
       "The witness reported seeing a blue vehicle near the entrance.",
-      { evidence_kind: "initial_case_narrative" },
+      "narrative",
     );
     const analysis = message("analysis-1", "assistant", "Case analysis", {
       analysis_trace: {
-        version: "analysis_trace_v3",
+        version: "case_analysis_trace_v1",
         validation_status: "validated",
         claims: [{
-          supporting_source_message_ids: ["source-1"],
-          contradicting_source_message_ids: [],
+          supporting_source_ids: ["source-1"],
+          contradicting_source_ids: [],
           supporting_citations: [{
-            source_message_id: "source-1",
+            source_id: "source-1",
             exact_quote: "seeing a blue vehicle",
             document_id: null,
             filename: null,
@@ -53,51 +76,25 @@ describe("AnalysisEvidenceReferences", () => {
     render(
       <AnalysisEvidenceReferences
         analysisMessage={analysis}
-        messages={[source, analysis]}
+        evidenceSources={[source]}
       />,
     );
-    expect(screen.getByRole("button", { name: "Case narrative" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Source source-1" })).toBeInTheDocument();
     expect(screen.queryByText(/p\. 1/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Case narrative" }));
+    fireEvent.click(screen.getByRole("button", { name: "Source source-1" }));
     expect(screen.getByText("seeing a blue vehicle").tagName).toBe("MARK");
   });
 
   it("shows page-first supporting and conflicting references", () => {
-    const supportingContent = "Page 4 records the transfer.";
-    const conflictingContent = "Page 5 disputes the transfer.";
-    const supporting = message("source-1", "user", supportingContent, {
-      evidence_kind: "initial_case_narrative",
-      document_sources: [{
-        document_id: "DOC-1",
-        filename: "statement.pdf",
-        page_spans: [{
-          page_number: 4,
-          start_offset: 0,
-          end_offset: supportingContent.length,
-          text_sha256: "hash",
-        }],
-      }],
-    });
-    const conflicting = message("source-2", "user", conflictingContent, {
-      evidence_kind: "clarification_answer",
-      document_sources: [{
-        document_id: "DOC-2",
-        filename: "rebuttal.pdf",
-        page_spans: [{
-          page_number: 5,
-          start_offset: 0,
-          end_offset: conflictingContent.length,
-          text_sha256: "hash",
-        }],
-      }],
-    });
+    const supporting = evidenceSource("source-1", "Page 4 records the transfer.", "reviewed_document", "DOC-1", "statement.pdf", 4);
+    const conflicting = evidenceSource("source-2", "Page 5 disputes the transfer.", "followup_answer", "DOC-2", "rebuttal.pdf", 5);
     const analysis = message("analysis-1", "assistant", "Case analysis", {
       analysis_trace: {
-        version: "analysis_trace_v3",
+        version: "case_analysis_trace_v1",
         validation_status: "validated",
         claims: [{
-          supporting_source_message_ids: ["source-1"],
-          contradicting_source_message_ids: ["source-2"],
+          supporting_source_ids: ["source-1"],
+          contradicting_source_ids: ["source-2"],
           supporting_citations: [citation("records the transfer", "source-1", "DOC-1", "statement.pdf", 4)],
           contradicting_citations: [citation("disputes the transfer", "source-2", "DOC-2", "rebuttal.pdf", 5)],
         }],
@@ -107,7 +104,7 @@ describe("AnalysisEvidenceReferences", () => {
     render(
       <AnalysisEvidenceReferences
         analysisMessage={analysis}
-        messages={[supporting, conflicting, analysis]}
+        evidenceSources={[supporting, conflicting]}
       />,
     );
 
@@ -121,13 +118,13 @@ describe("AnalysisEvidenceReferences", () => {
 
 function citation(
   exactQuote: string,
-  sourceMessageId: string,
+  sourceId: string,
   documentId: string,
   filename: string,
   pageNumber: number,
 ) {
   return {
-    source_message_id: sourceMessageId,
+    source_id: sourceId,
     exact_quote: exactQuote,
     document_id: documentId,
     filename,

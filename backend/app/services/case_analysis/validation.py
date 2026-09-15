@@ -16,18 +16,6 @@ from app.services.case_analysis.evidenceQuoteResolver import (
 )
 
 
-class AnalysisTraceStructureError(ValueError):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-
-
-class AnalysisTraceProvenanceError(ValueError):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-
-
 def validate_case_trace(
     trace: CaseAnalysisTrace,
     sources: tuple[CaseAdmittedSource, ...],
@@ -119,12 +107,12 @@ def _validate_claim(
     if not supporting.issubset(registry):
         raise CaseAnalysisFailure(
             "case_trace_support_outside_evidence",
-            "Case claim cites supporting evidence outside the snapshot",
+            "Case claim cites supporting evidence outside Case evidence",
         )
     if not contradicting.issubset(registry):
         raise CaseAnalysisFailure(
             "case_trace_contradiction_outside_evidence",
-            "Case claim cites contradicting evidence outside the snapshot",
+            "Case claim cites contradicting evidence outside Case evidence",
         )
     if supporting & contradicting:
         raise CaseAnalysisFailure(
@@ -195,7 +183,7 @@ def _normalize_citations(
     document_context: object,
 ) -> list[CaseEvidenceCitation]:
     normalized: list[CaseEvidenceCitation] = []
-    seen: set[tuple[str, int, str]] = set()
+    seen: set[tuple[str, str]] = set()
     for citation in citations:
         if citation.source_id not in allowed_ids:
             raise CaseAnalysisFailure(
@@ -203,11 +191,6 @@ def _normalize_citations(
                 f"A {role} citation is not bound to its claim role",
             )
         source = registry[citation.source_id]
-        if citation.source_revision != source.revision:
-            raise CaseAnalysisFailure(
-                "case_trace_citation_revision_invalid",
-                "Case citation revision does not match the pinned source revision",
-            )
         exact_quote = citation.exact_quote
         positions = quote_occurrences(source.content, exact_quote)
         if len(positions) == 0:
@@ -238,11 +221,10 @@ def _normalize_citations(
                 )
         canonical = CaseEvidenceCitation(
             source_id=source.source_id,
-            source_revision=source.revision,
             exact_quote=exact_quote,
             **locator,
         )
-        key = (canonical.source_id, canonical.source_revision, canonical.exact_quote)
+        key = (canonical.source_id, canonical.exact_quote)
         if key not in seen:
             normalized.append(canonical)
             seen.add(key)
@@ -264,7 +246,5 @@ def _admitted_technique_ids(value: object) -> set[str]:
 
 
 __all__ = [
-    "AnalysisTraceProvenanceError",
-    "AnalysisTraceStructureError",
     "validate_case_trace",
 ]

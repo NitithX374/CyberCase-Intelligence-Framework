@@ -1,23 +1,18 @@
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, CaseRunRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
 import type { CaseOverviewData } from "@/lib/case-overview-contracts";
 
 export function OverviewStatusRail({
   overview,
   result,
-  snapshot,
+  evidenceSources,
   runStatus,
 }: {
   overview: CaseOverviewData;
   result: CaseAnalysisResultRead | null;
-  snapshot: CaseEvidenceSnapshotRead | null;
+  evidenceSources: EvidenceSourceRead[];
   runStatus: CaseRunRead["status"] | null;
 }) {
-  const sourceEntries = Array.isArray(snapshot)
-    ? snapshot
-    : (snapshot && "manifest_json" in snapshot && Array.isArray((snapshot as Record<string, unknown>).manifest_json)
-      ? ((snapshot as Record<string, unknown>).manifest_json as Record<string, unknown>[]).filter(isManifestEntry)
-      : []);
-  const documentNames = uniqueDocumentNames(sourceEntries as Record<string, unknown>[]);
+  const documentNames = uniqueDocumentNames(evidenceSources);
   const citedSourceCount = new Set(
     overview.findings.flatMap((finding) => [
       ...finding.supportingSources.map((source) => source.id),
@@ -31,16 +26,8 @@ export function OverviewStatusRail({
         <Metric label="Analysis state" value={freshnessLabel(result)} tone={result?.freshness === "stale" ? "attention" : "positive"} />
         <Metric label="Completed" value={formatAnalysisDate(result?.created_at)} />
         <Metric
-          label={Array.isArray(snapshot) ? "Sources" : "Evidence revision"}
-          value={
-            !snapshot
-              ? "Unavailable"
-              : Array.isArray(snapshot)
-                ? String(snapshot.length)
-                : "evidence_revision" in snapshot && snapshot.evidence_revision !== undefined
-                  ? String(snapshot.evidence_revision)
-                  : "Unavailable"
-          }
+          label="Evidence revision"
+          value={result ? String(result.evidence_revision) : "Unavailable"}
         />
         <Metric label="Cited sources" value={String(citedSourceCount)} />
       </dl>
@@ -49,7 +36,7 @@ export function OverviewStatusRail({
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-3 py-2.5 text-[11px] text-ink-muted sm:px-4">
         <p>
-          {sourceEntries.length} evidence {sourceEntries.length === 1 ? "entry" : "entries"}
+          {evidenceSources.length} evidence {evidenceSources.length === 1 ? "entry" : "entries"}
           {documentNames.length > 0 ? ` across ${documentNames.length} ${documentNames.length === 1 ? "document" : "documents"}` : ""}
         </p>
         <details className="relative">
@@ -63,11 +50,7 @@ export function OverviewStatusRail({
             <RecordRow
               label="Evidence"
               value={
-                Array.isArray(snapshot)
-                  ? `${snapshot.length} sources`
-                  : snapshot && "id" in snapshot && snapshot.id
-                    ? String((snapshot as Record<string, unknown>).id)
-                    : "Unavailable"
+                result ? `revision ${result.evidence_revision}` : "Unavailable"
               }
               mono
             />
@@ -111,14 +94,10 @@ function RecordRow({ label, value, mono = false }: { label: string; value: strin
   );
 }
 
-function isManifestEntry(entry: unknown): entry is Record<string, unknown> {
-  return Boolean(entry) && typeof entry === "object" && !Array.isArray(entry);
-}
-
-function uniqueDocumentNames(entries: Record<string, unknown>[]): string[] {
+function uniqueDocumentNames(entries: EvidenceSourceRead[]): string[] {
   const names = new Set<string>();
   for (const entry of entries) {
-    const filename = String(entry.filename ?? "").trim();
+    const filename = String(entry.source_metadata_json?.filename ?? "").trim();
     if (filename) names.add(filename);
   }
   return [...names];

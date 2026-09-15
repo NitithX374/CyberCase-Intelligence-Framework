@@ -1,6 +1,5 @@
-import type { EvidenceSourceType } from "@/lib/case-evidence";
-
 export type ClaimType = "reported" | "analytical_inference" | "unknown";
+export type EvidenceSourceType = "case_description" | "clarification_response";
 export type EpistemicStatus =
   | "reported"
   | "suspected"
@@ -41,14 +40,6 @@ export interface EvidencePage {
   pageNumber: number;
   text: string;
   exactQuote: string | null;
-}
-
-export interface AnalysisEvidenceCitation {
-  sourceMessageId: string;
-  exactQuote: string;
-  documentId: string | null;
-  filename: string | null;
-  pageNumbers: number[];
 }
 
 export interface MitreTechniqueRef {

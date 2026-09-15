@@ -31,7 +31,7 @@ export default function OverviewPage() {
   const clarificationsQuery = useCaseClarifications(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId, activeCase?.chat_thread_id);
+  const runQuery = useCaseRunPolling(caseId ?? null, runId, caseId);
   const runStatus =
     runQuery.data?.status ??
     (activeCase?.processing_status === "queued" ||
@@ -60,16 +60,16 @@ export default function OverviewPage() {
 
   return (
     <CaseOverviewView
-      threadId={caseId}
-      threadTitle={activeCase?.title || "New case"}
-      threadStatus={activeCase?.status ?? "idle"}
+      caseId={caseId}
+      caseTitle={activeCase?.title || "New case"}
+      chatStatus={activeCase?.status ?? "idle"}
       analysisResult={analysisQuery.data ?? null}
-      evidenceSnapshot={evidenceQuery.data ?? null}
+      evidenceSources={evidenceQuery.data ?? []}
       runStatus={runStatus}
       run={runQuery.data ?? null}
       clarifications={clarificationsQuery.data ?? []}
       analysisLoading={analysisQuery.isLoading}
-      snapshotLoading={evidenceQuery.isLoading}
+      evidenceLoading={evidenceQuery.isLoading}
       onOpenChat={() => {}}
       onOpenReport={() => router.push(casePath(caseId, "report"))}
       onOpenIntake={() => router.push(casePath(caseId, "intake"))}

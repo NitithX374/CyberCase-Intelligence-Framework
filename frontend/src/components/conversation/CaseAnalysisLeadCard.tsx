@@ -1,26 +1,26 @@
 "use client";
 
 import { useMemo } from "react";
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { buildCaseOverview } from "@/lib/case-overview-builder";
 
 interface CaseAnalysisLeadCardProps {
   result: CaseAnalysisResultRead;
-  snapshot?: CaseEvidenceSnapshotRead | null;
+  evidenceSources?: EvidenceSourceRead[] | null;
   isUpdated?: boolean;
   onOpenOverview?: () => void;
 }
 
 export function CaseAnalysisLeadCard({
   result,
-  snapshot,
+  evidenceSources,
   isUpdated = false,
   onOpenOverview,
 }: CaseAnalysisLeadCardProps) {
   const summaryText = result.summary?.trim() || result.answer?.trim() || "";
   const isValidated = result.status === "validated";
-  const overview = useMemo(() => buildCaseOverview(result, snapshot ?? null, null), [result, snapshot]);
+  const overview = useMemo(() => buildCaseOverview(result, evidenceSources ?? null, null), [result, evidenceSources]);
   const findingCount = overview.hasAnalysis ? overview.findings.length : 0;
   const openQuestionCount = overview.hasAnalysis ? overview.gaps.length : 0;
   const freshnessLabel = result.freshness === "stale"
@@ -67,16 +67,8 @@ export function CaseAnalysisLeadCard({
           <Metric label="Findings" value={String(findingCount)} />
           <Metric label="Open questions" value={String(openQuestionCount)} />
           <Metric
-            label={Array.isArray(snapshot) ? "Sources" : "Evidence revision"}
-            value={
-              !snapshot
-                ? "—"
-                : Array.isArray(snapshot)
-                  ? String(snapshot.length)
-                  : "evidence_revision" in snapshot && snapshot.evidence_revision !== undefined
-                    ? String(snapshot.evidence_revision)
-                    : "—"
-            }
+            label="Evidence revision"
+            value={String(result.evidence_revision)}
           />
           <Metric label="Analysis state" value={freshnessLabel} emphasis={result.freshness === "stale" ? "attention" : "positive"} />
         </dl>

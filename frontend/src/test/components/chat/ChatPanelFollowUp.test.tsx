@@ -7,19 +7,19 @@ import type { PersistedChatMessage } from "@/lib/api";
 const messages: PersistedChatMessage[] = [
   {
     id: "message-1",
-    thread_id: "thread-1",
+    case_id: "caseChat-1",
     ordinal: 1,
     role: "user",
     content: "Investigate this PowerShell event.",
     retrieval_context_id: null,
     message_kind: "conversation",
     analysis_result_id: null,
-    metadata_json: { evidence_kind: "initial_case_narrative" },
+    metadata_json: {},
     created_at: "2026-08-23T00:00:00Z",
   },
   {
     id: "message-2",
-    thread_id: "thread-1",
+    case_id: "caseChat-1",
     ordinal: 2,
     role: "assistant",
     content: "Which affected host produced this event?",
@@ -27,8 +27,8 @@ const messages: PersistedChatMessage[] = [
     message_kind: "followup_question",
     analysis_result_id: null,
     metadata_json: {
+      action: "follow_up",
       chat_followup: {
-        kind: "clarification",
         root_ordinal: 1,
         round: 1,
         selected_gap_detail: {
@@ -55,7 +55,7 @@ describe("ChatPanel boundaries", () => {
       <ChatPanel
         messages={messages}
         input="host-7"
-        threadStatus="awaiting_followup"
+        chatStatus="awaiting_followup"
         phase="awaiting_followup"
         hasAnalysisContext
         onInputChange={onInputChange}
@@ -82,7 +82,7 @@ describe("ChatPanel boundaries", () => {
       <ChatPanel
         messages={[]}
         input=""
-        threadStatus="idle"
+        chatStatus="idle"
         phase="idle"
         hasAnalysisContext={false}
         onInputChange={vi.fn()}

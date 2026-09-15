@@ -1,12 +1,9 @@
-import type { ChatThreadDetail } from "./apiTypes";
-import type { ChatThreadDetail as ChatThreadDetailWire } from "./generated/chatTypes";
+import type { CaseChatDetail } from "./apiTypes";
+import type { CaseChatRead } from "./generated/chatTypes";
 
-export function normalizeChatThreadDetail(
-  detail: ChatThreadDetailWire,
-): ChatThreadDetail {
+export function normalizeCaseChat(detail: CaseChatRead): CaseChatDetail {
   return {
     ...detail,
     messages: detail.messages ?? [],
-    retry_request: detail.retry_request ?? null,
   };
 }

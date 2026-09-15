@@ -3,9 +3,6 @@
 import pytest
 from app.services.llm.modelRegistry import (
     DEFAULT_OPENROUTER_MODEL,
-    CURATED_MODEL_PRESETS,
-    format_model_table,
-    list_available_models,
     resolve_openrouter_model,
 )
 
@@ -49,15 +46,3 @@ def test_custom_model_passthrough():
     custom = "mistralai/mistral-large-2411"
     assert resolve_openrouter_model(custom) == custom
     assert resolve_openrouter_model(f"openrouter/{custom}") == custom
-
-
-def test_list_and_table_formatting():
-    models = list_available_models()
-    assert len(models) == len(CURATED_MODEL_PRESETS)
-    default_entry = next(m for m in models if m["canonical_id"] == DEFAULT_OPENROUTER_MODEL)
-    assert default_entry["is_default"] is True
-
-    table = format_model_table()
-    assert "CYBERCASE OPENROUTER MODEL REGISTRY" in table
-    assert "openai/gpt-5.6-luna" in table
-    assert "[DEFAULT]" in table

@@ -31,7 +31,7 @@ export default function IntakePage() {
   const analysisQuery = useCaseAnalysis(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId, activeCase?.chat_thread_id);
+  const runQuery = useCaseRunPolling(caseId ?? null, runId, caseId);
 
   const actions = useCaseWorkspaceActions({
     activeCaseId: caseId,

@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-import hashlib
-import json
-
 from app.schemas.reports import (
     PRELIMINARY_REPORT_SECTION_IDS,
     StructuredReport,
 )
-from app.services.reports.case_report_contracts import CaseReportInputSnapshot
 from app.services.reports.report_contracts import ReportValidationError
 
 
@@ -25,8 +21,6 @@ def validate_case_structured_report(
         if claim.claim_id in claim_ids:
             raise ReportValidationError("Report claim identifiers must be unique")
         claim_ids.add(claim.claim_id)
-        if claim.source_message_ids:
-            raise ReportValidationError("Case reports cannot cite chat message IDs")
         if not set(claim.source_evidence_ids).issubset(source_evidence_ids):
             raise ReportValidationError("A case report claim cites a non-evidence source")
         if not set(claim.mitre_technique_ids).issubset(mitre_ids):

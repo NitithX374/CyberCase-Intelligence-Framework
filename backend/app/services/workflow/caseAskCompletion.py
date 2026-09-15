@@ -12,7 +12,6 @@ from app.models.chat import ChatMessage
 from app.schemas.messageMetadata import serialize_message_metadata
 from app.services.case_analysis.contracts import CaseAnalysisTrace
 from app.services.case_materials import assembleCaseEvidence
-from app.services.chat.caseAnswer import ANSWER_VERSION
 from app.services.workflow.caseRunCompletion import (
     CaseRunCompletionError,
     _owns_run,
@@ -67,19 +66,12 @@ async def completeCaseAsk(
                 error_code=None,
                 error_message=None,
                 finished_at=now,
-                lease_owner=None,
-                lease_expires_at=None,
                 updated_at=now,
             )
             .returning(CaseRun.id)
         )
         if completion.scalar_one_or_none() is None:
             return False
-        analysis_freshness = (
-            "current"
-            if run.evidence_revision == case.evidence_revision
-            else "stale"
-        )
         next_ordinal = (
             await db.scalar(
                 select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
@@ -99,24 +91,8 @@ async def completeCaseAsk(
             in_reply_to_message_id=request_message.id,
             metadata_json=serialize_message_metadata(
                 {
-                    "analysis_kind": "question_answer",
-                    "analysis_state_scope": "response_scoped",
-                    "context_analysis_result_id": str(context_result.id),
-                    "evidence_source_ids": _trace_source_ids(trace),
+                    "action": "conversation",
                     "analysis_trace": trace.model_dump(mode="json"),
-                    "answer_receipt": output.execution_receipt,
-                    "analysis_freshness": analysis_freshness,
-                    "evidence_revision": run.evidence_revision,
-                    "case_evidence_revision": case.evidence_revision,
-                    "has_newer_evidence": bool(case.evidence_revision > run.evidence_revision),
-                    "chat_action": {
-                        "action": "ask",
-                        "route": "case",
-                        "rag_invoked": False,
-                        "retrieval_context_reused": False,
-                        "analysis_mode": "question_answer",
-                        "prompt_version": ANSWER_VERSION,
-                    },
                 }
             ),
         )
@@ -124,14 +100,4 @@ async def completeCaseAsk(
         case.updated_at = now
         await db.flush()
     return True
-
-
-def _trace_source_ids(trace: CaseAnalysisTrace) -> list[str]:
-    ids: list[str] = []
-    for claim in trace.claims:
-        ids.extend(claim.supporting_source_ids)
-        ids.extend(claim.contradicting_source_ids)
-    return list(dict.fromkeys(ids))
-
-
 __all__ = ["completeCaseAsk"]

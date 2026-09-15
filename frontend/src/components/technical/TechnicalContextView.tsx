@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
 import type { SourceMessageRef } from "@/lib/case-overview-contracts";
@@ -15,7 +15,7 @@ import {
 
 interface TechnicalContextViewProps {
   analysisResult: CaseAnalysisResultRead | null;
-  evidenceSnapshot: CaseEvidenceSnapshotRead | null;
+  evidenceSources: EvidenceSourceRead[] | null;
   onOpenIntake?: () => void;
   onNavigateToSource?: (messageId: string) => void;
 }
@@ -180,11 +180,11 @@ function ContextStatus({ data }: { data: TechnicalContextData }) {
 
 export function TechnicalContextView({
   analysisResult,
-  evidenceSnapshot,
+  evidenceSources,
   onOpenIntake,
   onNavigateToSource,
 }: TechnicalContextViewProps) {
-  const contextData = buildTechnicalContext(analysisResult, evidenceSnapshot);
+  const contextData = buildTechnicalContext(analysisResult, evidenceSources);
   const [activeSource, setActiveSource] = useState<{
     source: SourceMessageRef;
     element: HTMLElement;

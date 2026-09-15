@@ -17,7 +17,6 @@ class CaseClarificationRead(BaseModel):
     id: UUID
     case_id: UUID
     origin_analysis_result_id: UUID
-    origin_snapshot_id: UUID
     gap_key: str
     gap_id: str
     topic: str

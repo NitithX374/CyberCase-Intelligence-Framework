@@ -15,18 +15,18 @@ describe("Case workspace routes", () => {
   });
 
   it("does not expose deleted extraction or relationship routes", () => {
-    expect(caseRouteState("/case/thread-1/extraction")).toEqual({
-      caseId: "thread-1",
+    expect(caseRouteState("/case/caseChat-1/extraction")).toEqual({
+      caseId: "caseChat-1",
       view: "overview",
     });
-    expect(caseRouteState("/case/thread-1/relationships")).toEqual({
-      caseId: "thread-1",
+    expect(caseRouteState("/case/caseChat-1/relationships")).toEqual({
+      caseId: "caseChat-1",
       view: "overview",
     });
-    expect(casePath("thread-1", "overview")).toBe("/case/thread-1/overview");
+    expect(casePath("caseChat-1", "overview")).toBe("/case/caseChat-1/overview");
   });
 
   it("treats non-Case paths as an unselected Case workspace", () => {
-    expect(caseRouteState("/chat/thread-1/materials")).toEqual({ caseId: null, view: "overview" });
+    expect(caseRouteState("/chat/caseChat-1/materials")).toEqual({ caseId: null, view: "overview" });
   });
 });

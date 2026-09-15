@@ -51,7 +51,7 @@ export function useAuth({ enabled = true }: { enabled?: boolean } = {}) {
     mutationFn: (payload: DevLoginPayload) => devLogin(payload),
     onSuccess: (data) => {
       queryClient.setQueryData(authQueryKeys.session(), data.user);
-      queryClient.invalidateQueries({ queryKey: chatQueryKeys.threads() });
+      queryClient.invalidateQueries({ queryKey: chatQueryKeys.all });
     },
   });
 

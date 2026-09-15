@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import re
 import unicodedata
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 
-from app.services.case_analysis.contracts import (
-    CaseAnalysisGap,
-    CaseAnalysisTrace,
-)
+from app.services.case_analysis.contracts import CaseAnalysisGap
 from app.services.followup.contracts import answer_indicates_unavailable
-from app.services.followup.contracts import ClarificationExchange, GapAnalysis, GapItem
+from app.services.followup.contracts import ClarificationExchange
 
 
 _PRIORITY_RANK = {"high": 0, "medium": 1}
@@ -65,23 +61,22 @@ def normalize_gap_key(topic: str) -> str:
 
 
 def apply_clarification_history(
-    analysis: GapAnalysis,
+    gaps: Sequence[CaseAnalysisGap],
     exchanges: Sequence[ClarificationExchange],
-) -> GapAnalysis:
+) -> tuple[CaseAnalysisGap, ...]:
     exhausted = exhausted_gap_keys(exchanges)
     unavailable = unavailable_gap_keys(exchanges)
-    gaps: list[GapItem] = []
-    for gap in analysis.gaps:
+    updated_gaps: list[CaseAnalysisGap] = []
+    for gap in gaps:
         key = normalize_gap_key(gap.topic)
         if key not in exhausted:
-            gaps.append(gap)
+            updated_gaps.append(gap)
             continue
-        payload = gap.model_dump(mode="json")
-        payload["askable"] = False
+        updates: dict[str, object] = {"askable": False}
         if key in unavailable and gap.status == "NOT_PROVIDED":
-            payload["status"] = "EXPLICITLY_UNKNOWN"
-        gaps.append(GapItem.model_validate(payload))
-    return GapAnalysis(gaps=gaps)
+            updates["status"] = "EXPLICITLY_UNKNOWN"
+        updated_gaps.append(gap.model_copy(update=updates))
+    return tuple(updated_gaps)
 
 
 def exhausted_gap_keys(
@@ -109,9 +104,9 @@ def unavailable_gap_keys(
 
 
 def select_next_gap(
-    gaps: Sequence[CaseAnalysisGap | GapItem],
+    gaps: Sequence[CaseAnalysisGap],
     exchanges: Sequence[ClarificationExchange],
-) -> CaseAnalysisGap | GapItem | None:
+) -> CaseAnalysisGap | None:
     exhausted = exhausted_gap_keys(exchanges)
     candidates = [
         (index, gap)
@@ -133,71 +128,15 @@ def select_next_gap(
     )[1]
 
 
-def policy_gap(gap: CaseAnalysisGap | GapItem) -> GapItem:
-    if isinstance(gap, GapItem):
-        return gap
-    return GapItem(
-        topic=gap.topic,
-        status=gap.status,
-        description=gap.description,
-        affects=", ".join(gap.affected_claim_ids) or "case-level context",
-        reason=gap.reason,
-        priority=gap.priority,
-        askable=gap.askable,
-    )
-
-
-def relevant_claim_context(
-    trace: CaseAnalysisTrace,
-    gap: CaseAnalysisGap,
-) -> dict[str, object]:
-    affected = set(gap.affected_claim_ids)
-    return {
-        "relevant_claims": [
-            {
-                "claim_id": claim.claim_id,
-                "text": claim.text,
-                "epistemic_status": claim.epistemic_status,
-            }
-            for claim in trace.claims
-            if claim.claim_id in affected
-        ]
-    }
-
-
 def followup_context(
-    gap: CaseAnalysisGap | GapItem,
-    *,
-    evidence_sha256: str | None,
+    gap: CaseAnalysisGap,
 ) -> dict[str, str]:
     context = {
+        "gap_id": gap.gap_id,
         "gap_topic": gap.topic,
         "gap_key": normalize_gap_key(gap.topic),
     }
-    gap_id = gap.gap_id if isinstance(gap, CaseAnalysisGap) else None
-    if gap_id is not None:
-        context["gap_id"] = gap_id
-    if evidence_sha256 is not None:
-        context["evidence_sha256"] = evidence_sha256
     return context
-
-
-def clarification_answer_context(
-    question_message_id: str,
-    context: Mapping[str, object],
-) -> dict[str, str]:
-    output = {"question_message_id": question_message_id}
-    mapping = {
-        "gap_id": "answered_gap_id",
-        "gap_topic": "answered_gap_topic",
-        "gap_key": "answered_gap_key",
-        "evidence_sha256": "question_evidence_sha256",
-    }
-    for source, target in mapping.items():
-        value = context.get(source)
-        if isinstance(value, str) and value:
-            output[target] = value
-    return output
 
 
 def _exchange_gap_key(exchange: ClarificationExchange) -> str | None:
@@ -208,20 +147,15 @@ def _exchange_gap_key(exchange: ClarificationExchange) -> str | None:
     return None
 
 
-def _has_claim_links(gap: CaseAnalysisGap | GapItem) -> bool:
-    if isinstance(gap, CaseAnalysisGap):
-        return bool(gap.affected_claim_ids)
-    return bool(re.search(r"(?<![A-Z0-9])A-\d{2,}(?![A-Z0-9])", gap.affects))
+def _has_claim_links(gap: CaseAnalysisGap) -> bool:
+    return bool(gap.affected_claim_ids)
 
 
 __all__ = [
     "apply_clarification_history",
-    "clarification_answer_context",
     "exhausted_gap_keys",
     "followup_context",
     "normalize_gap_key",
-    "policy_gap",
-    "relevant_claim_context",
     "select_next_gap",
     "unavailable_gap_keys",
 ]

@@ -2,7 +2,7 @@
 
 import { accountStorageKey, readAccountValue, writeAccountValue } from "@/lib/account-storage";
 import { useCallback, useRef, useState } from "react";
-import type { ChatMessageAction, ChatThreadDetail, ThreadStatus } from "@/lib/api";
+import type { CaseChatDetail, CaseChatStatus } from "@/lib/api";
 import type { RunPhase } from "@/components/common/types";
 import {
   hasCompletedAssistantOutput,
@@ -13,18 +13,17 @@ import type { PendingChatSubmission } from "./chat-workspace-types";
 
 interface ChatDraftState {
   input: string;
-  postAnswerAction: ChatMessageAction | null;
-  pendingFollowUp: { threadId: string; followUp: ActiveChatFollowUp } | null;
+  pendingFollowUp: { caseId: string; followUp: ActiveChatFollowUp } | null;
   queryError: string | null;
-  activity: { phase: RunPhase; threadStatus: ThreadStatus | null } | null;
+  activity: { phase: RunPhase; chatStatus: CaseChatStatus | null } | null;
 }
 
 const emptyDraft: ChatDraftState = {
-  input: "", postAnswerAction: "ask", pendingFollowUp: null,
+  input: "", pendingFollowUp: null,
   queryError: null, activity: null,
 };
 
-export function determineThreadPhase(detail: ChatThreadDetail | undefined): RunPhase {
+export function determineCaseChatPhase(detail: CaseChatDetail | undefined): RunPhase {
   if (!detail) return "idle";
   if (detail.status === "processing") return "querying";
   if (detail.status === "awaiting_followup") return "awaiting_followup";
@@ -32,47 +31,42 @@ export function determineThreadPhase(detail: ChatThreadDetail | undefined): RunP
   return detail.messages.length > 0 ? "ready" : "idle";
 }
 
-export const phaseForThread = determineThreadPhase;
+export const phaseForCaseChat = determineCaseChatPhase;
 
 export function useChatDraft() {
   const [state, setState] = useState(() => ({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" }));
-  const draftThreadRef = useRef("new");
+  const draftCaseRef = useRef("new");
   const pendingRef = useRef<PendingChatSubmission | null>(null);
   const getPendingSubmission = useCallback(() => pendingRef.current, []);
   const changeInput = useCallback((input: string) => {
-    writeAccountValue(`draft:${draftThreadRef.current}`, input);
+    writeAccountValue(`draft:${draftCaseRef.current}`, input);
     setState((current) => ({ ...current, input }));
-  }, []);
-  const changePostAnswerAction = useCallback((postAnswerAction: ChatMessageAction | null) => {
-    writeAccountValue(`action:${draftThreadRef.current}`, postAnswerAction ?? "ask");
-    setState((current) => ({ ...current, postAnswerAction }));
   }, []);
   const reportError = useCallback((queryError: string | null) => {
     setState((current) => ({ ...current, queryError }));
   }, []);
-  const selectDraft = useCallback((threadId: string) => {
-    const previousThreadId = draftThreadRef.current;
-    draftThreadRef.current = threadId;
-    if (pendingRef.current?.threadId !== threadId) pendingRef.current = readPendingSubmission(threadId);
+  const selectDraft = useCallback((caseId: string) => {
+    const previousCaseId = draftCaseRef.current;
+    draftCaseRef.current = caseId;
+    if (pendingRef.current?.caseId !== caseId) pendingRef.current = readPendingSubmission(caseId);
     const pending = pendingRef.current;
     setState((current) => {
-      const persistedDraft = readAccountValue(`draft:${threadId}`) ?? "";
-      const isUnsavedNewDraft = previousThreadId === "new" && Boolean(current.input) && !persistedDraft;
-      const input = pending?.threadId === threadId && pending.kind === "followup"
+      const persistedDraft = readAccountValue(`draft:${caseId}`) ?? "";
+      const isUnsavedNewDraft = previousCaseId === "new" && Boolean(current.input) && !persistedDraft;
+      const input = pending?.caseId === caseId && pending.kind === "followup"
         ? pending.content
         : isUnsavedNewDraft
           ? current.input
           : persistedDraft;
       if (isUnsavedNewDraft) {
-        writeAccountValue(`draft:${threadId}`, current.input);
+        writeAccountValue(`draft:${caseId}`, current.input);
       }
       return {
         ...current,
         input,
-        postAnswerAction: pending?.threadId === threadId ? pending.action ?? "ask" : readAccountValue(`action:${threadId}`) === "add_case_info" ? "add_case_info" : "ask",
-        pendingFollowUp: current.pendingFollowUp?.threadId === threadId ? current.pendingFollowUp : null,
-        queryError: pending?.threadId === threadId ? current.queryError : null,
-        activity: pending ? { phase: "querying", threadStatus: "processing" } : null,
+        pendingFollowUp: current.pendingFollowUp?.caseId === caseId ? current.pendingFollowUp : null,
+        queryError: pending?.caseId === caseId ? current.queryError : null,
+        activity: pending ? { phase: "querying", chatStatus: "processing" } : null,
       };
     });
   }, []);
@@ -81,8 +75,8 @@ export function useChatDraft() {
     persistPendingSubmission(pending);
     setState((current) => ({
       ...current, queryError: null,
-      activity: { phase: "querying", threadStatus: "processing" },
-      pendingFollowUp: followUp ? { threadId: pending.threadId, followUp } : current.pendingFollowUp,
+      activity: { phase: "querying", chatStatus: "processing" },
+      pendingFollowUp: followUp ? { caseId: pending.caseId, followUp } : current.pendingFollowUp,
     }));
   }, []);
   const acceptSubmission = useCallback((key: string, ordinal: number) => {
@@ -94,80 +88,80 @@ export function useChatDraft() {
   }, []);
   const failSubmission = useCallback((
     kind: PendingChatSubmission["kind"],
-    statusBeforeSubmit: ThreadStatus | null,
+    statusBeforeSubmit: CaseChatStatus | null,
     queryError: string,
   ) => {
     setState((current) => ({
       ...current, queryError,
       activity: kind === "followup"
-        ? { phase: "awaiting_followup", threadStatus: "awaiting_followup" }
-        : { phase: "error", threadStatus: statusBeforeSubmit },
+        ? { phase: "awaiting_followup", chatStatus: "awaiting_followup" }
+        : { phase: "error", chatStatus: statusBeforeSubmit },
     }));
   }, []);
   const failSelection = useCallback((queryError: string) => {
     setState((current) => ({
-      ...current, queryError, activity: { phase: "error", threadStatus: null },
+      ...current, queryError, activity: { phase: "error", chatStatus: null },
     }));
   }, []);
-  const reconcile = useCallback((detail: ChatThreadDetail, failureMessage?: string) => {
-    if (!pendingRef.current) pendingRef.current = readPendingSubmission(detail.id);
+  const reconcile = useCallback((detail: CaseChatDetail, failureMessage?: string) => {
+    if (!pendingRef.current) pendingRef.current = readPendingSubmission(detail.case_id);
     const pending = pendingRef.current;
-    const requestOrdinal = pending?.threadId === detail.id
+    const requestOrdinal = pending?.caseId === detail.case_id
       ? pending.requestOrdinal ?? persistedRequestOrdinal(detail, pending.lastKnownMessageOrdinal, pending.content)
       : undefined;
-    if (pending?.threadId === detail.id && requestOrdinal !== undefined) {
+    if (pending?.caseId === detail.case_id && requestOrdinal !== undefined) {
       pendingRef.current = { ...pending, requestOrdinal };
       persistPendingSubmission(pendingRef.current);
     }
     const isFollowup = pending?.kind === "followup";
-    const completed = pending?.threadId === detail.id && requestOrdinal !== undefined &&
+    const completed = pending?.caseId === detail.case_id && requestOrdinal !== undefined &&
       (isFollowup
         ? (detail.status === "idle" || detail.status === "answered" || detail.status === "awaiting_followup")
         : hasCompletedAssistantOutput(detail, requestOrdinal));
     if (completed) {
       pendingRef.current = null;
-      removePendingSubmission(detail.id);
-      writeAccountValue(`draft:${detail.id}`, "");
+      removePendingSubmission(detail.case_id);
+      writeAccountValue(`draft:${detail.case_id}`, "");
     }
     setState((current) => ({
       ...current, activity: null,
       queryError: failureMessage || (detail.status === "failed"
         ? "Background processing failed. Retry the saved message."
-        : pending?.threadId !== detail.id || requestOrdinal !== undefined ? null : current.queryError),
-      ...(completed ? { input: "", pendingFollowUp: null, postAnswerAction: "ask" } : {}),
+        : pending?.caseId !== detail.case_id || requestOrdinal !== undefined ? null : current.queryError),
+      ...(completed ? { input: "", pendingFollowUp: null } : {}),
     }));
   }, []);
   const clearDraft = useCallback(() => {
-    draftThreadRef.current = "new";
+    draftCaseRef.current = "new";
     setState({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" });
   }, []);
-  const forgetThread = useCallback((threadId: string) => {
-    if (pendingRef.current?.threadId === threadId) pendingRef.current = null;
-    removePendingSubmission(threadId);
-    setState((current) => current.pendingFollowUp?.threadId === threadId
+  const forgetCaseChat = useCallback((caseId: string) => {
+    if (pendingRef.current?.caseId === caseId) pendingRef.current = null;
+    removePendingSubmission(caseId);
+    setState((current) => current.pendingFollowUp?.caseId === caseId
       ? { ...current, pendingFollowUp: null } : current);
   }, []);
 
   return {
-    state, getPendingSubmission, changeInput, changePostAnswerAction, reportError,
+    state, getPendingSubmission, changeInput, reportError,
     selectDraft, beginSubmission, acceptSubmission, failSubmission, failSelection,
-    reconcile, clearDraft, forgetThread,
+    reconcile, clearDraft, forgetCaseChat,
   };
 }
 
-function pendingStorageKey(threadId: string): string {
-  return `pending-case-chat:${threadId}`;
+function pendingStorageKey(caseId: string): string {
+  return `pending-case-chat:${caseId}`;
 }
 
-function readPendingSubmission(threadId: string): PendingChatSubmission | null {
-  const saved = readAccountValue(pendingStorageKey(threadId));
+function readPendingSubmission(caseId: string): PendingChatSubmission | null {
+  const saved = readAccountValue(pendingStorageKey(caseId));
   return saved === null ? null : JSON.parse(saved) as PendingChatSubmission;
 }
 
 function persistPendingSubmission(pending: PendingChatSubmission): void {
-  writeAccountValue(pendingStorageKey(pending.threadId), JSON.stringify(pending));
+  writeAccountValue(pendingStorageKey(pending.caseId), JSON.stringify(pending));
 }
 
-function removePendingSubmission(threadId: string): void {
-  if (typeof window !== "undefined") localStorage.removeItem(accountStorageKey(pendingStorageKey(threadId)));
+function removePendingSubmission(caseId: string): void {
+  if (typeof window !== "undefined") localStorage.removeItem(accountStorageKey(pendingStorageKey(caseId)));
 }

@@ -1,4 +1,3 @@
-import hashlib
 import unittest
 from unittest.mock import patch
 
@@ -50,7 +49,6 @@ def test_quote_alignment_preserves_source_text_when_ocr_wraps_a_word() -> None:
 def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
     citation = CaseEvidenceCitation(
         source_id="s1",
-        source_revision=1,
         exact_quote="The report",
     )
     claim = CaseAnalysisClaim(
@@ -78,9 +76,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
     async def test_provenance_failure_gets_one_corrective_provider_pass(self) -> None:
         source = CaseAdmittedSource(
             source_id="s1",
-            revision=1,
             content="The report was submitted.",
-            content_sha256=hashlib.sha256(b"The report was submitted.").hexdigest(),
         )
         calls: list[tuple[str, str]] = []
 
@@ -89,7 +85,6 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             return provider_result(contradicting=len(calls) == 1)
 
         raw_evidence = "[SOURCE s1]\nThe report was submitted."
-        digest = hashlib.sha256(raw_evidence.encode()).hexdigest()
         with patch(
             "app.services.case_analysis.caseAnalysis.requestAnalysisStage",
             new=request_stage,
@@ -103,10 +98,8 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
                 AnalysisPipelineConfig(),
                 (source,),
                 object(),
-                digest,
-                {"calls": []},
-                "case_overview",
-                None,
+                receipt={"calls": []},
+                mode="case_overview",
             )
 
         self.assertIsNotNone(result.trace)

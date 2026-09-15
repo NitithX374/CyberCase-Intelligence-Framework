@@ -4,22 +4,17 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Mapping, Sequence
 
 import httpx
 
 from app.config import settings
+from app.services.case_analysis.contracts import CaseAnalysisGap
 from app.services.followup.helpers import _extract_llm_json, _extract_llm_text
 from app.services.followup.prompts import (
-    FOLLOWUP_POLICY_PROVIDER,
     FOLLOWUP_POLICY_SCHEMA,
     FOLLOWUP_POLICY_SYSTEM,
-    FOLLOWUP_POLICY_VERSION,
-    FOLLOWUP_PROMPT_VERSION,
 )
 from app.services.followup.contracts import (
-    ClarificationExchange,
-    GapAnalysis,
     FollowUpDecision,
     FollowUpPolicyResult,
 )
@@ -35,21 +30,11 @@ class AnthropicFollowUpPolicy:
     async def decide(
         self,
         *,
-        original_user_content: str,
-        clarification_exchanges: Sequence[ClarificationExchange],
-        gap_analysis: GapAnalysis | Mapping[str, object] | None = None,
-        raw_evidence: str | None = None,
-        analysis_answer: str | None = None,
-        analysis_context: Mapping[str, object] | None = None,
+        selected_gap: CaseAnalysisGap,
         client: httpx.AsyncClient | None = None,
     ) -> FollowUpDecision:
         result = await self.decide_with_metadata(
-            original_user_content=original_user_content,
-            clarification_exchanges=clarification_exchanges,
-            gap_analysis=gap_analysis,
-            raw_evidence=raw_evidence,
-            analysis_answer=analysis_answer,
-            analysis_context=analysis_context,
+            selected_gap=selected_gap,
             client=client,
         )
         return result.decision
@@ -57,17 +42,10 @@ class AnthropicFollowUpPolicy:
     async def decide_with_metadata(
         self,
         *,
-        original_user_content: str,
-        clarification_exchanges: Sequence[ClarificationExchange],
-        gap_analysis: GapAnalysis | Mapping[str, object] | None = None,
-        raw_evidence: str | None = None,
-        analysis_answer: str | None = None,
-        analysis_context: Mapping[str, object] | None = None,
+        selected_gap: CaseAnalysisGap,
         client: httpx.AsyncClient | None = None,
     ) -> FollowUpPolicyResult:
         target = resolve_core_llm_target(settings.chat_followup_policy_model)
-        normalized_gap_analysis = _normalize_gap_analysis(gap_analysis)
-        selected_gap = normalized_gap_analysis.gaps[0]
         bounded_payload = {"selected_gap": selected_gap.model_dump(mode="json")}
         request_payload = {
             "model": target.model,
@@ -167,16 +145,6 @@ class AnthropicFollowUpPolicy:
         )
 
 
-def _normalize_gap_analysis(
-    value: GapAnalysis | Mapping[str, object] | None,
-) -> GapAnalysis:
-    if value is None:
-        return GapAnalysis(gaps=[])
-    if isinstance(value, GapAnalysis):
-        return value
-    return GapAnalysis.model_validate(value)
-
-
 def _nonnegative_int(value: object) -> int | None:
     if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
         return value
@@ -185,7 +153,4 @@ def _nonnegative_int(value: object) -> int | None:
 
 __all__ = [
     "AnthropicFollowUpPolicy",
-    "FOLLOWUP_POLICY_PROVIDER",
-    "FOLLOWUP_POLICY_VERSION",
-    "FOLLOWUP_PROMPT_VERSION",
 ]

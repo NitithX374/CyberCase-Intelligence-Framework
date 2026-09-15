@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
 import type { SourceMessageRef } from "@/lib/case-overview-contracts";
 import { sourceReferencesForAnalysisMessage } from "@/lib/analysis-citations";
 import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
@@ -9,16 +9,16 @@ import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip
 
 interface AnalysisEvidenceReferencesProps {
   analysisMessage: PersistedChatMessage;
-  messages: PersistedChatMessage[];
+  evidenceSources: EvidenceSourceRead[];
   onNavigateToSource?: (messageId: string) => void;
 }
 
 export function AnalysisEvidenceReferences({
   analysisMessage,
-  messages,
+  evidenceSources,
   onNavigateToSource,
 }: AnalysisEvidenceReferencesProps) {
-  const references = sourceReferencesForAnalysisMessage(analysisMessage, messages);
+  const references = sourceReferencesForAnalysisMessage(analysisMessage, evidenceSources);
   const [active, setActive] = useState<{
     key: string;
     source: SourceMessageRef;

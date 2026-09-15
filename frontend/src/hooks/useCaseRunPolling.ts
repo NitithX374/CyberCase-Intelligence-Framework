@@ -9,7 +9,7 @@ import { caseQueryKeys } from "./useCaseQueries";
 export function useCaseRunPolling(
   caseId: string | null,
   runId: string | null | undefined,
-  chatThreadId: string | null | undefined,
+  caseChatId: string | null | undefined,
 ) {
   const queryClient = useQueryClient();
   const lastInvalidated = useRef<string | null>(null);
@@ -36,14 +36,14 @@ export function useCaseRunPolling(
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.clarifications(caseId) });
-    if (chatThreadId) {
+    if (caseChatId) {
       void queryClient.refetchQueries({
-        queryKey: chatQueryKeys.detail(chatThreadId),
+        queryKey: chatQueryKeys.detail(caseChatId),
         exact: true,
         type: "all",
       });
     }
-  }, [caseId, chatThreadId, query.data?.status, query.data?.attempt_count, queryClient, runId]);
+  }, [caseChatId, caseId, query.data?.status, query.data?.attempt_count, queryClient, runId]);
 
   return query;
 }

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-import re
 from collections.abc import Mapping
-from copy import deepcopy
 
 import httpx
 
@@ -11,37 +9,6 @@ from app.services.case_analysis.contracts import CaseAnalysisFailure
 
 logger = logging.getLogger("app.case_analysis")
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text"})
-
-
-def formatIdentifier(value: object, prefix: str, aliases: str) -> object:
-    """Format claim or association identifier into normalized prefix-number string."""
-    if not isinstance(value, str):
-        return value
-    match = re.fullmatch(rf"(?:{aliases})[-_]?([0-9]+)", value.strip(), re.I)
-    return f"{prefix}-{int(match[1]):02d}" if match else value
-
-
-def normalizeAnalysisIdentifiers(payload: dict[str, object]) -> dict[str, object]:
-    """Normalize claim IDs and association IDs across parsed analysis payload."""
-    normalized = deepcopy(payload)
-    for collection, field, prefix, aliases in (
-        ("claims", "claim_id", "A", "A|claim|c"),
-        ("mitre_associations", "association_id", "MA", "MA|assoc|association"),
-    ):
-        rows = normalized.get(collection)
-        if not isinstance(rows, list):
-            continue
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            if field in row:
-                row[field] = formatIdentifier(row[field], prefix, aliases)
-            references = row.get("claim_ids")
-            if isinstance(references, list):
-                row["claim_ids"] = [
-                    formatIdentifier(value, "A", "A|claim|c") for value in references
-                ]
-    return normalized
 
 
 def extractTextValue(value: object) -> str:
@@ -117,34 +84,6 @@ def logResponseShape(status_code: int, payload: Mapping[str, object]) -> None:
     )
 
 
-def stripTrailingOcrBoilerplate(text: str) -> str:
-    """Strip default trailing OCR metadata disclaimers emitted by provider."""
-    if not text:
-        return text
-    lines = text.rstrip().split("\n")
-    while lines:
-        last_line = lines[-1].strip()
-        if not last_line:
-            lines.pop()
-            continue
-        cleaned = last_line.lstrip("*-# \t").rstrip(".*- \t")
-        if any(
-            marker in cleaned.lower()
-            for marker in (
-                "ocr confidence",
-                "ocr quality",
-                "extraction metadata",
-                "document recognition quality",
-                "low confidence",
-                "unverified extraction",
-            )
-        ):
-            lines.pop()
-            continue
-        break
-    return "\n".join(lines).rstrip()
-
-
 def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
     """Validate HTTP response payload from analysis provider."""
     if response.status_code >= 500:
@@ -214,9 +153,6 @@ def validateResponsePayload(response: httpx.Response) -> dict[str, object]:
 __all__ = [
     "extractTextValue",
     "extractVisibleText",
-    "formatIdentifier",
     "logResponseShape",
-    "normalizeAnalysisIdentifiers",
-    "stripTrailingOcrBoilerplate",
     "validateResponsePayload",
 ]

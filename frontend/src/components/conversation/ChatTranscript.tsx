@@ -1,24 +1,22 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, PersistedChatMessage } from "@/lib/api";
+import type { CaseAnalysisResultRead, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
 import {
   followUpGapDetailForMessage,
 } from "@/lib/chat-followup";
-import { mitreCandidatesForMessage } from "@/lib/mitre-candidate";
 import { Icon } from "@/components/common/icons";
 import { StatusPill } from "@/components/common/StatusPill";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { AnalysisEvidenceReferences } from "./AnalysisEvidenceReferences";
 import { FollowUpActionCard } from "./FollowUpActionCard";
-import { MitreCandidatePanel } from "./MitreCandidatePanel";
 import { CaseAnalysisLeadCard } from "./CaseAnalysisLeadCard";
 
 interface ChatTranscriptProps {
   messages: PersistedChatMessage[];
   isProcessing: boolean;
   leadResult?: CaseAnalysisResultRead | null;
-  leadSnapshot?: CaseEvidenceSnapshotRead | null;
+  evidenceSources?: EvidenceSourceRead[] | null;
   onOpenOverview?: () => void;
   onNavigateToSource?: (messageId: string) => void;
 }
@@ -27,7 +25,7 @@ export function ChatTranscript({
   messages,
   isProcessing,
   leadResult,
-  leadSnapshot,
+  evidenceSources,
   onOpenOverview,
   onNavigateToSource,
 }: ChatTranscriptProps) {
@@ -40,7 +38,7 @@ export function ChatTranscript({
   const leadResultIdRef = useRef<string | null>(leadResult?.id ?? null);
   const hasClarificationUpdate = messages.some((message) =>
     message.role === "user" &&
-    (message.message_kind === "followup_answer" || message.message_kind === "clarification_answer") &&
+    message.message_kind === "followup_answer" &&
     messageCreatedBeforeResult(message.created_at, leadResult?.created_at),
   );
 
@@ -82,7 +80,7 @@ export function ChatTranscript({
       {leadResult && (
         <CaseAnalysisLeadCard
           result={leadResult}
-          snapshot={leadSnapshot}
+          evidenceSources={evidenceSources}
           isUpdated={hasClarificationUpdate}
           onOpenOverview={onOpenOverview}
         />
@@ -95,9 +93,8 @@ export function ChatTranscript({
       {displayMessages.map((message) => {
         const isUser = message.role === "user";
         const isClarificationQuestion = message.message_kind === "followup_question";
-        const isClarificationAnswer = message.message_kind === "followup_answer" || message.message_kind === "clarification_answer";
+        const isClarificationAnswer = message.message_kind === "followup_answer";
         const followUpGap = followUpGapDetailForMessage(message);
-        const mitreCandidates = isUser ? null : mitreCandidatesForMessage(message);
         return (
           <article key={message.id} className="border-b border-line py-5 first:pt-1 last:border-b-0">
             <header className="flex items-center gap-2 text-[11px] font-semibold text-ink-muted">
@@ -122,11 +119,10 @@ export function ChatTranscript({
                   <ChatMessageMarkdown content={message.content} />
                   <AnalysisEvidenceReferences
                     analysisMessage={message}
-                    messages={messages}
+                    evidenceSources={evidenceSources ?? []}
                     onNavigateToSource={onNavigateToSource}
                   />
                   {followUpGap && <FollowUpActionCard detail={followUpGap} />}
-                  {mitreCandidates && <MitreCandidatePanel candidates={mitreCandidates} />}
                 </>
               )}
             </div>
@@ -160,9 +156,6 @@ function messageLabel(
 ): string {
   if (message.role === "user") {
     if (isClarificationAnswer) return "You · Case information";
-    if (message.metadata_json.evidence_kind === "initial_case_narrative" || message.metadata_json.evidence_kind === "added_case_information") {
-      return "You · Case information";
-    }
     return "You";
   }
   return isClarificationQuestion ? "CyberCase · One more detail" : "CyberCase";
@@ -174,17 +167,12 @@ function isLeadAnalysisPublication(
 ): boolean {
   if (
     message.message_kind === "followup_question" ||
-    message.message_kind === "followup_answer" ||
-    message.message_kind === "clarification_answer"
+    message.message_kind === "followup_answer"
   ) {
     return false;
   }
-  const metadata = message.metadata_json;
-  const isResponseScopedAnswer = message.message_kind === "conversation" && (
-    metadata?.analysis_kind === "question_answer" ||
-    metadata?.context_analysis_result_id === leadResultId
-  );
-  if (isResponseScopedAnswer) return false;
-  return message.analysis_result_id === leadResultId ||
-    metadata?.analysis_result_id === leadResultId;
+  if (message.message_kind === "conversation" && message.metadata_json.action === "conversation") {
+    return false;
+  }
+  return message.analysis_result_id === leadResultId;
 }

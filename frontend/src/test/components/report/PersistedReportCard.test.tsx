@@ -13,7 +13,6 @@ function sampleReport(): CaseReport {
     version_number: 1,
     idempotency_key: "report-request-1",
     analysis_result_id: "analysis-result-1",
-    source_reference_type: "case_evidence",
     prompt_version: "deterministic_raw_evidence_report_v1",
     persistence_status: "completed",
     validation_status: "validated",
@@ -35,7 +34,6 @@ function sampleReport(): CaseReport {
           section_id: "case_summary",
           text: "A login event was reported.",
           support_type: "user_reported",
-          source_message_ids: ["message-1"],
           source_evidence_ids: [],
           mitre_technique_ids: [],
         },
@@ -53,7 +51,7 @@ function sampleReport(): CaseReport {
   };
 }
 
-describe("PersistedReportCard with Real PDF Viewer", () => {
+describe("PersistedReportCard with Jinja2 HTML Viewer", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -64,14 +62,14 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
       },
     });
     if (typeof window !== "undefined") {
-      window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/test-pdf-blob");
+      window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/test-html-blob");
       window.URL.revokeObjectURL = vi.fn();
     }
   });
 
-  it("renders the real PDF viewer iframe and does not include claim inspector", async () => {
-    const fakeBlob = new Blob(["%PDF-1.4 test"], { type: "application/pdf" });
-    vi.spyOn(api, "downloadCaseReportPdf").mockResolvedValue(fakeBlob);
+  it("renders the readable HTML report viewer and does not include claim inspector", async () => {
+    const fakeBlob = new Blob(["<!doctype html><title>test</title>"], { type: "text/html" });
+    vi.spyOn(api, "downloadCaseReportHtml").mockResolvedValue(fakeBlob);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -90,19 +88,19 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
     expect(screen.getByRole("button", { name: "Download PDF" })).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByLabelText("PDF Document Viewer")).toBeInTheDocument();
+      expect(screen.getByLabelText("HTML Report Viewer")).toBeInTheDocument();
     });
 
-    const iframe = screen.getByTitle("PDF Report: Traceable report");
+    const iframe = screen.getByTitle("Case report: Traceable report");
     expect(iframe).toBeInTheDocument();
-    expect(iframe).toHaveAttribute("src", "blob:http://localhost/test-pdf-blob#toolbar=1&navpanes=0");
+    expect(iframe).toHaveAttribute("src", "blob:http://localhost/test-html-blob");
 
     expect(screen.queryByText("Claim inspector")).not.toBeInTheDocument();
   });
 
-  it("shows MeaningfulErrorModal on PDF preview failure without raw inline error and retries preview", async () => {
+  it("shows MeaningfulErrorModal on report preview failure without raw inline error and retries preview", async () => {
     const downloadSpy = vi
-      .spyOn(api, "downloadCaseReportPdf")
+      .spyOn(api, "downloadCaseReportHtml")
       .mockRejectedValue(new Error("timeout of 15000ms exceeded"));
 
     render(
@@ -125,9 +123,9 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
     expect(screen.getByText("Technical details")).toBeInTheDocument();
     expect(screen.getByText(/timeout of 15000ms exceeded/)).toBeInTheDocument();
 
-    expect(screen.getByText("ไม่สามารถแสดงตัวอย่าง PDF ได้")).toBeInTheDocument();
+    expect(screen.getByText("ไม่สามารถแสดงตัวอย่างรายงานได้")).toBeInTheDocument();
 
-    const retryBtn = screen.getByRole("button", { name: "โหลดตัวอย่าง PDF ใหม่" });
+    const retryBtn = screen.getByRole("button", { name: "โหลดตัวอย่างรายงานใหม่" });
     fireEvent.click(retryBtn);
     await waitFor(() => {
       expect(downloadSpy).toHaveBeenCalledTimes(2);
@@ -141,7 +139,7 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
       report: null,
       failure_message: "Validation schema mismatch occurred during report generation.",
       failure_code: "REPORT_SYNTHESIS_FAILED",
-      validation_errors: ["Missing timeline anchor."],
+      validation_errors: ["Missing evidence binding."],
     };
 
     render(
@@ -163,9 +161,9 @@ describe("PersistedReportCard with Real PDF Viewer", () => {
 
     expect(screen.getByText("Technical details")).toBeInTheDocument();
     expect(screen.getByText("REPORT_SYNTHESIS_FAILED")).toBeInTheDocument();
-    expect(screen.getByText("Missing timeline anchor.")).toBeInTheDocument();
+    expect(screen.getByText("Missing evidence binding.")).toBeInTheDocument();
 
-    expect(screen.queryByLabelText("PDF Document Viewer")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("HTML Report Viewer")).not.toBeInTheDocument();
     expect(screen.queryByText("Claim inspector")).not.toBeInTheDocument();
   });
 });

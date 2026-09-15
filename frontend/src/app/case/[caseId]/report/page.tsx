@@ -19,7 +19,7 @@ export default function ReportPage() {
   const analysisQuery = useCaseAnalysis(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId, activeCase?.chat_thread_id);
+  const runQuery = useCaseRunPolling(caseId ?? null, runId, caseId);
   const runStatus =
     runQuery.data?.status ??
     (activeCase?.processing_status === "queued" ||

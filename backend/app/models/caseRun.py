@@ -37,7 +37,6 @@ class CaseRun(Base):
         CheckConstraint("status IN ('queued', 'running', 'completed', 'failed')", name="ck_case_runs_status"),
         CheckConstraint("attempt_count >= 0", name="ck_case_runs_attempt_count_nonnegative"),
         Index("ux_case_runs_one_active_per_case", "case_id", unique=True, postgresql_where=text("status IN ('queued', 'running')")),
-        Index("ix_case_runs_status_lease_expires_at", "status", "lease_expires_at"),
         Index("ix_case_runs_case_id_created_at", "case_id", "created_at"),
     )
 
@@ -62,8 +61,6 @@ class CaseRun(Base):
     pipeline_config: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="queued", server_default=text("'queued'"))
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
-    lease_owner: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -89,25 +86,12 @@ class CaseRun(Base):
         passive_deletes=True,
     )
 
-    def __init__(self, **kwargs: object) -> None:
-        kwargs.pop("snapshot_id", None)
-        kwargs.pop("context_analysis_result_id", None)
-        kwargs.pop("request_fingerprint", None)
-        if "evidence_revision" not in kwargs:
-            kwargs["evidence_revision"] = 1
-        super().__init__(**kwargs)
-
-    @property
-    def snapshot_id(self) -> uuid.UUID:
-        return self.id
-
-
 class CaseAnalysisResult(Base):
     __tablename__ = "case_analysis_results"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_case_analysis_results"),
         UniqueConstraint("run_id", name="uq_case_analysis_results_run_id"),
-        CheckConstraint("status IN ('validated', 'legacy_unbound')", name="ck_case_analysis_results_status"),
+        CheckConstraint("status IN ('validated')", name="ck_case_analysis_results_status"),
         Index("ix_case_analysis_results_case_id_created_at", "case_id", "created_at"),
     )
 
@@ -119,7 +103,9 @@ class CaseAnalysisResult(Base):
         UUID(as_uuid=True), ForeignKey("case_runs.id", name="fk_case_analysis_results_run_id", ondelete="CASCADE"), nullable=False
     )
     evidence_revision: Mapped[int] = mapped_column(Integer, nullable=False)
-    schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    schema_version: Mapped[str] = mapped_column(
+        String(80), nullable=False, default="case_analysis_trace_v1", server_default=text("'case_analysis_trace_v1'")
+    )
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="validated", server_default=text("'validated'"))
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
@@ -142,18 +128,5 @@ class CaseAnalysisResult(Base):
     run: Mapped[CaseRun] = relationship(
         "CaseRun", back_populates="analysis_result", foreign_keys=[run_id], uselist=False
     )
-
-    def __init__(self, **kwargs: object) -> None:
-        kwargs.pop("snapshot_id", None)
-        if "evidence_revision" not in kwargs:
-            kwargs["evidence_revision"] = 1
-        if "schema_version" not in kwargs:
-            kwargs["schema_version"] = "analysis_trace_v3"
-        super().__init__(**kwargs)
-
-    @property
-    def snapshot_id(self) -> uuid.UUID:
-        return self.id
-
 
 __all__ = ["CaseAnalysisResult", "CaseRun"]

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PersistedChatMessage } from "@/lib/api";
 import {
-  activeChatFollowUpForThread,
+  activeCaseChatFollowUp,
   chatTranscriptMessages,
   filterSupersededClarificationAnswers,
   followUpGapDetailForMessage,
@@ -16,12 +16,12 @@ function message(
 ): PersistedChatMessage {
   return {
     id: `message-${ordinal}`,
-    thread_id: "thread-1",
+    case_id: "caseChat-1",
     ordinal,
     role,
     content,
     retrieval_context_id: null,
-    message_kind: role === "user" ? "clarification_answer" : "conversation",
+    message_kind: role === "user" ? "followup_answer" : "conversation",
     analysis_result_id: null,
     metadata_json,
     created_at: `2026-07-31T12:00:${String(ordinal).padStart(2, "0")}Z`,
@@ -37,8 +37,8 @@ function clarification(
     ...message(ordinal, "assistant", content),
     message_kind: "followup_question",
     metadata_json: {
+      action: "follow_up",
       chat_followup: {
-        kind: "clarification",
         root_ordinal: 1,
         round,
       },
@@ -70,8 +70,8 @@ describe("chat follow-up projection", () => {
     };
     const question = clarification(2, "Do you have authentication logs?", 1);
     question.metadata_json = {
+      action: "follow_up",
       chat_followup: {
-        kind: "clarification",
         root_ordinal: 1,
         round: 1,
         selected_gap_detail: selectedGapDetail,
@@ -84,8 +84,8 @@ describe("chat follow-up projection", () => {
   it("rejects malformed selected gap detail without hiding the message", () => {
     const question = clarification(2, "Do you have authentication logs?", 1);
     question.metadata_json = {
+      action: "follow_up",
       chat_followup: {
-        kind: "clarification",
         root_ordinal: 1,
         round: 1,
         selected_gap_detail: { topic: "authentication records" },
@@ -111,7 +111,7 @@ describe("chat follow-up projection", () => {
     ).toEqual(editedAnswer);
 
     expect(
-      activeChatFollowUpForThread(
+      activeCaseChatFollowUp(
         [nextQuestion, editedAnswer, question, firstAnswer],
         "awaiting_followup",
       ),
@@ -155,7 +155,7 @@ describe("chat follow-up projection", () => {
     ];
 
     expect(
-      activeChatFollowUpForThread(messages, "awaiting_followup"),
+      activeCaseChatFollowUp(messages, "awaiting_followup"),
     ).toEqual({
       question: "The latest clarification question.",
       entries: [],

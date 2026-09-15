@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
-
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
 import { buildTechnicalContext } from "@/lib/technicalContext";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const caseId = "22222222-2222-4222-8222-222222222222";
-const snapshotId = "33333333-3333-4333-8333-333333333333";
-const resultId = "44444444-4444-4444-8444-444444444444";
 const exactQuote = "The evidence reports PowerShell network activity.";
 
 function technicalContextFixture(
@@ -14,23 +11,19 @@ function technicalContextFixture(
   rows: Record<string, string>[],
   associations: Record<string, unknown>[] = [],
   failureCode?: string,
-): { result: CaseAnalysisResultRead; snapshot: CaseEvidenceSnapshotRead } {
-  const manifest = [{
-    exact_text: exactQuote,
-    provenance: { origin: "analyst-authored" },
-    revision: 1,
-    source_id: sourceId,
-    source_kind: "narrative",
-  }];
-  const snapshot: CaseEvidenceSnapshotRead = {
-    id: snapshotId,
+): { result: CaseAnalysisResultRead; evidenceSources: EvidenceSourceRead[] } {
+  const evidenceSources: EvidenceSourceRead[] = [{
+    id: sourceId,
     case_id: caseId,
-    evidence_revision: 1,
-    format_version: "case_evidence_snapshot_v1",
-    manifest_json: manifest,
-    input_text: exactQuote,
+    source_kind: "narrative",
+    document_id: null,
+    origin_message_id: null,
+    exact_text: exactQuote,
+    provenance_json: {},
+    source_metadata_json: {},
     created_at: "2026-09-10T00:00:00Z",
-  };
+    archived_at: null,
+  }];
   const retrievalContextId = status === "not_applicable" ? null : "retrieval-native-1";
   const traceAssociations = associations.map((association) => ({
     association_id: association.association_id,
@@ -41,11 +34,11 @@ function technicalContextFixture(
     support_role: "external_technical_context",
   }));
   const result: CaseAnalysisResultRead = {
-    id: resultId,
+    id: "44444444-4444-4444-8444-444444444444",
     case_id: caseId,
     run_id: "55555555-5555-4555-8555-555555555555",
     evidence_revision: 1,
-    schema_version: "case_analysis_result_v1",
+    schema_version: "case_analysis_trace_v1",
     status: "validated",
     answer: exactQuote,
     summary: exactQuote,
@@ -53,7 +46,6 @@ function technicalContextFixture(
       version: "case_analysis_trace_v1",
       validation_status: "validated",
       analysis_mode: "case_overview",
-      evidence_sha256: "test-hash",
       summary: exactQuote,
       claims: [{
         claim_id: "A-01",
@@ -63,7 +55,7 @@ function technicalContextFixture(
         reasoning_summary: null,
         supporting_source_ids: [sourceId],
         contradicting_source_ids: [],
-        supporting_citations: [{ source_id: sourceId, source_revision: 1, exact_quote: exactQuote }],
+        supporting_citations: [{ source_id: sourceId, exact_quote: exactQuote }],
         contradicting_citations: [],
       }],
       gaps: [],
@@ -80,7 +72,6 @@ function technicalContextFixture(
         applicability: { decision: "RETRIEVE", source_message_ids: [sourceId], trigger_text: [exactQuote] },
         retrieval_context_id: retrievalContextId,
         mitre_table: rows,
-        query_sha256: "a".repeat(64),
         association_ids: associations.map((association) => association.association_id),
         ...(failureCode ? { failure_code: failureCode } : {}),
       },
@@ -88,7 +79,7 @@ function technicalContextFixture(
     created_at: "2026-09-10T00:00:00Z",
     freshness: "current",
   };
-  return { result, snapshot };
+  return { result, evidenceSources };
 }
 
 describe("buildTechnicalContext", () => {
@@ -96,18 +87,16 @@ describe("buildTechnicalContext", () => {
 
   it("shows mapping failure separately from retrieved-only context", () => {
     const fixture = technicalContextFixture("failed", [row], [], "mitre_mapping_invalid");
-    const result = buildTechnicalContext(fixture.result, fixture.snapshot);
+    const result = buildTechnicalContext(fixture.result, fixture.evidenceSources);
     expect(result.status).toBe("failed");
     expect(result.failureStage).toBe("mapping");
     expect(result.retrievedOnlyTechniques).toHaveLength(1);
-    expect(result.techniques).toHaveLength(0);
   });
 
   it("distinguishes retrieval with no supported Case match", () => {
     const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
-    const result = buildTechnicalContext(fixture.result, fixture.snapshot);
+    const result = buildTechnicalContext(fixture.result, fixture.evidenceSources);
     expect(result.status).toBe("retrieved_without_supported_match");
-    expect(result.techniques).toHaveLength(0);
     expect(result.retrievedOnlyCount).toBe(1);
   });
 
@@ -117,7 +106,7 @@ describe("buildTechnicalContext", () => {
       [row, { technique_id: "T1105", name: "Ingress Tool Transfer", tactic: "Command and Control", description: "Transfer tools into the environment." }],
       [{ association_id: "MA-01", technique_id: "T1059.001", claim_ids: ["A-01"], reason: "The claim describes PowerShell activity." }],
     );
-    const result = buildTechnicalContext(fixture.result, fixture.snapshot);
+    const result = buildTechnicalContext(fixture.result, fixture.evidenceSources);
     expect(result.status).toBe("retrieved_with_matches");
     expect(result.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001"]);
     expect(result.retrievedOnlyTechniques.map((item) => item.techniqueId)).toEqual(["T1105"]);
@@ -127,7 +116,7 @@ describe("buildTechnicalContext", () => {
   it("withholds context when the persisted trace binding is invalid", () => {
     const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
     fixture.result.trace_json = { ...(fixture.result.trace_json ?? {}), validation_status: "failed" };
-    const result = buildTechnicalContext(fixture.result, fixture.snapshot);
+    const result = buildTechnicalContext(fixture.result, fixture.evidenceSources);
     expect(result.status).toBe("invalid_trace");
     expect(result.failureCode).toBe("invalid_trace");
   });

@@ -15,10 +15,9 @@ vi.mock("@/hooks/use-auth", () => ({
 describe("WorkspaceSidebar", () => {
   const sampleCases: CaseRead[] = [
     {
-      id: "thread-1",
+      id: "caseChat-1",
       title: "คดีการบุกรุกเว็บเซิร์ฟเวอร์",
       status: "answered",
-      chat_thread_id: "thread-1",
       evidence_revision: 1,
       processing_status: "idle",
       has_pending_clarification: false,
@@ -32,7 +31,7 @@ describe("WorkspaceSidebar", () => {
     render(
       <WorkspaceSidebar
         cases={sampleCases}
-        activeCaseId="thread-1"
+        activeCaseId="caseChat-1"
         casesLoading={false}
         casesError={null}
         onSelectCase={vi.fn()}
@@ -60,7 +59,7 @@ describe("WorkspaceSidebar", () => {
     render(
       <WorkspaceSidebar
         cases={sampleCases}
-        activeCaseId="thread-1"
+        activeCaseId="caseChat-1"
         casesLoading={false}
         casesError={null}
         onSelectCase={vi.fn()}

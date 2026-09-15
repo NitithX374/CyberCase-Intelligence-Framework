@@ -1,12 +1,12 @@
 import axios from "axios";
 import type {
   AuthTokenResponse,
-  ChatThreadDetail,
+  CaseChatDetail,
   DevLoginPayload,
   UserProfile,
 } from "./apiTypes";
-import { normalizeChatThreadDetail } from "./chat-api-adapter";
-import type { ChatThreadDetail as ChatThreadDetailWire } from "./generated/chatTypes";
+import { normalizeCaseChat } from "./chat-api-adapter";
+import type { CaseChatRead } from "./generated/chatTypes";
 
 axios.defaults.withCredentials = true;
 
@@ -34,15 +34,15 @@ export function getApiBaseUrl(): string {
   return url;
 }
 
-export const getChatThread = async (
-  threadId: string,
+export const getCaseChat = async (
+  caseId: string,
   signal?: AbortSignal,
-): Promise<ChatThreadDetail> => {
-  const response = await axios.get<ChatThreadDetailWire>(
-    `${getApiBaseUrl()}/chats/${encodeURIComponent(threadId)}`,
+): Promise<CaseChatDetail> => {
+  const response = await axios.get<CaseChatRead>(
+    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat`,
     { signal, timeout: CHAT_POLL_REQUEST_TIMEOUT_MS },
   );
-  return normalizeChatThreadDetail(response.data);
+  return normalizeCaseChat(response.data);
 };
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {

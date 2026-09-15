@@ -1,8 +1,4 @@
-"""Chat Thread and Message Domain Services."""
-
-from app.services.chat.chatService import (
-    ChatService,
-)
+"""Case-owned chat domain services."""
 from app.services.chat.clarification_chain import (
     ClarificationChain,
     reconstruct_clarification_chain,
@@ -10,22 +6,24 @@ from app.services.chat.clarification_chain import (
 
 __all__ = [
     "CaseChatError",
-    "ChatService",
     "createCaseChatMessageAndRun",
+    "getCaseChat",
     "ClarificationChain",
     "reconstruct_clarification_chain",
 ]
 
 
 def __getattr__(name: str):
-    if name in {"CaseChatError", "createCaseChatMessageAndRun"}:
+    if name in {"CaseChatError", "createCaseChatMessageAndRun", "getCaseChat"}:
         from app.services.chat.caseChat import (
             CaseChatError,
             createCaseChatMessageAndRun,
+            getCaseChat,
         )
 
         return {
             "CaseChatError": CaseChatError,
             "createCaseChatMessageAndRun": createCaseChatMessageAndRun,
+            "getCaseChat": getCaseChat,
         }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -81,7 +81,7 @@ export function CaseReportView({ caseId, caseTitle, analysisResult, runStatus, o
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">Report</h2>
-              <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">Each saved version remains bound to its Case Analysis Result and immutable evidence snapshot.</p>
+              <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">Each saved version remains bound to its Case Analysis Result and Case evidence revision.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={onOpenOverview} className="inline-flex h-9 items-center gap-1.5 px-2 text-xs font-medium text-ink-secondary underline decoration-line-strong underline-offset-4"><Icon name="overview" className="h-3.5 w-3.5" />View analysis</button>

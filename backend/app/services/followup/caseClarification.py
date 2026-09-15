@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -8,214 +7,25 @@ from fastapi import status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.case import Case
-from app.models.caseMaterials import EvidenceSource
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage
 from app.schemas.caseClarifications import (
     CaseClarificationAnswer,
     CaseClarificationRead,
-    ClarificationState,
 )
 from app.schemas.messageMetadata import serialize_message_metadata
 from app.services.case_materials import CaseMaterialsError, CaseMaterialsService
-from app.services.followup.contracts import ClarificationExchange
+from app.services.followup.caseClarificationHistory import (
+    get_owned_clarifications,
+    load_case_clarification_exchanges,
+)
+from app.services.followup.caseClarificationSupport import (
+    CaseClarificationError,
+    CaseClarificationHistoryError,
+    answer_fingerprint,
+    owned_case,
+)
 from app.services.workflow.caseRunService import CaseRunError
-
-
-class CaseClarificationError(Exception):
-    def __init__(self, code: str, message: str, status_code: int = status.HTTP_409_CONFLICT) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.status_code = status_code
-
-
-class CaseClarificationHistoryError(CaseClarificationError):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(code, message)
-
-
-def answer_fingerprint(request: CaseClarificationAnswer) -> str:
-    return f"{request.answer.strip()}:{request.response_language}"
-
-
-async def _owned_case(
-    db: AsyncSession,
-    case_id: UUID,
-    user_id: UUID | None,
-    *,
-    lock: bool = False,
-) -> Case:
-    statement = select(Case).where(Case.id == case_id)
-    if lock:
-        statement = statement.with_for_update()
-    case = await db.scalar(statement)
-    if case is None or case.user_id != user_id:
-        raise CaseClarificationError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
-    return case
-
-
-async def load_case_clarification_exchanges(
-    db: AsyncSession,
-    case_id: UUID,
-) -> tuple[ClarificationExchange, ...]:
-    result = await db.execute(
-        select(ChatMessage)
-        .where(
-            ChatMessage.case_id == case_id,
-            ChatMessage.role == "user",
-            ChatMessage.message_kind.in_(("followup_answer", "clarification_answer")),
-        )
-        .order_by(ChatMessage.ordinal)
-    )
-    answer_messages = list(result.scalars().all())
-    if not answer_messages:
-        return ()
-
-    exchanges: list[ClarificationExchange] = []
-    for ans_msg in answer_messages:
-        question_msg = None
-        if ans_msg.in_reply_to_message_id:
-            question_msg = await db.get(ChatMessage, ans_msg.in_reply_to_message_id)
-        if question_msg is None:
-            question_msg = await db.scalar(
-                select(ChatMessage)
-                .where(
-                    ChatMessage.case_id == case_id,
-                    ChatMessage.ordinal < ans_msg.ordinal,
-                    ChatMessage.role == "assistant",
-                    ChatMessage.message_kind == "followup_question",
-                )
-                .order_by(ChatMessage.ordinal.desc())
-            )
-        if question_msg is None:
-            continue
-
-        q_meta = question_msg.metadata_json if isinstance(question_msg.metadata_json, dict) else {}
-        gap_id = str(q_meta.get("gap_id") or "G-001")
-        topic = str(q_meta.get("topic") or q_meta.get("clarification_topic") or "")
-        gap_key = str(q_meta.get("gap_key") or f"{gap_id}:{topic.lower()}")
-
-        exchanges.append(
-            ClarificationExchange(
-                question=question_msg.content,
-                answer=ans_msg.content,
-                gap_id=gap_id,
-                gap_topic=topic,
-                gap_key=gap_key,
-                evidence_sha256="",
-                question_message_id=str(question_msg.id),
-                answer_message_id=str(ans_msg.id),
-            )
-        )
-    return tuple(exchanges)
-
-
-async def get_owned_clarifications(
-    db: AsyncSession,
-    case_id: UUID,
-    user_id: UUID | None = None,
-) -> list[CaseClarificationRead]:
-    case = await _owned_case(db, case_id, user_id)
-
-    q_result = await db.execute(
-        select(ChatMessage)
-        .where(
-            ChatMessage.case_id == case.id,
-            ChatMessage.role == "assistant",
-            ChatMessage.message_kind == "followup_question",
-        )
-        .order_by(ChatMessage.created_at, ChatMessage.ordinal)
-    )
-    question_messages = list(q_result.scalars().all())
-    if not question_messages:
-        return []
-
-    a_result = await db.execute(
-        select(ChatMessage)
-        .where(
-            ChatMessage.case_id == case.id,
-            ChatMessage.role == "user",
-            ChatMessage.message_kind.in_(("followup_answer", "clarification_answer")),
-        )
-        .order_by(ChatMessage.ordinal)
-    )
-    answer_messages = list(a_result.scalars().all())
-
-    answers_by_question: dict[UUID, ChatMessage] = {}
-    for ans in answer_messages:
-        if ans.in_reply_to_message_id:
-            answers_by_question[ans.in_reply_to_message_id] = ans
-
-    clarifications: list[CaseClarificationRead] = []
-    for q_msg in question_messages:
-        q_meta = q_msg.metadata_json if isinstance(q_msg.metadata_json, dict) else {}
-        ans_msg = answers_by_question.get(q_msg.id)
-        if ans_msg is None:
-            for ans in answer_messages:
-                if ans.ordinal > q_msg.ordinal and (ans.in_reply_to_message_id is None or ans.in_reply_to_message_id == q_msg.id):
-                    ans_msg = ans
-                    break
-
-        origin_result_id = q_msg.analysis_result_id
-        if origin_result_id is None:
-            raise CaseClarificationHistoryError(
-                "clarification_context_invalid",
-                "Clarification question has no pinned analysis result",
-            )
-        origin_result = await db.get(CaseAnalysisResult, origin_result_id)
-        if origin_result is None or origin_result.case_id != case.id:
-            raise CaseClarificationHistoryError(
-                "clarification_context_invalid",
-                "Clarification question has an invalid analysis result",
-            )
-        gap_id = str(q_meta.get("gap_id") or "G-001")
-        topic = str(q_meta.get("topic") or q_meta.get("clarification_topic") or "")
-        gap_key = str(q_meta.get("gap_key") or f"{gap_id}:{topic.lower()}")
-
-        if ans_msg is not None:
-            state: ClarificationState = "answered"
-            ans_meta = ans_msg.metadata_json if isinstance(ans_msg.metadata_json, dict) else {}
-            src_id_str = ans_meta.get("case_evidence_source_id")
-            answer_source_id = UUID(str(src_id_str)) if src_id_str else None
-            answer_msg_id = ans_msg.id
-            answered_at = ans_msg.created_at
-            fingerprint = answer_fingerprint(CaseClarificationAnswer(answer=ans_msg.content, idempotency_key="read"))
-        else:
-            if case.latest_analysis_result_id and case.latest_analysis_result_id != origin_result_id:
-                state = "superseded"
-            else:
-                state = "pending"
-            answer_source_id = None
-            answer_msg_id = None
-            answered_at = None
-            fingerprint = None
-
-        clarification_id = UUID(str(q_meta.get("clarification_id"))) if q_meta.get("clarification_id") else q_msg.id
-
-        clarifications.append(
-            CaseClarificationRead(
-                id=clarification_id,
-                case_id=case.id,
-                origin_analysis_result_id=origin_result_id,
-                origin_snapshot_id=UUID("00000000-0000-0000-0000-000000000000"),
-                gap_key=gap_key,
-                gap_id=gap_id,
-                topic=topic,
-                question=q_msg.content,
-                metadata_json=q_meta,
-                state=state,
-                answer_evidence_source_id=answer_source_id,
-                question_message_id=q_msg.id,
-                answer_message_id=answer_msg_id,
-                answer_fingerprint=fingerprint,
-                answered_at=answered_at,
-                created_at=q_msg.created_at,
-                updated_at=answered_at or q_msg.created_at,
-            )
-        )
-    return clarifications
 
 
 async def submit_clarification_answer(
@@ -226,7 +36,7 @@ async def submit_clarification_answer(
     user_id: UUID | None,
     request: CaseClarificationAnswer,
 ) -> tuple[CaseClarificationRead, CaseRun]:
-    case = await _owned_case(db, case_id, user_id, lock=True)
+    case = await owned_case(db, case_id, user_id, lock=True)
 
     q_result = await db.execute(
         select(ChatMessage)
@@ -240,8 +50,7 @@ async def submit_clarification_answer(
     questions = list(q_result.scalars().all())
     question = None
     for q in questions:
-        q_meta = q.metadata_json if isinstance(q.metadata_json, dict) else {}
-        if q.id == clarification_id or q_meta.get("clarification_id") == str(clarification_id):
+        if q.id == clarification_id:
             question = q
             break
 
@@ -253,7 +62,7 @@ async def submit_clarification_answer(
         .where(
             ChatMessage.case_id == case.id,
             ChatMessage.role == "user",
-            ChatMessage.message_kind.in_(("followup_answer", "clarification_answer")),
+            ChatMessage.message_kind == "followup_answer",
             ChatMessage.in_reply_to_message_id == question.id,
         )
     )
@@ -323,10 +132,7 @@ async def submit_clarification_answer(
         in_reply_to_message_id=question.id,
         metadata_json=serialize_message_metadata(
             {
-                "evidence_kind": "clarification_answer",
-                "analysis_kind": "clarification_answer",
-                "clarification_id": str(clarification_id),
-                "in_reply_to_message_id": str(question.id),
+                "action": "follow_up",
             }
         ),
     )
@@ -337,17 +143,13 @@ async def submit_clarification_answer(
         from app.services.workflow.caseRunService import enqueue_case_analysis
         from app.schemas.caseRuns import CaseAnalysisCreate
 
-        source = await CaseMaterialsService(db).admitText(
+        await CaseMaterialsService(db).admitText(
             case_id=case.id,
             user_id=user_id,
             source_kind="followup_answer",
             exact_text=request.answer,
             provenance_json={
                 "origin": "case_clarification",
-                "clarification_id": str(clarification_id),
-                "origin_message_id": str(message.id),
-            },
-            source_metadata_json={
                 "clarification_id": str(clarification_id),
                 "origin_message_id": str(message.id),
             },
@@ -365,19 +167,12 @@ async def submit_clarification_answer(
             request_message_id=message.id,
             request_payload_extra={
                 "content": request.answer.strip(),
-                "action": "clarification_answer",
+                "action": "follow_up",
             },
         )
     except (CaseMaterialsError, CaseRunError) as error:
         raise CaseClarificationError(error.code, error.message, getattr(error, "status_code", 409)) from error
 
-    message.metadata_json = serialize_message_metadata(
-        {
-            **message.metadata_json,
-            "case_evidence_source_id": str(source.id),
-            "case_evidence_revision": case.evidence_revision,
-        }
-    )
     case.updated_at = datetime.now(timezone.utc)
     await db.flush()
 
@@ -388,51 +183,11 @@ async def submit_clarification_answer(
     return clarification_read, run
 
 
-async def find_answered_clarification(
-    db: AsyncSession,
-    *,
-    case_id: UUID,
-    request: CaseClarificationAnswer,
-) -> CaseClarificationRead | None:
-    clarifications = await get_owned_clarifications(db, case_id=case_id, user_id=None)
-    fp = answer_fingerprint(request)
-    for c in reversed(clarifications):
-        if c.state == "answered" and c.answer_fingerprint == fp:
-            return c
-    return None
-
-
-async def create_pending_clarification(*args, **kwargs):
-    return None
-
-
-async def supersede_prior_clarifications(*args, **kwargs):
-    return None
-
-
-answerFingerprint = answer_fingerprint
-createPendingClarification = create_pending_clarification
-findAnsweredClarification = find_answered_clarification
-getOwnedClarifications = get_owned_clarifications
-loadCaseClarificationExchanges = load_case_clarification_exchanges
-submitClarificationAnswer = submit_clarification_answer
-supersedePriorClarifications = supersede_prior_clarifications
-
 __all__ = [
     "CaseClarificationError",
     "CaseClarificationHistoryError",
-    "answerFingerprint",
     "answer_fingerprint",
-    "createPendingClarification",
-    "create_pending_clarification",
-    "findAnsweredClarification",
-    "find_answered_clarification",
-    "getOwnedClarifications",
     "get_owned_clarifications",
-    "loadCaseClarificationExchanges",
     "load_case_clarification_exchanges",
-    "submitClarificationAnswer",
     "submit_clarification_answer",
-    "supersedePriorClarifications",
-    "supersede_prior_clarifications",
 ]

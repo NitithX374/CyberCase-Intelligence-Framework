@@ -110,55 +110,8 @@ class EvidenceSource(Base):
     document: Mapped[CaseDocument | None] = relationship(back_populates="evidence_sources")
     origin_message: Mapped["ChatMessage | None"] = relationship()
 
-    @property
-    def revisions(self) -> list[EvidenceRevision]:
-        return [
-            EvidenceRevision(
-                id=self.id,
-                source_id=self.id,
-                extraction_id=uuid.UUID(self.provenance_json["extraction_id"]) if isinstance(self.provenance_json, dict) and self.provenance_json.get("extraction_id") else None,
-                revision=1,
-                exact_text=self.exact_text,
-                provenance_json=self.provenance_json or {},
-                admitted_at=self.created_at,
-                archived_at=self.archived_at,
-            )
-        ]
-
-
-from dataclasses import dataclass, field
-from datetime import timezone
-
-
-@dataclass
-class EvidenceRevision:
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-    source_id: uuid.UUID | None = None
-    extraction_id: uuid.UUID | None = None
-    revision: int = 1
-    exact_text: str = ""
-    provenance_json: dict[str, object] = field(default_factory=dict)
-    admitted_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    archived_at: datetime | None = None
-
-
-@dataclass
-class CaseEvidenceSnapshot:
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-    case_id: uuid.UUID | None = None
-    evidence_revision: int = 0
-    format_version: str = "case_evidence_snapshot_v1"
-    manifest_json: list[dict[str, object]] = field(default_factory=list)
-    input_text: str = ""
-    text_sha256: str = ""
-    manifest_sha256: str = ""
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-
-
 __all__ = [
     "CaseDocument",
     "DocumentExtraction",
     "EvidenceSource",
-    "EvidenceRevision",
-    "CaseEvidenceSnapshot",
 ]

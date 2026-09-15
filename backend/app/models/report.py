@@ -126,24 +126,8 @@ class CaseReport(Base):
     input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    def __init__(self, **kwargs: object) -> None:
-        kwargs.pop("thread_id", None)
-        kwargs.pop("analysis_message_id", None)
-        kwargs.pop("evidence_snapshot_id", None)
-        kwargs.pop("source_snapshot_hash", None)
-        kwargs.pop("source_snapshot_json", None)
-        super().__init__(**kwargs)
-
     @property
     def report_id(self) -> uuid.UUID:
-        return self.id
-
-    @property
-    def thread_id(self) -> uuid.UUID:
-        return self.case_id
-
-    @property
-    def evidence_snapshot_id(self) -> uuid.UUID:
         return self.id
 
     case: Mapped["Case"] = relationship("Case", back_populates="reports")
@@ -151,7 +135,4 @@ class CaseReport(Base):
     retrieval_context: Mapped["RagContext | None"] = relationship("RagContext")
 
 
-# Compatibility alias
-ChatReport = CaseReport
-
-__all__ = ["CaseReport", "ChatReport"]
+__all__ = ["CaseReport"]

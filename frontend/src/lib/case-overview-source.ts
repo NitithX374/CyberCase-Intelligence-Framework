@@ -3,10 +3,10 @@ import { asArray, asRecord, asString } from "@/lib/case-overview-parsing";
 import type { EvidencePage, SourceMessageRef } from "@/lib/case-overview-contracts";
 import { formatPageReference } from "@/lib/evidence-citation";
 
-export interface CaseSnapshotSource {
+export interface CaseEvidenceSource {
   id: string;
   kind: string;
-  revision: number;
+  ordinal: number;
   text: string;
   provenance: Record<string, unknown>;
   documentId: string | null;
@@ -15,7 +15,6 @@ export interface CaseSnapshotSource {
 
 export interface CaseCitation {
   sourceId: string;
-  sourceRevision: number;
   exactQuote: string;
   documentId: string | null;
   filename: string | null;
@@ -27,61 +26,35 @@ interface CasePageBinding {
   pageNumbers: number[];
 }
 
-export function parseCaseSnapshot(snapshot: unknown): CaseSnapshotSource[] {
-  if (Array.isArray(snapshot)) {
-    return snapshot.map((item) => parseEvidenceSource(item as EvidenceSourceRead));
+export function parseCaseEvidence(evidenceSources: EvidenceSourceRead[]): CaseEvidenceSource[] {
+  const sources = evidenceSources.map((source, index) => parseEvidenceSource(source, index + 1));
+  if (new Set(sources.map((source) => source.id)).size !== sources.length) {
+    throw new Error("Case evidence has duplicate source IDs.");
   }
-  const record = asRecord(snapshot);
-  const manifest = asArray(record?.manifest_json);
-  if (manifest.length > 0) {
-    const sources = manifest.map(parseSnapshotSource);
-    if (new Set(sources.map((source) => source.id)).size !== sources.length) throw new Error("Evidence snapshot has duplicate source IDs.");
-    return sources;
-  }
-  if (Array.isArray(record?.sources)) {
-    return record.sources.map(parseSnapshotSource);
-  }
-  return [];
+  return sources;
 }
 
-export function parseEvidenceSource(source: EvidenceSourceRead): CaseSnapshotSource {
-  const document = (source as unknown as { document?: { filename?: string | null } }).document;
+function parseEvidenceSource(source: EvidenceSourceRead, ordinal: number): CaseEvidenceSource {
+  const metadata = asRecord(source.source_metadata_json) ?? {};
+  const provenance = asRecord(source.provenance_json) ?? {};
+  if (!source.id || !source.source_kind || !source.exact_text.trim()) {
+    throw new Error("Case evidence source binding is incomplete.");
+  }
   return {
     id: source.id,
     kind: source.source_kind,
-    revision: 1,
-    text: source.exact_text || "",
-    provenance: (source.provenance_json as Record<string, unknown>) || {},
-    documentId: source.document_id || null,
-    filename: document?.filename || null,
-  };
-}
-
-function parseSnapshotSource(value: unknown): CaseSnapshotSource {
-  const entry = asRecord(value);
-  const id = asString(entry?.source_id ?? entry?.id);
-  const kind = asString(entry?.source_kind ?? entry?.kind);
-  const revision = typeof entry?.revision === "number" ? entry.revision : 1;
-  const text = typeof entry?.exact_text === "string" ? entry.exact_text : (typeof entry?.text === "string" ? entry.text : "");
-  const provenance = asRecord(entry?.provenance ?? entry?.provenance_json) ?? {};
-  if (!id || !kind || !text) {
-    throw new Error("Evidence snapshot source binding is incomplete.");
-  }
-  return {
-    id,
-    kind,
-    revision,
-    text,
+    ordinal,
+    text: source.exact_text,
     provenance,
-    documentId: asString(entry?.document_id ?? entry?.documentId) || null,
-    filename: asString(entry?.filename) || null,
+    documentId: source.document_id || asString(metadata.document_id) || null,
+    filename: asString(metadata.filename) || asString(provenance.filename) || null,
   };
 }
 
 export function parseCaseCitations(
   value: unknown,
   sourceIds: string[],
-  sources: CaseSnapshotSource[],
+  sources: CaseEvidenceSource[],
 ): CaseCitation[] {
   return asArray(value).map((item) => {
     const citation = asRecord(item);
@@ -91,7 +64,6 @@ export function parseCaseCitations(
     }
     const parsed = {
       sourceId: asString(citation?.source_id),
-      sourceRevision: typeof citation?.source_revision === "number" ? citation.source_revision : 1,
       exactQuote: typeof citation?.exact_quote === "string" ? citation.exact_quote : "",
       documentId: asString(citation?.document_id) || null,
       filename: asString(citation?.filename) || null,
@@ -103,45 +75,44 @@ export function parseCaseCitations(
     const source = sources.find((candidate) => candidate.id === parsed.sourceId);
     const occurrences = source ? quoteOccurrences(source.text, parsed.exactQuote) : [];
     if (!source || occurrences.length === 0) {
-      throw new Error("Analysis citation is not bound to the snapshot.");
+      throw new Error("Analysis citation is not bound to Case evidence.");
     }
-    const citationObj = { ...parsed, sourceRevision: parsed.sourceRevision as number };
-    if (occurrences.length > 1 && (!parsed.pageNumbers.length || !resolvePageBinding(source, citationObj))) {
-      throw new Error("Analysis citation is ambiguous in the snapshot.");
+    if (occurrences.length > 1 && (!parsed.pageNumbers.length || !resolvePageBinding(source, parsed))) {
+      throw new Error("Analysis citation is ambiguous in Case evidence.");
     }
     const hasLocator = parsed.documentId !== null || parsed.filename !== null || parsed.pageNumbers.length > 0;
     if (hasLocator && (!parsed.documentId || !parsed.filename || !parsed.pageNumbers.length)) {
       throw new Error("Analysis document citation is incomplete.");
     }
-    return citationObj;
+    return parsed;
   });
 }
 
 export function sourceRefs(
   ids: string[],
   citations: CaseCitation[],
-  sources: CaseSnapshotSource[],
+  sources: CaseEvidenceSource[],
 ): SourceMessageRef[] {
   return ids.flatMap((id) => {
     const source = sources.find((candidate) => candidate.id === id);
-    if (!source) throw new Error("Analysis source reference is missing from the snapshot.");
+    if (!source) throw new Error("Analysis source reference is missing from Case evidence.");
     const matches = citations.filter((citation) => citation.sourceId === id);
     return matches.length ? matches.map((citation) => buildSourceRef(source, citation)) : [buildSourceRef(source, null)];
   });
 }
 
-function buildSourceRef(source: CaseSnapshotSource, citation: CaseCitation | null): SourceMessageRef {
+function buildSourceRef(source: CaseEvidenceSource, citation: CaseCitation | null): SourceMessageRef {
   const pageBinding = citation ? resolvePageBinding(source, citation) : null;
   const sourceType = sourceTypeFor(source.kind);
   const documentLabel = source.filename ? `${source.filename} · ` : "";
-  const label = pageBinding ? `${documentLabel}${formatPageReference(pageBinding.pageNumbers)}` : `${documentLabel}Source ${source.id} · revision ${source.revision}`;
+  const label = pageBinding ? `${documentLabel}${formatPageReference(pageBinding.pageNumbers)}` : `${documentLabel}Source ${source.id}`;
   return {
     id: source.id,
-    ordinal: source.revision,
+    ordinal: source.ordinal,
     label,
     excerpt: source.text.length > 120 ? `${source.text.slice(0, 120)}…` : source.text,
     sourceType,
-    sourceTypeLabel: `${sourceTypeLabel(sourceType)} · Source ${source.id} · revision ${source.revision}`,
+    sourceTypeLabel: `${sourceTypeLabel(sourceType)} · Source ${source.id}`,
     fullContent: source.text,
     displayContent: pageBinding ? pageBinding.pages.map((page) => page.text).join("\n\n") : contextualExcerpt(source.text, citation?.exactQuote),
     exactQuote: citation?.exactQuote ?? null,
@@ -153,7 +124,7 @@ function buildSourceRef(source: CaseSnapshotSource, citation: CaseCitation | nul
   };
 }
 
-function resolvePageBinding(source: CaseSnapshotSource, citation: CaseCitation): CasePageBinding | null {
+function resolvePageBinding(source: CaseEvidenceSource, citation: CaseCitation): CasePageBinding | null {
   if (!citation.documentId || !citation.filename || citation.pageNumbers.length === 0) return null;
   if (source.documentId !== citation.documentId || source.filename !== citation.filename) return null;
   const spans = asArray(source.provenance.pages).flatMap((value, index, values) => {
@@ -185,15 +156,13 @@ function resolvePageBinding(source: CaseSnapshotSource, citation: CaseCitation):
 }
 
 function sourceTypeFor(kind: string): SourceMessageRef["sourceType"] {
-  if (kind === "clarification_answer" || kind === "followup_answer") return "clarification_response";
-  if (kind === "explicit_chat_addition") return "additional_info";
+  if (kind === "followup_answer") return "clarification_response";
   if (kind === "narrative" || kind === "reviewed_document") return "case_description";
   throw new Error("Unsupported native evidence source kind.");
 }
 
 function sourceTypeLabel(type: SourceMessageRef["sourceType"]): string {
   if (type === "clarification_response") return "Clarification response";
-  if (type === "additional_info") return "Additional case information";
   return "Case narrative";
 }
 
@@ -227,5 +196,3 @@ function isInteger(value: unknown): value is number {
 function isPositiveInteger(value: unknown): value is number {
   return isInteger(value) && value > 0;
 }
-
-__all_exports: ;

@@ -1,4 +1,3 @@
-import hashlib
 import unittest
 from unittest.mock import patch
 
@@ -50,13 +49,10 @@ def test_case_overview_models_construct_and_normalize_claim_ids() -> None:
 def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> None:
     source = CaseAdmittedSource(
         source_id="s1",
-        revision=1,
         content="Server breached on Monday.",
-        content_sha256=hashlib.sha256(b"Server breached on Monday.").hexdigest(),
     )
     citation = CaseEvidenceCitation(
         source_id="s1",
-        source_revision=1,
         exact_quote="Server breached on Monday.",
     )
     claim = CaseAnalysisClaim(
@@ -80,7 +76,6 @@ def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> Non
         impacts=[
             CaseImpactItem(description="Server compromise", claim_ids=["A-01"])
         ],
-        evidence_sha256="0" * 64,
     )
     validated = validate_case_trace(trace, (source,), [])
     assert len(validated.involved_parties) == 1
@@ -91,13 +86,10 @@ def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> Non
 def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
     source = CaseAdmittedSource(
         source_id="s1",
-        revision=1,
         content="Server breached.",
-        content_sha256=hashlib.sha256(b"Server breached.").hexdigest(),
     )
     citation = CaseEvidenceCitation(
         source_id="s1",
-        source_revision=1,
         exact_quote="Server breached.",
     )
     claim = CaseAnalysisClaim(
@@ -115,7 +107,6 @@ def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None
             CaseInvolvedParty(name="Unknown Actor", role="Attacker", claim_ids=["A-99"])
         ],
         claims=[claim],
-        evidence_sha256="0" * 64,
     )
     with pytest.raises(CaseAnalysisFailure) as exc_info:
         validate_case_trace(trace, (source,), [])
@@ -125,13 +116,10 @@ def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None
 def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
     source = CaseAdmittedSource(
         source_id="s1",
-        revision=1,
         content="Server breached.",
-        content_sha256=hashlib.sha256(b"Server breached.").hexdigest(),
     )
     citation = CaseEvidenceCitation(
         source_id="s1",
-        source_revision=1,
         exact_quote="Server breached.",
     )
     claim = CaseAnalysisClaim(
@@ -149,7 +137,6 @@ def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
             CaseTimelineItem(time="Tuesday", event="Lateral movement", claim_ids=["A-05"])
         ],
         claims=[claim],
-        evidence_sha256="0" * 64,
     )
     with pytest.raises(CaseAnalysisFailure) as exc_info:
         validate_case_trace(trace, (source,), [])
@@ -159,13 +146,10 @@ def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
 def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
     source = CaseAdmittedSource(
         source_id="s1",
-        revision=1,
         content="Server breached.",
-        content_sha256=hashlib.sha256(b"Server breached.").hexdigest(),
     )
     citation = CaseEvidenceCitation(
         source_id="s1",
-        source_revision=1,
         exact_quote="Server breached.",
     )
     claim = CaseAnalysisClaim(
@@ -183,7 +167,6 @@ def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
             CaseImpactItem(description="Financial loss", claim_ids=["A-99"])
         ],
         claims=[claim],
-        evidence_sha256="0" * 64,
     )
     with pytest.raises(CaseAnalysisFailure) as exc_info:
         validate_case_trace(trace, (source,), [])
@@ -195,13 +178,10 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
         raw_text = "On Monday, company ACME was targeted by unauthorized access."
         source = CaseAdmittedSource(
             source_id="s1",
-            revision=1,
             content=raw_text,
-            content_sha256=hashlib.sha256(raw_text.encode()).hexdigest(),
         )
         citation = CaseEvidenceCitation(
             source_id="s1",
-            source_revision=1,
             exact_quote=raw_text,
         )
         claim = CaseAnalysisClaim(
@@ -232,7 +212,6 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             return provider_output
 
         raw_evidence = f"[SOURCE s1 · REVISION 1]\n{raw_text}"
-        digest = hashlib.sha256(raw_evidence.encode()).hexdigest()
         with patch(
             "app.services.case_analysis.caseAnalysis.requestAnalysisStage",
             new=fake_request_stage,
@@ -244,10 +223,8 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
                 AnalysisPipelineConfig(),
                 (source,),
                 None,  # client
-                digest,
-                {"calls": []},
-                "case_overview",
-                None,
+                receipt={"calls": []},
+                mode="case_overview",
             )
 
         assert result.trace is not None
@@ -336,7 +313,6 @@ def test_persisted_case_analysis_trace_defaults_structural_keys_when_omitted() -
             "analysis_mode": "case_overview",
             "summary": "Summary",
             "claims": [],
-            "evidence_sha256": "0" * 64,
         }
     )
     assert trace.involved_parties == []

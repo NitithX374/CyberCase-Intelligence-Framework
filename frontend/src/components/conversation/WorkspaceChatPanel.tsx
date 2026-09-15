@@ -6,9 +6,9 @@ import { EmptyChatIntakeNotice } from "@/components/common/CaseRequiredState";
 import { Icon } from "@/components/common/icons";
 import type {
   CaseAnalysisResultRead,
-  CaseEvidenceSnapshotRead,
+  CaseChatStatus,
+  EvidenceSourceRead,
   PersistedChatMessage,
-  ThreadStatus,
 } from "@/lib/api";
 import type {
   RunPhase,
@@ -20,11 +20,11 @@ interface WorkspaceChatPanelProps {
   phase: RunPhase;
   messages: PersistedChatMessage[];
   visibleMessages: PersistedChatMessage[];
-  threadStatus: ThreadStatus | null;
+  chatStatus: CaseChatStatus | null;
   input: string;
   hasAnalysisContext: boolean;
   leadResult?: CaseAnalysisResultRead | null;
-  leadSnapshot?: CaseEvidenceSnapshotRead | null;
+  evidenceSources?: EvidenceSourceRead[] | null;
   onViewChange: (view: WorkspaceView) => void;
   onNavigateToSource?: (messageId: string) => void;
   onInputChange: (value: string) => void;
@@ -37,11 +37,11 @@ export function WorkspaceChatPanel({
   phase,
   messages,
   visibleMessages,
-  threadStatus,
+  chatStatus,
   input,
   hasAnalysisContext,
   leadResult,
-  leadSnapshot,
+  evidenceSources,
   onViewChange,
   onNavigateToSource,
   onInputChange,
@@ -56,13 +56,11 @@ export function WorkspaceChatPanel({
 
   if (!isOpen) return null;
 
-  const evidenceRevisionLabel = leadSnapshot
-    ? Array.isArray(leadSnapshot)
-      ? ` · ${leadSnapshot.length} sources`
-      : "evidence_revision" in leadSnapshot && leadSnapshot.evidence_revision !== undefined
-        ? ` · Evidence revision ${leadSnapshot.evidence_revision}`
-        : ""
-    : "";
+  const evidenceRevisionLabel = leadResult
+    ? ` · Evidence revision ${leadResult.evidence_revision}`
+    : evidenceSources
+      ? ` · ${evidenceSources.length} sources`
+      : "";
   const contextLabel = leadResult
     ? leadResult.freshness === "stale"
       ? `Using older analysis${evidenceRevisionLabel}`
@@ -126,11 +124,11 @@ export function WorkspaceChatPanel({
         <ChatPanel
           messages={visibleMessages}
           input={input}
-          threadStatus={threadStatus}
+          chatStatus={chatStatus}
           phase={phase}
           hasAnalysisContext={hasAnalysisContext}
           leadResult={leadResult}
-          leadSnapshot={leadSnapshot}
+          evidenceSources={evidenceSources}
           onOpenOverview={() => onViewChange("overview")}
           onOpenIntake={() => onViewChange("intake")}
           onNavigateToSource={onNavigateToSource}

@@ -1,4 +1,4 @@
-from app.schemas.reports import StructuredReport
+from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, ReportClaim, StructuredReport
 from app.services.case_analysis.contracts import CaseProviderAnalysis
 from app.services.llm.structuredOutput import (
     anthropic_json_schema,
@@ -11,6 +11,12 @@ def test_report_schema_is_provider_compatible() -> None:
     assert schema["properties"]["report_version"]["const"] == (
         "preliminary_analysis_report_v1"
     )
+
+
+def test_report_contract_is_case_evidence_bound() -> None:
+    assert "case_evidence" in PRELIMINARY_REPORT_SECTION_IDS
+    assert "indicators_found" not in PRELIMINARY_REPORT_SECTION_IDS
+    assert "source_message_ids" not in ReportClaim.model_fields
 
 
 def test_case_provider_analysis_schema_exposes_grounded_claim_roles() -> None:

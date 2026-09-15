@@ -1,34 +1,24 @@
 """Pydantic request and response schemas for all API domains."""
 
-from app.schemas.chat import (
-    CaseChatMessageAccepted,
-    ChatMessageCreate,
-    ChatMessageRead,
-    ChatThreadCreate,
-    ChatThreadDetail,
-    ChatThreadRead,
-    ChatThreadUpdate,
-    MessageRole,
-    RunStatus,
-    ThreadStatus,
-)
-from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 from app.schemas.caseClarifications import (
     CaseClarificationAccepted,
     CaseClarificationAnswer,
     CaseClarificationRead,
 )
-from app.schemas.rag import (
-    MitreTableRow,
-    QueryRequest,
-    QueryResponse,
-    RagQueryRequest,
+from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
+from app.schemas.chat import (
+    CaseChatMessageAccepted,
+    CaseChatRead,
+    CaseChatStatus,
+    ChatMessageCreate,
+    ChatMessageRead,
+    MessageKind,
+    MessageRole,
 )
+from app.schemas.rag import MitreTableRow, QueryRequest, QueryResponse, RagQueryRequest
 from app.schemas.reports import (
     CaseReportCreate,
     CaseReportRead,
-    ChatReportCreate,
-    ChatReportRead,
     ReportClaim,
     ReportHeading,
     ReportPersistenceStatus,
@@ -41,23 +31,20 @@ from app.schemas.reports import (
 )
 
 __all__ = [
+    "CaseChatMessageAccepted",
+    "CaseChatRead",
+    "CaseChatStatus",
+    "CaseClarificationAccepted",
+    "CaseClarificationAnswer",
+    "CaseClarificationRead",
     "CaseCreate",
     "CaseRead",
     "CaseReportCreate",
     "CaseReportRead",
     "CaseUpdate",
-    "CaseClarificationAccepted",
-    "CaseClarificationAnswer",
-    "CaseClarificationRead",
-    "CaseChatMessageAccepted",
     "ChatMessageCreate",
     "ChatMessageRead",
-    "ChatReportCreate",
-    "ChatReportRead",
-    "ChatThreadCreate",
-    "ChatThreadDetail",
-    "ChatThreadRead",
-    "ChatThreadUpdate",
+    "MessageKind",
     "MessageRole",
     "MitreTableRow",
     "QueryRequest",
@@ -71,7 +58,5 @@ __all__ = [
     "ReportStatus",
     "ReportSupportType",
     "ReportValidationStatus",
-    "RunStatus",
     "StructuredReport",
-    "ThreadStatus",
 ]

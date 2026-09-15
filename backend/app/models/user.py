@@ -21,7 +21,6 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.case import Case
-    from app.models.chat import ChatThread
 
 
 class User(Base):
@@ -82,7 +81,3 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
-
-    @property
-    def threads(self) -> list[ChatThread]:
-        return [c.thread for c in self.cases if c.thread is not None]

@@ -194,7 +194,6 @@ function intakeStatus({ isSubmitting, isCaseDataLoading, failed, analysisResult,
 
 function sourceLabel(kind: string): string {
   if (kind === "reviewed_document") return "Reviewed document";
-  if (kind === "clarification_answer" || kind === "followup_answer") return "Clarification answer";
-  if (kind === "explicit_chat_addition") return "Added case information";
+  if (kind === "followup_answer") return "Follow-up answer";
   return "Case narrative";
 }

@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 from uuid import uuid4
 
 from app.models import Case
@@ -38,13 +37,10 @@ def test_document_admission_binds_page_spans_to_the_admitted_text():
                     user_id=None,
                     extraction_id=document.extractions[0].id,
                 )
-                revision = source.revisions[0]
-                pages = revision.provenance_json["pages"]
+                pages = source.provenance_json["pages"]
                 assert pages[0]["start_offset"] == 0
                 assert pages[0]["end_offset"] == pages[1]["start_offset"]
-                assert pages[0]["text_sha256"] == hashlib.sha256(
-                    "first page\n\n".encode()
-                ).hexdigest()
+                assert pages[0]["merged_text"] == "first page"
 
             async with factory() as db, db.begin():
                 revised = await CaseMaterialsService(db).addRevision(
@@ -59,7 +55,7 @@ def test_document_admission_binds_page_spans_to_the_admitted_text():
                         ]
                     },
                 )
-                revised_pages = revised.revisions[-1].provenance_json["pages"]
+                revised_pages = revised.provenance_json["pages"]
                 assert revised_pages[1]["start_offset"] == len("first page\n\n")
                 assert revised_pages[1]["end_offset"] == len("first page\n\nupdated page")
 

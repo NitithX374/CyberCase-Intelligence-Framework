@@ -1,6 +1,6 @@
-import type { CaseAnalysisResultRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
 import { type SourceMessageRef } from "@/lib/case-overview-contracts";
-import { parseCaseSnapshot, sourceRefs, type CaseSnapshotSource } from "@/lib/case-overview-source";
+import { parseCaseEvidence, sourceRefs, type CaseEvidenceSource } from "@/lib/case-overview-source";
 import { parseCaseTrace, type CaseTraceAssociation, type CaseTraceClaim } from "@/lib/case-overview-trace";
 import { asArray, asRecord, asString } from "@/lib/case-overview-parsing";
 
@@ -65,14 +65,14 @@ interface TechnicalAugmentation {
 
 export function buildTechnicalContext(
   result: CaseAnalysisResultRead | null,
-  snapshot: unknown | null,
+  evidenceSources: EvidenceSourceRead[] | null,
 ): TechnicalContextData {
-  if (!result || !snapshot) return emptyTechnicalContext("unavailable", "case_analysis_unavailable");
-  let sources: CaseSnapshotSource[];
+  if (!result || !evidenceSources) return emptyTechnicalContext("unavailable", "case_analysis_unavailable");
+  let sources: CaseEvidenceSource[];
   let trace: ReturnType<typeof parseCaseTrace>;
   try {
-    sources = parseCaseSnapshot(snapshot);
-    trace = parseCaseTrace(result, snapshot, sources);
+    sources = parseCaseEvidence(evidenceSources);
+    trace = parseCaseTrace(result, sources);
   } catch {
     return emptyTechnicalContext("invalid_trace", "invalid_trace");
   }
@@ -142,7 +142,7 @@ function mappedCard(
   association: CaseTraceAssociation,
   row: MitreRow,
   claims: Map<string, CaseTraceClaim>,
-  sources: CaseSnapshotSource[],
+  sources: CaseEvidenceSource[],
 ): TechnicalContextCard {
   const sourceIds = [...new Set(association.claimIds.flatMap((claimId) => claims.get(claimId)?.supportingIds ?? []))];
   if (!sourceIds.length) throw new Error("MITRE association has no Case evidence support.");

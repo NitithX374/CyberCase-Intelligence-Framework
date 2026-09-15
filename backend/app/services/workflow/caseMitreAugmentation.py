@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import logging
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
@@ -61,7 +60,7 @@ class CaseMitreAugmentation:
     def mitre_table(self) -> list[dict[str, object]]:
         return list(self.context.mitre_table) if self.context else []
 
-    def to_metadata(self, query: str) -> dict[str, object]:
+    def to_metadata(self) -> dict[str, object]:
         metadata: dict[str, object] = {
             "version": CASE_MITRE_AUGMENTATION_VERSION,
             "status": self.status,
@@ -82,7 +81,6 @@ async def run_case_mitre_augmentation(
     input_text: str,
     manifest: Sequence[Mapping[str, object]],
     base_trace: CaseAnalysisTrace,
-    document_context: object,
     config: AnalysisPipelineConfig,
     applicability_gate=evaluate_mitre_applicability,
     rag_request=request_rag,
@@ -337,11 +335,6 @@ def _failed(
     return CaseMitreAugmentation("failed", record, context, (), code)
 
 
-mergeCaseMitreTrace = merge_case_mitre_trace
-requestCaseMitreMapping = request_case_mitre_mapping
-runCaseMitreAugmentation = run_case_mitre_augmentation
-
-
 def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload:
     retrieval_id = response.retrieval_context_id
     context = response.context
@@ -363,18 +356,12 @@ def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload
     )
 
 
-validatedCaseRagContext = validated_case_rag_context
-
 __all__ = [
     "CASE_MITRE_AUGMENTATION_VERSION",
     "CaseMitreAugmentation",
     "CaseRagContextPayload",
-    "mergeCaseMitreTrace",
     "merge_case_mitre_trace",
-    "requestCaseMitreMapping",
     "request_case_mitre_mapping",
-    "runCaseMitreAugmentation",
     "run_case_mitre_augmentation",
-    "validatedCaseRagContext",
     "validated_case_rag_context",
 ]

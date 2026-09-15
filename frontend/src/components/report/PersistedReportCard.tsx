@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
-  downloadCaseReportPdf,
+  downloadCaseReportHtml,
   type CaseReport,
 } from "@/lib/api";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
@@ -44,11 +44,6 @@ export function PersistedReportCard({
           <h2 className="mt-1 text-lg font-bold tracking-tight text-ink sm:text-xl">
             {report.report?.title ?? caseTitle}
           </h2>
-          {report.source_reference_type === "case_evidence" && report.analysis_result_id && (
-            <p className="mt-2 max-w-2xl break-all text-[10px] leading-relaxed text-ink-muted">
-              Bound to Case analysis {report.analysis_result_id}.
-            </p>
-          )}
         </div>
 
         {report.persistence_status === "completed" && report.report && (
@@ -66,7 +61,7 @@ export function PersistedReportCard({
       {report.persistence_status === "failed" || !report.report ? (
         <ReportFailure report={report} />
       ) : (
-        <ReportPdfViewer
+        <ReportHtmlViewer
           caseId={caseId}
           reportId={report.report_id}
           title={report.report.title ?? caseTitle}
@@ -76,7 +71,7 @@ export function PersistedReportCard({
   );
 }
 
-function ReportPdfViewer({
+function ReportHtmlViewer({
   caseId,
   reportId,
   title,
@@ -88,56 +83,56 @@ function ReportPdfViewer({
   const [isModalDismissed, setIsModalDismissed] = useState(false);
 
   const {
-    data: pdfBlob,
+    data: htmlBlob,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["case-report-pdf-blob", caseId, reportId],
-    queryFn: () => downloadCaseReportPdf(caseId, reportId),
+    queryKey: ["case-report-html-blob", caseId, reportId],
+    queryFn: () => downloadCaseReportHtml(caseId, reportId),
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
 
-  const pdfUrl = useMemo(() => {
+  const htmlUrl = useMemo(() => {
     if (
-      !pdfBlob ||
+      !htmlBlob ||
       typeof window === "undefined" ||
       typeof window.URL?.createObjectURL !== "function"
     ) {
       return null;
     }
-    return window.URL.createObjectURL(pdfBlob);
-  }, [pdfBlob]);
+    return window.URL.createObjectURL(htmlBlob);
+  }, [htmlBlob]);
 
   useEffect(() => {
     return () => {
       if (
-        pdfUrl &&
+        htmlUrl &&
         typeof window !== "undefined" &&
         typeof window.URL?.revokeObjectURL === "function"
       ) {
-        window.URL.revokeObjectURL(pdfUrl);
+        window.URL.revokeObjectURL(htmlUrl);
       }
     };
-  }, [pdfUrl]);
+  }, [htmlUrl]);
 
-  const pdfUserFacingError = useMemo(() => {
+  const htmlUserFacingError = useMemo(() => {
     if (!error) return null;
-    return toUserFacingError(error, { actionLabel: "โหลดตัวอย่าง PDF ใหม่" });
+    return toUserFacingError(error, { actionLabel: "โหลดตัวอย่างรายงานใหม่" });
   }, [error]);
 
   if (isLoading) {
     return (
       <div
-        aria-label="Loading PDF preview"
+        aria-label="Loading report preview"
         className="flex h-[750px] w-full flex-col items-center justify-center border-y border-line bg-surface p-6 text-center text-ink-secondary"
       >
         <div
           className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
           aria-hidden="true"
         />
-        <p className="mt-3 text-xs font-bold text-ink">Loading PDF report...</p>
+        <p className="mt-3 text-xs font-bold text-ink">Loading report...</p>
         <p className="mt-0.5 text-[11px] text-ink-muted">
           Retrieving formatted case analysis document.
         </p>
@@ -145,14 +140,14 @@ function ReportPdfViewer({
     );
   }
 
-  if (error || !pdfUrl) {
+  if (error || !htmlUrl) {
     return (
       <>
         <div
-          aria-label="PDF Preview Unavailable"
+          aria-label="Report Preview Unavailable"
           className="flex h-[400px] w-full flex-col items-center justify-center space-y-3 border-y border-line bg-surface p-6 text-center"
         >
-          <p className="text-xs font-semibold text-ink">ไม่สามารถแสดงตัวอย่าง PDF ได้</p>
+          <p className="text-xs font-semibold text-ink">ไม่สามารถแสดงตัวอย่างรายงานได้</p>
           <p className="text-[11px] text-ink-secondary">
             กรุณาลองโหลดเอกสารใหม่อีกครั้ง หรือดาวน์โหลดไฟล์ PDF โดยตรง
           </p>
@@ -168,8 +163,8 @@ function ReportPdfViewer({
           </button>
         </div>
         <MeaningfulErrorModal
-          isOpen={!isModalDismissed && Boolean(pdfUserFacingError)}
-          error={pdfUserFacingError}
+          isOpen={!isModalDismissed && Boolean(htmlUserFacingError)}
+          error={htmlUserFacingError}
           onClose={() => setIsModalDismissed(true)}
           onRetry={() => {
             setIsModalDismissed(false);
@@ -182,12 +177,12 @@ function ReportPdfViewer({
 
   return (
     <div
-      aria-label="PDF Document Viewer"
+      aria-label="HTML Report Viewer"
       className="overflow-hidden border border-line bg-surface"
     >
       <iframe
-        src={`${pdfUrl}#toolbar=1&navpanes=0`}
-        title={`PDF Report: ${title}`}
+        src={htmlUrl}
+        title={`Case report: ${title}`}
         className="h-[800px] w-full border-0 bg-canvas sm:h-[850px]"
       />
     </div>

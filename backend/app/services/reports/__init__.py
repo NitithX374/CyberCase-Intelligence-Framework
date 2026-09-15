@@ -1,16 +1,16 @@
 from app.services.reports.case_report_contracts import (
-    CaseReportInputSnapshot,
+    CaseReportInput,
     CaseReportSource,
     CaseReportTechnicalAugmentation,
     CaseTechnicalAugmentationStatus,
-    ensure_case_report_snapshot,
     native_source_ids,
 )
+from app.services.reports.case_report_html import render_case_report_html
 from app.services.reports.case_report_pdf import render_case_report_pdf
 from app.services.reports.case_report_persistence import (
     CaseReportService,
-    build_case_report_snapshot,
-    serialize_chat_report,
+    build_case_report_input,
+    serialize_case_report,
 )
 from app.services.reports.case_report_template import (
     build_case_template_report,
@@ -28,7 +28,7 @@ from app.services.reports.report_validation import (
 )
 
 __all__ = [
-    "CaseReportInputSnapshot",
+    "CaseReportInput",
     "CaseReportService",
     "CaseReportSource",
     "CaseReportTechnicalAugmentation",
@@ -39,11 +39,11 @@ __all__ = [
     "ReportServiceError",
     "ReportValidationError",
     "build_case_template_report",
-    "build_case_report_snapshot",
-    "ensure_case_report_snapshot",
+    "build_case_report_input",
     "native_source_ids",
     "render_case_report_pdf",
+    "render_case_report_html",
     "run_case_report_generation",
-    "serialize_chat_report",
+    "serialize_case_report",
     "validate_case_structured_report",
 ]

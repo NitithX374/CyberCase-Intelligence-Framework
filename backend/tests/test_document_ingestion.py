@@ -205,22 +205,3 @@ def test_ingestion_does_not_call_rag_or_case_analysis(monkeypatch) -> None:
         )
     )
     assert calls == {"rag": 0, "analysis": 0}
-
-
-def test_ingestion_does_not_create_persisted_chat_or_case(monkeypatch) -> None:
-    calls = {"create": 0}
-
-    async def forbidden_create(*args, **kwargs):
-        calls["create"] += 1
-
-    monkeypatch.setattr(
-        "app.services.chat.chatService.ChatService.create_thread",
-        forbidden_create,
-    )
-
-    asyncio.run(
-        _service(RecordingRecognizer()).ingest(
-            _docx_bytes("evidence only"), "case.docx"
-        )
-    )
-    assert calls == {"create": 0}

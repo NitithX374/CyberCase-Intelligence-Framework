@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
 import { pollCaseRunUntilSettled, waitForNextChatPoll } from "@/features/chat/runs/chat-polling";
-import { caseAccepted, deferred, message, thread } from "./chat-session-test-support";
+import { caseAccepted, deferred, message, caseChat } from "./chat-session-test-support";
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
@@ -13,7 +13,7 @@ it("preserves the CaseRun one-read retry budget and then surfaces the error", as
   const apply = vi.fn();
   const completion = pollCaseRunUntilSettled({
     runId: "run-1", signal: controller.signal, isCurrent: () => true,
-    readRun, readThread: vi.fn(), applyThreadDetail: apply,
+    readRun, readCaseChat: vi.fn(), applyCaseChat: apply,
   });
   const assertion = expect(completion).rejects.toThrow("Read failed");
   await vi.advanceTimersByTimeAsync(2000);
@@ -22,15 +22,15 @@ it("preserves the CaseRun one-read retry budget and then surfaces the error", as
   expect(apply).not.toHaveBeenCalled();
 });
 
-it("surfaces a CaseRun failure even when the thread response has already settled", async () => {
+it("surfaces a CaseRun failure even when the caseChat response has already settled", async () => {
   const receipt = caseAccepted(message("a", 1, "user"));
   const apply = vi.fn();
-  const detail = thread("a", "answered");
+  const detail = caseChat("a", "answered");
   const completion = pollCaseRunUntilSettled({
     runId: receipt.run.id,
     signal: new AbortController().signal, isCurrent: () => true,
     readRun: async () => ({ ...receipt.run, status: "failed", error_message: "Analysis failed" }),
-    readThread: async () => detail, applyThreadDetail: apply,
+    readCaseChat: async () => detail, applyCaseChat: apply,
   });
   await vi.advanceTimersByTimeAsync(1000);
   expect(await completion).toBeNull();
@@ -44,8 +44,8 @@ it("does not apply a run result after cancellation during its HTTP request", asy
   const completion = pollCaseRunUntilSettled({
     runId: "run-1", signal: controller.signal,
     isCurrent: () => true, readRun: () => waiting.promise,
-    readThread: async () => thread("a", "answered"),
-    applyThreadDetail: apply,
+    readCaseChat: async () => caseChat("a", "answered"),
+    applyCaseChat: apply,
   });
   await vi.advanceTimersByTimeAsync(1000);
   controller.abort();

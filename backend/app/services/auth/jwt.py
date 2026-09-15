@@ -52,12 +52,7 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
         return None
 
 
-createAccessToken = create_access_token
-decodeAccessToken = decode_access_token
-
 __all__ = [
-    "createAccessToken",
     "create_access_token",
-    "decodeAccessToken",
     "decode_access_token",
 ]

@@ -16,7 +16,6 @@ const sampleCase: CaseRead = {
   id: "case-1",
   title: "Payment Review",
   status: "answered",
-  chat_thread_id: "thread-1",
   evidence_revision: 3,
   processing_status: "idle",
   has_pending_clarification: false,

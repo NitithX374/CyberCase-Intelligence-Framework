@@ -14,7 +14,7 @@ def _fastapi_app() -> FastAPI:
     return application
 
 
-def test_health_chat_and_nested_report_api_routes_are_registered() -> None:
+def test_health_case_and_nested_report_api_routes_are_registered() -> None:
     openapi_paths = _fastapi_app().openapi()["paths"]
     api_routes = {
         (method.upper(), path)
@@ -42,9 +42,7 @@ def test_health_chat_and_nested_report_api_routes_are_registered() -> None:
         ("PATCH", "/api/v1/cases/{case_id}"),
         ("DELETE", "/api/v1/cases/{case_id}"),
         ("GET", "/api/v1/cases/{case_id}/chat"),
-        ("POST", "/api/v1/cases/{case_id}/chat"),
         ("POST", "/api/v1/cases/{case_id}/chat/messages"),
-        ("GET", "/api/v1/cases/{case_id}/chat/runs/{run_id}"),
         ("GET", "/api/v1/cases/{case_id}/documents"),
         ("POST", "/api/v1/cases/{case_id}/documents"),
         ("GET", "/api/v1/cases/{case_id}/documents/{document_id}/content"),
@@ -60,22 +58,11 @@ def test_health_chat_and_nested_report_api_routes_are_registered() -> None:
         ("GET", "/api/v1/cases/{case_id}/runs/{run_id}"),
         ("GET", "/api/v1/cases/{case_id}/clarifications"),
         ("POST", "/api/v1/cases/{case_id}/clarifications/{clarification_id}/answers"),
-        ("GET", "/api/v1/chats"),
-        ("POST", "/api/v1/chats"),
-        ("GET", "/api/v1/chats/{thread_id}/case-link"),
-        ("GET", "/api/v1/chats/{thread_id}"),
-        ("PATCH", "/api/v1/chats/{thread_id}"),
-        ("DELETE", "/api/v1/chats/{thread_id}"),
-        ("POST", "/api/v1/chats/{thread_id}/messages"),
-        ("GET", "/api/v1/chats/{thread_id}/runs/{run_id}"),
-        ("POST", "/api/v1/chats/{thread_id}/reports"),
-        ("GET", "/api/v1/chats/{thread_id}/reports"),
-        ("GET", "/api/v1/chats/{thread_id}/reports/{report_id}"),
-        ("GET", "/api/v1/chats/{thread_id}/reports/{report_id}/pdf"),
         ("POST", "/api/v1/cases/{case_id}/reports"),
         ("GET", "/api/v1/cases/{case_id}/reports"),
         ("GET", "/api/v1/cases/{case_id}/reports/{report_id}"),
         ("GET", "/api/v1/cases/{case_id}/reports/{report_id}/pdf"),
+        ("GET", "/api/v1/cases/{case_id}/reports/{report_id}/html"),
     }
 
 

@@ -1,7 +1,7 @@
 import type {
-  ChatThreadDetail,
+  CaseChatDetail,
   PersistedChatMessage,
-  ThreadStatus,
+  CaseChatStatus,
 } from "@/lib/api";
 
 export interface ChatFollowUpEntry {
@@ -39,10 +39,9 @@ function followUpMetadata(
 ): FollowUpMetadata | null {
   const value = message.metadata_json.chat_followup;
   if (
+    message.metadata_json.action !== "follow_up" ||
     typeof value !== "object" ||
     value === null ||
-    !("kind" in value) ||
-    value.kind !== "clarification" ||
     !("root_ordinal" in value) ||
     typeof value.root_ordinal !== "number" ||
     !Number.isInteger(value.root_ordinal) ||
@@ -90,7 +89,7 @@ export function followUpGapDetailForMessage(
   message: PersistedChatMessage,
 ): ChatFollowUpGapDetail | null {
   const followUp = message.metadata_json.chat_followup;
-  if (!isRecord(followUp) || followUp.kind !== "clarification") return null;
+  if (message.metadata_json.action !== "follow_up" || !isRecord(followUp)) return null;
 
   const detail = followUp.selected_gap_detail;
   if (
@@ -129,8 +128,7 @@ export function isClarificationAnswer(message: PersistedChatMessage): boolean {
   if (message.role !== "user") return false;
   if (message.message_kind === "conversation") return false;
   if (
-    message.message_kind === "followup_answer" ||
-    message.message_kind === "clarification_answer"
+    message.message_kind === "followup_answer"
   ) {
     return true;
   }
@@ -155,9 +153,9 @@ export function latestUserAnswerBetween(
   return candidates[candidates.length - 1] ?? null;
 }
 
-export function activeChatFollowUpForThread(
+export function activeCaseChatFollowUp(
   persistedMessages: PersistedChatMessage[],
-  status: ThreadStatus | null,
+  status: CaseChatStatus | null,
 ): ActiveChatFollowUp | null {
   if (status !== "awaiting_followup") return null;
 
@@ -262,7 +260,7 @@ export function chatTranscriptMessages(
 }
 
 export function persistedRequestOrdinal(
-  detail: ChatThreadDetail,
+  detail: CaseChatDetail,
   lastKnownMessageOrdinal: number,
   content: string,
 ): number | undefined {
@@ -275,7 +273,7 @@ export function persistedRequestOrdinal(
 }
 
 export function hasCompletedAssistantOutput(
-  detail: ChatThreadDetail,
+  detail: CaseChatDetail,
   requestOrdinal: number,
 ): boolean {
   if (

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -35,7 +34,6 @@ async def enqueue_case_analysis(
     case_id: UUID,
     user_id: UUID | None,
     request: CaseAnalysisCreate,
-    clarification_id: UUID | None = None,
     request_message_id: UUID | None = None,
     request_payload_extra: dict[str, object] | None = None,
 ) -> CaseRun:
@@ -44,7 +42,6 @@ async def enqueue_case_analysis(
         "operation": "analysis",
         "response_language": request.response_language,
         "expected_evidence_revision": request.expected_evidence_revision,
-        "clarification_id": str(clarification_id) if clarification_id else None,
         **(request_payload_extra or {}),
     }
     existing = await db.scalar(
@@ -53,7 +50,7 @@ async def enqueue_case_analysis(
         .with_for_update()
     )
     if existing is not None:
-        if not await _existing_request_matches(db, existing, saved_payload):
+        if not await _existing_request_matches(existing, saved_payload):
             raise CaseRunError(
                 "idempotency_conflict",
                 "Idempotency key was already used with different analysis intent",
@@ -175,10 +172,6 @@ def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
     if result is None:
         return "missing"
     rev = getattr(result, "evidence_revision", None)
-    if rev is None and hasattr(result, "snapshot"):
-        snap = getattr(result, "snapshot")
-        if snap is not None:
-            rev = getattr(snap, "evidence_revision", None)
     if rev is None:
         return "missing"
     return "current" if rev == case.evidence_revision else "stale"
@@ -190,10 +183,6 @@ async def _locked_case(db: AsyncSession, case_id: UUID, user_id: UUID | None) ->
     if case is None or case.user_id != user_id:
         raise CaseMaterialsError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
     return case
-
-
-def case_run_fingerprint(value: dict[str, object]) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 async def requeue_failed_case_run(
@@ -238,82 +227,31 @@ async def requeue_failed_case_run(
     run.status = "queued"
     run.error_code = None
     run.error_message = None
-    run.lease_owner = None
-    run.lease_expires_at = None
     run.started_at = None
     run.finished_at = None
     return run
 
 
 async def _existing_request_matches(
-    db: AsyncSession,
     run: CaseRun,
     request_payload: dict[str, object],
 ) -> bool:
     return run.request_payload == request_payload
 
 
-async def case_run_fingerprint_matches(
-    db: AsyncSession,
-    run: CaseRun,
-) -> bool:
-    return True
-
-
 @dataclass(frozen=True)
 class ClaimedCaseRun:
     id: UUID
     case_id: UUID
-    evidence_revision: int = 1
-    attempt_count: int = 0
-    operation: str = "analysis"
-    input_text: str = ""
-    manifest: tuple[dict[str, object], ...] = ()
-    source_ids: tuple[str, ...] = ()
+    evidence_revision: int
+    attempt_count: int
+    operation: str
+    input_text: str
+    manifest: tuple[dict[str, object], ...]
+    source_ids: tuple[str, ...]
     source_text_by_id: dict[str, str] = field(default_factory=dict)
     pipeline_config: dict[str, object] = field(default_factory=dict)
     request_payload: dict[str, object] = field(default_factory=dict)
-    _snapshot_id: UUID | None = None
-    _text_sha256: str = ""
-
-    def __init__(
-        self,
-        id: UUID,
-        case_id: UUID,
-        evidence_revision: int = 1,
-        attempt_count: int = 0,
-        operation: str = "analysis",
-        input_text: str = "",
-        manifest: tuple[dict[str, object], ...] = (),
-        source_ids: tuple[str, ...] = (),
-        source_text_by_id: dict[str, str] | None = None,
-        pipeline_config: dict[str, object] | None = None,
-        request_payload: dict[str, object] | None = None,
-        snapshot_id: UUID | None = None,
-        text_sha256: str = "",
-        **kwargs: object,
-    ) -> None:
-        object.__setattr__(self, "id", id)
-        object.__setattr__(self, "case_id", case_id)
-        object.__setattr__(self, "evidence_revision", evidence_revision)
-        object.__setattr__(self, "attempt_count", attempt_count)
-        object.__setattr__(self, "operation", operation)
-        object.__setattr__(self, "input_text", input_text)
-        object.__setattr__(self, "manifest", manifest)
-        object.__setattr__(self, "source_ids", source_ids)
-        object.__setattr__(self, "source_text_by_id", source_text_by_id if source_text_by_id is not None else {})
-        object.__setattr__(self, "pipeline_config", pipeline_config if pipeline_config is not None else {})
-        object.__setattr__(self, "request_payload", request_payload if request_payload is not None else {})
-        object.__setattr__(self, "_snapshot_id", snapshot_id)
-        object.__setattr__(self, "_text_sha256", text_sha256)
-
-    @property
-    def snapshot_id(self) -> UUID:
-        return self._snapshot_id or UUID("00000000-0000-0000-0000-000000000000")
-
-    @property
-    def text_sha256(self) -> str:
-        return self._text_sha256
 
 
 async def fail_case_run(
@@ -337,17 +275,12 @@ async def fail_case_run(
                 error_code=error_code,
                 error_message=error_message,
                 finished_at=now,
-                lease_owner=None,
-                lease_expires_at=None,
                 updated_at=now,
             )
         )
         return bool(result.rowcount)
 
 
-analysisFreshness = analysis_freshness
-caseRunFingerprint = case_run_fingerprint
-caseRunFingerprintMatches = case_run_fingerprint_matches
 enqueueCaseAnalysis = enqueue_case_analysis
 failCaseRun = fail_case_run
 getLatestCaseAnalysis = get_latest_case_analysis
@@ -368,8 +301,6 @@ async def cleanupAbandonedCaseRuns(session_factory: Callable[[], AsyncSession]) 
                 error_code=CASE_RUN_RECOVERY_CODE,
                 error_message="Case processing was interrupted by application restart. Retry analysis.",
                 finished_at=now,
-                lease_owner=None,
-                lease_expires_at=None,
                 updated_at=now,
             )
         )
@@ -380,12 +311,7 @@ __all__ = [
     "CASE_RUN_RECOVERY_CODE",
     "CaseRunError",
     "ClaimedCaseRun",
-    "analysisFreshness",
     "analysis_freshness",
-    "caseRunFingerprint",
-    "caseRunFingerprintMatches",
-    "case_run_fingerprint",
-    "case_run_fingerprint_matches",
     "cleanupAbandonedCaseRuns",
     "enqueueCaseAnalysis",
     "enqueue_case_analysis",

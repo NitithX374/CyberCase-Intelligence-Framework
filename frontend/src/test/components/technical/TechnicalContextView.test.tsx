@@ -1,42 +1,34 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TechnicalContextView } from "@/components/technical/TechnicalContextView";
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
 import { mockNativeDialog } from "../overview/mock-native-dialog";
 
 mockNativeDialog();
 
 const caseId = "22222222-2222-4222-8222-222222222222";
 const sourceId = "11111111-1111-4111-8111-111111111111";
-const snapshotId = "33333333-3333-4333-8333-333333333333";
 const exactQuote = "The evidence reports PowerShell network activity.";
 
-function technicalProjection(): {
-  result: CaseAnalysisResultRead;
-  snapshot: CaseEvidenceSnapshotRead;
-} {
-  const manifest = [{
-    exact_text: exactQuote,
-    provenance: { origin: "analyst-authored" },
-    revision: 1,
-    source_id: sourceId,
-    source_kind: "narrative",
-  }];
-  const snapshot: CaseEvidenceSnapshotRead = {
-    id: snapshotId,
+function technicalProjection(): { result: CaseAnalysisResultRead; evidenceSources: EvidenceSourceRead[] } {
+  const evidenceSources: EvidenceSourceRead[] = [{
+    id: sourceId,
     case_id: caseId,
-    evidence_revision: 1,
-    format_version: "case_evidence_snapshot_v1",
-    manifest_json: manifest,
-    input_text: exactQuote,
+    source_kind: "narrative",
+    document_id: null,
+    origin_message_id: null,
+    exact_text: exactQuote,
+    provenance_json: {},
+    source_metadata_json: {},
     created_at: "2026-09-10T00:00:00Z",
-  };
+    archived_at: null,
+  }];
   const result: CaseAnalysisResultRead = {
     id: "44444444-4444-4444-8444-444444444444",
     case_id: caseId,
     run_id: "55555555-5555-4555-8555-555555555555",
     evidence_revision: 1,
-    schema_version: "case_analysis_result_v1",
+    schema_version: "case_analysis_trace_v1",
     status: "validated",
     answer: exactQuote,
     summary: exactQuote,
@@ -44,7 +36,6 @@ function technicalProjection(): {
       version: "case_analysis_trace_v1",
       validation_status: "validated",
       analysis_mode: "case_overview",
-      evidence_sha256: "test-hash",
       summary: exactQuote,
       claims: [{
         claim_id: "A-01",
@@ -54,7 +45,7 @@ function technicalProjection(): {
         reasoning_summary: null,
         supporting_source_ids: [sourceId],
         contradicting_source_ids: [],
-        supporting_citations: [{ source_id: sourceId, source_revision: 1, exact_quote: exactQuote }],
+        supporting_citations: [{ source_id: sourceId, exact_quote: exactQuote }],
         contradicting_citations: [],
       }],
       gaps: [],
@@ -78,20 +69,19 @@ function technicalProjection(): {
         applicability: { decision: "RETRIEVE", source_message_ids: [sourceId], trigger_text: [exactQuote] },
         retrieval_context_id: "retrieval-1",
         mitre_table: [{ technique_id: "T1059.001", name: "PowerShell", tactic: "Execution", description: "Command and scripting interpreter." }],
-        query_sha256: "a".repeat(64),
         association_ids: ["MA-01"],
       },
     },
-    created_at: "2026-09-10T00:00:00Z",
+    created_at: "2026-09-10T12:00:00Z",
     freshness: "current",
   };
-  return { result, snapshot };
+  return { result, evidenceSources };
 }
 
 describe("TechnicalContextView", () => {
   it("shows the optional-context empty state without Case analysis", () => {
     const openIntake = vi.fn();
-    render(<TechnicalContextView analysisResult={null} evidenceSnapshot={null} onOpenIntake={openIntake} />);
+    render(<TechnicalContextView analysisResult={null} evidenceSources={null} onOpenIntake={openIntake} />);
     expect(screen.getByText("Technical augmentation outcome is unavailable")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Go to Intake/i }));
     expect(openIntake).toHaveBeenCalledOnce();
@@ -100,10 +90,10 @@ describe("TechnicalContextView", () => {
   it("shows validated Case mappings and inspects their exact source", () => {
     const projection = technicalProjection();
     const navigateToSource = vi.fn();
-    render(<TechnicalContextView analysisResult={projection.result} evidenceSnapshot={projection.snapshot} onNavigateToSource={navigateToSource} />);
+    render(<TechnicalContextView analysisResult={projection.result} evidenceSources={projection.evidenceSources} onNavigateToSource={navigateToSource} />);
     expect(screen.getByText("Validated Case mappings")).toBeInTheDocument();
     expect(screen.getByText("PowerShell")).toBeInTheDocument();
-    const source = screen.getByRole("button", { name: /Source — Source .* revision 1/i });
+    const source = screen.getByRole("button", { name: /Source — Source .*/i });
     fireEvent.click(source);
     expect(screen.getByRole("dialog")).toHaveTextContent(exactQuote);
     fireEvent.click(screen.getByRole("button", { name: /View in Materials/i }));
@@ -125,11 +115,10 @@ describe("TechnicalContextView", () => {
         applicability: { decision: "SKIP", source_message_ids: [], trigger_text: [] },
         retrieval_context_id: null,
         mitre_table: [],
-        query_sha256: null,
         association_ids: [],
       },
     };
-    render(<TechnicalContextView analysisResult={projection.result} evidenceSnapshot={projection.snapshot} />);
+    render(<TechnicalContextView analysisResult={projection.result} evidenceSources={projection.evidenceSources} />);
     expect(screen.getByText("MITRE augmentation was not applicable")).toBeInTheDocument();
     expect(screen.queryByText("PowerShell")).not.toBeInTheDocument();
   });

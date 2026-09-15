@@ -19,7 +19,6 @@ import {
   type CaseDocumentRead,
   type EvidenceSourceRead,
 } from "@/lib/api";
-import { chatQueryKeys } from "./useChatQueries";
 
 export const caseQueryKeys = {
   all: ["cases"] as const,
@@ -75,14 +74,6 @@ export function useCaseClarifications(caseId: string | null) {
   });
 }
 
-export function useCaseWorkspaceQueries(caseId: string | null) {
-  const documents = useCaseDocuments(caseId);
-  const evidence = useCaseEvidence(caseId);
-  const analysis = useCaseAnalysis(caseId);
-  const clarifications = useCaseClarifications(caseId);
-  return { documents, evidence, analysis, clarifications };
-}
-
 export function useCases() {
   return useQuery({
     queryKey: caseQueryKeys.cases(),
@@ -125,7 +116,7 @@ export function useCaseMutations() {
         (current) => (current ?? []).filter((item) => item.id !== deletedCaseId),
       );
       queryClient.removeQueries({ queryKey: caseQueryKeys.case(deletedCaseId) });
-      queryClient.removeQueries({ queryKey: chatQueryKeys.thread(deletedCaseId) });
+      queryClient.removeQueries({ queryKey: ["chat", "cases", deletedCaseId] });
     },
   });
 

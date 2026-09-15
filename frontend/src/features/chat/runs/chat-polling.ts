@@ -1,4 +1,4 @@
-import type { CaseRunRead, ChatThreadDetail } from "@/lib/api";
+import type { CaseChatDetail, CaseRunRead } from "@/lib/api";
 
 export const CHAT_POLL_INTERVAL_MS = 1000;
 
@@ -30,17 +30,17 @@ interface CasePollingOptions {
   signal: AbortSignal;
   isCurrent: () => boolean;
   readRun: () => Promise<CaseRunRead>;
-  readThread: () => Promise<ChatThreadDetail>;
-  applyThreadDetail: (detail: ChatThreadDetail, failureMessage?: string) => void;
+  readCaseChat: () => Promise<CaseChatDetail>;
+  applyCaseChat: (detail: CaseChatDetail, failureMessage?: string) => void;
 }
 
 export async function pollCaseRunUntilSettled({
   signal,
   isCurrent,
   readRun,
-  readThread,
-  applyThreadDetail,
-}: CasePollingOptions): Promise<ChatThreadDetail | null> {
+  readCaseChat,
+  applyCaseChat,
+}: CasePollingOptions): Promise<CaseChatDetail | null> {
   let consecutiveReadFailures = 0;
   while (!signal.aborted && isCurrent()) {
     await waitForNextChatPoll(signal);
@@ -57,22 +57,22 @@ export async function pollCaseRunUntilSettled({
     }
     if (signal.aborted || !isCurrent()) return null;
     if (run.status === "queued" || run.status === "running") continue;
-    let detail: ChatThreadDetail;
+    let detail: CaseChatDetail;
     try {
-      detail = await readThread();
+      detail = await readCaseChat();
     } catch (error) {
       if (isChatRequestCanceled(signal, error) || !isCurrent()) return null;
       throw error;
     }
     if (signal.aborted || !isCurrent()) return null;
     if (run.status === "failed") {
-      applyThreadDetail(
+      applyCaseChat(
         detail,
         run.error_message || "Case processing failed. Retry the saved message.",
       );
       return null;
     }
-    applyThreadDetail(detail);
+    applyCaseChat(detail);
     return detail;
   }
   return null;

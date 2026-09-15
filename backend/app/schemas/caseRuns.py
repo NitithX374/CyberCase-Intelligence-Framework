@@ -25,8 +25,6 @@ class CaseRunRead(BaseModel):
     operation: CaseRunOperation
     evidence_revision: int
     request_message_id: UUID | None
-    context_analysis_result_id: UUID | None = None
-    clarification_id: UUID | None = None
     status: CaseRunStatus
     attempt_count: int
     error_code: str | None
@@ -45,7 +43,7 @@ class CaseAnalysisResultRead(BaseModel):
     run_id: UUID
     evidence_revision: int
     schema_version: str
-    status: Literal["validated", "legacy_unbound"]
+    status: Literal["validated"]
     answer: str
     summary: str
     trace_json: dict[str, object] | None

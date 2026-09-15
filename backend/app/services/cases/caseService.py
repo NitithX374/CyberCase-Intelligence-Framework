@@ -1,6 +1,6 @@
 """Case aggregate lifecycle and construction services."""
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select, update
@@ -15,13 +15,12 @@ from app.models.caseMaterials import (
 )
 from app.models.report import CaseReport
 from app.models.caseRun import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatMessage, ChatThread
+from app.models.chat import ChatMessage
 from app.models.ragContext import RagContext
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 
 
 def serializeCase(case: Case) -> CaseRead:
-    thread = case.chat_thread
     analysis_runs = [run for run in case.case_runs if run.operation == "analysis"]
     latest_run = max(analysis_runs, key=lambda run: run.created_at, default=None)
     if latest_run is not None and latest_run.status in {"queued", "running"}:
@@ -31,15 +30,15 @@ def serializeCase(case: Case) -> CaseRead:
     else:
         processing_status = "idle"
     has_pending_clarification = False
-    if thread and thread.messages:
+    if case.chat_messages:
         answered_ids = {
             m.in_reply_to_message_id
-            for m in thread.messages
+            for m in case.chat_messages
             if m.in_reply_to_message_id is not None
         }
         has_pending_clarification = any(
             m.message_kind == "followup_question" and m.id not in answered_ids
-            for m in thread.messages
+            for m in case.chat_messages
         )
     status_value = "processing" if processing_status in {"queued", "running"} else (
         "failed" if processing_status == "failed" else
@@ -54,7 +53,6 @@ def serializeCase(case: Case) -> CaseRead:
         user_id=case.user_id,
         title=case.title,
         status=status_value,
-        chat_thread_id=thread.id if thread is not None else None,
         evidence_revision=case.evidence_revision,
         latest_analysis_result_id=case.latest_analysis_result_id,
         processing_status=processing_status,
@@ -65,15 +63,6 @@ def serializeCase(case: Case) -> CaseRead:
         created_at=case.created_at,
         updated_at=case.updated_at,
     )
-
-
-def buildCaseWithChat(
-    title: str,
-    user_id: UUID | None,
-) -> tuple[Case, ChatThread]:
-    case_id = uuid4()
-    case = Case(id=case_id, title=title, user_id=user_id)
-    return case, case.chat_thread
 
 
 class CaseService:
@@ -182,4 +171,4 @@ class CaseService:
         return case
 
 
-__all__ = ["CaseService", "buildCaseWithChat", "serializeCase"]
+__all__ = ["CaseService", "serializeCase"]

@@ -2,31 +2,29 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import type { CaseChatMessageAccepted, CaseRead, ChatThreadDetail, PersistedChatMessage, ThreadStatus } from "@/lib/api";
-import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
-import { useChatSubmission } from "@/features/chat/runs/useChatSubmission";
+import type { CaseChatDetail, CaseChatMessageAccepted, CaseChatStatus, CaseRead, PersistedChatMessage } from "@/lib/api";
+import { useCaseChatSelection } from "@/features/chat/workspace/use-case-chat-selection";
+import { useCaseChatSubmission } from "@/features/chat/runs/useCaseChatSubmission";
 
-export function message(threadId: string, ordinal: number, role: "user" | "assistant", content: string = role): PersistedChatMessage {
+export function message(caseId: string, ordinal: number, role: "user" | "assistant", content: string = role): PersistedChatMessage {
   return {
-    id: `${threadId}-${ordinal}`, thread_id: threadId, ordinal, role, content,
+    id: `${caseId}-${ordinal}`, case_id: caseId, ordinal, role, content,
     message_kind: "conversation", analysis_result_id: null,
     metadata_json: {}, retrieval_context_id: null, created_at: "2026-09-05T00:00:00Z",
   };
 }
 
-export function thread(id = "a", status: ThreadStatus = "idle", messages: PersistedChatMessage[] = []): ChatThreadDetail {
+export function caseChat(caseId = "a", status: CaseChatStatus = "idle", messages: PersistedChatMessage[] = []): CaseChatDetail {
   return {
-    id, title: "Saved case", status, messages, retry_request: null,
-    created_at: "2026-09-05T00:00:00Z", updated_at: "2026-09-05T00:00:00Z",
+    case_id: caseId, status, messages,
   };
 }
 
-export function caseRecord(id = "a", status: ThreadStatus = "idle"): CaseRead {
+export function caseRecord(id = "a", status: CaseChatStatus = "idle"): CaseRead {
   return {
     id,
     title: "Saved case",
     status,
-    chat_thread_id: id,
     evidence_revision: 1,
     processing_status: status === "processing" ? "running" : "idle",
     has_pending_clarification: status === "awaiting_followup",
@@ -35,7 +33,8 @@ export function caseRecord(id = "a", status: ThreadStatus = "idle"): CaseRead {
     updated_at: "2026-09-05T00:00:00Z",
   };
 }
-export function caseAccepted(
+
+export function caseAccepted(
   request: PersistedChatMessage,
   operation: "analysis" | "ask" = "analysis",
 ): CaseChatMessageAccepted {
@@ -43,12 +42,10 @@ export function caseRecord(id = "a", status: ThreadStatus = "idle"): CaseRead {
     message: request,
     run: {
       id: "run-1",
-      case_id: request.thread_id,
+      case_id: request.case_id,
       operation,
       evidence_revision: 1,
       request_message_id: request.id,
-      context_analysis_result_id: operation === "ask" ? "result-1" : null,
-      clarification_id: null,
       status: "running",
       attempt_count: 0,
       error_code: null,
@@ -73,16 +70,14 @@ export function renderSession(nativeCaseId: string | null = "a") {
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
   });
   const upsert = vi.fn();
-  const updateCase = vi.fn().mockResolvedValue(caseRecord());
   const wrapper = ({ children }: { children: ReactNode }) =>
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   const hook = renderHook(() => {
-    const session = useChatThreadSelection({ cacheUpsertThread: upsert });
-    const submission = useChatSubmission({
+    const session = useCaseChatSelection({ cacheUpsertCaseChat: upsert });
+    const submission = useCaseChatSubmission({
       session,
       cases: [caseRecord("a"), caseRecord("b")],
       upsertCase: upsert,
-      updateCase,
       caseId: nativeCaseId,
     });
     return { session, ...submission };
