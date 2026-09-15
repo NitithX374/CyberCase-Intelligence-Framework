@@ -4,14 +4,14 @@ from uuid import uuid4
 
 import httpx
 
-from app.services.case_analysis.mitreApplicabilityGate import (
+from app.services.case_analysis.mitre_applicability_gate import (
     MITRE_APPLICABILITY_GATE_VERSION,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
     MitreApplicabilityGate,
     evaluate_mitre_applicability,
 )
-from app.services.case_analysis.mitreApplicabilityGate import RawEvidenceSource
-from app.services.llm.coreLlm import CoreLlmTarget
+from app.services.case_materials import CaseSourceItem
+from app.services.llm.core_llm import CoreLlmTarget
 
 
 def target():
@@ -29,22 +29,23 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
     monkeypatch,
 ) -> None:
     captured = {}
-    source = RawEvidenceSource(
-        message_id=uuid4(),
-        content="PowerShell downloaded a remote script.",
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="PowerShell downloaded a remote script.",
     )
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured.update(json.loads(request.content))
         output = {
             "decision": "RETRIEVE",
-            "source_message_ids": [str(source.message_id)],
+            "source_message_ids": [source.source_id],
             "trigger_text": ["PowerShell downloaded a remote script"],
         }
         return httpx.Response(200, json={"output_text": json.dumps(output)})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitreApplicabilityGate.resolve_core_llm_target",
+        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -55,7 +56,7 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
     assert captured["system"] == MITRE_APPLICABILITY_SYSTEM_PROMPT
     assert captured["temperature"] == 0.0
     assert captured["max_tokens"] == 1024
-    assert str(source.message_id) in captured["messages"][0]["content"]
+    assert source.source_id in captured["messages"][0]["content"]
     schema = captured["output_config"]["format"]["schema"]
     assert schema["additionalProperties"] is False
     assert set(schema["required"]) == {
@@ -67,20 +68,24 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
 
 
 def test_malformed_provider_output_fails_closed(monkeypatch) -> None:
-    source = RawEvidenceSource(message_id=uuid4(), content="PowerShell executed")
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="PowerShell executed",
+    )
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"output_text": "```json\n{}\n```"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitreApplicabilityGate.resolve_core_llm_target",
+        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     result = asyncio.run(
         evaluate_mitre_applicability(
             source_run_id=uuid4(),
-            evidence_sources=[source],
+            case_sources=[source],
             gate=MitreApplicabilityGate(client=client),
         )
     )
@@ -91,20 +96,24 @@ def test_malformed_provider_output_fails_closed(monkeypatch) -> None:
 
 
 def test_provider_error_fails_closed(monkeypatch) -> None:
-    source = RawEvidenceSource(message_id=uuid4(), content="PowerShell executed")
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="PowerShell executed",
+    )
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(503, json={"error": "unavailable"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitreApplicabilityGate.resolve_core_llm_target",
+        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     result = asyncio.run(
         evaluate_mitre_applicability(
             source_run_id=uuid4(),
-            evidence_sources=[source],
+            case_sources=[source],
             gate=MitreApplicabilityGate(client=client),
         )
     )

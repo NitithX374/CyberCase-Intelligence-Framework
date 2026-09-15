@@ -161,7 +161,7 @@ def test_oauth_callback_invalid_state(client):
 
 
 def test_oauth_callback_success(client, mock_db):
-    from app.services.auth.oauthClients import OAuthUserProfile
+    from app.services.auth.oauth_clients import OAuthUserProfile
 
     user = User(
         id=uuid4(),

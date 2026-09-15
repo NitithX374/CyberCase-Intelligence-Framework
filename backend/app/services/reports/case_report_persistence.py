@@ -9,20 +9,20 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.models.case import Case
-from app.models.caseMaterials import EvidenceSource
-from app.models.caseRun import CaseAnalysisResult
+from app.models.case_materials import CaseSource
+from app.models.case_run import CaseAnalysisResult
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportCreate, CaseReportRead, StructuredReport
 from app.services.reports.case_report_contracts import (
     CaseReportInput,
     ReportGenerationConflict,
     ReportNotFound,
-    native_source_ids,
+    case_source_ids,
     validate_case_structured_report,
 )
 from app.services.reports.case_report_html import render_case_report_html
 from app.services.reports.case_report_pdf import render_case_report_pdf
-from app.services.reports.caseReportProjection import build_case_report_input, serialize_case_report
+from app.services.reports.case_report_projection import build_case_report_input, serialize_case_report
 from app.services.reports.case_report_template import run_case_report_generation
 
 
@@ -117,7 +117,7 @@ class CaseReportService:
         structured = StructuredReport.model_validate(report.structured_report)
         validate_case_structured_report(
             structured,
-            source_evidence_ids=native_source_ids(report_input),
+            allowed_source_ids=case_source_ids(report_input),
             mitre_ids={
                 str(item["technique_id"])
                 for item in report_input.analysis_trace.get("mitre_associations", [])
@@ -129,7 +129,7 @@ class CaseReportService:
     async def locked_case(self, case_id: UUID, user_id: UUID | None) -> Case:
         result = await self.db.execute(
             select(Case)
-            .options(selectinload(Case.evidence_sources).selectinload(EvidenceSource.document))
+            .options(selectinload(Case.sources).selectinload(CaseSource.document))
             .where(Case.id == case_id)
             .with_for_update()
         )
@@ -141,7 +141,7 @@ class CaseReportService:
     async def owned_case(self, case_id: UUID, user_id: UUID | None) -> Case:
         result = await self.db.execute(
             select(Case)
-            .options(selectinload(Case.evidence_sources).selectinload(EvidenceSource.document))
+            .options(selectinload(Case.sources).selectinload(CaseSource.document))
             .where(Case.id == case_id)
         )
         case = result.scalar_one_or_none()

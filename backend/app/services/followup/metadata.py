@@ -6,7 +6,7 @@ from uuid import UUID
 
 from app.config import settings
 from app.services.followup.prompts import FOLLOWUP_POLICY_VERSION, FOLLOWUP_PROMPT_VERSION
-from app.services.llm.coreLlm import resolve_core_llm_target
+from app.services.llm.core_llm import resolve_core_llm_target
 
 
 def followup_metadata(

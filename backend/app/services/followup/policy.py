@@ -18,8 +18,8 @@ from app.services.followup.contracts import (
     FollowUpDecision,
     FollowUpPolicyResult,
 )
-from app.services.llm.coreLlm import resolve_core_llm_target
-from app.services.llm.structuredOutput import (
+from app.services.llm.core_llm import resolve_core_llm_target
+from app.services.llm.structured_output import (
     structured_output_request_options,
 )
 

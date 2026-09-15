@@ -15,7 +15,7 @@ from app.schemas.chat import (
 )
 from app.services.auth.dependencies import get_current_user
 from app.services.cases import CaseService
-from app.services.chat.caseChat import (
+from app.services.chat.case_chat import (
     CaseChatError,
     create_case_chat_message_and_run,
     get_case_chat as get_case_chat_service,

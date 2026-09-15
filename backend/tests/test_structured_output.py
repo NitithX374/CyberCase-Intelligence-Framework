@@ -1,6 +1,6 @@
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, ReportClaim, StructuredReport
 from app.services.case_analysis.contracts import CaseProviderAnalysis
-from app.services.llm.structuredOutput import (
+from app.services.llm.structured_output import (
     anthropic_json_schema,
     structured_output_schema,
 )

@@ -8,17 +8,17 @@ from app.database import get_db
 from app.main import app
 from app.models import Case, CaseAnalysisResult, CaseRun, User
 from app.services.auth.jwt import create_access_token
-from app.routers import caseAnalysis, cases
+from app.routers import case_analysis, cases
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
-    CaseEvidenceCitation,
+    CaseSourceCitation,
 )
 from app.services.case_materials import CaseMaterialsService
-from app.services.case_analysis.pipelineConfig import configured_pipeline
-from app.services.workflow.caseAskCompletion import complete_case_ask
-from app.services.workflow.caseRunClaim import claim_case_run
-from app.services.workflow.caseRunService import cleanup_abandoned_case_runs
+from app.services.case_analysis.pipeline_config import configured_pipeline
+from app.services.workflow.case_ask_completion import complete_case_ask
+from app.services.workflow.case_run_claim import claim_case_run
+from app.services.workflow.case_run_service import cleanup_abandoned_case_runs
 from run_recovery_support import isolated_database
 
 
@@ -28,7 +28,7 @@ def test_interrupted_request_can_be_read_and_retried_through_http(monkeypatch):
     async def record_dispatch(run_id):
         dispatched.append(str(run_id))
 
-    monkeypatch.setattr(caseAnalysis, "process_case_run", record_dispatch)
+    monkeypatch.setattr(case_analysis, "process_case_run", record_dispatch)
 
     async def exercise():
         async with isolated_database() as factory:
@@ -110,11 +110,11 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                 case = Case(user_id=owner.id, title="Case ASK")
                 db.add(case)
                 await db.flush()
-                source = await CaseMaterialsService(db).add_evidence_text(
+                source = await CaseMaterialsService(db).add_text_source(
                     case_id=case.id,
                     user_id=owner.id,
                     source_kind="narrative",
-                    exact_text="The witness reported a blue vehicle.",
+                    text="The witness reported a blue vehicle.",
                     provenance_json={"origin": "test"},
                 )
                 analysis_run = CaseRun(
@@ -140,7 +140,7 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                             epistemic_status="reported",
                             supporting_source_ids=[str(source.id)],
                             supporting_citations=[
-                                CaseEvidenceCitation(
+                                CaseSourceCitation(
                                     source_id=str(source.id),
                                     exact_quote="The witness reported a blue vehicle.",
                                 )
@@ -180,7 +180,7 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                             epistemic_status="reported",
                             supporting_source_ids=[str(source.id)],
                             supporting_citations=[
-                                CaseEvidenceCitation(
+                                CaseSourceCitation(
                                     source_id=str(source.id),
                                     exact_quote="The witness reported a blue vehicle.",
                                 )
@@ -188,7 +188,7 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                         )
                     ],
                 )
-                from app.services.case_analysis.contracts import CaseAnalysisResult as AnalysisOutput
+                from app.services.case_analysis.contracts import CaseAnalysisOutput as AnalysisOutput
 
                 async with factory() as db:
                     assert await complete_case_ask(

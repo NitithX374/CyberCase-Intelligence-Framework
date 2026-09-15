@@ -8,16 +8,16 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisTrace,
-    CaseEvidenceCitation,
+    CaseSourceCitation,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
     CaseTimelineItem,
 )
-from app.services.case_analysis.mitreApplicabilityGate import MitreApplicabilityRecord
+from app.services.case_analysis.mitre_applicability_gate import MitreApplicabilityRecord
+from app.services.case_materials import CaseSourceBundle, CaseSourceItem
 from app.services.reports.case_report_contracts import (
     CaseReportInput,
-    CaseReportSource,
     CaseReportTechnicalAugmentation,
 )
 from app.services.reports.case_report_html import render_case_report_html
@@ -49,7 +49,7 @@ def _input(technical: bool = False) -> CaseReportInput:
                 text="<script>กิจกรรม PowerShell ปรากฏในหลักฐาน</script>",
                 epistemic_status="reported",
                 supporting_source_ids=[source_id],
-                supporting_citations=[CaseEvidenceCitation(source_id=source_id, exact_quote=evidence_text)],
+                supporting_citations=[CaseSourceCitation(source_id=source_id, exact_quote=evidence_text)],
             )
         ],
         gaps=[
@@ -91,8 +91,18 @@ def _input(technical: bool = False) -> CaseReportInput:
         case_id=uuid4(),
         case_title="คดีทดสอบ",
         analysis_result_id=uuid4(),
-        evidence_revision=1,
-        sources=[CaseReportSource(source_id=source_id, exact_text=evidence_text, filename="หลักฐาน.pdf")],
+        source_bundle=CaseSourceBundle(
+            revision=1,
+            sources=(
+                CaseSourceItem(
+                    source_id=source_id,
+                    source_kind="document",
+                    text=evidence_text,
+                    document_id=str(uuid4()),
+                    filename="หลักฐาน.pdf",
+                ),
+            ),
+        ),
         analysis_answer="ควรตรวจสอบผู้ใช้งานและต้นทางของคำสั่งเพิ่มเติม",
         analysis_summary=trace.summary,
         analysis_trace=trace.model_dump(mode="json"),

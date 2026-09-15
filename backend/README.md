@@ -1,48 +1,38 @@
-# CyberCase Chat Backend
+# CyberCase Backend
 
-The FastAPI backend owns persisted chat, background runs, raw-evidence selection, external RAG orchestration, Main Case Analysis, bounded clarification, and chat-scoped reports.
+The FastAPI backend owns authentication, Case CRUD, document/material intake, Case sources, analysis runs/results, deterministic follow-up, Case-owned Ask/Chat messages, optional MITRE context, and preliminary reports.
 
-## Authoritative evidence
+## Current boundary
 
-`app/services/chat/raw_evidence.py` deterministically projects ordered user messages through a run's request message. It includes the initial incident, clarification answers, and explicit added case information. It excludes ordinary questions and every assistant-authored message.
+All application routes use `/api/v1`. The main route groups are:
 
-Fresh-evidence runs call `rag_service POST /query`. Ordinary `ask` runs reuse the latest completed run's durable `RagContext` and do not invoke RAG. Validated analysis claims reference source message IDs, and the analysis trace binds the evidence hash and retrieval context.
+- `/cases` and `/cases/{case_id}` for Case lifecycle;
+- `/cases/{case_id}/documents` and document content routes;
+- `/cases/{case_id}/evidence` for received Case sources;
+- `/cases/{case_id}/analysis` and `/cases/{case_id}/runs/{run_id}` for analysis state;
+- `/cases/{case_id}/clarifications` for focused follow-up answers;
+- `/cases/{case_id}/chat` for the Case Ask/Chat panel;
+- `/cases/{case_id}/reports` for report generation, history, HTML, and PDF.
 
-## Database
+The browser calls only this backend. Authentication and Case ownership are enforced here. External MITRE retrieval is performed by the backend when the current analysis gate requires it; external context is not Case evidence.
 
-The clean demo migration baseline creates only `chat_threads`, `chat_messages`, `chat_runs`, `rag_contexts`, and `chat_reports`. `RagContext.run_id` is unique, so each completed analysis run owns at most one retrieval snapshot. The baseline is intentionally incompatible with the deleted Case State/extraction schema.
+## Persistence
 
-```powershell
-cd backend
-python -m alembic upgrade head
-```
+PostgreSQL stores Cases, documents, extraction records, Case sources, CaseRuns, analysis results, Case-owned messages, optional RAG context, and Case reports. The current SQLAlchemy models and Alembic migrations are the authority for the persisted shape.
 
-## Routes
+## Source flow
 
-All routes use `/api/v1`.
+Documents become `CaseDocument` and `DocumentExtraction` records, then a document source. Narratives and follow-up answers are also persisted as Case sources. Active sources are loaded as one `CaseSourceBundle(revision, sources)` for a `CaseRun`; analysis, validation, Chat, MITRE augmentation, and reports derive their local views from that bundle.
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/health` | Backend and database health |
-| `GET`, `POST` | `/chats` | List or create threads |
-| `GET`, `PATCH`, `DELETE` | `/chats/{thread_id}` | Read, rename, or hard-delete a thread |
-| `POST` | `/chats/{thread_id}/messages` | Persist a user message and enqueue a run |
-| `GET` | `/chats/{thread_id}/runs/{run_id}` | Read run status |
-| `POST`, `GET` | `/chats/{thread_id}/reports` | Generate or list report versions |
-| `GET` | `/chats/{thread_id}/reports/{report_id}` | Read one report |
-| `GET` | `/chats/{thread_id}/reports/{report_id}/pdf` | Download its PDF |
+## Compatibility names
 
-The service has no authentication, standalone case API, upload/OCR API, or frontend-facing RAG proxy.
-
-## Reports
-
-Reports are deterministic and template-first. A report snapshot contains raw source messages, the latest grounded analysis and trace, the associated retrieval context, admitted MITRE rows, and unresolved gaps. Generation does not run extraction or another RAG query.
+Application code uses `CaseSource`, `CaseSourceCreate`, and `CaseSourceRead`. The existing `/evidence` HTTP paths and generated schema names `CaseEvidenceCreate` and `EvidenceSourceRead` remain unchanged for frontend compatibility. The physical `case_evidence_sources` table, `exact_text` source column, and `evidence_revision` fields also remain unchanged until a separately reviewed migration.
 
 ## Run and verify
 
 ```powershell
 cd backend
+python -m alembic upgrade head
 uvicorn app.main:app --reload
 ..\env_mitre\Scripts\python.exe -m pytest tests -q
-..\env_mitre\Scripts\python.exe -m alembic heads
 ```

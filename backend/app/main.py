@@ -11,16 +11,16 @@ from app.config import settings
 from app.database import async_session, engine
 from app.routers import (
     auth,
-    caseAnalysis,
-    caseClarifications,
-    caseMaterials,
-    caseReports,
+    case_analysis,
+    case_clarifications,
+    case_materials,
+    case_reports,
     cases,
     health,
 )
 from app.services.auth.dependencies import get_current_user
-from app.services.auth.requestGuard import guard_browser_request
-from app.services.workflow.caseRunService import cleanup_abandoned_case_runs
+from app.services.auth.request_guard import guard_browser_request
+from app.services.workflow.case_run_service import cleanup_abandoned_case_runs
 
 
 @asynccontextmanager
@@ -62,10 +62,10 @@ app.middleware("http")(guard_browser_request)
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(cases.router, prefix="/api/v1")
-app.include_router(caseMaterials.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
-app.include_router(caseAnalysis.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
-app.include_router(caseClarifications.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
-app.include_router(caseReports.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(case_materials.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(case_analysis.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(case_clarifications.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(case_reports.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
 # Wrap the full ASGI app so even unhandled 500 responses carry CORS headers.
 app = CORSMiddleware(

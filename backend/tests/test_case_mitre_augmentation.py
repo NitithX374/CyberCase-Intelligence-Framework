@@ -8,15 +8,16 @@ import httpx
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
-    CaseEvidenceCitation,
+    CaseSourceCitation,
     CaseMitreAssociation,
 )
-from app.services.case_analysis.mitreApplicabilityGate import (
+from app.services.case_materials import CaseSourceBundle, CaseSourceItem
+from app.services.case_analysis.mitre_applicability_gate import (
     MitreApplicabilityRecord,
 )
-from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
-from app.services.clients.ragClient import RagCallFailure
-from app.services.workflow.caseMitreAugmentation import (
+from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
+from app.services.clients.rag_client import RagCallFailure
+from app.services.workflow.case_mitre_augmentation import (
     CaseRagContextPayload,
     merge_case_mitre_trace,
     request_case_mitre_mapping,
@@ -34,7 +35,7 @@ def _fixtures():
         epistemic_status="reported",
         supporting_source_ids=[source_id],
         supporting_citations=[
-            CaseEvidenceCitation(
+            CaseSourceCitation(
                 source_id=source_id,
                 exact_quote=text,
             )
@@ -45,7 +46,10 @@ def _fixtures():
         summary=claim.text,
         claims=[claim],
     )
-    manifest = ({"source_id": source_id, "exact_text": text},)
+    source_bundle = CaseSourceBundle(
+        revision=1,
+        sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=text),),
+    )
     applicability = MitreApplicabilityRecord(
         decision="RETRIEVE",
         source_message_ids=[source_id],
@@ -62,7 +66,7 @@ def _fixtures():
             },
         ),
     )
-    return source_id, trace, manifest, applicability, context
+    return source_id, trace, source_bundle, applicability, context
 
 
 def _gate(record):
@@ -93,7 +97,7 @@ def _association():
 
 def test_nontechnical_case_does_not_call_rag_or_mapping():
     async def exercise():
-        _, trace, manifest, _, _ = _fixtures()
+        _, trace, source_bundle, _, _ = _fixtures()
         calls = []
 
         async def rag(_query):
@@ -106,8 +110,7 @@ def test_nontechnical_case_does_not_call_rag_or_mapping():
 
         result = await run_case_mitre_augmentation(
             run_id=uuid4(),
-            input_text="A bicycle was reported missing.",
-            manifest=manifest,
+            source_bundle=source_bundle,
             base_trace=trace,
             config=AnalysisPipelineConfig(),
             applicability_gate=_gate(
@@ -125,11 +128,11 @@ def test_nontechnical_case_does_not_call_rag_or_mapping():
 
 def test_technical_case_calls_rag_and_persists_case_claim_mapping():
     async def exercise():
-        source_id, trace, manifest, applicability, context = _fixtures()
+        source_id, trace, source_bundle, applicability, context = _fixtures()
         observed = []
 
         async def gate(**kwargs):
-            observed.append(("gate", kwargs["evidence_sources"][0].message_id))
+            observed.append(("gate", kwargs["case_sources"][0].source_id))
             return applicability
 
         async def rag(query):
@@ -143,8 +146,7 @@ def test_technical_case_calls_rag_and_persists_case_claim_mapping():
 
         result = await run_case_mitre_augmentation(
             run_id=uuid4(),
-            input_text="case evidence",
-            manifest=manifest,
+            source_bundle=source_bundle,
             base_trace=trace,
             config=AnalysisPipelineConfig(),
             applicability_gate=gate,
@@ -154,18 +156,10 @@ def test_technical_case_calls_rag_and_persists_case_claim_mapping():
         assert result.status == "retrieved_with_matches"
         assert result.retrieval_context_id == "retrieval-case-1"
         assert result.associations == (_association(),)
-        from app.services.case_analysis.contracts import CaseEvidenceSource
-
         merged = merge_case_mitre_trace(
             trace,
             result,
-            (
-                CaseEvidenceSource(
-                    source_id,
-                    manifest[0]["exact_text"],
-                ),
-            ),
-            [],
+            source_bundle,
         )
         assert merged.mitre_associations[0].technique_id == "T1059.001"
         assert [item[0] for item in observed] == ["gate", "rag", "mapping"]
@@ -175,7 +169,7 @@ def test_technical_case_calls_rag_and_persists_case_claim_mapping():
 
 def test_empty_retrieval_is_insufficient_without_mapping():
     async def exercise():
-        _, trace, manifest, applicability, _ = _fixtures()
+        _, trace, source_bundle, applicability, _ = _fixtures()
         called = False
 
         async def rag(_query):
@@ -188,8 +182,7 @@ def test_empty_retrieval_is_insufficient_without_mapping():
 
         result = await run_case_mitre_augmentation(
             run_id=uuid4(),
-            input_text="case evidence",
-            manifest=manifest,
+            source_bundle=source_bundle,
             base_trace=trace,
             config=AnalysisPipelineConfig(),
             applicability_gate=_gate(applicability),
@@ -204,15 +197,14 @@ def test_empty_retrieval_is_insufficient_without_mapping():
 
 def test_rag_transport_failure_preserves_failed_augmentation_status():
     async def exercise():
-        _, trace, manifest, applicability, _ = _fixtures()
+        _, trace, source_bundle, applicability, _ = _fixtures()
 
         async def rag(_query):
             raise RagCallFailure("rag_timeout", "timed out")
 
         result = await run_case_mitre_augmentation(
             run_id=uuid4(),
-            input_text="case evidence",
-            manifest=manifest,
+            source_bundle=source_bundle,
             base_trace=trace,
             config=AnalysisPipelineConfig(),
             applicability_gate=_gate(applicability),
@@ -251,7 +243,7 @@ def test_mapping_http_boundary_uses_existing_core_provider(monkeypatch):
                 )
 
         monkeypatch.setattr(
-            "app.services.workflow.caseMitreAugmentation.resolve_target",
+            "app.services.workflow.case_mitre_augmentation.resolve_target",
             lambda _config: SimpleNamespace(
                 model="test-model",
                 provider="anthropic",

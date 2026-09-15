@@ -7,7 +7,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, StructuredReport
-from app.services.case_analysis.mitreApplicabilityGate import MitreApplicabilityRecord
+from app.services.case_materials.case_source_bundle import CaseSourceBundle
+from app.services.case_analysis.mitre_applicability_gate import MitreApplicabilityRecord
 
 
 CaseTechnicalAugmentationStatus = Literal[
@@ -17,14 +18,6 @@ CaseTechnicalAugmentationStatus = Literal[
     "retrieved_without_supported_match",
     "failed",
 ]
-
-
-class CaseReportSource(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_id: UUID
-    exact_text: str = Field(min_length=1)
-    filename: str | None = None
 
 
 class CaseReportTechnicalAugmentation(BaseModel):
@@ -41,13 +34,12 @@ class CaseReportTechnicalAugmentation(BaseModel):
 
 
 class CaseReportInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     case_id: UUID
     case_title: str = "CyberCase Investigation"
     analysis_result_id: UUID
-    evidence_revision: int = Field(ge=0)
-    sources: list[CaseReportSource] = Field(min_length=1, max_length=256)
+    source_bundle: CaseSourceBundle
     analysis_answer: str = Field(min_length=1)
     analysis_summary: str = Field(min_length=1)
     analysis_trace: dict[str, object]
@@ -55,8 +47,8 @@ class CaseReportInput(BaseModel):
     unresolved_issues: list[str] = Field(default_factory=list, max_length=64)
 
 
-def native_source_ids(report_input: CaseReportInput) -> set[str]:
-    return {str(source.source_id) for source in report_input.sources}
+def case_source_ids(report_input: CaseReportInput) -> set[str]:
+    return {source.source_id for source in report_input.source_bundle.sources}
 
 
 class ReportServiceError(Exception):
@@ -96,7 +88,7 @@ class ReportRunResult:
 def validate_case_structured_report(
     report: StructuredReport,
     *,
-    source_evidence_ids: set[str],
+    allowed_source_ids: set[str],
     mitre_ids: set[str],
 ) -> None:
     section_ids = tuple(section.section_id for section in report.sections)
@@ -107,7 +99,7 @@ def validate_case_structured_report(
         if claim.claim_id in claim_ids:
             raise ReportValidationError("Report claim identifiers must be unique")
         claim_ids.add(claim.claim_id)
-        if not set(claim.source_evidence_ids).issubset(source_evidence_ids):
+        if not set(claim.source_evidence_ids).issubset(allowed_source_ids):
             raise ReportValidationError("A case report claim cites a non-evidence source")
         if not set(claim.mitre_technique_ids).issubset(mitre_ids):
             raise ReportValidationError("A report claim cites an unrecognized MITRE technique")
@@ -115,7 +107,6 @@ def validate_case_structured_report(
 
 __all__ = [
     "CaseReportInput",
-    "CaseReportSource",
     "CaseReportTechnicalAugmentation",
     "CaseTechnicalAugmentationStatus",
     "ReportGenerationConflict",
@@ -123,6 +114,6 @@ __all__ = [
     "ReportRunResult",
     "ReportServiceError",
     "ReportValidationError",
-    "native_source_ids",
+    "case_source_ids",
     "validate_case_structured_report",
 ]

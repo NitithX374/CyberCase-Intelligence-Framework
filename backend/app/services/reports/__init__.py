@@ -1,6 +1,5 @@
 from app.services.reports.case_report_contracts import (
     CaseReportInput,
-    CaseReportSource,
     CaseReportTechnicalAugmentation,
     CaseTechnicalAugmentationStatus,
     ReportGenerationConflict,
@@ -8,7 +7,7 @@ from app.services.reports.case_report_contracts import (
     ReportRunResult,
     ReportServiceError,
     ReportValidationError,
-    native_source_ids,
+    case_source_ids,
     validate_case_structured_report,
 )
 from app.services.reports.case_report_html import render_case_report_html
@@ -26,7 +25,6 @@ from app.services.reports.case_report_template import (
 __all__ = [
     "CaseReportInput",
     "CaseReportService",
-    "CaseReportSource",
     "CaseReportTechnicalAugmentation",
     "CaseTechnicalAugmentationStatus",
     "ReportGenerationConflict",
@@ -36,7 +34,7 @@ __all__ = [
     "ReportValidationError",
     "build_case_template_report",
     "build_case_report_input",
-    "native_source_ids",
+    "case_source_ids",
     "render_case_report_pdf",
     "render_case_report_html",
     "run_case_report_generation",

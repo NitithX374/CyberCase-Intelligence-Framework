@@ -8,8 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.caseRuns import CaseRunRead
-from app.schemas.messageMetadata import MessageMetadata
+from app.schemas.case_runs import CaseRunRead
+from app.schemas.message_metadata import MessageMetadata
 
 CaseChatStatus = Literal[
     "idle",

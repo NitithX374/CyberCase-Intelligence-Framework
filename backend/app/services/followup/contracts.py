@@ -9,7 +9,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-from app.schemas.messageMetadata import MessageMetadata
+from app.schemas.message_metadata import MessageMetadata
 from app.services.case_analysis.contracts import CaseAnalysisGap
 
 

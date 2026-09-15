@@ -28,7 +28,7 @@ from app.services.document_ingestion.errors import (
     InvalidDocumentError,
 )
 from app.services.document_ingestion.parsers import inspect_pdf, parse_docx
-from app.services.document_ingestion.parsers.pdfTextParser import (
+from app.services.document_ingestion.parsers.pdf_text_parser import (
     NativeTextPolicy,
     split_native_blocks,
 )

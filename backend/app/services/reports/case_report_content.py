@@ -179,7 +179,10 @@ def claim_references(
 
 
 def source_labels_for_report(report_input: CaseReportInput) -> dict[str, str]:
-    return {str(source.source_id): f"E-{index:02d}" for index, source in enumerate(report_input.sources, 1)}
+    return {
+        source.source_id: f"E-{index:02d}"
+        for index, source in enumerate(report_input.source_bundle.sources, 1)
+    }
 
 
 def support_type(claim_type: str) -> str:

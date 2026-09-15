@@ -1,20 +1,12 @@
 # CyberCase Frontend
 
-The Next.js frontend provides two persisted workspaces: Chat and Report. The deleted Case State inspector, extraction view, and relationship graph are not product routes.
+The Next.js App Router presents a Case-first workspace. `/case` is the Case Library; `/case/[caseId]` contains intake, materials, overview, technical context, report, and the Case-owned Ask/Chat panel.
 
-The browser calls the FastAPI backend through `src/lib/api.ts` and never calls `rag_service` directly. TanStack Query owns server-state loading and polling; the backend remains authoritative for messages, run status, analysis, and reports.
+The browser calls the FastAPI backend through `src/lib/api.ts` and never calls `rag_service` directly. TanStack Query manages server-state loading and polling while the backend remains authoritative for Case data, messages, runs, analysis, and reports.
 
-## Routes
+## Contracts
 
-- `/chat`: create or select a chat
-- `/chat/[threadId]`: persisted conversation and run polling
-- `/chat/[threadId]/report`: report generation, history, preview, and PDF download
-
-Unknown former workspace suffixes resolve to the Chat view rather than exposing compatibility screens.
-
-## Analysis presentation
-
-Assistant analysis metadata uses `analysis_trace_v2`. MITRE candidates render only when the trace is validated, binds a retrieval context and raw-evidence hash, links valid analysis claims, and references techniques admitted by the persisted MITRE table.
+Generated declarations under `src/lib/generated/` reflect the backend OpenAPI contract. Update them only through the existing generation command when an API change is explicitly required. The UI must present evidence, analysis, technical context, and report status according to the current response schemas rather than inventing client-only domain objects.
 
 ## Commands
 

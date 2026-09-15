@@ -6,9 +6,9 @@ import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import Case, CaseRun
-from app.schemas.caseRuns import CaseAnalysisCreate
+from app.schemas.case_runs import CaseAnalysisCreate
 from app.services.case_materials import CaseMaterialsService
-from app.services.workflow.caseRunService import (
+from app.services.workflow.case_run_service import (
     CaseRunError,
     enqueue_case_analysis,
 )
@@ -19,11 +19,11 @@ async def _case_with_source(factory: async_sessionmaker):
     case_id = uuid4()
     async with factory() as db, db.begin():
         db.add(Case(id=case_id, title="Retry safeguards"))
-        await CaseMaterialsService(db).add_evidence_text(
+        await CaseMaterialsService(db).add_text_source(
             case_id=case_id,
             user_id=None,
             source_kind="narrative",
-            exact_text="The witness reported a blue vehicle.",
+            text="The witness reported a blue vehicle.",
             provenance_json={"origin": "test"},
         )
     return case_id
