@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
-from app.services.case_analysis.analysisEvidenceContracts import (
-    CaseEvidenceSource,
+from app.services.case_analysis.analysis_source_contracts import (
     CaseAnalysisMode,
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseClaimType,
-    CaseEvidenceCitation,
     CaseEpistemicStatus,
     CaseGeneratedUnit,
+    CaseSourceCitation,
 )
-from app.services.case_analysis.analysisTraceContracts import (
+from app.services.case_analysis.analysis_trace_contracts import (
     CaseAnalysisFailureMetadata,
     CaseAnalysisTrace,
     CaseImpactItem,
@@ -33,30 +31,9 @@ class CaseAnalysisFailure(Exception):
         self.message = message
 
 
-def build_case_source_registry(
-    context: Mapping[str, object],
-) -> tuple[CaseEvidenceSource, ...]:
-    ids = context.get("source_ids")
-    texts = context.get("_source_text_by_source_id")
-    if (
-        not isinstance(ids, list)
-        or not ids
-        or not all(isinstance(value, str) and value.strip() for value in ids)
-        or len(ids) != len(set(ids))
-        or not isinstance(texts, Mapping)
-        or set(ids) != set(texts)
-    ):
-        raise CaseAnalysisFailure("case_sources_invalid", "Case evidence source registry is invalid")
-    sources: list[CaseEvidenceSource] = []
-    for source_id in ids:
-        content = texts[source_id]
-        if not isinstance(content, str) or not content.strip():
-            raise CaseAnalysisFailure("case_source_empty", "Case evidence source text is empty")
-        sources.append(CaseEvidenceSource(source_id=source_id, content=content))
-    return tuple(sources)
-
-
 ResponseLanguage = Literal["thai", "english"]
+
+
 def resolve_response_language(user_message: object) -> ResponseLanguage:
     if not isinstance(user_message, str) or not user_message.strip():
         raise ValueError("User message must be a non-empty string")
@@ -68,7 +45,7 @@ def resolve_response_language(user_message: object) -> ResponseLanguage:
 
 
 @dataclass(frozen=True)
-class CaseAnalysisResult:
+class CaseAnalysisOutput:
     answer: str
     trace: CaseAnalysisTrace | None
     trace_failure: CaseAnalysisFailureMetadata | None = None
@@ -78,17 +55,16 @@ class CaseAnalysisResult:
 
 
 __all__ = [
-    "CaseEvidenceSource",
     "CaseAnalysisClaim",
     "CaseAnalysisFailure",
     "CaseAnalysisFailureMetadata",
     "CaseAnalysisGap",
     "CaseAnalysisMode",
-    "CaseAnalysisResult",
+    "CaseAnalysisOutput",
     "CaseAnalysisTrace",
     "CaseClaimType",
     "CaseEpistemicStatus",
-    "CaseEvidenceCitation",
+    "CaseSourceCitation",
     "CaseGeneratedUnit",
     "CaseImpactItem",
     "CaseInvolvedParty",
@@ -97,6 +73,5 @@ __all__ = [
     "CaseProviderMitreMapping",
     "CaseTimelineItem",
     "ResponseLanguage",
-    "build_case_source_registry",
     "resolve_response_language",
 ]

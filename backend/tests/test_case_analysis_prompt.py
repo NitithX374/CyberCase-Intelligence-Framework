@@ -4,18 +4,18 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from app.services.case_analysis.caseAnalysis import execute_raw_direct_pipeline
+from app.services.case_analysis.case_analysis import execute_direct_pipeline
 from app.services.case_analysis.contracts import (
-    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
-    CaseEvidenceCitation,
+    CaseSourceCitation,
     CaseProviderAnalysis,
 )
-from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
+from app.services.case_materials import CaseSourceBundle, CaseSourceItem
+from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
 from app.services.case_analysis.prompts import case_system_prompt
-from app.services.case_analysis.evidenceQuoteResolver import find_aligned_quote
-from app.services.case_analysis.caseAnalysisResponseParser import validate_response_payload
+from app.services.case_analysis.source_quote_resolver import find_aligned_quote
+from app.services.case_analysis.case_analysis_response_parser import validate_response_payload
 
 
 def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
@@ -52,7 +52,7 @@ def test_quote_alignment_preserves_source_text_when_ocr_wraps_a_word() -> None:
 
 
 def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
-    citation = CaseEvidenceCitation(
+    citation = CaseSourceCitation(
         source_id="s1",
         exact_quote="The report",
     )
@@ -78,10 +78,65 @@ def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
 
 
 class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
-    async def test_provenance_failure_gets_one_corrective_provider_pass(self) -> None:
-        source = CaseEvidenceSource(
+    async def test_provider_request_uses_one_structured_case_source_collection(self) -> None:
+        source = CaseSourceItem(
             source_id="s1",
-            content="The report was submitted.",
+            source_kind="document",
+            text="The report was submitted.",
+            document_id="d1",
+            filename="report.pdf",
+            provenance={"verification_status": "machine_read"},
+        )
+        observed: dict[str, object] = {}
+
+        async def request_stage(*args, **kwargs):
+            observed["content"] = args[4]
+            return provider_result(contradicting=False)
+
+        with patch(
+            "app.services.case_analysis.case_analysis.request_analysis_stage",
+            new=request_stage,
+        ):
+            await execute_direct_pipeline(
+                CaseSourceBundle(revision=1, sources=(source,)),
+                "english",
+                AnalysisPipelineConfig(),
+                object(),
+                receipt={"calls": []},
+                mode="case_overview",
+            )
+
+        content = observed["content"]
+        self.assertEqual(
+            content,
+            {
+                "response_language": "english",
+                "analysis_mode": "case_overview",
+                "case_sources": [
+                    {
+                        "source_id": "s1",
+                        "source_kind": "document",
+                        "text": "The report was submitted.",
+                        "document": {
+                            "document_id": "d1",
+                            "filename": "report.pdf",
+                            "verification_status": "machine_read",
+                        },
+                    }
+                ],
+                "question": None,
+            },
+        )
+        self.assertEqual(
+            set(content),
+            {"response_language", "analysis_mode", "case_sources", "question"},
+        )
+
+    async def test_provenance_failure_gets_one_corrective_provider_pass(self) -> None:
+        source = CaseSourceItem(
+            source_id="s1",
+            source_kind="narrative",
+            text="The report was submitted.",
         )
         calls: list[tuple[str, str]] = []
 
@@ -89,19 +144,14 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             calls.append((args[2], args[3]))
             return provider_result(contradicting=len(calls) == 1)
 
-        raw_evidence = "[SOURCE s1]\nThe report was submitted."
         with patch(
-            "app.services.case_analysis.caseAnalysis.request_analysis_stage",
+            "app.services.case_analysis.case_analysis.request_analysis_stage",
             new=request_stage,
         ):
-            result = await execute_raw_direct_pipeline(
-                raw_evidence,
-                {
-                    "document_source_context": [],
-                },
+            result = await execute_direct_pipeline(
+                CaseSourceBundle(revision=1, sources=(source,)),
                 "english",
                 AnalysisPipelineConfig(),
-                (source,),
                 object(),
                 receipt={"calls": []},
                 mode="case_overview",

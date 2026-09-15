@@ -75,28 +75,20 @@ function responseFor(body) {
     };
   }
   const request = asObject(content);
-  const evidence = typeof request?.raw_case_evidence === "string" ? request.raw_case_evidence : "";
-  const sourceIds = Array.isArray(request?.authoritative_case_source_ids)
-    ? request.authoritative_case_source_ids.filter((value) => typeof value === "string" && value)
+  const caseSources = Array.isArray(request?.case_sources)
+    ? request.case_sources.filter(
+        (source) => source && typeof source === "object" && typeof source.source_id === "string" && source.source_id,
+      )
     : [];
-  if (!evidence || sourceIds.length === 0) {
+  if (caseSources.length === 0) {
     throw new Error("Unsupported E2E provider request");
   }
 
-  const sectionRegex = /\[[^\]]*SOURCE\s+([0-9a-fA-F-]+)\]\n([\s\S]*?)(?=(?:\n\n\[[^\]]*SOURCE|$))/g;
-  const sections = [];
-  let match;
-  while ((match = sectionRegex.exec(evidence)) !== null) {
-    sections.push({
-      sourceId: match[1],
-      quote: match[2].trim(),
-    });
-  }
-  if (sections.length === 0) {
-    const sourceId = sourceIds[0];
-    const quote = evidence.split(/\]\n/).at(-1)?.trim() || evidence.trim();
-    sections.push({ sourceId, revision: 1, quote });
-  }
+  const sections = caseSources.map((source) => ({
+    sourceId: source.source_id,
+    quote: typeof source.text === "string" ? source.text.trim() : "",
+  }));
+  const sourceText = sections.map((section) => section.quote).join("\n\n");
 
   const claims = sections.map((sec, idx) => ({
     claim_id: `A-0${idx + 1}`,
@@ -114,9 +106,9 @@ function responseFor(body) {
     contradicting_citations: [],
   }));
 
-  const hasClarificationAnswer = evidence.includes("FOLLOW-UP ANSWER") || sections.length > 1;
+  const hasClarificationAnswer = caseSources.some((source) => source.source_kind === "followup_answer") || sections.length > 1;
 
-  const gaps = (evidence.includes("needs-clarification") && !hasClarificationAnswer)
+  const gaps = (sourceText.includes("needs-clarification") && !hasClarificationAnswer)
     ? [
         {
           gap_id: "G-01",
@@ -133,8 +125,8 @@ function responseFor(body) {
 
   return {
     version: "case_analysis_trace_v1",
-    answer: `Deterministic E2E analysis: ${evidence}`,
-    summary: `Deterministic E2E summary: ${evidence}`,
+    answer: `Deterministic E2E analysis: ${sourceText}`,
+    summary: `Deterministic E2E summary: ${sourceText}`,
     involved_parties: [],
     timeline: [],
     impacts: [],

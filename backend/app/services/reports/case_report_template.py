@@ -11,7 +11,7 @@ from app.services.reports.case_report_content import (
 from app.services.reports.case_report_contracts import (
     CaseReportInput,
     ReportRunResult,
-    native_source_ids,
+    case_source_ids,
     validate_case_structured_report,
 )
 from app.schemas.reports import StructuredReport
@@ -26,7 +26,7 @@ async def run_case_report_generation(report_input: CaseReportInput) -> ReportRun
         trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
         validate_case_structured_report(
             report,
-            source_evidence_ids=native_source_ids(report_input),
+            allowed_source_ids=case_source_ids(report_input),
             mitre_ids={association.technique_id for association in trace.mitre_associations},
         )
         return ReportRunResult(

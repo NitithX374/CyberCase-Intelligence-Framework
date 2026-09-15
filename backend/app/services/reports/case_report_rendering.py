@@ -43,15 +43,15 @@ def build_case_report_display(
 ) -> CaseReportDisplay:
     trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
     source_labels = {
-        str(source.source_id): f"E-{index:02d}"
-        for index, source in enumerate(report_input.sources, 1)
+        source.source_id: f"E-{index:02d}"
+        for index, source in enumerate(report_input.source_bundle.sources, 1)
     }
     sources = tuple(
         ReportDisplaySource(
-            label=source_labels[str(source.source_id)],
-            filename=source.filename or "หลักฐานที่ไม่ได้ระบุชื่อเอกสาร",
+            label=source_labels[source.source_id],
+            filename=source.filename or "แหล่งข้อมูลที่ไม่ได้ระบุชื่อเอกสาร",
         )
-        for source in report_input.sources
+        for source in report_input.source_bundle.sources
     )
     trace_claims = {claim.claim_id: claim for claim in trace.claims}
     claims = tuple(

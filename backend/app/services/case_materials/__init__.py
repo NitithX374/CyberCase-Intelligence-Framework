@@ -1,17 +1,25 @@
-from app.services.case_materials.documentContent import get_owned_document_content
-from app.services.case_materials.caseEvidenceAssembly import (
-    AssembledCaseEvidence,
-    assemble_case_evidence,
+from app.services.case_materials.document_content import get_owned_document_content
+from app.services.case_materials.case_source_bundle import (
+    CaseSourceBundle,
+    CaseSourceItem,
+    build_document_source_context,
+    build_rag_query,
+    case_source_bundle_from_case,
+    load_case_source_bundle,
 )
-from app.services.case_materials.materialService import (
+from app.services.case_materials.material_service import (
     CaseMaterialsError,
     CaseMaterialsService,
 )
 
 __all__ = [
-    "AssembledCaseEvidence",
+    "CaseSourceBundle",
+    "CaseSourceItem",
     "CaseMaterialsError",
     "CaseMaterialsService",
-    "assemble_case_evidence",
+    "build_document_source_context",
+    "build_rag_query",
+    "case_source_bundle_from_case",
     "get_owned_document_content",
+    "load_case_source_bundle",
 ]

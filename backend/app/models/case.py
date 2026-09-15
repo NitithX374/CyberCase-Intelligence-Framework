@@ -13,13 +13,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
-    from app.models.caseMaterials import (
+    from app.models.case_materials import (
         CaseDocument,
-        EvidenceSource,
+        CaseSource,
     )
-    from app.models.caseRun import CaseAnalysisResult, CaseRun
+    from app.models.case_run import CaseAnalysisResult, CaseRun
     from app.models.chat import ChatMessage
-    from app.models.ragContext import RagContext
+    from app.models.rag_context import RagContext
     from app.models.report import CaseReport
     from app.models.user import User
 
@@ -91,8 +91,8 @@ class Case(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    evidence_sources: Mapped[list["EvidenceSource"]] = relationship(
-        "EvidenceSource",
+    sources: Mapped[list["CaseSource"]] = relationship(
+        "CaseSource",
         back_populates="case",
         cascade="all, delete-orphan",
         passive_deletes=True,

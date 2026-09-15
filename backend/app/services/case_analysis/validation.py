@@ -3,26 +3,26 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from app.services.case_analysis.contracts import (
-    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisTrace,
-    CaseEvidenceCitation,
+    CaseSourceCitation,
 )
-from app.services.case_analysis.evidenceQuoteResolver import (
+from app.services.case_analysis.source_quote_resolver import (
     find_aligned_quote,
     quote_occurrences,
     resolve_document_locator,
 )
+from app.services.case_materials import CaseSourceBundle, CaseSourceItem, build_document_source_context
 
 
 def validate_case_trace(
     trace: CaseAnalysisTrace,
-    sources: tuple[CaseEvidenceSource, ...],
-    document_context: object,
+    source_bundle: CaseSourceBundle,
     mitre_table: object = None,
 ) -> CaseAnalysisTrace:
-    registry = {source.source_id: source for source in sources}
+    registry = {source.source_id: source for source in source_bundle.sources}
+    document_context = build_document_source_context(source_bundle)
     claim_ids = [claim.claim_id for claim in trace.claims]
     if len(claim_ids) != len(set(claim_ids)):
         raise CaseAnalysisFailure(
@@ -99,7 +99,7 @@ def validate_case_trace(
 
 def validate_claim(
     claim: CaseAnalysisClaim,
-    registry: dict[str, CaseEvidenceSource],
+    registry: dict[str, CaseSourceItem],
     document_context: object,
 ) -> CaseAnalysisClaim:
     supporting = set(claim.supporting_source_ids)
@@ -107,12 +107,12 @@ def validate_claim(
     if not supporting.issubset(registry):
         raise CaseAnalysisFailure(
             "case_trace_support_outside_evidence",
-            "Case claim cites supporting evidence outside Case evidence",
+            "Case claim cites supporting sources outside the Case source bundle",
         )
     if not contradicting.issubset(registry):
         raise CaseAnalysisFailure(
             "case_trace_contradiction_outside_evidence",
-            "Case claim cites contradicting evidence outside Case evidence",
+            "Case claim cites contradicting sources outside the Case source bundle",
         )
     if supporting & contradicting:
         raise CaseAnalysisFailure(
@@ -122,7 +122,7 @@ def validate_claim(
     if claim.claim_type in {"reported", "analytical_inference"} and not supporting:
         raise CaseAnalysisFailure(
             "case_trace_claim_unbound",
-            "Reported and inferred claims need supporting Case evidence",
+            "Reported and inferred claims need supporting Case sources",
         )
     if claim.claim_type == "analytical_inference" and claim.reasoning_summary is None:
         raise CaseAnalysisFailure(
@@ -143,16 +143,8 @@ def validate_claim(
         registry,
         document_context,
     )
-    require_role_complete_citations(
-        supporting,
-        supporting_citations,
-        "supporting",
-    )
-    require_role_complete_citations(
-        contradicting,
-        contradicting_citations,
-        "contradicting",
-    )
+    require_role_complete_citations(supporting, supporting_citations, "supporting")
+    require_role_complete_citations(contradicting, contradicting_citations, "contradicting")
     return claim.model_copy(
         update={
             "supporting_citations": supporting_citations,
@@ -163,7 +155,7 @@ def validate_claim(
 
 def require_role_complete_citations(
     source_ids: set[str],
-    citations: list[CaseEvidenceCitation],
+    citations: list[CaseSourceCitation],
     role: str,
 ) -> None:
     cited_ids = {citation.source_id for citation in citations}
@@ -176,13 +168,13 @@ def require_role_complete_citations(
 
 
 def normalize_citations(
-    citations: list[CaseEvidenceCitation],
+    citations: list[CaseSourceCitation],
     allowed_ids: set[str],
     role: str,
-    registry: dict[str, CaseEvidenceSource],
+    registry: dict[str, CaseSourceItem],
     document_context: object,
-) -> list[CaseEvidenceCitation]:
-    normalized: list[CaseEvidenceCitation] = []
+) -> list[CaseSourceCitation]:
+    normalized: list[CaseSourceCitation] = []
     seen: set[tuple[str, str]] = set()
     for citation in citations:
         if citation.source_id not in allowed_ids:
@@ -192,34 +184,35 @@ def normalize_citations(
             )
         source = registry[citation.source_id]
         exact_quote = citation.exact_quote
-        positions = quote_occurrences(source.content, exact_quote)
+        positions = quote_occurrences(source.text, exact_quote)
         if len(positions) == 0:
-            aligned = find_aligned_quote(source.content, exact_quote)
+            aligned = find_aligned_quote(source.text, exact_quote)
             if aligned is not None:
                 exact_quote = aligned
-                positions = quote_occurrences(source.content, exact_quote)
+                positions = quote_occurrences(source.text, exact_quote)
         locator = resolve_document_locator(
             source.source_id,
             exact_quote,
-            source.content,
+            source.text,
             document_context,
         )
         has_documents = any(
-            isinstance(e, Mapping) and e.get("source_id") == source.source_id and e.get("documents")
-            for e in (document_context if isinstance(document_context, list) else [])
+            isinstance(entry, Mapping)
+            and entry.get("source_id") == source.source_id
+            and entry.get("documents")
+            for entry in (document_context if isinstance(document_context, list) else [])
         )
         if len(positions) == 0:
             raise CaseAnalysisFailure(
                 "case_trace_citation_quote_invalid",
                 "Case citation quote is absent or ambiguous in the pinned source",
             )
-        if len(positions) > 1:
-            if has_documents and not locator.get("page_numbers"):
-                raise CaseAnalysisFailure(
-                    "case_trace_citation_quote_invalid",
-                    "Case citation quote is absent or ambiguous in the pinned source",
-                )
-        canonical = CaseEvidenceCitation(
+        if len(positions) > 1 and has_documents and not locator.get("page_numbers"):
+            raise CaseAnalysisFailure(
+                "case_trace_citation_quote_invalid",
+                "Case citation quote is absent or ambiguous in the pinned source",
+            )
+        canonical = CaseSourceCitation(
             source_id=source.source_id,
             exact_quote=exact_quote,
             **locator,

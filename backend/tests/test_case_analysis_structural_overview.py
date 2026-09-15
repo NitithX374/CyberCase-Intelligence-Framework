@@ -3,19 +3,19 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.case_analysis.caseAnalysis import execute_raw_direct_pipeline
+from app.services.case_analysis.case_analysis import execute_direct_pipeline
 from app.services.case_analysis.contracts import (
-    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisTrace,
-    CaseEvidenceCitation,
+    CaseSourceCitation,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderAnalysis,
     CaseTimelineItem,
 )
-from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
+from app.services.case_materials import CaseSourceBundle, CaseSourceItem
+from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
 from app.services.case_analysis.validation import validate_case_trace
 
 
@@ -47,11 +47,12 @@ def test_case_overview_models_construct_and_normalize_claim_ids() -> None:
 
 
 def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> None:
-    source = CaseEvidenceSource(
+    source = CaseSourceItem(
         source_id="s1",
-        content="Server breached on Monday.",
+        source_kind="narrative",
+        text="Server breached on Monday.",
     )
-    citation = CaseEvidenceCitation(
+    citation = CaseSourceCitation(
         source_id="s1",
         exact_quote="Server breached on Monday.",
     )
@@ -77,18 +78,19 @@ def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> Non
             CaseImpactItem(description="Server compromise", claim_ids=["A-01"])
         ],
     )
-    validated = validate_case_trace(trace, (source,), [])
+    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert len(validated.involved_parties) == 1
     assert len(validated.timeline) == 1
     assert len(validated.impacts) == 1
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
-    source = CaseEvidenceSource(
+    source = CaseSourceItem(
         source_id="s1",
-        content="Server breached.",
+        source_kind="narrative",
+        text="Server breached.",
     )
-    citation = CaseEvidenceCitation(
+    citation = CaseSourceCitation(
         source_id="s1",
         exact_quote="Server breached.",
     )
@@ -109,16 +111,17 @@ def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None
         claims=[claim],
     )
     with pytest.raises(CaseAnalysisFailure) as exc_info:
-        validate_case_trace(trace, (source,), [])
+        validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert exc_info.value.code == "case_trace_party_unknown_claim"
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
-    source = CaseEvidenceSource(
+    source = CaseSourceItem(
         source_id="s1",
-        content="Server breached.",
+        source_kind="narrative",
+        text="Server breached.",
     )
-    citation = CaseEvidenceCitation(
+    citation = CaseSourceCitation(
         source_id="s1",
         exact_quote="Server breached.",
     )
@@ -139,16 +142,17 @@ def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
         claims=[claim],
     )
     with pytest.raises(CaseAnalysisFailure) as exc_info:
-        validate_case_trace(trace, (source,), [])
+        validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert exc_info.value.code == "case_trace_timeline_unknown_claim"
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
-    source = CaseEvidenceSource(
+    source = CaseSourceItem(
         source_id="s1",
-        content="Server breached.",
+        source_kind="narrative",
+        text="Server breached.",
     )
-    citation = CaseEvidenceCitation(
+    citation = CaseSourceCitation(
         source_id="s1",
         exact_quote="Server breached.",
     )
@@ -169,18 +173,19 @@ def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
         claims=[claim],
     )
     with pytest.raises(CaseAnalysisFailure) as exc_info:
-        validate_case_trace(trace, (source,), [])
+        validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert exc_info.value.code == "case_trace_impact_unknown_claim"
 
 
 class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
     async def test_direct_pipeline_populates_parties_timeline_and_impacts(self) -> None:
         raw_text = "On Monday, company ACME was targeted by unauthorized access."
-        source = CaseEvidenceSource(
+        source = CaseSourceItem(
             source_id="s1",
-            content=raw_text,
+            source_kind="narrative",
+            text=raw_text,
         )
-        citation = CaseEvidenceCitation(
+        citation = CaseSourceCitation(
             source_id="s1",
             exact_quote=raw_text,
         )
@@ -211,17 +216,14 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
         async def fake_request_stage(*args, **kwargs):
             return provider_output
 
-        raw_evidence = f"[SOURCE s1 · REVISION 1]\n{raw_text}"
         with patch(
-            "app.services.case_analysis.caseAnalysis.request_analysis_stage",
+            "app.services.case_analysis.case_analysis.request_analysis_stage",
             new=fake_request_stage,
         ):
-            result = await execute_raw_direct_pipeline(
-                raw_evidence,
-                {"document_source_context": []},
+            result = await execute_direct_pipeline(
+                CaseSourceBundle(revision=1, sources=(source,)),
                 "english",
                 AnalysisPipelineConfig(),
-                (source,),
                 None,  # client
                 receipt={"calls": []},
                 mode="case_overview",

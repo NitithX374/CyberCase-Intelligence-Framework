@@ -192,9 +192,9 @@ def test_ingestion_does_not_call_rag_or_case_analysis(monkeypatch) -> None:
     async def forbidden_analysis(*args, **kwargs):
         calls["analysis"] += 1
 
-    monkeypatch.setattr("app.services.clients.ragClient.request_rag", forbidden_rag)
+    monkeypatch.setattr("app.services.clients.rag_client.request_rag", forbidden_rag)
     monkeypatch.setattr(
-        "app.services.case_analysis.caseAnalysis.request_case_analysis",
+        "app.services.case_analysis.case_analysis.request_case_analysis",
         forbidden_analysis,
     )
 

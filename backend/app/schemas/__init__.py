@@ -1,6 +1,6 @@
 """Pydantic request and response schemas for all API domains."""
 
-from app.schemas.caseClarifications import (
+from app.schemas.case_clarifications import (
     CaseClarificationAnswer,
     CaseClarificationRead,
 )

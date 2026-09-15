@@ -1,5 +1,5 @@
 import pytest
-from app.services.case_analysis.pipelineConfig import (
+from app.services.case_analysis.pipeline_config import (
     AnalysisPipelineConfig,
     configured_pipeline,
     read_pipeline,

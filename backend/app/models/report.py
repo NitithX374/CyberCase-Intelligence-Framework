@@ -27,8 +27,8 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.case import Case
-    from app.models.caseRun import CaseAnalysisResult
-    from app.models.ragContext import RagContext
+    from app.models.case_run import CaseAnalysisResult
+    from app.models.rag_context import RagContext
 
 
 class CaseReport(Base):

@@ -23,14 +23,14 @@ from app.schemas.auth import (
     RegisterRequest,
     UserRead,
 )
-from app.services.auth.authService import (
+from app.services.auth.auth_service import (
     build_auth_cookie_options,
     get_or_create_dev_user,
     get_or_create_oauth_user,
 )
 from app.services.auth.dependencies import get_current_user, get_optional_user
 from app.services.auth.jwt import create_access_token
-from app.services.auth.oauthClients import get_oauth_client
+from app.services.auth.oauth_clients import get_oauth_client
 from app.services.auth.passwords import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["authentication"])

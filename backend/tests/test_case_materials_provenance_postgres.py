@@ -32,7 +32,7 @@ def test_document_receive_binds_page_spans_to_case_evidence():
                         "warnings_json": [],
                     },
                 )
-                sources = await CaseMaterialsService(db).list_evidence(case_id, None)
+                sources = await CaseMaterialsService(db).list_sources(case_id, None)
                 assert len(sources) == 1
                 source = sources[0]
                 assert source.source_kind == "document"

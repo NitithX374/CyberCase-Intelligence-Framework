@@ -2,27 +2,33 @@ import pytest
 from builtins import ExceptionGroup
 
 from app.services.case_analysis.contracts import (
-    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisGap,
     CaseAnalysisTrace,
-    CaseEvidenceCitation,
+    CaseSourceCitation,
     CaseGeneratedUnit,
     CaseProviderAnalysis,
 )
+from app.services.case_materials import CaseSourceBundle, CaseSourceItem
 from app.services.case_analysis.validation import validate_case_trace
-from app.services.case_analysis.evidenceQuoteResolver import (
+from app.services.case_analysis.source_quote_resolver import (
     find_aligned_quote,
     resolve_document_locator,
 )
 from app.services.document_ingestion.provenance import bind_exact_page_spans
 
 
-def _source(source_id: str, content: str) -> CaseEvidenceSource:
-    return CaseEvidenceSource(
+def _source(
+    source_id: str,
+    content: str,
+    provenance: dict[str, object] | None = None,
+) -> CaseSourceItem:
+    return CaseSourceItem(
         source_id=source_id,
-        content=content,
+        source_kind="narrative",
+        text=content,
+        provenance=provenance or {},
     )
 
 
@@ -39,7 +45,7 @@ def test_case_validation_requires_exact_citation_for_each_declared_role(role):
     content = "The witness reported a blue vehicle."
     supporting_ids = ["s1"]
     supporting_citations = [
-        CaseEvidenceCitation(
+        CaseSourceCitation(
             source_id="s1",
             exact_quote=content,
         )
@@ -56,7 +62,14 @@ def test_case_validation_requires_exact_citation_for_each_declared_role(role):
     )
     trace = _trace(claim, content)
     with pytest.raises(CaseAnalysisFailure) as error:
-        validate_case_trace(trace, (_source("s1", content), _source("s2", "A different account.")), [])
+        validate_case_trace(
+            trace,
+            CaseSourceBundle(
+                revision=1,
+                sources=(_source("s1", content), _source("s2", "A different account.")),
+            ),
+            [],
+        )
     assert error.value.code == "case_trace_role_citation_missing"
 
 
@@ -237,7 +250,7 @@ def test_case_generated_unit_and_gap_identifier_normalization():
 
 
 def test_unwrap_exception_handles_nested_exception_group():
-    from app.services.workflow.caseRunExecution import unwrap_exception
+    from app.services.workflow.case_run_execution import unwrap_exception
 
     domain_error = CaseAnalysisFailure("test_code", "Test message")
     group = ExceptionGroup("outer", [ExceptionGroup("inner", [domain_error])])
@@ -247,8 +260,7 @@ def test_unwrap_exception_handles_nested_exception_group():
 
 
 def test_case_evidence_citation_normalizes_partial_document_locators():
-    # Scenario from LLM: filename provided from header, but document_id null and pages empty
-    citation_partial = CaseEvidenceCitation.model_validate({
+    citation_partial = CaseSourceCitation.model_validate({
         "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
         "exact_quote": "ผู้ต้องหาหลบหนี",
         "filename": "ลำดับ01 รายงานการสอบสวน.pdf",
@@ -258,8 +270,7 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
     assert citation_partial.filename is None
     assert citation_partial.page_numbers == []
 
-    # Complete locator is preserved
-    citation_complete = CaseEvidenceCitation.model_validate({
+    citation_complete = CaseSourceCitation.model_validate({
         "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
         "exact_quote": "ผู้ต้องหาหลบหนี",
         "document_id": "doc-01",
@@ -282,11 +293,22 @@ def test_find_aligned_quote_handles_markdown_and_whitespace():
 def test_validate_case_trace_allows_same_page_multiple_occurrences():
     content = "report\n\npage one fact repeated\n\nfact repeated"
     provenance = bind_exact_page_spans({"pages": [{"page_number": 1, "merged_text": content}]}, content)
-    context = [{"source_id": "s1", "documents": [{"document_id": "d1", "filename": "report.pdf", "page_spans": provenance["pages"]}]}]
     claim = CaseAnalysisClaim(
         claim_id="A-01", claim_type="reported", text="Fact was reported.", epistemic_status="reported",
         supporting_source_ids=["s1"],
-        supporting_citations=[CaseEvidenceCitation(source_id="s1", exact_quote="fact repeated")],
+        supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote="fact repeated")],
     )
-    validated = validate_case_trace(_trace(claim, content), (_source("s1", content),), context)
+    source = CaseSourceItem(
+        source_id="s1",
+        source_kind="document",
+        text=content,
+        document_id="d1",
+        filename="report.pdf",
+        provenance={"pages": provenance["pages"]},
+    )
+    validated = validate_case_trace(
+        _trace(claim, content),
+        CaseSourceBundle(revision=1, sources=(source,)),
+        [],
+    )
     assert validated.claims[0].supporting_citations[0].page_numbers == [1]

@@ -2,10 +2,10 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.case_analysis.mitreApplicabilityGate import (
+from app.services.case_analysis.mitre_applicability_gate import (
     validate_mitre_applicability,
 )
-from app.services.case_analysis.mitreApplicabilityGate import RawEvidenceSource
+from app.services.case_materials import CaseSourceItem
 
 
 SEMANTIC_FIXTURES = [
@@ -84,10 +84,14 @@ def test_semantic_fixture_contract(
     decision: str,
     trigger: str | None,
 ) -> None:
-    source = RawEvidenceSource(message_id=uuid4(), content=content)
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text=content,
+    )
     payload = {
         "decision": decision,
-        "source_message_ids": [str(source.message_id)] if trigger else [],
+        "source_message_ids": [source.source_id] if trigger else [],
         "trigger_text": [trigger] if trigger else [],
     }
     result = validate_mitre_applicability(payload, [source])
@@ -96,38 +100,45 @@ def test_semantic_fixture_contract(
 
 
 def test_mixed_sources_cite_only_the_cyber_source() -> None:
-    theft = RawEvidenceSource(message_id=uuid4(), content="A laptop was stolen.")
-    login = RawEvidenceSource(
-        message_id=uuid4(),
-        content="The email account logged in from an unknown device.",
+    theft = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="A laptop was stolen.",
+    )
+    login = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="The email account logged in from an unknown device.",
     )
     result = validate_mitre_applicability(
         {
             "decision": "RETRIEVE",
-            "source_message_ids": [str(login.message_id)],
+            "source_message_ids": [login.source_id],
             "trigger_text": ["logged in from an unknown device"],
         },
         [theft, login],
     )
     assert result.decision == "RETRIEVE"
-    assert result.source_message_ids == [str(login.message_id)]
+    assert result.source_message_ids == [login.source_id]
 
 
 def test_multi_message_behavior_can_cite_each_authoritative_source() -> None:
-    email = RawEvidenceSource(
-        message_id=uuid4(),
-        content="The victim received a fake login email.",
+    email = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="The victim received a fake login email.",
     )
-    credentials = RawEvidenceSource(
-        message_id=uuid4(),
-        content="The victim entered credentials on the linked website.",
+    credentials = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="The victim entered credentials on the linked website.",
     )
     result = validate_mitre_applicability(
         {
             "decision": "RETRIEVE",
             "source_message_ids": [
-                str(email.message_id),
-                str(credentials.message_id),
+                email.source_id,
+                credentials.source_id,
             ],
             "trigger_text": [
                 "received a fake login email",
@@ -138,8 +149,8 @@ def test_multi_message_behavior_can_cite_each_authoritative_source() -> None:
     )
     assert result.decision == "RETRIEVE"
     assert set(result.source_message_ids) == {
-        str(email.message_id),
-        str(credentials.message_id),
+        email.source_id,
+        credentials.source_id,
     }
 
 
@@ -181,7 +192,11 @@ def test_multi_message_behavior_can_cite_each_authoritative_source() -> None:
     ],
 )
 def test_invalid_or_unattributable_output_fails_closed(payload: object) -> None:
-    source = RawEvidenceSource(message_id=uuid4(), content="PowerShell executed")
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="PowerShell executed",
+    )
     result = validate_mitre_applicability(payload, [source])
     assert result.decision == "SKIP"
     assert result.source_message_ids == []
@@ -190,11 +205,15 @@ def test_invalid_or_unattributable_output_fails_closed(payload: object) -> None:
 
 
 def test_trigger_must_be_an_exact_source_span() -> None:
-    source = RawEvidenceSource(message_id=uuid4(), content="PowerShell executed")
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="narrative",
+        text="PowerShell executed",
+    )
     result = validate_mitre_applicability(
         {
             "decision": "RETRIEVE",
-            "source_message_ids": [str(source.message_id)],
+            "source_message_ids": [source.source_id],
             "trigger_text": ["powershell executed"],
         },
         [source],
