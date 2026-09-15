@@ -37,6 +37,7 @@
 - 2026-09-15 [USER] D009 ACTIVE: Do not preserve legacy `clarification_answer` or `explicit_chat_addition` aliases; canonical contracts use `followup_answer` and `narrative`.
 - 2026-09-15 [USER] D010 ACTIVE: Reports must present general Case analysis, not a full digital-forensics dossier; retain raw evidence references, revision binding, claims/gaps, and optional MITRE context.
 - 2026-09-15 [CODE] D011 ACTIVE: Report HTML preview and PDF export use the same deterministic report/display data; presentation headings are sections 1–7 and raw source text is not dumped into the report body.
+- 2026-09-15 [USER] D012 ACTIVE: All current `.md` files may be versioned and pushed; non-Markdown experiment scripts and generated outputs remain excluded unless separately requested.
 
 ## State (Done/Now/Next)
 
@@ -48,7 +49,7 @@
 - 2026-09-14 [CODE] Done: `/case` is now a NotebookLM-inspired Case Library with latest-case continuation, search, sort, grid/list views, empty/error states, and explicit New Case navigation.
 - 2026-09-15 [CODE] Done: Case Library remains frontend-only; `useCaseChatSubmission` is the cleaned live Case Chat boundary; legacy evidence/chat aliases and report-only forensic framing are removed from the wire contract; report 409 diagnosis remains unchanged; readable Jinja2 HTML/PDF presentation is implemented and no live data mutation was performed.
 - 2026-09-15 [USER] Next: review the Case Library and new report preview in the running app; implementation is published, with no deploy or live database migration performed.
-- 2026-09-15 [TOOL] Published: implementation commit `8fcff59` and its publication ledger commits are on `main` and `origin/main`; user-owned instruction, translation, and output files remain intentionally outside version control.
+- 2026-09-15 [TOOL] Published: implementation commit `8fcff59` and its publication ledger commits are on `main` and `origin/main`; Markdown guides are now authorized for publication while translation scripts and generated outputs remain outside version control.
 
 ## Working set
 
@@ -60,7 +61,8 @@
 - 2026-09-14 [CODE] `frontend/src/app/case/page.tsx`, `frontend/src/components/case-library/`, and Case Library tests
 - 2026-09-14 [CODE] `backend/tests/` canonical analysis/provenance/route tests and `frontend/src/test/` Case/chat contract tests
 - 2026-09-14 [DOC] `docs/superpowers/specs/2026-09-14-compatibility-ghost-removal-design.md`
-- 2026-09-14 [USER] User-owned untracked instruction files `AGENTS.md`, `CLAUDE.md`, `DESIGN.md`, `frontend/AGENTS.md`, and `frontend/CLAUDE.md` are preserved.
+- 2026-09-14 [USER] Superseded on 2026-09-15: user-owned untracked instruction files `AGENTS.md`, `CLAUDE.md`, `DESIGN.md`, `frontend/AGENTS.md`, and `frontend/CLAUDE.md` were preserved outside version control.
+- 2026-09-15 [USER] User explicitly authorized all current Markdown files to be committed and pushed; non-Markdown translation scripts and generated outputs remain excluded.
 
 ## Receipts
 
