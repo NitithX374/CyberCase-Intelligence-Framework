@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
-import type { SourceMessageRef } from "@/lib/case-overview-contracts";
-import { formatEvidenceCitationText } from "@/lib/evidence-citation";
-import { SourceEvidenceContent } from "@/components/evidence/SourceEvidenceContent";
+import { Fragment, useEffect, useId, useRef } from "react";
+import type { SourceMessageRef } from "@/lib/caseOverviewTypes";
+import { formatEvidenceCitationText } from "@/lib/caseOverviewSource";
 import { Icon } from "@/components/common/icons";
 
 export function SourceEvidenceDrawer({ sourceRef, anchorElement, citationRole, onClose, onNavigateToSource }: {
@@ -73,5 +72,49 @@ export function SourceEvidenceDrawer({ sourceRef, anchorElement, citationRole, o
         )}
       </div>
     </dialog>
+  );
+}
+
+function SourceEvidenceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
+  const pages = sourceRef.evidencePages;
+  const content = sourceRef.displayContent || sourceRef.excerpt;
+  const hasHighlight = pages.length > 0
+    ? pages.some((page) => page.exactQuote !== null && page.text.includes(page.exactQuote))
+    : sourceRef.exactQuote !== null && content.includes(sourceRef.exactQuote);
+
+  return (
+    <div className="space-y-4">
+      {pages.length > 0 ? pages.map((page) => (
+        <section key={page.pageNumber} className="space-y-3">
+          <h3 className="border-b border-line pb-2 text-xs font-semibold text-ink-secondary">Page {page.pageNumber}</h3>
+          <p className="select-text whitespace-pre-wrap text-sm leading-7 text-ink [overflow-wrap:anywhere]">
+            <HighlightedEvidenceText content={page.text || "(No text content)"} exactQuote={page.exactQuote} />
+          </p>
+        </section>
+      )) : (
+        <p className="select-text whitespace-pre-wrap text-sm leading-7 text-ink [overflow-wrap:anywhere]">
+          <HighlightedEvidenceText content={content || "(No text content)"} exactQuote={sourceRef.exactQuote} />
+        </p>
+      )}
+      {sourceRef.exactQuote && !hasHighlight && (
+        <p className="text-xs leading-relaxed text-ink-muted">The cited passage could not be highlighted in the available source text.</p>
+      )}
+    </div>
+  );
+}
+
+function HighlightedEvidenceText({ content, exactQuote }: { content: string; exactQuote: string | null }) {
+  if (!exactQuote) return <>{content}</>;
+  const segments = content.split(exactQuote);
+  if (segments.length === 1) return <>{content}</>;
+  return (
+    <>
+      {segments.map((segment, index) => (
+        <Fragment key={index}>
+          {segment}
+          {index < segments.length - 1 && <mark className="rounded-sm bg-[#F4D58D]/75 px-0.5 text-inherit ring-1 ring-[#B98218]/20">{exactQuote}</mark>}
+        </Fragment>
+      ))}
+    </>
   );
 }

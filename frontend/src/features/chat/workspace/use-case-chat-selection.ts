@@ -10,7 +10,6 @@ import {
   type CaseChatDetail,
   type CaseChatRead,
 } from "@/lib/api";
-import { chatQueryKeys } from "@/hooks/useChatQueries";
 import { caseQueryKeys } from "@/hooks/useCaseQueries";
 import { isChatRequestCanceled, pollCaseRunUntilSettled } from "../runs/chat-polling";
 import { phaseForCaseChat, useChatDraft } from "./use-chat-draft";
@@ -42,7 +41,7 @@ export function useCaseChatSelection({
   } = draft;
 
   const chatQuery = useQuery<CaseChatDetail>({
-    queryKey: chatQueryKeys.detail(activeCaseChatId),
+    queryKey: caseQueryKeys.chat(activeCaseChatId ?? "none"),
     queryFn: activeCaseChatId === null
       ? skipToken
       : ({ signal }) => readCaseChatDetail(activeCaseChatId, signal),
@@ -61,14 +60,14 @@ export function useCaseChatSelection({
   }, [cacheUpsertCaseChat]);
 
   const readChat = useCallback((selection: CaseChatSelection) => queryClient.fetchQuery({
-    queryKey: chatQueryKeys.detail(selection.caseId),
+    queryKey: caseQueryKeys.chat(selection.caseId),
     queryFn: ({ signal }) => readCaseChatDetail(selection.caseId, signal),
     staleTime: 0,
     retry: false,
   }), [queryClient]);
 
   const applyCaseChat = useCallback((chat: CaseChatDetail, failureMessage?: string) => {
-    queryClient.setQueryData(chatQueryKeys.detail(chat.case_id), chat);
+    queryClient.setQueryData(caseQueryKeys.chat(chat.case_id), chat);
     upsertCaseChat(chat);
     reconcile(chat, failureMessage);
   }, [queryClient, reconcile, upsertCaseChat]);
@@ -90,7 +89,7 @@ export function useCaseChatSelection({
       void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
       void queryClient.invalidateQueries({ queryKey: caseQueryKeys.clarifications(caseId) });
       void queryClient.refetchQueries({
-        queryKey: chatQueryKeys.detail(selection.caseId),
+        queryKey: caseQueryKeys.chat(selection.caseId),
         exact: true,
         type: "all",
       });
@@ -103,7 +102,7 @@ export function useCaseChatSelection({
     controllerRef.current = null;
     selectionRef.current = null;
     if (previous) {
-      void queryClient.cancelQueries({ queryKey: chatQueryKeys.detail(previous.caseId), exact: true });
+      void queryClient.cancelQueries({ queryKey: caseQueryKeys.chat(previous.caseId), exact: true });
     }
   }, [queryClient]);
 
@@ -115,7 +114,7 @@ export function useCaseChatSelection({
     try {
       const chat = await readChat(selection);
       if (inactiveCaseChatIds.current.has(targetId)) return;
-      queryClient.setQueryData(chatQueryKeys.detail(targetId), chat);
+      queryClient.setQueryData(caseQueryKeys.chat(targetId), chat);
       applyCaseChat(chat);
     } catch (error) {
       if (!isChatRequestCanceled(selection.signal, error)) {
@@ -151,14 +150,14 @@ export function useCaseChatSelection({
   ) => {
     if (!isCurrentSelection(selection)) return;
     acceptDraftSubmission(key, accepted.message.ordinal);
-    queryClient.setQueryData<CaseChatDetail>(chatQueryKeys.detail(selection.caseId), (current) => {
+    queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(selection.caseId), (current) => {
       if (!current) throw new Error("The selected Case Chat must be loaded before accepting a submission.");
       const messages = current.messages.some((message) => message.id === accepted.message.id)
         ? current.messages
         : [...current.messages, accepted.message].sort((left, right) => left.ordinal - right.ordinal);
       return { ...current, status: "processing", messages };
     });
-    const current = queryClient.getQueryData<CaseChatDetail>(chatQueryKeys.detail(selection.caseId));
+    const current = queryClient.getQueryData<CaseChatDetail>(caseQueryKeys.chat(selection.caseId));
     if (current) upsertCaseChat(current);
   }, [acceptDraftSubmission, isCurrentSelection, queryClient, upsertCaseChat]);
 
@@ -181,7 +180,7 @@ export function useCaseChatSelection({
 
   const removeCaseChat = useCallback((caseId: string) => {
     forgetCaseChat(caseId);
-    queryClient.removeQueries({ queryKey: chatQueryKeys.detail(caseId), exact: true });
+    queryClient.removeQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true });
   }, [forgetCaseChat, queryClient]);
 
   useEffect(() => cancelSelection, [cancelSelection]);

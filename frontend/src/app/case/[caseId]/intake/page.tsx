@@ -11,8 +11,8 @@ import {
   useCaseEvidence,
   useCaseMutations,
   useCases,
+  useCaseRunPolling,
 } from "@/hooks/useCaseQueries";
-import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
 import { useCaseWorkspaceActions } from "@/hooks/useCaseWorkspaceActions";
 import { casePath } from "@/features/chat/routing/workspaceRoutes";
 
@@ -35,7 +35,6 @@ export default function IntakePage() {
 
   const actions = useCaseWorkspaceActions({
     activeCaseId: caseId,
-    activeCase,
     upsertCase,
     updateCase: updateMutation.mutateAsync,
     router,
@@ -56,10 +55,8 @@ export default function IntakePage() {
         isCaseDataLoading={isCaseDataLoading}
         error={actions.actionError}
         isUploadingDocument={actions.isUploadingDocument}
-        admittingExtractionId={actions.admittingExtractionId}
         onSubmitCase={actions.submitCase}
         onUploadDocument={(file) => void actions.uploadDocument(file)}
-        onAdmitExtraction={(docId, extId) => void actions.admitExtraction(docId, extId)}
         onOpenOverview={() => router.push(casePath(caseId, "overview"))}
         onOpenMaterials={() => router.push(casePath(caseId, "materials"))}
       />

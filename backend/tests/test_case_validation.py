@@ -1,7 +1,8 @@
 import pytest
+from builtins import ExceptionGroup
 
 from app.services.case_analysis.contracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisGap,
@@ -18,8 +19,8 @@ from app.services.case_analysis.evidenceQuoteResolver import (
 from app.services.document_ingestion.provenance import bind_exact_page_spans
 
 
-def _source(source_id: str, content: str) -> CaseAdmittedSource:
-    return CaseAdmittedSource(
+def _source(source_id: str, content: str) -> CaseEvidenceSource:
+    return CaseEvidenceSource(
         source_id=source_id,
         content=content,
     )
@@ -236,11 +237,11 @@ def test_case_generated_unit_and_gap_identifier_normalization():
 
 
 def test_unwrap_exception_handles_nested_exception_group():
-    from app.services.workflow.caseRunExecution import _unwrap_exception
+    from app.services.workflow.caseRunExecution import unwrap_exception
 
     domain_error = CaseAnalysisFailure("test_code", "Test message")
     group = ExceptionGroup("outer", [ExceptionGroup("inner", [domain_error])])
-    unwrapped = _unwrap_exception(group)
+    unwrapped = unwrap_exception(group)
     assert unwrapped is domain_error
     assert unwrapped.code == "test_code"
 

@@ -55,13 +55,13 @@ def build_case_report_display(
     )
     trace_claims = {claim.claim_id: claim for claim in trace.claims}
     claims = tuple(
-        _display_claim(index, claim, trace_claims.get(claim.claim_id), source_labels)
+        display_claim(index, claim, trace_claims.get(claim.claim_id), source_labels)
         for index, claim in enumerate(report.claims, 1)
     )
     return CaseReportDisplay(claims=claims, sources=sources)
 
 
-def _display_claim(
+def display_claim(
     ordinal: int,
     report_claim: ReportClaim,
     source_claim: CaseAnalysisClaim | None,
@@ -73,13 +73,13 @@ def _display_claim(
         if trace_claim is not None
         else report_claim.source_evidence_ids
     )
-    source_labels_for_claim = _labels(supporting_source_ids, source_labels)
-    contradicting_source_labels = _labels(
+    source_labels_for_claim = labels_for_sources(supporting_source_ids, source_labels)
+    contradicting_source_labels = labels_for_sources(
         getattr(trace_claim, "contradicting_source_ids", []),
         source_labels,
     )
-    supporting_quotes = _quotes(getattr(trace_claim, "supporting_citations", []))
-    contradicting_quotes = _quotes(getattr(trace_claim, "contradicting_citations", []))
+    supporting_quotes = quotes_from_citations(getattr(trace_claim, "supporting_citations", []))
+    contradicting_quotes = quotes_from_citations(getattr(trace_claim, "contradicting_citations", []))
     return ReportDisplayClaim(
         ordinal=ordinal,
         claim_id=report_claim.claim_id,
@@ -97,7 +97,7 @@ def _display_claim(
     )
 
 
-def _labels(source_ids: list[str], source_labels: dict[str, str]) -> tuple[str, ...]:
+def labels_for_sources(source_ids: list[str], source_labels: dict[str, str]) -> tuple[str, ...]:
     return tuple(
         dict.fromkeys(
             source_labels[source_id]
@@ -107,7 +107,7 @@ def _labels(source_ids: list[str], source_labels: dict[str, str]) -> tuple[str, 
     )
 
 
-def _quotes(citations: list[object]) -> tuple[str, ...]:
+def quotes_from_citations(citations: list[object]) -> tuple[str, ...]:
     return tuple(
         citation.exact_quote
         for citation in citations

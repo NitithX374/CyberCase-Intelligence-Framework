@@ -3,9 +3,9 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.case_analysis.caseAnalysis import executeRawDirectPipeline
+from app.services.case_analysis.caseAnalysis import execute_raw_direct_pipeline
 from app.services.case_analysis.contracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisTrace,
@@ -47,7 +47,7 @@ def test_case_overview_models_construct_and_normalize_claim_ids() -> None:
 
 
 def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> None:
-    source = CaseAdmittedSource(
+    source = CaseEvidenceSource(
         source_id="s1",
         content="Server breached on Monday.",
     )
@@ -84,7 +84,7 @@ def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> Non
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
-    source = CaseAdmittedSource(
+    source = CaseEvidenceSource(
         source_id="s1",
         content="Server breached.",
     )
@@ -114,7 +114,7 @@ def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
-    source = CaseAdmittedSource(
+    source = CaseEvidenceSource(
         source_id="s1",
         content="Server breached.",
     )
@@ -144,7 +144,7 @@ def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
-    source = CaseAdmittedSource(
+    source = CaseEvidenceSource(
         source_id="s1",
         content="Server breached.",
     )
@@ -176,7 +176,7 @@ def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
 class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
     async def test_direct_pipeline_populates_parties_timeline_and_impacts(self) -> None:
         raw_text = "On Monday, company ACME was targeted by unauthorized access."
-        source = CaseAdmittedSource(
+        source = CaseEvidenceSource(
             source_id="s1",
             content=raw_text,
         )
@@ -213,10 +213,10 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
 
         raw_evidence = f"[SOURCE s1 · REVISION 1]\n{raw_text}"
         with patch(
-            "app.services.case_analysis.caseAnalysis.requestAnalysisStage",
+            "app.services.case_analysis.caseAnalysis.request_analysis_stage",
             new=fake_request_stage,
         ):
-            result = await executeRawDirectPipeline(
+            result = await execute_raw_direct_pipeline(
                 raw_evidence,
                 {"document_source_context": []},
                 "english",

@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, type FormEvent } from "react";
 import {
   createCaseChatMessage, getApiErrorMessage,
   type CaseRead,
 } from "@/lib/api";
 import { hasCompletedAssistantOutput, type ActiveChatFollowUp } from "@/lib/chat-followup";
 import { isChatRequestCanceled } from "./chat-polling";
-import type { PendingChatSubmission } from "../workspace/chat-workspace-types";
+import type { PendingChatSubmission } from "../workspace/use-chat-draft";
 import type { CaseChatSelection, CaseChatSession } from "../workspace/use-case-chat-selection";
 
 interface UseCaseChatSubmissionOptions {
@@ -120,5 +120,19 @@ export function useCaseChatSubmission({
     })();
   }, [caseId, cases, session, upsertCase]);
 
-  return { submitContent };
+  const submitMessage = useCallback((event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    submitContent(session.input, "message");
+  }, [session.input, submitContent]);
+
+  const clearQueryError = useCallback(() => session.reportError(null), [session]);
+
+  const retryQuery = useCallback(() => {
+    const pending = session.getPendingSubmission();
+    if (!pending || pending.caseId !== session.getActiveCaseChatId()) return;
+    session.reportError(null);
+    submitContent(pending.content, pending.kind, session.pendingFollowUp?.followUp);
+  }, [session, submitContent]);
+
+  return { submitContent, clearQueryError, retryQuery, submitMessage };
 }

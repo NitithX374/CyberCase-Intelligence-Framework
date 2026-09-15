@@ -32,7 +32,7 @@ class CoreLlmProviderTests(unittest.TestCase):
 
     def test_openrouter_target_uses_dedicated_secret_and_bearer_auth(self) -> None:
         target = resolve_core_llm_target(
-            "claude-feature-model",
+            "luna",
             configured_settings=self._settings(openrouter_key="core-secret"),
         )
 
@@ -80,7 +80,7 @@ class CoreLlmProviderTests(unittest.TestCase):
             "OPENROUTER_CYBERCASE",
         ):
             resolve_core_llm_target(
-                "claude-feature-model",
+                "luna",
                 configured_settings=configured,
             )
 
@@ -90,7 +90,7 @@ class CoreLlmProviderTests(unittest.TestCase):
 
         with self.assertRaises(CoreLlmConfigurationError):
             resolve_core_llm_target(
-                "claude-feature-model",
+                "luna",
                 configured_settings=configured,
             )
 

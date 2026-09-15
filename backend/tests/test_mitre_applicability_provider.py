@@ -10,7 +10,7 @@ from app.services.case_analysis.mitreApplicabilityGate import (
     MitreApplicabilityGate,
     evaluate_mitre_applicability,
 )
-from app.services.chat.raw_evidence import RawEvidenceSource
+from app.services.case_analysis.mitreApplicabilityGate import RawEvidenceSource
 from app.services.llm.coreLlm import CoreLlmTarget
 
 

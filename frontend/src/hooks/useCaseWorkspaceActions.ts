@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  admitCaseDocument,
-  admitCaseEvidence,
+  addCaseEvidence,
+  detectResponseLanguage,
   getApiErrorMessage,
   getCase,
   startCaseAnalysis,
@@ -12,15 +12,14 @@ import {
   type CaseIntakeSubmission,
   type CaseRead,
 } from "@/lib/api";
+import { readAccountValue, writeAccountValue } from "@/lib/account-storage";
 import { caseQueryKeys } from "./useCaseQueries";
-import { useCaseAnalysisSubmission } from "./useCaseAnalysisSubmission";
 import { casePath } from "@/features/chat/routing/workspaceRoutes";
 import type { WorkspaceView } from "@/components/common/types";
 import type { CaseChatSession } from "@/features/chat/workspace/use-case-chat-selection";
 
 interface UseCaseWorkspaceActionsOptions {
   activeCaseId: string | null;
-  activeCase: CaseRead | null;
   isChatOpen?: boolean;
   setIsChatOpen?: Dispatch<SetStateAction<boolean>>;
   session?: CaseChatSession;
@@ -32,7 +31,6 @@ interface UseCaseWorkspaceActionsOptions {
 
 export function useCaseWorkspaceActions({
   activeCaseId,
-  activeCase,
   isChatOpen = false,
   setIsChatOpen,
   session,
@@ -45,7 +43,6 @@ export function useCaseWorkspaceActions({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
-  const [admittingExtractionId, setAdmittingExtractionId] = useState<string | null>(null);
   const [pendingSubmission, setPendingSubmission] = useCaseAnalysisSubmission(activeCaseId);
 
   const invalidateCaseData = useCallback(async (caseId: string) => {
@@ -74,7 +71,7 @@ export function useCaseWorkspaceActions({
       setIsChatOpen(false);
       setActionError(getApiErrorMessage(error, "The Case Chat could not be opened."));
     }
-  }, [activeCase, activeCaseId, isChatOpen, session, setIsChatOpen, upsertCase]);
+  }, [activeCaseId, isChatOpen, session, setIsChatOpen]);
 
   const uploadDocument = useCallback(async (file: File) => {
     if (!activeCaseId || isUploadingDocument) return;
@@ -82,30 +79,16 @@ export function useCaseWorkspaceActions({
     setIsUploadingDocument(true);
     try {
       await uploadCaseDocument(activeCaseId, file);
-      await queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(activeCaseId) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(activeCaseId) }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(activeCaseId) }),
+      ]);
     } catch (error) {
       setActionError(getApiErrorMessage(error, "The document could not be saved."));
     } finally {
       setIsUploadingDocument(false);
     }
   }, [activeCaseId, isUploadingDocument, queryClient]);
-
-  const admitExtraction = useCallback(async (documentId: string, extractionId: string) => {
-    if (!activeCaseId || admittingExtractionId !== null) return;
-    setActionError(null);
-    setAdmittingExtractionId(extractionId);
-    try {
-      await admitCaseDocument(activeCaseId, documentId, extractionId);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(activeCaseId) }),
-        queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(activeCaseId) }),
-      ]);
-    } catch (error) {
-      setActionError(getApiErrorMessage(error, "The reviewed document text could not be admitted."));
-    } finally {
-      setAdmittingExtractionId(null);
-    }
-  }, [activeCaseId, admittingExtractionId, queryClient]);
 
   const submitCase = useCallback(async ({ title, description }: CaseIntakeSubmission) => {
     if (!activeCaseId || isSubmitting) return;
@@ -123,7 +106,7 @@ export function useCaseWorkspaceActions({
         inputFingerprint,
         idempotencyKey: createIdempotencyKey(),
         expectedEvidenceRevision: null,
-        admissionCompleted: false,
+        evidenceAdded: false,
       };
     setPendingSubmission(submission);
     try {
@@ -131,28 +114,28 @@ export function useCaseWorkspaceActions({
       if (normalizedTitle && normalizedTitle !== currentCase.title) {
         currentCase = await updateCase({ caseId: activeCaseId, title: normalizedTitle });
       }
-      if (normalizedDescription && !submission.admissionCompleted) {
-        await admitCaseEvidence(activeCaseId, {
+      if (normalizedDescription && !submission.evidenceAdded) {
+        await addCaseEvidence(activeCaseId, {
           exact_text: normalizedDescription,
           source_kind: "narrative",
           provenance_json: { interface: "case_intake" },
           source_metadata_json: { interface: "case_intake" },
         });
-        submission = { ...submission, admissionCompleted: true };
+        submission = { ...submission, evidenceAdded: true };
         setPendingSubmission(submission);
         currentCase = await getCase(activeCaseId);
       }
-      if (!submission.admissionCompleted || submission.expectedEvidenceRevision === null) {
+      if (!submission.evidenceAdded || submission.expectedEvidenceRevision === null) {
         submission = {
           ...submission,
-          admissionCompleted: true,
+          evidenceAdded: true,
           expectedEvidenceRevision: requiredEvidenceRevision(currentCase),
         };
         setPendingSubmission(submission);
       }
       const accepted = await startCaseAnalysis(activeCaseId, {
         idempotency_key: submission.idempotencyKey,
-        response_language: "english",
+        response_language: detectResponseLanguage(normalizedDescription),
         expected_evidence_revision: submission.expectedEvidenceRevision,
       });
       setPendingSubmission(null);
@@ -179,10 +162,8 @@ export function useCaseWorkspaceActions({
     clearActionError: () => setActionError(null),
     isSubmitting,
     isUploadingDocument,
-    admittingExtractionId,
     toggleChat,
     uploadDocument,
-    admitExtraction,
     submitCase,
   };
 }
@@ -197,4 +178,33 @@ function requiredEvidenceRevision(caseRecord: CaseRead): number {
 function createIdempotencyKey(): string {
   if (typeof globalThis.crypto?.randomUUID !== "function") throw new Error("The browser does not provide a Case analysis idempotency key generator.");
   return globalThis.crypto.randomUUID();
+}
+
+interface PendingCaseAnalysisSubmission {
+  inputFingerprint: string;
+  idempotencyKey: string;
+  expectedEvidenceRevision: number | null;
+  evidenceAdded: boolean;
+}
+
+function useCaseAnalysisSubmission(caseId: string | null) {
+  const storageKey = `case-analysis-submission:${caseId ?? "none"}`;
+  const loadedKey = useRef(storageKey);
+  const [value, setValue] = useState<PendingCaseAnalysisSubmission | null>(() => readSubmission(storageKey));
+
+  useEffect(() => {
+    if (loadedKey.current !== storageKey) {
+      loadedKey.current = storageKey;
+      setValue(readSubmission(storageKey));
+      return;
+    }
+    writeAccountValue(storageKey, JSON.stringify(value));
+  }, [storageKey, value]);
+
+  return [value, setValue] as const;
+}
+
+function readSubmission(storageKey: string): PendingCaseAnalysisSubmission | null {
+  const saved = readAccountValue(storageKey);
+  return saved === null ? null : JSON.parse(saved) as PendingCaseAnalysisSubmission;
 }

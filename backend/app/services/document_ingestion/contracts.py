@@ -1,12 +1,10 @@
-import hashlib
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 
 class IngestionMode(StrEnum):
     UNIFIED = "unified"
-    ROUTED = "routed"
 
 
 class ExtractionMethod(StrEnum):
@@ -68,7 +66,7 @@ class OCRWord(BaseModel):
     confidence: float | None = Field(default=None, ge=0, le=1, strict=True)
     bbox: BoundingBox | None = Field(
         default=None,
-        description="Pixels in the recognition input image; crop-local in routed mode.",
+        description="Pixels in the recognition input image.",
     )
 
 

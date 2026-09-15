@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
-import type { SourceMessageRef } from "@/lib/case-overview-contracts";
+import type { SourceMessageRef } from "@/lib/caseOverviewTypes";
 import {
   buildTechnicalContext,
   type RetrievedTechnicalContextCard,
@@ -213,7 +213,7 @@ export function TechnicalContextView({
           <div>
             <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">Technical context</h2>
             <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">
-              External technical augmentation derived from the Case analysis. It is not admitted Case evidence.
+              External technical augmentation derived from the Case analysis. It is not Case evidence.
             </p>
           </div>
           <span className="rounded-md border border-mitre/25 bg-mitre/5 px-2.5 py-1.5 text-[10px] font-semibold text-mitre">MITRE ATT&amp;CK</span>

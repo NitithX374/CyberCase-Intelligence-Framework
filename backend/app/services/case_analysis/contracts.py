@@ -4,16 +4,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
-from app.services.case_analysis.analysisContractUtils import (
-    CaseAnalysisMode,
-    CaseClaimType,
-    CaseEpistemicStatus,
-)
 from app.services.case_analysis.analysisEvidenceContracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
+    CaseAnalysisMode,
     CaseAnalysisClaim,
     CaseAnalysisGap,
+    CaseClaimType,
     CaseEvidenceCitation,
+    CaseEpistemicStatus,
     CaseGeneratedUnit,
 )
 from app.services.case_analysis.analysisTraceContracts import (
@@ -37,7 +35,7 @@ class CaseAnalysisFailure(Exception):
 
 def build_case_source_registry(
     context: Mapping[str, object],
-) -> tuple[CaseAdmittedSource, ...]:
+) -> tuple[CaseEvidenceSource, ...]:
     ids = context.get("source_ids")
     texts = context.get("_source_text_by_source_id")
     if (
@@ -49,12 +47,12 @@ def build_case_source_registry(
         or set(ids) != set(texts)
     ):
         raise CaseAnalysisFailure("case_sources_invalid", "Case evidence source registry is invalid")
-    sources: list[CaseAdmittedSource] = []
+    sources: list[CaseEvidenceSource] = []
     for source_id in ids:
         content = texts[source_id]
         if not isinstance(content, str) or not content.strip():
             raise CaseAnalysisFailure("case_source_empty", "Case evidence source text is empty")
-        sources.append(CaseAdmittedSource(source_id=source_id, content=content))
+        sources.append(CaseEvidenceSource(source_id=source_id, content=content))
     return tuple(sources)
 
 
@@ -69,7 +67,6 @@ def resolve_response_language(user_message: object) -> ResponseLanguage:
     raise ValueError("User message language must be Thai or English")
 
 
-AnalysisMode = CaseAnalysisMode
 @dataclass(frozen=True)
 class CaseAnalysisResult:
     answer: str
@@ -81,8 +78,7 @@ class CaseAnalysisResult:
 
 
 __all__ = [
-    "AnalysisMode",
-    "CaseAdmittedSource",
+    "CaseEvidenceSource",
     "CaseAnalysisClaim",
     "CaseAnalysisFailure",
     "CaseAnalysisFailureMetadata",

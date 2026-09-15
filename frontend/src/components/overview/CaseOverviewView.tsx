@@ -2,17 +2,15 @@
 
 import { useMemo, useState } from "react";
 import type { CaseAnalysisResultRead, CaseChatStatus, CaseClarificationRead, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
-import type { SourceMessageRef } from "@/lib/case-overview-contracts";
-import { buildCaseOverview } from "@/lib/case-overview-builder";
-import { CaseOverviewHeader } from "./CaseOverviewHeader";
+import type { CaseGap, SourceMessageRef } from "@/lib/caseOverviewTypes";
+import { buildCaseOverview } from "@/lib/caseOverview";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import { MitreExplainedSimply } from "./MitreExplainedSimply";
-import { OpenQuestionsSection } from "./OpenQuestionsSection";
 import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
 import { OverviewStatusRail } from "./OverviewStatusRail";
 import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
 import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
-import { CaseOverviewState } from "./CaseOverviewState";
+import { Icon } from "@/components/common/icons";
 
 export function OverviewSummarySection({ summary }: { summary: string }) {
   if (!summary) return null;
@@ -29,7 +27,6 @@ interface CaseOverviewViewProps {
   caseId: string | null;
   caseTitle: string;
   chatStatus: CaseChatStatus;
-  onOpenChat: () => void;
   onOpenReport: () => void;
   onOpenIntake?: () => void;
   onOpenMaterials?: () => void;
@@ -49,7 +46,6 @@ export function CaseOverviewView({
   caseId,
   caseTitle,
   chatStatus,
-  onOpenChat,
   onOpenReport,
   onOpenIntake,
   onOpenMaterials,
@@ -82,18 +78,18 @@ export function CaseOverviewView({
         title="No Case Material Yet"
         description="Add a case narrative or document in Intake to begin."
         actionLabel="Open Intake"
-        onAction={onOpenIntake ?? onOpenChat}
+        onAction={onOpenIntake}
         actionIcon="intake"
       />
     );
   }
 
   if (analysisLoading && !analysisResult) {
-    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} processing />;
+    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Intake" onAction={onOpenIntake} processing />;
   }
 
   if (evidenceLoading && analysisResult) {
-    return <CaseOverviewState title="Loading Case evidence…" description="Loading the current Case evidence." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenChat} processing />;
+    return <CaseOverviewState title="Loading Case evidence…" description="Loading the current Case evidence." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenIntake} processing />;
   }
 
   if (runStatus === "failed" && !analysisResult) {
@@ -101,9 +97,9 @@ export function CaseOverviewView({
       <CaseOverviewState
         eyebrow="Case overview"
         title="Analysis Failed"
-        description={run?.error_message || "The case analysis failed to complete. Return to Intake to verify the admitted material and retry."}
+        description={run?.error_message || "The case analysis failed to complete. Return to Intake to verify the received Case material and retry."}
         actionLabel="Open Intake"
-        onAction={onOpenIntake ?? onOpenChat}
+        onAction={onOpenIntake}
         actionIcon="intake"
       />
     );
@@ -117,16 +113,13 @@ export function CaseOverviewView({
       <CaseOverviewState
         eyebrow={pendingClarification?.topic ? `Clarification needed · ${pendingClarification.topic}` : "Clarification needed"}
         title="Analysis Needs More Information"
-        description={question ? `The case analysis requires additional details: "${question}" Please proceed to Chat to follow up.` : "The case analysis requires additional details to proceed. Please proceed to Chat to follow up."}
-        actionLabel="Proceed to Chat"
-        onAction={onOpenChat}
-        actionIcon="chat"
+        description={question ? `The case analysis requires additional details: "${question}" Open Ask from the workspace header to follow up.` : "The case analysis requires additional details. Open Ask from the workspace header to follow up."}
       />
     );
   }
 
   if (overview.unavailableReason) {
-    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the admitted Case material.`} actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} actionIcon="intake" />;
+    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Intake" onAction={onOpenIntake} actionIcon="intake" />;
   }
 
   if (!overview.hasAnalysis && overview.isProcessing) {
@@ -134,8 +127,6 @@ export function CaseOverviewView({
       <CaseOverviewState
         title="Analyzing Case Material…"
         description="CyberCase is building the case summary, findings, and open questions from the submitted material."
-        actionLabel="View Progress"
-        onAction={onOpenChat}
         processing
       />
     );
@@ -148,7 +139,7 @@ export function CaseOverviewView({
         title="Analysis Required"
         description="This case has material but no completed case-level analysis yet. Return to Intake to run the analysis."
         actionLabel="Open Intake"
-        onAction={onOpenIntake ?? onOpenChat}
+        onAction={onOpenIntake}
         actionIcon="intake"
       />
     );
@@ -226,7 +217,7 @@ export function CaseOverviewView({
           activeSourceKey={activeSource?.sourceKey ?? null}
         />
 
-        <OpenQuestionsSection gaps={overview.gaps} onOpenChat={onOpenChat} />
+        <OpenQuestionsSection gaps={overview.gaps} />
 
         <MitreExplainedSimply
           techniques={overview.mitreContext}
@@ -245,5 +236,78 @@ export function CaseOverviewView({
         />
       )}
     </div>
+  );
+}
+
+function CaseOverviewHeader({ caseTitle, onOpenReport, onOpenMaterials }: { caseTitle: string; onOpenReport: () => void; onOpenMaterials?: () => void }) {
+  return (
+    <header aria-label={`${caseTitle} analysis`} className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
+      <div>
+        <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">Analysis</h2>
+        <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">Grounded findings from the persisted Case Analysis Result and current Case evidence.</p>
+      </div>
+      <div className="flex items-center gap-3">
+        {onOpenMaterials && <button type="button" onClick={onOpenMaterials} className="text-xs font-medium text-ink-secondary underline decoration-line-strong underline-offset-4 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent">View sources</button>}
+        <button type="button" onClick={onOpenReport} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-xs font-semibold text-ivory hover:bg-charcoal-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"><Icon name="report" className="h-3.5 w-3.5" />View report</button>
+      </div>
+    </header>
+  );
+}
+
+function CaseOverviewState({
+  eyebrow,
+  title,
+  description,
+  actionLabel,
+  onAction,
+  actionIcon,
+  processing,
+}: {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  actionIcon?: "intake";
+  processing?: boolean;
+}) {
+  return (
+    <div className="mx-auto flex h-full min-h-[360px] w-full max-w-5xl flex-col justify-center px-5 py-10 sm:px-8 lg:px-10">
+      <div className="max-w-xl border-y border-line py-8">
+        {processing ? (
+          <div className="mb-4 flex items-center gap-2 text-evidence"><span className="h-2 w-2 rounded-full bg-evidence motion-safe:animate-pulse motion-reduce:animate-none" /><span className="text-[11px] font-semibold">Analysis in progress</span></div>
+        ) : eyebrow ? <p className="section-eyebrow">{eyebrow}</p> : null}
+        <h2 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">{title}</h2>
+        <p className="mt-2 max-w-lg text-xs leading-6 text-ink-secondary">{description}</p>
+        {actionLabel && onAction && <div className="pt-5"><button type="button" onClick={onAction} className="btn-primary inline-flex items-center gap-2 rounded-md">{actionIcon && <Icon name={actionIcon} className="h-3.5 w-3.5" />}{actionLabel}</button></div>}
+      </div>
+    </div>
+  );
+}
+
+const gapLabels: Record<CaseGap["status"], string> = {
+  NOT_PROVIDED: "Not provided",
+  EXPLICITLY_UNKNOWN: "Explicitly unknown",
+  AMBIGUOUS: "Ambiguous",
+  CONFLICTING: "Conflicting information",
+};
+
+function OpenQuestionsSection({ gaps }: { gaps: CaseGap[] }) {
+  return (
+    <section aria-labelledby="overview-open-questions-heading" className="order-4 min-w-0 border-t border-line pt-4 lg:order-2">
+      <h2 id="overview-open-questions-heading" className="flex items-baseline gap-2 text-sm font-semibold text-ink">Open Questions {gaps.length > 0 && <span className="text-xs font-normal text-ink-muted">{gaps.length}</span>}</h2>
+      {gaps.length === 0 ? <p className="pt-2 text-xs leading-5 text-ink-secondary">No open questions recorded.</p> : (
+        <div className="divide-y divide-line">
+          {gaps.map((gap) => (
+            <article key={gap.id} className="space-y-2 py-4 last:pb-1">
+              <p className="text-[11px] text-ink-muted">{gapLabels[gap.status]}{gap.askable && " · Needs clarification"}</p>
+              <h3 className="text-sm font-semibold leading-6 text-ink">{gap.topic}</h3>
+              <p className="text-xs leading-6 text-ink-secondary">{gap.description}</p>
+              {gap.reason && <p className="text-xs leading-6 text-ink-secondary"><span className="font-medium">Why it matters: </span>{gap.reason}</p>}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

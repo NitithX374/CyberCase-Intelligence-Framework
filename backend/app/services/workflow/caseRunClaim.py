@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
 from app.models.caseRun import CaseRun
-from app.services.case_materials import CaseMaterialsError, assembleCaseEvidence
+from app.services.case_materials import CaseMaterialsError, assemble_case_evidence
 from app.services.workflow.caseRunService import ClaimedCaseRun
 
 
-async def claimCaseRun(
+async def claim_case_run(
     db: AsyncSession,
     run_id: UUID,
 ) -> ClaimedCaseRun | None:
@@ -48,10 +48,10 @@ async def claimCaseRun(
             select(Case).where(Case.id == row["case_id"]).with_for_update()
         )
         if case is None:
-            await _fail_claimed_run(db, row["id"], row["attempt_count"], now, "case_not_found", "Case is missing")
+            await fail_claimed_run(db, row["id"], row["attempt_count"], now, "case_not_found", "Case is missing")
             return None
         if case.evidence_revision != row["evidence_revision"]:
-            await _fail_claimed_run(
+            await fail_claimed_run(
                 db,
                 row["id"],
                 row["attempt_count"],
@@ -61,9 +61,9 @@ async def claimCaseRun(
             )
             return None
         try:
-            assembled = await assembleCaseEvidence(db, case_id=row["case_id"], user_id=None)
+            assembled = await assemble_case_evidence(db, case_id=row["case_id"], user_id=None)
         except CaseMaterialsError as error:
-            await _fail_claimed_run(db, row["id"], row["attempt_count"], now, error.code, error.message)
+            await fail_claimed_run(db, row["id"], row["attempt_count"], now, error.code, error.message)
             return None
 
         manifest = tuple(
@@ -95,7 +95,7 @@ async def claimCaseRun(
         )
 
 
-async def _fail_claimed_run(
+async def fail_claimed_run(
     db: AsyncSession,
     run_id: UUID,
     attempt_count: int,
@@ -121,5 +121,5 @@ async def _fail_claimed_run(
 
 
 __all__ = [
-    "claimCaseRun",
+    "claim_case_run",
 ]

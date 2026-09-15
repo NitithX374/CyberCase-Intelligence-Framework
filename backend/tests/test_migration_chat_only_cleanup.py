@@ -9,6 +9,8 @@ def test_migration_chain_is_clean_and_linear() -> None:
     migrations = sorted(BASELINE.glob("*.py"))
     assert [path.name for path in migrations] == [
         "0001_canonical_case_system.py",
+        "0002_case_run_active_index.py",
+        "0003_received_case_material.py",
     ]
     baseline_source = migrations[0].read_text(encoding="utf-8")
     assert 'revision = "0001_canonical_case_system"' in baseline_source

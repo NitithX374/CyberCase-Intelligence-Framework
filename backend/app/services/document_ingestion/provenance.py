@@ -107,25 +107,8 @@ def bind_exact_page_spans(
     return output
 
 
-def order_regions(regions: list[object]) -> list[object]:
-    return sorted(
-        regions,
-        key=lambda region: (
-            getattr(region, "bbox", None).y0 if getattr(region, "bbox", None) else float("inf"),
-            getattr(region, "bbox", None).x0 if getattr(region, "bbox", None) else float("inf"),
-            getattr(region, "region_id", ""),
-        ),
-    )
-
-
-def merge_region_text(regions: list[object]) -> str:
-    return "\n".join(region.text for region in order_regions(regions) if getattr(region, "text", None))
-
-
 __all__ = [
     "bind_exact_page_spans",
     "build_block_id",
     "build_region_id",
-    "merge_region_text",
-    "order_regions",
 ]

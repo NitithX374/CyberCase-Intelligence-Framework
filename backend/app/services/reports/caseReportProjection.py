@@ -5,7 +5,7 @@ from app.models.caseRun import CaseAnalysisResult
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportRead, StructuredReport
 from app.services.case_analysis.contracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
     CaseAnalysisFailure,
     CaseAnalysisTrace,
 )
@@ -14,8 +14,8 @@ from app.services.reports.case_report_contracts import (
     CaseReportInput,
     CaseReportSource,
     CaseReportTechnicalAugmentation,
+    ReportGenerationConflict,
 )
-from app.services.reports.report_contracts import ReportGenerationConflict
 
 
 def serialize_case_report(report: CaseReport) -> CaseReportRead:
@@ -71,7 +71,7 @@ def build_case_report_input(
     ]
     if not sources:
         raise ReportGenerationConflict("case_report_input_invalid", "The Case has no active source evidence")
-    trace = _validated_trace(result, case)
+    trace = validated_trace(result, case)
     return CaseReportInput(
         case_id=case.id,
         case_title=case.title or "CyberCase Investigation",
@@ -81,12 +81,12 @@ def build_case_report_input(
         analysis_answer=result.answer,
         analysis_summary=result.summary,
         analysis_trace=trace.model_dump(mode="json"),
-        technical_augmentation=_technical_augmentation_input(result, trace),
+        technical_augmentation=technical_augmentation_input(result, trace),
         unresolved_issues=[gap.description for gap in trace.gaps],
     )
 
 
-def _validated_trace(
+def validated_trace(
     result: CaseAnalysisResult,
     case: Case,
 ) -> CaseAnalysisTrace:
@@ -98,15 +98,15 @@ def _validated_trace(
             raise ValueError("analysis trace mode is not case_overview")
         return validate_case_trace(
             trace,
-            _case_sources(case),
-            _document_context(case),
-            mitre_table=_mitre_table_for_validation(result),
+            case_sources(case),
+            document_context(case),
+            mitre_table=mitre_table_for_validation(result),
         )
     except (CaseAnalysisFailure, ValueError) as error:
         raise ReportGenerationConflict("case_analysis_trace_invalid", "The selected analysis trace is invalid") from error
 
 
-def _technical_augmentation_input(
+def technical_augmentation_input(
     result: CaseAnalysisResult,
     trace: CaseAnalysisTrace,
 ) -> CaseReportTechnicalAugmentation | None:
@@ -131,11 +131,11 @@ def _technical_augmentation_input(
             "case_technical_augmentation_invalid",
             "The persisted technical associations are not bound to the analysis trace",
         )
-    _validate_augmentation_outcome(augmentation, trace)
+    validate_augmentation_outcome(augmentation, trace)
     return augmentation
 
 
-def _validate_augmentation_outcome(
+def validate_augmentation_outcome(
     augmentation: CaseReportTechnicalAugmentation,
     trace: CaseAnalysisTrace,
 ) -> None:
@@ -159,22 +159,22 @@ def _validate_augmentation_outcome(
         )
 
 
-def _mitre_table_for_validation(result: CaseAnalysisResult) -> list[dict[str, object]]:
+def mitre_table_for_validation(result: CaseAnalysisResult) -> list[dict[str, object]]:
     metadata = result.provider_metadata_json if isinstance(result.provider_metadata_json, dict) else {}
     raw = metadata.get("technical_augmentation")
     table = raw.get("mitre_table", []) if isinstance(raw, dict) else metadata.get("mitre_table", [])
     return [dict(item) for item in table if isinstance(item, dict)] if isinstance(table, list) else []
 
 
-def _case_sources(case: Case) -> tuple[CaseAdmittedSource, ...]:
+def case_sources(case: Case) -> tuple[CaseEvidenceSource, ...]:
     return tuple(
-        CaseAdmittedSource(str(source.id), source.exact_text)
+        CaseEvidenceSource(str(source.id), source.exact_text)
         for source in case.evidence_sources
         if source.archived_at is None
     )
 
 
-def _document_context(case: Case) -> list[dict[str, object]]:
+def document_context(case: Case) -> list[dict[str, object]]:
     context: list[dict[str, object]] = []
     for source in case.evidence_sources:
         if source.archived_at is not None or not source.document_id or not source.document:

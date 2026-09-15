@@ -2,7 +2,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeAccountValue } from "@/lib/account-storage";
 import { useChatDraft } from "@/features/chat/workspace/use-chat-draft";
-import type { PendingChatSubmission } from "@/features/chat/workspace/chat-workspace-types";
+import type { PendingChatSubmission } from "@/features/chat/workspace/use-chat-draft";
 import { message, caseChat } from "./chat-session-test-support";
 
 afterEach(() => {

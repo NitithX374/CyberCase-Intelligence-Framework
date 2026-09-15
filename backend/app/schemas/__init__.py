@@ -1,7 +1,6 @@
 """Pydantic request and response schemas for all API domains."""
 
 from app.schemas.caseClarifications import (
-    CaseClarificationAccepted,
     CaseClarificationAnswer,
     CaseClarificationRead,
 )
@@ -15,7 +14,7 @@ from app.schemas.chat import (
     MessageKind,
     MessageRole,
 )
-from app.schemas.rag import MitreTableRow, QueryRequest, QueryResponse, RagQueryRequest
+from app.schemas.rag import MitreTableRow, QueryRequest, QueryResponse
 from app.schemas.reports import (
     CaseReportCreate,
     CaseReportRead,
@@ -34,7 +33,6 @@ __all__ = [
     "CaseChatMessageAccepted",
     "CaseChatRead",
     "CaseChatStatus",
-    "CaseClarificationAccepted",
     "CaseClarificationAnswer",
     "CaseClarificationRead",
     "CaseCreate",
@@ -49,7 +47,6 @@ __all__ = [
     "MitreTableRow",
     "QueryRequest",
     "QueryResponse",
-    "RagQueryRequest",
     "ReportClaim",
     "ReportHeading",
     "ReportPersistenceStatus",

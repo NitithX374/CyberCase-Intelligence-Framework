@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CaseAnalysisResultRead, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
-import { CaseAnalysisLeadCard } from "@/components/conversation/CaseAnalysisLeadCard";
 import { ChatTranscript } from "@/components/conversation/ChatTranscript";
 
 const sampleResult: CaseAnalysisResultRead = {
@@ -35,10 +34,10 @@ const evidenceSources: EvidenceSourceRead[] = [{
   archived_at: null,
 }];
 
-describe("CaseAnalysisLeadCard", () => {
+describe("ChatTranscript lead card", () => {
   it("renders grounded case analysis summary and validated pill", () => {
     const onOpenOverview = vi.fn();
-    render(<CaseAnalysisLeadCard result={sampleResult} evidenceSources={evidenceSources} onOpenOverview={onOpenOverview} />);
+    render(<ChatTranscript messages={[]} isProcessing={false} leadResult={sampleResult} evidenceSources={evidenceSources} onOpenOverview={onOpenOverview} />);
     expect(screen.getByText("Analysis Result")).toBeInTheDocument();
     expect(screen.getByText("Validated")).toBeInTheDocument();
     expect(screen.getByText(sampleResult.summary)).toBeInTheDocument();

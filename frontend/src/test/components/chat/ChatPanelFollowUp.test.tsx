@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ChatPanel } from "@/components/conversation/ChatPanel";
+import { WorkspaceChatPanel } from "@/components/conversation/WorkspaceChatPanel";
 import type { PersistedChatMessage } from "@/lib/api";
 
 const messages: PersistedChatMessage[] = [
@@ -46,18 +46,21 @@ const messages: PersistedChatMessage[] = [
   },
 ];
 
-describe("ChatPanel boundaries", () => {
+describe("WorkspaceChatPanel boundaries", () => {
   it("renders the persisted clarification and enables composer to answer in Chat", () => {
     Element.prototype.scrollIntoView = vi.fn();
     const onInputChange = vi.fn();
 
     render(
-      <ChatPanel
+      <WorkspaceChatPanel
+        isOpen
         messages={messages}
+        visibleMessages={messages}
         input="host-7"
         chatStatus="awaiting_followup"
         phase="awaiting_followup"
         hasAnalysisContext
+        onViewChange={vi.fn()}
         onInputChange={onInputChange}
         onSubmit={vi.fn()}
       />,
@@ -79,12 +82,15 @@ describe("ChatPanel boundaries", () => {
 
   it("explains that Chat has no context before Case analysis", () => {
     render(
-      <ChatPanel
+      <WorkspaceChatPanel
+        isOpen
         messages={[]}
+        visibleMessages={[]}
         input=""
         chatStatus="idle"
         phase="idle"
         hasAnalysisContext={false}
+        onViewChange={vi.fn()}
         onInputChange={vi.fn()}
         onSubmit={vi.fn()}
       />,

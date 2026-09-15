@@ -1,5 +1,5 @@
 from app.database import Base
-from app.models import Case
+import app.models  # noqa: F401
 
 
 def test_schema_contains_only_product_runtime_tables() -> None:

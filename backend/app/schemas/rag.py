@@ -5,15 +5,11 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class RagQueryRequest(BaseModel):
+class QueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query: str
     use_agent: bool = True
-
-
-class QueryRequest(RagQueryRequest):
-    pass
 
 
 class MitreTableRow(BaseModel):
@@ -82,5 +78,4 @@ __all__ = [
     "MitreTableRow",
     "QueryRequest",
     "QueryResponse",
-    "RagQueryRequest",
 ]

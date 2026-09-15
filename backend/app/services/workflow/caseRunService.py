@@ -15,7 +15,7 @@ from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.schemas.caseRuns import CaseAnalysisCreate
 from app.services.case_materials import (
     CaseMaterialsError,
-    assembleCaseEvidence,
+    assemble_case_evidence,
 )
 from app.services.case_analysis.pipelineConfig import configured_pipeline
 
@@ -37,7 +37,7 @@ async def enqueue_case_analysis(
     request_message_id: UUID | None = None,
     request_payload_extra: dict[str, object] | None = None,
 ) -> CaseRun:
-    case = await _locked_case(db, case_id, user_id)
+    case = await locked_case(db, case_id, user_id)
     saved_payload = {
         "operation": "analysis",
         "response_language": request.response_language,
@@ -50,7 +50,7 @@ async def enqueue_case_analysis(
         .with_for_update()
     )
     if existing is not None:
-        if not await _existing_request_matches(existing, saved_payload):
+        if not await existing_request_matches(existing, saved_payload):
             raise CaseRunError(
                 "idempotency_conflict",
                 "Idempotency key was already used with different analysis intent",
@@ -75,7 +75,7 @@ async def enqueue_case_analysis(
     if active is not None:
         raise CaseRunError("case_run_active", "Case already has an active analysis run")
 
-    await assembleCaseEvidence(db, case_id=case.id, user_id=user_id)
+    await assemble_case_evidence(db, case_id=case.id, user_id=user_id)
     pipeline = configured_pipeline().model_dump(mode="json")
     run = CaseRun(
         case_id=case.id,
@@ -131,43 +131,6 @@ async def get_latest_case_analysis(
     return case, analysis
 
 
-async def list_case_analysis_results(
-    db: AsyncSession,
-    *,
-    case_id: UUID,
-    user_id: UUID | None,
-) -> tuple[Case, list[CaseAnalysisResult]]:
-    case = await db.scalar(select(Case).where(Case.id == case_id, Case.user_id == user_id))
-    if case is None:
-        raise CaseRunError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
-    result = await db.execute(
-        select(CaseAnalysisResult)
-        .where(CaseAnalysisResult.case_id == case_id)
-        .order_by(CaseAnalysisResult.created_at.desc())
-    )
-    return case, list(result.scalars().all())
-
-
-async def get_case_analysis_result(
-    db: AsyncSession,
-    *,
-    case_id: UUID,
-    result_id: UUID,
-    user_id: UUID | None,
-) -> tuple[Case, CaseAnalysisResult]:
-    case = await db.scalar(select(Case).where(Case.id == case_id, Case.user_id == user_id))
-    if case is None:
-        raise CaseRunError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
-    result = await db.execute(
-        select(CaseAnalysisResult)
-        .where(CaseAnalysisResult.id == result_id, CaseAnalysisResult.case_id == case_id)
-    )
-    analysis = result.scalar_one_or_none()
-    if analysis is None:
-        raise CaseRunError("analysis_result_not_found", "Analysis result not found", status.HTTP_404_NOT_FOUND)
-    return case, analysis
-
-
 def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
     if result is None:
         return "missing"
@@ -177,7 +140,7 @@ def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
     return "current" if rev == case.evidence_revision else "stale"
 
 
-async def _locked_case(db: AsyncSession, case_id: UUID, user_id: UUID | None) -> Case:
+async def locked_case(db: AsyncSession, case_id: UUID, user_id: UUID | None) -> Case:
     result = await db.execute(select(Case).where(Case.id == case_id).with_for_update())
     case = result.scalar_one_or_none()
     if case is None or case.user_id != user_id:
@@ -232,7 +195,7 @@ async def requeue_failed_case_run(
     return run
 
 
-async def _existing_request_matches(
+async def existing_request_matches(
     run: CaseRun,
     request_payload: dict[str, object],
 ) -> bool:
@@ -281,16 +244,10 @@ async def fail_case_run(
         return bool(result.rowcount)
 
 
-enqueueCaseAnalysis = enqueue_case_analysis
-failCaseRun = fail_case_run
-getLatestCaseAnalysis = get_latest_case_analysis
-getOwnedCaseRun = get_owned_case_run
-requeueFailedCaseRun = requeue_failed_case_run
-
 CASE_RUN_RECOVERY_CODE = "case_run_interrupted"
 
 
-async def cleanupAbandonedCaseRuns(session_factory: Callable[[], AsyncSession]) -> int:
+async def cleanup_abandoned_case_runs(session_factory: Callable[[], AsyncSession]) -> int:
     now = datetime.now(timezone.utc)
     async with session_factory() as db, db.begin():
         result = await db.execute(
@@ -312,15 +269,10 @@ __all__ = [
     "CaseRunError",
     "ClaimedCaseRun",
     "analysis_freshness",
-    "cleanupAbandonedCaseRuns",
-    "enqueueCaseAnalysis",
+    "cleanup_abandoned_case_runs",
     "enqueue_case_analysis",
-    "failCaseRun",
     "fail_case_run",
-    "getLatestCaseAnalysis",
     "get_latest_case_analysis",
-    "getOwnedCaseRun",
     "get_owned_case_run",
-    "requeueFailedCaseRun",
     "requeue_failed_case_run",
 ]

@@ -126,10 +126,6 @@ class CaseReport(Base):
     input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    @property
-    def report_id(self) -> uuid.UUID:
-        return self.id
-
     case: Mapped["Case"] = relationship("Case", back_populates="reports")
     analysis_result: Mapped["CaseAnalysisResult"] = relationship("CaseAnalysisResult")
     retrieval_context: Mapped["RagContext | None"] = relationship("RagContext")

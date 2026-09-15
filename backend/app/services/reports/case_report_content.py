@@ -51,7 +51,7 @@ def build_case_report_claims(
             claim_id=claim.claim_id,
             section_id="case_evidence",
             text=claim.text,
-            support_type=_support_type(claim.claim_type),
+            support_type=support_type(claim.claim_type),
             source_evidence_ids=list(dict.fromkeys(claim.supporting_source_ids + claim.contradicting_source_ids)),
             mitre_technique_ids=list(dict.fromkeys(association_by_claim.get(claim.claim_id, []))),
         )
@@ -63,14 +63,14 @@ def build_case_report_sections(
     report_input: CaseReportInput,
     trace: CaseAnalysisTrace,
 ) -> list[ReportSection]:
-    source_labels = _source_labels(report_input)
+    source_labels = source_labels_for_report(report_input)
     claims_by_id = {claim.claim_id: claim for claim in trace.claims}
     return [
         ReportSection(
             section_id="case_summary",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["case_summary"],
-            paragraphs=_summary_paragraphs(report_input),
-            items=_summary_items(trace, claims_by_id, source_labels),
+            paragraphs=summary_paragraphs(report_input),
+            items=summary_items(trace, claims_by_id, source_labels),
         ),
         ReportSection(
             section_id="case_evidence",
@@ -82,25 +82,25 @@ def build_case_report_sections(
             section_id="mitre_attack_mapping",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["mitre_attack_mapping"],
             paragraphs=["MITRE ATT&CK เป็นข้อมูลภายนอกเพื่อช่วยจัดหมวดพฤติกรรมทางเทคนิค ไม่ใช่หลักฐานของคดี"],
-            items=_technical_items(report_input, trace),
+            items=technical_items(report_input, trace),
         ),
         ReportSection(
             section_id="mapping_rationale",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["mapping_rationale"],
             paragraphs=["เหตุผลต่อไปนี้อธิบายการเชื่อมโยงเชิงเทคนิคกับตัวบ่งชี้ของคดี ไม่ใช่การยืนยันว่ามีการใช้เทคนิคนั้นจริง"],
-            items=_technical_rationale(report_input, trace, claims_by_id, source_labels),
+            items=technical_rationale(report_input, trace, claims_by_id, source_labels),
         ),
         ReportSection(
             section_id="evidence_to_examine",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["evidence_to_examine"],
             paragraphs=["รายการนี้สรุปช่องว่างหรือความขัดแย้งที่ควรตรวจสอบเพิ่มเติมก่อนใช้ประกอบการพิจารณาคดี"],
-            items=_gap_items(trace),
+            items=gap_items(trace),
         ),
         ReportSection(
             section_id="preliminary_recommendations",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["preliminary_recommendations"],
             paragraphs=["คำแนะนำมุ่งที่การยืนยันข้อเท็จจริง การรักษาหลักฐาน และการลดความไม่แน่นอนของคดี"],
-            items=_recommendation_items(trace),
+            items=recommendation_items(trace),
         ),
         ReportSection(
             section_id="system_limitations",
@@ -133,7 +133,7 @@ def build_case_report_limitations(report_input: CaseReportInput) -> list[str]:
     return limitations
 
 
-def _summary_paragraphs(report_input: CaseReportInput) -> list[str]:
+def summary_paragraphs(report_input: CaseReportInput) -> list[str]:
     paragraphs = [
         "วัตถุประสงค์ของรายงาน: ช่วยให้ผู้ตรวจสอบเห็นภาพรวมของคดี ประเด็นสำคัญ และหลักฐานที่ควรตรวจสอบต่อ โดยไม่ใช่คำวินิจฉัยทางกฎหมาย",
         f"สรุปจากผลวิเคราะห์: {report_input.analysis_summary}",
@@ -143,27 +143,27 @@ def _summary_paragraphs(report_input: CaseReportInput) -> list[str]:
     return paragraphs
 
 
-def _summary_items(
+def summary_items(
     trace: CaseAnalysisTrace,
     claims_by_id: dict[str, CaseAnalysisClaim],
     source_labels: dict[str, str],
 ) -> list[str]:
     items = [
-        f"ผู้เกี่ยวข้อง: {party.name} ({party.role}) · {_claim_references(party.claim_ids, claims_by_id, source_labels)}"
+        f"ผู้เกี่ยวข้อง: {party.name} ({party.role}) · {claim_references(party.claim_ids, claims_by_id, source_labels)}"
         for party in trace.involved_parties
     ]
     items.extend(
-        f"ลำดับเหตุการณ์: {event.time} — {event.event} · {_claim_references(event.claim_ids, claims_by_id, source_labels)}"
+        f"ลำดับเหตุการณ์: {event.time} — {event.event} · {claim_references(event.claim_ids, claims_by_id, source_labels)}"
         for event in trace.timeline
     )
     items.extend(
-        f"ผลกระทบที่ปรากฏ: {impact.description} · {_claim_references(impact.claim_ids, claims_by_id, source_labels)}"
+        f"ผลกระทบที่ปรากฏ: {impact.description} · {claim_references(impact.claim_ids, claims_by_id, source_labels)}"
         for impact in trace.impacts
     )
     return items or ["ผลวิเคราะห์ยังไม่มีข้อมูลผู้เกี่ยวข้อง ลำดับเหตุการณ์ หรือผลกระทบที่สกัดได้"]
 
 
-def _claim_references(
+def claim_references(
     claim_ids: list[str],
     claims_by_id: dict[str, CaseAnalysisClaim],
     source_labels: dict[str, str],
@@ -178,11 +178,11 @@ def _claim_references(
     return f"อ้างอิง: {', '.join(labels)}" if labels else "อ้างอิง: ไม่มีหลักฐานโดยตรง"
 
 
-def _source_labels(report_input: CaseReportInput) -> dict[str, str]:
+def source_labels_for_report(report_input: CaseReportInput) -> dict[str, str]:
     return {str(source.source_id): f"E-{index:02d}" for index, source in enumerate(report_input.sources, 1)}
 
 
-def _support_type(claim_type: str) -> str:
+def support_type(claim_type: str) -> str:
     return {
         "reported": "user_reported",
         "analytical_inference": "analytical_inference",
@@ -190,7 +190,7 @@ def _support_type(claim_type: str) -> str:
     }[claim_type]
 
 
-def _technical_items(
+def technical_items(
     report_input: CaseReportInput,
     trace: CaseAnalysisTrace,
 ) -> list[str]:
@@ -222,7 +222,7 @@ def _technical_items(
     return items or ["ไม่พบ mapping ที่ผ่านการตรวจสอบ"]
 
 
-def _technical_rationale(
+def technical_rationale(
     report_input: CaseReportInput,
     trace: CaseAnalysisTrace,
     claims_by_id: dict[str, CaseAnalysisClaim],
@@ -231,7 +231,7 @@ def _technical_rationale(
     augmentation = report_input.technical_augmentation
     if augmentation is not None and augmentation.status == "retrieved_with_matches":
         return [
-            f"{association.technique_id}: {association.reason} · {_claim_references(association.claim_ids, claims_by_id, source_labels)} · ใช้เพื่อจัดหมวดพฤติกรรม ไม่ได้ยืนยันการเกิดเหตุ"
+            f"{association.technique_id}: {association.reason} · {claim_references(association.claim_ids, claims_by_id, source_labels)} · ใช้เพื่อจัดหมวดพฤติกรรม ไม่ได้ยืนยันการเกิดเหตุ"
             for association in trace.mitre_associations
         ] or ["ไม่พบเหตุผลของ mapping ที่บันทึกไว้"]
     if augmentation is not None and augmentation.status == "failed":
@@ -245,7 +245,7 @@ def _technical_rationale(
     return ["ไม่มีผลการเสริมข้อมูล MITRE ที่บันทึกไว้ จึงไม่มีการอนุมาน mapping จาก metadata"]
 
 
-def _gap_items(trace: CaseAnalysisTrace) -> list[str]:
+def gap_items(trace: CaseAnalysisTrace) -> list[str]:
     if not trace.gaps:
         return ["ไม่พบช่องว่างสำคัญที่ต้องตรวจสอบเพิ่มเติมจากผลวิเคราะห์นี้"]
     return [
@@ -254,7 +254,7 @@ def _gap_items(trace: CaseAnalysisTrace) -> list[str]:
     ]
 
 
-def _recommendation_items(trace: CaseAnalysisTrace) -> list[str]:
+def recommendation_items(trace: CaseAnalysisTrace) -> list[str]:
     items = [
         f"ตรวจสอบเพิ่มเติมในประเด็น {gap.topic}: {gap.description}"
         for gap in trace.gaps

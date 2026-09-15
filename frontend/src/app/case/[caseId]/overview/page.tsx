@@ -10,11 +10,10 @@ import {
   useCaseEvidence,
   useCases,
   caseQueryKeys,
+  useCaseRunPolling,
 } from "@/hooks/useCaseQueries";
-import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
 import { casePath } from "@/features/chat/routing/workspaceRoutes";
-import { startCaseAnalysis } from "@/lib/api";
-import { createIdempotencyKey } from "@/lib/idempotency";
+import { detectResponseLanguage, startCaseAnalysis } from "@/lib/api";
 
 export default function OverviewPage() {
   const params = useParams();
@@ -44,8 +43,10 @@ export default function OverviewPage() {
     if (!caseId) return;
     try {
       const accepted = await startCaseAnalysis(caseId, {
-        idempotency_key: createIdempotencyKey(),
-        response_language: "english",
+        idempotency_key: globalThis.crypto.randomUUID(),
+        response_language: detectResponseLanguage(
+          evidenceQuery.data?.map((source) => source.exact_text).join("\n") ?? "",
+        ),
         expected_evidence_revision: activeCase?.evidence_revision ?? 0,
       });
       queryClient.setQueryData(caseQueryKeys.run(caseId, accepted.run.id), accepted.run);
@@ -70,7 +71,6 @@ export default function OverviewPage() {
       clarifications={clarificationsQuery.data ?? []}
       analysisLoading={analysisQuery.isLoading}
       evidenceLoading={evidenceQuery.isLoading}
-      onOpenChat={() => {}}
       onOpenReport={() => router.push(casePath(caseId, "report"))}
       onOpenIntake={() => router.push(casePath(caseId, "intake"))}
       onOpenMaterials={() => router.push(casePath(caseId, "materials"))}

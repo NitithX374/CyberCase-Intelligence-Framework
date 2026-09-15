@@ -27,6 +27,6 @@ describe("Case workspace routes", () => {
   });
 
   it("treats non-Case paths as an unselected Case workspace", () => {
-    expect(caseRouteState("/chat/caseChat-1/materials")).toEqual({ caseId: null, view: "overview" });
+    expect(caseRouteState("/unknown/case-1/materials")).toEqual({ caseId: null, view: "overview" });
   });
 });

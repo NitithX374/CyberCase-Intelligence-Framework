@@ -9,7 +9,15 @@ import {
   persistedRequestOrdinal,
   type ActiveChatFollowUp,
 } from "@/lib/chat-followup";
-import type { PendingChatSubmission } from "./chat-workspace-types";
+
+export interface PendingChatSubmission {
+  caseId: string;
+  content: string;
+  key: string;
+  kind: "message" | "followup";
+  lastKnownMessageOrdinal: number;
+  requestOrdinal?: number;
+}
 
 interface ChatDraftState {
   input: string;

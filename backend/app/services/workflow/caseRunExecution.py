@@ -2,51 +2,99 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from builtins import BaseExceptionGroup
 from collections.abc import Callable
+from copy import deepcopy
+from dataclasses import replace
 from uuid import UUID
 
 from app.config import settings
 from app.services.case_analysis import CaseAnalysisFailure, request_case_analysis
-from app.services.chat.caseAnswer import generateCaseAnswer, loadCaseAnswerContext
+from app.services.chat.caseAnswer import generate_case_answer, load_case_answer_context
 from app.services.case_analysis.contracts import (
     CaseAnalysisResult as AnalysisOutput,
     CaseAnalysisTrace,
 )
-from app.services.workflow.caseRunClaim import claimCaseRun
-from app.services.workflow.caseRunCompletion import (
-    CaseRunCompletionError,
-    complete_case_run,
-)
-from app.services.workflow.caseAskCompletion import completeCaseAsk
-from app.services.workflow.caseRunContext import attachCaseAugmentation, buildAnalysisContext
-from app.services.workflow.caseRunErrors import CaseRunExecutionError
-from app.services.workflow.caseRunFollowup import attachCaseFollowup
-from app.services.workflow.caseRunService import ClaimedCaseRun, fail_case_run
 from app.services.followup.caseClarification import (
     CaseClarificationHistoryError,
     load_case_clarification_exchanges,
 )
+from app.services.followup.decision import evaluate_followup_outcome
+from app.services.workflow.caseRunClaim import claim_case_run
+from app.services.workflow.caseRunCompletion import (
+    CaseRunCompletionError,
+    complete_case_run,
+)
+from app.services.workflow.caseAskCompletion import complete_case_ask
+from app.services.workflow.caseRunContext import (
+    CaseRunExecutionError,
+    attach_case_augmentation,
+    build_analysis_context,
+)
+from app.services.workflow.caseRunService import ClaimedCaseRun, fail_case_run
 
 logger = logging.getLogger("app.case_workflow")
 
 
-async def executeCaseRun(
+async def attach_case_followup(
+    output: AnalysisOutput,
+    claimed: ClaimedCaseRun,
+    clarification_exchanges,
+) -> AnalysisOutput:
+    if not isinstance(output.trace, CaseAnalysisTrace):
+        return output
+    resolution = await evaluate_followup_outcome(
+        clarification_exchanges=clarification_exchanges,
+        followup_root_ordinal=1,
+        source_run_id=claimed.id,
+        canonical_trace=output.trace,
+    )
+    if resolution.question is None:
+        return output
+    metadata = deepcopy(resolution.metadata_json)
+    followup = metadata.get("chat_followup")
+    if not isinstance(followup, dict):
+        raise CaseRunExecutionError(
+            "clarification_metadata_missing",
+            "Case clarification metadata is missing",
+        )
+    detail = followup.get("selected_gap_detail")
+    detail = detail if isinstance(detail, dict) else {}
+    context = followup.get("followup_context")
+    context = context if isinstance(context, dict) else {}
+    topic = detail.get("topic") or followup.get("selected_gap")
+    gap_key = context.get("gap_key")
+    gap_id = detail.get("gap_id") or context.get("gap_id") or gap_key
+    if not all(isinstance(value, str) and value.strip() for value in (gap_id, topic, gap_key)):
+        raise CaseRunExecutionError(
+            "clarification_metadata_missing",
+            "Case clarification has no stable gap identity",
+        )
+    metadata.update({"gap_id": gap_id, "topic": topic, "gap_key": gap_key})
+    return replace(
+        output,
+        followup_question=resolution.question,
+        followup_metadata=metadata,
+    )
+
+
+async def execute_case_run(
     run_id: UUID,
     *,
     session_factory: Callable,
     analysis_request=request_case_analysis,
-    answer_request=generateCaseAnswer,
+    answer_request=generate_case_answer,
     applicability_gate=None,
     rag_request=None,
     mapping_request=None,
 ) -> None:
     async with session_factory() as db:
-        claimed = await claimCaseRun(db, run_id)
+        claimed = await claim_case_run(db, run_id)
     if claimed is None:
         return
     try:
         async with asyncio.timeout(settings.case_run_timeout_seconds):
-            output = await _execute_claimed_work(
+            output = await execute_claimed_work(
                 claimed,
                 session_factory=session_factory,
                 analysis_request=analysis_request,
@@ -57,18 +105,18 @@ async def executeCaseRun(
             )
         async with session_factory() as db:
             if claimed.operation == "ask":
-                await completeCaseAsk(db, run_id, claimed.attempt_count, output)
+                await complete_case_ask(db, run_id, claimed.attempt_count, output)
             else:
                 await complete_case_run(db, run_id, claimed.attempt_count, output)
     except asyncio.CancelledError:
-        await _record_cancellation_failure(
+        await record_cancellation_failure(
             session_factory,
             run_id,
             claimed.attempt_count,
         )
         raise
     except TimeoutError:
-        await _record_failure(
+        await record_failure(
             session_factory,
             run_id,
             claimed.attempt_count,
@@ -76,18 +124,18 @@ async def executeCaseRun(
             "Case processing exceeded its configured execution timeout",
         )
     except CaseRunCompletionError as error:
-        await _record_failure(session_factory, run_id, claimed.attempt_count, error.code, error.message)
+        await record_failure(session_factory, run_id, claimed.attempt_count, error.code, error.message)
     except CaseAnalysisFailure as error:
-        await _record_failure(session_factory, run_id, claimed.attempt_count, error.code, error.message)
+        await record_failure(session_factory, run_id, claimed.attempt_count, error.code, error.message)
     except CaseRunExecutionError as error:
-        await _record_failure(session_factory, run_id, claimed.attempt_count, error.code, error.message)
+        await record_failure(session_factory, run_id, claimed.attempt_count, error.code, error.message)
     except Exception as error:
-        unwrapped = _unwrap_exception(error)
+        unwrapped = unwrap_exception(error)
         if isinstance(unwrapped, (CaseRunCompletionError, CaseAnalysisFailure, CaseRunExecutionError)):
-            await _record_failure(session_factory, run_id, claimed.attempt_count, unwrapped.code, unwrapped.message)
+            await record_failure(session_factory, run_id, claimed.attempt_count, unwrapped.code, unwrapped.message)
         else:
             logger.exception("Case processing failed run_id=%s attempt=%s", run_id, claimed.attempt_count)
-            await _record_failure(
+            await record_failure(
                 session_factory,
                 run_id,
                 claimed.attempt_count,
@@ -96,7 +144,7 @@ async def executeCaseRun(
             )
 
 
-async def _execute_claimed_work(
+async def execute_claimed_work(
     claimed: ClaimedCaseRun,
     *,
     session_factory: Callable,
@@ -118,21 +166,21 @@ async def _execute_claimed_work(
                 raise CaseRunExecutionError(error.code, error.message) from error
     if claimed.operation == "ask":
         async with session_factory() as db:
-            context = await loadCaseAnswerContext(db, claimed.id, buildAnalysisContext(claimed))
+            context = await load_case_answer_context(db, claimed.id, build_analysis_context(claimed))
         output = coerce_analysis_result(
             await answer_request(
                 context=context,
-                analysis_context=buildAnalysisContext(claimed),
-                user_message=_analysis_request_language(claimed),
+                analysis_context=build_analysis_context(claimed),
+                user_message=analysis_request_language(claimed),
             )
         )
     else:
         output = coerce_analysis_result(
             await analysis_request(
                 raw_evidence=claimed.input_text,
-                analysis_context=buildAnalysisContext(claimed),
+                analysis_context=build_analysis_context(claimed),
                 question=None,
-                user_message=_analysis_request_language(claimed),
+                user_message=analysis_request_language(claimed),
                 mode="case_overview",
             )
         )
@@ -142,7 +190,7 @@ async def _execute_claimed_work(
         and applicability_gate is not None
         and rag_request is not None
     ):
-        output = await attachCaseAugmentation(
+        output = await attach_case_augmentation(
             output,
             claimed,
             applicability_gate,
@@ -151,7 +199,7 @@ async def _execute_claimed_work(
             session_factory=session_factory,
     )
     if claimed.operation == "analysis" and isinstance(output.trace, CaseAnalysisTrace):
-        output = await attachCaseFollowup(
+        output = await attach_case_followup(
             output,
             claimed,
             clarification_exchanges,
@@ -164,23 +212,23 @@ async def _execute_claimed_work(
     return output
 
 
-def _unwrap_exception(error: BaseException) -> BaseException:
+def unwrap_exception(error: BaseException) -> BaseException:
     if isinstance(error, BaseExceptionGroup):
         for sub in error.exceptions:
-            sub_unwrapped = _unwrap_exception(sub)
+            sub_unwrapped = unwrap_exception(sub)
             if isinstance(sub_unwrapped, (CaseRunCompletionError, CaseAnalysisFailure, CaseRunExecutionError)):
                 return sub_unwrapped
         if error.exceptions:
-            return _unwrap_exception(error.exceptions[0])
+            return unwrap_exception(error.exceptions[0])
     return error
 
 
-def _analysis_request_language(claimed: ClaimedCaseRun) -> str:
+def analysis_request_language(claimed: ClaimedCaseRun) -> str:
     language = claimed.request_payload.get("response_language")
     return "วิเคราะห์คดีนี้" if language == "thai" else "Analyze this case."
 
 
-async def _record_failure(
+async def record_failure(
     session_factory,
     run_id: UUID,
     claimed_attempt: int,
@@ -191,14 +239,14 @@ async def _record_failure(
         await fail_case_run(db, run_id, claimed_attempt, code, message)
 
 
-async def _record_cancellation_failure(
+async def record_cancellation_failure(
     session_factory,
     run_id: UUID,
     claimed_attempt: int,
 ) -> None:
     try:
         await asyncio.wait_for(
-            _record_failure(
+            record_failure(
                 session_factory,
                 run_id,
                 claimed_attempt,
@@ -238,7 +286,7 @@ async def process_case_run(run_id: UUID) -> None:
     from app.services.clients.ragClient import request_rag
     from app.services.workflow.caseMitreAugmentation import request_case_mitre_mapping
 
-    await executeCaseRun(
+    await execute_case_run(
         run_id,
         session_factory=async_session,
         applicability_gate=evaluate_mitre_applicability,
@@ -247,6 +295,4 @@ async def process_case_run(run_id: UUID) -> None:
     )
 
 
-processCaseRun = process_case_run
-
-__all__ = ["CaseRunExecutionError", "executeCaseRun", "processCaseRun", "process_case_run"]
+__all__ = ["CaseRunExecutionError", "attach_case_followup", "execute_case_run", "process_case_run"]

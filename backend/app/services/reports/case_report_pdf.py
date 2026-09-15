@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+import re
 from io import BytesIO
 from pathlib import Path
 from uuid import UUID
+from html import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -16,12 +18,12 @@ from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer,
 
 from app.schemas.reports import StructuredReport
 from app.services.reports.case_report_contracts import CaseReportInput
-from app.services.reports.case_report_pdf_formatting import formatted_text, paragraph_text, plain_text
-from app.services.reports.case_report_pdf_sections import (
-    build_indicator_story,
-    build_source_register_story,
+from app.services.reports.case_report_rendering import (
+    CaseReportDisplay,
+    ReportDisplayClaim,
+    ReportDisplaySource,
+    build_case_report_display,
 )
-from app.services.reports.case_report_rendering import CaseReportDisplay, build_case_report_display
 
 
 INK = colors.HexColor("#111827")
@@ -103,6 +105,102 @@ def build_report_styles(font_names: tuple[str, str]) -> dict[str, ParagraphStyle
     }
 
 
+def formatted_text(value: object) -> str:
+    raw = plain_text(value)
+    raw = re.sub(r"^#{1,6}\s*", "", raw, flags=re.MULTILINE)
+    escaped = escape(raw)
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
+    escaped = re.sub(r"\*([^\*]+?)\*", r"<i>\1</i>", escaped)
+    escaped = re.sub(r"`([^`]+?)`", r'<font name="Courier" size="7.5">\1</font>', escaped)
+    return escaped.replace("\n", "<br/>")
+
+
+def paragraph_text(value: object) -> str:
+    return formatted_text(value)
+
+
+def plain_text(value: object) -> str:
+    return (
+        str(value)
+        .replace("\u2010", "-")
+        .replace("\u2011", "-")
+        .replace("\u2012", "-")
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+        .replace("\u2212", "-")
+    )
+
+
+def build_indicator_story(
+    claims: tuple[ReportDisplayClaim, ...],
+    styles: dict[str, object],
+) -> list[object]:
+    story: list[object] = []
+    for claim in claims:
+        references = ", ".join(claim.source_labels) or "ไม่มีการอ้างอิงโดยตรง"
+        story.extend(
+            [
+                Paragraph(
+                    f"<b>{paragraph_text(f'ตัวบ่งชี้ {claim.ordinal} · {claim.epistemic_label}')}</b>",
+                    styles["subheading"],
+                ),
+                Paragraph(paragraph_text(claim.text), styles["body"]),
+                Paragraph(
+                    paragraph_text(f"{claim.support_label} · อ้างอิง: {references}"),
+                    styles["body_small"],
+                ),
+            ]
+        )
+        for quote in claim.supporting_quotes:
+            story.append(
+                Paragraph(
+                    paragraph_text(f"ข้อความจากหลักฐาน: “{quote}”"),
+                    styles["body_muted"],
+                )
+            )
+        for quote in claim.contradicting_quotes:
+            story.append(
+                Paragraph(
+                    paragraph_text(f"ข้อความที่ขัดแย้ง: “{quote}”"),
+                    styles["body_muted"],
+                )
+            )
+        if claim.reasoning_summary:
+            story.append(
+                Paragraph(
+                    paragraph_text(f"เหตุผลเชิงวิเคราะห์: {claim.reasoning_summary}"),
+                    styles["body_muted"],
+                )
+            )
+        story.append(Spacer(1, 2.2))
+    return story
+
+
+def build_source_register_story(
+    sources: tuple[ReportDisplaySource, ...],
+    styles: dict[str, object],
+) -> list[object]:
+    story: list[object] = [
+        Paragraph("เอกสาร/หลักฐานอ้างอิง", styles["section_heading"]),
+        Spacer(1, 2),
+        Paragraph(
+            "รายการนี้เป็นดัชนีอ้างอิงของหลักฐานที่ใช้ประกอบรายงาน รายละเอียดข้อความจะแสดงเฉพาะส่วนที่ถูกอ้างในตัวบ่งชี้",
+            styles["body_muted"],
+        ),
+    ]
+    for source in sources:
+        story.extend(
+            [
+                Paragraph(
+                    paragraph_text(f"{source.label} · {source.filename}"),
+                    styles["body"],
+                ),
+                Spacer(1, 1.2),
+            ]
+        )
+    return story
+
+
 def render_case_report_pdf(
     report_input: CaseReportInput,
     report: StructuredReport,
@@ -122,16 +220,16 @@ def render_case_report_pdf(
         author="CyberCase Intelligence Framework",
         subject="Preliminary case analysis report",
     )
-    story = _story(report_input, report, styles)
+    story = build_report_story(report_input, report, styles)
     document.build(
         story,
-        onFirstPage=lambda canvas, doc: _page_chrome(canvas, doc, report_id),
-        onLaterPages=lambda canvas, doc: _page_chrome(canvas, doc, report_id),
+        onFirstPage=lambda canvas, doc: draw_page_chrome(canvas, doc, report_id),
+        onLaterPages=lambda canvas, doc: draw_page_chrome(canvas, doc, report_id),
     )
     return buffer.getvalue()
 
 
-def _story(
+def build_report_story(
     report_input: CaseReportInput,
     report: StructuredReport,
     styles: dict[str, ParagraphStyle],
@@ -142,7 +240,7 @@ def _story(
         Spacer(1, 2 * mm),
         Paragraph(paragraph_text(report.title), styles["doc_title"]),
         Spacer(1, 3 * mm),
-        _metadata_table(display, styles),
+        build_metadata_table(display, styles),
         Spacer(1, 3 * mm),
         HRFlowable(width="100%", thickness=1.2, color=DARK_RULE),
         Spacer(1, 5 * mm),
@@ -170,7 +268,7 @@ def _story(
     return story
 
 
-def _metadata_table(
+def build_metadata_table(
     display: CaseReportDisplay,
     styles: dict[str, ParagraphStyle],
 ) -> Table:
@@ -200,7 +298,7 @@ def _metadata_table(
     return table
 
 
-def _page_chrome(canvas, document, _report_id: UUID) -> None:
+def draw_page_chrome(canvas, document, report_id: UUID) -> None:
     canvas.saveState()
     canvas.setStrokeColor(DARK_RULE)
     canvas.setLineWidth(0.5)

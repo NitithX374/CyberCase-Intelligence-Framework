@@ -31,13 +31,13 @@ async def request_rag(
     payload = QueryRequest(query=content, use_agent=True).model_dump()
     url = f"{settings.rag_service_url.rstrip('/')}/query"
     if client is not None:
-        return await _post_and_validate(client, url, payload)
+        return await post_and_validate(client, url, payload)
 
     async with httpx.AsyncClient(timeout=RAG_HTTP_TIMEOUT_SECONDS) as owned_client:
-        return await _post_and_validate(owned_client, url, payload)
+        return await post_and_validate(owned_client, url, payload)
 
 
-async def _post_and_validate(
+async def post_and_validate(
     client: httpx.AsyncClient,
     url: str,
     payload: dict[str, object],

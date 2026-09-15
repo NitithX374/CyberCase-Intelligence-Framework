@@ -2,6 +2,12 @@ import type {
   CaseChatRead,
   ChatMessageRead,
 } from "./generated/chatTypes";
+import type {
+  CaseReportRead,
+  ReportClaim,
+  ReportSection,
+  StructuredReport,
+} from "./generated/reportTypes";
 
 export type CaseRead = import("./generated/caseTypes").CaseRead;
 export type PersistedChatMessage = ChatMessageRead;
@@ -20,13 +26,10 @@ export interface CaseIntakeSubmission {
 
 export type { CaseChatRead } from "./generated/chatTypes";
 export type {
-  AdmitExtractionRequest,
   CaseAnalysisAccepted,
   CaseAnalysisCreate,
   CaseAnalysisResultRead,
   CaseChatMessageAccepted,
-  CaseClarificationAccepted,
-  CaseClarificationAnswer,
   CaseClarificationRead,
   CaseRunRead,
 } from "./generated/runTypes";
@@ -43,12 +46,25 @@ export type {
   EvidenceSourceRead,
 };
 export type { CaseReportCreate } from "./generated/reportTypes";
-export type {
-  CaseReport,
-  CaseReportClaim,
-  CaseReportSection,
-  CaseStructuredReport,
-} from "./case-report";
+export type CaseReportClaim = Omit<ReportClaim, "source_evidence_ids" | "mitre_technique_ids"> & {
+  source_evidence_ids: string[];
+  mitre_technique_ids: string[];
+};
+
+export type CaseReportSection = Omit<ReportSection, "paragraphs" | "items"> & {
+  paragraphs: string[];
+  items: string[];
+};
+
+export type CaseStructuredReport = Omit<StructuredReport, "sections" | "claims" | "limitations"> & {
+  sections: CaseReportSection[];
+  claims: CaseReportClaim[];
+  limitations: string[];
+};
+
+export type CaseReport = Omit<CaseReportRead, "report"> & {
+  report: CaseStructuredReport | null;
+};
 
 export interface UserProfile {
   id: string;

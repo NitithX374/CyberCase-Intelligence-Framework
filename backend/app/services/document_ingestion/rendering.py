@@ -4,11 +4,10 @@ from io import BytesIO
 import pypdfium2 as pdfium
 from PIL import Image
 
-from app.services.document_ingestion.contracts import BoundingBox
 from app.services.document_ingestion.errors import InvalidDocumentError
 
 
-def _encode_png(image: Image.Image) -> bytes:
+def encode_png(image: Image.Image) -> bytes:
     output = BytesIO()
     image.convert("RGB").save(output, format="PNG")
     return output.getvalue()
@@ -23,7 +22,7 @@ def render_pdf_page(content: bytes, page_number: int, longest_edge: int) -> byte
         width, height = page.get_size()
         scale = longest_edge / max(width, height)
         image = page.render(scale=scale).to_pil()
-        return _encode_png(image)
+        return encode_png(image)
     except Exception as error:
         raise InvalidDocumentError(
             f"PDF page {page_number} could not be rendered."
@@ -46,7 +45,7 @@ def normalize_image(content: bytes, longest_edge: int, max_pixels: int) -> bytes
                 )
             image.load()
         image.thumbnail((longest_edge, longest_edge), Image.Resampling.LANCZOS)
-        return _encode_png(image)
+        return encode_png(image)
     except InvalidDocumentError:
         raise
     except Exception as error:
@@ -59,15 +58,3 @@ def image_dimensions(content: bytes) -> tuple[int, int]:
             return image.width, image.height
     except Exception as error:
         raise InvalidDocumentError("The rendered page could not be decoded.") from error
-
-
-def crop_image_region(content: bytes, bbox: BoundingBox) -> bytes:
-    try:
-        with Image.open(BytesIO(content)) as image:
-            left = max(0, min(image.width - 1, int(bbox.x0)))
-            top = max(0, min(image.height - 1, int(bbox.y0)))
-            right = max(left + 1, min(image.width, int(bbox.x1 + 0.999)))
-            bottom = max(top + 1, min(image.height, int(bbox.y1 + 0.999)))
-            return _encode_png(image.crop((left, top, right, bottom)))
-    except Exception as error:
-        raise InvalidDocumentError("A document region could not be cropped.") from error

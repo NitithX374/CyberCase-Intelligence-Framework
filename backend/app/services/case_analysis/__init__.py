@@ -1,8 +1,4 @@
-from app.services.case_analysis.caseAnalysis import (
-    MainCaseAnalysisService,
-    analyze_case,
-    request_case_analysis,
-)
+from app.services.case_analysis.caseAnalysis import analyze_case, request_case_analysis
 from app.services.case_analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisResult,
@@ -15,7 +11,6 @@ __all__ = [
     "CaseAnalysisFailure",
     "CaseAnalysisResult",
     "CaseAnalysisTrace",
-    "MainCaseAnalysisService",
     "analyze_case",
     "request_case_analysis",
 ]

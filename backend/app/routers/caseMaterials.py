@@ -7,11 +7,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.database import commit_dependency_transaction, get_db
 from app.models.user import User
 from app.schemas.caseMaterials import (
-    AdmitExtractionRequest,
     CaseDocumentRead,
     CaseEvidenceCreate,
     EvidenceSourceRead,
@@ -20,22 +18,25 @@ from app.services.auth.dependencies import get_current_user
 from app.services.case_materials import (
     CaseMaterialsError,
     CaseMaterialsService,
-    getOwnedDocumentContent,
+    get_owned_document_content,
 )
 from app.services.document_ingestion import DocumentIngestionError
-from app.routers.documentIngestion import _build_service, _read_limited
+from app.services.document_ingestion import (
+    build_document_ingestion_service,
+    read_limited,
+)
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-materials"])
 
 
-def _materials_http_error(error: CaseMaterialsError) -> HTTPException:
+def materials_http_error(error: CaseMaterialsError) -> HTTPException:
     return HTTPException(
         status_code=error.status_code,
         detail={"code": error.code, "message": error.message},
     )
 
 
-def _ingestion_http_error(error: DocumentIngestionError) -> HTTPException:
+def ingestion_http_error(error: DocumentIngestionError) -> HTTPException:
     status_code = (
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
         if error.code == "unsupported_document_type"
@@ -56,9 +57,9 @@ async def list_case_documents(
     user: User = Depends(get_current_user),
 ):
     try:
-        return await CaseMaterialsService(db).listDocuments(case_id, user.id)
+        return await CaseMaterialsService(db).list_documents(case_id, user.id)
     except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
+        raise materials_http_error(error) from error
 
 
 @router.get("/documents/{document_id}/content", response_class=Response)
@@ -69,14 +70,14 @@ async def get_case_document_content(
     user: User = Depends(get_current_user),
 ):
     try:
-        document = await getOwnedDocumentContent(
+        document = await get_owned_document_content(
             db,
             case_id=case_id,
             document_id=document_id,
             user_id=user.id,
         )
     except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
+        raise materials_http_error(error) from error
     return Response(
         content=document.content_bytes,
         media_type=document.mime_type,
@@ -94,11 +95,11 @@ async def add_case_document(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    content = await _read_limited(file, settings.document_ingestion_max_bytes)
     try:
-        ingested = await _build_service().ingest(content, file.filename or "document")
+        content = await read_limited(file)
+        ingested = await build_document_ingestion_service().ingest(content, file.filename or "document")
     except DocumentIngestionError as error:
-        raise _ingestion_http_error(error) from error
+        raise ingestion_http_error(error) from error
     extraction = {
         "provider": ingested.extraction_method.value,
         "config_json": {"mode": ingested.mode.value},
@@ -116,7 +117,7 @@ async def add_case_document(
     try:
         await commit_dependency_transaction(db)
         async with db.begin():
-            return await CaseMaterialsService(db).addDocument(
+            return await CaseMaterialsService(db).add_document(
                 case_id=case_id,
                 user_id=user.id,
                 filename=ingested.filename,
@@ -125,32 +126,7 @@ async def add_case_document(
                 extraction=extraction,
             )
     except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
-
-
-@router.post("/documents/{document_id}/admit", response_model=EvidenceSourceRead, status_code=status.HTTP_201_CREATED)
-async def admit_case_document(
-    case_id: UUID,
-    document_id: UUID,
-    request: AdmitExtractionRequest,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        await commit_dependency_transaction(db)
-        async with db.begin():
-            service = CaseMaterialsService(db)
-            await service.getOwnedCase(case_id, user.id)
-            source = await service.admitExtraction(
-                case_id=case_id,
-                user_id=user.id,
-                extraction_id=request.extraction_id,
-            )
-            if source.document_id != document_id:
-                raise CaseMaterialsError("document_not_found", "Document not found", 404)
-            return source
-    except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
+        raise materials_http_error(error) from error
 
 
 @router.get("/evidence", response_model=list[EvidenceSourceRead])
@@ -160,9 +136,9 @@ async def list_case_evidence(
     user: User = Depends(get_current_user),
 ):
     try:
-        return await CaseMaterialsService(db).listEvidence(case_id, user.id)
+        return await CaseMaterialsService(db).list_evidence(case_id, user.id)
     except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
+        raise materials_http_error(error) from error
 
 
 @router.post("/evidence", response_model=EvidenceSourceRead, status_code=status.HTTP_201_CREATED)
@@ -175,7 +151,7 @@ async def add_case_evidence(
     try:
         await commit_dependency_transaction(db)
         async with db.begin():
-            return await CaseMaterialsService(db).admitText(
+            return await CaseMaterialsService(db).add_evidence_text(
                 case_id=case_id,
                 user_id=user.id,
                 source_kind=request.source_kind,
@@ -184,48 +160,7 @@ async def add_case_evidence(
                 source_metadata_json=request.source_metadata_json,
             )
     except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
-
-
-@router.post("/evidence/{source_id}/revisions", response_model=EvidenceSourceRead, status_code=status.HTTP_201_CREATED)
-async def revise_case_evidence(
-    case_id: UUID,
-    source_id: UUID,
-    request: CaseEvidenceCreate,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        await commit_dependency_transaction(db)
-        async with db.begin():
-            return await CaseMaterialsService(db).addRevision(
-                case_id=case_id,
-                user_id=user.id,
-                source_id=source_id,
-                exact_text=request.exact_text,
-                provenance_json=request.provenance_json,
-            )
-    except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
-
-
-@router.post("/evidence/{source_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
-async def archive_case_evidence(
-    case_id: UUID,
-    source_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        await commit_dependency_transaction(db)
-        async with db.begin():
-            await CaseMaterialsService(db).archiveSource(
-                case_id=case_id,
-                user_id=user.id,
-                source_id=source_id,
-            )
-    except CaseMaterialsError as error:
-        raise _materials_http_error(error) from error
+        raise materials_http_error(error) from error
 
 
 __all__ = ["router"]

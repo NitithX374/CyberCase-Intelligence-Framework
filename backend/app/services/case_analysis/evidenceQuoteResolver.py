@@ -15,8 +15,8 @@ def resolve_document_locator(
 ) -> dict[str, object]:
     occurrences = quote_occurrences(content, quote)
     candidates: set[tuple[str, str, tuple[int, ...]]] = set()
-    for document in extractDocumentsForSource(source_id, document_context):
-        locator = findDocumentLocator(
+    for document in extract_documents_for_source(source_id, document_context):
+        locator = find_document_locator(
             document, content, occurrences, len(quote), require_complete_coverage
         )
         if locator is not None:
@@ -31,7 +31,7 @@ def resolve_document_locator(
     }
 
 
-def extractDocumentsForSource(
+def extract_documents_for_source(
     source_id: str, context: object
 ) -> list[Mapping[str, object]]:
     if not isinstance(context, list):
@@ -51,7 +51,7 @@ def extractDocumentsForSource(
     return documents
 
 
-def findDocumentLocator(
+def find_document_locator(
     document: Mapping[str, object],
     content: str,
     occurrences: list[int],
@@ -62,11 +62,11 @@ def findDocumentLocator(
     filename = document.get("filename")
     if not isinstance(document_id, str) or not isinstance(filename, str):
         return None
-    spans = validatePageSpans(document.get("page_spans"), content)
+    spans = validate_page_spans(document.get("page_spans"), content)
     occurrence_pages: list[tuple[int, ...]] = []
     for start in occurrences:
         end = start + quote_length
-        if require_complete_coverage and not verifyQuoteCoverage(spans, start, end):
+        if require_complete_coverage and not verify_quote_coverage(spans, start, end):
             return None
         pages = tuple(span[0] for span in spans if span[1] < end and span[2] > start)
         if (
@@ -84,7 +84,7 @@ def findDocumentLocator(
     return document_id, filename, unique_pages.pop()
 
 
-def verifyQuoteCoverage(spans: list[tuple[int, int, int]], start: int, end: int) -> bool:
+def verify_quote_coverage(spans: list[tuple[int, int, int]], start: int, end: int) -> bool:
     cursor = start
     covered = 0
     for page, lower, upper in spans:
@@ -99,7 +99,7 @@ def verifyQuoteCoverage(spans: list[tuple[int, int, int]], start: int, end: int)
     return False
 
 
-def validatePageSpans(value: object, content: str) -> list[tuple[int, int, int]]:
+def validate_page_spans(value: object, content: str) -> list[tuple[int, int, int]]:
     if not isinstance(value, list):
         return []
     spans: list[tuple[int, int, int]] = []
@@ -145,7 +145,7 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
     if len(occurrences) > 1:
         return None
 
-    ellipsis_aligned = _expand_unique_ellipsis_quote(content, quote)
+    ellipsis_aligned = expand_unique_ellipsis_quote(content, quote)
     if ellipsis_aligned is not None:
         return ellipsis_aligned
 
@@ -182,7 +182,7 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
     return None
 
 
-def _expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
+def expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
     parts = [part.strip() for part in re.split(r"(?:\.{3,}|…+)", quote)]
     if len(parts) < 2 or any(len(part) < 2 for part in parts):
         return None
@@ -217,11 +217,11 @@ def _expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
 __all__ = [
     "MAX_PAGE_SPANS_PER_QUOTE",
     "MAX_SUPPORTED_DOCUMENT_PAGES",
-    "extractDocumentsForSource",
-    "findDocumentLocator",
+    "extract_documents_for_source",
+    "find_document_locator",
     "find_aligned_quote",
     "quote_occurrences",
     "resolve_document_locator",
-    "validatePageSpans",
-    "verifyQuoteCoverage",
+    "validate_page_spans",
+    "verify_quote_coverage",
 ]

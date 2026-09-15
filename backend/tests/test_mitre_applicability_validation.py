@@ -5,7 +5,7 @@ import pytest
 from app.services.case_analysis.mitreApplicabilityGate import (
     validate_mitre_applicability,
 )
-from app.services.chat.raw_evidence import RawEvidenceSource
+from app.services.case_analysis.mitreApplicabilityGate import RawEvidenceSource
 
 
 SEMANTIC_FIXTURES = [

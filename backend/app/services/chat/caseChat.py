@@ -33,7 +33,7 @@ class CaseChatError(Exception):
         self.status_code = status_code
 
 
-async def lockCaseChat(
+async def lock_case_chat(
     db: AsyncSession,
     case_id: UUID,
     user_id: UUID | None,
@@ -44,7 +44,7 @@ async def lockCaseChat(
     return case
 
 
-async def getCaseChat(
+async def get_case_chat(
     db: AsyncSession,
     *,
     case_id: UUID,
@@ -85,7 +85,7 @@ async def getCaseChat(
     return CaseChatRead(case_id=case.id, status=chat_status, messages=messages)
 
 
-async def findCaseRunByIdempotencyKey(
+async def find_case_run_by_idempotency_key(
     db: AsyncSession,
     case_id: UUID,
     idempotency_key: str,
@@ -110,7 +110,7 @@ async def findCaseRunByIdempotencyKey(
     return message, run
 
 
-def buildChatRequestPayload(request: ChatMessageCreate, operation: str = "ask") -> dict[str, object]:
+def build_chat_request_payload(request: ChatMessageCreate, operation: str = "ask") -> dict[str, object]:
     return {
         "operation": operation,
         "content": request.content.strip(),
@@ -119,7 +119,7 @@ def buildChatRequestPayload(request: ChatMessageCreate, operation: str = "ask") 
     }
 
 
-def buildClarificationRequest(request: ChatMessageCreate) -> CaseClarificationAnswer:
+def build_clarification_request(request: ChatMessageCreate) -> CaseClarificationAnswer:
     return CaseClarificationAnswer(
         answer=request.content,
         idempotency_key=request.idempotency_key,
@@ -127,7 +127,7 @@ def buildClarificationRequest(request: ChatMessageCreate) -> CaseClarificationAn
     )
 
 
-async def createCaseChatMessageAndRun(
+async def create_case_chat_message_and_run(
     db: AsyncSession,
     *,
     case_id: UUID,
@@ -136,7 +136,7 @@ async def createCaseChatMessageAndRun(
 ) -> tuple[ChatMessage, CaseRun]:
     if not request.content.strip():
         raise CaseChatError("case_chat_content_empty", "Case Chat message is empty", 422)
-    case, _ = await lockCaseChat(db, case_id, user_id)
+    case = await lock_case_chat(db, case_id, user_id)
 
     if request.intent == "followup_answer":
         target_id = request.in_reply_to_message_id
@@ -152,7 +152,7 @@ async def createCaseChatMessageAndRun(
                 case_id=case.id,
                 clarification_id=target_id,
                 user_id=user_id,
-                request=buildClarificationRequest(request),
+                request=build_clarification_request(request),
             )
         except CaseClarificationError as error:
             raise CaseChatError(error.code, error.message, error.status_code) from error
@@ -161,8 +161,8 @@ async def createCaseChatMessageAndRun(
             raise CaseChatError("case_chat_message_missing", "Clarification answer message is missing")
         return message, run
 
-    expected_payload = buildChatRequestPayload(request, "ask")
-    existing = await findCaseRunByIdempotencyKey(db, case.id, request.idempotency_key, expected_payload)
+    expected_payload = build_chat_request_payload(request, "ask")
+    existing = await find_case_run_by_idempotency_key(db, case.id, request.idempotency_key, expected_payload)
     if existing is not None:
         try:
             await requeue_failed_case_run(db, case, existing[1])
@@ -217,7 +217,7 @@ async def createCaseChatMessageAndRun(
     db.add(message)
     await db.flush()
     payload = {
-        **buildChatRequestPayload(request, "ask"),
+        **build_chat_request_payload(request, "ask"),
     }
     run = CaseRun(
         case_id=case.id,
@@ -234,4 +234,4 @@ async def createCaseChatMessageAndRun(
     return message, run
 
 
-__all__ = ["CaseChatError", "createCaseChatMessageAndRun"]
+__all__ = ["CaseChatError", "create_case_chat_message_and_run"]

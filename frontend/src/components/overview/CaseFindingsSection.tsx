@@ -5,8 +5,8 @@ import {
   groupCaseFindings,
   claimTypeLabels,
   epistemicStatusLabels,
-} from "@/lib/case-overview";
-import type { CaseFinding, SourceMessageRef } from "@/lib/case-overview-contracts";
+} from "@/lib/caseOverview";
+import type { CaseFinding, SourceMessageRef } from "@/lib/caseOverviewTypes";
 import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
 import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip";
 import { Icon } from "@/components/common/icons";

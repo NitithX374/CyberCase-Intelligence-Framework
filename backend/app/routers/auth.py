@@ -3,16 +3,26 @@
 from __future__ import annotations
 
 import secrets
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import AuthTokenResponse, DevLoginRequest, UserRead
+from app.schemas.auth import (
+    AuthTokenResponse,
+    DevLoginRequest,
+    PasswordLoginRequest,
+    RegisterRequest,
+    UserRead,
+)
 from app.services.auth.authService import (
     build_auth_cookie_options,
     get_or_create_dev_user,
@@ -21,8 +31,59 @@ from app.services.auth.authService import (
 from app.services.auth.dependencies import get_current_user, get_optional_user
 from app.services.auth.jwt import create_access_token
 from app.services.auth.oauthClients import get_oauth_client
+from app.services.auth.passwords import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+
+
+def start_password_session(user: User, response: Response) -> UserRead:
+    token = create_access_token(user.id, user.email)
+    response.set_cookie(value=token, **build_auth_cookie_options())
+    response.headers["Cache-Control"] = "no-store"
+    return UserRead.model_validate(user)
+
+
+@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+async def register(
+    payload: RegisterRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> UserRead:
+    email = str(payload.email).lower()
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Display name is required")
+    user = User(
+        id=uuid.uuid4(),
+        email=email,
+        name=name,
+        oauth_provider="password",
+        oauth_subject_id=email,
+        password_hash=await run_in_threadpool(hash_password, payload.password),
+    )
+    db.add(user)
+    try:
+        await db.commit()
+    except IntegrityError as error:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account already exists for this email") from error
+    await db.refresh(user)
+    return start_password_session(user, response)
+
+
+@router.post("/login", response_model=UserRead)
+async def login(
+    payload: PasswordLoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> UserRead:
+    user = await db.scalar(select(User).where(User.email == str(payload.email).lower()))
+    if user is None or not user.password_hash:
+        await run_in_threadpool(hash_password, payload.password)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
+    if not await run_in_threadpool(verify_password, payload.password, user.password_hash):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
+    return start_password_session(user, response)
 
 
 @router.get("/login/{provider}", summary="Initiate OAuth login flow")
@@ -75,7 +136,7 @@ async def oauth_callback(
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
     """Exchange authorization code for user profile, issue session cookie, and redirect to frontend."""
-    def _login_redirect(err_code: str) -> RedirectResponse:
+    def login_redirect(err_code: str) -> RedirectResponse:
         resp = RedirectResponse(
             url=f"{settings.frontend_base_url}/login?error={err_code}",
             status_code=status.HTTP_302_FOUND,
@@ -85,7 +146,7 @@ async def oauth_callback(
         return resp
 
     if error:
-        return _login_redirect("cancelled" if "denied" in error.lower() or "cancel" in error.lower() else "oauth_failed")
+        return login_redirect("cancelled" if "denied" in error.lower() or "cancel" in error.lower() else "oauth_failed")
 
     if not code:
         raise HTTPException(400, "Missing OAuth code; please start sign-in again")
@@ -98,18 +159,18 @@ async def oauth_callback(
         client = get_oauth_client(provider)
         profile = await client.exchange_code_for_profile(code)
     except ValueError:
-        return _login_redirect("oauth_failed")
+        return login_redirect("oauth_failed")
     except Exception:
-        return _login_redirect("oauth_failed")
+        return login_redirect("oauth_failed")
 
     try:
         user = await get_or_create_oauth_user(db, profile)
     except HTTPException as http_exc:
         if http_exc.status_code == 409:
-            return _login_redirect("account_exists_with_password")
-        return _login_redirect("oauth_failed")
+            return login_redirect("account_exists_with_password")
+        return login_redirect("oauth_failed")
     except Exception:
-        return _login_redirect("oauth_failed")
+        return login_redirect("oauth_failed")
 
     token = create_access_token(user_id=user.id, email=user.email)
 

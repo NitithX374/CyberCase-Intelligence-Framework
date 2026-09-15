@@ -3,21 +3,23 @@ from __future__ import annotations
 import asyncio
 import json
 import unicodedata
+from collections.abc import Mapping
 
 import httpx
 
-from collections.abc import Mapping
+from app.services.case_analysis.contracts import CaseAnalysisGap
+from app.services.followup.contracts import FollowUpDecision, FollowUpPolicyResult
 
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset(
     {"text", "output_text", "message", "thought_text"}
 )
 
 
-def _extract_text_value(value: object) -> str:
+def extract_text_value(value: object) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, list):
-        return "".join(_extract_text_value(item) for item in value)
+        return "".join(extract_text_value(item) for item in value)
     if not isinstance(value, Mapping):
         return ""
 
@@ -35,18 +37,18 @@ def _extract_text_value(value: object) -> str:
 
     nested_content = value.get("content")
     if nested_content is not None:
-        nested = _extract_text_value(nested_content)
+        nested = extract_text_value(nested_content)
         if nested:
             return nested
 
     message = value.get("message")
     if message is not None:
-        return _extract_text_value(message)
+        return extract_text_value(message)
 
     return ""
 
 
-def _extract_llm_text(payload: Mapping[str, object] | object) -> str:
+def extract_llm_text(payload: Mapping[str, object] | object) -> str:
     """Extract raw text across supported provider response shapes (Anthropic, OpenRouter, etc.)."""
     if not isinstance(payload, Mapping):
         return ""
@@ -57,26 +59,26 @@ def _extract_llm_text(payload: Mapping[str, object] | object) -> str:
 
     content = payload.get("content")
     if content is not None:
-        extracted = _extract_text_value(content)
+        extracted = extract_text_value(content)
         if extracted.strip():
             return extracted
 
     choices = payload.get("choices")
     if isinstance(choices, list):
-        extracted = _extract_text_value(choices)
+        extracted = extract_text_value(choices)
         if extracted.strip():
             return extracted
 
     output = payload.get("output")
     if output is not None:
-        extracted = _extract_text_value(output)
+        extracted = extract_text_value(output)
         if extracted.strip():
             return extracted
 
     return ""
 
 
-def _extract_llm_json(raw: str) -> dict[str, object]:
+def extract_llm_json(raw: str) -> dict[str, object]:
     cleaned = raw.strip()
     if not cleaned:
         raise ValueError("LLM response text is empty")
@@ -99,11 +101,7 @@ def _extract_llm_json(raw: str) -> dict[str, object]:
     ]
 
 
-from app.services.case_analysis.contracts import CaseAnalysisGap
-from app.services.followup.contracts import FollowUpDecision, FollowUpPolicyResult
-
-
-def resolveGapReasonCode(gap: CaseAnalysisGap) -> str:
+def resolve_gap_reason_code(gap: CaseAnalysisGap) -> str:
     return {
         "NOT_PROVIDED": "material_incident_fact_missing",
         "AMBIGUOUS": "material_incident_fact_ambiguous",
@@ -112,7 +110,7 @@ def resolveGapReasonCode(gap: CaseAnalysisGap) -> str:
     }[gap.status]
 
 
-def coercePolicyResult(
+def coerce_policy_result(
     raw_result: object,
     *,
     elapsed_ms: float,
@@ -125,8 +123,20 @@ def coercePolicyResult(
                 if raw_result.latency_ms is not None
                 else elapsed_ms
             ),
-            input_tokens=countTokensSafely(raw_result.input_tokens),
-            output_tokens=countTokensSafely(raw_result.output_tokens),
+            input_tokens=(
+                raw_result.input_tokens
+                if isinstance(raw_result.input_tokens, int)
+                and not isinstance(raw_result.input_tokens, bool)
+                and raw_result.input_tokens >= 0
+                else None
+            ),
+            output_tokens=(
+                raw_result.output_tokens
+                if isinstance(raw_result.output_tokens, int)
+                and not isinstance(raw_result.output_tokens, bool)
+                and raw_result.output_tokens >= 0
+                else None
+            ),
             provider=raw_result.provider,
             model=raw_result.model,
         )
@@ -136,13 +146,7 @@ def coercePolicyResult(
     )
 
 
-def countTokensSafely(value: object) -> int | None:
-    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
-        return value
-    return None
-
-
-def resolveFollowupFailureCode(error: Exception) -> str:
+def resolve_followup_failure_code(error: Exception) -> str:
     if isinstance(error, (asyncio.TimeoutError, httpx.TimeoutException)):
         return "policy_timeout"
     if isinstance(error, (json.JSONDecodeError, ValueError, TypeError)):
@@ -150,17 +154,16 @@ def resolveFollowupFailureCode(error: Exception) -> str:
     return "policy_error"
 
 
-def normalizeQuestion(question: str) -> str:
+def normalize_question(question: str) -> str:
     normalized = unicodedata.normalize("NFKC", question)
     return " ".join(normalized.strip().split())
 
 
 __all__ = [
-    "_extract_llm_json",
-    "_extract_llm_text",
-    "coercePolicyResult",
-    "countTokensSafely",
-    "normalizeQuestion",
-    "resolveFollowupFailureCode",
-    "resolveGapReasonCode",
+    "extract_llm_json",
+    "extract_llm_text",
+    "coerce_policy_result",
+    "normalize_question",
+    "resolve_followup_failure_code",
+    "resolve_gap_reason_code",
 ]

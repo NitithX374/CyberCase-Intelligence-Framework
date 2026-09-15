@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getSession, logout, type UserProfile } from "@/lib/api";
-import { SignOutDialog } from "@/components/common/SignOutDialog";
+import { SignOutDialog } from "@/components/common/DeleteDialog";
 
 export type HomePillarVisual = "bars" | "grid" | "line";
 
@@ -130,13 +130,13 @@ export function HomeNavigation() {
           setIsLoggedIn(true);
           setUser(fetchedUser);
           const savedRoute = localStorage.getItem(`cybercase:${fetchedUser.id}:route`);
-          if (savedRoute && (savedRoute.startsWith("/case/") || savedRoute.startsWith("/chat/"))) {
+          if (savedRoute?.startsWith("/case/")) {
             setWorkspaceRoute(savedRoute);
           }
         } else if (accountId) {
           setIsLoggedIn(true);
           const savedRoute = localStorage.getItem(`cybercase:${accountId}:route`);
-          if (savedRoute && (savedRoute.startsWith("/case/") || savedRoute.startsWith("/chat/"))) {
+          if (savedRoute?.startsWith("/case/")) {
             setWorkspaceRoute(savedRoute);
           }
         } else {
@@ -148,7 +148,7 @@ export function HomeNavigation() {
         if (accountId) {
           setIsLoggedIn(true);
           const savedRoute = localStorage.getItem(`cybercase:${accountId}:route`);
-          if (savedRoute && (savedRoute.startsWith("/case/") || savedRoute.startsWith("/chat/"))) {
+          if (savedRoute?.startsWith("/case/")) {
             setWorkspaceRoute(savedRoute);
           }
         } else {

@@ -1,9 +1,5 @@
 import type { ChatMessageRead } from "./chatTypes";
 
-export type AdmitExtractionRequest = {
-    extraction_id: string;
-};
-
 export type CaseAnalysisAccepted = {
     run: CaseRunRead;
 };
@@ -43,17 +39,6 @@ export type CaseAnalysisResultRead = {
 export type CaseChatMessageAccepted = {
     message: ChatMessageRead;
     run: CaseRunRead;
-};
-
-export type CaseClarificationAccepted = {
-    clarification: CaseClarificationRead;
-    run: CaseRunRead;
-};
-
-export type CaseClarificationAnswer = {
-    answer: string;
-    idempotency_key: string;
-    response_language: "thai" | "english";
 };
 
 export type CaseClarificationRead = {

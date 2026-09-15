@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from app.services.case_analysis.contracts import (
-    CaseAdmittedSource,
+    CaseEvidenceSource,
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisTrace,
@@ -18,7 +18,7 @@ from app.services.case_analysis.evidenceQuoteResolver import (
 
 def validate_case_trace(
     trace: CaseAnalysisTrace,
-    sources: tuple[CaseAdmittedSource, ...],
+    sources: tuple[CaseEvidenceSource, ...],
     document_context: object,
     mitre_table: object = None,
 ) -> CaseAnalysisTrace:
@@ -30,7 +30,7 @@ def validate_case_trace(
             "Case analysis claims must have unique identifiers",
         )
     normalized_claims = [
-        _validate_claim(claim, registry, document_context) for claim in trace.claims
+        validate_claim(claim, registry, document_context) for claim in trace.claims
     ]
     known_claim_ids = set(claim_ids)
     for party in trace.involved_parties:
@@ -77,7 +77,7 @@ def validate_case_trace(
                 "case_trace_explicit_unknown_askable",
                 "An explicitly unknown gap cannot be marked askable",
             )
-    admitted_techniques = _admitted_technique_ids(mitre_table)
+    context_techniques = context_technique_ids(mitre_table)
     if trace.mitre_associations and trace.retrieval_context_id is None:
         raise CaseAnalysisFailure(
             "case_trace_mitre_without_retrieval",
@@ -89,7 +89,7 @@ def validate_case_trace(
                 "case_trace_mitre_unknown_claim",
                 "Case MITRE association references an unknown claim",
             )
-        if association.technique_id not in admitted_techniques:
+        if association.technique_id not in context_techniques:
             raise CaseAnalysisFailure(
                 "case_trace_mitre_outside_context",
                 "Case MITRE association is outside the bound context",
@@ -97,9 +97,9 @@ def validate_case_trace(
     return trace.model_copy(update={"claims": normalized_claims})
 
 
-def _validate_claim(
+def validate_claim(
     claim: CaseAnalysisClaim,
-    registry: dict[str, CaseAdmittedSource],
+    registry: dict[str, CaseEvidenceSource],
     document_context: object,
 ) -> CaseAnalysisClaim:
     supporting = set(claim.supporting_source_ids)
@@ -129,26 +129,26 @@ def _validate_claim(
             "case_trace_inference_without_reasoning",
             "Case inferences need a concise reasoning summary",
         )
-    supporting_citations = _normalize_citations(
+    supporting_citations = normalize_citations(
         claim.supporting_citations,
         supporting,
         "supporting",
         registry,
         document_context,
     )
-    contradicting_citations = _normalize_citations(
+    contradicting_citations = normalize_citations(
         claim.contradicting_citations,
         contradicting,
         "contradicting",
         registry,
         document_context,
     )
-    _require_role_complete_citations(
+    require_role_complete_citations(
         supporting,
         supporting_citations,
         "supporting",
     )
-    _require_role_complete_citations(
+    require_role_complete_citations(
         contradicting,
         contradicting_citations,
         "contradicting",
@@ -161,7 +161,7 @@ def _validate_claim(
     )
 
 
-def _require_role_complete_citations(
+def require_role_complete_citations(
     source_ids: set[str],
     citations: list[CaseEvidenceCitation],
     role: str,
@@ -175,11 +175,11 @@ def _require_role_complete_citations(
         )
 
 
-def _normalize_citations(
+def normalize_citations(
     citations: list[CaseEvidenceCitation],
     allowed_ids: set[str],
     role: str,
-    registry: dict[str, CaseAdmittedSource],
+    registry: dict[str, CaseEvidenceSource],
     document_context: object,
 ) -> list[CaseEvidenceCitation]:
     normalized: list[CaseEvidenceCitation] = []
@@ -231,7 +231,7 @@ def _normalize_citations(
     return normalized
 
 
-def _admitted_technique_ids(value: object) -> set[str]:
+def context_technique_ids(value: object) -> set[str]:
     if not isinstance(value, list):
         return set()
     identifiers: set[str] = set()

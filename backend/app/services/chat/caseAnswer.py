@@ -45,13 +45,13 @@ class CaseAnswerResponse(BaseModel):
     units: list[CaseGeneratedUnit] = Field(max_length=32)
 
     @model_validator(mode="after")
-    def requireConsistentAnswer(self) -> "CaseAnswerResponse":
+    def require_consistent_answer(self) -> "CaseAnswerResponse":
         if self.insufficient_context == bool(self.units):
             raise ValueError("An answer needs grounded units; insufficient context must have no units")
         return self
 
 
-async def loadCaseAnswerContext(
+async def load_case_answer_context(
     db: AsyncSession, run_id: UUID, analysis_context: dict[str, object]
 ) -> dict[str, object]:
     run = await db.get(CaseRun, run_id)
@@ -67,7 +67,7 @@ async def loadCaseAnswerContext(
         result is None or result.case_id != run.case_id or result.status != "validated"
     ):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Pinned Chat analysis is unavailable")
-    trace = _parse_trace(result.trace_json, "Pinned Chat analysis trace is invalid")
+    trace = parse_trace(result.trace_json, "Pinned Chat analysis trace is invalid")
     if trace.analysis_mode != "case_overview":
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis does not match overview mode")
     metadata = result.provider_metadata_json
@@ -109,7 +109,7 @@ async def loadCaseAnswerContext(
     }
 
 
-async def generateCaseAnswer(
+async def generate_case_answer(
     *, context: dict[str, object], analysis_context: dict[str, object],
     user_message: object, client: httpx.AsyncClient | None = None,
 ) -> AnalysisOutput:
@@ -122,7 +122,7 @@ async def generateCaseAnswer(
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis configuration is invalid") from error
     if not isinstance(context, Mapping):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is invalid")
-    trace = _parse_trace(context.get("trace"), "Chat analysis trace is invalid")
+    trace = parse_trace(context.get("trace"), "Chat analysis trace is invalid")
     question = context.get("question")
     summary = context.get("analysis_summary")
     analysis_result_id = context.get("analysis_result_id")
@@ -134,7 +134,7 @@ async def generateCaseAnswer(
         or not isinstance(history, list)
     ):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is incomplete")
-    normalized_history = _validate_history(history)
+    normalized_history = validate_history(history)
     language = resolve_response_language(user_message)
     calls: list[dict[str, object]] = []
     content = {
@@ -187,7 +187,7 @@ async def generateCaseAnswer(
     return AnalysisOutput(answer=answer, trace=answer_trace, execution_receipt=receipt)
 
 
-def _validate_history(value: list[object]) -> list[dict[str, str]]:
+def validate_history(value: list[object]) -> list[dict[str, str]]:
     normalized: list[dict[str, str]] = []
     for item in value:
         if not isinstance(item, Mapping):
@@ -201,7 +201,7 @@ def _validate_history(value: list[object]) -> list[dict[str, str]]:
     return normalized
 
 
-def _parse_trace(value: object, message: str) -> CaseAnalysisTrace:
+def parse_trace(value: object, message: str) -> CaseAnalysisTrace:
     try:
         return CaseAnalysisTrace.model_validate(value)
     except ValidationError as error:

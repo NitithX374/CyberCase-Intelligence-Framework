@@ -46,3 +46,8 @@ def test_custom_model_passthrough():
     custom = "mistralai/mistral-large-2411"
     assert resolve_openrouter_model(custom) == custom
     assert resolve_openrouter_model(f"openrouter/{custom}") == custom
+
+
+def test_unknown_alias_fails_clearly():
+    with pytest.raises(ValueError, match="Unknown OpenRouter model alias"):
+        resolve_openrouter_model("not-a-configured-model")

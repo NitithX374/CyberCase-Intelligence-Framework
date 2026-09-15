@@ -10,16 +10,15 @@ from app.models.case import Case
 from app.models.caseRun import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage
 from app.schemas.messageMetadata import serialize_message_metadata
-from app.services.case_analysis.contracts import CaseAnalysisTrace
-from app.services.case_materials import assembleCaseEvidence
+from app.services.case_materials import assemble_case_evidence
 from app.services.workflow.caseRunCompletion import (
     CaseRunCompletionError,
-    _owns_run,
-    _validated_output,
+    owns_run,
+    validated_output,
 )
 
 
-async def completeCaseAsk(
+async def complete_case_ask(
     db: AsyncSession,
     run_id: UUID,
     claimed_attempt: int,
@@ -34,7 +33,7 @@ async def completeCaseAsk(
         if case is None:
             return False
         run = await db.scalar(select(CaseRun).where(CaseRun.id == run_id).with_for_update())
-        if not _owns_run(run, case.id, claimed_attempt):
+        if not owns_run(run, case.id, claimed_attempt):
             return False
         if run.operation != "ask" or run.request_message_id is None:
             raise CaseRunCompletionError("case_ask_run_invalid", "Case ASK run is incomplete")
@@ -50,8 +49,8 @@ async def completeCaseAsk(
         ):
             raise CaseRunCompletionError("case_ask_context_invalid", "Case ASK context result is invalid")
 
-        assembled = await assembleCaseEvidence(db, case_id=case.id, user_id=None)
-        trace = _validated_output(output, assembled)
+        assembled = await assemble_case_evidence(db, case_id=case.id, user_id=None)
+        trace = validated_output(output, assembled)
         if trace.analysis_mode != "question_answer":
             raise CaseRunCompletionError("case_ask_trace_invalid", "Case ASK output is not response-scoped")
         completion = await db.execute(
@@ -100,4 +99,4 @@ async def completeCaseAsk(
         case.updated_at = now
         await db.flush()
     return True
-__all__ = ["completeCaseAsk"]
+__all__ = ["complete_case_ask"]

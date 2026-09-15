@@ -10,7 +10,7 @@ from app.models.caseMaterials import CaseDocument
 from app.services.case_materials.materialService import CaseMaterialsError
 
 
-async def getOwnedDocumentContent(
+async def get_owned_document_content(
     db: AsyncSession,
     *,
     case_id: UUID,
@@ -32,4 +32,4 @@ async def getOwnedDocumentContent(
     return document
 
 
-__all__ = ["getOwnedDocumentContent"]
+__all__ = ["get_owned_document_content"]

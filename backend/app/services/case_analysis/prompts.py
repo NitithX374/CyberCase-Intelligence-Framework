@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.case_analysis.contracts import AnalysisMode, CaseAnalysisFailure
+from app.services.case_analysis.contracts import CaseAnalysisFailure, CaseAnalysisMode
 
 CASE_ANALYSIS_PROMPT_VERSION = "main_case_analysis_v1"
 
@@ -74,9 +74,9 @@ def case_system_prompt() -> str:
 
 
 def validate_analysis_request(
-    mode: AnalysisMode,
+    mode: CaseAnalysisMode,
     question: str | None,
-) -> tuple[AnalysisMode, str | None]:
+) -> tuple[CaseAnalysisMode, str | None]:
     if mode not in {"case_overview", "question_answer"}:
         raise CaseAnalysisFailure("analysis_invalid_request", "The analysis mode is invalid")
     normalized_question = question.strip() if isinstance(question, str) else None
