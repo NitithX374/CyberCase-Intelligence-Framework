@@ -16,7 +16,6 @@ from app.routers import (
     caseMaterials,
     caseReports,
     cases,
-    chat,
     documentIngestion,
     health,
     passwordAuth,
@@ -65,7 +64,6 @@ app.middleware("http")(guard_browser_request)
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(passwordAuth.router, prefix="/api/v1")
-app.include_router(chat.router, prefix="/api/v1")
 app.include_router(cases.router, prefix="/api/v1")
 app.include_router(caseMaterials.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(caseAnalysis.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])

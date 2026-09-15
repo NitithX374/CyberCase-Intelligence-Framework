@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
 import { useCaseWorkspaceActions } from "@/hooks/useCaseWorkspaceActions";
 import type { CaseRead, CaseRunRead } from "@/lib/api";
-import type { ChatSession } from "@/features/chat/workspace/use-chat-thread-selection";
+import type { CaseChatSession } from "@/features/chat/workspace/use-case-chat-selection";
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
@@ -13,7 +13,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
     ...actual,
     admitCaseEvidence: vi.fn(),
     admitCaseDocument: vi.fn(),
-    ensureCaseChat: vi.fn(),
+
     getCase: vi.fn(),
     startCaseAnalysis: vi.fn(),
     uploadCaseDocument: vi.fn(),
@@ -25,7 +25,6 @@ const initialCase: CaseRead = {
   user_id: null,
   title: "Untitled Case",
   status: "idle",
-  chat_thread_id: null,
   evidence_revision: 0,
   latest_analysis_result_id: null,
   active_run_id: null,
@@ -48,8 +47,6 @@ const acceptedRun: CaseRunRead = {
   operation: "analysis",
   evidence_revision: 1,
   request_message_id: null,
-  context_analysis_result_id: null,
-  clarification_id: null,
   status: "queued",
   attempt_count: 0,
   error_code: null,
@@ -82,8 +79,8 @@ describe("useCaseWorkspaceActions", () => {
   it("reuses the admitted evidence and logical Analyze identity after an uncertain response", async () => {
     const session = {
       clearSelection: vi.fn(),
-      selectThread: vi.fn(),
-    } as unknown as ChatSession;
+      selectCaseChat: vi.fn(),
+    } as unknown as CaseChatSession;
     const { result } = renderHook(
       () => useCaseWorkspaceActions({
         activeCaseId: "case-1",

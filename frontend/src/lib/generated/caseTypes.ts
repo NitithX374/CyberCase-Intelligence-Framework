@@ -9,31 +9,11 @@ export type CaseDocumentRead = {
     extractions?: DocumentExtractionRead[];
 };
 
-export type CaseNarrativeDocumentPageSpan = {
-    page_number: number;
-    start_offset: number;
-    end_offset: number;
-    text_sha256?: string | null;
-};
-
-export type CaseNarrativeDocumentSource = {
-    document_id: string;
-    filename: string;
-    extraction_method: "native_pdf" | "native_docx" | "document_recognition" | "hybrid";
-    page_count: number;
-    verification_status: "native" | "machine_read" | "needs_review";
-    confidence_status: "reported" | "not_reported" | "not_applicable";
-    minimum_confidence?: number | null;
-    warnings?: string[];
-    page_spans?: CaseNarrativeDocumentPageSpan[];
-};
-
 export type CaseRead = {
     id: string;
     user_id?: string | null;
     title: string;
     status: "idle" | "processing" | "awaiting_followup" | "answered" | "failed";
-    chat_thread_id: string | null;
     evidence_revision: number;
     latest_analysis_result_id?: string | null;
     active_run_id?: string | null;
@@ -58,18 +38,4 @@ export type DocumentExtractionRead = {
     };
     warnings_json: unknown[];
     created_at: string;
-};
-
-export type DocumentSourceMetadata = {
-    document_id?: string;
-    filename?: string;
-    page_count?: number;
-    extraction_method?: string;
-    verification_status?: string;
-    confidence_status?: string;
-    minimum_confidence?: number | null;
-    warnings?: string[];
-    page_spans?: CaseNarrativeDocumentPageSpan[];
-} & {
-    [key: string]: unknown;
 };

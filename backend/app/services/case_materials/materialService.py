@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -207,20 +206,15 @@ class CaseMaterialsService:
         source_metadata_json: dict[str, object] | None = None,
         origin_message_id: UUID | None = None,
     ) -> EvidenceSource:
-        if source_kind not in {"narrative", "followup_answer", "clarification_answer", "explicit_chat_addition"}:
+        if source_kind not in {"narrative", "followup_answer"}:
             raise CaseMaterialsError("evidence_source_kind_invalid", "Unsupported native evidence source kind")
-        persisted_kind = (
-            "followup_answer"
-            if source_kind in {"followup_answer", "clarification_answer"}
-            else "narrative"
-        )
         normalized_text = exact_text.strip()
         if not normalized_text:
             raise CaseMaterialsError("evidence_text_empty", "Admitted evidence text is empty")
         case = await self.getOwnedCase(case_id, user_id, lock=True)
         source = EvidenceSource(
             case_id=case.id,
-            source_kind=persisted_kind,
+            source_kind=source_kind,
             origin_message_id=origin_message_id,
             exact_text=normalized_text,
             provenance_json=deepcopy(provenance_json),
@@ -303,100 +297,7 @@ def _list(value: object) -> list[object]:
     return deepcopy(value) if isinstance(value, list) else []
 
 
-def _source_label(source: EvidenceSource) -> str:
-    if source.document is not None:
-        return f"DOCUMENT {source.document.filename}"
-    return {
-        "narrative": "CASE NARRATIVE",
-        "followup_answer": "FOLLOW-UP ANSWER",
-        "clarification_answer": "CLARIFICATION ANSWER",
-        "explicit_chat_addition": "ADDED CASE INFORMATION",
-        "legacy_unbound": "LEGACY CASE MATERIAL",
-    }.get(source.source_kind, "CASE MATERIAL")
-
-
-@dataclass(frozen=True)
-class AssembledCaseEvidence:
-    input_text: str
-    active_sources: list[EvidenceSource]
-    evidence_revision: int
-
-    @property
-    def id(self) -> UUID:
-        return self.active_sources[0].id if self.active_sources else UUID("00000000-0000-0000-0000-000000000000")
-
-    @property
-    def manifest_json(self) -> list[dict[str, object]]:
-        return [
-            {
-                "source_id": str(s.id),
-                "source_kind": s.source_kind,
-                "document_id": str(s.document_id) if s.document_id else None,
-                "filename": s.document.filename if s.document else None,
-                "provenance_json": s.provenance_json,
-            }
-            for s in self.active_sources
-        ]
-
-    @property
-    def text_sha256(self) -> str:
-        return ""
-
-    @property
-    def format_version(self) -> str:
-        return "case_evidence_snapshot_v1"
-
-
-async def assembleCaseEvidence(
-    db: AsyncSession,
-    *,
-    case_id: UUID,
-    user_id: UUID | None,
-) -> AssembledCaseEvidence:
-    result = await db.execute(
-        select(Case)
-        .options(
-            selectinload(Case.evidence_sources).selectinload(EvidenceSource.document),
-        )
-        .where(Case.id == case_id)
-        .with_for_update()
-    )
-    case = result.scalar_one_or_none()
-    if case is None or (user_id is not None and case.user_id != user_id):
-        raise CaseMaterialsError("case_not_found", "Case not found", 404)
-
-    selected: list[EvidenceSource] = []
-    for source in sorted(case.evidence_sources, key=lambda item: (item.created_at, str(item.id))):
-        if source.archived_at is not None:
-            continue
-        if not source.exact_text.strip():
-            raise CaseMaterialsError("evidence_text_empty", "Admitted evidence text is empty")
-        selected.append(source)
-    if not selected:
-        raise CaseMaterialsError("case_evidence_missing", "Add and admit case material before analysis")
-
-    sections: list[str] = []
-    for source in selected:
-        sections.append(
-            f"[{_source_label(source)} · SOURCE {source.id}]\n{source.exact_text.strip()}"
-        )
-
-    input_text = "\n\n".join(sections)
-    return AssembledCaseEvidence(
-        input_text=input_text,
-        active_sources=selected,
-        evidence_revision=case.evidence_revision,
-    )
-
-
-# Compatibility alias for buildCaseEvidenceSnapshot
-buildCaseEvidenceSnapshot = assembleCaseEvidence
-
-
 __all__ = [
-    "AssembledCaseEvidence",
     "CaseMaterialsError",
     "CaseMaterialsService",
-    "assembleCaseEvidence",
-    "buildCaseEvidenceSnapshot",
 ]

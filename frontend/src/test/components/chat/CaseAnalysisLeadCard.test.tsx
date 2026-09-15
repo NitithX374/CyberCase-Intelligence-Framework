@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, PersistedChatMessage } from "@/lib/api";
+import type { CaseAnalysisResultRead, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
 import { CaseAnalysisLeadCard } from "@/components/conversation/CaseAnalysisLeadCard";
 import { ChatTranscript } from "@/components/conversation/ChatTranscript";
 
@@ -9,7 +9,7 @@ const sampleResult: CaseAnalysisResultRead = {
   case_id: "case-123",
   run_id: "run-123",
   evidence_revision: 1,
-  schema_version: "analysis_trace_v3",
+  schema_version: "case_analysis_trace_v1",
   status: "validated",
   summary: "Initial compromise occurred via spearphishing attachment delivering malware.",
   answer: "Initial compromise occurred via spearphishing attachment delivering malware.",
@@ -22,133 +22,67 @@ const sampleResult: CaseAnalysisResultRead = {
   freshness: "current",
 };
 
-const sampleSnapshot: CaseEvidenceSnapshotRead = {
-  id: "snapshot-123",
+const evidenceSources: EvidenceSourceRead[] = [{
+  id: "source-1",
   case_id: "case-123",
-  evidence_revision: 1,
-  format_version: "v1",
-  manifest_json: [],
-  input_text: "test",
-  text_sha256: "hash",
-  manifest_sha256: "hash",
+  source_kind: "narrative",
+  document_id: null,
+  origin_message_id: null,
+  exact_text: "Initial compromise occurred via spearphishing attachment delivering malware.",
+  provenance_json: {},
+  source_metadata_json: {},
   created_at: "2026-09-10T11:59:00Z",
-};
+  archived_at: null,
+}];
 
 describe("CaseAnalysisLeadCard", () => {
   it("renders grounded case analysis summary and validated pill", () => {
     const onOpenOverview = vi.fn();
-    render(
-      <CaseAnalysisLeadCard
-        result={sampleResult}
-        snapshot={sampleSnapshot}
-        onOpenOverview={onOpenOverview}
-      />,
-    );
-
+    render(<CaseAnalysisLeadCard result={sampleResult} evidenceSources={evidenceSources} onOpenOverview={onOpenOverview} />);
     expect(screen.getByText("Analysis Result")).toBeInTheDocument();
     expect(screen.getByText("Validated")).toBeInTheDocument();
-    expect(
-      screen.getByText("Initial compromise occurred via spearphishing attachment delivering malware."),
-    ).toBeInTheDocument();
-
-    const overviewBtn = screen.getByRole("button", { name: /view full case overview/i });
-    expect(overviewBtn).toBeInTheDocument();
-    fireEvent.click(overviewBtn);
+    expect(screen.getByText(sampleResult.summary)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /view full case overview/i }));
     expect(onOpenOverview).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("ChatTranscript with Lead Card", () => {
-  it("renders lead card at the top and deduplicates matching historical publication message", () => {
+  it("renders the lead card and removes its historical publication", () => {
     const historicalDuplicateMessage: PersistedChatMessage = {
-      id: "msg-pub-1",
-      thread_id: "thread-1",
-      ordinal: 1,
-      role: "assistant",
-      content: "Duplicate publication of analysis findings",
-      retrieval_context_id: null,
-      message_kind: "conversation",
-      analysis_result_id: "analysis-result-1",
-      metadata_json: {},
+      id: "msg-pub-1", case_id: "case-123", ordinal: 1, role: "assistant",
+      content: "Duplicate publication of analysis findings", retrieval_context_id: null,
+      message_kind: "conversation", analysis_result_id: "analysis-result-1", metadata_json: {},
       created_at: "2026-09-10T12:00:01Z",
     };
-
     const regularQAMessage: PersistedChatMessage = {
-      id: "msg-qa-1",
-      thread_id: "thread-1",
-      ordinal: 2,
-      role: "user",
-      content: "What malware family was identified?",
-      retrieval_context_id: null,
-      message_kind: "conversation",
-      analysis_result_id: null,
-      metadata_json: {},
+      id: "msg-qa-1", case_id: "case-123", ordinal: 2, role: "user",
+      content: "What malware family was identified?", retrieval_context_id: null,
+      message_kind: "conversation", analysis_result_id: null, metadata_json: {},
       created_at: "2026-09-10T12:05:00Z",
     };
-
-    render(
-      <ChatTranscript
-        messages={[historicalDuplicateMessage, regularQAMessage]}
-        isProcessing={false}
-        leadResult={sampleResult}
-        leadSnapshot={sampleSnapshot}
-      />,
-    );
-
-    // Lead card is rendered
+    render(<ChatTranscript messages={[historicalDuplicateMessage, regularQAMessage]} isProcessing={false} leadResult={sampleResult} evidenceSources={evidenceSources} />);
     expect(screen.getByText("Analysis Result")).toBeInTheDocument();
-
-    // Regular QA message is rendered
     expect(screen.getByText("What malware family was identified?")).toBeInTheDocument();
-
-    // Historical publication message matching leadResult.id is omitted from transcript
     expect(screen.queryByText("Duplicate publication of analysis findings")).not.toBeInTheDocument();
   });
 
-  it("renders followup_question in transcript even when linked to leadResult.id", () => {
+  it("renders a follow-up question linked to the current analysis", () => {
     const followupQuestionMessage: PersistedChatMessage = {
-      id: "msg-followup-1",
-      thread_id: "thread-1",
-      ordinal: 3,
-      role: "assistant",
+      id: "msg-followup-1", case_id: "case-123", ordinal: 3, role: "assistant",
       content: "What was the destination IP address for the exfiltration traffic?",
-      message_kind: "followup_question",
-      retrieval_context_id: null,
-      analysis_result_id: "analysis-result-1",
+      message_kind: "followup_question", retrieval_context_id: null, analysis_result_id: "analysis-result-1",
       metadata_json: {
-        analysis_kind: "clarification_question",
-        analysis_result_id: "analysis-result-1",
+        action: "follow_up",
         chat_followup: {
-          kind: "clarification",
-          action: "ask_followup",
-          root_ordinal: 3,
-          round: 1,
-          selected_gap_detail: {
-            topic: "Destination IP",
-            status: "NOT_PROVIDED",
-            description: "Missing destination IP for exfiltration",
-            affects: "Technical attribution",
-            reason: "Required to verify C2 infrastructure",
-            priority: "high",
-            askable: true,
-          },
+          root_ordinal: 3, round: 1,
+          selected_gap_detail: { topic: "Destination IP", status: "NOT_PROVIDED", description: "Missing destination IP for exfiltration", affects: "Technical attribution", reason: "Required to verify C2 infrastructure", priority: "high", askable: true },
         },
       },
       created_at: "2026-09-10T12:06:00Z",
     };
-
-    render(
-      <ChatTranscript
-        messages={[followupQuestionMessage]}
-        isProcessing={false}
-        leadResult={sampleResult}
-        leadSnapshot={sampleSnapshot}
-      />,
-    );
-
-    // Followup question content is rendered
+    render(<ChatTranscript messages={[followupQuestionMessage]} isProcessing={false} leadResult={sampleResult} evidenceSources={evidenceSources} />);
     expect(screen.getByText("What was the destination IP address for the exfiltration traffic?")).toBeInTheDocument();
-    // Action card for the gap is rendered
     expect(screen.getByText("Destination IP")).toBeInTheDocument();
   });
 });

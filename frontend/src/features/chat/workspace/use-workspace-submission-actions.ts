@@ -3,7 +3,7 @@
 import { useCallback, type FormEvent } from "react";
 import type { ActiveChatFollowUp } from "@/lib/chat-followup";
 import type { PendingChatSubmission } from "./chat-workspace-types";
-import type { ChatSession } from "./use-chat-thread-selection";
+import type { CaseChatSession } from "./use-case-chat-selection";
 
 type SubmitContent = (
   content: string,
@@ -12,7 +12,7 @@ type SubmitContent = (
 ) => void;
 
 interface WorkspaceSubmissionActionsOptions {
-  session: Pick<ChatSession, "input" | "pendingFollowUp" | "getPendingSubmission" | "getActiveThreadId" | "reportError">;
+  session: Pick<CaseChatSession, "input" | "pendingFollowUp" | "getPendingSubmission" | "getActiveCaseChatId" | "reportError">;
   submitContent: SubmitContent;
 }
 
@@ -28,7 +28,7 @@ export function useWorkspaceSubmissionActions({
 
   const retryQuery = useCallback(() => {
     const pending = session.getPendingSubmission();
-    if (!pending || pending.threadId !== session.getActiveThreadId()) return;
+    if (!pending || pending.caseId !== session.getActiveCaseChatId()) return;
     session.reportError(null);
     submitContent(pending.content, pending.kind, session.pendingFollowUp?.followUp);
   }, [session, submitContent]);

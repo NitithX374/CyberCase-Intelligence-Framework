@@ -1,19 +1,16 @@
-"""Typed report output and report API contracts."""
+"""Typed Case report output and API contracts."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 ReportSupportType = Literal[
     "user_reported",
     "analytical_inference",
-    "general_technical_knowledge",
-    "mitre_mapping_candidate",
     "unknown",
 ]
 ReportStatus = Literal["provisional_unverified"]
@@ -22,7 +19,7 @@ ReportValidationStatus = Literal["validated", "failed"]
 ReportVersion = Literal["preliminary_analysis_report_v1"]
 ReportSectionId = Literal[
     "case_summary",
-    "indicators_found",
+    "case_evidence",
     "mitre_attack_mapping",
     "mapping_rationale",
     "evidence_to_examine",
@@ -33,7 +30,7 @@ ReportHeading = str
 
 PRELIMINARY_REPORT_SECTION_IDS: tuple[str, ...] = (
     "case_summary",
-    "indicators_found",
+    "case_evidence",
     "mitre_attack_mapping",
     "mapping_rationale",
     "evidence_to_examine",
@@ -42,13 +39,13 @@ PRELIMINARY_REPORT_SECTION_IDS: tuple[str, ...] = (
 )
 
 PRELIMINARY_REPORT_SECTION_HEADINGS: dict[str, str] = {
-    "case_summary": "1. ภาพรวมเหตุการณ์",
-    "indicators_found": "2. ลำดับเหตุการณ์สำคัญและหลักฐาน",
-    "mitre_attack_mapping": "4. ข้อมูลอ้างอิง MITRE ATT&CK ที่เกี่ยวข้อง",
-    "mapping_rationale": "เหตุผลการเชื่อมโยงเชิงวิเคราะห์",
-    "evidence_to_examine": "5. ประเด็นที่ยังไม่สามารถยืนยันได้",
-    "preliminary_recommendations": "6. ประเด็นที่ควรตรวจสอบเพิ่มเติม",
-    "system_limitations": "7. ข้อจำกัดของรายงาน",
+    "case_summary": "1. สรุปคดี",
+    "case_evidence": "2. ตัวบ่งชี้ที่พบ",
+    "mitre_attack_mapping": "3. MITRE ATT&CK Mapping",
+    "mapping_rationale": "4. เหตุผลของการ Mapping",
+    "evidence_to_examine": "5. หลักฐานที่ควรตรวจสอบ",
+    "preliminary_recommendations": "6. คำแนะนำเบื้องต้น",
+    "system_limitations": "7. ข้อจำกัดของระบบ",
 }
 
 REPORT_SECTION_IDS_BY_VERSION: dict[str, tuple[str, ...]] = {
@@ -67,7 +64,6 @@ class ReportClaim(BaseModel):
     section_id: ReportSectionId
     text: str = Field(min_length=1, max_length=4_000)
     support_type: ReportSupportType
-    source_message_ids: list[str] = Field(default_factory=list, max_length=32)
     source_evidence_ids: list[str] = Field(default_factory=list, max_length=32)
     mitre_technique_ids: list[str] = Field(default_factory=list, max_length=32)
 
@@ -78,7 +74,7 @@ class ReportSection(BaseModel):
     section_id: ReportSectionId
     heading: ReportHeading
     paragraphs: list[str] = Field(default_factory=list, max_length=16)
-    items: list[str] = Field(default_factory=list, max_length=32)
+    items: list[str] = Field(default_factory=list, max_length=256)
 
 
 class StructuredReport(BaseModel):
@@ -90,20 +86,6 @@ class StructuredReport(BaseModel):
     sections: list[ReportSection] = Field(min_length=7, max_length=7)
     claims: list[ReportClaim] = Field(default_factory=list, max_length=96)
     limitations: list[str] = Field(default_factory=list, max_length=32)
-
-
-class ChatReportCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    idempotency_key: str | None = Field(default=None, max_length=255)
-
-    @field_validator("idempotency_key")
-    @classmethod
-    def normalize_idempotency_key(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
 
 
 class CaseReportCreate(BaseModel):
@@ -125,12 +107,10 @@ class CaseReportRead(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     report_id: UUID
-    id: UUID | None = None
-    case_id: UUID | None = None
-    analysis_result_id: UUID | None = None
     version_number: int
     idempotency_key: str
-    source_reference_type: Literal["legacy_chat", "case_evidence"] = "case_evidence"
+    case_id: UUID
+    analysis_result_id: UUID
     retrieval_context_id: str | None = None
     prompt_version: str
     persistence_status: ReportPersistenceStatus
@@ -146,15 +126,9 @@ class CaseReportRead(BaseModel):
     output_tokens: int | None
 
 
-# Compatibility alias
-ChatReportRead = CaseReportRead
-
-
 __all__ = [
     "CaseReportCreate",
     "CaseReportRead",
-    "ChatReportCreate",
-    "ChatReportRead",
     "REPORT_SECTION_HEADINGS_BY_VERSION",
     "REPORT_SECTION_IDS_BY_VERSION",
     "PRELIMINARY_REPORT_SECTION_HEADINGS",

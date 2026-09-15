@@ -1,7 +1,7 @@
 import type { CaseAnalysisResultRead } from "@/lib/api";
 import { asArray, asRecord, asString, asStringArray } from "@/lib/case-overview-parsing";
 import type { CaseGap, ClaimType, EpistemicStatus, GapPriority, GapStatus } from "@/lib/case-overview-contracts";
-import { parseCaseCitations, type CaseCitation, type CaseSnapshotSource } from "./case-overview-source";
+import { parseCaseCitations, type CaseCitation, type CaseEvidenceSource } from "./case-overview-source";
 
 export interface CaseTraceClaim {
   claimId: string;
@@ -37,11 +37,10 @@ const gapPriorities = new Set<GapPriority>(["high", "medium", "low"]);
 
 export function parseCaseTrace(
   result: CaseAnalysisResultRead,
-  snapshot: unknown,
-  sources: CaseSnapshotSource[],
+  sources: CaseEvidenceSource[],
 ): ParsedCaseTrace {
   const trace = asRecord(result.trace_json);
-  if (!trace || (trace.version !== "case_analysis_trace_v1" && trace.version !== "analysis_trace_v2") || trace.validation_status !== "validated" || trace.analysis_mode !== "case_overview") throw new Error("The saved Case analysis trace is unavailable or unsupported.");
+  if (!trace || trace.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated" || trace.analysis_mode !== "case_overview") throw new Error("The saved Case analysis trace is unavailable or unsupported.");
   const claims = asArray(trace.claims).map((claim) => parseClaim(claim, sources));
   const gaps = asArray(trace.gaps).map(parseGap);
   const associations = asArray(trace.mitre_associations).map(parseAssociation);
@@ -58,7 +57,7 @@ export function parseCaseTrace(
   };
 }
 
-function parseClaim(value: unknown, sources: CaseSnapshotSource[]): CaseTraceClaim {
+function parseClaim(value: unknown, sources: CaseEvidenceSource[]): CaseTraceClaim {
   const claim = asRecord(value);
   const claimId = asString(claim?.claim_id);
   const claimType = asString(claim?.claim_type) as ClaimType;
@@ -67,7 +66,7 @@ function parseClaim(value: unknown, sources: CaseSnapshotSource[]): CaseTraceCla
   if (!/^A-\d{2,}$/.test(claimId) || !text || !claimTypes.has(claimType) || !epistemicStatuses.has(epistemicStatus)) throw new Error("Analysis claim is invalid.");
   const supportingIds = asStringArray(claim?.supporting_source_ids);
   const contradictingIds = asStringArray(claim?.contradicting_source_ids);
-  if (supportingIds.some((id) => !sources.some((source) => source.id === id)) || contradictingIds.some((id) => !sources.some((source) => source.id === id))) throw new Error("Analysis claim cites evidence outside the snapshot.");
+  if (supportingIds.some((id) => !sources.some((source) => source.id === id)) || contradictingIds.some((id) => !sources.some((source) => source.id === id))) throw new Error("Analysis claim cites evidence outside Case evidence.");
   if (supportingIds.some((id) => contradictingIds.includes(id))) throw new Error("Analysis claim assigns one source to two roles.");
   return {
     claimId,

@@ -7,12 +7,13 @@ from uuid import UUID
 from fastapi import status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.case import Case
 from app.models.caseRun import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatMessage, ChatThread
+from app.models.chat import ChatMessage
 from app.schemas.caseClarifications import CaseClarificationAnswer
-from app.schemas.chat import ChatMessageCreate
+from app.schemas.chat import CaseChatRead, ChatMessageCreate, ChatMessageRead
 from app.schemas.messageMetadata import serialize_message_metadata
 from app.services.followup.caseClarification import (
     CaseClarificationError,
@@ -20,7 +21,6 @@ from app.services.followup.caseClarification import (
 )
 from app.services.workflow.caseRunService import (
     CaseRunError,
-    case_run_fingerprint_matches,
     requeue_failed_case_run,
 )
 
@@ -37,11 +37,52 @@ async def lockCaseChat(
     db: AsyncSession,
     case_id: UUID,
     user_id: UUID | None,
-) -> tuple[Case, ChatThread]:
+) -> Case:
     case = await db.scalar(select(Case).where(Case.id == case_id).with_for_update())
     if case is None or case.user_id != user_id:
         raise CaseChatError("case_not_found", "Case not found", 404)
-    return case, case.chat_thread
+    return case
+
+
+async def getCaseChat(
+    db: AsyncSession,
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+) -> CaseChatRead:
+    case = await db.scalar(
+        select(Case)
+        .options(
+            selectinload(Case.chat_messages),
+            selectinload(Case.case_runs),
+            selectinload(Case.latest_analysis_result),
+        )
+        .where(Case.id == case_id)
+    )
+    if case is None or case.user_id != user_id:
+        raise CaseChatError("case_not_found", "Case not found", 404)
+    messages = [ChatMessageRead.model_validate(message) for message in case.chat_messages]
+    answered_ids = {
+        message.in_reply_to_message_id
+        for message in case.chat_messages
+        if message.in_reply_to_message_id is not None
+    }
+    has_pending_followup = any(
+        message.message_kind == "followup_question" and message.id not in answered_ids
+        for message in case.chat_messages
+    )
+    latest_run = max(case.case_runs, key=lambda item: item.created_at, default=None)
+    if latest_run is not None and latest_run.status in {"queued", "running"}:
+        chat_status = "processing"
+    elif latest_run is not None and latest_run.status == "failed":
+        chat_status = "failed"
+    elif has_pending_followup:
+        chat_status = "awaiting_followup"
+    elif case.latest_analysis_result is not None or messages:
+        chat_status = "answered"
+    else:
+        chat_status = "idle"
+    return CaseChatRead(case_id=case.id, status=chat_status, messages=messages)
 
 
 async def findCaseRunByIdempotencyKey(
@@ -61,8 +102,6 @@ async def findCaseRunByIdempotencyKey(
         run.request_payload.get(key) != value for key, value in expected_payload.items()
     ):
         raise CaseChatError("idempotency_conflict", "Idempotency key was already used with different intent")
-    if not await case_run_fingerprint_matches(db, run):
-        raise CaseChatError("idempotency_conflict", "Case run fingerprint does not match the saved intent")
     if run.request_message_id is None:
         raise CaseChatError("case_chat_request_missing", "Case Chat request message is missing")
     message = await db.get(ChatMessage, run.request_message_id)
@@ -75,7 +114,7 @@ def buildChatRequestPayload(request: ChatMessageCreate, operation: str = "ask") 
     return {
         "operation": operation,
         "content": request.content.strip(),
-        "action": "ask",
+        "action": "conversation",
         "response_language": request.response_language,
     }
 
@@ -99,12 +138,12 @@ async def createCaseChatMessageAndRun(
         raise CaseChatError("case_chat_content_empty", "Case Chat message is empty", 422)
     case, _ = await lockCaseChat(db, case_id, user_id)
 
-    if request.intent in ("followup_answer", "clarification_answer"):
-        target_id = request.in_reply_to_message_id or request.clarification_id
+    if request.intent == "followup_answer":
+        target_id = request.in_reply_to_message_id
         if target_id is None:
             raise CaseChatError(
-                "clarification_id_required",
-                "in_reply_to_message_id or clarification_id is required when intent is followup_answer",
+                "followup_target_required",
+                "in_reply_to_message_id is required when intent is followup_answer",
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         try:
@@ -154,11 +193,6 @@ async def createCaseChatMessageAndRun(
         )
     if not isinstance(context_result.pipeline_config, dict) or not context_result.pipeline_config.get("version"):
         raise CaseChatError("case_ask_context_invalid", "Latest Case analysis configuration is unavailable")
-    analysis_freshness = (
-        "current"
-        if context_result.evidence_revision == case.evidence_revision
-        else "stale"
-    )
     next_ordinal = (
         await db.scalar(
             select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
@@ -176,21 +210,7 @@ async def createCaseChatMessageAndRun(
         analysis_result_id=context_result.id,
         metadata_json=serialize_message_metadata(
             {
-                "analysis_kind": "question_request",
-                "analysis_state_scope": "response_scoped",
-                "context_analysis_result_id": str(context_result.id),
-                "analysis_freshness": analysis_freshness,
-                "evidence_revision": context_result.evidence_revision,
-                "case_evidence_revision": case.evidence_revision,
-                "has_newer_evidence": bool(case.evidence_revision > context_result.evidence_revision),
-                "chat_action": {
-                    "action": "ask",
-                    "route": "case",
-                    "rag_invoked": False,
-                    "retrieval_context_reused": False,
-                    "analysis_mode": "question_answer",
-                    "prompt_version": context_result.pipeline_config.get("version"),
-                },
+                "action": "conversation",
             }
         ),
     )

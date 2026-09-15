@@ -5,12 +5,10 @@ export type CaseReportCreate = {
 
 export type CaseReportRead = {
     report_id: string;
-    id?: string | null;
-    case_id?: string | null;
-    analysis_result_id?: string | null;
     version_number: number;
     idempotency_key: string;
-    source_reference_type: "legacy_chat" | "case_evidence";
+    case_id: string;
+    analysis_result_id: string;
     retrieval_context_id?: string | null;
     prompt_version: string;
     persistence_status: "completed" | "failed";
@@ -28,16 +26,15 @@ export type CaseReportRead = {
 
 export type ReportClaim = {
     claim_id: string;
-    section_id: "case_summary" | "indicators_found" | "mitre_attack_mapping" | "mapping_rationale" | "evidence_to_examine" | "preliminary_recommendations" | "system_limitations";
+    section_id: "case_summary" | "case_evidence" | "mitre_attack_mapping" | "mapping_rationale" | "evidence_to_examine" | "preliminary_recommendations" | "system_limitations";
     text: string;
-    support_type: "user_reported" | "analytical_inference" | "general_technical_knowledge" | "mitre_mapping_candidate" | "unknown";
-    source_message_ids?: string[];
+    support_type: "user_reported" | "analytical_inference" | "unknown";
     source_evidence_ids?: string[];
     mitre_technique_ids?: string[];
 };
 
 export type ReportSection = {
-    section_id: "case_summary" | "indicators_found" | "mitre_attack_mapping" | "mapping_rationale" | "evidence_to_examine" | "preliminary_recommendations" | "system_limitations";
+    section_id: "case_summary" | "case_evidence" | "mitre_attack_mapping" | "mapping_rationale" | "evidence_to_examine" | "preliminary_recommendations" | "system_limitations";
     heading: string;
     paragraphs?: string[];
     items?: string[];

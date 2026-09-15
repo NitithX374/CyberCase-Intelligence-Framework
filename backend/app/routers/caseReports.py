@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -80,6 +81,23 @@ async def download_case_report_pdf(
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Cache-Control": "no-store",
         },
+    )
+
+
+@router.get("/{report_id}/html", response_class=HTMLResponse, status_code=status.HTTP_200_OK)
+async def render_case_report_html(
+    case_id: UUID,
+    report_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        content = await CaseReportService(db).get_report_html(case_id, report_id, user.id)
+    except ReportServiceError as error:
+        raise _report_http_error(error) from error
+    return HTMLResponse(
+        content=content,
+        headers={"Cache-Control": "no-store"},
     )
 
 

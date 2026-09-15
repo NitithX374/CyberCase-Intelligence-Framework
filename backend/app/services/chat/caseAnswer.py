@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Mapping
 from copy import deepcopy
 from uuid import UUID
@@ -11,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.caseRun import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatMessage, ChatThread
+from app.models.chat import ChatMessage
 from app.services.case_analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisResult as AnalysisOutput,
@@ -181,7 +180,6 @@ async def generateCaseAnswer(
         CaseAnalysisTrace(
             analysis_mode="question_answer", summary=answer,
             claims=[deepcopy(known[claim_id]) for claim_id in selected],
-            evidence_sha256=trace.evidence_sha256,
         ),
         build_case_source_registry(analysis_context),
         analysis_context.get("document_source_context", []),

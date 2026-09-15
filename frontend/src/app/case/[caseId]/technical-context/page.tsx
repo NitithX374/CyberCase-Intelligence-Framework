@@ -16,7 +16,7 @@ export default function TechnicalContextPage() {
   return (
     <TechnicalContextView
       analysisResult={analysisQuery.data ?? null}
-      evidenceSnapshot={evidenceQuery.data ?? null}
+      evidenceSources={evidenceQuery.data ?? null}
       onOpenIntake={() => router.push(casePath(caseId, "intake"))}
       onNavigateToSource={() => router.push(casePath(caseId, "materials"))}
     />

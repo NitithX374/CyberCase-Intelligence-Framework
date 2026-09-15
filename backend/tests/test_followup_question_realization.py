@@ -2,7 +2,7 @@ import asyncio
 import json
 from types import SimpleNamespace
 
-from app.services.followup.contracts import GapAnalysis, GapItem
+from app.services.case_analysis.contracts import CaseAnalysisGap
 from app.services.followup.policy import AnthropicFollowUpPolicy
 
 
@@ -43,23 +43,19 @@ def test_question_realizer_receives_only_the_selected_gap(monkeypatch) -> None:
             headers={},
         ),
     )
-    gap = GapItem(
+    gap = CaseAnalysisGap(
+        gap_id="G-01",
         topic="incident time",
         status="NOT_PROVIDED",
         description="The time is absent.",
-        affects="case chronology",
+        affected_claim_ids=[],
         reason="Timing materially affects the analysis.",
         priority="high",
         askable=True,
     )
     result = asyncio.run(
         AnthropicFollowUpPolicy().decide_with_metadata(
-            original_user_content="SECRET RAW CASE EVIDENCE",
-            clarification_exchanges=(),
-            gap_analysis=GapAnalysis(gaps=[gap]),
-            raw_evidence="SECRET RAW CASE EVIDENCE",
-            analysis_answer="SECRET GENERATED ANALYSIS",
-            analysis_context={"secret": "SECRET CONTEXT"},
+            selected_gap=gap,
             client=Client(),
         )
     )

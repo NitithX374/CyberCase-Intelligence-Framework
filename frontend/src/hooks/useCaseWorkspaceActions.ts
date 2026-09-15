@@ -5,7 +5,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   admitCaseDocument,
   admitCaseEvidence,
-  ensureCaseChat,
   getApiErrorMessage,
   getCase,
   startCaseAnalysis,
@@ -17,14 +16,14 @@ import { caseQueryKeys } from "./useCaseQueries";
 import { useCaseAnalysisSubmission } from "./useCaseAnalysisSubmission";
 import { casePath } from "@/features/chat/routing/workspaceRoutes";
 import type { WorkspaceView } from "@/components/common/types";
-import type { ChatSession } from "@/features/chat/workspace/use-chat-thread-selection";
+import type { CaseChatSession } from "@/features/chat/workspace/use-case-chat-selection";
 
 interface UseCaseWorkspaceActionsOptions {
   activeCaseId: string | null;
   activeCase: CaseRead | null;
   isChatOpen?: boolean;
   setIsChatOpen?: Dispatch<SetStateAction<boolean>>;
-  session?: ChatSession;
+  session?: CaseChatSession;
   upsertCase: (caseRecord: CaseRead) => void;
   updateCase: (input: { caseId: string; title: string }) => Promise<CaseRead>;
   router: { push(path: string): void };
@@ -70,12 +69,7 @@ export function useCaseWorkspaceActions({
     setIsChatOpen(true);
     if (!activeCaseId) return;
     try {
-      const threadId = activeCase?.chat_thread_id ?? (await ensureCaseChat(activeCaseId)).id;
-      if (!activeCase?.chat_thread_id) {
-        const current = activeCase ?? await getCase(activeCaseId);
-        upsertCase({ ...current, chat_thread_id: threadId });
-      }
-      await session?.selectThread(threadId);
+      await session?.selectCaseChat(activeCaseId);
     } catch (error) {
       setIsChatOpen(false);
       setActionError(getApiErrorMessage(error, "The Case Chat could not be opened."));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { CaseAnalysisResultRead, CaseClarificationRead, CaseEvidenceSnapshotRead, CaseRunRead, ThreadStatus } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseChatStatus, CaseClarificationRead, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
 import type { SourceMessageRef } from "@/lib/case-overview-contracts";
 import { buildCaseOverview } from "@/lib/case-overview-builder";
 import { CaseOverviewHeader } from "./CaseOverviewHeader";
@@ -26,9 +26,9 @@ export function OverviewSummarySection({ summary }: { summary: string }) {
   );
 }
 interface CaseOverviewViewProps {
-  threadId: string | null;
-  threadTitle: string;
-  threadStatus: ThreadStatus;
+  caseId: string | null;
+  caseTitle: string;
+  chatStatus: CaseChatStatus;
   onOpenChat: () => void;
   onOpenReport: () => void;
   onOpenIntake?: () => void;
@@ -36,19 +36,19 @@ interface CaseOverviewViewProps {
   onOpenTechnicalContext?: () => void;
   onNavigateToSource?: (messageId: string) => void;
   analysisResult: CaseAnalysisResultRead | null;
-  evidenceSnapshot: CaseEvidenceSnapshotRead | null;
+  evidenceSources: EvidenceSourceRead[];
   runStatus: CaseRunRead["status"] | null;
   clarifications: CaseClarificationRead[];
   analysisLoading: boolean;
-  snapshotLoading: boolean;
+  evidenceLoading: boolean;
   run: CaseRunRead | null;
   onRunAnalysis?: () => void;
 }
 
 export function CaseOverviewView({
-  threadId,
-  threadTitle,
-  threadStatus,
+  caseId,
+  caseTitle,
+  chatStatus,
   onOpenChat,
   onOpenReport,
   onOpenIntake,
@@ -56,11 +56,11 @@ export function CaseOverviewView({
   onOpenTechnicalContext,
   onNavigateToSource,
   analysisResult,
-  evidenceSnapshot,
+  evidenceSources,
   runStatus,
   clarifications,
   analysisLoading,
-  snapshotLoading,
+  evidenceLoading,
   run,
   onRunAnalysis,
 }: CaseOverviewViewProps) {
@@ -71,11 +71,11 @@ export function CaseOverviewView({
     citationRole?: "supporting" | "conflicting";
   } | null>(null);
   const overview = useMemo(
-    () => buildCaseOverview(analysisResult, evidenceSnapshot, runStatus),
-    [analysisResult, evidenceSnapshot, runStatus],
+    () => buildCaseOverview(analysisResult, evidenceSources, runStatus),
+    [analysisResult, evidenceSources, runStatus],
   );
 
-  if (!threadId) {
+  if (!caseId) {
     return (
       <CaseOverviewState
         eyebrow="Case overview"
@@ -89,11 +89,11 @@ export function CaseOverviewView({
   }
 
   if (analysisLoading && !analysisResult) {
-    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and its evidence snapshot." actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} processing />;
+    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Intake" onAction={onOpenIntake ?? onOpenChat} processing />;
   }
 
-  if (snapshotLoading && analysisResult) {
-    return <CaseOverviewState title="Loading Case evidence…" description="Restoring the exact evidence snapshot used by this analysis." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenChat} processing />;
+  if (evidenceLoading && analysisResult) {
+    return <CaseOverviewState title="Loading Case evidence…" description="Loading the current Case evidence." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenChat} processing />;
   }
 
   if (runStatus === "failed" && !analysisResult) {
@@ -110,7 +110,7 @@ export function CaseOverviewView({
   }
 
   const pendingClarification = clarifications.find((item) => item.state === "pending");
-  const isAwaitingFollowup = threadStatus === "awaiting_followup" || Boolean(pendingClarification);
+  const isAwaitingFollowup = chatStatus === "awaiting_followup" || Boolean(pendingClarification);
   if (isAwaitingFollowup) {
     const question = pendingClarification?.question?.trim();
     return (
@@ -179,8 +179,8 @@ export function CaseOverviewView({
     >
       <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
         <CaseOverviewHeader
-          key={threadId}
-          threadTitle={threadTitle}
+          key={caseId}
+          caseTitle={caseTitle}
           onOpenReport={onOpenReport}
           onOpenMaterials={onOpenMaterials}
         />
@@ -212,7 +212,7 @@ export function CaseOverviewView({
         <OverviewStatusRail
           overview={overview}
           result={analysisResult}
-          snapshot={evidenceSnapshot}
+          evidenceSources={evidenceSources}
           runStatus={runStatus}
         />
 

@@ -24,7 +24,7 @@ Claims:
 - Distinguish reported facts, qualified analytical inferences, and unknowns.
 - Reported facts and inferences need supporting source IDs copied from the supplied IDs.
 - For each supporting or contradicting source, copy one specific exact quote from the
-  raw evidence. Include its source revision; leave document_id and filename null and
+  raw evidence. Leave document_id and filename null and
   page_numbers empty so the backend can attach document locations.
 - For one claim, a source ID may appear in only one role. If one source contains
   opposing statements, create separate attributed claims or a conflict gap; never
@@ -60,7 +60,7 @@ Re-emit the complete JSON object. This is a provenance correction pass.
 - Copy every exact_quote character-for-character from raw_case_evidence.
 - Do not use ellipses, brackets, paraphrases, translations, OCR corrections, or
   punctuation changes inside exact_quote.
-- Use only authoritative_case_source_ids and the matching source_revision values.
+- Use only authoritative_case_source_ids.
 - For one claim, each source ID may appear in only one role. Split opposing statements
   into separate attributed claims or use a conflict gap.
 - Ensure all claim_ids in involved_parties, timeline, impacts, and gaps reference valid claim IDs from claims.
@@ -85,16 +85,11 @@ def validate_analysis_request(
     if mode == "case_overview" and normalized_question:
         raise CaseAnalysisFailure("analysis_invalid_request", "Case overview mode does not accept a question")
     return mode, normalized_question
-
-
-_validate_analysis_request = validate_analysis_request
-
 __all__ = [
     "CASE_ANALYSIS_PROMPT_VERSION",
     "CASE_MITRE_MAPPING_PROMPT",
     "CASE_TRACE_CORRECTION_PROMPT",
     "MAIN_CASE_ANALYSIS_SYSTEM_PROMPT",
-    "_validate_analysis_request",
     "case_system_prompt",
     "validate_analysis_request",
 ]

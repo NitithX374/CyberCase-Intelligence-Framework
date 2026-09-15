@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import json
 from types import SimpleNamespace
 from uuid import uuid4
@@ -37,7 +36,6 @@ def _fixtures():
         supporting_citations=[
             CaseEvidenceCitation(
                 source_id=source_id,
-                source_revision=1,
                 exact_quote=text,
             )
         ],
@@ -46,9 +44,8 @@ def _fixtures():
         analysis_mode="case_overview",
         summary=claim.text,
         claims=[claim],
-        evidence_sha256="a" * 64,
     )
-    manifest = ({"source_id": source_id, "exact_text": text, "revision": 1},)
+    manifest = ({"source_id": source_id, "exact_text": text},)
     applicability = MitreApplicabilityRecord(
         decision="RETRIEVE",
         source_message_ids=[source_id],
@@ -112,7 +109,6 @@ def test_nontechnical_case_does_not_call_rag_or_mapping():
             input_text="A bicycle was reported missing.",
             manifest=manifest,
             base_trace=trace,
-            document_context=[],
             config=AnalysisPipelineConfig(),
             applicability_gate=_gate(
                 {"decision": "SKIP", "source_message_ids": [], "trigger_text": []}
@@ -150,7 +146,6 @@ def test_technical_case_calls_rag_and_persists_case_claim_mapping():
             input_text="case evidence",
             manifest=manifest,
             base_trace=trace,
-            document_context=[],
             config=AnalysisPipelineConfig(),
             applicability_gate=gate,
             rag_request=rag,
@@ -167,9 +162,7 @@ def test_technical_case_calls_rag_and_persists_case_claim_mapping():
             (
                 CaseAdmittedSource(
                     source_id,
-                    1,
                     manifest[0]["exact_text"],
-                    hashlib.sha256(manifest[0]["exact_text"].encode()).hexdigest(),
                 ),
             ),
             [],
@@ -198,7 +191,6 @@ def test_empty_retrieval_is_insufficient_without_mapping():
             input_text="case evidence",
             manifest=manifest,
             base_trace=trace,
-            document_context=[],
             config=AnalysisPipelineConfig(),
             applicability_gate=_gate(applicability),
             rag_request=rag,
@@ -222,7 +214,6 @@ def test_rag_transport_failure_preserves_failed_augmentation_status():
             input_text="case evidence",
             manifest=manifest,
             base_trace=trace,
-            document_context=[],
             config=AnalysisPipelineConfig(),
             applicability_gate=_gate(applicability),
             rag_request=rag,

@@ -18,7 +18,9 @@ export type IconName =
   | "alert"
   | "expand"
   | "collapse"
-  | "account";
+  | "account"
+  | "search"
+  | "list";
 
 const paths: Record<IconName, React.ReactNode> = {
   error: (
@@ -117,6 +119,22 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21a8 8 0 0 1 16 0" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 5 5" />
+    </>
+  ),
+  list: (
+    <>
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
     </>
   ),
 };

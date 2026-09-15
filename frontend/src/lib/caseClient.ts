@@ -12,8 +12,6 @@ import type {
   EvidenceSourceRead,
   CaseReport,
   CaseChatMessageAccepted,
-  ChatMessageAction,
-  ChatThreadRead,
 } from "./apiTypes";
 import { getApiBaseUrl } from "./apiClient";
 import { normalizeCaseReport } from "./case-report";
@@ -24,18 +22,17 @@ export const createCaseChatMessage = async (
   content: string,
   idempotencyKey: string,
   signal?: AbortSignal,
-  action?: ChatMessageAction,
-  intent?: "ask" | "clarification_answer",
-  clarificationId?: string,
+  intent?: "ask" | "followup_answer",
+  inReplyToMessageId?: string,
 ): Promise<CaseChatMessageAccepted> => {
   const response = await axios.post<CaseChatMessageAccepted>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat/messages`,
     {
       content,
       idempotency_key: idempotencyKey,
-      ...(action ? { action } : {}),
       ...(intent ? { intent } : {}),
-      ...(clarificationId ? { clarification_id: clarificationId } : {}),
+      response_language: "english",
+      ...(inReplyToMessageId ? { in_reply_to_message_id: inReplyToMessageId } : {}),
     },
     { signal },
   );
@@ -208,18 +205,6 @@ export const getCaseRun = async (
   return response.data;
 };
 
-export const ensureCaseChat = async (
-  caseId: string,
-  signal?: AbortSignal,
-): Promise<ChatThreadRead> => {
-  const response = await axios.post<ChatThreadRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat`,
-    {},
-    { signal },
-  );
-  return response.data;
-};
-
 export const listCaseClarifications = async (
   caseId: string,
   signal?: AbortSignal,
@@ -262,6 +247,18 @@ export const downloadCaseReportPdf = async (
 ): Promise<Blob> => {
   const response = await axios.get<Blob>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports/${encodeURIComponent(reportId)}/pdf`,
+    { signal, responseType: "blob", timeout: 120_000 },
+  );
+  return response.data;
+};
+
+export const downloadCaseReportHtml = async (
+  caseId: string,
+  reportId: string,
+  signal?: AbortSignal,
+): Promise<Blob> => {
+  const response = await axios.get<Blob>(
+    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports/${encodeURIComponent(reportId)}/html`,
     { signal, responseType: "blob", timeout: 120_000 },
   );
   return response.data;

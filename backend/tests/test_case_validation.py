@@ -1,5 +1,3 @@
-import hashlib
-
 import pytest
 
 from app.services.case_analysis.contracts import (
@@ -23,9 +21,7 @@ from app.services.document_ingestion.provenance import bind_exact_page_spans
 def _source(source_id: str, content: str) -> CaseAdmittedSource:
     return CaseAdmittedSource(
         source_id=source_id,
-        revision=1,
         content=content,
-        content_sha256=hashlib.sha256(content.encode("utf-8")).hexdigest(),
     )
 
 
@@ -34,7 +30,6 @@ def _trace(claim: CaseAnalysisClaim, content: str) -> CaseAnalysisTrace:
         analysis_mode="case_overview",
         summary=claim.text,
         claims=[claim],
-        evidence_sha256=hashlib.sha256(content.encode("utf-8")).hexdigest(),
     )
 
 
@@ -45,7 +40,6 @@ def test_case_validation_requires_exact_citation_for_each_declared_role(role):
     supporting_citations = [
         CaseEvidenceCitation(
             source_id="s1",
-            source_revision=1,
             exact_quote=content,
         )
     ] if role == "contradicting" else []
@@ -255,7 +249,6 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
     # Scenario from LLM: filename provided from header, but document_id null and pages empty
     citation_partial = CaseEvidenceCitation.model_validate({
         "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
-        "source_revision": 1,
         "exact_quote": "ผู้ต้องหาหลบหนี",
         "filename": "ลำดับ01 รายงานการสอบสวน.pdf",
         "page_numbers": [],
@@ -267,7 +260,6 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
     # Complete locator is preserved
     citation_complete = CaseEvidenceCitation.model_validate({
         "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
-        "source_revision": 1,
         "exact_quote": "ผู้ต้องหาหลบหนี",
         "document_id": "doc-01",
         "filename": "ลำดับ01 รายงานการสอบสวน.pdf",
@@ -293,7 +285,7 @@ def test_validate_case_trace_allows_same_page_multiple_occurrences():
     claim = CaseAnalysisClaim(
         claim_id="A-01", claim_type="reported", text="Fact was reported.", epistemic_status="reported",
         supporting_source_ids=["s1"],
-        supporting_citations=[CaseEvidenceCitation(source_id="s1", source_revision=1, exact_quote="fact repeated")],
+        supporting_citations=[CaseEvidenceCitation(source_id="s1", exact_quote="fact repeated")],
     )
     validated = validate_case_trace(_trace(claim, content), (_source("s1", content),), context)
     assert validated.claims[0].supporting_citations[0].page_numbers == [1]

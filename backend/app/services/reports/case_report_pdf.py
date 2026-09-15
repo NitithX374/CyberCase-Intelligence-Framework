@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
-from html import escape
 from io import BytesIO
 from pathlib import Path
 from uuid import UUID
@@ -17,7 +15,13 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.schemas.reports import StructuredReport
-from app.services.reports.case_report_contracts import CaseReportInputSnapshot
+from app.services.reports.case_report_contracts import CaseReportInput
+from app.services.reports.case_report_pdf_formatting import formatted_text, paragraph_text, plain_text
+from app.services.reports.case_report_pdf_sections import (
+    build_indicator_story,
+    build_source_register_story,
+)
+from app.services.reports.case_report_rendering import CaseReportDisplay, build_case_report_display
 
 
 INK = colors.HexColor("#111827")
@@ -85,66 +89,22 @@ def build_report_styles(font_names: tuple[str, str]) -> dict[str, ParagraphStyle
         "subheading": ParagraphStyle("ReportSubheading", parent=base["Normal"], fontName=bold, fontSize=8.5, leading=11.5, textColor=INK, keepWithNext=True),
         "meta_label": ParagraphStyle("ReportMetaLabel", parent=base["Normal"], fontName=bold, fontSize=8, leading=10.5, textColor=MUTED),
         "meta_value": ParagraphStyle("ReportMetaValue", parent=base["Normal"], fontName=regular, fontSize=8, leading=10.5, textColor=INK),
-        "body": ParagraphStyle("ReportBody", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12.2, textColor=INK),
-        "body_indent": ParagraphStyle("ReportBodyIndent", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12.2, textColor=INK, firstLineIndent=14),
-        "body_small": ParagraphStyle("ReportBodySmall", parent=base["Normal"], fontName=regular, fontSize=7.5, leading=10, textColor=INK),
-        "body_muted": ParagraphStyle("ReportBodyMuted", parent=base["Normal"], fontName=regular, fontSize=8, leading=11, textColor=MUTED),
+        "body": ParagraphStyle("ReportBody", parent=base["Normal"], fontName=regular, fontSize=9.5, leading=13.8, textColor=INK),
+        "body_indent": ParagraphStyle("ReportBodyIndent", parent=base["Normal"], fontName=regular, fontSize=9.5, leading=13.8, textColor=INK, firstLineIndent=14),
+        "body_small": ParagraphStyle("ReportBodySmall", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=11.5, textColor=INK),
+        "body_muted": ParagraphStyle("ReportBodyMuted", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=11.5, textColor=MUTED),
         "table_header": ParagraphStyle("ReportTableHeader", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=9.5, textColor=INK),
         "table_header_center": ParagraphStyle("ReportTableHeaderCenter", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=9.5, textColor=INK, alignment=TA_CENTER),
         "table_cell": ParagraphStyle("ReportTableCell", parent=base["Normal"], fontName=regular, fontSize=7.5, leading=10, textColor=INK),
         "table_cell_center": ParagraphStyle("ReportTableCellCenter", parent=base["Normal"], fontName=regular, fontSize=7.5, leading=10, textColor=INK, alignment=TA_CENTER),
         "table_cell_small": ParagraphStyle("ReportTableCellSmall", parent=base["Normal"], fontName=regular, fontSize=7.5, leading=9.5, textColor=INK),
         "table_cell_code": ParagraphStyle("ReportTableCellCode", parent=base["Normal"], fontName="Courier", fontSize=7, leading=9.5, textColor=INK),
-        "end_note": ParagraphStyle("ReportEndNote", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=10, textColor=MUTED, alignment=TA_CENTER),
+        "end_note": ParagraphStyle("ReportEndNote", parent=base["Normal"], fontName=bold, fontSize=8.5, leading=11.5, textColor=MUTED, alignment=TA_CENTER),
     }
 
 
-def formatted_text(value: object) -> str:
-    """Format markdown text (bold, italic, code, line breaks) into safe ReportLab HTML."""
-    raw = plain_text(value)
-    raw = re.sub(r"^###+\s*[^\n]+\n?", "", raw, flags=re.MULTILINE)
-    escaped = escape(raw)
-    escaped = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
-    escaped = re.sub(r"\*([^\*]+?)\*", r"<i>\1</i>", escaped)
-    escaped = re.sub(r"`([^`]+?)`", r'<font name="Courier" size="7.5">\1</font>', escaped)
-    escaped = escaped.replace("\n", "<br/>")
-    return escaped
-
-
-def paragraph_text(value: object) -> str:
-    return formatted_text(value)
-
-
-def plain_text(value: object) -> str:
-    return (
-        str(value)
-        .replace("\u2010", "-")
-        .replace("\u2011", "-")
-        .replace("\u2012", "-")
-        .replace("\u2013", "-")
-        .replace("\u2014", "-")
-        .replace("\u2212", "-")
-    )
-
-
-def table_style() -> TableStyle:
-    return TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), PANEL),
-        ("TEXTCOLOR", (0, 0), (-1, 0), INK),
-        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 2.0 * mm),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2.0 * mm),
-        ("LEFTPADDING", (0, 0), (-1, -1), 2.0 * mm),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 2.0 * mm),
-        ("GRID", (0, 0), (-1, -1), 0.4, RULE),
-        ("LINEABOVE", (0, 0), (-1, 0), 1.0, DARK_RULE),
-        ("LINEBELOW", (0, 0), (-1, 0), 1.0, DARK_RULE),
-    ])
-
-
 def render_case_report_pdf(
-    snapshot: CaseReportInputSnapshot,
+    report_input: CaseReportInput,
     report: StructuredReport,
     report_id: UUID,
 ) -> bytes:
@@ -160,9 +120,9 @@ def render_case_report_pdf(
         bottomMargin=16 * mm,
         title=plain_text(report.title),
         author="CyberCase Intelligence Framework",
-        subject="Case evidence-bound analysis report",
+        subject="Preliminary case analysis report",
     )
-    story = _story(snapshot, report, styles)
+    story = _story(report_input, report, styles)
     document.build(
         story,
         onFirstPage=lambda canvas, doc: _page_chrome(canvas, doc, report_id),
@@ -172,16 +132,17 @@ def render_case_report_pdf(
 
 
 def _story(
-    snapshot: CaseReportInputSnapshot,
+    report_input: CaseReportInput,
     report: StructuredReport,
     styles: dict[str, ParagraphStyle],
 ) -> list[object]:
+    display = build_case_report_display(report_input, report)
     story: list[object] = [
         Paragraph("CYBERCASE INTELLIGENCE FRAMEWORK", styles["eyebrow"]),
         Spacer(1, 2 * mm),
         Paragraph(paragraph_text(report.title), styles["doc_title"]),
         Spacer(1, 3 * mm),
-        _metadata_table(snapshot, styles),
+        _metadata_table(display, styles),
         Spacer(1, 3 * mm),
         HRFlowable(width="100%", thickness=1.2, color=DARK_RULE),
         Spacer(1, 5 * mm),
@@ -194,27 +155,29 @@ def _story(
             ]
         )
         story.extend(Paragraph(paragraph_text(text), styles["body"]) for text in section.paragraphs)
-        for item in section.items:
-            story.extend(
-                [
-                    Paragraph(f"• {paragraph_text(item)}", styles["body"]),
-                    Spacer(1, 1.2 * mm),
-                ]
-            )
+        if section.section_id == "case_evidence":
+            story.extend(build_indicator_story(display.claims, styles))
+        else:
+            for item in section.items:
+                story.extend(
+                    [
+                        Paragraph(f"• {paragraph_text(item)}", styles["body"]),
+                        Spacer(1, 1.2 * mm),
+                    ]
+                )
         story.append(Spacer(1, 3 * mm))
-    story.extend(_claim_story(report, styles))
-    story.extend(_source_story(snapshot, styles))
+    story.extend(build_source_register_story(display.sources, styles))
     return story
 
 
 def _metadata_table(
-    snapshot: CaseReportInputSnapshot,
+    display: CaseReportDisplay,
     styles: dict[str, ParagraphStyle],
 ) -> Table:
     rows = [
-        ("Case", str(snapshot.case_id)),
-        ("Analysis result", str(snapshot.analysis_result_id)),
-        ("Evidence revision", str(snapshot.evidence_revision)),
+        ("ประเภทเอกสาร", "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น"),
+        ("หลักฐานที่ใช้", f"{len(display.sources)} รายการ"),
+        ("สถานะ", "เบื้องต้น / ยังไม่ยืนยัน"),
     ]
     table = Table(
         [[Paragraph(paragraph_text(label), styles["meta_label"]), Paragraph(paragraph_text(value), styles["meta_value"])] for label, value in rows],
@@ -237,56 +200,14 @@ def _metadata_table(
     return table
 
 
-def _claim_story(
-    report: StructuredReport,
-    styles: dict[str, ParagraphStyle],
-) -> list[object]:
-    story: list[object] = [
-        Paragraph("Key findings and source binding", styles["section_heading"]),
-        Spacer(1, 2 * mm),
-    ]
-    for claim in report.claims:
-        sources = ", ".join(claim.source_evidence_ids) or "No source binding"
-        story.extend(
-            [
-                Paragraph(f"<b>{paragraph_text(claim.claim_id)}</b>: {paragraph_text(claim.text)}", styles["body"]),
-                Paragraph(f"Evidence source IDs: {paragraph_text(sources)}", styles["body_small"]),
-                Spacer(1, 2 * mm),
-            ]
-        )
-    return story
-
-
-def _source_story(
-    snapshot: CaseReportInputSnapshot,
-    styles: dict[str, ParagraphStyle],
-) -> list[object]:
-    story: list[object] = [
-        Paragraph("Admitted case sources", styles["section_heading"]),
-        Spacer(1, 2 * mm),
-    ]
-    for source in snapshot.sources:
-        label = f"{source.source_id} · revision {source.revision}"
-        if source.filename:
-            label += f" · {source.filename}"
-        story.extend(
-            [
-                Paragraph(f"<b>{paragraph_text(label)}</b>", styles["subheading"]),
-                Paragraph(paragraph_text(source.exact_text), styles["body"]),
-                Spacer(1, 2 * mm),
-            ]
-        )
-    return story
-
-
-def _page_chrome(canvas, document, report_id: UUID) -> None:
+def _page_chrome(canvas, document, _report_id: UUID) -> None:
     canvas.saveState()
     canvas.setStrokeColor(DARK_RULE)
     canvas.setLineWidth(0.5)
     canvas.line(document.leftMargin, 11 * mm, A4[0] - document.rightMargin, 11 * mm)
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(colors.HexColor("#4B5563"))
-    canvas.drawString(document.leftMargin, 7 * mm, f"Report {report_id}")
+    canvas.drawString(document.leftMargin, 7 * mm, "CyberCase · Preliminary analysis")
     canvas.drawRightString(A4[0] - document.rightMargin, 7 * mm, f"Page {document.page}")
     canvas.restoreState()
 
@@ -307,5 +228,4 @@ __all__ = [
     "plain_text",
     "register_report_fonts",
     "render_case_report_pdf",
-    "table_style",
 ]

@@ -116,9 +116,7 @@ function responseFor(body) {
     contradicting_citations: [],
   }));
 
-  const hasClarificationAnswer = evidence.includes("FOLLOW-UP ANSWER") ||
-    evidence.includes("CLARIFICATION ANSWER") ||
-    sections.length > 1;
+  const hasClarificationAnswer = evidence.includes("FOLLOW-UP ANSWER") || sections.length > 1;
 
   const gaps = (evidence.includes("needs-clarification") && !hasClarificationAnswer)
     ? [

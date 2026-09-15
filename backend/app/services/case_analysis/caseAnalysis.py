@@ -17,8 +17,8 @@ from app.services.case_analysis.pipelineConfig import AnalysisPipelineConfig
 from app.services.case_analysis.providerStage import request_stage, resolve_target
 from app.services.case_analysis.prompts import (
     CASE_TRACE_CORRECTION_PROMPT,
-    _validate_analysis_request,
     case_system_prompt,
+    validate_analysis_request,
 )
 from app.services.case_analysis.validation import validate_case_trace
 
@@ -94,9 +94,9 @@ async def executeCaseAnalysisPipeline(
         config,
         sources,
         client,
-        receipt,
-        mode,
-        question,
+        receipt=receipt,
+        mode=mode,
+        question=question,
     )
 
 
@@ -107,33 +107,11 @@ async def executeRawDirectPipeline(
     config: AnalysisPipelineConfig,
     sources: tuple[CaseAdmittedSource, ...],
     client: httpx.AsyncClient | None,
-    *args: object,
-    receipt: dict[str, object] | None = None,
+    *,
+    receipt: dict[str, object],
     mode: str = "case_overview",
     question: str | None = None,
-    **kwargs: object,
 ) -> CaseAnalysisResult:
-    actual_receipt = receipt
-    actual_mode = mode
-    actual_question = question
-    if args:
-        if isinstance(args[0], str) and len(args) >= 2 and isinstance(args[1], dict):
-            actual_receipt = args[1]
-            if len(args) > 2 and isinstance(args[2], str):
-                actual_mode = args[2]
-            if len(args) > 3:
-                actual_question = args[3] if isinstance(args[3], str) else None
-        elif isinstance(args[0], dict):
-            actual_receipt = args[0]
-            if len(args) > 1 and isinstance(args[1], str):
-                actual_mode = args[1]
-            if len(args) > 2:
-                actual_question = args[2] if isinstance(args[2], str) else None
-    if actual_receipt is None:
-        actual_receipt = {"calls": []}
-    mode = actual_mode
-    question = actual_question
-    receipt = actual_receipt
     document_quality_context = []
     for item in (context.get("document_source_context") or []):
         if not isinstance(item, dict):
@@ -220,7 +198,6 @@ _DIRECT_TRACE_CORRECTION_CODES = frozenset(
         "case_trace_claim_unbound",
         "case_trace_role_citation_missing",
         "case_trace_citation_role_invalid",
-        "case_trace_citation_revision_invalid",
         "case_trace_citation_quote_invalid",
         "case_trace_party_without_claim",
         "case_trace_party_unknown_claim",
@@ -296,7 +273,7 @@ class MainCaseAnalysisService:
         question: str | None,
         user_message: object,
     ) -> CaseAnalysisResult:
-        validated_mode, validated_question = _validate_analysis_request(
+        validated_mode, validated_question = validate_analysis_request(
             mode,
             question,
         )
@@ -328,7 +305,7 @@ async def request_case_analysis(
     user_message: object,
     client: httpx.AsyncClient | None = None,
 ) -> CaseAnalysisResult:
-    validated_mode, validated_question = _validate_analysis_request(mode, question)
+    validated_mode, validated_question = validate_analysis_request(mode, question)
     return await MainCaseAnalysisService(client=client).analyze(
         mode=validated_mode,
         raw_evidence=raw_evidence,

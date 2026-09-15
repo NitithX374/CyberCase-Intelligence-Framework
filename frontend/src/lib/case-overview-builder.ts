@@ -1,20 +1,21 @@
 import type { CaseAnalysisResultRead } from "@/lib/api";
+import type { EvidenceSourceRead } from "@/lib/api";
 import type { CaseFinding, CaseOverviewData, MitreExplainedCard, TechnicalContextStatus } from "@/lib/case-overview-contracts";
 import { asRecord, asString } from "@/lib/case-overview-parsing";
-import { parseCaseSnapshot, sourceRefs, type CaseSnapshotSource } from "./case-overview-source";
+import { parseCaseEvidence, sourceRefs, type CaseEvidenceSource } from "./case-overview-source";
 import { parseCaseTrace, type CaseTraceAssociation, type CaseTraceClaim } from "./case-overview-trace";
 
 export function buildCaseOverview(
   result: CaseAnalysisResultRead | null,
-  snapshot: unknown | null,
+  evidenceSources: EvidenceSourceRead[] | null,
   runStatus: string | null,
 ): CaseOverviewData {
   const isProcessing = runStatus === "queued" || runStatus === "running";
   if (!result) return emptyCaseOverview(isProcessing);
-  if (!snapshot) return unavailableCaseOverview(isProcessing, "The Case evidence is not available yet.");
+  if (!evidenceSources) return unavailableCaseOverview(isProcessing, "The Case evidence is not available yet.");
   try {
-    const sources = parseCaseSnapshot(snapshot);
-    const trace = parseCaseTrace(result, snapshot, sources);
+    const sources = parseCaseEvidence(evidenceSources);
+    const trace = parseCaseTrace(result, sources);
     const findings = trace.claims.map((claim) => toFinding(claim, trace.associations, sources));
     return {
       hasAnalysis: true,
@@ -50,7 +51,7 @@ function unavailableCaseOverview(isProcessing: boolean, reason: string): CaseOve
 function toFinding(
   claim: CaseTraceClaim,
   associations: CaseTraceAssociation[],
-  sources: CaseSnapshotSource[],
+  sources: CaseEvidenceSource[],
 ): CaseFinding {
   return {
     id: claim.claimId,

@@ -20,7 +20,7 @@ export type CaseAnalysisResultRead = {
     run_id: string;
     evidence_revision: number;
     schema_version: string;
-    status: "validated" | "legacy_unbound";
+    status: "validated";
     answer: string;
     summary: string;
     trace_json: {
@@ -60,7 +60,6 @@ export type CaseClarificationRead = {
     id: string;
     case_id: string;
     origin_analysis_result_id: string;
-    origin_snapshot_id: string;
     gap_key: string;
     gap_id: string;
     topic: string;
@@ -84,8 +83,6 @@ export type CaseRunRead = {
     operation: "analysis" | "ask";
     evidence_revision: number;
     request_message_id: string | null;
-    context_analysis_result_id?: string | null;
-    clarification_id?: string | null;
     status: "queued" | "running" | "completed" | "failed";
     attempt_count: number;
     error_code: string | null;

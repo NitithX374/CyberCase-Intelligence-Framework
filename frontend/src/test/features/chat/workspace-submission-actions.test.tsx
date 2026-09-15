@@ -19,9 +19,9 @@ function SubmissionHarness({ submitContent }: { submitContent: SubmitContent }) 
   const actions = useWorkspaceSubmissionActions({
     session: {
       input: "What happened after the login?",
-      pendingFollowUp: { threadId: "case-1", followUp },
+      pendingFollowUp: { caseId: "case-1", followUp },
       getPendingSubmission: () => null,
-      getActiveThreadId: () => "case-1",
+      getActiveCaseChatId: () => "case-1",
       reportError: vi.fn(),
     },
     submitContent,

@@ -6,8 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   getApiErrorMessage,
   type CaseRead,
-  type ChatThreadDetail,
-  type ChatThreadRead,
+  type CaseChatDetail,
+  type CaseChatRead,
 } from "@/lib/api";
 import type { RunPhase, WorkspaceView } from "@/components/common/types";
 import { chatTranscriptMessages } from "@/lib/chat-followup";
@@ -15,9 +15,9 @@ import { useCaseMutations, useCases } from "@/hooks/useCaseQueries";
 import { useCaseRunPolling } from "@/hooks/useCaseRunPolling";
 import { chatQueryKeys } from "@/hooks/useChatQueries";
 import { casePath, caseRouteState } from "@/features/chat/routing/workspaceRoutes";
-import { useChatSubmission } from "@/features/chat/runs/useChatSubmission";
-import { useChatThreadSelection } from "@/features/chat/workspace/use-chat-thread-selection";
-import { useChatThreadDeletion } from "@/features/chat/workspace/use-chat-thread-deletion";
+import { useCaseChatSubmission } from "@/features/chat/runs/useCaseChatSubmission";
+import { useCaseChatSelection } from "@/features/chat/workspace/use-case-chat-selection";
+import { useCaseDeletion } from "@/features/chat/workspace/use-case-deletion";
 import { useWorkspaceSubmissionActions } from "@/features/chat/workspace/use-workspace-submission-actions";
 import { WorkspaceHeader } from "@/components/layout/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/layout/WorkspaceSidebar";
@@ -25,7 +25,6 @@ import { WorkspaceChatPanel } from "@/components/conversation/WorkspaceChatPanel
 import { DeleteCaseDialog } from "@/components/common/DeleteDialog";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
 import { toUserFacingError } from "@/lib/user-facing-error";
-import { ensureCaseChat } from "@/lib/caseClient";
 
 interface CaseShellLayoutProps {
   children: ReactNode;
@@ -45,7 +44,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   const [chatActionError, setChatActionError] = useState<string | null>(null);
 
   const casesQuery = useCases();
-  const { upsertCase, createMutation, updateMutation, deleteMutation } = useCaseMutations();
+  const { upsertCase, createMutation, deleteMutation } = useCaseMutations();
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
   const activeCase = cases.find((c) => c.id === caseId) ?? null;
 
@@ -53,30 +52,30 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   const runQuery = useCaseRunPolling(
     caseId ?? null,
     runId,
-    activeCase?.chat_thread_id,
+    caseId,
   );
   const runStatus = runQuery.data?.status ?? caseRunStatus(activeCase);
 
   const cacheUpsertCaseFromChat = useCallback(
-    (thread: ChatThreadRead) => {
-      queryClient.setQueryData<ChatThreadDetail>(chatQueryKeys.detail(thread.id), (current) =>
-        current ? { ...current, ...thread } : undefined,
+    (chat: CaseChatRead) => {
+      queryClient.setQueryData<CaseChatDetail>(chatQueryKeys.detail(chat.case_id), (current) =>
+        current ? { ...current, ...chat } : undefined,
       );
     },
     [queryClient],
   );
 
-  const session = useChatThreadSelection({
-    cacheUpsertThread: cacheUpsertCaseFromChat,
+  const session = useCaseChatSelection({
+    cacheUpsertCaseChat: cacheUpsertCaseFromChat,
   });
 
   const {
-    getActiveThreadId,
+    getActiveCaseChatId,
     messages,
     input,
     queryError,
-    selectThread,
-    refreshThread,
+    selectCaseChat,
+    refreshCaseChat,
     clearSelection,
     changeInput,
   } = session;
@@ -86,28 +85,27 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   const lastCompletedRunRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isChatOpen || !activeCase?.chat_thread_id || !latestAnalysisId) return;
+    if (!isChatOpen || !activeCase || !latestAnalysisId) return;
     if (lastRefreshedAnalysisRef.current === latestAnalysisId) return;
     lastRefreshedAnalysisRef.current = latestAnalysisId;
-    void refreshThread(activeCase.chat_thread_id);
-  }, [activeCase?.chat_thread_id, isChatOpen, latestAnalysisId, refreshThread]);
+    void refreshCaseChat(activeCase.id);
+  }, [activeCase, isChatOpen, latestAnalysisId, refreshCaseChat]);
 
   useEffect(() => {
-    if (!isChatOpen || !activeCase?.chat_thread_id || runStatus !== "completed" || !runId) return;
+    if (!isChatOpen || !activeCase || runStatus !== "completed" || !runId) return;
     if (lastCompletedRunRef.current === runId) return;
     lastCompletedRunRef.current = runId;
-    void refreshThread(activeCase.chat_thread_id);
-  }, [activeCase?.chat_thread_id, isChatOpen, runStatus, refreshThread, runId]);
+    void refreshCaseChat(activeCase.id);
+  }, [activeCase, isChatOpen, refreshCaseChat, runId, runStatus]);
 
   useEffect(() => {
     if (!activeCase) return;
-    const threadId = activeCase?.chat_thread_id ?? null;
-    if (!isChatOpen || !threadId) {
-      if (getActiveThreadId() !== null) clearSelection();
+    if (!isChatOpen || !activeCase) {
+      if (getActiveCaseChatId() !== null) clearSelection();
       return;
     }
-    if (getActiveThreadId() !== threadId) void selectThread(threadId);
-  }, [activeCase, clearSelection, getActiveThreadId, isChatOpen, selectThread]);
+    if (getActiveCaseChatId() !== activeCase.id) void selectCaseChat(activeCase.id);
+  }, [activeCase, clearSelection, getActiveCaseChatId, isChatOpen, selectCaseChat]);
 
   const toggleChat = useCallback(async () => {
     if (isChatOpen) {
@@ -119,28 +117,23 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     setIsChatOpen(true);
     if (!caseId) return;
     try {
-      const threadId = activeCase?.chat_thread_id ?? (await ensureCaseChat(caseId)).id;
-      if (!activeCase?.chat_thread_id) {
-        const current = activeCase ?? { id: caseId, title: "New case", status: "idle", chat_thread_id: threadId, evidence_revision: 0, processing_status: "idle", has_pending_clarification: false, analysis_freshness: "missing", created_at: "", updated_at: "" };
-        upsertCase({ ...current, chat_thread_id: threadId });
-      }
-      await selectThread(threadId);
+      await selectCaseChat(caseId);
     } catch (error) {
       setIsChatOpen(false);
       setChatActionError(getApiErrorMessage(error, "The Case Chat could not be opened."));
     }
-  }, [activeCase, caseId, clearSelection, isChatOpen, selectThread, upsertCase]);
+  }, [caseId, clearSelection, isChatOpen, selectCaseChat]);
 
   const handleSelectCase = useCallback(
     (targetCaseId: string) => {
       router.push(casePath(targetCaseId, activeView));
       if (isChatOpen) {
         const selected = cases.find((c) => c.id === targetCaseId);
-        if (selected?.chat_thread_id) void selectThread(selected.chat_thread_id);
+        if (selected) void selectCaseChat(targetCaseId);
         else clearSelection();
       }
     },
-    [activeView, cases, clearSelection, isChatOpen, router, selectThread],
+    [activeView, cases, clearSelection, isChatOpen, router, selectCaseChat],
   );
 
   const handleNewCase = useCallback(async () => {
@@ -162,16 +155,14 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     [caseId, router],
   );
 
-  const { submitContent } = useChatSubmission({
+  const { submitContent } = useCaseChatSubmission({
     session,
     cases,
     upsertCase,
-    updateCase: (inputValue) => updateMutation.mutateAsync(inputValue),
     caseId: caseId ?? null,
-    pendingClarificationId: null,
   });
 
-  const { cancelDelete, confirmDelete } = useChatThreadDeletion({
+  const { cancelDelete, confirmDelete } = useCaseDeletion({
     session,
     deleteCandidate,
     deletingCaseId: deleteMutation.isPending ? deleteMutation.variables ?? null : null,
@@ -200,7 +191,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     handleClearQueryError();
   }, [handleClearQueryError]);
 
-  const workspaceThreadStatus = caseThreadStatus(activeCase, runStatus);
+  const workspaceChatStatus = caseChatStatus(activeCase, runStatus);
   const workspacePhase = determineCaseRunPhase(runStatus, Boolean(activeCase?.latest_analysis_result_id));
   const casesError = casesQuery.error
     ? getApiErrorMessage(casesQuery.error, "Saved cases could not be loaded.")
@@ -252,7 +243,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
         phase={workspacePhase}
         messages={messages}
         visibleMessages={visibleMessages}
-        threadStatus={workspaceThreadStatus}
+        chatStatus={workspaceChatStatus}
         input={input}
         hasAnalysisContext={Boolean(activeCase?.latest_analysis_result_id)}
         onViewChange={handleViewChange}
@@ -289,7 +280,7 @@ function caseRunStatus(caseRecord: CaseRead | null): "queued" | "running" | "fai
   return status === "queued" || status === "running" || status === "failed" ? status : null;
 }
 
-function caseThreadStatus(caseRecord: CaseRead | null, runStatus: string | null) {
+function caseChatStatus(caseRecord: CaseRead | null, runStatus: string | null) {
   if (runStatus === "queued" || runStatus === "running") return "processing" as const;
   if (runStatus === "failed") return "failed" as const;
   return caseRecord?.status ?? null;

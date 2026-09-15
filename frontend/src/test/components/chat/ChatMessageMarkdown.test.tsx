@@ -94,7 +94,7 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
     const messages: PersistedChatMessage[] = [
       {
         id: "msg-user",
-        thread_id: "thread-1",
+        case_id: "caseChat-1",
         ordinal: 1,
         role: "user",
         content: "Check this **user message** with `code`.",
@@ -106,7 +106,7 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
       },
       {
         id: "msg-assistant",
-        thread_id: "thread-1",
+        case_id: "caseChat-1",
         ordinal: 2,
         role: "assistant",
         content: "Here is **assistant response** with `code`.",
@@ -146,7 +146,7 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
     const messages: PersistedChatMessage[] = [
       {
         id: "msg-follow-up",
-        thread_id: "thread-1",
+        case_id: "caseChat-1",
         ordinal: 2,
         role: "assistant",
         content: "Do you have authentication logs?",
@@ -154,8 +154,8 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
         message_kind: "followup_question",
         analysis_result_id: null,
         metadata_json: {
+          action: "follow_up",
           chat_followup: {
-            kind: "clarification",
             selected_gap_detail: {
               topic: "Authentication records for VM access",
               status: "NOT_PROVIDED",

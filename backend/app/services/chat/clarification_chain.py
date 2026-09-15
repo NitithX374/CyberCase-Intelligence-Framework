@@ -35,8 +35,7 @@ def _is_clarification_message(message: ChatMessage) -> bool:
     metadata = message.metadata_json
     if not isinstance(metadata, dict):
         return False
-    followup = metadata.get("chat_followup")
-    return isinstance(followup, dict) and followup.get("kind") == "clarification"
+    return message.message_kind == "followup_question" and metadata.get("action") == "follow_up"
 
 
 def _is_terminal_assistant_message(message: ChatMessage) -> bool:
@@ -44,42 +43,28 @@ def _is_terminal_assistant_message(message: ChatMessage) -> bool:
         return False
     if _is_clarification_message(message):
         return False
-    if message.retrieval_context_id is not None:
-        return True
     metadata = message.metadata_json
-    return isinstance(metadata, dict) and "mitre_table" in metadata
+    return (
+        message.message_kind == "conversation"
+        and isinstance(metadata, dict)
+        and metadata.get("action") == "conversation"
+    )
 
 
 def _followup_context(message: ChatMessage) -> dict[str, str]:
     metadata = message.metadata_json
     followup = metadata.get("chat_followup") if isinstance(metadata, dict) else None
-    context = followup.get("followup_context") if isinstance(followup, dict) else None
-    if not isinstance(context, Mapping):
-        return {}
-    return {
-        key: value
-        for key in ("gap_id", "gap_topic", "gap_key", "evidence_sha256")
-        if isinstance((value := context.get(key)), str) and value
-    }
-
-
-def _answer_context(message: ChatMessage | None) -> dict[str, str]:
-    if message is None or not isinstance(message.metadata_json, dict):
-        return {}
-    context = message.metadata_json.get("clarification_context")
-    if not isinstance(context, Mapping):
+    if not isinstance(followup, Mapping):
         return {}
     mapping = {
-        "answered_gap_id": "gap_id",
-        "answered_gap_topic": "gap_topic",
-        "answered_gap_key": "gap_key",
-        "question_evidence_sha256": "evidence_sha256",
-        "question_message_id": "question_message_id",
+        "gap_id": "gap_id",
+        "topic": "gap_topic",
+        "gap_key": "gap_key",
     }
     return {
         target: value
         for source, target in mapping.items()
-        if isinstance((value := context.get(source)), str) and value
+        if isinstance((value := followup.get(source)), str) and value
     }
 
 
@@ -88,18 +73,14 @@ def _exchange(
     answer: str,
     answer_message: ChatMessage | None,
 ) -> ClarificationExchange:
-    answer_context = _answer_context(answer_message)
-    if answer_context.get("question_message_id") != str(question.id):
-        answer_context = {}
-    context = {**_followup_context(question), **answer_context}
+    context = _followup_context(question)
     return ClarificationExchange(
         question=question.content,
         answer=answer,
         gap_id=context.get("gap_id"),
         gap_topic=context.get("gap_topic"),
         gap_key=context.get("gap_key"),
-        evidence_sha256=context.get("evidence_sha256"),
-        question_message_id=context.get("question_message_id", str(question.id)),
+        question_message_id=str(question.id),
         answer_message_id=(
             str(answer_message.id) if answer_message is not None else None
         ),

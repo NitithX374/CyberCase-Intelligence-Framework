@@ -16,7 +16,6 @@ from app.services.workflow.caseRunService import ClaimedCaseRun
 async def claimCaseRun(
     db: AsyncSession,
     run_id: UUID,
-    _worker_id: str,
 ) -> ClaimedCaseRun | None:
     now = datetime.now(timezone.utc)
     async with db.begin():
@@ -30,8 +29,6 @@ async def claimCaseRun(
                 finished_at=None,
                 error_code=None,
                 error_message=None,
-                lease_owner=None,
-                lease_expires_at=None,
                 updated_at=now,
             )
             .returning(
@@ -47,9 +44,21 @@ async def claimCaseRun(
         row = claimed.mappings().one_or_none()
         if row is None:
             return None
-        case = await db.scalar(select(Case).where(Case.id == row["case_id"]))
+        case = await db.scalar(
+            select(Case).where(Case.id == row["case_id"]).with_for_update()
+        )
         if case is None:
             await _fail_claimed_run(db, row["id"], row["attempt_count"], now, "case_not_found", "Case is missing")
+            return None
+        if case.evidence_revision != row["evidence_revision"]:
+            await _fail_claimed_run(
+                db,
+                row["id"],
+                row["attempt_count"],
+                now,
+                "case_run_superseded",
+                "Case evidence changed before this run started. Retry analysis.",
+            )
             return None
         try:
             assembled = await assembleCaseEvidence(db, case_id=row["case_id"], user_id=None)
@@ -65,7 +74,6 @@ async def claimCaseRun(
                 "source_kind": s.source_kind,
                 "document_id": str(s.document_id) if s.document_id else None,
                 "filename": s.document.filename if s.document else None,
-                "revision": 1,
             }
             for s in assembled.active_sources
         )
@@ -107,16 +115,11 @@ async def _fail_claimed_run(
             error_code=error_code,
             error_message=error_message,
             finished_at=finished_at,
-            lease_owner=None,
-            lease_expires_at=None,
             updated_at=finished_at,
         )
     )
 
 
-claim_case_run = claimCaseRun
-
 __all__ = [
     "claimCaseRun",
-    "claim_case_run",
 ]

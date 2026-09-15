@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ report.title }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm 16mm; }
+    :root { color-scheme: light; font-family: "Noto Sans Thai", "Garuda", "Tahoma", sans-serif; color: #172033; background: #f4f6f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f4f6f8; color: #172033; font-size: 14px; line-height: 1.7; }
+    .document { width: min(100%, 900px); margin: 0 auto; padding: 36px 28px 48px; background: #ffffff; }
+    .eyebrow { margin: 0 0 8px; color: #526173; font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+    h1 { margin: 0; color: #172033; font-size: 30px; line-height: 1.25; }
+    .report-type { margin: 8px 0 20px; color: #526173; font-size: 14px; }
+    .purpose { margin: 0 0 24px; padding: 15px 18px; border-left: 4px solid #2d5678; background: #eef4f8; }
+    .purpose p { margin: 3px 0 0; }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 28px; }
+    .meta-card { min-width: 160px; padding: 10px 13px; border: 1px solid #dbe3ea; background: #fbfcfd; }
+    .meta-card span { display: block; color: #66758a; font-size: 11px; }
+    .meta-card strong { display: block; margin-top: 2px; font-size: 14px; }
+    .report-section, .source-register { margin-top: 25px; break-inside: avoid; }
+    .report-section h2, .source-register h2 { margin: 0 0 13px; padding: 8px 13px; border: 1px solid #d5e0e8; background: #edf3f7; color: #1d4668; font-size: 18px; line-height: 1.4; }
+    .paragraph { margin: 0 0 10px; white-space: pre-wrap; }
+    .items { margin: 8px 0 0; padding-left: 23px; }
+    .items li { margin: 5px 0; white-space: pre-wrap; }
+    .indicator-list { display: grid; gap: 13px; }
+    .indicator { padding: 14px 16px; border: 1px solid #d9e2e9; border-radius: 6px; background: #ffffff; break-inside: avoid; }
+    .indicator-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; color: #1d4668; font-weight: 700; }
+    .badge { padding: 2px 8px; border-radius: 999px; background: #edf3f7; color: #526173; font-size: 11px; font-weight: 600; }
+    .indicator p { margin: 0 0 6px; white-space: pre-wrap; }
+    .indicator-meta { color: #526173; font-size: 12px; }
+    .quote { margin-top: 9px; padding: 8px 11px; border-left: 3px solid #a5bacb; background: #f6f8fa; color: #38485a; font-size: 13px; white-space: pre-wrap; }
+    .reasoning { margin-top: 8px; color: #526173; font-size: 12px; white-space: pre-wrap; }
+    .source-register { margin-top: 34px; padding-top: 5px; border-top: 2px solid #1d4668; }
+    .source-register p { margin: 0 0 10px; color: #66758a; font-size: 12px; }
+    .source-row { padding: 7px 0; border-bottom: 1px solid #e5ebef; }
+    .source-row strong { color: #1d4668; }
+    footer { margin-top: 34px; padding-top: 12px; border-top: 1px solid #dbe3ea; color: #66758a; font-size: 11px; }
+    @media print {
+      body { background: #ffffff; }
+      .document { width: auto; padding: 0; }
+      .report-section, .source-register { break-inside: auto; }
+      .indicator { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <article class="document">
+    <header>
+      <p class="eyebrow">CYBERCASE INTELLIGENCE FRAMEWORK</p>
+      <h1>{{ report.title }}</h1>
+      <p class="report-type">รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น</p>
+      <div class="purpose">
+        <strong>วัตถุประสงค์ของรายงาน</strong>
+        <p>ช่วยให้ผู้ตรวจสอบเห็นภาพรวมของคดี ประเด็นสำคัญ และหลักฐานที่ควรตรวจสอบต่อ โดยไม่ใช่คำวินิจฉัยทางกฎหมาย</p>
+      </div>
+      <div class="meta">
+        <div class="meta-card"><span>หลักฐานที่ใช้</span><strong>{{ display.sources | length }} รายการ</strong></div>
+        <div class="meta-card"><span>สถานะ</span><strong>เบื้องต้น / ยังไม่ยืนยัน</strong></div>
+      </div>
+    </header>
+    <main>
+      {% for section in report.sections %}
+      <section class="report-section" id="{{ section.section_id }}">
+        <h2>{{ section.heading }}</h2>
+        {% for paragraph in section.paragraphs %}
+        <p class="paragraph">{{ paragraph | clean_report_text }}</p>
+        {% endfor %}
+        {% if section.section_id == "case_evidence" and display.claims %}
+        <div class="indicator-list">
+          {% for claim in display.claims %}
+          <article class="indicator">
+            <div class="indicator-head">
+              <span>ตัวบ่งชี้ {{ claim.ordinal }}</span>
+              <span class="badge">{{ claim.epistemic_label }}</span>
+            </div>
+            <p>{{ claim.text | clean_report_text }}</p>
+            <div class="indicator-meta">
+              {{ claim.support_label }} ·
+              {% if claim.source_labels %}อ้างอิง: {{ claim.source_labels | join(", ") }}{% else %}ไม่มีการอ้างอิงโดยตรง{% endif %}
+              {% if claim.contradicting_source_labels %} · ข้อมูลขัดแย้ง: {{ claim.contradicting_source_labels | join(", ") }}{% endif %}
+            </div>
+            {% for quote in claim.supporting_quotes %}<div class="quote">ข้อความจากหลักฐาน: “{{ quote }}”</div>{% endfor %}
+            {% for quote in claim.contradicting_quotes %}<div class="quote">ข้อความที่ขัดแย้ง: “{{ quote }}”</div>{% endfor %}
+            {% if claim.reasoning_summary %}<div class="reasoning">เหตุผลเชิงวิเคราะห์: {{ claim.reasoning_summary | clean_report_text }}</div>{% endif %}
+          </article>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if section.items %}
+        <ul class="items">
+          {% for item in section.items %}<li>{{ item | clean_report_text }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </section>
+      {% endfor %}
+      <section class="source-register">
+        <h2>เอกสาร/หลักฐานอ้างอิง</h2>
+        <p>รายการนี้เป็นดัชนีอ้างอิงของหลักฐานที่ใช้ประกอบรายงาน รายละเอียดข้อความจะแสดงเฉพาะส่วนที่ถูกอ้างในตัวบ่งชี้</p>
+        {% for source in display.sources %}<div class="source-row"><strong>{{ source.label }}</strong> · {{ source.filename }}</div>{% endfor %}
+      </section>
+    </main>
+    <footer>รายงานนี้จัดทำจากหลักฐานของคดีและผลวิเคราะห์ที่บันทึกไว้ ควรตรวจสอบเอกสารต้นฉบับและใช้ดุลยพินิจของผู้ปฏิบัติงานประกอบเสมอ</footer>
+  </article>
+</body>
+</html>

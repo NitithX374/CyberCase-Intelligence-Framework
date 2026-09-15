@@ -99,60 +99,11 @@ def _extract_llm_json(raw: str) -> dict[str, object]:
     ]
 
 
-from app.services.followup.contracts import (
-    GapAnalysis,
-    GapAnalysisResult,
-    GapItem,
-    FollowUpDecision,
-    FollowUpPolicyResult,
-)
+from app.services.case_analysis.contracts import CaseAnalysisGap
+from app.services.followup.contracts import FollowUpDecision, FollowUpPolicyResult
 
 
-def coerceGapAnalysisResult(
-    raw_result: object,
-    *,
-    elapsed_ms: float,
-) -> GapAnalysisResult:
-    if isinstance(raw_result, GapAnalysisResult):
-        return GapAnalysisResult(
-            analysis=normalizeGapAnalysisSemantics(
-                GapAnalysis.model_validate(raw_result.analysis)
-            ),
-            latency_ms=(
-                raw_result.latency_ms
-                if raw_result.latency_ms is not None
-                else elapsed_ms
-            ),
-            input_tokens=countTokensSafely(raw_result.input_tokens),
-            output_tokens=countTokensSafely(raw_result.output_tokens),
-            provider=raw_result.provider,
-            model=raw_result.model,
-        )
-    return GapAnalysisResult(
-        analysis=normalizeGapAnalysisSemantics(
-            GapAnalysis.model_validate(raw_result)
-        ),
-        latency_ms=elapsed_ms,
-    )
-
-
-def normalizeGapAnalysisSemantics(analysis: GapAnalysis) -> GapAnalysis:
-    return GapAnalysis(
-        gaps=[
-            GapItem.model_validate(
-                {
-                    **gap.model_dump(mode="json"),
-                    "status": "NOT_PROVIDED",
-                }
-            )
-            if gap.status == "EXPLICITLY_UNKNOWN" and gap.askable
-            else gap
-            for gap in analysis.gaps
-        ]
-    )
-
-
-def resolveGapReasonCode(gap: GapItem) -> str:
+def resolveGapReasonCode(gap: CaseAnalysisGap) -> str:
     return {
         "NOT_PROVIDED": "material_incident_fact_missing",
         "AMBIGUOUS": "material_incident_fact_ambiguous",
@@ -207,10 +158,8 @@ def normalizeQuestion(question: str) -> str:
 __all__ = [
     "_extract_llm_json",
     "_extract_llm_text",
-    "coerceGapAnalysisResult",
     "coercePolicyResult",
     "countTokensSafely",
-    "normalizeGapAnalysisSemantics",
     "normalizeQuestion",
     "resolveFollowupFailureCode",
     "resolveGapReasonCode",

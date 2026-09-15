@@ -1,28 +1,24 @@
 import type {
+  CaseChatRead,
   ChatMessageRead,
-  ChatRetryRequest,
-  ChatThreadDetail as GeneratedChatThreadDetail,
-  ChatThreadRead,
 } from "./generated/chatTypes";
 
 export type CaseRead = import("./generated/caseTypes").CaseRead;
 export type PersistedChatMessage = ChatMessageRead;
-export type ChatThreadDetail = Omit<
-  GeneratedChatThreadDetail,
-  "messages" | "retry_request"
+export type CaseChatDetail = Omit<
+  CaseChatRead,
+  "messages"
 > & {
   messages: PersistedChatMessage[];
-  retry_request: ChatRetryRequest | null;
 };
-export type ThreadStatus = ChatThreadRead["status"];
-export type ChatMessageAction = "ask" | "add_case_info";
+export type CaseChatStatus = CaseChatRead["status"];
 
 export interface CaseIntakeSubmission {
   title?: string;
   description: string;
 }
 
-export type { ChatThreadRead } from "./generated/chatTypes";
+export type { CaseChatRead } from "./generated/chatTypes";
 export type {
   AdmitExtractionRequest,
   CaseAnalysisAccepted,
@@ -36,7 +32,6 @@ export type {
 } from "./generated/runTypes";
 export type {
   CaseDocumentRead,
-  CaseNarrativeDocumentPageSpan,
   DocumentExtractionRead,
 } from "./generated/caseTypes";
 import type {
@@ -47,20 +42,6 @@ export type {
   CaseEvidenceCreate,
   EvidenceSourceRead,
 };
-
-export type CaseEvidenceSnapshotRead = EvidenceSourceRead[] | {
-  id?: string;
-  case_id?: string;
-  evidence_revision?: number;
-  sources?: EvidenceSourceRead[];
-  manifest_json?: unknown[];
-  text_sha256?: string;
-  manifest_sha256?: string;
-  format_version?: string;
-  input_text?: string;
-  created_at?: string;
-};
-export type EvidenceRevisionRead = Record<string, unknown>;
 export type { CaseReportCreate } from "./generated/reportTypes";
 export type {
   CaseReport,

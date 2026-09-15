@@ -1,5 +1,5 @@
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
-import type { CaseAnalysisResultRead, CaseEvidenceSnapshotRead, PersistedChatMessage, ThreadStatus } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseChatStatus, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
 import type { RunPhase } from "@/components/common/types";
 import { Icon } from "@/components/common/icons";
 import { ChatTranscript } from "./ChatTranscript";
@@ -7,11 +7,11 @@ import { ChatTranscript } from "./ChatTranscript";
 interface ChatPanelProps {
   messages: PersistedChatMessage[];
   input: string;
-  threadStatus: ThreadStatus | null;
+  chatStatus: CaseChatStatus | null;
   phase: RunPhase;
   hasAnalysisContext: boolean;
   leadResult?: CaseAnalysisResultRead | null;
-  leadSnapshot?: CaseEvidenceSnapshotRead | null;
+  evidenceSources?: EvidenceSourceRead[] | null;
   onOpenOverview?: () => void;
   onOpenIntake?: () => void;
   onNavigateToSource?: (messageId: string) => void;
@@ -22,11 +22,11 @@ interface ChatPanelProps {
 export function ChatPanel({
   messages,
   input,
-  threadStatus,
+  chatStatus,
   phase,
   hasAnalysisContext,
   leadResult,
-  leadSnapshot,
+  evidenceSources,
   onOpenOverview,
   onOpenIntake,
   onNavigateToSource,
@@ -34,7 +34,7 @@ export function ChatPanel({
   onSubmit,
 }: ChatPanelProps) {
   const isProcessing = phase === "querying" || phase === "analyzing";
-  const isAwaitingClarification = threadStatus === "awaiting_followup";
+  const isAwaitingClarification = chatStatus === "awaiting_followup";
   const isComposerDisabled = isProcessing || (!isAwaitingClarification && !hasAnalysisContext);
 
   return (
@@ -44,7 +44,7 @@ export function ChatPanel({
           messages={messages}
           isProcessing={isProcessing}
           leadResult={leadResult}
-          leadSnapshot={leadSnapshot}
+          evidenceSources={evidenceSources}
           onOpenOverview={onOpenOverview}
           onNavigateToSource={onNavigateToSource}
         />

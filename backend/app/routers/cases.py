@@ -7,44 +7,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import commit_dependency_transaction, get_db
 from app.models.user import User
-from app.schemas.caseRuns import CaseRunRead
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 from app.schemas.chat import (
     CaseChatMessageAccepted,
+    CaseChatRead,
     ChatMessageCreate,
-    ChatThreadDetail,
-    ChatThreadRead,
 )
 from app.services.auth.dependencies import get_current_user
 from app.services.cases import CaseService
 from app.services.chat import (
     CaseChatError,
-    ChatService,
     createCaseChatMessageAndRun,
+    getCaseChat,
 )
 from app.services.workflow import process_case_run
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
 
-@router.post("/{case_id}/chat", response_model=ChatThreadRead, status_code=status.HTTP_200_OK)
-async def ensure_case_chat(
-    case_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    return await ChatService(db).ensure_thread_for_case(case_id, user_id=user.id)
-
-
-@router.get("/{case_id}/chat", response_model=ChatThreadDetail, status_code=status.HTTP_200_OK)
+@router.get("/{case_id}/chat", response_model=CaseChatRead, status_code=status.HTTP_200_OK)
 async def get_case_chat(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    chat_service = ChatService(db)
-    thread = await chat_service.ensure_thread_for_case(case_id, user_id=user.id)
-    return await chat_service.get_thread(thread.id, user_id=user.id)
+    return await getCaseChat(db, case_id=case_id, user_id=user.id)
 
 
 @router.post(
@@ -75,23 +62,6 @@ async def create_case_chat_message(
         ) from error
     background_tasks.add_task(process_case_run, run.id)
     return CaseChatMessageAccepted(message=message, run=run)
-
-
-@router.get(
-    "/{case_id}/chat/runs/{run_id}",
-    response_model=CaseRunRead,
-    status_code=status.HTTP_200_OK,
-)
-async def get_case_chat_run(
-    case_id: UUID,
-    run_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    chat_service = ChatService(db)
-    thread = await chat_service.ensure_thread_for_case(case_id, user_id=user.id)
-    service = ChatService(db)
-    return await service.get_run(thread.id, run_id)
 
 
 @router.get("", response_model=list[CaseRead], status_code=status.HTTP_200_OK)

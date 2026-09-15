@@ -8,10 +8,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.chat import ThreadStatus
-
 CaseProcessingStatus = Literal["idle", "queued", "running", "failed"]
 CaseAnalysisFreshness = Literal["missing", "current", "stale"]
+CaseStatus = Literal["idle", "processing", "awaiting_followup", "answered", "failed"]
 
 
 class CaseCreate(BaseModel):
@@ -28,8 +27,7 @@ class CaseRead(BaseModel):
     id: UUID
     user_id: UUID | None = None
     title: str
-    status: ThreadStatus
-    chat_thread_id: UUID | None
+    status: CaseStatus
     evidence_revision: int = 0
     latest_analysis_result_id: UUID | None = None
     active_run_id: UUID | None = None
@@ -46,5 +44,6 @@ __all__ = [
     "CaseCreate",
     "CaseRead",
     "CaseProcessingStatus",
+    "CaseStatus",
     "CaseUpdate",
 ]

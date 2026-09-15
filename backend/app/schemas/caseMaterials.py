@@ -42,7 +42,7 @@ class AdmitExtractionRequest(BaseModel):
 class CaseEvidenceCreate(BaseModel):
     exact_text: str = Field(min_length=1, max_length=400_000)
     provenance_json: dict[str, object] = Field(default_factory=dict)
-    source_kind: Literal["narrative", "followup_answer", "clarification_answer", "explicit_chat_addition"] = "narrative"
+    source_kind: Literal["narrative", "followup_answer"] = "narrative"
     source_metadata_json: dict[str, object] = Field(default_factory=dict)
 
 

@@ -7,9 +7,8 @@ import type {
 
 export type CaseReportClaim = Omit<
   ReportClaim,
-  "source_message_ids" | "source_evidence_ids" | "mitre_technique_ids"
+  "source_evidence_ids" | "mitre_technique_ids"
 > & {
-  source_message_ids: string[];
   source_evidence_ids: string[];
   mitre_technique_ids: string[];
 };
@@ -45,7 +44,6 @@ export function normalizeCaseReport(report: CaseReportRead): CaseReport {
           })),
           claims: (report.report.claims ?? []).map((claim) => ({
             ...claim,
-            source_message_ids: claim.source_message_ids ?? [],
             source_evidence_ids: claim.source_evidence_ids ?? [],
             mitre_technique_ids: claim.mitre_technique_ids ?? [],
           })),

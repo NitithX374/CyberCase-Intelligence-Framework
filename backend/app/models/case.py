@@ -1,4 +1,4 @@
-"""Case aggregate owning one primary chat thread."""
+"""Case aggregate owning evidence, analysis, and chat messages."""
 
 from __future__ import annotations
 
@@ -80,32 +80,6 @@ class Case(Base):
         order_by="ChatMessage.ordinal",
         lazy="selectin",
     )
-
-    @property
-    def chat_thread(self) -> Any:
-        from app.models.chat import ChatThread
-
-        messages = getattr(self, "chat_messages", None) or []
-        next_ordinal = (
-            max((m.ordinal for m in messages), default=0) + 1
-            if messages
-            else 1
-        )
-        return ChatThread(
-            id=self.id,
-            case_id=self.id,
-            title=self.title,
-            user_id=self.user_id,
-            next_message_ordinal=next_ordinal,
-            case=self,
-            messages=messages,
-            created_at=self.created_at,
-            updated_at=self.updated_at,
-        )
-
-    @chat_thread.setter
-    def chat_thread(self, val: Any) -> None:
-        pass
 
     user: Mapped["User | None"] = relationship(
         "User",

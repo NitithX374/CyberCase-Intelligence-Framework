@@ -156,8 +156,6 @@ def upgrade() -> None:
         sa.Column("pipeline_config", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
         sa.Column("status", sa.String(length=16), server_default="queued", nullable=False),
         sa.Column("attempt_count", sa.Integer(), server_default="0", nullable=False),
-        sa.Column("lease_owner", sa.String(length=255), nullable=True),
-        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("error_code", sa.String(length=80), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
@@ -173,7 +171,6 @@ def upgrade() -> None:
         sa.UniqueConstraint("case_id", "idempotency_key", name="uq_case_runs_case_id_idempotency_key"),
     )
     op.create_index("ix_case_runs_case_id_created_at", "case_runs", ["case_id", "created_at"])
-    op.create_index("ix_case_runs_status_lease_expires_at", "case_runs", ["status", "lease_expires_at"])
 
     # 8. case_analysis_results
     op.create_table(
@@ -182,7 +179,7 @@ def upgrade() -> None:
         sa.Column("case_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("run_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("evidence_revision", sa.Integer(), nullable=False),
-        sa.Column("schema_version", sa.String(length=80), nullable=False),
+        sa.Column("schema_version", sa.String(length=80), server_default=sa.text("'case_analysis_trace_v1'"), nullable=False),
         sa.Column("status", sa.String(length=24), server_default=sa.text("'validated'"), nullable=False),
         sa.Column("answer", sa.Text(), nullable=False),
         sa.Column("summary", sa.Text(), nullable=False),
@@ -192,7 +189,7 @@ def upgrade() -> None:
         sa.Column("pipeline_config", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
         sa.Column("provider_metadata_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.CheckConstraint("status IN ('validated', 'legacy_unbound')", name="ck_case_analysis_results_status"),
+        sa.CheckConstraint("status IN ('validated')", name="ck_case_analysis_results_status"),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_analysis_results_case_id", ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["run_id"], ["case_runs.id"], name="fk_case_analysis_results_run_id", ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id", name="pk_case_analysis_results"),
