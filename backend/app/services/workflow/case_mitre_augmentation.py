@@ -1,30 +1,22 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from uuid import UUID
 
-import httpx
 from pydantic import ValidationError
 
 from app.schemas.rag import QueryResponse
 from app.services.case_analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisFailure,
     CaseAnalysisTrace,
     CaseMitreAssociation,
-    CaseProviderMitreMapping,
 )
 from app.services.case_analysis.mitre_applicability_gate import (
     MitreApplicabilityRecord,
     evaluate_mitre_applicability,
     skipped_mitre_applicability,
 )
-from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
-from app.services.case_analysis.provider_stage import request_stage, resolve_target
-from app.services.case_analysis.prompts import CASE_MITRE_MAPPING_PROMPT
 from app.services.case_analysis.validation import validate_case_trace
 from app.services.clients.rag_client import RagCallFailure, request_rag
 from app.services.case_materials import CaseSourceBundle, build_rag_query
@@ -78,12 +70,8 @@ async def run_case_mitre_augmentation(
     *,
     run_id: UUID,
     source_bundle: CaseSourceBundle,
-    base_trace: CaseAnalysisTrace,
-    config: AnalysisPipelineConfig,
     applicability_gate=evaluate_mitre_applicability,
     rag_request=request_rag,
-    mapping_request=None,
-    calls: list[dict[str, object]] | None = None,
     on_rag_validated=None,
     reused_context: CaseRagContextPayload | None = None,
 ) -> CaseMitreAugmentation:
@@ -119,36 +107,13 @@ async def run_case_mitre_augmentation(
             except Exception:
                 logger.exception("Case MITRE early persistence callback failed run_id=%s", run_id)
 
-    technique_rows = technique_rows_for_context(context.mitre_table)
-    if not context.retrieval_context_id or not technique_rows:
+    if not context.retrieval_context_id or not context.mitre_table:
         return CaseMitreAugmentation("insufficient_context", applicability, context, (), reused=is_reused)
-
-    try:
-        associations = await (mapping_request or request_case_mitre_mapping)(
-            claims=base_trace.claims,
-            applicability=applicability,
-            context=context,
-            config=config,
-            calls=calls if calls is not None else [],
-        )
-        valid_associations = validate_associations(
-            associations,
-            base_trace.claims,
-            applicability,
-            technique_rows,
-        )
-    except (CaseAnalysisFailure, ValidationError, ValueError):
-        return failed_augmentation("mitre_mapping_invalid", applicability, context)
-    except Exception:
-        logger.exception("Case MITRE mapping failed run_id=%s", run_id)
-        return failed_augmentation("mitre_mapping_error", applicability, context)
-
-    status = "retrieved_with_matches" if valid_associations else "retrieved_without_supported_match"
     return CaseMitreAugmentation(
-        status,
+        "retrieved_from_rag",
         applicability,
         context,
-        tuple(valid_associations),
+        (),
         reused=is_reused,
     )
 
@@ -171,56 +136,6 @@ def merge_case_mitre_trace(
     )
 
 
-async def request_case_mitre_mapping(
-    *,
-    claims: Sequence[CaseAnalysisClaim],
-    applicability: MitreApplicabilityRecord,
-    context: CaseRagContextPayload,
-    config: AnalysisPipelineConfig,
-    calls: list[dict[str, object]],
-    client: httpx.AsyncClient | None = None,
-) -> tuple[CaseMitreAssociation, ...]:
-    content = {
-        "case_claims": [
-            {
-                "claim_id": claim.claim_id,
-                "text": claim.text,
-                "claim_type": claim.claim_type,
-                "epistemic_status": claim.epistemic_status,
-                "supporting_source_ids": claim.supporting_source_ids,
-                "contradicting_source_ids": claim.contradicting_source_ids,
-            }
-            for claim in claims
-        ],
-        "applicability": applicability.model_dump(mode="json"),
-        "external_mitre_table": list(context.mitre_table),
-    }
-    if client is not None:
-        parsed = await request_mapping(client, config, content, calls)
-    else:
-        async with httpx.AsyncClient() as owned_client:
-            parsed = await request_mapping(owned_client, config, content, calls)
-    return tuple(parsed.associations)
-
-
-async def request_mapping(
-    client: httpx.AsyncClient,
-    config: AnalysisPipelineConfig,
-    content: dict[str, object],
-    calls: list[dict[str, object]],
-) -> CaseProviderMitreMapping:
-    return await request_stage(
-        client=client,
-        target=resolve_target(config),
-        config=config,
-        stage="case_mitre_mapping",
-        system=CASE_MITRE_MAPPING_PROMPT,
-        content=content,
-        schema=CaseProviderMitreMapping,
-        calls=calls,
-    )
-
-
 async def evaluate_gate(run_id, case_sources, gate):
     try:
         result = await gate(source_run_id=run_id, case_sources=case_sources)
@@ -228,52 +143,6 @@ async def evaluate_gate(run_id, case_sources, gate):
     except Exception:
         logger.exception("Case MITRE applicability failed run_id=%s", run_id)
         return skipped_mitre_applicability("mitre_applicability_provider_error")
-
-
-def technique_rows_for_context(rows: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
-    return [
-        dict(row)
-        for row in rows
-        if isinstance(row, Mapping)
-        and isinstance(row.get("technique_id"), str)
-        and is_technique_id(row["technique_id"])
-    ]
-
-
-def validate_associations(
-    associations: Sequence[CaseMitreAssociation],
-    claims: Sequence[CaseAnalysisClaim],
-    applicability: MitreApplicabilityRecord,
-    rows: Sequence[Mapping[str, object]],
-) -> list[CaseMitreAssociation]:
-    known_claims = {claim.claim_id: claim for claim in claims}
-    technique_ids = {str(row["technique_id"]) for row in rows}
-    cited_sources = set(applicability.source_message_ids)
-    seen_ids: set[str] = set()
-    validated: list[CaseMitreAssociation] = []
-    for association in associations:
-        if association.association_id in seen_ids:
-            raise ValueError("MITRE association identifiers must be unique")
-        if association.technique_id not in technique_ids:
-            raise ValueError("MITRE association technique is outside retrieved context")
-        if not set(association.claim_ids).issubset(known_claims):
-            raise ValueError("MITRE association claim is outside Case analysis")
-        if not any(
-            set(known_claims[claim_id].supporting_source_ids) & cited_sources
-            for claim_id in association.claim_ids
-        ):
-            raise ValueError("MITRE association has no cited Case claim support")
-        seen_ids.add(association.association_id)
-        validated.append(association)
-    return validated
-
-
-def is_technique_id(value: str) -> bool:
-    if len(value) not in {5, 9} or not value.startswith("T"):
-        return False
-    if len(value) == 5:
-        return value[1:].isdigit()
-    return value[1:5].isdigit() and value[5] == "." and value[6:].isdigit()
 
 
 def failed_augmentation(
@@ -315,7 +184,6 @@ __all__ = [
     "CaseMitreAugmentation",
     "CaseRagContextPayload",
     "merge_case_mitre_trace",
-    "request_case_mitre_mapping",
     "run_case_mitre_augmentation",
     "validated_case_rag_context",
 ]

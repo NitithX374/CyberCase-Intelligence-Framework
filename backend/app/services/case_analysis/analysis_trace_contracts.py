@@ -157,13 +157,6 @@ class CaseProviderAnalysis(BaseModel):
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
 
 
-class CaseProviderMitreMapping(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_mitre_mapping_v1"]
-    associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
-
-
 class CaseAnalysisFailureMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -179,6 +172,5 @@ __all__ = [
     "CaseImpactItem",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
-    "CaseProviderMitreMapping",
     "CaseTimelineItem",
 ]

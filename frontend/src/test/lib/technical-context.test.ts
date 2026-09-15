@@ -100,6 +100,18 @@ describe("buildTechnicalContext", () => {
     expect(result.retrievedOnlyCount).toBe(1);
   });
 
+  it("accepts every RAG row without creating Case mappings", () => {
+    const fixture = technicalContextFixture("retrieved_from_rag", [
+      row,
+      { technique_id: "S0096", name: "Systeminfo", tactic: "", description: "System information utility." },
+    ]);
+    const result = buildTechnicalContext(fixture.result, fixture.evidenceSources);
+    expect(result.status).toBe("retrieved_from_rag");
+    expect(result.techniques).toHaveLength(0);
+    expect(result.retrievedOnlyTechniques.map((item) => item.techniqueId)).toEqual(["T1059.001", "S0096"]);
+    expect(result.retrievedOnlyCount).toBe(2);
+  });
+
   it("renders only the evidence-bound mapped subset", () => {
     const fixture = technicalContextFixture(
       "retrieved_with_matches",

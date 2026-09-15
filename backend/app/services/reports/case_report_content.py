@@ -124,6 +124,8 @@ def build_case_report_limitations(report_input: CaseReportInput) -> list[str]:
         limitations.append("ระบบไม่พบเงื่อนไขที่จำเป็นต้องใช้ MITRE ATT&CK กับคดีนี้")
     elif augmentation.status == "insufficient_context":
         limitations.append("ข้อมูลทางเทคนิคภายนอกไม่เพียงพอสำหรับการจัดทำ mapping")
+    elif augmentation.status == "retrieved_from_rag":
+        limitations.append("ระบบยอมรับรายการ MITRE ทั้งหมดจาก RAG service เป็นบริบททางเทคนิคภายนอก โดยไม่ถือเป็นหลักฐานของคดีหรือการเชื่อมโยงกับ claim")
     elif augmentation.status == "retrieved_without_supported_match":
         limitations.append("พบข้อมูล MITRE ภายนอก แต่ยังไม่มี mapping ที่เชื่อมโยงกับหลักฐานของคดีได้")
     elif augmentation.status == "failed":
@@ -204,6 +206,19 @@ def technical_items(
         return ["ไม่พบเงื่อนไขที่จำเป็นต้องใช้ MITRE ATT&CK กับคดีนี้"]
     if augmentation.status == "insufficient_context":
         return ["มีการร้องขอ MITRE ATT&CK แต่ข้อมูลทางเทคนิคภายนอกไม่เพียงพอ"]
+    if augmentation.status == "retrieved_from_rag":
+        items = []
+        for row in augmentation.mitre_table:
+            identifier = row.get("technique_id") or row.get("name") or "RAG technical reference"
+            name = row.get("name")
+            description = row.get("description")
+            label = str(identifier)
+            if isinstance(name, str) and name.strip() and name.strip() != label:
+                label += f" — {name.strip()}"
+            if isinstance(description, str) and description.strip():
+                label += f" · {description.strip()}"
+            items.append(f"{label} · ยอมรับจาก RAG service เป็นบริบททางเทคนิคภายนอก ไม่ใช่หลักฐานของคดี")
+        return items or ["RAG service ไม่ได้ส่งรายการ MITRE ที่ใช้แสดงผล"]
     if augmentation.status == "retrieved_without_supported_match":
         return ["พบข้อมูล MITRE ATT&CK ภายนอก แต่ยังไม่มี mapping ที่เชื่อมโยงกับหลักฐานของคดีได้"]
     if augmentation.status == "failed":
@@ -243,6 +258,11 @@ def technical_rationale(
         return ["ข้อมูล MITRE ที่ค้นพบยังเป็นข้อมูลภายนอก เพราะไม่ผ่านการเชื่อมโยงกับหลักฐานของคดี"]
     if augmentation is not None and augmentation.status == "insufficient_context":
         return ["ยังไม่มีบริบททางเทคนิคเพียงพอสำหรับการให้เหตุผลของ mapping"]
+    if augmentation is not None and augmentation.status == "retrieved_from_rag":
+        return [
+            f"{row.get('technique_id') or row.get('name') or 'RAG technical reference'}: รายการนี้รับโดยตรงจาก RAG service เพื่อจัดหมวดบริบททางเทคนิค ไม่ได้สร้าง claim association และไม่ยืนยันการเกิดเหตุ"
+            for row in augmentation.mitre_table
+        ] or ["ไม่มีรายการจาก RAG service ให้เหตุผลเพิ่มเติม"]
     if augmentation is not None and augmentation.status == "not_applicable":
         return ["ระบบข้ามการค้นหา MITRE ตามเกณฑ์ความเกี่ยวข้องของคดี"]
     return ["ไม่มีผลการเสริมข้อมูล MITRE ที่บันทึกไว้ จึงไม่มีการอนุมาน mapping จาก metadata"]

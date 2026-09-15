@@ -19,7 +19,6 @@ from app.services.case_analysis.analysis_trace_contracts import (
     CaseInvolvedParty,
     CaseMitreAssociation,
     CaseProviderAnalysis,
-    CaseProviderMitreMapping,
     CaseTimelineItem,
 )
 
@@ -70,7 +69,6 @@ __all__ = [
     "CaseInvolvedParty",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
-    "CaseProviderMitreMapping",
     "CaseTimelineItem",
     "ResponseLanguage",
     "resolve_response_language",

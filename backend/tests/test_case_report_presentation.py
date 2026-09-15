@@ -110,6 +110,39 @@ def _input(technical: bool = False) -> CaseReportInput:
     )
 
 
+def _rag_only_input() -> CaseReportInput:
+    report_input = _input(technical=True)
+    trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
+    augmentation = report_input.technical_augmentation
+    assert augmentation is not None
+    rag_augmentation = CaseReportTechnicalAugmentation.model_validate(
+        {
+            **augmentation.model_dump(mode="json"),
+            "status": "retrieved_from_rag",
+            "mitre_table": [
+                {
+                    "technique_id": "T1059.001",
+                    "name": "PowerShell",
+                    "description": "Command and scripting interpreter.",
+                },
+                {
+                    "technique_id": "S0096",
+                    "name": "Systeminfo",
+                    "entity_type": "Software",
+                    "description": "System information utility.",
+                },
+            ],
+            "association_ids": [],
+        }
+    )
+    return report_input.model_copy(
+        update={
+            "analysis_trace": trace.model_copy(update={"mitre_associations": []}).model_dump(mode="json"),
+            "technical_augmentation": rag_augmentation,
+        }
+    )
+
+
 def test_report_uses_readable_sections_and_restores_analysis_context() -> None:
     report = build_case_template_report(_input())
 
@@ -135,6 +168,16 @@ def test_jinja_report_renders_sections_and_escapes_case_content() -> None:
     assert "บริบททางเทคนิคภายนอก ไม่ใช่หลักฐานของคดี" in html
     assert "&lt;script&gt;กิจกรรม PowerShell ปรากฏในหลักฐาน&lt;/script&gt;" in html
     assert "<script>กิจกรรม PowerShell ปรากฏในหลักฐาน</script>" not in html
+
+
+def test_report_accepts_all_rag_rows_without_claim_mapping() -> None:
+    report = build_case_template_report(_rag_only_input())
+
+    mapping_items = report.sections[2].items
+    rationale_items = report.sections[3].items
+    assert any("T1059.001" in item for item in mapping_items)
+    assert any("S0096" in item for item in mapping_items)
+    assert any("RAG service" in item for item in rationale_items)
 
 
 def test_pdf_report_is_generated_from_the_readable_report_content() -> None:

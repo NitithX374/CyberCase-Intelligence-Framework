@@ -138,6 +138,8 @@ def validate_augmentation_outcome(
         valid = augmentation.applicability.decision == "SKIP" and not has_context and not has_rows and not has_associations
     elif augmentation.status == "insufficient_context":
         valid = augmentation.applicability.decision == "RETRIEVE" and has_context and not has_associations
+    elif augmentation.status == "retrieved_from_rag":
+        valid = augmentation.applicability.decision == "RETRIEVE" and has_context and has_rows and not has_associations
     elif augmentation.status == "retrieved_without_supported_match":
         valid = augmentation.applicability.decision == "RETRIEVE" and has_context and has_rows and not has_associations
     elif augmentation.status == "retrieved_with_matches":
