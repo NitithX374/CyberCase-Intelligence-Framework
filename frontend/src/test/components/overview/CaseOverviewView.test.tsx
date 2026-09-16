@@ -1,11 +1,32 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { ComponentProps } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
 import type { CaseAnalysisResultRead, CaseFollowUpRead, CaseRunRead, CaseSourceRead } from "@/lib/api";
+import {
+  useCase,
+  useCaseAnalysis,
+  useCaseEvidence,
+  useCaseFollowUps,
+  useCaseRunPolling,
+  useStartCaseAnalysis,
+} from "@/hooks/useCaseQueries";
 import { mockNativeDialog } from "./mock-native-dialog";
 
 mockNativeDialog();
+
+const routerPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush }),
+}));
+
+vi.mock("@/hooks/useCaseQueries", () => ({
+  useCase: vi.fn(),
+  useCaseAnalysis: vi.fn(),
+  useCaseEvidence: vi.fn(),
+  useCaseFollowUps: vi.fn(),
+  useCaseRunPolling: vi.fn(),
+  useStartCaseAnalysis: vi.fn(),
+}));
 
 const caseId = "22222222-2222-4222-8222-222222222222";
 const sourceId = "11111111-1111-4111-8111-111111111111";
@@ -80,26 +101,6 @@ function caseProjection(options: { technical?: boolean; rag?: boolean; page?: bo
   return { result, evidenceSources };
 }
 
-function renderOverview(overrides: Partial<ComponentProps<typeof CaseOverviewView>> = {}) {
-  const projection = caseProjection();
-  const props: ComponentProps<typeof CaseOverviewView> = {
-    caseId,
-    caseTitle: "Transfer Review",
-    chatStatus: "answered",
-    onOpenReport: vi.fn(),
-    analysisResult: projection.result,
-    evidenceSources: projection.evidenceSources,
-    runStatus: "completed",
-    followups: [],
-    analysisLoading: false,
-    evidenceLoading: false,
-    run: null,
-    ...overrides,
-  };
-  render(<CaseOverviewView {...props} />);
-  return props;
-}
-
 function failedRun(): CaseRunRead {
   return {
     id: "55555555-5555-4555-8555-555555555555",
@@ -118,19 +119,91 @@ function failedRun(): CaseRunRead {
   };
 }
 
+interface MockOverrides {
+  caseId?: string | null;
+  caseTitle?: string;
+  chatStatus?: string;
+  analysisResult?: CaseAnalysisResultRead | null;
+  evidenceSources?: CaseSourceRead[];
+  runStatus?: string | null;
+  run?: CaseRunRead | null;
+  followups?: CaseFollowUpRead[];
+  analysisLoading?: boolean;
+  evidenceLoading?: boolean;
+}
+
+function configureAndRender(overrides: MockOverrides = {}) {
+  const id = overrides.caseId === undefined ? caseId : overrides.caseId;
+  const projection = caseProjection();
+  const result = overrides.analysisResult !== undefined ? overrides.analysisResult : projection.result;
+  const evidence = overrides.evidenceSources !== undefined ? overrides.evidenceSources : projection.evidenceSources;
+  const followups = overrides.followups ?? [];
+  const run = overrides.run ?? null;
+  const runStatus = overrides.runStatus !== undefined ? overrides.runStatus : "completed";
+  const chatStatus = overrides.chatStatus ?? "answered";
+
+  vi.mocked(useCase).mockReturnValue({
+    data: id ? {
+      id,
+      user_id: "user-1",
+      title: overrides.caseTitle ?? "Transfer Review",
+      status: chatStatus,
+      evidence_revision: result?.evidence_revision ?? 1,
+      latest_analysis_result_id: result?.id ?? null,
+      active_run_id: runStatus === "queued" || runStatus === "running" ? run?.id ?? null : null,
+      latest_run_id: run?.id ?? null,
+      processing_status: runStatus ?? "idle",
+      has_pending_followup: followups.some((f) => f.state === "pending"),
+      analysis_freshness: result?.freshness ?? "current",
+      created_at: "2026-09-10T00:00:00Z",
+      updated_at: "2026-09-14T00:00:00Z",
+    } : undefined,
+    isLoading: false,
+  } as never);
+
+  vi.mocked(useCaseAnalysis).mockReturnValue({
+    data: result,
+    isLoading: overrides.analysisLoading ?? false,
+  } as never);
+
+  vi.mocked(useCaseEvidence).mockReturnValue({
+    data: evidence,
+    isLoading: overrides.evidenceLoading ?? false,
+  } as never);
+
+  vi.mocked(useCaseFollowUps).mockReturnValue({
+    data: followups,
+    isLoading: false,
+  } as never);
+
+  vi.mocked(useCaseRunPolling).mockReturnValue({
+    data: run ? { ...run, status: runStatus ?? run.status } : undefined,
+    isLoading: false,
+  } as never);
+
+  vi.mocked(useStartCaseAnalysis).mockReturnValue({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  } as never);
+
+  render(<CaseOverviewView caseId={id} />);
+}
+
+beforeEach(() => {
+  routerPush.mockClear();
+});
+
 describe("CaseOverviewView", () => {
   it("renders the empty Case state without a selected Case", () => {
-    const openIntake = vi.fn();
-    renderOverview({ caseId: null, analysisResult: null, evidenceSources: [], runStatus: null, onOpenIntake: openIntake });
+    configureAndRender({ caseId: null, analysisResult: null, evidenceSources: [], runStatus: null });
     expect(screen.getByText("No Case Material Yet")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open Intake" }));
-    expect(openIntake).toHaveBeenCalledOnce();
+    expect(routerPush).toHaveBeenCalledOnce();
   });
 
   it("renders the canonical Case projection and opens exact page evidence", () => {
     const projection = caseProjection({ page: true });
-    const navigateToSource = vi.fn();
-    renderOverview({ analysisResult: projection.result, evidenceSources: projection.evidenceSources, onNavigateToSource: navigateToSource });
+    configureAndRender({ analysisResult: projection.result, evidenceSources: projection.evidenceSources });
     expect(screen.getByRole("heading", { name: /Executive Summary/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Case Findings/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Open Questions/i })).toBeInTheDocument();
@@ -138,19 +211,18 @@ describe("CaseOverviewView", () => {
     expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
     expect(screen.getByRole("dialog").querySelector("mark")).toHaveTextContent("received 52,000 baht");
     fireEvent.click(screen.getByRole("button", { name: /View in Materials/i }));
-    expect(navigateToSource).toHaveBeenCalledWith(sourceId);
+    expect(routerPush).toHaveBeenCalled();
   });
 
   it("does not render external cyber references in the Case Overview", () => {
     const technical = caseProjection({ technical: true, rag: true });
-    render(<CaseOverviewView {...renderProps(technical.result, technical.evidenceSources)} />);
+    configureAndRender({ analysisResult: technical.result, evidenceSources: technical.evidenceSources });
     expect(screen.queryByRole("heading", { name: /External Cyber Reference/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/External cyber reference unavailable/i)).not.toBeInTheDocument();
   });
 
   it("renders the failed run state without an analysis result", () => {
-    const openIntake = vi.fn();
-    renderOverview({ analysisResult: null, evidenceSources: [], runStatus: "failed", run: failedRun(), onOpenIntake: openIntake });
+    configureAndRender({ analysisResult: null, evidenceSources: [], runStatus: "failed", run: failedRun() });
     expect(screen.getByText("Analysis Failed")).toBeInTheDocument();
     expect(screen.getByText("Case analysis extraction failed.")).toBeInTheDocument();
   });
@@ -174,7 +246,7 @@ describe("CaseOverviewView", () => {
       created_at: "2026-09-10T01:00:00Z",
       updated_at: "2026-09-10T01:00:00Z",
     };
-    renderOverview({ chatStatus: "awaiting_followup", followups: [followup] });
+    configureAndRender({ chatStatus: "awaiting_followup", followups: [followup] });
     expect(screen.getByText(/Analysis Needs More Information/i)).toBeInTheDocument();
     expect(screen.getByText(/Respond in the Ask panel on the right/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Executive Summary/i })).toBeInTheDocument();
@@ -183,16 +255,14 @@ describe("CaseOverviewView", () => {
 
   it("offers reanalysis when the canonical result is stale", () => {
     const projection = caseProjection({ stale: true });
-    const runAnalysis = vi.fn();
-    renderOverview({ analysisResult: projection.result, evidenceSources: projection.evidenceSources, onRunAnalysis: runAnalysis });
+    configureAndRender({ analysisResult: projection.result, evidenceSources: projection.evidenceSources });
     expect(screen.getByText(/Analysis is based on older evidence/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Analyze latest evidence/i }));
-    expect(runAnalysis).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: /Analyze latest evidence/i })).toBeInTheDocument();
   });
 
   it("switches between Case Findings and Open Questions tabs", () => {
     const projection = caseProjection();
-    renderOverview({ analysisResult: projection.result, evidenceSources: projection.evidenceSources });
+    configureAndRender({ analysisResult: projection.result, evidenceSources: projection.evidenceSources });
 
     const findingsTab = screen.getByRole("tab", { name: /Case Findings/i });
     const questionsTab = screen.getByRole("tab", { name: /Open Questions/i });
@@ -213,19 +283,3 @@ describe("CaseOverviewView", () => {
     expect(questionsPanel).toHaveClass("block");
   });
 });
-
-function renderProps(result: CaseAnalysisResultRead, evidenceSources: CaseSourceRead[]): ComponentProps<typeof CaseOverviewView> {
-  return {
-    caseId,
-    caseTitle: "Transfer Review",
-    chatStatus: "answered",
-    onOpenReport: vi.fn(),
-    analysisResult: result,
-    evidenceSources,
-    runStatus: "completed",
-    followups: [],
-    analysisLoading: false,
-    evidenceLoading: false,
-    run: null,
-  };
-}

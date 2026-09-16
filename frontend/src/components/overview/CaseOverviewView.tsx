@@ -1,9 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { CaseAnalysisResultRead, CaseChatStatus, CaseFollowUpRead, CaseRunRead, CaseSourceRead } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import type { CaseGap, SourceMessageRef } from "@/lib/caseOverviewTypes";
 import { buildCaseOverview } from "@/lib/caseOverview";
+import { detectResponseLanguage } from "@/lib/api";
+import {
+  useCase,
+  useCaseAnalysis,
+  useCaseEvidence,
+  useCaseFollowUps,
+  useCaseRunPolling,
+  useStartCaseAnalysis,
+} from "@/hooks/useCaseQueries";
+import { casePath } from "@/lib/workspaceRoutes";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
 import { OverviewStatusRail } from "./OverviewStatusRail";
@@ -11,54 +21,38 @@ import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdo
 import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
 import { Icon } from "@/components/common/icons";
 
-export function OverviewSummarySection({ summary }: { summary: string }) {
-  if (!summary) return null;
-  return (
-    <section aria-labelledby="overview-summary-heading" className="order-1 min-w-0 space-y-4">
-      <WorkspaceSectionHeader headingId="overview-summary-heading" title="Executive Summary" />
-      <div className="max-w-prose text-sm leading-relaxed text-ink [overflow-wrap:anywhere] sm:text-[15px]">
-        <ChatMessageMarkdown content={summary} />
-      </div>
-    </section>
-  );
-}
 interface CaseOverviewViewProps {
   caseId: string | null;
-  caseTitle: string;
-  chatStatus: CaseChatStatus;
-  onOpenReport: () => void;
-  onOpenIntake?: () => void;
-  onOpenMaterials?: () => void;
-  onOpenTechnicalContext?: () => void;
-  onNavigateToSource?: (messageId: string) => void;
-  analysisResult: CaseAnalysisResultRead | null;
-  evidenceSources: CaseSourceRead[];
-  runStatus: CaseRunRead["status"] | null;
-  followups: CaseFollowUpRead[];
-  analysisLoading: boolean;
-  evidenceLoading: boolean;
-  run: CaseRunRead | null;
-  onRunAnalysis?: () => void;
 }
 
-export function CaseOverviewView({
-  caseId,
-  caseTitle,
-  chatStatus,
-  onOpenReport,
-  onOpenIntake,
-  onOpenMaterials,
-  onOpenTechnicalContext,
-  onNavigateToSource,
-  analysisResult,
-  evidenceSources,
-  runStatus,
-  followups,
-  analysisLoading,
-  evidenceLoading,
-  run,
-  onRunAnalysis,
-}: CaseOverviewViewProps) {
+export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
+  const router = useRouter();
+
+  const caseQuery = useCase(caseId);
+  const activeCase = caseQuery.data ?? null;
+  const analysisQuery = useCaseAnalysis(caseId);
+  const evidenceQuery = useCaseEvidence(caseId);
+  const followupsQuery = useCaseFollowUps(caseId);
+
+  const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
+  const runQuery = useCaseRunPolling(caseId, runId);
+  const runStatus =
+    runQuery.data?.status ??
+    (activeCase?.processing_status === "queued" ||
+    activeCase?.processing_status === "running" ||
+    activeCase?.processing_status === "failed"
+      ? activeCase.processing_status
+      : null);
+
+  const startAnalysisMutation = useStartCaseAnalysis(caseId);
+
+  const analysisResult = analysisQuery.data ?? null;
+  const evidenceSources = evidenceQuery.data ?? [];
+  const followups = followupsQuery.data ?? [];
+  const run = runQuery.data ?? null;
+  const caseTitle = activeCase?.title || "New case";
+  const chatStatus = activeCase?.status ?? "idle";
+
   const [activeSource, setActiveSource] = useState<{
     sourceRef: SourceMessageRef;
     anchorElement: HTMLElement;
@@ -71,6 +65,25 @@ export function CaseOverviewView({
     [analysisResult, evidenceSources, runStatus],
   );
 
+  const navigateToIntake = () => { if (caseId) router.push(casePath(caseId, "intake")); };
+  const navigateToMaterials = () => { if (caseId) router.push(casePath(caseId, "materials")); };
+  const navigateToReport = () => { if (caseId) router.push(casePath(caseId, "report")); };
+
+  const handleRunAnalysis = async () => {
+    if (!caseId || startAnalysisMutation.isPending) return;
+    try {
+      await startAnalysisMutation.mutateAsync({
+        idempotency_key: globalThis.crypto.randomUUID(),
+        response_language: detectResponseLanguage(
+          evidenceSources.map((source) => source.exact_text).join("\n"),
+        ),
+        expected_evidence_revision: activeCase?.evidence_revision ?? 0,
+      });
+    } catch {
+      // Handled by run state / error modals
+    }
+  };
+
   if (!caseId) {
     return (
       <CaseOverviewState
@@ -78,18 +91,18 @@ export function CaseOverviewView({
         title="No Case Material Yet"
         description="Add a case narrative or document in Intake to begin."
         actionLabel="Open Intake"
-        onAction={onOpenIntake}
+        onAction={navigateToIntake}
         actionIcon="intake"
       />
     );
   }
 
-  if (analysisLoading && !analysisResult) {
-    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Intake" onAction={onOpenIntake} processing />;
+  if (analysisQuery.isLoading && !analysisResult) {
+    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Intake" onAction={navigateToIntake} processing />;
   }
 
-  if (evidenceLoading && analysisResult) {
-    return <CaseOverviewState title="Loading Case evidence…" description="Loading the current Case evidence." actionLabel="Open Materials" onAction={onOpenMaterials ?? onOpenIntake} processing />;
+  if (evidenceQuery.isLoading && analysisResult) {
+    return <CaseOverviewState title="Loading Case evidence…" description="Loading the current Case evidence." actionLabel="Open Materials" onAction={navigateToMaterials} processing />;
   }
 
   if (runStatus === "failed" && !analysisResult) {
@@ -99,7 +112,7 @@ export function CaseOverviewView({
         title="Analysis Failed"
         description={run?.error_message || "The case analysis failed to complete. Return to Intake to verify the received Case material and retry."}
         actionLabel="Open Intake"
-        onAction={onOpenIntake}
+        onAction={navigateToIntake}
         actionIcon="intake"
       />
     );
@@ -109,7 +122,7 @@ export function CaseOverviewView({
   const isAwaitingFollowup = chatStatus === "awaiting_followup" || Boolean(pendingFollowUp);
 
   if (overview.unavailableReason) {
-    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Intake" onAction={onOpenIntake} actionIcon="intake" />;
+    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Intake" onAction={navigateToIntake} actionIcon="intake" />;
   }
 
   if (!overview.hasAnalysis && overview.isProcessing) {
@@ -129,7 +142,7 @@ export function CaseOverviewView({
         title="Analysis Required"
         description="This case has material but no completed case-level analysis yet. Return to Intake to run the analysis."
         actionLabel="Open Intake"
-        onAction={onOpenIntake}
+        onAction={navigateToIntake}
         actionIcon="intake"
       />
     );
@@ -147,7 +160,6 @@ export function CaseOverviewView({
         : { sourceRef, anchorElement, sourceKey, citationRole },
     );
   };
-  const sourceNavigation = onNavigateToSource;
   const isStale = analysisResult?.freshness === "stale";
   const analysisKey = analysisResult?.id ?? "case-analysis";
 
@@ -162,8 +174,8 @@ export function CaseOverviewView({
         <CaseOverviewHeader
           key={caseId}
           caseTitle={caseTitle}
-          onOpenReport={onOpenReport}
-          onOpenMaterials={onOpenMaterials}
+          onOpenReport={navigateToReport}
+          onOpenMaterials={navigateToMaterials}
         />
 
         {isAwaitingFollowup && (
@@ -201,15 +213,13 @@ export function CaseOverviewView({
                 <p className="mt-0.5 text-ink-secondary">New case material was added after this analysis.</p>
               </div>
             </div>
-            {onRunAnalysis && (
-              <button
-                type="button"
-                onClick={onRunAnalysis}
-                className="btn-primary rounded-md px-3 py-1.5 text-xs font-semibold"
-              >
-                Analyze latest evidence
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => void handleRunAnalysis()}
+              className="btn-primary rounded-md px-3 py-1.5 text-xs font-semibold"
+            >
+              Analyze latest evidence
+            </button>
           </div>
         )}
 
@@ -284,7 +294,7 @@ export function CaseOverviewView({
             <CaseFindingsSection
               key={analysisKey}
               findings={overview.findings}
-              onNavigateToSource={sourceNavigation}
+              onNavigateToSource={navigateToMaterials}
               onSelectSource={handleSelectSource}
               activeSourceKey={activeSource?.sourceKey ?? null}
             />
@@ -306,7 +316,7 @@ export function CaseOverviewView({
           sourceRef={activeSource.sourceRef}
           anchorElement={activeSource.anchorElement}
           onClose={() => setActiveSource(null)}
-          onNavigateToSource={sourceNavigation}
+          onNavigateToSource={navigateToMaterials}
           citationRole={activeSource.citationRole}
         />
       )}
@@ -326,6 +336,18 @@ function CaseOverviewHeader({ caseTitle, onOpenReport, onOpenMaterials }: { case
         <button type="button" onClick={onOpenReport} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-xs font-semibold text-ivory hover:bg-charcoal-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"><Icon name="report" className="h-3.5 w-3.5" />View report</button>
       </div>
     </header>
+  );
+}
+
+function OverviewSummarySection({ summary }: { summary: string }) {
+  if (!summary) return null;
+  return (
+    <section aria-labelledby="overview-summary-heading" className="order-1 min-w-0 space-y-4">
+      <WorkspaceSectionHeader headingId="overview-summary-heading" title="Executive Summary" />
+      <div className="max-w-prose text-sm leading-relaxed text-ink [overflow-wrap:anywhere] sm:text-[15px]">
+        <ChatMessageMarkdown content={summary} />
+      </div>
+    </section>
   );
 }
 
