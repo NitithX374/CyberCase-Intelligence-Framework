@@ -6,15 +6,16 @@ from docx import Document
 from PIL import Image
 from reportlab.pdfgen import canvas
 
-from app.services.document_ingestion.contracts import (
-    ExtractionMethod,
-    SourceType,
-)
+from app.services.document_ingestion.contracts import ExtractionMethod
 from app.services.document_ingestion.errors import (
     RecognitionProviderError,
     UnsupportedDocumentError,
 )
-from app.services.document_ingestion.recognition import RecognizedPage, RenderedPage
+from app.services.document_ingestion.recognition import (
+    RecognizedPage,
+    RenderedPage,
+    separate_generated_visual_descriptions,
+)
 from app.services.document_ingestion.service import (
     DocumentIngestionLimits,
     DocumentIngestionService,
@@ -28,7 +29,27 @@ class RecordingRecognizer:
 
     async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
         self.pages.append(page.page_number)
-        return RecognizedPage(text=self.text, layout_markdown=self.text)
+        return RecognizedPage(text=self.text)
+
+
+class ConcurrencyTrackingRecognizer:
+    def __init__(self, delay: float = 0.05) -> None:
+        self.delay = delay
+        self.current_concurrency = 0
+        self.max_observed_concurrency = 0
+        self.lock = asyncio.Lock()
+
+    async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
+        async with self.lock:
+            self.current_concurrency += 1
+            if self.current_concurrency > self.max_observed_concurrency:
+                self.max_observed_concurrency = self.current_concurrency
+        try:
+            await asyncio.sleep(self.delay)
+            return RecognizedPage(text=f"page {page.page_number}")
+        finally:
+            async with self.lock:
+                self.current_concurrency -= 1
 
 
 class FailingRecognizer:
@@ -36,7 +57,9 @@ class FailingRecognizer:
         raise RecognitionProviderError("provider unavailable")
 
 
-def _service(recognizer) -> DocumentIngestionService:
+def _service(
+    recognizer, max_concurrent_ocr: int = 4
+) -> DocumentIngestionService:
     return DocumentIngestionService(
         recognizer,
         DocumentIngestionLimits(
@@ -44,6 +67,7 @@ def _service(recognizer) -> DocumentIngestionService:
             max_pages=10,
             max_image_pixels=10_000_000,
             render_longest_edge=1000,
+            max_concurrent_ocr=max_concurrent_ocr,
         ),
     )
 
@@ -87,11 +111,10 @@ def test_docx_uses_native_extraction() -> None:
     )
 
     assert result.extraction_method == ExtractionMethod.NATIVE_DOCX
-    assert [block.text for block in result.pages[0].blocks] == [
-        "รายละเอียดคดี",
-        "มีการโอนเงิน 131,000 บาท",
-    ]
     assert result.pages[0].page_number == 1
+    assert result.pages[0].text_method == "native"
+    assert result.pages[0].verification_status == "native"
+    assert result.pages[0].text == "รายละเอียดคดี\n\nมีการโอนเงิน 131,000 บาท"
     assert recognizer.pages == []
 
 
@@ -105,7 +128,9 @@ def test_text_pdf_does_not_trigger_recognition() -> None:
     )
 
     assert result.extraction_method == ExtractionMethod.NATIVE_PDF
-    assert result.pages[0].blocks[0].source_type == SourceType.NATIVE
+    assert result.pages[0].text_method == "native"
+    assert result.pages[0].verification_status == "native"
+    assert result.pages[0].text.strip() == native_text.strip()
     assert recognizer.pages == []
 
 
@@ -115,7 +140,9 @@ def test_scanned_pdf_page_is_routed_to_recognizer() -> None:
 
     assert result.extraction_method == ExtractionMethod.DOCUMENT_RECOGNITION
     assert recognizer.pages == [1]
-    assert result.pages[0].full_text == "ข้อความจากภาพสแกน"
+    assert result.pages[0].text == "ข้อความจากภาพสแกน"
+    assert result.pages[0].text_method == "ocr"
+    assert result.pages[0].verification_status == "machine_read"
 
 
 def test_pdf_with_tiny_text_layer_is_still_routed_to_recognizer() -> None:
@@ -125,7 +152,8 @@ def test_pdf_with_tiny_text_layer_is_still_routed_to_recognizer() -> None:
     )
 
     assert recognizer.pages == [1]
-    assert result.pages[0].full_text == "complete recognized page"
+    assert result.pages[0].text == "complete recognized page"
+    assert result.pages[0].text_method == "ocr"
 
 
 def test_mixed_pdf_routes_pages_independently_and_preserves_page_numbers() -> None:
@@ -142,21 +170,32 @@ def test_mixed_pdf_routes_pages_independently_and_preserves_page_numbers() -> No
 
     assert result.extraction_method == ExtractionMethod.HYBRID
     assert [page.page_number for page in result.pages] == [1, 2, 3]
+    assert result.pages[0].text_method == "native"
+    assert result.pages[1].text_method == "ocr"
+    assert result.pages[1].text == "recognized page two"
+    assert result.pages[2].text_method == "native"
     assert recognizer.pages == [2]
-    assert result.pages[1].full_text == "recognized page two"
 
 
-def test_block_ids_are_deterministic() -> None:
+def test_concurrent_ocr_is_bounded_by_semaphore() -> None:
+    recognizer = ConcurrencyTrackingRecognizer(delay=0.03)
+    # 6 scanned pages with limit = 2
+    service = _service(recognizer, max_concurrent_ocr=2)
+    result = asyncio.run(service.ingest(_pdf_bytes([None] * 6), "six_pages.pdf"))
+
+    assert len(result.pages) == 6
+    assert [p.page_number for p in result.pages] == [1, 2, 3, 4, 5, 6]
+    assert recognizer.max_observed_concurrency <= 2
+    assert recognizer.max_observed_concurrency > 0
+
+
+def test_document_ids_are_deterministic() -> None:
     content = _docx_bytes("first block", "second block")
     first = asyncio.run(_service(RecordingRecognizer()).ingest(content, "a.docx"))
     second = asyncio.run(_service(RecordingRecognizer()).ingest(content, "b.docx"))
 
     assert first.document_id == second.document_id
-    assert [block.block_id for block in first.pages[0].blocks] == [
-        f"{first.document_id}-P001-B001",
-        f"{first.document_id}-P001-B002",
-    ]
-    assert first.pages[0].blocks[0].block_id == second.pages[0].blocks[0].block_id
+    assert first.pages[0].text == second.pages[0].text
 
 
 def test_unsupported_file_type_fails_cleanly() -> None:
@@ -169,8 +208,17 @@ def test_unsupported_file_type_fails_cleanly() -> None:
 def test_recognizer_failure_is_returned_as_controlled_warning() -> None:
     result = asyncio.run(_service(FailingRecognizer()).ingest(_png_bytes(), "scan.png"))
 
-    assert result.pages[0].blocks == []
+    assert result.pages[0].text == ""
+    assert result.pages[0].verification_status == "needs_review"
     assert "document_recognition_provider_error" in result.warnings[0]
+
+
+def test_generated_visual_descriptions_are_stripped() -> None:
+    raw = "Evidence text before.\n<figure>Generated description of diagram</figure>\nEvidence text after."
+    text, descriptions = separate_generated_visual_descriptions(raw)
+    assert "<figure>" not in text
+    assert "Generated description of diagram" not in text
+    assert "Evidence text before.\n\nEvidence text after." == text
 
 
 def test_prompt_injection_like_document_text_remains_inert_data() -> None:
@@ -179,8 +227,8 @@ def test_prompt_injection_like_document_text_remains_inert_data() -> None:
         _service(RecordingRecognizer(embedded_text)).ingest(_png_bytes(), "scan.png")
     )
 
-    assert result.pages[0].blocks[0].text == embedded_text
-    assert result.pages[0].blocks[0].source_type == SourceType.UNKNOWN
+    assert result.pages[0].text == embedded_text
+    assert result.pages[0].text_method == "ocr"
 
 
 def test_ingestion_does_not_call_rag_or_case_analysis(monkeypatch) -> None:

@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { TechnicalContextView } from "@/components/technical/TechnicalContextView";
 import { useCaseAnalysis, useCaseEvidence } from "@/hooks/useCaseQueries";
-import { casePath } from "@/features/chat/routing/workspaceRoutes";
+import { casePath } from "@/lib/workspaceRoutes";
 
 export default function TechnicalContextPage() {
   const params = useParams();

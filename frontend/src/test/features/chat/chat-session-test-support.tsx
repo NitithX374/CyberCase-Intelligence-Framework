@@ -3,8 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { CaseChatDetail, CaseChatMessageAccepted, CaseChatStatus, CaseRead, ChatMessageRead } from "@/lib/api";
-import { useCaseChatSelection } from "@/features/chat/workspace/use-case-chat-selection";
-import { useCaseChatSubmission } from "@/features/chat/runs/useCaseChatSubmission";
+import { useCaseChat } from "@/features/chat/useCaseChat";
 
 export function message(caseId: string, ordinal: number, role: "user" | "assistant", content: string = role): ChatMessageRead {
   return {
@@ -65,22 +64,22 @@ export function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-export function renderSession(nativeCaseId: string | null = "a") {
+export function renderSession(nativeCaseId: string | null = null) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
   });
   const upsert = vi.fn();
-  const wrapper = ({ children }: { children: ReactNode }) =>
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
   const hook = renderHook(() => {
-    const session = useCaseChatSelection({ cacheUpsertCaseChat: upsert });
-    const submission = useCaseChatSubmission({
-      session,
+    const chat = useCaseChat({
+      caseId: nativeCaseId,
       cases: [caseRecord("a"), caseRecord("b")],
       upsertCase: upsert,
-      caseId: nativeCaseId,
+      isChatOpen: true,
     });
-    return { session, ...submission };
+    return chat;
   }, { wrapper });
   return { ...hook, queryClient, upsert };
 }

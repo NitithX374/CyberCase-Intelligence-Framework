@@ -1,25 +1,13 @@
-import re
+import asyncio
 from dataclasses import dataclass
 
 from fastapi import UploadFile
 
 from app.config import settings
 from app.services.document_ingestion.contracts import (
-    BoundingBox,
-    ContentRole,
-    DocumentBlock,
     DocumentPage,
-    DocumentRegion,
     ExtractionMethod,
     IngestedDocument,
-    IngestionMode,
-    RecognitionCandidate,
-    RecognitionMethod,
-    RecognizedContent,
-    RoutingSummary,
-    RegionType,
-    SourceType,
-    VerificationStatus,
 )
 from app.services.document_ingestion.detection import DocumentKind, detect_document
 from app.services.document_ingestion.errors import (
@@ -30,22 +18,14 @@ from app.services.document_ingestion.errors import (
 from app.services.document_ingestion.parsers import inspect_pdf, parse_docx
 from app.services.document_ingestion.parsers.pdf_text_parser import (
     NativeTextPolicy,
-    split_native_blocks,
+    PdfPageInspection,
 )
-from app.services.document_ingestion.provenance import (
-    build_block_id,
-    build_blocks,
-    build_document_id,
-    build_native_regions,
-    build_region_id,
-)
+from app.services.document_ingestion.provenance import build_document_id
 from app.services.document_ingestion.recognition import (
     DocumentRecognizer,
-    RecognizedPage,
     RenderedPage,
 )
 from app.services.document_ingestion.rendering import (
-    image_dimensions,
     normalize_image,
     render_pdf_page,
 )
@@ -57,6 +37,7 @@ class DocumentIngestionLimits:
     max_pages: int
     max_image_pixels: int
     render_longest_edge: int
+    max_concurrent_ocr: int = 4
 
 
 class DocumentIngestionService:
@@ -70,11 +51,20 @@ class DocumentIngestionService:
         self._limits = limits
         self._native_text_policy = native_text_policy or NativeTextPolicy()
 
+    async def aclose(self) -> None:
+        if hasattr(self._recognizer, "aclose"):
+            await self._recognizer.aclose()
+
+    async def __aenter__(self) -> "DocumentIngestionService":
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.aclose()
+
     async def ingest(
         self,
         content: bytes,
         filename: str,
-        mode: IngestionMode = IngestionMode.UNIFIED,
     ) -> IngestedDocument:
         self.validate_content(content)
         detected = detect_document(content)
@@ -90,13 +80,12 @@ class DocumentIngestionService:
             pages, warnings = await self.ingest_image(content, document_id)
             method = ExtractionMethod.DOCUMENT_RECOGNITION
 
-        full_text = "\n\n".join(page.merged_text for page in pages if page.merged_text)
+        full_text = "\n\n".join(page.text for page in pages if page.text)
         return IngestedDocument(
             document_id=document_id,
             filename=safe_filename,
             media_type=detected.media_type,
             extraction_method=method,
-            mode=mode,
             pages=pages,
             full_text=full_text,
             warnings=warnings,
@@ -121,46 +110,58 @@ class DocumentIngestionService:
             self._native_text_policy,
             self._limits.max_pages,
         )
-        pages = []
-        warnings = []
-        native_page_count = 0
+        semaphore = asyncio.Semaphore(self._limits.max_concurrent_ocr)
 
-        for inspected_page in inspection.pages:
-            if inspected_page.warning:
-                warnings.append(inspected_page.warning)
+        async def process_page(
+            inspected_page: PdfPageInspection,
+        ) -> tuple[DocumentPage, list[str]]:
             if inspected_page.usable_native_text:
-                pages.append(
-                    self.native_page(
-                        document_id,
-                        inspected_page.page_number,
-                        split_native_blocks(inspected_page.text),
-                    )
+                page = DocumentPage(
+                    page_number=inspected_page.page_number,
+                    text=inspected_page.text,
+                    text_method="native",
+                    verification_status="native",
                 )
-                native_page_count += 1
-                continue
+                warnings = [inspected_page.warning] if inspected_page.warning else []
+                return page, warnings
 
-            warnings.append(
+            page_warnings: list[str] = [
                 f"Page {inspected_page.page_number}: native text was not usable; document recognition was requested."
-            )
-            rendered = RenderedPage(
-                document_id,
-                inspected_page.page_number,
-                render_pdf_page(
+            ]
+            if inspected_page.warning:
+                page_warnings.insert(0, inspected_page.warning)
+
+            async with semaphore:
+                image_bytes = await asyncio.to_thread(
+                    render_pdf_page,
                     content,
                     inspected_page.page_number,
                     self._limits.render_longest_edge,
-                ),
-            )
-            page, page_warnings = await self.process_rendered_page(rendered)
-            pages.append(page)
-            warnings.extend(page_warnings)
+                )
+                rendered = RenderedPage(
+                    document_id=document_id,
+                    page_number=inspected_page.page_number,
+                    image_bytes=image_bytes,
+                )
+                doc_page, ocr_warnings = await self.process_rendered_page(rendered)
+                page_warnings.extend(ocr_warnings)
+                return doc_page, page_warnings
 
+        results = await asyncio.gather(
+            *(process_page(page) for page in inspection.pages)
+        )
+
+        pages = [page for page, _ in results]
+        warnings = [warning for _, page_warnings in results for warning in page_warnings]
+
+        native_page_count = sum(1 for page in pages if page.text_method == "native")
         if native_page_count == inspection.page_count:
             method = ExtractionMethod.NATIVE_PDF
         elif native_page_count:
             method = ExtractionMethod.HYBRID
         else:
             method = ExtractionMethod.DOCUMENT_RECOGNITION
+
         return pages, warnings, method
 
     async def ingest_image(
@@ -173,119 +174,42 @@ class DocumentIngestionService:
             self._limits.render_longest_edge,
             self._limits.max_image_pixels,
         )
-        page, warnings = await self.process_rendered_page(RenderedPage(document_id, 1, image_bytes))
+        page, warnings = await self.process_rendered_page(
+            RenderedPage(document_id, 1, image_bytes)
+        )
         return [page], warnings
 
     async def process_rendered_page(
         self,
         rendered_page: RenderedPage,
     ) -> tuple[DocumentPage, list[str]]:
-        page, warning = await self.recognize_page(rendered_page)
-        return page, [warning] if warning else []
-
-    async def recognize_page(
-        self,
-        rendered_page: RenderedPage,
-    ) -> tuple[DocumentPage, str | None]:
         try:
             recognized = await self._recognizer.recognize_page(rendered_page)
+            return (
+                DocumentPage(
+                    page_number=rendered_page.page_number,
+                    text=recognized.text,
+                    text_method="ocr",
+                    verification_status="machine_read",
+                ),
+                [],
+            )
         except DocumentRecognitionError as error:
             warning = f"Page {rendered_page.page_number} [{error.code}]: {error}"
-            return DocumentPage(page_number=rendered_page.page_number), warning
-
-        region = build_unified_region(rendered_page, recognized)
-        texts = [
-            text.strip()
-            for text in re.split(r"\n\s*\n", recognized.text.replace("\r\n", "\n"))
-            if text.strip()
-        ]
-        blocks = build_blocks(
-            rendered_page.document_id,
-            rendered_page.page_number,
-            texts,
-            recognized.source_type,
-        )
-        if len(blocks) == 1:
-            blocks[0] = DocumentBlock(
-                block_id=build_block_id(
-                    rendered_page.document_id, rendered_page.page_number, 1
+            return (
+                DocumentPage(
+                    page_number=rendered_page.page_number,
+                    text="",
+                    text_method="ocr",
+                    verification_status="needs_review",
                 ),
-                text=blocks[0].text,
-                source_type=blocks[0].source_type,
-                bbox=region.bbox,
-                confidence=recognized.confidence,
+                [warning],
             )
-        return DocumentPage(
-            page_number=rendered_page.page_number,
-            regions=[region],
-            merged_text=recognized.text,
-            routing_summary=RoutingSummary(unified=1, unknown=1),
-            blocks=blocks,
-            full_text=recognized.text,
-            layout_markdown=recognized.layout_markdown,
-        ), None
-
-    @staticmethod
-    def native_page(
-        document_id: str,
-        page_number: int,
-        texts: list[str],
-    ) -> DocumentPage:
-        blocks = build_blocks(document_id, page_number, texts, SourceType.NATIVE)
-        regions = build_native_regions(document_id, page_number, texts)
-        full_text = "\n".join(block.text for block in blocks)
-        return DocumentPage(
-            page_number=page_number,
-            regions=regions,
-            merged_text=full_text,
-            routing_summary=RoutingSummary(native=len(regions)),
-            blocks=blocks,
-            full_text=full_text,
-        )
 
     @staticmethod
     def safe_filename(filename: str) -> str:
         safe_filename = filename.replace("\\", "/").split("/")[-1].strip()
         return (safe_filename or "document")[:255]
-
-
-def build_unified_region(
-    page: RenderedPage, recognized: RecognizedPage
-) -> DocumentRegion:
-    width, height = image_dimensions(page.image_bytes)
-    generated = [
-        RecognizedContent(
-            text=description,
-            content_role=ContentRole.GENERATED_VISUAL_DESCRIPTION,
-            verification_status=VerificationStatus.NON_AUTHORITATIVE,
-        )
-        for description in recognized.generated_visual_descriptions
-    ]
-    candidate = RecognitionCandidate(
-        recognition_method=RecognitionMethod.UNIFIED,
-        recognizer=recognized.recognizer,
-        text=recognized.text,
-        confidence=recognized.confidence,
-        words=recognized.words,
-        content_role=ContentRole.TRANSCRIBED_TEXT,
-        verification_status=VerificationStatus.MACHINE_READ,
-    )
-    return DocumentRegion(
-        region_id=build_region_id(page.document_id, page.page_number, 1),
-        page_number=page.page_number,
-        bbox=BoundingBox(x0=0, y0=0, x1=width, y1=height),
-        region_type=RegionType.UNKNOWN,
-        recognition_method=RecognitionMethod.UNIFIED,
-        recognizer=recognized.recognizer,
-        text=recognized.text,
-        recognition_confidence=recognized.confidence,
-        words=recognized.words,
-        verification_status=VerificationStatus.MACHINE_READ,
-        content_role=ContentRole.TRANSCRIBED_TEXT,
-        candidates=[candidate],
-        selected_candidate_index=0,
-        generated_contents=generated,
-    )
 
 
 def build_document_recognizer() -> DocumentRecognizer:
@@ -313,6 +237,7 @@ def build_document_ingestion_service() -> DocumentIngestionService:
             max_pages=settings.document_ingestion_max_pages,
             max_image_pixels=settings.document_ingestion_max_image_pixels,
             render_longest_edge=settings.document_ingestion_render_longest_edge,
+            max_concurrent_ocr=settings.document_ingestion_max_concurrent_ocr,
         ),
     )
 
@@ -329,3 +254,12 @@ async def read_limited(upload: UploadFile) -> bytes:
             )
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+__all__ = [
+    "DocumentIngestionLimits",
+    "DocumentIngestionService",
+    "build_document_ingestion_service",
+    "build_document_recognizer",
+    "read_limited",
+]

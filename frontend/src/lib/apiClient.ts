@@ -133,14 +133,6 @@ export const logout = async (
   return response.data;
 };
 
-export const getOAuthLoginUrl = (
-  provider: "google" = "google",
-  redirect?: string,
-): string => {
-  const base = `${getApiBaseUrl()}/auth/login/${provider}`;
-  return redirect ? `${base}?redirect=${encodeURIComponent(redirect)}` : base;
-};
-
 export const createCaseChatMessage = async (
   caseId: string,
   content: string,

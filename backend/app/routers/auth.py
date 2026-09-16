@@ -1,13 +1,11 @@
-"""Authentication API router for OAuth login, callbacks, user profile, and dev-mode login."""
+"""Authentication API router for registration, login, user profile, and dev-mode login."""
 
 from __future__ import annotations
 
-import secrets
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,11 +24,9 @@ from app.schemas.auth import (
 from app.services.auth.auth_service import (
     build_auth_cookie_options,
     get_or_create_dev_user,
-    get_or_create_oauth_user,
 )
 from app.services.auth.dependencies import get_current_user, get_optional_user
 from app.services.auth.jwt import create_access_token
-from app.services.auth.oauth_clients import get_oauth_client
 from app.services.auth.passwords import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -86,109 +82,6 @@ async def login(
     return start_password_session(user, response)
 
 
-@router.get("/login/{provider}", summary="Initiate OAuth login flow")
-async def oauth_login(
-    provider: str,
-    redirect: str | None = Query(default=None, description="Optional post-login redirect path"),
-) -> RedirectResponse:
-    """Redirect user to OAuth provider's authorization screen."""
-    try:
-        client = get_oauth_client(provider)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
-
-    state = secrets.token_urlsafe(32)
-    auth_url = client.get_authorization_url(state=state)
-    response = RedirectResponse(url=auth_url, status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        "oauth_state",
-        f"{provider}:{state}",
-        httponly=True,
-        secure=settings.jwt_cookie_secure,
-        samesite="lax",
-        max_age=600,
-        path="/api/v1/auth",
-    )
-    if redirect and redirect.startswith("/") and not redirect.startswith("//"):
-        response.set_cookie(
-            "oauth_redirect",
-            redirect,
-            httponly=True,
-            secure=settings.jwt_cookie_secure,
-            samesite="lax",
-            max_age=600,
-            path="/api/v1/auth",
-        )
-    return response
-
-
-@router.get("/callback/{provider}", summary="OAuth callback handler")
-async def oauth_callback(
-    provider: str,
-    request: Request,
-    code: str | None = Query(default=None, description="OAuth authorization code"),
-    state: str | None = Query(default=None, description="OAuth state parameter"),
-    error: str | None = Query(default=None, description="OAuth provider error code"),
-    error_description: str | None = Query(default=None, description="OAuth provider error description"),
-    db: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    """Exchange authorization code for user profile, issue session cookie, and redirect to frontend."""
-    def login_redirect(err_code: str) -> RedirectResponse:
-        resp = RedirectResponse(
-            url=f"{settings.frontend_base_url}/login?error={err_code}",
-            status_code=status.HTTP_302_FOUND,
-        )
-        resp.delete_cookie("oauth_state", path="/api/v1/auth")
-        resp.delete_cookie("oauth_redirect", path="/api/v1/auth")
-        return resp
-
-    if error:
-        return login_redirect("cancelled" if "denied" in error.lower() or "cancel" in error.lower() else "oauth_failed")
-
-    if not code:
-        raise HTTPException(400, "Missing OAuth code; please start sign-in again")
-
-    expected = request.cookies.get("oauth_state")
-    if not state or not expected or not secrets.compare_digest(expected, f"{provider}:{state}"):
-        raise HTTPException(400, "Invalid OAuth state; please start sign-in again")
-
-    try:
-        client = get_oauth_client(provider)
-        profile = await client.exchange_code_for_profile(code)
-    except ValueError:
-        return login_redirect("oauth_failed")
-    except Exception:
-        return login_redirect("oauth_failed")
-
-    try:
-        user = await get_or_create_oauth_user(db, profile)
-    except HTTPException as http_exc:
-        if http_exc.status_code == 409:
-            return login_redirect("account_exists_with_password")
-        return login_redirect("oauth_failed")
-    except Exception:
-        return login_redirect("oauth_failed")
-
-    token = create_access_token(user_id=user.id, email=user.email)
-
-    target_path = "/case"
-    saved_redirect = request.cookies.get("oauth_redirect")
-    if saved_redirect and saved_redirect.startswith("/") and not saved_redirect.startswith("//"):
-        target_path = saved_redirect
-
-    redirect_target = f"{settings.frontend_base_url}{target_path}"
-    response = RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
-
-    cookie_opts = build_auth_cookie_options()
-    response.set_cookie(value=token, **cookie_opts)
-    response.delete_cookie("oauth_state", path="/api/v1/auth")
-    response.delete_cookie("oauth_redirect", path="/api/v1/auth")
-    return response
-
-
 @router.get("/me", response_model=UserRead, summary="Get current authenticated user")
 async def get_me(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -229,7 +122,7 @@ async def dev_login(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> AuthTokenResponse:
-    """Simulate OAuth login locally for development and automated testing."""
+    """Simulate login locally for development and automated testing."""
     if not settings.auth_dev_login_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -253,9 +146,3 @@ async def dev_login(
         expires_in=settings.jwt_expire_minutes * 60,
         user=UserRead.model_validate(user),
     )
-
-
-@router.get("/providers")
-async def available_providers() -> list[str]:
-    enabled = bool(settings.oauth_google_client_id and settings.oauth_google_client_secret)
-    return ["google"] if enabled else []

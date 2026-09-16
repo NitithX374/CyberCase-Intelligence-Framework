@@ -1,24 +1,22 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useMemo } from "react";
 import { CaseReportView } from "@/components/report/CaseReportView";
-import { useCaseAnalysis, useCases, useCaseRunPolling } from "@/hooks/useCaseQueries";
-import { casePath } from "@/features/chat/routing/workspaceRoutes";
+import { useCase, useCaseAnalysis, useCaseRunPolling } from "@/hooks/useCaseQueries";
+import { casePath } from "@/lib/workspaceRoutes";
 
 export default function ReportPage() {
   const params = useParams();
   const router = useRouter();
   const caseId = params?.caseId as string;
 
-  const casesQuery = useCases();
-  const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
-  const activeCase = cases.find((c) => c.id === caseId) ?? null;
+  const caseQuery = useCase(caseId ?? null);
+  const activeCase = caseQuery.data ?? null;
 
   const analysisQuery = useCaseAnalysis(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId, caseId);
+  const runQuery = useCaseRunPolling(caseId ?? null, runId);
   const runStatus =
     runQuery.data?.status ??
     (activeCase?.processing_status === "queued" ||

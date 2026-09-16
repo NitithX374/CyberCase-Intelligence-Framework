@@ -26,10 +26,7 @@ def test_health_case_and_nested_report_api_routes_are_registered() -> None:
 
     assert api_routes == {
         ("GET", "/api/v1/health"),
-        ("GET", "/api/v1/auth/login/{provider}"),
-        ("GET", "/api/v1/auth/callback/{provider}"),
         ("GET", "/api/v1/auth/me"),
-        ("GET", "/api/v1/auth/providers"),
         ("POST", "/api/v1/auth/register"),
         ("POST", "/api/v1/auth/login"),
         ("GET", "/api/v1/auth/session"),

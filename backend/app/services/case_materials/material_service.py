@@ -173,11 +173,9 @@ def build_document_provenance(extraction: DocumentExtraction) -> dict[str, objec
     verification_status = extraction.provenance_json.get("verification_status")
     if not verification_status:
         statuses = [
-            region.get("verification_status")
+            page.get("verification_status")
             for page in provenance.get("pages", [])
-            if isinstance(page, dict)
-            for region in page.get("regions", [])
-            if isinstance(region, dict) and region.get("verification_status")
+            if isinstance(page, dict) and page.get("verification_status")
         ]
         if any(value == "needs_review" for value in statuses):
             verification_status = "needs_review"
@@ -191,20 +189,13 @@ def build_document_provenance(extraction: DocumentExtraction) -> dict[str, objec
 
     confidence_status = extraction.provenance_json.get("confidence_status")
     if not confidence_status:
-        confidences = [
-            float(region["recognition_confidence"])
-            for page in provenance.get("pages", [])
-            if isinstance(page, dict)
-            for region in page.get("regions", [])
-            if isinstance(region, dict) and region.get("recognition_confidence") is not None
-        ]
-        if confidences:
-            confidence_status = "reported"
-            provenance["minimum_confidence"] = min(confidences)
-        else:
-            confidence_status = "not_reported" if extraction_method in ("document_recognition", "ocr") else "not_applicable"
-            provenance["minimum_confidence"] = None
+        confidence_status = (
+            "not_reported"
+            if extraction_method in ("document_recognition", "ocr", "hybrid")
+            else "not_applicable"
+        )
     provenance["confidence_status"] = str(confidence_status)
+    provenance["minimum_confidence"] = None
     return provenance
 
 

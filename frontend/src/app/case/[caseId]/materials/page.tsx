@@ -1,48 +1,39 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { CaseMaterialsView } from "@/components/materials/CaseMaterialsView";
 import {
   useCaseDocuments,
-  caseQueryKeys,
+  useUploadCaseDocument,
 } from "@/hooks/useCaseQueries";
-import { uploadCaseDocument } from "@/lib/api";
-import { casePath } from "@/features/chat/routing/workspaceRoutes";
+import { casePath } from "@/lib/workspaceRoutes";
 
 export default function MaterialsPage() {
   const params = useParams();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const caseId = params?.caseId as string;
 
   const documentsQuery = useCaseDocuments(caseId ?? null);
-
-  const [isUploading, setIsUploading] = useState(false);
+  const uploadMutation = useUploadCaseDocument(caseId ?? null);
 
   const handleUploadDocument = useCallback(
     async (file: File) => {
-      if (!caseId || isUploading) return;
-      setIsUploading(true);
+      if (!caseId || uploadMutation.isPending) return;
       try {
-        await uploadCaseDocument(caseId, file);
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(caseId) }),
-          queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) }),
-        ]);
-      } finally {
-        setIsUploading(false);
+        await uploadMutation.mutateAsync(file);
+      } catch {
+        // Errors handled by mutation state
       }
     },
-    [caseId, isUploading, queryClient],
+    [caseId, uploadMutation],
   );
 
   return (
     <CaseMaterialsView
       caseId={caseId}
       documents={documentsQuery.data ?? []}
-      isUploading={isUploading}
+      isUploading={uploadMutation.isPending}
       onUploadDocument={(file) => void handleUploadDocument(file)}
       onOpenIntake={() => router.push(casePath(caseId, "intake"))}
     />

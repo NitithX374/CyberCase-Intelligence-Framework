@@ -22,7 +22,7 @@ export interface PendingChatSubmission {
   followUpQuestionId?: string;
 }
 
-interface ChatDraftState {
+export interface ChatDraftState {
   input: string;
   pendingFollowUp: { caseId: string; followUp: ActiveChatFollowUp } | null;
   queryError: string | null;
@@ -43,7 +43,7 @@ export function determineCaseChatPhase(detail: CaseChatDetail | undefined): RunP
 }
 
 export function useChatDraft() {
-  const [state, setState] = useState(() => ({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" }));
+  const [state, setState] = useState<ChatDraftState>(() => ({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" }));
   const draftCaseRef = useRef("new");
   const pendingRef = useRef<PendingChatSubmission | null>(null);
   const getPendingSubmission = useCallback(() => pendingRef.current, []);
@@ -136,8 +136,8 @@ export function useChatDraft() {
       ...current, activity: null,
       queryError: failureMessage || (detail.status === "failed"
         ? "Background processing failed. Retry the saved message."
-        : pending?.caseId !== detail.case_id || requestOrdinal !== undefined ? null : current.queryError),
-      ...(completed ? { input: "", pendingFollowUp: null } : {}),
+        : current.queryError || (pending?.caseId !== detail.case_id || requestOrdinal !== undefined ? null : current.queryError)),
+      ...(completed ? { input: "", pendingFollowUp: null, queryError: null } : {}),
     }));
   }, []);
   const clearDraft = useCallback(() => {
@@ -157,6 +157,8 @@ export function useChatDraft() {
     reconcile, clearDraft, forgetCaseChat,
   };
 }
+
+export type ChatDraftSession = ReturnType<typeof useChatDraft>;
 
 function pendingStorageKey(caseId: string): string {
   return `pending-case-chat:${caseId}`;

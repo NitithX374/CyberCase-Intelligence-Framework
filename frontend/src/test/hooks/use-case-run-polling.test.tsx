@@ -32,7 +32,7 @@ describe("useCaseRunPolling", () => {
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
     renderHook(
-      () => useCaseRunPolling("case-1", "run-1", null),
+      () => useCaseRunPolling("case-1", "run-1"),
       { wrapper: createWrapper(queryClient) },
     );
 

@@ -4,7 +4,6 @@ import {
   getSession,
   devLogin,
   logout,
-  getOAuthLoginUrl,
   type DevLoginPayload,
 } from "@/lib/api";
 import { caseQueryKeys } from "./useCaseQueries";
@@ -65,10 +64,6 @@ export function useAuth({ enabled = true }: { enabled?: boolean } = {}) {
     },
   });
 
-  const loginWithOAuth = (provider: "google" = "google", redirect?: string) => {
-    window.location.href = getOAuthLoginUrl(provider, redirect);
-  };
-
   return {
     sessionError: sessionQuery.error,
     user: sessionQuery.data ?? null,
@@ -78,7 +73,6 @@ export function useAuth({ enabled = true }: { enabled?: boolean } = {}) {
     isDevLoggingIn: devLoginMutation.isPending,
     logout: logoutMutation.mutateAsync,
     isLoggingOut: logoutMutation.isPending,
-    loginWithOAuth,
     refetchSession: sessionQuery.refetch,
   };
 }

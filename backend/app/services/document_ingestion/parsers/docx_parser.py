@@ -2,21 +2,13 @@ from io import BytesIO
 
 from docx import Document
 from docx.document import Document as DocumentObject
-from docx.table import Table
-from docx.text.paragraph import Paragraph
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 
-from app.services.document_ingestion.contracts import (
-    DocumentPage,
-    RoutingSummary,
-    SourceType,
-)
+from app.services.document_ingestion.contracts import DocumentPage
 from app.services.document_ingestion.errors import InvalidDocumentError
-from app.services.document_ingestion.provenance import (
-    build_blocks,
-    build_native_regions,
-)
 
 
 def iter_document_blocks(document: DocumentObject):
@@ -51,19 +43,15 @@ def parse_docx(
         if normalized:
             texts.append(normalized)
 
-    blocks = build_blocks(document_id, 1, texts, SourceType.NATIVE)
-    regions = build_native_regions(document_id, 1, texts)
-    full_text = "\n\n".join(block.text for block in blocks)
+    full_text = "\n\n".join(texts)
     warnings = [
         "DOCX does not expose stable rendered page boundaries; page 1 is a logical document page."
     ]
     return [
         DocumentPage(
             page_number=1,
-            regions=regions,
-            merged_text=full_text,
-            routing_summary=RoutingSummary(native=len(regions)),
-            blocks=blocks,
-            full_text=full_text,
+            text=full_text,
+            text_method="native",
+            verification_status="native",
         )
     ], warnings

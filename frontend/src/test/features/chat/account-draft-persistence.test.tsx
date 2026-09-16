@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, expect, it } from "vitest";
-import { useChatDraft } from "@/features/chat/workspace/use-chat-draft";
+import { useChatDraft } from "@/features/chat/useChatDraft";
 
 beforeEach(() => localStorage.clear());
 

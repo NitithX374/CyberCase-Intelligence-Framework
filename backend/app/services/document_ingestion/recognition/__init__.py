@@ -1,23 +1,19 @@
 from app.services.document_ingestion.recognition.base import (
     DocumentRecognizer,
-    HTRRecognizer,
-    OCRRecognizer,
     RecognizedPage,
-    RecognitionResult,
     RenderedPage,
-    RenderedRegion,
+    separate_generated_visual_descriptions,
 )
 from app.services.document_ingestion.recognition.typhoon import (
     TyphoonDocumentRecognizer,
+    TyphoonRecognizerConfig,
 )
 
 __all__ = [
     "DocumentRecognizer",
-    "HTRRecognizer",
-    "OCRRecognizer",
     "RecognizedPage",
-    "RecognitionResult",
     "RenderedPage",
-    "RenderedRegion",
     "TyphoonDocumentRecognizer",
+    "TyphoonRecognizerConfig",
+    "separate_generated_visual_descriptions",
 ]

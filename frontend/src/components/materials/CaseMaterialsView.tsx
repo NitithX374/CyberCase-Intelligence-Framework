@@ -58,7 +58,7 @@ export function CaseMaterialsView({
   );
 }
 
-type MaterialPreviewMode = "original" | "ocr";
+type MaterialPreviewMode = "original" | "ocr" | "split";
 
 interface MaterialPreviewViewportProps {
   caseId: string;
@@ -88,6 +88,7 @@ function MaterialPreviewViewport({
         <div role="tablist" aria-label="Source representation" className="flex h-8 items-end gap-4">
           <PreviewTab selected={mode === "original"} onClick={() => onModeChange("original")}>Original File</PreviewTab>
           <PreviewTab selected={mode === "ocr"} onClick={() => onModeChange("ocr")}>System OCR</PreviewTab>
+          <PreviewTab selected={mode === "split"} onClick={() => onModeChange("split")}>Side by Side</PreviewTab>
         </div>
 
       </header>
@@ -97,8 +98,17 @@ function MaterialPreviewViewport({
           <EmptyPreview onOpenIntake={onOpenIntake} />
         ) : mode === "original" ? (
           <OriginalFilePreview caseId={caseId} document={document} />
-        ) : (
+        ) : mode === "ocr" ? (
           <SystemOcrPreview extraction={extraction} />
+        ) : (
+          <div className="flex h-full min-h-0 flex-col divide-y divide-line lg:flex-row lg:divide-x lg:divide-y-0">
+            <div className="h-1/2 min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full">
+              <OriginalFilePreview caseId={caseId} document={document} />
+            </div>
+            <div className="h-1/2 min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full">
+              <SystemOcrPreview extraction={extraction} />
+            </div>
+          </div>
         )}
       </div>
     </section>
@@ -157,17 +167,111 @@ function OriginalFilePreview({ caseId, document }: { caseId: string; document: C
   return <iframe src={objectUrl} title={`Original file: ${document.filename}`} className="h-full min-h-[28rem] w-full border-0 bg-surface" />;
 }
 
+interface ExtractionPageItem {
+  page_number?: number;
+  text?: string;
+  merged_text?: string;
+  text_method?: string;
+  verification_status?: string;
+}
+
+interface ExtractionPage {
+  pageNumber: number;
+  text: string;
+  method?: string;
+}
+
+function getExtractionPages(extraction: DocumentExtractionRead): ExtractionPage[] {
+  const provenance = extraction.provenance_json as Record<string, unknown> | undefined;
+  const rawPages = Array.isArray(provenance?.pages) ? (provenance.pages as ExtractionPageItem[]) : [];
+
+  if (rawPages.length === 0) {
+    return [{ pageNumber: 1, text: extraction.extracted_text }];
+  }
+
+  return rawPages.map((page, index) => ({
+    pageNumber: typeof page.page_number === "number" ? page.page_number : index + 1,
+    text: typeof page.text === "string" ? page.text : typeof page.merged_text === "string" ? page.merged_text : "",
+    method: typeof page.text_method === "string" ? page.text_method : undefined,
+  }));
+}
+
 function SystemOcrPreview({ extraction }: { extraction: DocumentExtractionRead | null }) {
+  const pages = useMemo(() => (extraction ? getExtractionPages(extraction) : []), [extraction]);
+
   if (!extraction) return <ViewportMessage title="No system extraction is available." />;
+
   return (
     <div role="tabpanel" aria-label="System OCR" className="h-full overflow-auto p-4 sm:p-6">
-      <article className="mx-auto min-h-full max-w-4xl border border-line bg-surface px-5 py-6 sm:px-8 sm:py-8">
-        <div className="mb-5 flex items-center justify-between border-b border-line pb-3 text-[10px] text-ink-muted">
-          <span>System OCR · {extraction.provider}</span>
-          {extraction.warnings_json.length > 0 && <span className="text-unresolved">{extraction.warnings_json.length} warning{extraction.warnings_json.length === 1 ? "" : "s"}</span>}
-        </div>
-        <p className="whitespace-pre-wrap break-words text-sm leading-7 text-ink">{extraction.extracted_text}</p>
-      </article>
+      <div className="mx-auto max-w-4xl space-y-4">
+        <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface/95 px-4 py-2.5 backdrop-blur shadow-sm">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="font-semibold text-ink">System OCR</span>
+            <span className="text-ink-muted">·</span>
+            <span className="text-ink-secondary">{extraction.provider}</span>
+            <span className="rounded bg-canvas px-2 py-0.5 text-[11px] font-medium text-ink-muted">
+              {pages.length} {pages.length === 1 ? "page" : "pages"}
+            </span>
+            {extraction.warnings_json.length > 0 && (
+              <span className="text-unresolved text-xs">
+                {extraction.warnings_json.length} warning{extraction.warnings_json.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+
+          {pages.length > 1 && (
+            <nav aria-label="Page navigation" className="flex flex-wrap items-center gap-1">
+              <span className="mr-1 text-[10px] uppercase tracking-wider text-ink-muted">Jump to:</span>
+              {pages.map((p) => (
+                <button
+                  key={p.pageNumber}
+                  type="button"
+                  onClick={() => {
+                    document.getElementById(`ocr-page-${p.pageNumber}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="rounded border border-line bg-surface px-2 py-0.5 text-xs text-ink-secondary hover:border-accent hover:text-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                >
+                  P.{p.pageNumber}
+                </button>
+              ))}
+            </nav>
+          )}
+        </header>
+
+        {pages.map((page) => (
+          <article
+            key={page.pageNumber}
+            id={`ocr-page-${page.pageNumber}`}
+            className="scroll-mt-14 rounded-md border border-line bg-surface px-5 py-6 shadow-sm sm:px-8 sm:py-8"
+          >
+            <div className="mb-4 flex items-center justify-between border-b border-line pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent">
+                  Page {page.pageNumber}
+                </span>
+                {page.method && (
+                  <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+                    {page.method}
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] text-ink-muted">
+                {page.text.trim().length.toLocaleString()} chars
+              </span>
+            </div>
+
+            {page.text.trim() ? (
+              <p className="whitespace-pre-wrap break-words text-sm leading-7 text-ink">
+                {page.text}
+              </p>
+            ) : (
+              <p className="py-4 text-center text-xs italic text-ink-muted">
+                (No text extracted on this page)
+              </p>
+            )}
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
