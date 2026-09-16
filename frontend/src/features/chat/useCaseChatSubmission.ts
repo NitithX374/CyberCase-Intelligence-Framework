@@ -102,6 +102,8 @@ export function useCaseChatSubmission({
           toApiFollowUpAnswer(answer),
         );
 
+        const nextStatus = accepted.run ? "processing" : "idle";
+
         // RACE GUARD: If active case changed during in-flight POST
         if (activeCaseIdRef.current !== targetCaseId) {
           queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => {
@@ -109,53 +111,63 @@ export function useCaseChatSubmission({
             const updated = current.messages.some((m) => m.id === accepted.message.id)
               ? current.messages
               : [...current.messages, accepted.message].sort((a, b) => a.ordinal - b.ordinal);
-            return { ...current, status: "processing", messages: updated };
+            return { ...current, status: nextStatus, messages: updated };
           });
           return;
         }
 
         draft.acceptSubmission(submission.key, accepted.message.ordinal);
         queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => {
-          const base = current ?? { case_id: targetCaseId, status: "processing", messages: [] };
+          const base = current ?? { case_id: targetCaseId, status: nextStatus, messages: [] };
           const updated = base.messages.some((m) => m.id === accepted.message.id)
             ? base.messages
             : [...base.messages, accepted.message].sort((a, b) => a.ordinal - b.ordinal);
-          return { ...base, status: "processing", messages: updated };
+          return { ...base, status: nextStatus, messages: updated };
         });
 
-        if (currentCase && upsertCase) {
-          upsertCase({
-            ...currentCase,
-            status: "processing",
-            active_run_id: accepted.run.id,
-            latest_run_id: accepted.run.id,
-            processing_status: "queued",
+        if (accepted.run) {
+          if (currentCase && upsertCase) {
+            upsertCase({
+              ...currentCase,
+              status: "processing",
+              active_run_id: accepted.run.id,
+              latest_run_id: accepted.run.id,
+              processing_status: "queued",
+            });
+          }
+
+          await pollCaseRunUntilSettled({
+            runId: accepted.run.id,
+            signal: controller.signal,
+            isCurrent: () => activeCaseIdRef.current === targetCaseId && !controller.signal.aborted,
+            readRun: () => getCaseRun(targetCaseId, accepted.run!.id, controller.signal),
+            readCaseChat: async () => {
+              const res = await getCaseChat(targetCaseId, controller.signal);
+              return { ...res, messages: [...res.messages].sort((a, b) => a.ordinal - b.ordinal) };
+            },
+            applyCaseChat: (detail, failureMessage) => {
+              queryClient.setQueryData(caseQueryKeys.chat(targetCaseId), detail);
+              draft.reconcile(detail, failureMessage);
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(targetCaseId) });
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(targetCaseId) });
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(targetCaseId) });
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
+              void queryClient.refetchQueries({
+                queryKey: caseQueryKeys.chat(targetCaseId),
+                exact: true,
+                type: "all",
+              });
+            },
+          });
+        } else {
+          void queryClient.invalidateQueries({ queryKey: caseQueryKeys.chat(targetCaseId) });
+          void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
+          void queryClient.refetchQueries({
+            queryKey: caseQueryKeys.chat(targetCaseId),
+            exact: true,
+            type: "all",
           });
         }
-
-        await pollCaseRunUntilSettled({
-          runId: accepted.run.id,
-          signal: controller.signal,
-          isCurrent: () => activeCaseIdRef.current === targetCaseId && !controller.signal.aborted,
-          readRun: () => getCaseRun(targetCaseId, accepted.run.id, controller.signal),
-          readCaseChat: async () => {
-            const res = await getCaseChat(targetCaseId, controller.signal);
-            return { ...res, messages: [...res.messages].sort((a, b) => a.ordinal - b.ordinal) };
-          },
-          applyCaseChat: (detail, failureMessage) => {
-            queryClient.setQueryData(caseQueryKeys.chat(targetCaseId), detail);
-            draft.reconcile(detail, failureMessage);
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(targetCaseId) });
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(targetCaseId) });
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(targetCaseId) });
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
-            void queryClient.refetchQueries({
-              queryKey: caseQueryKeys.chat(targetCaseId),
-              exact: true,
-              type: "all",
-            });
-          },
-        });
       } catch (error) {
         if (isChatRequestCanceled(controller.signal, error) || activeCaseIdRef.current !== targetCaseId) return;
         draft.failSubmission("followup", "awaiting_followup", getApiErrorMessage(
@@ -217,60 +229,67 @@ export function useCaseChatSubmission({
             const updated = current.messages.some((m) => m.id === accepted.message.id)
               ? current.messages
               : [...current.messages, accepted.message].sort((a, b) => a.ordinal - b.ordinal);
-            return { ...current, status: "processing", messages: updated };
+            return { ...current, status: accepted.run ? "processing" : current.status, messages: updated };
           });
           return;
         }
 
+        const nextStatus = accepted.run ? "processing" : "idle";
         draft.acceptSubmission(submission.key, accepted.message.ordinal);
         queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => {
-          const base = current ?? { case_id: targetCaseId, status: "processing", messages: [] };
+          const base = current ?? { case_id: targetCaseId, status: nextStatus, messages: [] };
           const updated = base.messages.some((m) => m.id === accepted.message.id)
             ? base.messages
             : [...base.messages, accepted.message].sort((a, b) => a.ordinal - b.ordinal);
-          return { ...base, status: "processing", messages: updated };
+          return { ...base, status: nextStatus, messages: updated };
         });
 
-        if (currentCase && upsertCase) {
-          upsertCase({
-            ...currentCase,
-            status: "processing",
-            active_run_id: accepted.run.id,
-            latest_run_id: accepted.run.id,
-            processing_status: "queued",
-          });
-        }
-
-        const completed = await pollCaseRunUntilSettled({
-          runId: accepted.run.id,
-          signal: controller.signal,
-          isCurrent: () => activeCaseIdRef.current === targetCaseId && !controller.signal.aborted,
-          readRun: () => getCaseRun(targetCaseId, accepted.run.id, controller.signal),
-          readCaseChat: async () => {
-            const res = await getCaseChat(targetCaseId, controller.signal);
-            return { ...res, messages: [...res.messages].sort((a, b) => a.ordinal - b.ordinal) };
-          },
-          applyCaseChat: (detail, failureMessage) => {
-            queryClient.setQueryData(caseQueryKeys.chat(targetCaseId), detail);
-            draft.reconcile(detail, failureMessage);
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(targetCaseId) });
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(targetCaseId) });
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(targetCaseId) });
-            void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
-            void queryClient.refetchQueries({
-              queryKey: caseQueryKeys.chat(targetCaseId),
-              exact: true,
-              type: "all",
+        if (accepted.run) {
+          const runId = accepted.run.id;
+          if (currentCase && upsertCase) {
+            upsertCase({
+              ...currentCase,
+              status: "processing",
+              active_run_id: runId,
+              latest_run_id: runId,
+              processing_status: "queued",
             });
-          },
-        });
+          }
 
-        if (
-          completed &&
-          activeCaseIdRef.current === targetCaseId &&
-          !hasCompletedAssistantOutput(completed, accepted.message.ordinal)
-        ) {
-          draft.reportError("The completed run did not persist an assistant response. Retry the saved message.");
+          const completed = await pollCaseRunUntilSettled({
+            runId,
+            signal: controller.signal,
+            isCurrent: () => activeCaseIdRef.current === targetCaseId && !controller.signal.aborted,
+            readRun: () => getCaseRun(targetCaseId, runId, controller.signal),
+            readCaseChat: async () => {
+              const res = await getCaseChat(targetCaseId, controller.signal);
+              return { ...res, messages: [...res.messages].sort((a, b) => a.ordinal - b.ordinal) };
+            },
+            applyCaseChat: (detail, failureMessage) => {
+              queryClient.setQueryData(caseQueryKeys.chat(targetCaseId), detail);
+              draft.reconcile(detail, failureMessage);
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(targetCaseId) });
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(targetCaseId) });
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(targetCaseId) });
+              void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
+              void queryClient.refetchQueries({
+                queryKey: caseQueryKeys.chat(targetCaseId),
+                exact: true,
+                type: "all",
+              });
+            },
+          });
+
+          if (
+            completed &&
+            activeCaseIdRef.current === targetCaseId &&
+            !hasCompletedAssistantOutput(completed, accepted.message.ordinal)
+          ) {
+            draft.reportError("The completed run did not persist an assistant response. Retry the saved message.");
+          }
+        } else {
+          void queryClient.invalidateQueries({ queryKey: caseQueryKeys.chat(targetCaseId) });
+          void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
         }
       } catch (error) {
         if (isChatRequestCanceled(controller.signal, error) || activeCaseIdRef.current !== targetCaseId) return;

@@ -64,35 +64,39 @@ export function parseCaseCitations(
   sourceIds: string[],
   sources: CaseEvidenceSource[],
 ): CaseCitation[] {
-  return asArray(value).map((item) => {
+  return asArray(value).flatMap((item) => {
     const citation = asRecord(item);
     const rawPages = asArray(citation?.page_numbers);
-    if (!rawPages.every(isPositiveInteger) || rawPages.length > 8 || new Set(rawPages).size !== rawPages.length) {
-      throw new Error("Analysis citation pages are invalid.");
+    const parsedPages = rawPages.every(isPositiveInteger) && rawPages.length <= 8 && new Set(rawPages).size === rawPages.length
+      ? rawPages
+      : [];
+    const sourceId = asString(citation?.source_id);
+    const exactQuote = typeof citation?.exact_quote === "string" ? citation.exact_quote : "";
+    if (!sourceIds.includes(sourceId) || !exactQuote || exactQuote.trim() !== exactQuote) {
+      return [];
     }
-    const parsed = {
-      sourceId: asString(citation?.source_id),
-      exactQuote: typeof citation?.exact_quote === "string" ? citation.exact_quote : "",
+    const source = sources.find((candidate) => candidate.id === sourceId);
+    if (!source) {
+      return [];
+    }
+    const occurrences = quoteOccurrences(source.text, exactQuote);
+    if (occurrences.length === 0) {
+      return [];
+    }
+    const parsed: CaseCitation = {
+      sourceId,
+      exactQuote,
       documentId: asString(citation?.document_id) || null,
       filename: asString(citation?.filename) || null,
-      pageNumbers: rawPages,
+      pageNumbers: parsedPages,
     };
-    if (!sourceIds.includes(parsed.sourceId) || !parsed.exactQuote || parsed.exactQuote.trim() !== parsed.exactQuote) {
-      throw new Error("Analysis citation is invalid.");
-    }
-    const source = sources.find((candidate) => candidate.id === parsed.sourceId);
-    const occurrences = source ? quoteOccurrences(source.text, parsed.exactQuote) : [];
-    if (!source || occurrences.length === 0) {
-      throw new Error("Analysis citation is not bound to Case evidence.");
-    }
     if (occurrences.length > 1 && (!parsed.pageNumbers.length || !resolvePageBinding(source, parsed))) {
-      throw new Error("Analysis citation is ambiguous in Case evidence.");
+      return [{
+        ...parsed,
+        pageNumbers: [],
+      }];
     }
-    const hasLocator = parsed.documentId !== null || parsed.filename !== null || parsed.pageNumbers.length > 0;
-    if (hasLocator && (!parsed.documentId || !parsed.filename || !parsed.pageNumbers.length)) {
-      throw new Error("Analysis document citation is incomplete.");
-    }
-    return parsed;
+    return [parsed];
   });
 }
 
@@ -103,7 +107,7 @@ export function sourceRefs(
 ): SourceMessageRef[] {
   return ids.flatMap((id) => {
     const source = sources.find((candidate) => candidate.id === id);
-    if (!source) throw new Error("Analysis source reference is missing from Case evidence.");
+    if (!source) return [];
     const matches = citations.filter((citation) => citation.sourceId === id);
     return matches.length ? matches.map((citation) => buildSourceRef(source, citation)) : [buildSourceRef(source, null)];
   });

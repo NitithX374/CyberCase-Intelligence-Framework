@@ -153,4 +153,18 @@ function renderMaterials(overrides: Partial<React.ComponentProps<typeof CaseMate
     expect(screen.getByText("Page 1")).toBeInTheDocument();
     expect(screen.getByText("First page content")).toBeInTheDocument();
   });
+
+  it("renders the in-flight pending document item when uploading", () => {
+    renderMaterials({
+      isUploading: true,
+      uploadingFilename: "forensic_report.pdf",
+      uploadingFileSize: 2048,
+    });
+
+    expect(screen.getByText("forensic_report.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Pending extraction…")).toBeInTheDocument();
+    expect(screen.getByText("2 KB")).toBeInTheDocument();
+    expect(screen.getByText("1 file")).toBeInTheDocument();
+    expect(screen.queryByText("No source files yet.")).not.toBeInTheDocument();
+  });
 });

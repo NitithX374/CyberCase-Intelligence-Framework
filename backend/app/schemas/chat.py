@@ -56,7 +56,7 @@ class CaseChatRead(BaseModel):
 
 class CaseChatMessageAccepted(BaseModel):
     message: ChatMessageRead
-    run: CaseRunRead
+    run: CaseRunRead | None = None
 
 
 __all__ = [

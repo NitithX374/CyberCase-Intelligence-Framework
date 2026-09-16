@@ -222,7 +222,8 @@ def technical_items(
     if augmentation.status == "retrieved_without_supported_match":
         return ["พบข้อมูล MITRE ATT&CK ภายนอก แต่ยังไม่มี mapping ที่เชื่อมโยงกับหลักฐานของคดีได้"]
     if augmentation.status == "failed":
-        return [f"การเสริมข้อมูล MITRE ATT&CK ไม่สำเร็จ จึงไม่แสดง mapping เป็นข้อสรุปของคดี ({augmentation.failure_code})"]
+        detail = "ไม่สามารถเชื่อมต่อกับบริการภายนอกได้ในขณะนี้" if augmentation.failure_code in {"rag_service_error", "rag_service_unavailable"} else f"ระบบภายนอกขัดข้อง ({augmentation.failure_code})"
+        return [f"การเสริมข้อมูล MITRE ATT&CK ไม่สำเร็จ: {detail} จึงไม่แสดง mapping เป็นข้อสรุปของคดี"]
     rows_by_id = {
         str(row.get("technique_id")): row
         for row in augmentation.mitre_table
@@ -253,7 +254,8 @@ def technical_rationale(
             for association in trace.mitre_associations
         ] or ["ไม่พบเหตุผลของ mapping ที่บันทึกไว้"]
     if augmentation is not None and augmentation.status == "failed":
-        return [f"ยังไม่สามารถอธิบาย mapping ได้ เนื่องจากการเสริมข้อมูล MITRE ขัดข้อง ({augmentation.failure_code})"]
+        detail = "ไม่สามารถเชื่อมต่อกับบริการภายนอกได้ในขณะนี้" if augmentation.failure_code in {"rag_service_error", "rag_service_unavailable"} else f"ระบบภายนอกขัดข้อง ({augmentation.failure_code})"
+        return [f"ยังไม่สามารถอธิบาย mapping ได้ ({detail})"]
     if augmentation is not None and augmentation.status == "retrieved_without_supported_match":
         return ["ข้อมูล MITRE ที่ค้นพบยังเป็นข้อมูลภายนอก เพราะไม่ผ่านการเชื่อมโยงกับหลักฐานของคดี"]
     if augmentation is not None and augmentation.status == "insufficient_context":
@@ -279,14 +281,14 @@ def gap_items(trace: CaseAnalysisTrace) -> list[str]:
 
 def recommendation_items(trace: CaseAnalysisTrace) -> list[str]:
     items = [
-        f"ตรวจสอบเพิ่มเติมในประเด็น {gap.topic}: {gap.description}"
+        f"ตรวจสอบเพิ่มเติมในประเด็น {gap.topic}: ดำเนินการสืบสวน/สอบสวนเพื่อคลี่คลายข้อเท็จจริง ({PRIORITY_LABELS[gap.priority]})"
         for gap in trace.gaps
     ]
     items.extend(
         [
             "ตรวจสอบเอกสารต้นฉบับและความสอดคล้องของข้อมูลก่อนใช้เป็นข้อเท็จจริง",
             "เปรียบเทียบข้อมูลจากหลายแหล่งและบันทึกผลที่ยืนยันได้แยกจากข้อสันนิษฐาน",
-            "รักษาข้อมูลต้นฉบับและบริบทที่เกี่ยวข้องไว้เพื่อให้ตรวจสอบย้อนกลับได้",
+            "รักษาข้อมูลต้นฉบับและบันทึก Chain of Custody ไว้เพื่อให้ตรวจสอบย้อนกลับได้",
         ]
     )
     return list(dict.fromkeys(items))

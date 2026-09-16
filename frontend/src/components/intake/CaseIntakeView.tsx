@@ -16,6 +16,7 @@ interface CaseIntakeViewProps {
   isCaseDataLoading: boolean;
   error?: string | null;
   isUploadingDocument: boolean;
+  uploadingFilename?: string | null;
   onSubmitCase: (data: CaseIntakeSubmission) => void;
   onUploadDocument: (file: File) => void;
   onOpenOverview?: () => void;
@@ -32,6 +33,7 @@ export function CaseIntakeView({
   isCaseDataLoading,
   error,
   isUploadingDocument,
+  uploadingFilename,
   onSubmitCase,
   onUploadDocument,
   onOpenOverview,
@@ -90,7 +92,7 @@ export function CaseIntakeView({
             <UploadControl disabled={isUploadingDocument || isBusy} isUploading={isUploadingDocument} onUpload={onUploadDocument} />
           </div>
 
-          {documents.length === 0 ? (
+          {documents.length === 0 && !isUploadingDocument ? (
             <p className="border-y border-line py-5 text-xs text-ink-muted">No documents have been uploaded. A written narrative is enough to begin.</p>
           ) : (
             <div className="border-y border-line">
@@ -98,6 +100,23 @@ export function CaseIntakeView({
                 <span>Source</span><span>Extraction</span><span>Status</span>
               </div>
               <div className="divide-y divide-line">
+                {isUploadingDocument && (
+                  <article aria-live="polite" className="grid gap-3 bg-accent-soft/30 px-3 py-3.5 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.7fr)] sm:items-center sm:gap-4 animate-pulse">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="relative flex h-2 w-2 shrink-0">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+                      </span>
+                      <p className="break-words text-xs font-semibold text-ink">
+                        {uploadingFilename || "Uploading document…"}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-ink-muted italic">Ingesting & extracting…</p>
+                    <div>
+                      <StatusPill tone="attention">Uploading…</StatusPill>
+                    </div>
+                  </article>
+                )}
                 {documents.map((document) => {
                   const extraction = [...(document.extractions ?? [])].sort(
                     (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()

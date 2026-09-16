@@ -224,7 +224,7 @@ async def submit_followup_answer(
     answer: CaseFollowUpAnswer,
     idempotency_key: str,
     response_language: str,
-) -> tuple[ChatMessage, CaseRun]:
+) -> tuple[ChatMessage, CaseRun | None]:
     case = await owned_case(db, case_id, user_id, lock=True)
     question = await db.scalar(
         select(ChatMessage).where(
@@ -265,51 +265,6 @@ async def submit_followup_answer(
             "Clarification provenance is invalid",
         )
 
-    answer_payload = answer.model_dump(mode="json")
-    answer_content = format_followup_answer(answer)
-    expected_payload = {
-        "operation": "analysis",
-        "response_language": response_language,
-        "expected_evidence_revision": source_revision + 1,
-        "content": answer_content,
-        "action": "follow_up",
-        "answer": answer_payload,
-        "source_analysis_id": source_analysis_id,
-        "source_revision": source_revision,
-    }
-    existing_run = await db.scalar(
-        select(CaseRun)
-        .where(
-            CaseRun.case_id == case.id,
-            CaseRun.idempotency_key == idempotency_key,
-        )
-        .with_for_update()
-    )
-    if existing_run is not None:
-        if existing_run.request_payload != expected_payload:
-            raise CaseFollowUpError(
-                "idempotency_conflict",
-                "Idempotency key was already used with different clarification answer",
-            )
-        answer_message = await answer_message_for_run(db, existing_run)
-        if answer_message is None:
-            raise CaseFollowUpError(
-                "clarification_answer_missing",
-                "Clarification answer message is missing",
-            )
-        await requeue_existing_run(db, case, existing_run)
-        return answer_message, existing_run
-
-    if case.evidence_revision != source_revision:
-        raise CaseFollowUpError(
-            "clarification_stale",
-            "Case evidence changed while this clarification was open. Reload the Case.",
-        )
-    if case.latest_analysis_result_id != question.analysis_result_id:
-        raise CaseFollowUpError(
-            "clarification_superseded",
-            "This clarification belongs to an older analysis",
-        )
     if str(gap.get("gap_id")) != answer.gap_id:
         raise CaseFollowUpError(
             "clarification_gap_mismatch",
@@ -317,16 +272,70 @@ async def submit_followup_answer(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
 
-    active_run = await db.scalar(
-        select(CaseRun.id).where(
-            CaseRun.case_id == case.id,
-            CaseRun.status.in_(("queued", "running")),
+    existing_answer = await db.scalar(
+        select(ChatMessage).where(
+            ChatMessage.case_id == case.id,
+            ChatMessage.in_reply_to_message_id == question.id,
+            ChatMessage.role == "user",
+            ChatMessage.message_kind == "followup_answer",
         )
     )
-    if active_run is not None:
-        raise CaseFollowUpError(
-            "case_run_active", "Case already has an active analysis run"
+    if existing_answer is not None:
+        existing_run = await db.scalar(
+            select(CaseRun).where(
+                CaseRun.case_id == case.id,
+                CaseRun.request_message_id == existing_answer.id,
+            )
         )
+        return existing_answer, existing_run
+
+    answer_payload = answer.model_dump(mode="json")
+    answer_content = format_followup_answer(answer)
+    expected_payload = {
+        "operation": "analysis",
+        "response_language": response_language,
+        "expected_evidence_revision": case.evidence_revision + 1,
+        "content": answer_content,
+        "action": "follow_up",
+        "answer": answer_payload,
+        "source_analysis_id": source_analysis_id,
+        "source_revision": source_revision,
+    }
+
+    if answer.disposition == "answered":
+        existing_run = await db.scalar(
+            select(CaseRun)
+            .where(
+                CaseRun.case_id == case.id,
+                CaseRun.idempotency_key == idempotency_key,
+            )
+            .with_for_update()
+        )
+        if existing_run is not None:
+            if existing_run.request_payload != expected_payload:
+                raise CaseFollowUpError(
+                    "idempotency_conflict",
+                    "Idempotency key was already used with different clarification answer",
+                )
+            answer_message = await answer_message_for_run(db, existing_run)
+            if answer_message is None:
+                raise CaseFollowUpError(
+                    "clarification_answer_missing",
+                    "Clarification answer message is missing",
+                )
+            await requeue_existing_run(db, case, existing_run)
+            return answer_message, existing_run
+
+        active_run = await db.scalar(
+            select(CaseRun.id).where(
+                CaseRun.case_id == case.id,
+                CaseRun.status.in_(("queued", "running")),
+            )
+        )
+        if active_run is not None:
+            raise CaseFollowUpError(
+                "case_run_active", "Case already has an active analysis run"
+            )
 
     next_ordinal = (
         await db.scalar(
@@ -359,6 +368,7 @@ async def submit_followup_answer(
     db.add(answer_message)
     await db.flush()
 
+    run: CaseRun | None = None
     if answer.disposition == "answered":
         db.add(
             CaseSource(
@@ -379,38 +389,38 @@ async def submit_followup_answer(
                 source_metadata_json={"disposition": answer.disposition},
             )
         )
-    case.evidence_revision += 1
-    await db.flush()
+        case.evidence_revision += 1
+        await db.flush()
 
-    try:
-        from app.schemas.case_runs import CaseAnalysisCreate
-        from app.services.workflow.case_run_service import (
-            CaseRunError,
-            enqueue_case_analysis,
-        )
+        try:
+            from app.schemas.case_runs import CaseAnalysisCreate
+            from app.services.workflow.case_run_service import (
+                CaseRunError,
+                enqueue_case_analysis,
+            )
 
-        run = await enqueue_case_analysis(
-            db,
-            case_id=case.id,
-            user_id=user_id,
-            request=CaseAnalysisCreate(
-                idempotency_key=idempotency_key,
-                response_language=response_language,
-                expected_evidence_revision=case.evidence_revision,
-            ),
-            request_message_id=answer_message.id,
-            request_payload_extra={
-                "content": answer_content,
-                "action": "follow_up",
-                "answer": answer_payload,
-                "source_analysis_id": source_analysis_id,
-                "source_revision": source_revision,
-            },
-        )
-    except CaseRunError as error:
-        raise CaseFollowUpError(
-            error.code, error.message, error.status_code
-        ) from error
+            run = await enqueue_case_analysis(
+                db,
+                case_id=case.id,
+                user_id=user_id,
+                request=CaseAnalysisCreate(
+                    idempotency_key=idempotency_key,
+                    response_language=response_language,
+                    expected_evidence_revision=case.evidence_revision,
+                ),
+                request_message_id=answer_message.id,
+                request_payload_extra={
+                    "content": answer_content,
+                    "action": "follow_up",
+                    "answer": answer_payload,
+                    "source_analysis_id": source_analysis_id,
+                    "source_revision": source_revision,
+                },
+            )
+        except CaseRunError as error:
+            raise CaseFollowUpError(
+                error.code, error.message, error.status_code
+            ) from error
 
     case.updated_at = datetime.now(timezone.utc)
     await db.flush()

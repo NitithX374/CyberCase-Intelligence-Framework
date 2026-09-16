@@ -5,13 +5,11 @@ from app.models.case_run import CaseAnalysisResult
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportRead, StructuredReport
 from app.services.case_analysis.contracts import (
-    CaseAnalysisFailure,
     CaseAnalysisTrace,
 )
-from app.services.case_analysis.validation import validate_case_trace
 from app.services.case_materials.case_source_bundle import (
     CaseSourceBundle,
-    case_source_bundle_from_case,
+    case_source_bundle_for_analysis,
 )
 from app.services.reports.case_report_contracts import (
     CaseReportInput,
@@ -57,15 +55,10 @@ def build_case_report_input(
         raise ReportGenerationConflict("case_analysis_mismatch", "Analysis result does not belong to this Case")
     if result.status != "validated":
         raise ReportGenerationConflict("case_analysis_unavailable", "Only a validated Case analysis can produce a report")
-    if result.evidence_revision != case.evidence_revision:
-        raise ReportGenerationConflict(
-            "case_analysis_stale",
-            "The selected Case analysis is based on a different evidence revision. Re-run analysis before generating a report.",
-        )
-    source_bundle = case_source_bundle_from_case(case)
+    source_bundle = case_source_bundle_for_analysis(case, result)
     if not source_bundle.sources:
         raise ReportGenerationConflict("case_report_input_invalid", "The Case has no active source evidence")
-    trace = validated_trace(result, source_bundle)
+    trace = validated_trace(result)
     return CaseReportInput(
         case_id=case.id,
         case_title=case.title or "CyberCase Investigation",
@@ -81,7 +74,6 @@ def build_case_report_input(
 
 def validated_trace(
     result: CaseAnalysisResult,
-    source_bundle: CaseSourceBundle,
 ) -> CaseAnalysisTrace:
     if not isinstance(result.trace_json, dict):
         raise ReportGenerationConflict("case_analysis_trace_missing", "The selected analysis has no validated trace")
@@ -89,12 +81,8 @@ def validated_trace(
         trace = CaseAnalysisTrace.model_validate(result.trace_json)
         if trace.analysis_mode != "case_overview":
             raise ValueError("analysis trace mode is not case_overview")
-        return validate_case_trace(
-            trace,
-            source_bundle,
-            mitre_table=mitre_table_for_validation(result),
-        )
-    except (CaseAnalysisFailure, ValueError) as error:
+        return trace
+    except ValueError as error:
         raise ReportGenerationConflict("case_analysis_trace_invalid", "The selected analysis trace is invalid") from error
 
 

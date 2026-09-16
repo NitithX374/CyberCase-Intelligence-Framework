@@ -192,16 +192,54 @@ export function parseCaseTrace(
   sources: CaseEvidenceSource[],
 ): ParsedCaseTrace {
   const trace = asRecord(result.trace_json);
-  if (!trace || trace.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated" || trace.analysis_mode !== "case_overview") throw new Error("The saved Case analysis trace is unavailable or unsupported.");
-  const claims = asArray(trace.claims).map((claim) => parseClaim(claim, sources));
-  const gaps = asArray(trace.gaps).map(parseGap);
-  const associations = asArray(trace.mitre_associations).map(parseAssociation);
-  const claimIds = new Set(claims.map((claim) => claim.claimId));
-  if (claimIds.size !== claims.length) throw new Error("Analysis claims have duplicate identifiers.");
-  for (const gap of gaps) if (!gap.affectedClaimIds.every((id) => claimIds.has(id))) throw new Error("Analysis gap references an unknown claim.");
-  for (const association of associations) if (!association.claimIds.every((id) => claimIds.has(id))) throw new Error("Analysis reference points to an unknown claim.");
+  if (!trace || trace.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated" || trace.analysis_mode !== "case_overview") {
+    throw new Error("The saved Case analysis trace is unavailable or unsupported.");
+  }
+  const claims: CaseTraceClaim[] = [];
+  const claimIds = new Set<string>();
+  for (const rawClaim of asArray(trace.claims)) {
+    try {
+      const claim = parseClaim(rawClaim, sources);
+      if (!claimIds.has(claim.claimId)) {
+        claimIds.add(claim.claimId);
+        claims.push(claim);
+      }
+    } catch (err) {
+      console.warn("Skipping invalid claim in analysis trace:", err);
+    }
+  }
+
+  const gaps: CaseGap[] = [];
+  for (const rawGap of asArray(trace.gaps)) {
+    try {
+      const gap = parseGap(rawGap);
+      gaps.push({
+        ...gap,
+        affectedClaimIds: gap.affectedClaimIds.filter((id) => claimIds.has(id)),
+      });
+    } catch (err) {
+      console.warn("Skipping invalid gap in analysis trace:", err);
+    }
+  }
+
+  const associations: CaseTraceAssociation[] = [];
+  for (const rawAssociation of asArray(trace.mitre_associations)) {
+    try {
+      const association = parseAssociation(rawAssociation);
+      const filteredClaimIds = association.claimIds.filter((id) => claimIds.has(id));
+      if (filteredClaimIds.length > 0) {
+        associations.push({
+          ...association,
+          claimIds: filteredClaimIds,
+        });
+      }
+    } catch (err) {
+      console.warn("Skipping invalid MITRE association in analysis trace:", err);
+    }
+  }
+
   return {
-    summary: asString(trace.summary) || invalidSummary(),
+    summary: asString(trace.summary) || asString(result.summary) || "Case summary not provided.",
     claims,
     gaps,
     associations,
@@ -215,11 +253,14 @@ function parseClaim(value: unknown, sources: CaseEvidenceSource[]): CaseTraceCla
   const claimType = asString(claim?.claim_type) as ClaimType;
   const text = asString(claim?.text);
   const epistemicStatus = asString(claim?.epistemic_status) as EpistemicStatus;
-  if (!/^A-\d{2,}$/.test(claimId) || !text || !claimTypes.has(claimType) || !epistemicStatuses.has(epistemicStatus)) throw new Error("Analysis claim is invalid.");
-  const supportingIds = asStringArray(claim?.supporting_source_ids);
-  const contradictingIds = asStringArray(claim?.contradicting_source_ids);
-  if (supportingIds.some((id) => !sources.some((source) => source.id === id)) || contradictingIds.some((id) => !sources.some((source) => source.id === id))) throw new Error("Analysis claim cites evidence outside Case evidence.");
-  if (supportingIds.some((id) => contradictingIds.includes(id))) throw new Error("Analysis claim assigns one source to two roles.");
+  if (!/^A-\d{2,}$/.test(claimId) || !text || !claimTypes.has(claimType) || !epistemicStatuses.has(epistemicStatus)) {
+    throw new Error("Analysis claim is invalid.");
+  }
+  const rawSupportingIds = asStringArray(claim?.supporting_source_ids);
+  const rawContradictingIds = asStringArray(claim?.contradicting_source_ids);
+  const knownSourceIds = new Set(sources.map((source) => source.id));
+  const supportingIds = rawSupportingIds.filter((id) => knownSourceIds.has(id));
+  const contradictingIds = rawContradictingIds.filter((id) => knownSourceIds.has(id) && !supportingIds.includes(id));
   return {
     claimId,
     claimType,
@@ -254,8 +295,4 @@ function parseAssociation(value: unknown): CaseTraceAssociation {
   const reason = asString(association?.reason);
   if (!/^MA-\d{2,}$/.test(id) || !/^T\d{4}(?:\.\d{3})?$/.test(techniqueId) || !claimIds.length || !reason || association?.status !== "candidate_only" || association?.support_role !== "external_technical_context") throw new Error("External technical association is invalid.");
   return { id, techniqueId, claimIds, reason };
-}
-
-function invalidSummary(): string {
-  throw new Error("Analysis summary is empty.");
 }

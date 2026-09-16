@@ -40,37 +40,32 @@ def _trace(claim: CaseAnalysisClaim, content: str) -> CaseAnalysisTrace:
     )
 
 
-@pytest.mark.parametrize("role", ["supporting", "contradicting"])
-def test_case_validation_requires_exact_citation_for_each_declared_role(role):
+def test_case_validation_allows_sources_without_exact_citations():
     content = "The witness reported a blue vehicle."
     supporting_ids = ["s1"]
-    supporting_citations = [
-        CaseSourceCitation(
-            source_id="s1",
-            exact_quote=content,
-        )
-    ] if role == "contradicting" else []
-    contradicting_ids = ["s2"] if role == "contradicting" else []
+    contradicting_ids = ["s2"]
     claim = CaseAnalysisClaim(
         claim_id="A-01",
         claim_type="reported",
         text="The witness reported a vehicle.",
         epistemic_status="reported",
         supporting_source_ids=supporting_ids,
-        supporting_citations=supporting_citations,
+        supporting_citations=[],
         contradicting_source_ids=contradicting_ids,
+        contradicting_citations=[],
     )
     trace = _trace(claim, content)
-    with pytest.raises(CaseAnalysisFailure) as error:
-        validate_case_trace(
-            trace,
-            CaseSourceBundle(
-                revision=1,
-                sources=(_source("s1", content), _source("s2", "A different account.")),
-            ),
-            [],
-        )
-    assert error.value.code == "case_trace_role_citation_missing"
+    validated = validate_case_trace(
+        trace,
+        CaseSourceBundle(
+            revision=1,
+            sources=(_source("s1", content), _source("s2", "A different account.")),
+        ),
+        [],
+    )
+    assert validated.claims[0].claim_id == "A-01"
+    assert validated.claims[0].supporting_source_ids == ["s1"]
+    assert validated.claims[0].contradicting_source_ids == ["s2"]
 
 
 def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_text():

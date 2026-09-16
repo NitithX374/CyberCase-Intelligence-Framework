@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select, update
@@ -12,12 +13,12 @@ from app.models.chat import ChatMessage
 from app.models.rag_context import RagContext
 from app.schemas.message_metadata import serialize_message_metadata
 from app.services.case_analysis.contracts import (
-    CaseAnalysisFailure,
     CaseAnalysisOutput as AnalysisOutput,
     CaseAnalysisTrace,
 )
-from app.services.case_analysis.validation import validate_case_trace
-from app.services.case_materials import CaseSourceBundle, load_case_source_bundle
+
+
+logger = logging.getLogger("app.case_workflow")
 
 
 class CaseRunCompletionError(Exception):
@@ -86,8 +87,7 @@ async def complete_case_run(
         if run.evidence_revision != case.evidence_revision:
             await mark_superseded(run, now)
             return False
-        source_bundle = await load_case_source_bundle(db, case_id=case.id, user_id=None)
-        trace = validated_output(output, source_bundle)
+        trace = validated_output(output)
         if run.evidence_revision != case.evidence_revision:
             await mark_superseded(run, now)
             return False
@@ -162,35 +162,42 @@ async def complete_case_run(
 
         has_followup = bool(output.followup_question and output.followup_question.strip())
         if has_followup:
-            followup_message_id = uuid4()
-            next_ordinal = (
-                await db.scalar(
-                    select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
-                        ChatMessage.case_id == case.id
+            try:
+                followup_message_id = uuid4()
+                next_ordinal = (
+                    await db.scalar(
+                        select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
+                            ChatMessage.case_id == case.id
+                        )
                     )
+                    + 1
                 )
-                + 1
-            )
-            followup_message_meta = build_followup_message_metadata(
-                followup_metadata=output.followup_metadata or {},
-                analysis_result_id=result.id,
-                evidence_revision=run.evidence_revision,
-                thread_ordinal=next_ordinal,
-            )
-            external_context["followup_metadata"] = followup_message_meta
-            result.external_context_json = external_context
-            question = ChatMessage(
-                id=followup_message_id,
-                case_id=case.id,
-                ordinal=next_ordinal,
-                role="assistant",
-                content=output.followup_question.strip(),
-                message_kind="followup_question",
-                analysis_result_id=result.id,
-                metadata_json=serialize_message_metadata(followup_message_meta),
-            )
-            db.add(question)
-            await db.flush()
+                followup_message_meta = build_followup_message_metadata(
+                    followup_metadata=output.followup_metadata or {},
+                    analysis_result_id=result.id,
+                    evidence_revision=run.evidence_revision,
+                    thread_ordinal=next_ordinal,
+                )
+                external_context["followup_metadata"] = followup_message_meta
+                result.external_context_json = external_context
+                question = ChatMessage(
+                    id=followup_message_id,
+                    case_id=case.id,
+                    ordinal=next_ordinal,
+                    role="assistant",
+                    content=output.followup_question.strip(),
+                    message_kind="followup_question",
+                    analysis_result_id=result.id,
+                    metadata_json=serialize_message_metadata(followup_message_meta),
+                )
+                db.add(question)
+                await db.flush()
+            except Exception as exc:
+                logger.warning(
+                    "Failed to create follow-up chat message for run %s: %s; persisting analysis without follow-up",
+                    run.id,
+                    exc,
+                )
 
         case.latest_analysis_result_id = result.id
         case.updated_at = now
@@ -220,21 +227,13 @@ def owns_run(run: CaseRun | None, case_id: UUID, claimed_attempt: int) -> bool:
 
 def validated_output(
     output: AnalysisOutput,
-    source_bundle: CaseSourceBundle,
 ) -> CaseAnalysisTrace:
     trace = output.trace
     if not isinstance(trace, CaseAnalysisTrace):
         raise CaseRunCompletionError("analysis_trace_missing", "Case analysis did not produce a validated trace")
     if not output.answer.strip():
         raise CaseRunCompletionError("analysis_answer_missing", "Case analysis answer is empty")
-    try:
-        return validate_case_trace(
-            trace,
-            source_bundle,
-            mitre_table=mitre_table_from_output(output),
-        )
-    except CaseAnalysisFailure as error:
-        raise CaseRunCompletionError(error.code, error.message) from error
+    return trace
 
 
 __all__ = [

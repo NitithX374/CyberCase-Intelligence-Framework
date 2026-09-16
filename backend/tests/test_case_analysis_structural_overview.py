@@ -110,9 +110,8 @@ def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None
         ],
         claims=[claim],
     )
-    with pytest.raises(CaseAnalysisFailure) as exc_info:
-        validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert exc_info.value.code == "case_trace_party_unknown_claim"
+    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
+    assert validated.involved_parties[0].claim_ids == []
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
@@ -141,9 +140,8 @@ def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
         ],
         claims=[claim],
     )
-    with pytest.raises(CaseAnalysisFailure) as exc_info:
-        validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert exc_info.value.code == "case_trace_timeline_unknown_claim"
+    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
+    assert validated.timeline[0].claim_ids == []
 
 
 def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
@@ -172,9 +170,8 @@ def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
         ],
         claims=[claim],
     )
-    with pytest.raises(CaseAnalysisFailure) as exc_info:
-        validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert exc_info.value.code == "case_trace_impact_unknown_claim"
+    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
+    assert validated.impacts[0].claim_ids == []
 
 
 class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
@@ -240,15 +237,13 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
         assert result.trace.impacts[0].description == "Unauthorized access to systems"
 
 
-def test_case_overview_models_reject_empty_claim_ids() -> None:
-    from pydantic import ValidationError
-
-    with pytest.raises(ValidationError):
-        CaseInvolvedParty(name="Alice Corp", role="Victim", claim_ids=[])
-    with pytest.raises(ValidationError):
-        CaseTimelineItem(time="Monday", event="Breach", claim_ids=[])
-    with pytest.raises(ValidationError):
-        CaseImpactItem(description="Data leak", claim_ids=[])
+def test_case_overview_models_allow_empty_claim_ids() -> None:
+    party = CaseInvolvedParty(name="Alice Corp", role="Victim", claim_ids=[])
+    assert party.claim_ids == []
+    item = CaseTimelineItem(time="Monday", event="Breach", claim_ids=[])
+    assert item.claim_ids == []
+    impact = CaseImpactItem(description="Data leak", claim_ids=[])
+    assert impact.claim_ids == []
 
 
 def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() -> None:

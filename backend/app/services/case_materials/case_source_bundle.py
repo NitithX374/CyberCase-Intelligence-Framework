@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.case import Case
 from app.models.case_materials import CaseSource
+from app.models.case_run import CaseAnalysisResult
 from app.services.case_materials.material_service import CaseMaterialsError
 
 
@@ -58,6 +59,37 @@ def case_source_bundle_from_case(case: Case) -> CaseSourceBundle:
     return CaseSourceBundle(
         revision=case.evidence_revision,
         sources=tuple(case_source_item(source) for source in active_sources),
+    )
+
+
+def case_source_bundle_for_analysis(case: Case, result: CaseAnalysisResult) -> CaseSourceBundle:
+    referenced_source_ids: set[str] = set()
+    if isinstance(result.trace_json, dict):
+        claims = result.trace_json.get("claims")
+        if isinstance(claims, list):
+            for claim in claims:
+                if isinstance(claim, dict):
+                    supporting = claim.get("supporting_source_ids")
+                    if isinstance(supporting, list):
+                        referenced_source_ids.update(str(s) for s in supporting)
+                    contradicting = claim.get("contradicting_source_ids")
+                    if isinstance(contradicting, list):
+                        referenced_source_ids.update(str(s) for s in contradicting)
+
+    if referenced_source_ids:
+        analysis_sources = [
+            source for source in case.sources
+            if str(source.id) in referenced_source_ids
+        ]
+    else:
+        analysis_sources = [
+            source for source in case.sources
+            if (source.created_at <= result.created_at and source.archived_at is None)
+        ]
+    analysis_sources.sort(key=lambda source: (source.created_at, str(source.id)))
+    return CaseSourceBundle(
+        revision=result.evidence_revision,
+        sources=tuple(case_source_item(source) for source in analysis_sources),
     )
 
 
@@ -123,6 +155,7 @@ __all__ = [
     "CaseSourceItem",
     "build_document_source_context",
     "build_rag_query",
+    "case_source_bundle_for_analysis",
     "case_source_bundle_from_case",
     "case_source_item",
     "load_case_source_bundle",

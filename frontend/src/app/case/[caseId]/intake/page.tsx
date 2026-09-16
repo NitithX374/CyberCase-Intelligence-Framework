@@ -53,6 +53,7 @@ export default function IntakePage() {
         isCaseDataLoading={isCaseDataLoading}
         error={actions.actionError}
         isUploadingDocument={actions.isUploadingDocument}
+        uploadingFilename={actions.uploadingFilename}
         onSubmitCase={actions.submitCase}
         onUploadDocument={(file) => void actions.uploadDocument(file)}
         onOpenOverview={() => router.push(casePath(caseId, "overview"))}

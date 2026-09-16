@@ -134,7 +134,7 @@ async def create_case_chat_message_and_run(
     case_id: UUID,
     user_id: UUID | None,
     request: ChatMessageCreate,
-) -> tuple[ChatMessage, CaseRun]:
+) -> tuple[ChatMessage, CaseRun | None]:
     case = await lock_case_chat(db, case_id, user_id)
 
     if request.intent == "followup_answer":
