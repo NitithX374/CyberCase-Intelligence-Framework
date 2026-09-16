@@ -28,7 +28,7 @@ class CaseSourceCitation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source_id: str = Field(min_length=1, max_length=160)
-    exact_quote: str = Field(min_length=1, max_length=2_000)
+    exact_quote: str = Field(default="", max_length=2_000)
     document_id: str | None = Field(default=None, min_length=1, max_length=160)
     filename: str | None = Field(default=None, min_length=1, max_length=255)
     page_numbers: list[int] = Field(default_factory=list, max_length=8)
@@ -57,6 +57,21 @@ class CaseSourceCitation(BaseModel):
     @classmethod
     def normalize_text(cls, value: str | None) -> str | None:
         return value.strip() if value is not None else None
+
+    @field_validator("page_numbers", mode="before")
+    @classmethod
+    def sanitize_page_numbers(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            seen: list[int] = []
+            for p in value:
+                if isinstance(p, int) and 1 <= p <= 500 and p not in seen:
+                    seen.append(p)
+                elif isinstance(p, str) and p.strip().isdigit():
+                    num = int(p.strip())
+                    if 1 <= num <= 500 and num not in seen:
+                        seen.append(num)
+            return seen
+        return value
 
     @field_validator("page_numbers")
     @classmethod
@@ -108,18 +123,49 @@ class CaseAnalysisClaim(BaseModel):
     contradicting_source_ids: list[str] = Field(default_factory=list, max_length=64)
     supporting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
     contradicting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
-    reasoning_summary: str | None = Field(default=None, min_length=1, max_length=1_000)
+    reasoning_summary: str | None = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_raw_citations(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        for field_name in ("supporting_citations", "contradicting_citations"):
+            raw = data.get(field_name)
+            if not isinstance(raw, (list, tuple)):
+                continue
+            cleaned = []
+            for item in raw:
+                if isinstance(item, CaseSourceCitation):
+                    if item.exact_quote.strip():
+                        cleaned.append(item)
+                elif isinstance(item, dict):
+                    source_id = item.get("source_id")
+                    quote = item.get("exact_quote")
+                    if not source_id or not isinstance(source_id, str) or not source_id.strip():
+                        continue
+                    if not quote or not isinstance(quote, str) or not quote.strip():
+                        continue
+                    cleaned.append(item)
+            data[field_name] = cleaned
+        return data
 
     @field_validator("claim_id", mode="before")
     @classmethod
     def normalize_claim_id(cls, value: object) -> object:
         return normalize_identifier(value, "A", "A|claim|c")
 
-    @field_validator("text", "reasoning_summary")
+    @field_validator("reasoning_summary", mode="before")
     @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
+    def normalize_reasoning_summary(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped if stripped else None
+        return value
+
+    @field_validator("text")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
             raise ValueError("claim text values must be non-empty")

@@ -309,3 +309,114 @@ def test_validate_case_trace_allows_same_page_multiple_occurrences():
         [],
     )
     assert validated.claims[0].supporting_citations[0].page_numbers == [1]
+
+
+def test_claim_reasoning_summary_empty_and_whitespace_normalized():
+    claim_empty = CaseAnalysisClaim.model_validate({
+        "claim_id": "A-01",
+        "claim_type": "reported",
+        "text": "Valid factual claim text",
+        "epistemic_status": "reported",
+        "supporting_source_ids": ["s1"],
+        "reasoning_summary": "",
+    })
+    assert claim_empty.reasoning_summary is None
+
+    claim_whitespace = CaseAnalysisClaim.model_validate({
+        "claim_id": "A-02",
+        "claim_type": "reported",
+        "text": "Valid factual claim text",
+        "epistemic_status": "reported",
+        "supporting_source_ids": ["s1"],
+        "reasoning_summary": "   ",
+    })
+    assert claim_whitespace.reasoning_summary is None
+
+
+def test_claim_malformed_raw_citations_dropped_without_failing_claim():
+    claim = CaseAnalysisClaim.model_validate({
+        "claim_id": "A-01",
+        "claim_type": "reported",
+        "text": "Valid factual claim text",
+        "epistemic_status": "reported",
+        "supporting_source_ids": ["s1"],
+        "supporting_citations": [
+            {"source_id": "s1", "exact_quote": ""},
+            {"source_id": "", "exact_quote": "some quote"},
+            {
+                "source_id": "s1",
+                "exact_quote": "valid quote",
+                "document_id": "doc-01",
+                "filename": "doc.pdf",
+                "page_numbers": [1, 1, 999, -5],
+            },
+        ],
+    })
+    # Empty quote and empty source_id are dropped; valid quote with duplicate/out-of-range pages is sanitized
+    assert len(claim.supporting_citations) == 1
+    assert claim.supporting_citations[0].exact_quote == "valid quote"
+    assert claim.supporting_citations[0].page_numbers == [1]
+
+
+def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources():
+    from types import SimpleNamespace
+    from datetime import datetime, timezone, timedelta
+    from app.services.case_materials.case_source_bundle import case_source_bundle_for_analysis
+
+    t0 = datetime.now(timezone.utc)
+    t_result = t0 + timedelta(minutes=10)
+    t_archived_later = t0 + timedelta(minutes=20)
+
+    # Source 1: active, created before analysis
+    s1 = SimpleNamespace(
+        id="00000000-0000-0000-0000-000000000001",
+        source_kind="narrative",
+        exact_text="Source 1 text",
+        document_id=None,
+        provenance_json={},
+        created_at=t0,
+        archived_at=None,
+        source_metadata_json={},
+        document=None,
+    )
+    # Source 2: archived AFTER analysis was run
+    s2 = SimpleNamespace(
+        id="00000000-0000-0000-0000-000000000002",
+        source_kind="narrative",
+        exact_text="Source 2 text",
+        document_id=None,
+        provenance_json={},
+        created_at=t0 + timedelta(minutes=1),
+        archived_at=t_archived_later,
+        source_metadata_json={},
+        document=None,
+    )
+    # Source 3: archived BEFORE analysis was run
+    s3 = SimpleNamespace(
+        id="00000000-0000-0000-0000-000000000003",
+        source_kind="narrative",
+        exact_text="Source 3 text",
+        document_id=None,
+        provenance_json={},
+        created_at=t0,
+        archived_at=t0 + timedelta(minutes=5),
+        source_metadata_json={},
+        document=None,
+    )
+    case = SimpleNamespace(
+        evidence_revision=3,
+        sources=[s1, s2, s3],
+    )
+    result = SimpleNamespace(
+        created_at=t_result,
+        evidence_revision=2,
+        trace_json={},  # No referenced claims -> triggers fallback
+    )
+
+    bundle = case_source_bundle_for_analysis(case, result)
+    assert bundle.revision == 2
+    # s1 (active) and s2 (archived after analysis) should be included; s3 (archived before analysis) should NOT be
+    bundle_source_ids = {s.source_id for s in bundle.sources}
+    assert s1.id in bundle_source_ids
+    assert s2.id in bundle_source_ids
+    assert s3.id not in bundle_source_ids

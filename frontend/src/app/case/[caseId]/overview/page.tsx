@@ -67,7 +67,6 @@ export default function OverviewPage() {
       onOpenReport={() => router.push(casePath(caseId, "report"))}
       onOpenIntake={() => router.push(casePath(caseId, "intake"))}
       onOpenMaterials={() => router.push(casePath(caseId, "materials"))}
-      onOpenTechnicalContext={() => router.push(casePath(caseId, "technical-context"))}
       onNavigateToSource={() => router.push(casePath(caseId, "materials"))}
       onRunAnalysis={() => void handleRunAnalysis()}
     />

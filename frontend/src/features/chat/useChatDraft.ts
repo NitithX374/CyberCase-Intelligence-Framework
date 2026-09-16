@@ -140,6 +140,18 @@ export function useChatDraft() {
       ...(completed ? { input: "", pendingFollowUp: null, queryError: null } : {}),
     }));
   }, []);
+  const completeSubmissionWithoutRun = useCallback((caseId: string) => {
+    if (pendingRef.current?.caseId === caseId) pendingRef.current = null;
+    removePendingSubmission(caseId);
+    writeAccountValue(`draft:${caseId}`, "");
+    setState((current) => ({
+      ...current,
+      activity: null,
+      input: "",
+      pendingFollowUp: null,
+      queryError: null,
+    }));
+  }, []);
   const clearDraft = useCallback(() => {
     draftCaseRef.current = "new";
     setState({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" });
@@ -154,7 +166,7 @@ export function useChatDraft() {
   return {
     state, getPendingSubmission, changeInput, reportError,
     selectDraft, beginSubmission, acceptSubmission, failSubmission, failSelection,
-    reconcile, clearDraft, forgetCaseChat,
+    reconcile, completeSubmissionWithoutRun, clearDraft, forgetCaseChat,
   };
 }
 

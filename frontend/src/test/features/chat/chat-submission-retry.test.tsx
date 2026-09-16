@@ -187,6 +187,35 @@ describe("chat submission lifecycle", () => {
     expect(runRead).toHaveBeenCalledWith("a", nativeReceipt.run.id, expect.any(AbortSignal));
     expect(result.current.session.messages).toEqual([request, message("a", 2, "assistant", "Answer")]);
   });
+
+  it("clears activity and localStorage pending submission when accepted.run is null (e.g. skipped follow-up)", async () => {
+    const question = followUpQuestion();
+    vi.spyOn(api, "getCaseChat")
+      .mockResolvedValueOnce(caseChat("a", "awaiting_followup", [question]))
+      .mockResolvedValueOnce(caseChat("a", "idle", [question, message("a", 3, "user", "I don't have this information")]));
+
+    const send = vi.spyOn(api, "createCaseChatMessage").mockResolvedValue({
+      message: message("a", 3, "user", "I don't have this information"),
+      run: null,
+    });
+
+    const { result } = renderSession();
+    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await tick();
+
+    act(() => {
+      result.current.submitFollowUp({
+        gapId: "gap-host",
+        answer: "I don't have this information",
+        disposition: "skipped",
+      });
+    });
+    await tick(50);
+
+    expect(send).toHaveBeenCalled();
+    expect(result.current.session.phase).not.toBe("querying");
+    expect(readAccountValue("pending-case-chat:a")).toBeNull();
+  });
 });
 
 function followUpQuestion(): api.ChatMessageRead {

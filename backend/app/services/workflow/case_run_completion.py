@@ -163,35 +163,36 @@ async def complete_case_run(
         has_followup = bool(output.followup_question and output.followup_question.strip())
         if has_followup:
             try:
-                followup_message_id = uuid4()
-                next_ordinal = (
-                    await db.scalar(
-                        select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
-                            ChatMessage.case_id == case.id
+                async with db.begin_nested():
+                    followup_message_id = uuid4()
+                    next_ordinal = (
+                        await db.scalar(
+                            select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
+                                ChatMessage.case_id == case.id
+                            )
                         )
+                        + 1
                     )
-                    + 1
-                )
-                followup_message_meta = build_followup_message_metadata(
-                    followup_metadata=output.followup_metadata or {},
-                    analysis_result_id=result.id,
-                    evidence_revision=run.evidence_revision,
-                    thread_ordinal=next_ordinal,
-                )
-                external_context["followup_metadata"] = followup_message_meta
-                result.external_context_json = external_context
-                question = ChatMessage(
-                    id=followup_message_id,
-                    case_id=case.id,
-                    ordinal=next_ordinal,
-                    role="assistant",
-                    content=output.followup_question.strip(),
-                    message_kind="followup_question",
-                    analysis_result_id=result.id,
-                    metadata_json=serialize_message_metadata(followup_message_meta),
-                )
-                db.add(question)
-                await db.flush()
+                    followup_message_meta = build_followup_message_metadata(
+                        followup_metadata=output.followup_metadata or {},
+                        analysis_result_id=result.id,
+                        evidence_revision=run.evidence_revision,
+                        thread_ordinal=next_ordinal,
+                    )
+                    external_context["followup_metadata"] = followup_message_meta
+                    result.external_context_json = external_context
+                    question = ChatMessage(
+                        id=followup_message_id,
+                        case_id=case.id,
+                        ordinal=next_ordinal,
+                        role="assistant",
+                        content=output.followup_question.strip(),
+                        message_kind="followup_question",
+                        analysis_result_id=result.id,
+                        metadata_json=serialize_message_metadata(followup_message_meta),
+                    )
+                    db.add(question)
+                    await db.flush()
             except Exception as exc:
                 logger.warning(
                     "Failed to create follow-up chat message for run %s: %s; persisting analysis without follow-up",

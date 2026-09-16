@@ -84,7 +84,10 @@ def case_source_bundle_for_analysis(case: Case, result: CaseAnalysisResult) -> C
     else:
         analysis_sources = [
             source for source in case.sources
-            if (source.created_at <= result.created_at and source.archived_at is None)
+            if (
+                source.created_at <= result.created_at
+                and (source.archived_at is None or source.archived_at > result.created_at)
+            )
         ]
     analysis_sources.sort(key=lambda source: (source.created_at, str(source.id)))
     return CaseSourceBundle(
