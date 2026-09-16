@@ -14,6 +14,14 @@ TEMPLATE_DIRECTORY = Path(__file__).with_name("templates")
 REPORT_TEMPLATE_NAME = "case_report.html.j2"
 
 
+def strip_reference_text(value: object) -> str:
+    text = clean_report_text(value)
+    cleaned = re.sub(r"\s*[·•]\s*อ้างอิง\s*:\s*.*$", "", text)
+    cleaned = re.sub(r"\s*\(อ้างอิง\s*:\s*.*\)$", "", cleaned)
+    cleaned = re.sub(r"\s*\[อ้างอิง\s*:\s*.*\]$", "", cleaned)
+    return cleaned.strip()
+
+
 def render_case_report_html(
     report_input: CaseReportInput,
     report: StructuredReport,
@@ -26,6 +34,7 @@ def render_case_report_html(
         ),
     )
     environment.filters["clean_report_text"] = clean_report_text
+    environment.filters["strip_reference_text"] = strip_reference_text
     template = environment.get_template(REPORT_TEMPLATE_NAME)
     return template.render(
         report=report,
@@ -39,4 +48,4 @@ def clean_report_text(value: object) -> str:
     return text.replace("**", "").replace("`", "")
 
 
-__all__ = ["REPORT_TEMPLATE_NAME", "clean_report_text", "render_case_report_html"]
+__all__ = ["REPORT_TEMPLATE_NAME", "clean_report_text", "strip_reference_text", "render_case_report_html"]

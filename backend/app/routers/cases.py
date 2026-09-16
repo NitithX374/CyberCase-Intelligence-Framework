@@ -66,7 +66,8 @@ async def create_case_chat_message(
             status_code=error.status_code,
             detail={"code": error.code, "message": error.message},
         ) from error
-    background_tasks.add_task(process_case_run, run.id)
+    if run is not None:
+        background_tasks.add_task(process_case_run, run.id)
     return CaseChatMessageAccepted(message=message, run=run)
 
 

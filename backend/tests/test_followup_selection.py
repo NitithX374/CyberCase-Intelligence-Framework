@@ -54,6 +54,27 @@ def test_select_followup_gap_returns_one_ranked_high_priority_gap() -> None:
     assert selected.gap_id == "G-02"
 
 
+def test_select_followup_gap_treats_skipped_disposition_as_exhausted() -> None:
+    gaps = (
+        gap("G-01", "first_gap"),
+        gap("G-02", "second_gap"),
+    )
+    exchanges = (
+        FollowUpExchange(
+            question="What is the first gap?",
+            answer="skipped",
+            gap_id="G-01",
+            gap_key="first_gap",
+            disposition="skipped",
+        ),
+    )
+
+    selected = select_followup_gap(gaps, exchanges)
+
+    assert selected is not None
+    assert selected.gap_id == "G-02"
+
+
 def test_followup_questions_are_realized_from_main_analysis_gaps(monkeypatch) -> None:
     monkeypatch.setattr("app.services.followup.decision.settings.chat_followup_enabled", True)
     monkeypatch.setattr("app.services.followup.decision.settings.chat_followup_max_rounds", 2)

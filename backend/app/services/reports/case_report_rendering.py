@@ -54,10 +54,19 @@ def build_case_report_display(
         for source in report_input.source_bundle.sources
     )
     trace_claims = {claim.claim_id: claim for claim in trace.claims}
-    claims = tuple(
-        display_claim(index, claim, trace_claims.get(claim.claim_id), source_labels)
-        for index, claim in enumerate(report.claims, 1)
-    )
+    seen_texts: set[str] = set()
+    display_claims_list: list[ReportDisplayClaim] = []
+    ordinal = 1
+    for claim in report.claims:
+        clean = claim.text.strip()
+        if clean in seen_texts:
+            continue
+        seen_texts.add(clean)
+        display_claims_list.append(
+            display_claim(ordinal, claim, trace_claims.get(claim.claim_id), source_labels)
+        )
+        ordinal += 1
+    claims = tuple(display_claims_list)
     return CaseReportDisplay(claims=claims, sources=sources)
 
 

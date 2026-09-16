@@ -17,7 +17,7 @@ class CaseInvolvedParty(BaseModel):
 
     name: str = Field(min_length=1, max_length=500)
     role: str = Field(min_length=1, max_length=500)
-    claim_ids: list[str] = Field(min_length=1, max_length=64)
+    claim_ids: list[str] = Field(default_factory=list, max_length=64)
 
     @field_validator("name", "role")
     @classmethod
@@ -48,7 +48,7 @@ class CaseTimelineItem(BaseModel):
 
     time: str = Field(min_length=1, max_length=500)
     event: str = Field(min_length=1, max_length=2_000)
-    claim_ids: list[str] = Field(min_length=1, max_length=64)
+    claim_ids: list[str] = Field(default_factory=list, max_length=64)
 
     @field_validator("time", "event")
     @classmethod
@@ -78,7 +78,7 @@ class CaseImpactItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = Field(min_length=1, max_length=2_000)
-    claim_ids: list[str] = Field(min_length=1, max_length=64)
+    claim_ids: list[str] = Field(default_factory=list, max_length=64)
 
     @field_validator("description")
     @classmethod

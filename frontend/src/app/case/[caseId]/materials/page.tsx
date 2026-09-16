@@ -23,7 +23,6 @@ export default function MaterialsPage() {
       try {
         await uploadMutation.mutateAsync(file);
       } catch {
-        // Errors handled by mutation state
       }
     },
     [caseId, uploadMutation],

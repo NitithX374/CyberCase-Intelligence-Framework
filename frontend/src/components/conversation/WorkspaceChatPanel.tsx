@@ -219,7 +219,6 @@ function FollowUpStepper({
       </div>
       <div className="flex flex-wrap gap-2 border-t border-unresolved/20 px-3 py-2">
         <button type="button" onClick={() => onDisposition("unavailable")} className="text-[11px] font-semibold text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">I don’t have this information</button>
-        <button type="button" onClick={() => onDisposition("skipped")} className="text-[11px] font-semibold text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">Skip</button>
       </div>
     </div>
   );

@@ -28,11 +28,18 @@ from app.services.reports.case_report_rendering import (
 
 INK = colors.HexColor("#111827")
 MUTED = colors.HexColor("#4B5563")
-RULE = colors.HexColor("#E5E7EB")
-DARK_RULE = colors.HexColor("#243B53")
-ACCENT = colors.HexColor("#243B53")
-PANEL = colors.HexColor("#EAF0F6")
+RULE = colors.HexColor("#D1D5DB")
+DARK_RULE = colors.HexColor("#1E293B")
+ACCENT = colors.HexColor("#1E293B")
+PANEL = colors.HexColor("#F3F4F6")
 PAGE_WIDTH, PAGE_HEIGHT = A4
+
+
+def strip_reference_text(text: str) -> str:
+    cleaned = re.sub(r"\s*[·•]\s*อ้างอิง\s*:\s*.*$", "", text)
+    cleaned = re.sub(r"\s*\(อ้างอิง\s*:\s*.*\)$", "", cleaned)
+    cleaned = re.sub(r"\s*\[อ้างอิง\s*:\s*.*\]$", "", cleaned)
+    return cleaned.strip()
 
 
 def register_report_fonts() -> tuple[str, str]:
@@ -86,15 +93,18 @@ def build_report_styles(font_names: tuple[str, str]) -> dict[str, ParagraphStyle
     base = getSampleStyleSheet()
     return {
         "eyebrow": ParagraphStyle("ReportEyebrow", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=10, textColor=MUTED, textTransform="uppercase", spaceAfter=1),
-        "doc_title": ParagraphStyle("ReportDocTitle", parent=base["Normal"], fontName=bold, fontSize=17, leading=22, textColor=ACCENT),
-        "section_heading": ParagraphStyle("ReportSectionHeading", parent=base["Normal"], fontName=bold, fontSize=10.5, leading=14, textColor=ACCENT, backColor=PANEL, borderColor=RULE, borderWidth=0.4, borderPadding=(1.5, 5, 1.5, 5), keepWithNext=True),
-        "subheading": ParagraphStyle("ReportSubheading", parent=base["Normal"], fontName=bold, fontSize=8.5, leading=11.5, textColor=INK, keepWithNext=True),
-        "meta_label": ParagraphStyle("ReportMetaLabel", parent=base["Normal"], fontName=bold, fontSize=8, leading=10.5, textColor=MUTED),
-        "meta_value": ParagraphStyle("ReportMetaValue", parent=base["Normal"], fontName=regular, fontSize=8, leading=10.5, textColor=INK),
-        "body": ParagraphStyle("ReportBody", parent=base["Normal"], fontName=regular, fontSize=9.5, leading=13.8, textColor=INK),
-        "body_indent": ParagraphStyle("ReportBodyIndent", parent=base["Normal"], fontName=regular, fontSize=9.5, leading=13.8, textColor=INK, firstLineIndent=14),
-        "body_small": ParagraphStyle("ReportBodySmall", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=11.5, textColor=INK),
-        "body_muted": ParagraphStyle("ReportBodyMuted", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=11.5, textColor=MUTED),
+        "doc_title": ParagraphStyle("ReportDocTitle", parent=base["Normal"], fontName=bold, fontSize=15, leading=20, textColor=ACCENT, spaceAfter=2),
+        "doc_subtitle": ParagraphStyle("ReportDocSubtitle", parent=base["Normal"], fontName=bold, fontSize=10, leading=14, textColor=MUTED, spaceAfter=4),
+        "section_heading": ParagraphStyle("ReportSectionHeading", parent=base["Normal"], fontName=bold, fontSize=10.5, leading=14, textColor=ACCENT, backColor=PANEL, borderColor=RULE, borderWidth=0.5, borderPadding=(2, 5, 2, 5), spaceBefore=4, spaceAfter=2, keepWithNext=True),
+        "subheading": ParagraphStyle("ReportSubheading", parent=base["Normal"], fontName=bold, fontSize=9, leading=13, textColor=ACCENT, spaceBefore=3, spaceAfter=1.5, keepWithNext=True),
+        "meta_label": ParagraphStyle("ReportMetaLabel", parent=base["Normal"], fontName=bold, fontSize=8, leading=11, textColor=MUTED),
+        "meta_value": ParagraphStyle("ReportMetaValue", parent=base["Normal"], fontName=regular, fontSize=8, leading=11, textColor=INK),
+        "body": ParagraphStyle("ReportBody", parent=base["Normal"], fontName=regular, fontSize=9, leading=14, textColor=INK),
+        "body_indent": ParagraphStyle("ReportBodyIndent", parent=base["Normal"], fontName=regular, fontSize=9, leading=14, textColor=INK, firstLineIndent=14),
+        "body_small": ParagraphStyle("ReportBodySmall", parent=base["Normal"], fontName=regular, fontSize=8, leading=11, textColor=INK),
+        "body_muted": ParagraphStyle("ReportBodyMuted", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12.5, textColor=MUTED),
+        "quote": ParagraphStyle("ReportQuote", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12.5, textColor=MUTED, leftIndent=14),
+        "reasoning": ParagraphStyle("ReportReasoning", parent=base["Normal"], fontName=regular, fontSize=8.5, leading=12.5, textColor=colors.HexColor("#1E3A8A"), leftIndent=14),
         "table_header": ParagraphStyle("ReportTableHeader", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=9.5, textColor=INK),
         "table_header_center": ParagraphStyle("ReportTableHeaderCenter", parent=base["Normal"], fontName=bold, fontSize=7.5, leading=9.5, textColor=INK, alignment=TA_CENTER),
         "table_cell": ParagraphStyle("ReportTableCell", parent=base["Normal"], fontName=regular, fontSize=7.5, leading=10, textColor=INK),
@@ -137,42 +147,20 @@ def build_indicator_story(
 ) -> list[object]:
     story: list[object] = []
     for claim in claims:
-        references = ", ".join(claim.source_labels) or "ไม่มีการอ้างอิงโดยตรง"
-        story.extend(
-            [
-                Paragraph(
-                    f"<b>{paragraph_text(f'ตัวบ่งชี้ {claim.ordinal} · {claim.epistemic_label}')}</b>",
-                    styles["subheading"],
-                ),
-                Paragraph(paragraph_text(claim.text), styles["body"]),
-                Paragraph(
-                    paragraph_text(f"{claim.support_label} · อ้างอิง: {references}"),
-                    styles["body_small"],
-                ),
-            ]
-        )
+        epistemic_note = ""
+        if claim.epistemic_label not in ("ปรากฏในหลักฐาน", "reported"):
+            epistemic_note = f" <i>({claim.epistemic_label})</i>"
+
+        story.append(Paragraph(f"<b>ตัวบ่งชี้ที่ {claim.ordinal}:</b>{epistemic_note}", styles["subheading"]))
+        story.append(Paragraph(paragraph_text(claim.text), styles["body"]))
+
         for quote in claim.supporting_quotes:
-            story.append(
-                Paragraph(
-                    paragraph_text(f"ข้อความจากหลักฐาน: “{quote}”"),
-                    styles["body_muted"],
-                )
-            )
+            story.append(Paragraph(f"<i>ข้อความจากหลักฐาน: “{paragraph_text(quote)}”</i>", styles["quote"]))
         for quote in claim.contradicting_quotes:
-            story.append(
-                Paragraph(
-                    paragraph_text(f"ข้อความที่ขัดแย้ง: “{quote}”"),
-                    styles["body_muted"],
-                )
-            )
+            story.append(Paragraph(f"<i>ข้อความที่ขัดแย้ง: “{paragraph_text(quote)}”</i>", styles["quote"]))
         if claim.reasoning_summary:
-            story.append(
-                Paragraph(
-                    paragraph_text(f"เหตุผลเชิงวิเคราะห์: {claim.reasoning_summary}"),
-                    styles["body_muted"],
-                )
-            )
-        story.append(Spacer(1, 2.2))
+            story.append(Paragraph(f"<i>เหตุผลเชิงวิเคราะห์: {paragraph_text(claim.reasoning_summary)}</i>", styles["reasoning"]))
+        story.append(Spacer(1, 2 * mm))
     return story
 
 
@@ -181,22 +169,20 @@ def build_source_register_story(
     styles: dict[str, object],
 ) -> list[object]:
     story: list[object] = [
-        Paragraph("เอกสาร/หลักฐานอ้างอิง", styles["section_heading"]),
-        Spacer(1, 2),
+        Paragraph("เอกสารที่ใช้ประกอบการวิเคราะห์", styles["section_heading"]),
+        Spacer(1, 1.5 * mm),
         Paragraph(
-            "รายการนี้เป็นดัชนีอ้างอิงของหลักฐานที่ใช้ประกอบรายงาน รายละเอียดข้อความจะแสดงเฉพาะส่วนที่ถูกอ้างในตัวบ่งชี้",
+            "รายงานฉบับนี้จัดทำขึ้นจากการประมวลผลเอกสารหลักฐานในสำนวนคดีดังต่อไปนี้:",
             styles["body_muted"],
         ),
+        Spacer(1, 1 * mm),
     ]
     for source in sources:
-        story.extend(
-            [
-                Paragraph(
-                    paragraph_text(f"{source.label} · {source.filename}"),
-                    styles["body"],
-                ),
-                Spacer(1, 1.2),
-            ]
+        story.append(
+            Paragraph(
+                paragraph_text(f"• {source.filename}"),
+                styles["body"],
+            )
         )
     return story
 
@@ -237,33 +223,176 @@ def build_report_story(
     display = build_case_report_display(report_input, report)
     story: list[object] = [
         Paragraph("CYBERCASE INTELLIGENCE FRAMEWORK", styles["eyebrow"]),
-        Spacer(1, 2 * mm),
-        Paragraph(paragraph_text(report.title), styles["doc_title"]),
-        Spacer(1, 3 * mm),
+        Spacer(1, 1.5 * mm),
+        Paragraph("รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น", styles["doc_title"]),
+        Paragraph(f"เรื่อง: {paragraph_text(report.title)}", styles["doc_subtitle"]),
+        Spacer(1, 1 * mm),
         build_metadata_table(display, styles),
         Spacer(1, 3 * mm),
-        HRFlowable(width="100%", thickness=1.2, color=DARK_RULE),
-        Spacer(1, 5 * mm),
+        HRFlowable(width="100%", thickness=1, color=DARK_RULE),
+        Spacer(1, 3 * mm),
     ]
     for section in report.sections:
-        story.extend(
-            [
-                Paragraph(paragraph_text(section.heading), styles["section_heading"]),
-                Spacer(1, 2 * mm),
-            ]
-        )
-        story.extend(Paragraph(paragraph_text(text), styles["body"]) for text in section.paragraphs)
-        if section.section_id == "case_evidence":
-            story.extend(build_indicator_story(display.claims, styles))
-        else:
+        story.append(Paragraph(paragraph_text(section.heading), styles["section_heading"]))
+        story.append(Spacer(1, 1.5 * mm))
+
+        if section.section_id == "case_summary":
+            for paragraph in section.paragraphs:
+                cleaned = strip_reference_text(paragraph)
+                if cleaned.startswith("วัตถุประสงค์ของรายงาน:"):
+                    story.append(
+                        Paragraph(
+                            f"<b>วัตถุประสงค์:</b> {paragraph_text(cleaned.replace('วัตถุประสงค์ของรายงาน:', '').strip())}",
+                            styles["body"],
+                        )
+                    )
+                    story.append(Spacer(1, 1 * mm))
+                elif cleaned.startswith("สรุปจากผลวิเคราะห์:"):
+                    story.append(Paragraph("<b>สรุปภาพรวมจากผลการวิเคราะห์:</b>", styles["subheading"]))
+                    story.append(
+                        Paragraph(
+                            paragraph_text(cleaned.replace("สรุปจากผลวิเคราะห์:", "").strip()),
+                            styles["body_indent"],
+                        )
+                    )
+                    story.append(Spacer(1, 1 * mm))
+                elif cleaned.startswith("ข้อสรุปเบื้องต้น:"):
+                    story.append(Paragraph("<b>ข้อสรุปเบื้องต้น:</b>", styles["subheading"]))
+                    story.append(
+                        Paragraph(
+                            paragraph_text(cleaned.replace("ข้อสรุปเบื้องต้น:", "").strip()),
+                            styles["body_indent"],
+                        )
+                    )
+                    story.append(Spacer(1, 1 * mm))
+                else:
+                    story.append(Paragraph(paragraph_text(cleaned), styles["body_indent"]))
+
+            parties = []
+            timeline = []
+            impacts = []
+            others = []
+
             for item in section.items:
-                story.extend(
-                    [
-                        Paragraph(f"• {paragraph_text(item)}", styles["body"]),
-                        Spacer(1, 1.2 * mm),
-                    ]
-                )
-        story.append(Spacer(1, 3 * mm))
+                cleaned = strip_reference_text(item)
+                if cleaned.startswith("ผู้เกี่ยวข้อง:"):
+                    parties.append(cleaned.replace("ผู้เกี่ยวข้อง:", "").strip())
+                elif cleaned.startswith("ลำดับเหตุการณ์:"):
+                    timeline.append(cleaned.replace("ลำดับเหตุการณ์:", "").strip())
+                elif cleaned.startswith("ผลกระทบที่ปรากฏ:"):
+                    impacts.append(cleaned.replace("ผลกระทบที่ปรากฏ:", "").strip())
+                else:
+                    others.append(cleaned)
+
+            if parties:
+                story.append(Paragraph("<b>ผู้เกี่ยวข้องในคดี:</b>", styles["subheading"]))
+                for p in parties:
+                    match = re.match(r"^([^\(]+)\s*\((.+)\)$", p)
+                    if match:
+                        name, role = match.group(1).strip(), match.group(2).strip()
+                        story.append(Paragraph(f"• <b>{paragraph_text(name)}</b> — {paragraph_text(role)}", styles["body"]))
+                    else:
+                        story.append(Paragraph(f"• {paragraph_text(p)}", styles["body"]))
+                story.append(Spacer(1, 1.5 * mm))
+
+            if timeline:
+                story.append(Paragraph("<b>ลำดับเหตุการณ์สำคัญ:</b>", styles["subheading"]))
+                for t in timeline:
+                    if "—" in t:
+                        time_part, event_part = t.split("—", 1)
+                        story.append(Paragraph(f"• <b>{paragraph_text(time_part.strip())}</b>: {paragraph_text(event_part.strip())}", styles["body"]))
+                    elif " - " in t:
+                        time_part, event_part = t.split(" - ", 1)
+                        story.append(Paragraph(f"• <b>{paragraph_text(time_part.strip())}</b>: {paragraph_text(event_part.strip())}", styles["body"]))
+                    else:
+                        story.append(Paragraph(f"• {paragraph_text(t)}", styles["body"]))
+                story.append(Spacer(1, 1.5 * mm))
+
+            if impacts:
+                story.append(Paragraph("<b>ความเสียหายและผลกระทบที่ปรากฏ:</b>", styles["subheading"]))
+                for imp in impacts:
+                    story.append(Paragraph(f"• {paragraph_text(imp)}", styles["body"]))
+                story.append(Spacer(1, 1.5 * mm))
+
+            if others:
+                for o in others:
+                    story.append(Paragraph(f"• {paragraph_text(o)}", styles["body"]))
+
+        elif section.section_id == "case_evidence":
+            story.extend(build_indicator_story(display.claims, styles))
+
+        elif section.section_id == "evidence_to_examine":
+            for paragraph in section.paragraphs:
+                story.append(Paragraph(paragraph_text(paragraph), styles["body"]))
+                story.append(Spacer(1, 1 * mm))
+
+            for item in section.items:
+                cleaned = strip_reference_text(item)
+                parts = [p.strip() for p in cleaned.split("·")]
+                if len(parts) >= 4:
+                    gid = parts[0]
+                    topic = parts[1]
+                    prio = parts[2].replace("ระดับความสำคัญ:", "").strip()
+                    status_part = parts[3].replace("สถานะ:", "").strip()
+                    rest = " · ".join(parts[4:]) if len(parts) > 4 else ""
+
+                    desc = rest
+                    reason = ""
+                    if "เหตุผล:" in rest:
+                        desc, reason = rest.split("เหตุผล:", 1)
+                    elif "เหตุผลเชิงวิเคราะห์:" in rest:
+                        desc, reason = rest.split("เหตุผลเชิงวิเคราะห์:", 1)
+
+                    story.append(Paragraph(f"• <b>[{paragraph_text(gid)}] {paragraph_text(topic)}</b> (ความสำคัญ: {paragraph_text(prio)} | สถานะ: {paragraph_text(status_part)})", styles["body"]))
+                    if desc.strip():
+                        story.append(Paragraph(f"รายละเอียด: {paragraph_text(desc.strip())}", styles["quote"]))
+                    if reason.strip():
+                        story.append(Paragraph(f"<i>เหตุผลที่ควรตรวจสอบ: {paragraph_text(reason.strip())}</i>", styles["reasoning"]))
+                    story.append(Spacer(1, 1.5 * mm))
+                else:
+                    story.append(Paragraph(f"• {paragraph_text(cleaned)}", styles["body"]))
+
+        elif section.section_id == "preliminary_recommendations":
+            for paragraph in section.paragraphs:
+                story.append(Paragraph(paragraph_text(paragraph), styles["body"]))
+                story.append(Spacer(1, 1 * mm))
+
+            specific_recs = []
+            general_recs = []
+            for item in section.items:
+                cleaned = strip_reference_text(item)
+                if cleaned.startswith("ตรวจสอบเพิ่มเติมในประเด็น"):
+                    specific_recs.append(cleaned.replace("ตรวจสอบเพิ่มเติมในประเด็น", "").strip())
+                else:
+                    general_recs.append(cleaned)
+
+            if specific_recs:
+                story.append(Paragraph("<b>ประเด็นสำคัญที่ควรดำเนินการตรวจสอบเพิ่มเติม:</b>", styles["subheading"]))
+                for rec in specific_recs:
+                    if ":" in rec:
+                        topic, desc = rec.split(":", 1)
+                        story.append(Paragraph(f"• <b>{paragraph_text(topic.strip())}</b>: {paragraph_text(desc.strip())}", styles["body"]))
+                    else:
+                        story.append(Paragraph(f"• {paragraph_text(rec)}", styles["body"]))
+                story.append(Spacer(1, 1.5 * mm))
+
+            if general_recs:
+                story.append(Paragraph("<b>แนวทางการปฏิบัติในการรวบรวมพยานหลักฐาน:</b>", styles["subheading"]))
+                for rec in general_recs:
+                    story.append(Paragraph(f"• {paragraph_text(rec)}", styles["body"]))
+                story.append(Spacer(1, 1.5 * mm))
+
+        else:
+            for paragraph in section.paragraphs:
+                story.append(Paragraph(paragraph_text(paragraph), styles["body"]))
+                story.append(Spacer(1, 1 * mm))
+            for item in section.items:
+                cleaned = strip_reference_text(item)
+                story.append(Paragraph(f"• {paragraph_text(cleaned)}", styles["body"]))
+                story.append(Spacer(1, 1 * mm))
+
+        story.append(Spacer(1, 2.5 * mm))
+
     story.extend(build_source_register_story(display.sources, styles))
     return story
 
@@ -273,20 +402,25 @@ def build_metadata_table(
     styles: dict[str, ParagraphStyle],
 ) -> Table:
     rows = [
-        ("ประเภทเอกสาร", "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น"),
-        ("หลักฐานที่ใช้", f"{len(display.sources)} รายการ"),
-        ("สถานะ", "เบื้องต้น / ยังไม่ยืนยัน"),
+        [
+            Paragraph("<b>ประเภทเอกสาร:</b> รายงานสรุปผลการวิเคราะห์เบื้องต้น", styles["meta_value"]),
+            Paragraph("<b>สถานะ:</b> เบื้องต้น / ยังไม่ยืนยัน", styles["meta_value"]),
+        ],
+        [
+            Paragraph(f"<b>เอกสารที่นำเข้า:</b> {len(display.sources)} รายการ", styles["meta_value"]),
+            Paragraph("<b>วัตถุประสงค์:</b> สำหรับการตรวจสำนวนภายใน", styles["meta_value"]),
+        ],
     ]
     table = Table(
-        [[Paragraph(paragraph_text(label), styles["meta_label"]), Paragraph(paragraph_text(value), styles["meta_value"])] for label, value in rows],
-        colWidths=(45 * mm, 133 * mm),
+        rows,
+        colWidths=(89 * mm, 89 * mm),
     )
     table.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), PANEL),
                 ("BOX", (0, 0), (-1, -1), 0.5, RULE),
-                ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D7DEE7")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.25, RULE),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 2.5 * mm),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 2.5 * mm),

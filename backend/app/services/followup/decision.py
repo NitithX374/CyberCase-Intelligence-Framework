@@ -110,8 +110,7 @@ def exhausted_gap_keys(
     return {
         key
         for exchange in exchanges
-        if exchange.disposition in {"answered", "unavailable"}
-        or (exchange.disposition == "answered" and exchange.answer.strip())
+        if exchange.disposition in {"answered", "unavailable", "skipped"}
         for key in [exchange_gap_key(exchange)]
         if key is not None
     }

@@ -101,11 +101,18 @@ class TyphoonDocumentRecognizer:
 
         provider_output = await self.post(messages)
         try:
-            raw_text = provider_output["choices"][0]["message"]["content"].strip()
+            choice = provider_output["choices"][0]
+            finish_reason = choice.get("finish_reason")
+            raw_text = choice["message"]["content"].strip()
         except (KeyError, IndexError, TypeError, ValueError, AttributeError) as error:
             raise RecognitionResponseError(
                 "Typhoon OCR returned an invalid response."
             ) from error
+        if finish_reason == "length":
+            raise RecognitionResponseError(
+                "Typhoon OCR returned truncated document text "
+                "(finish_reason='length')."
+            )
         if not raw_text:
             raise RecognitionResponseError("Typhoon OCR returned no document text.")
         transcription, _ = separate_generated_visual_descriptions(raw_text)

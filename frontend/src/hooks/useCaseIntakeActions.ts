@@ -112,6 +112,7 @@ export function useCaseIntakeActions({
     clearActionError: () => setActionError(null),
     isSubmitting,
     isUploadingDocument: uploadMutation.isPending,
+    uploadingFilename: uploadMutation.isPending ? uploadMutation.variables?.name ?? null : null,
     uploadDocument,
     submitCase,
   };

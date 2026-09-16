@@ -83,4 +83,16 @@ describe("Case preparation workflow", () => {
     expect(screen.getByText("Received")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Admit text" })).not.toBeInTheDocument();
   });
+
+  it("renders the in-flight pending document row when uploading", () => {
+    renderIntake({
+      isUploadingDocument: true,
+      uploadingFilename: "incident_log.docx",
+    });
+
+    expect(screen.getByText("incident_log.docx")).toBeInTheDocument();
+    expect(screen.getByText("Ingesting & extracting…")).toBeInTheDocument();
+    expect(screen.getByText("Uploading…")).toBeInTheDocument();
+    expect(screen.queryByText(/No documents have been uploaded/)).not.toBeInTheDocument();
+  });
 });

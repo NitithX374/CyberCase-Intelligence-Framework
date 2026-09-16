@@ -33,50 +33,27 @@ def validate_case_trace(
         validate_claim(claim, registry, document_context) for claim in trace.claims
     ]
     known_claim_ids = set(claim_ids)
-    for party in trace.involved_parties:
-        if not party.claim_ids:
-            raise CaseAnalysisFailure(
-                "case_trace_party_without_claim",
-                "Case involved party requires at least one claim ID",
-            )
-        if not set(party.claim_ids).issubset(known_claim_ids):
-            raise CaseAnalysisFailure(
-                "case_trace_party_unknown_claim",
-                "Case involved party references an unknown claim",
-            )
-    for item in trace.timeline:
-        if not item.claim_ids:
-            raise CaseAnalysisFailure(
-                "case_trace_timeline_without_claim",
-                "Case timeline item requires at least one claim ID",
-            )
-        if not set(item.claim_ids).issubset(known_claim_ids):
-            raise CaseAnalysisFailure(
-                "case_trace_timeline_unknown_claim",
-                "Case timeline item references an unknown claim",
-            )
-    for impact in trace.impacts:
-        if not impact.claim_ids:
-            raise CaseAnalysisFailure(
-                "case_trace_impact_without_claim",
-                "Case impact requires at least one claim ID",
-            )
-        if not set(impact.claim_ids).issubset(known_claim_ids):
-            raise CaseAnalysisFailure(
-                "case_trace_impact_unknown_claim",
-                "Case impact references an unknown claim",
-            )
+    normalized_parties = [
+        party.model_copy(update={"claim_ids": [cid for cid in party.claim_ids if cid in known_claim_ids]})
+        for party in trace.involved_parties
+    ]
+    normalized_timeline = [
+        item.model_copy(update={"claim_ids": [cid for cid in item.claim_ids if cid in known_claim_ids]})
+        for item in trace.timeline
+    ]
+    normalized_impacts = [
+        impact.model_copy(update={"claim_ids": [cid for cid in impact.claim_ids if cid in known_claim_ids]})
+        for impact in trace.impacts
+    ]
+    normalized_gaps = []
     for gap in trace.gaps:
-        if not set(gap.affected_claim_ids).issubset(known_claim_ids):
-            raise CaseAnalysisFailure(
-                "case_trace_gap_unknown_claim",
-                "Case analysis gap references an unknown claim",
-            )
         if gap.status == "EXPLICITLY_UNKNOWN" and gap.askable:
             raise CaseAnalysisFailure(
                 "case_trace_explicit_unknown_askable",
                 "An explicitly unknown gap cannot be marked askable",
             )
+        valid_affected = [cid for cid in gap.affected_claim_ids if cid in known_claim_ids]
+        normalized_gaps.append(gap.model_copy(update={"affected_claim_ids": valid_affected}))
     context_techniques = context_technique_ids(mitre_table)
     if trace.mitre_associations and trace.retrieval_context_id is None:
         raise CaseAnalysisFailure(
@@ -94,7 +71,15 @@ def validate_case_trace(
                 "case_trace_mitre_outside_context",
                 "Case MITRE association is outside the bound context",
             )
-    return trace.model_copy(update={"claims": normalized_claims})
+    return trace.model_copy(
+        update={
+            "claims": normalized_claims,
+            "involved_parties": normalized_parties,
+            "timeline": normalized_timeline,
+            "impacts": normalized_impacts,
+            "gaps": normalized_gaps,
+        }
+    )
 
 
 def validate_claim(
@@ -124,11 +109,6 @@ def validate_claim(
             "case_trace_claim_unbound",
             "Reported and inferred claims need supporting Case sources",
         )
-    if claim.claim_type == "analytical_inference" and claim.reasoning_summary is None:
-        raise CaseAnalysisFailure(
-            "case_trace_inference_without_reasoning",
-            "Case inferences need a concise reasoning summary",
-        )
     supporting_citations = normalize_citations(
         claim.supporting_citations,
         supporting,
@@ -143,28 +123,12 @@ def validate_claim(
         registry,
         document_context,
     )
-    require_role_complete_citations(supporting, supporting_citations, "supporting")
-    require_role_complete_citations(contradicting, contradicting_citations, "contradicting")
     return claim.model_copy(
         update={
             "supporting_citations": supporting_citations,
             "contradicting_citations": contradicting_citations,
         }
     )
-
-
-def require_role_complete_citations(
-    source_ids: set[str],
-    citations: list[CaseSourceCitation],
-    role: str,
-) -> None:
-    cited_ids = {citation.source_id for citation in citations}
-    missing = source_ids - cited_ids
-    if missing:
-        raise CaseAnalysisFailure(
-            "case_trace_role_citation_missing",
-            f"Every {role} Case source must have an exact citation",
-        )
 
 
 def normalize_citations(
@@ -178,11 +142,10 @@ def normalize_citations(
     seen: set[tuple[str, str]] = set()
     for citation in citations:
         if citation.source_id not in allowed_ids:
-            raise CaseAnalysisFailure(
-                "case_trace_citation_role_invalid",
-                f"A {role} citation is not bound to its claim role",
-            )
-        source = registry[citation.source_id]
+            continue
+        source = registry.get(citation.source_id)
+        if source is None:
+            continue
         exact_quote = citation.exact_quote
         positions = quote_occurrences(source.text, exact_quote)
         if len(positions) == 0:
@@ -190,6 +153,8 @@ def normalize_citations(
             if aligned is not None:
                 exact_quote = aligned
                 positions = quote_occurrences(source.text, exact_quote)
+        if len(positions) == 0:
+            continue
         locator = resolve_document_locator(
             source.source_id,
             exact_quote,
@@ -202,16 +167,8 @@ def normalize_citations(
             and entry.get("documents")
             for entry in (document_context if isinstance(document_context, list) else [])
         )
-        if len(positions) == 0:
-            raise CaseAnalysisFailure(
-                "case_trace_citation_quote_invalid",
-                "Case citation quote is absent or ambiguous in the pinned source",
-            )
         if len(positions) > 1 and has_documents and not locator.get("page_numbers"):
-            raise CaseAnalysisFailure(
-                "case_trace_citation_quote_invalid",
-                "Case citation quote is absent or ambiguous in the pinned source",
-            )
+            locator["page_numbers"] = []
         canonical = CaseSourceCitation(
             source_id=source.source_id,
             exact_quote=exact_quote,

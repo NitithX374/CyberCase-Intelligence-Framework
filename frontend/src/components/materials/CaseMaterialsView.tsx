@@ -9,6 +9,8 @@ interface CaseMaterialsViewProps {
   caseId: string;
   documents: CaseDocumentRead[];
   isUploading: boolean;
+  uploadingFilename?: string | null;
+  uploadingFileSize?: number | null;
   onUploadDocument: (file: File) => void;
   onOpenIntake?: () => void;
 }
@@ -17,6 +19,8 @@ export function CaseMaterialsView({
   caseId,
   documents,
   isUploading,
+  uploadingFilename,
+  uploadingFileSize,
   onUploadDocument,
   onOpenIntake,
 }: CaseMaterialsViewProps) {
@@ -41,6 +45,8 @@ export function CaseMaterialsView({
           documents={documents}
           selectedDocumentId={selectedDocument?.id ?? null}
           isUploading={isUploading}
+          uploadingFilename={uploadingFilename}
+          uploadingFileSize={uploadingFileSize}
           onSelectDocument={setSelectedDocumentId}
           onUploadDocument={onUploadDocument}
         />
@@ -297,6 +303,8 @@ interface MaterialSourceRailProps {
   documents: CaseDocumentRead[];
   selectedDocumentId: string | null;
   isUploading: boolean;
+  uploadingFilename?: string | null;
+  uploadingFileSize?: number | null;
   onSelectDocument: (documentId: string) => void;
   onUploadDocument: (file: File) => void;
 }
@@ -305,15 +313,19 @@ function MaterialSourceRail({
   documents,
   selectedDocumentId,
   isUploading,
+  uploadingFilename,
+  uploadingFileSize,
   onSelectDocument,
   onUploadDocument,
 }: MaterialSourceRailProps) {
+  const totalCount = documents.length + (isUploading ? 1 : 0);
+
   return (
     <aside className="flex max-h-48 w-full shrink-0 flex-col border-b border-line bg-sidebar md:max-h-none md:w-60 md:border-r md:border-b-0">
       <header className="flex min-h-12 items-center justify-between border-b border-line px-3">
         <div>
           <h2 className="text-xs font-semibold text-ink">Sources</h2>
-          <p className="text-[10px] text-ink-muted">{documents.length} file{documents.length === 1 ? "" : "s"}</p>
+          <p className="text-[10px] text-ink-muted">{totalCount} file{totalCount === 1 ? "" : "s"}</p>
         </div>
         <label className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover hover:text-ink focus-within:ring-2 focus-within:ring-accent has-[:disabled]:cursor-wait has-[:disabled]:opacity-50">
           <Icon name="plus" className="h-4 w-4" />
@@ -334,10 +346,39 @@ function MaterialSourceRail({
       </header>
 
       <div className="min-h-0 overflow-auto p-2">
-        {documents.length === 0 ? (
+        {documents.length === 0 && !isUploading ? (
           <p className="px-2 py-4 text-[11px] leading-5 text-ink-muted">No source files yet.</p>
         ) : (
           <ul className="space-y-1">
+            {isUploading && (
+              <li aria-live="polite" className="animate-pulse">
+                <div className="w-full rounded-md border border-dashed border-accent/60 bg-accent-soft/60 px-2.5 py-2.5 text-left shadow-xs">
+                  <span className="flex items-start gap-2">
+                    <span className="relative mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent/40 opacity-75" />
+                      <Icon name="materials" className="relative h-3.5 w-3.5 text-accent" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold text-ink">
+                        {uploadingFilename || "Uploading document…"}
+                      </span>
+                      <span className="mt-1 flex items-center gap-1.5 text-[10px] text-ink-muted">
+                        {typeof uploadingFileSize === "number" && (
+                          <>
+                            <span>{formatBytes(uploadingFileSize)}</span>
+                            <span aria-hidden="true">·</span>
+                          </>
+                        )}
+                        <span className="inline-flex items-center gap-1 font-medium text-accent">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-ping" />
+                          Pending extraction…
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                </div>
+              </li>
+            )}
             {documents.map((document) => {
               const extraction = [...(document.extractions ?? [])].sort(
                 (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),

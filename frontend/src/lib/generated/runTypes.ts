@@ -38,7 +38,7 @@ export type CaseAnalysisResultRead = {
 
 export type CaseChatMessageAccepted = {
     message: ChatMessageRead;
-    run: CaseRunRead;
+    run?: CaseRunRead | null;
 };
 
 export type CaseFollowUpAnswer = {

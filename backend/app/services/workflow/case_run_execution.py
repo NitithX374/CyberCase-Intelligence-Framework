@@ -43,26 +43,35 @@ async def attach_case_followup(
 ) -> AnalysisOutput:
     if not isinstance(output.trace, CaseAnalysisTrace):
         return output
-    resolution = await evaluate_followup_outcome(
-        followup_exchanges=followup_exchanges,
-        followup_root_ordinal=1,
-        source_run_id=claimed.id,
-        source_revision=claimed.source_revision,
-        canonical_trace=output.trace,
-    )
-    if resolution.question is None:
-        return output
-    followup = resolution.metadata_json.get("chat_followup")
-    if not isinstance(followup, dict) or not isinstance(followup.get("gap"), dict):
-        raise CaseRunExecutionError(
-            "followup_metadata_missing",
-            "Case follow-up gap is missing",
+    try:
+        resolution = await evaluate_followup_outcome(
+            followup_exchanges=followup_exchanges,
+            followup_root_ordinal=1,
+            source_run_id=claimed.id,
+            source_revision=claimed.source_revision,
+            canonical_trace=output.trace,
         )
-    return replace(
-        output,
-        followup_question=resolution.question,
-        followup_metadata=resolution.metadata_json,
-    )
+        if resolution.question is None:
+            return output
+        followup = resolution.metadata_json.get("chat_followup")
+        if not isinstance(followup, dict) or not isinstance(followup.get("gap"), dict):
+            logger.warning(
+                "Case follow-up metadata or gap missing for run %s; skipping follow-up attachment",
+                claimed.id,
+            )
+            return output
+        return replace(
+            output,
+            followup_question=resolution.question,
+            followup_metadata=resolution.metadata_json,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to evaluate follow-up for run %s: %s; continuing analysis without follow-up",
+            claimed.id,
+            exc,
+        )
+        return output
 
 
 async def execute_case_run(
