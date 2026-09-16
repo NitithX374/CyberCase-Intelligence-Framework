@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.case_analysis.case_analysis import execute_direct_pipeline
+from app.services.case_analysis.case_analysis import execute_analysis_pipeline
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisFailure,
@@ -220,7 +220,7 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             "app.services.case_analysis.case_analysis.request_analysis_stage",
             new=fake_request_stage,
         ):
-            result = await execute_direct_pipeline(
+            result = await execute_analysis_pipeline(
                 CaseSourceBundle(revision=1, sources=(source,)),
                 "english",
                 AnalysisPipelineConfig(),

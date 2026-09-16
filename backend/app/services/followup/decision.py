@@ -1,66 +1,252 @@
+"""Deterministic follow-up decision engine, gap ranking, and metadata construction."""
+
 from __future__ import annotations
 
-import logging
-import time
 from collections.abc import Sequence
 from typing import Any
+import unicodedata
 from uuid import UUID
 
 from app.config import settings
-from app.services.case_analysis.contracts import CaseAnalysisTrace
+from app.services.case_analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace
 from app.services.followup.contracts import (
-    ClarificationExchange,
-    FollowUpPolicy,
+    FollowUpExchange,
     FollowUpResolution,
-)
-from app.services.followup.helpers import (
-    coerce_policy_result,
-    normalize_question,
-    resolve_followup_failure_code,
-    resolve_gap_reason_code,
-)
-from app.services.followup.metadata import followup_metadata
-from app.services.followup.policy import AnthropicFollowUpPolicy
-from app.services.followup.stateful import (
-    apply_clarification_history,
-    followup_context,
-    normalize_gap_key,
-    select_next_gap,
+    answer_indicates_unavailable,
 )
 
-logger = logging.getLogger("app.chat")
+
+_PRIORITY_RANK = {"high": 0}
+
+_THAI_INCIDENT_TIME_KEYS = {
+    "เวลาเกิดเหตุ",
+    "เวลาที่เกิดเหตุ",
+    "เวลาของเหตุการณ์",
+    "ช่วงเวลาเกิดเหตุ",
+    "ช่วงเวลาที่เกิดเหตุ",
+    "ช่วงเวลาของเหตุการณ์",
+}
+_ENGLISH_INCIDENT_TIME_KEYS = {
+    "event time",
+    "incident time",
+    "the incident time",
+    "time of event",
+    "time of incident",
+    "time of the event",
+    "time of the incident",
+}
+_THAI_CCTV_IDENTITY_KEYS = {
+    "การระบุตัวบุคคลในภาพกล้อง",
+    "ตัวบุคคลในภาพกล้อง",
+    "บุคคลในภาพกล้อง",
+    "อัตลักษณ์บุคคลในภาพกล้อง",
+}
+_ENGLISH_CCTV_IDENTITY_KEYS = {
+    "cctv subject identity",
+    "identity in cctv",
+    "identity of cctv subject",
+    "identity of person in cctv footage",
+    "person in cctv",
+}
+
+_GAP_REASON_CODES = {
+    "NOT_PROVIDED": "material_incident_fact_missing",
+    "AMBIGUOUS": "material_incident_fact_ambiguous",
+    "CONFLICTING": "material_incident_fact_conflicting",
+    "EXPLICITLY_UNKNOWN": "unresolved_gaps_recorded",
+}
+
+
+def normalize_gap_key(topic: str) -> str:
+    normalized = unicodedata.normalize("NFKC", topic).casefold()
+    normalized = "".join(
+        " " if unicodedata.category(character).startswith("P") else character
+        for character in normalized
+    )
+    normalized = " ".join(normalized.split())
+    compact = normalized.replace(" ", "")
+    if compact in _THAI_INCIDENT_TIME_KEYS:
+        return "topic:incident-time"
+    if normalized in _ENGLISH_INCIDENT_TIME_KEYS:
+        return "topic:incident-time"
+    if compact in _THAI_CCTV_IDENTITY_KEYS:
+        return "topic:cctv-subject-identity"
+    if normalized in _ENGLISH_CCTV_IDENTITY_KEYS:
+        return "topic:cctv-subject-identity"
+    return f"topic:{normalized}"
+
+
+def normalize_question(question: str) -> str:
+    normalized = unicodedata.normalize("NFKC", question)
+    return " ".join(normalized.strip().split())
+
+
+def resolve_gap_reason_code(gap: CaseAnalysisGap) -> str:
+    return _GAP_REASON_CODES[gap.status]
+
+
+def apply_followup_history(
+    gaps: Sequence[CaseAnalysisGap],
+    exchanges: Sequence[FollowUpExchange],
+) -> tuple[CaseAnalysisGap, ...]:
+    exhausted = exhausted_gap_keys(exchanges)
+    unavailable = unavailable_gap_keys(exchanges)
+    updated_gaps: list[CaseAnalysisGap] = []
+    for gap in gaps:
+        key = normalize_gap_key(gap.gap_key)
+        if key not in exhausted:
+            updated_gaps.append(gap)
+            continue
+        updates: dict[str, object] = {"askable": False}
+        if key in unavailable and gap.status == "NOT_PROVIDED":
+            updates["status"] = "EXPLICITLY_UNKNOWN"
+        updated_gaps.append(gap.model_copy(update=updates))
+    return tuple(updated_gaps)
+
+
+def exhausted_gap_keys(
+    exchanges: Sequence[FollowUpExchange],
+) -> set[str]:
+    return {
+        key
+        for exchange in exchanges
+        if exchange.disposition in {"answered", "unavailable"}
+        or (exchange.disposition == "answered" and exchange.answer.strip())
+        for key in [exchange_gap_key(exchange)]
+        if key is not None
+    }
+
+
+def unavailable_gap_keys(
+    exchanges: Sequence[FollowUpExchange],
+) -> set[str]:
+    return {
+        key
+        for exchange in exchanges
+        if exchange.disposition == "unavailable"
+        or answer_indicates_unavailable(exchange.answer)
+        for key in [exchange_gap_key(exchange)]
+        if key is not None
+    }
+
+
+def exchange_gap_key(exchange: FollowUpExchange) -> str | None:
+    if exchange.gap_key:
+        return normalize_gap_key(exchange.gap_key)
+    if exchange.gap_topic:
+        return normalize_gap_key(exchange.gap_topic)
+    return None
+
+
+def has_claim_links(gap: CaseAnalysisGap) -> bool:
+    return bool(gap.affected_claim_ids)
+
+
+def select_followup_gap(
+    gaps: Sequence[CaseAnalysisGap],
+    exchanges: Sequence[FollowUpExchange],
+) -> CaseAnalysisGap | None:
+    exhausted = exhausted_gap_keys(exchanges)
+    candidates: list[tuple[int, CaseAnalysisGap]] = [
+        (index, gap)
+        for index, gap in enumerate(gaps)
+        if gap.priority in _PRIORITY_RANK
+        and gap.askable
+        and gap.status != "EXPLICITLY_UNKNOWN"
+        and normalize_gap_key(gap.gap_key) not in exhausted
+        and gap.clarification_question is not None
+        and gap.clarification_question.strip()
+    ]
+    ranked = sorted(
+        candidates,
+        key=lambda item: (
+            _PRIORITY_RANK[item[1].priority],
+            0 if has_claim_links(item[1]) else 1,
+            item[0],
+        ),
+    )
+    for _, gap in ranked:
+        return gap
+    return None
+
+
+def followup_context(gap: CaseAnalysisGap) -> dict[str, str]:
+    return {
+        "gap_id": gap.gap_id,
+        "gap_topic": gap.topic,
+        "gap_key": gap.gap_key,
+    }
+
+
+def gap_metadata(gap: CaseAnalysisGap) -> dict[str, Any]:
+    detail = gap.model_dump(mode="json")
+    detail["gap_key"] = gap.gap_key
+    detail["followup_context"] = followup_context(gap)
+    if gap.affected_claim_ids:
+        detail["affects"] = (
+            f"Clarifying {gap.topic.lower()} addresses missing investigative evidence for: "
+            f"{', '.join(gap.affected_claim_ids)}."
+        )
+    else:
+        detail["affects"] = (
+            f"Clarifying this information helps establish facts and complete the case analysis for "
+            f"{gap.topic.lower()}."
+        )
+    return detail
+
+
+def followup_metadata(
+    *,
+    round_number: int,
+    prior_exchange_count: int,
+    source_revision: int,
+    action: str,
+    reason_code: str,
+    selected_gap: CaseAnalysisGap | None = None,
+) -> dict[str, Any]:
+    return {
+        "action": action,
+        "chat_followup": {
+            "round": round_number,
+            "prior_exchange_count": prior_exchange_count,
+            "source_revision": source_revision,
+            "reason_code": reason_code,
+            "gap": gap_metadata(selected_gap) if selected_gap else None,
+        },
+    }
 
 
 async def evaluate_followup_outcome(
     *,
-    clarification_exchanges: Sequence[ClarificationExchange],
+    followup_exchanges: Sequence[FollowUpExchange],
     followup_root_ordinal: int,
     source_run_id: UUID,
-    policy: FollowUpPolicy | None = None,
+    source_revision: int,
     canonical_trace: CaseAnalysisTrace | None = None,
 ) -> FollowUpResolution:
-    round_number = len(clarification_exchanges) + 1
-    prior_exchange_count = len(clarification_exchanges)
+    del followup_root_ordinal, source_run_id
+    round_number = max(
+        (exchange.round_number for exchange in followup_exchanges),
+        default=0,
+    ) + 1
+    prior_exchange_count = len(followup_exchanges)
 
     def resolution(
         *,
         action: str,
         reason_code: str,
-        stop_reason: str,
-        **metadata_kwargs: Any,
+        selected_gap: CaseAnalysisGap | None = None,
+        question: str | None = None,
     ) -> FollowUpResolution:
         return FollowUpResolution(
-            question=metadata_kwargs.pop("question", None),
+            question=question,
             metadata_json=followup_metadata(
-                source_run_id=source_run_id,
-                followup_root_ordinal=followup_root_ordinal,
                 round_number=round_number,
                 prior_exchange_count=prior_exchange_count,
+                source_revision=source_revision,
                 action=action,
-                question=metadata_kwargs.pop("metadata_question", ""),
                 reason_code=reason_code,
-                stop_reason=stop_reason,
-                **metadata_kwargs,
+                selected_gap=selected_gap,
             ),
         )
 
@@ -68,116 +254,48 @@ async def evaluate_followup_outcome(
         return resolution(
             action="proceed",
             reason_code="canonical_state_unavailable",
-            stop_reason="canonical_state_unavailable",
         )
 
-    canonical_gaps = apply_clarification_history(
+    canonical_gaps = apply_followup_history(
         canonical_trace.gaps,
-        clarification_exchanges,
+        followup_exchanges,
     )
-    if not settings.chat_followup_policy_enabled:
+    if not settings.chat_followup_enabled:
         return resolution(
             action="proceed",
-            reason_code="followup_policy_disabled",
-            stop_reason="policy_disabled",
+            reason_code="followup_disabled",
         )
-    if len(clarification_exchanges) >= settings.chat_followup_max_rounds:
+    if round_number > settings.chat_followup_max_rounds:
         return resolution(
             action="proceed",
             reason_code="max_rounds_reached",
-            stop_reason="max_rounds_reached",
         )
 
-    candidate = select_next_gap(canonical_gaps, clarification_exchanges)
-    if candidate is None:
-        reason_code = (
-            "unresolved_gaps_recorded"
-            if canonical_gaps
-            else "sufficient_case_context"
-        )
+    selected_gap = select_followup_gap(canonical_gaps, followup_exchanges)
+    if selected_gap is None:
         return resolution(
             action="proceed",
-            reason_code=reason_code,
-            stop_reason="no_eligible_canonical_gap",
-        )
-
-    started = time.perf_counter()
-    try:
-        active_policy = policy() if isinstance(policy, type) else (policy or AnthropicFollowUpPolicy())
-        policy_kwargs = {"selected_gap": candidate}
-        if hasattr(active_policy, "decide_with_metadata"):
-            raw_result = await active_policy.decide_with_metadata(**policy_kwargs)
-        else:
-            raw_result = await active_policy.decide(**policy_kwargs)
-        elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-        result = coerce_policy_result(raw_result, elapsed_ms=elapsed_ms)
-    except Exception as error:
-        elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
-        failure_code = resolve_followup_failure_code(error)
-        logger.warning(
-            "Chat follow-up policy failed open source_run_id=%s failure_code=%s error=%s",
-            source_run_id,
-            failure_code,
-            error,
-            exc_info=True,
-        )
-        return resolution(
-            action="proceed",
-            reason_code="policy_failed_open",
-            stop_reason="policy_failed_open",
-            latency_ms=elapsed_ms,
-            failure_code=failure_code,
-        )
-
-    decision = result.decision
-    common_metadata = {
-        "decision": decision.decision,
-        "latency_ms": result.latency_ms,
-        "input_tokens": result.input_tokens,
-        "output_tokens": result.output_tokens,
-        "provider": result.provider,
-        "model": result.model,
-    }
-    if decision.decision == "proceed":
-        return resolution(
-            action="proceed",
-            reason_code="unresolved_gaps_recorded",
-            stop_reason="question_generation_proceed",
-            **common_metadata,
-        )
-    if normalize_gap_key(decision.selected_gap or "") != normalize_gap_key(candidate.topic):
-        return resolution(
-            action="proceed",
-            reason_code="policy_invalid_selection",
-            stop_reason="policy_invalid_selection",
-            requested_selected_gap=decision.selected_gap,
-            **common_metadata,
-        )
-
-    normalized_question = normalize_question(decision.question)
-    if any(normalize_question(exchange.question) == normalized_question for exchange in clarification_exchanges):
-        return resolution(
-            action="proceed",
-            reason_code="duplicate_question",
-            stop_reason="duplicate_question",
-            selected_gap=candidate.topic,
-            **common_metadata,
+            reason_code="no_eligible_high_priority_gap",
         )
 
     return resolution(
-        action="ask_followup",
-        reason_code=resolve_gap_reason_code(candidate),
-        stop_reason="ask_followup",
-        question=decision.question,
-        metadata_question=decision.question,
-        decision_source="provider_question_realizer",
-        policy_decision=decision.decision,
-        selected_gap=candidate.topic,
-        selected_gap_detail=candidate.model_dump(mode="json"),
-        followup_context=followup_context(candidate),
-        rag_skipped=True,
-        **common_metadata,
+        action="follow_up",
+        reason_code=_GAP_REASON_CODES[selected_gap.status],
+        selected_gap=selected_gap,
+        question=selected_gap.clarification_question.strip(),
     )
 
 
-__all__ = ["evaluate_followup_outcome"]
+__all__ = [
+    "apply_followup_history",
+    "evaluate_followup_outcome",
+    "exhausted_gap_keys",
+    "followup_context",
+    "followup_metadata",
+    "gap_metadata",
+    "normalize_gap_key",
+    "normalize_question",
+    "resolve_gap_reason_code",
+    "select_followup_gap",
+    "unavailable_gap_keys",
+]

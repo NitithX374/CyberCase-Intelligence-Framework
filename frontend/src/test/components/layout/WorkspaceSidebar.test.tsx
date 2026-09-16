@@ -20,7 +20,7 @@ describe("WorkspaceSidebar", () => {
       status: "answered",
       evidence_revision: 1,
       processing_status: "idle",
-      has_pending_clarification: false,
+      has_pending_followup: false,
       analysis_freshness: "current",
       created_at: "2026-03-10T08:00:00Z",
       updated_at: "2026-03-10T08:10:00Z",

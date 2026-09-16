@@ -1,4 +1,4 @@
-import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import { type SourceMessageRef, type CaseEvidenceSource, type CaseTraceAssociation, type CaseTraceClaim } from "@/lib/caseOverviewTypes";
 import { asArray, asRecord, asString, parseCaseEvidence, sourceRefs } from "@/lib/caseOverviewSource";
 import { parseCaseTrace } from "@/lib/caseOverview";
@@ -65,7 +65,7 @@ interface TechnicalAugmentation {
 
 export function buildTechnicalContext(
   result: CaseAnalysisResultRead | null,
-  evidenceSources: EvidenceSourceRead[] | null,
+  evidenceSources: CaseSourceRead[] | null,
 ): TechnicalContextData {
   if (!result || !evidenceSources) return emptyTechnicalContext("unavailable", "case_analysis_unavailable");
   let sources: CaseEvidenceSource[];
@@ -77,7 +77,7 @@ export function buildTechnicalContext(
     return emptyTechnicalContext("invalid_trace", "invalid_trace");
   }
 
-  const augmentationRecord = asRecord(result.provider_metadata_json.technical_augmentation);
+  const augmentationRecord = asRecord(result.external_context_json?.technical_augmentation);
   if (!augmentationRecord) {
     return emptyTechnicalContext("unavailable", "technical_augmentation_unavailable", "metadata");
   }

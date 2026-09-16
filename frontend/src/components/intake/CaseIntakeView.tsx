@@ -4,12 +4,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Icon } from "@/components/common/icons";
 import { StatusPill } from "@/components/common/StatusPill";
 import { readAccountValue, writeAccountValue } from "@/lib/account-storage";
-import type { CaseAnalysisResultRead, CaseDocumentRead, CaseIntakeSubmission, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseDocumentRead, CaseIntakeSubmission, CaseRunRead, CaseSourceRead } from "@/lib/api";
 
 interface CaseIntakeViewProps {
   caseId: string;
   documents: CaseDocumentRead[];
-  evidence: EvidenceSourceRead[];
+  evidence: CaseSourceRead[];
   analysisResult: CaseAnalysisResultRead | null;
   run: CaseRunRead | null;
   isSubmitting: boolean;

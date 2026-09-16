@@ -1,5 +1,5 @@
 export type ClaimType = "reported" | "analytical_inference" | "unknown";
-export type EvidenceSourceType = "case_description" | "clarification_response";
+export type EvidenceSourceType = "case_description" | "followup_response";
 export type EpistemicStatus =
   | "reported"
   | "suspected"

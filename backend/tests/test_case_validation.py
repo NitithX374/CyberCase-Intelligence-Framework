@@ -212,6 +212,7 @@ def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
             "gaps": [
                 {
                     "gap_id": "gap1",
+                    "gap_key": "incident_time",
                     "topic": "Incident time",
                     "status": "NOT_PROVIDED",
                     "description": "The supplied material does not state when the incident occurred.",
@@ -237,6 +238,7 @@ def test_case_generated_unit_and_gap_identifier_normalization():
 
     gap = CaseAnalysisGap(
         gap_id="gap1",
+        gap_key="financial_loss",
         topic="Financial loss",
         status="NOT_PROVIDED",
         description="Amount of money lost was not stated.",

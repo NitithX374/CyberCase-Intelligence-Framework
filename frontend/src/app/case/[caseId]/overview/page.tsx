@@ -6,8 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
 import {
   useCaseAnalysis,
-  useCaseClarifications,
   useCaseEvidence,
+  useCaseFollowUps,
   useCases,
   caseQueryKeys,
   useCaseRunPolling,
@@ -27,7 +27,7 @@ export default function OverviewPage() {
 
   const analysisQuery = useCaseAnalysis(caseId ?? null);
   const evidenceQuery = useCaseEvidence(caseId ?? null);
-  const clarificationsQuery = useCaseClarifications(caseId ?? null);
+  const followupsQuery = useCaseFollowUps(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
   const runQuery = useCaseRunPolling(caseId ?? null, runId, caseId);
@@ -68,7 +68,7 @@ export default function OverviewPage() {
       evidenceSources={evidenceQuery.data ?? []}
       runStatus={runStatus}
       run={runQuery.data ?? null}
-      clarifications={clarificationsQuery.data ?? []}
+      followups={followupsQuery.data ?? []}
       analysisLoading={analysisQuery.isLoading}
       evidenceLoading={evidenceQuery.isLoading}
       onOpenReport={() => router.push(casePath(caseId, "report"))}

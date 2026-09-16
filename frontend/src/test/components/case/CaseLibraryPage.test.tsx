@@ -27,7 +27,7 @@ function caseRecord(overrides: Partial<CaseRead> = {}): CaseRead {
     active_run_id: null,
     latest_run_id: "run-1",
     processing_status: "idle",
-    has_pending_clarification: false,
+    has_pending_followup: false,
     analysis_freshness: "current",
     created_at: "2026-09-10T10:00:00Z",
     updated_at: "2026-09-14T10:00:00Z",

@@ -1,4 +1,4 @@
-import type { EvidenceSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api";
 import type { EvidencePage, SourceMessageRef, CaseCitation, CaseEvidenceSource } from "./caseOverviewTypes";
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
@@ -30,11 +30,11 @@ export function formatEvidenceCitationText(
   if (sourceRef.pageNumbers.length > 0) return formatPageReference(sourceRef.pageNumbers);
   if (sourceRef.isNativeEvidence) return sourceRef.label;
   if (sourceRef.sourceType === "case_description") return "Case narrative";
-  if (sourceRef.sourceType === "clarification_response") return "Clarification";
+  if (sourceRef.sourceType === "followup_response") return "Follow-up";
   return sourceRef.label;
 }
 
-export function parseCaseEvidence(evidenceSources: EvidenceSourceRead[]): CaseEvidenceSource[] {
+export function parseCaseEvidence(evidenceSources: CaseSourceRead[]): CaseEvidenceSource[] {
   const sources = evidenceSources.map((source, index) => parseEvidenceSource(source, index + 1));
   if (new Set(sources.map((source) => source.id)).size !== sources.length) {
     throw new Error("Case evidence has duplicate source IDs.");
@@ -42,7 +42,7 @@ export function parseCaseEvidence(evidenceSources: EvidenceSourceRead[]): CaseEv
   return sources;
 }
 
-function parseEvidenceSource(source: EvidenceSourceRead, ordinal: number): CaseEvidenceSource {
+function parseEvidenceSource(source: CaseSourceRead, ordinal: number): CaseEvidenceSource {
   const metadata = asRecord(source.source_metadata_json) ?? {};
   const provenance = asRecord(source.provenance_json) ?? {};
   if (!source.id || !source.source_kind || !source.exact_text.trim()) {
@@ -169,13 +169,13 @@ function resolvePageBinding(source: CaseEvidenceSource, citation: CaseCitation):
 }
 
 function sourceTypeFor(kind: string): SourceMessageRef["sourceType"] {
-  if (kind === "followup_answer") return "clarification_response";
+  if (kind === "followup_answer") return "followup_response";
   if (kind === "narrative" || kind === "document") return "case_description";
   throw new Error("Unsupported native evidence source kind.");
 }
 
 function sourceTypeLabel(type: SourceMessageRef["sourceType"]): string {
-  if (type === "clarification_response") return "Clarification response";
+  if (type === "followup_response") return "Follow-up response";
   return "Case narrative";
 }
 

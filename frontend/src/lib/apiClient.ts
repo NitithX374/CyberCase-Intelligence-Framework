@@ -7,15 +7,16 @@ import type {
   CaseChatMessageAccepted,
   CaseChatDetail,
   CaseChatRead,
-  CaseClarificationRead,
+  CaseFollowUpAnswer,
+  CaseFollowUpRead,
   CaseDocumentRead,
-  CaseEvidenceCreate,
   CaseRead,
   CaseReport,
   CaseReportCreate,
   CaseRunRead,
+  CaseSourceCreate,
+  CaseSourceRead,
   DevLoginPayload,
-  EvidenceSourceRead,
   UserProfile,
 } from "./apiTypes";
 import type { CaseReportRead } from "./generated/reportTypes";
@@ -147,6 +148,7 @@ export const createCaseChatMessage = async (
   signal?: AbortSignal,
   intent?: "ask" | "followup_answer",
   inReplyToMessageId?: string,
+  followup?: CaseFollowUpAnswer,
 ): Promise<CaseChatMessageAccepted> => {
   const response = await axios.post<CaseChatMessageAccepted>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat/messages`,
@@ -156,6 +158,7 @@ export const createCaseChatMessage = async (
       ...(intent ? { intent } : {}),
       response_language: detectResponseLanguage(content),
       ...(inReplyToMessageId ? { in_reply_to_message_id: inReplyToMessageId } : {}),
+       ...(followup ? { followup } : {}),
     },
     { signal },
   );
@@ -196,13 +199,13 @@ export const fetchCaseDocumentContent = async (caseId: string, documentId: strin
   return response.data;
 };
 
-export const listCaseEvidence = async (caseId: string, signal?: AbortSignal): Promise<EvidenceSourceRead[]> => {
-  const response = await axios.get<EvidenceSourceRead[]>(`${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/evidence`, { signal });
+export const listCaseEvidence = async (caseId: string, signal?: AbortSignal): Promise<CaseSourceRead[]> => {
+  const response = await axios.get<CaseSourceRead[]>(`${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/evidence`, { signal });
   return response.data;
 };
 
-export const addCaseEvidence = async (caseId: string, request: CaseEvidenceCreate, signal?: AbortSignal): Promise<EvidenceSourceRead> => {
-  const response = await axios.post<EvidenceSourceRead>(`${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/evidence`, request, { signal });
+export const addCaseEvidence = async (caseId: string, request: CaseSourceCreate, signal?: AbortSignal): Promise<CaseSourceRead> => {
+  const response = await axios.post<CaseSourceRead>(`${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/evidence`, request, { signal });
   return response.data;
 };
 
@@ -228,8 +231,8 @@ export const getCaseRun = async (caseId: string, runId: string, signal?: AbortSi
   return response.data;
 };
 
-export const listCaseClarifications = async (caseId: string, signal?: AbortSignal): Promise<CaseClarificationRead[]> => {
-  const response = await axios.get<CaseClarificationRead[]>(`${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/clarifications`, { signal });
+export const listCaseFollowUps = async (caseId: string, signal?: AbortSignal): Promise<CaseFollowUpRead[]> => {
+  const response = await axios.get<CaseFollowUpRead[]>(`${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/followups`, { signal });
   return response.data;
 };
 

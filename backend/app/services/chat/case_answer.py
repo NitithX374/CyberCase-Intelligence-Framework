@@ -70,7 +70,7 @@ async def load_case_answer_context(
     trace = parse_trace(result.trace_json, "Pinned Chat analysis trace is invalid")
     if trace.analysis_mode != "case_overview":
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis does not match overview mode")
-    metadata = result.provider_metadata_json
+    metadata = result.external_context_json
     if not isinstance(metadata, Mapping):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Pinned Chat analysis metadata is invalid")
     augmentation_value = metadata.get("technical_augmentation")
@@ -95,7 +95,7 @@ async def load_case_answer_context(
     return {
         "analysis_result_id": str(result.id),
         "source_revision": source_bundle.revision,
-        "pipeline_config": deepcopy(result.pipeline_config),
+        "pipeline_config": dict(result.pipeline_config) if isinstance(result.pipeline_config, dict) else result.pipeline_config,
         "analysis_summary": result.summary,
         "trace": trace.model_dump(mode="json"),
         "question": message.content,

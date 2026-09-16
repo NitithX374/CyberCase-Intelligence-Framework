@@ -21,18 +21,27 @@ describe("chat submission lifecycle", () => {
     expect(result.current.session.queryError).toContain("Analyze the Case");
   });
 
-  it("sends a clarification intent when caseChat status is awaiting_followup", async () => {
-    vi.spyOn(api, "getCaseChat").mockResolvedValue(caseChat("a", "awaiting_followup"));
+  it("sends a clarification answer when caseChat status is awaiting_followup", async () => {
+    const question = followUpQuestion();
+    vi.spyOn(api, "getCaseChat").mockResolvedValue(caseChat("a", "awaiting_followup", [question]));
     const send = vi.spyOn(api, "createCaseChatMessage").mockRejectedValue(new Error("Testing follow-up"));
     const { result } = renderSession();
     await act(async () => { await result.current.session.selectCaseChat("a"); });
     await tick();
-    act(() => result.current.session.changeInput("Stole Phone B"));
-    await tick();
-    act(() => result.current.submitMessage({ preventDefault: vi.fn() } as unknown as Parameters<typeof result.current.submitMessage>[0]));
+    act(() => result.current.submitFollowUp({
+      gapId: "gap-host",
+      answer: "Stole Phone B",
+      disposition: "answered",
+    }));
     await tick();
     expect(send.mock.calls[0][1]).toBe("Stole Phone B");
     expect(send.mock.calls[0][4]).toBe("followup_answer");
+    expect(send.mock.calls[0][5]).toBe(question.id);
+    expect(send.mock.calls[0][6]).toEqual({
+      gap_id: "gap-host",
+      answer: "Stole Phone B",
+      disposition: "answered",
+    });
   });
   it("reuses the idempotency key after a lost receipt and clears the draft only after persisted output", async () => {
     const request = message("a", 1, "user", "Evidence");
@@ -100,21 +109,20 @@ describe("chat submission lifecycle", () => {
   });
 
   it("retains a failed clarification answer and the same request key for retry", async () => {
-    vi.spyOn(api, "getCaseChat").mockResolvedValue(caseChat("a", "awaiting_followup"));
+    vi.spyOn(api, "getCaseChat").mockResolvedValue(caseChat("a", "awaiting_followup", [followUpQuestion()]));
     const send = vi.spyOn(api, "createCaseChatMessage").mockRejectedValue(new Error("Network failure"));
     const { result } = renderSession();
     await act(async () => { await result.current.session.selectCaseChat("a"); });
     await tick();
-    const followUp = { question: "When?", entries: [], rootOrdinal: 1 };
+    const answer = { gapId: "gap-host", answer: "Unknown", disposition: "answered" as const };
     act(() => {
-      result.current.session.changeInput("Unknown");
-      result.current.submitContent("Unknown", "followup", followUp);
+      result.current.submitFollowUp(answer);
     });
     await tick();
     expect(result.current.session.chatStatus).toBe("awaiting_followup");
-    expect(result.current.session.input).toBe("Unknown");
-    expect(result.current.session.pendingFollowUp?.followUp).toEqual(followUp);
-    act(() => result.current.submitContent("Unknown", "followup", followUp));
+    expect(result.current.session.pendingFollowUp?.followUp.question).toBe("When?");
+    expect(result.current.session.getPendingSubmission()?.followUpAnswer).toEqual(answer);
+    act(() => result.current.retryQuery());
     await tick();
     expect(send.mock.calls[1][2]).toBe(send.mock.calls[0][2]);
   });
@@ -180,3 +188,32 @@ describe("chat submission lifecycle", () => {
     expect(result.current.session.messages).toEqual([request, message("a", 2, "assistant", "Answer")]);
   });
 });
+
+function followUpQuestion(): api.ChatMessageRead {
+  return {
+    ...message("a", 2, "assistant", "When?"),
+    message_kind: "followup_question",
+    analysis_result_id: "analysis-1",
+    metadata_json: {
+      action: "follow_up",
+      chat_followup: {
+        root_ordinal: 2,
+        round: 1,
+        source_analysis_id: "analysis-1",
+        source_revision: 1,
+        gap: {
+          gap_id: "gap-host",
+          gap_key: "affected_host",
+          topic: "affected host",
+          status: "NOT_PROVIDED",
+          description: "The affected host was not provided.",
+          affects: "The impacted system cannot be scoped.",
+          reason: "The reported event has no host identifier.",
+          priority: "high",
+          askable: true,
+          clarification_question: "When?",
+        },
+      },
+    },
+  };
+}

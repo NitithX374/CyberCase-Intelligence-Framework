@@ -55,6 +55,7 @@ def _input(technical: bool = False) -> CaseReportInput:
         gaps=[
             CaseAnalysisGap(
                 gap_id="G-01",
+                gap_key="user_identity",
                 topic="ผู้ใช้ที่สั่งงาน",
                 status="NOT_PROVIDED",
                 description="ยังไม่มีข้อมูลยืนยันว่าใครเป็นผู้สั่งงาน",

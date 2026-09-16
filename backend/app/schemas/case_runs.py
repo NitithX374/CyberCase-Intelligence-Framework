@@ -50,7 +50,7 @@ class CaseAnalysisResultRead(BaseModel):
     execution_receipt_json: dict[str, object] | None
     retrieval_context_id: str | None
     pipeline_config: dict[str, object]
-    provider_metadata_json: dict[str, object]
+    external_context_json: dict[str, object] = Field(default_factory=dict)
     created_at: datetime
     freshness: AnalysisFreshness = "current"
 

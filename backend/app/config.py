@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -80,19 +80,14 @@ class LLMProviderConfig(BaseModel):
     rag_service_url: str = "http://rag-service:8001"
 
 
-# ── 5. Follow-up Question Realization ────────────────────────────────────────
-class FollowupPolicyConfig(BaseModel):
-    chat_followup_policy_enabled: bool = True
-    chat_followup_policy_model: str = "openai/gpt-5.6-luna"
-    chat_followup_policy_timeout_seconds: float = 45.0
-    chat_followup_policy_max_output_tokens: int = 2_048
+# ── 5. Deterministic follow-up selection ─────────────────────────────────────
+class FollowupConfig(BaseModel):
+    chat_followup_enabled: bool = True
     chat_followup_max_rounds: int = Field(default=2, ge=1, le=16)
 
 
 # ── 6. Case Analysis & Post-Answer Q&A ────────────────────────────────────────
 class CaseAnalysisConfig(BaseModel):
-    # Post-answer ASK reasons over the persisted case and latest analysis. It
-    # deliberately does not call the retrieval service again.
     case_run_timeout_seconds: float = Field(default=900.0, gt=0)
     case_run_failure_persistence_timeout_seconds: float = Field(default=5.0, gt=0)
     chat_ask_model: str = "openai/gpt-5.6-luna"
@@ -114,10 +109,7 @@ class DocumentIngestionConfig(BaseModel):
     document_ingestion_max_image_pixels: int = Field(default=40_000_000, ge=1)
     document_ingestion_render_longest_edge: int = Field(default=1_800, ge=512, le=4096)
     document_recognition_timeout_seconds: float = Field(default=60.0, gt=0)
-    typhoon_ocr_api_key: str = Field(
-        default="",
-        validation_alias=AliasChoices("typhoon_ocr_api_key", "typhoon_api_key"),
-    )
+    typhoon_api_key: str = ""
     typhoon_ocr_base_url: str = "https://api.opentyphoon.ai/v1"
     typhoon_ocr_model: str = "typhoon-ocr"
 
@@ -142,7 +134,7 @@ class Settings(
     CORSConfig,
     AuthConfig,
     LLMProviderConfig,
-    FollowupPolicyConfig,
+    FollowupConfig,
     CaseAnalysisConfig,
     ReportConfig,
     DocumentIngestionConfig,
@@ -171,7 +163,7 @@ __all__ = [
     "CaseAnalysisConfig",
     "DatabaseConfig",
     "DocumentIngestionConfig",
-    "FollowupPolicyConfig",
+    "FollowupConfig",
     "LLMProviderConfig",
     "ReportConfig",
     "Settings",

@@ -29,7 +29,7 @@ export type CaseAnalysisResultRead = {
     pipeline_config: {
         [key: string]: unknown;
     };
-    provider_metadata_json: {
+    external_context_json?: {
         [key: string]: unknown;
     };
     created_at: string;
@@ -41,7 +41,13 @@ export type CaseChatMessageAccepted = {
     run: CaseRunRead;
 };
 
-export type CaseClarificationRead = {
+export type CaseFollowUpAnswer = {
+    gap_id: string;
+    answer?: string | null;
+    disposition: "answered" | "unavailable" | "skipped";
+};
+
+export type CaseFollowUpRead = {
     id: string;
     case_id: string;
     origin_analysis_result_id: string;

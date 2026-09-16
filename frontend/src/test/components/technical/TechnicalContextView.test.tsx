@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TechnicalContextView } from "@/components/technical/TechnicalContextView";
-import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import { mockNativeDialog } from "../overview/mock-native-dialog";
 
 mockNativeDialog();
@@ -10,8 +10,8 @@ const caseId = "22222222-2222-4222-8222-222222222222";
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const exactQuote = "The evidence reports PowerShell network activity.";
 
-function technicalProjection(): { result: CaseAnalysisResultRead; evidenceSources: EvidenceSourceRead[] } {
-  const evidenceSources: EvidenceSourceRead[] = [{
+function technicalProjection(): { result: CaseAnalysisResultRead; evidenceSources: CaseSourceRead[] } {
+  const evidenceSources: CaseSourceRead[] = [{
     id: sourceId,
     case_id: caseId,
     source_kind: "narrative",
@@ -62,7 +62,7 @@ function technicalProjection(): { result: CaseAnalysisResultRead; evidenceSource
     execution_receipt_json: {},
     retrieval_context_id: "retrieval-1",
     pipeline_config: {},
-    provider_metadata_json: {
+    external_context_json: {
       technical_augmentation: {
         version: "case_mitre_augmentation_v1",
         status: "retrieved_with_matches",
@@ -108,7 +108,7 @@ describe("TechnicalContextView", () => {
       retrieval_context_id: null,
     };
     projection.result.retrieval_context_id = null;
-    projection.result.provider_metadata_json = {
+    projection.result.external_context_json = {
       technical_augmentation: {
         version: "case_mitre_augmentation_v1",
         status: "not_applicable",

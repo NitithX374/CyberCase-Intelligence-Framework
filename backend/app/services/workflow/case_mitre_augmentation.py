@@ -90,8 +90,13 @@ async def run_case_mitre_augmentation(
         context = reused_context
         is_reused = True
     else:
+        rag_query = (
+            "\n".join(applicability.trigger_text).strip()
+            if applicability.trigger_text
+            else ""
+        ) or build_rag_query(source_bundle)
         try:
-            response = await rag_request(build_rag_query(source_bundle))
+            response = await rag_request(rag_query)
             context = validated_case_rag_context(response)
         except RagCallFailure as error:
             return failed_augmentation(error.code, applicability)
@@ -103,7 +108,10 @@ async def run_case_mitre_augmentation(
 
         if on_rag_validated is not None:
             try:
-                await on_rag_validated(context)
+                try:
+                    await on_rag_validated(context, rag_query)
+                except TypeError:
+                    await on_rag_validated(context)
             except Exception:
                 logger.exception("Case MITRE early persistence callback failed run_id=%s", run_id)
 
@@ -123,10 +131,15 @@ def merge_case_mitre_trace(
     augmentation: CaseMitreAugmentation,
     source_bundle: CaseSourceBundle,
 ) -> CaseAnalysisTrace:
+    associations = (
+        list(augmentation.associations)
+        if augmentation.associations
+        else list(trace.mitre_associations)
+    )
     merged = trace.model_copy(
         update={
-            "mitre_associations": list(augmentation.associations),
-            "retrieval_context_id": augmentation.retrieval_context_id,
+            "mitre_associations": associations,
+            "retrieval_context_id": augmentation.retrieval_context_id or trace.retrieval_context_id,
         }
     )
     return validate_case_trace(

@@ -1,4 +1,4 @@
-import type { CaseAnalysisResultRead, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseRunRead, CaseSourceRead } from "@/lib/api";
 import type { CaseOverviewData } from "@/lib/caseOverviewTypes";
 
 export function OverviewStatusRail({
@@ -9,7 +9,7 @@ export function OverviewStatusRail({
 }: {
   overview: CaseOverviewData;
   result: CaseAnalysisResultRead | null;
-  evidenceSources: EvidenceSourceRead[];
+  evidenceSources: CaseSourceRead[];
   runStatus: CaseRunRead["status"] | null;
 }) {
   const documentNames = uniqueDocumentNames(evidenceSources);
@@ -94,7 +94,7 @@ function RecordRow({ label, value, mono = false }: { label: string; value: strin
   );
 }
 
-function uniqueDocumentNames(entries: EvidenceSourceRead[]): string[] {
+function uniqueDocumentNames(entries: CaseSourceRead[]): string[] {
   const names = new Set<string>();
   for (const entry of entries) {
     const filename = String(entry.source_metadata_json?.filename ?? "").trim();

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
 import { ChatTranscript } from "@/components/conversation/ChatTranscript";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { ChatMessageRead } from "@/lib/api";
 
 beforeAll(() => {
   Object.defineProperty(Element.prototype, "scrollIntoView", {
@@ -91,7 +91,7 @@ Hello <button id="unsafe-btn">Click me</button> <script>console.log('xss')</scri
 
 describe("ChatTranscript Markdown vs Plain Text behavior", () => {
   it("renders assistant messages as Markdown and user messages as plain text", () => {
-    const messages: PersistedChatMessage[] = [
+    const messages: ChatMessageRead[] = [
       {
         id: "msg-user",
         case_id: "caseChat-1",
@@ -143,7 +143,7 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
   });
 
   it("expands the exact persisted follow-up explanation", () => {
-    const messages: PersistedChatMessage[] = [
+    const messages: ChatMessageRead[] = [
       {
         id: "msg-follow-up",
         case_id: "caseChat-1",
@@ -156,7 +156,13 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
         metadata_json: {
           action: "follow_up",
           chat_followup: {
-            selected_gap_detail: {
+            root_ordinal: 2,
+            round: 1,
+            source_analysis_id: "analysis-1",
+            source_revision: 1,
+            gap: {
+              gap_id: "gap-authentication",
+              gap_key: "authentication_records",
               topic: "Authentication records for VM access",
               status: "NOT_PROVIDED",
               description: "Authentication records were not provided.",
@@ -164,6 +170,7 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
               reason: "The reported access cannot be linked to a credential.",
               priority: "high",
               askable: true,
+              clarification_question: "Do you have authentication logs?",
             },
           },
         },

@@ -138,6 +138,7 @@ class CaseAnalysisGap(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     gap_id: str = Field(pattern=r"^G-\d{2,}$", max_length=80)
+    gap_key: str = Field(min_length=1, max_length=160)
     topic: str = Field(min_length=1, max_length=500)
     status: Literal["NOT_PROVIDED", "EXPLICITLY_UNKNOWN", "AMBIGUOUS", "CONFLICTING"]
     description: str = Field(min_length=1, max_length=4_000)
@@ -145,11 +146,26 @@ class CaseAnalysisGap(BaseModel):
     reason: str = Field(min_length=1, max_length=4_000)
     priority: Literal["high", "medium", "low"]
     askable: bool
+    clarification_question: str | None = Field(default=None, max_length=300)
 
     @field_validator("gap_id", mode="before")
     @classmethod
     def normalize_gap_id(cls, value: object) -> object:
         return normalize_identifier(value, "G", "G|gap")
+
+    @field_validator("gap_key", "topic", "clarification_question", mode="before")
+    @classmethod
+    def normalize_gap_text(cls, value: object) -> object:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Gap text values must be non-empty")
+        if "\n" in normalized or "\r" in normalized:
+            raise ValueError("Gap text values cannot contain line breaks")
+        return normalized
 
     @field_validator("affected_claim_ids", mode="before")
     @classmethod

@@ -125,12 +125,12 @@ test.describe("case lifecycle", () => {
       const caseRecord = await response.json();
       return {
         status: caseRecord?.status,
-        has_pending_clarification: caseRecord?.has_pending_clarification,
+        has_pending_followup: caseRecord?.has_pending_followup,
         processing_status: caseRecord?.processing_status,
       };
     }, { timeout: 60_000, intervals: [500, 1000, 2000] }).toEqual({
       status: "answered",
-      has_pending_clarification: false,
+      has_pending_followup: false,
       processing_status: "idle",
     });
 

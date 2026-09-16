@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import type { CaseChatDetail, CaseChatMessageAccepted, CaseChatStatus, CaseRead, PersistedChatMessage } from "@/lib/api";
+import type { CaseChatDetail, CaseChatMessageAccepted, CaseChatStatus, CaseRead, ChatMessageRead } from "@/lib/api";
 import { useCaseChatSelection } from "@/features/chat/workspace/use-case-chat-selection";
 import { useCaseChatSubmission } from "@/features/chat/runs/useCaseChatSubmission";
 
-export function message(caseId: string, ordinal: number, role: "user" | "assistant", content: string = role): PersistedChatMessage {
+export function message(caseId: string, ordinal: number, role: "user" | "assistant", content: string = role): ChatMessageRead {
   return {
     id: `${caseId}-${ordinal}`, case_id: caseId, ordinal, role, content,
     message_kind: "conversation", analysis_result_id: null,
@@ -14,7 +14,7 @@ export function message(caseId: string, ordinal: number, role: "user" | "assista
   };
 }
 
-export function caseChat(caseId = "a", status: CaseChatStatus = "idle", messages: PersistedChatMessage[] = []): CaseChatDetail {
+export function caseChat(caseId = "a", status: CaseChatStatus = "idle", messages: ChatMessageRead[] = []): CaseChatDetail {
   return {
     case_id: caseId, status, messages,
   };
@@ -27,7 +27,7 @@ export function caseRecord(id = "a", status: CaseChatStatus = "idle"): CaseRead 
     status,
     evidence_revision: 1,
     processing_status: status === "processing" ? "running" : "idle",
-    has_pending_clarification: status === "awaiting_followup",
+    has_pending_followup: status === "awaiting_followup",
     analysis_freshness: "current",
     created_at: "2026-09-05T00:00:00Z",
     updated_at: "2026-09-05T00:00:00Z",
@@ -35,7 +35,7 @@ export function caseRecord(id = "a", status: CaseChatStatus = "idle"): CaseRead 
 }
 
 export function caseAccepted(
-  request: PersistedChatMessage,
+  request: ChatMessageRead,
   operation: "analysis" | "ask" = "analysis",
 ): CaseChatMessageAccepted {
   return {

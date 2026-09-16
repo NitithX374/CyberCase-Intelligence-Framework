@@ -1,3 +1,5 @@
+import type { CaseFollowUpAnswer } from "./runTypes";
+
 export type CaseChatRead = {
     case_id: string;
     status: "idle" | "processing" | "awaiting_followup" | "answered" | "failed";
@@ -10,6 +12,7 @@ export type ChatMessageCreate = {
     intent: "ask" | "followup_answer";
     in_reply_to_message_id?: string | null;
     response_language: "thai" | "english";
+    followup?: CaseFollowUpAnswer | null;
 };
 
 export type ChatMessageRead = {
@@ -29,10 +32,12 @@ export type ChatMessageRead = {
 export type FollowUpMetadata = {
     root_ordinal?: number;
     round?: number;
-    gap_id?: string;
-    gap_key?: string;
-    topic?: string;
-    selected_gap_detail?: {
+    source_analysis_id?: string;
+    source_revision?: number;
+    gap?: {
+        [key: string]: unknown;
+    };
+    answer?: {
         [key: string]: unknown;
     };
 };

@@ -1,10 +1,17 @@
 import asyncio
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
+
+import pytest
 
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
+    CaseAnalysisFailure,
+    CaseAnalysisOutput,
     CaseAnalysisTrace,
+    CaseMitreAssociation,
+    CaseProviderAnalysis,
     CaseSourceCitation,
 )
 from app.services.case_materials import CaseSourceBundle, CaseSourceItem
@@ -17,6 +24,9 @@ from app.services.workflow.case_mitre_augmentation import (
     merge_case_mitre_trace,
     run_case_mitre_augmentation,
 )
+from app.services.case_analysis.case_analysis import validate_direct_trace
+from app.services.workflow.case_run_execution import execute_claimed_work
+from app.services.workflow.case_run_service import ClaimedCaseRun
 
 
 def _fixtures():
@@ -182,3 +192,275 @@ def test_rag_transport_failure_preserves_failed_augmentation_status():
         assert result.associations == ()
 
     asyncio.run(exercise())
+
+
+def test_workflow_scenario_a_non_cyber_case_gate_skip():
+    async def exercise():
+        source_id, trace, source_bundle, _, _ = _fixtures()
+        claimed = ClaimedCaseRun(
+            id=uuid4(),
+            case_id=uuid4(),
+            source_bundle=source_bundle,
+            attempt_count=1,
+            operation="analysis",
+            pipeline_config={},
+            request_payload={"response_language": "english"},
+        )
+        rag_calls = []
+
+        async def fake_rag(q):
+            rag_calls.append(q)
+            return None
+
+        analysis_calls = []
+
+        async def fake_analysis(**kwargs):
+            analysis_calls.append(kwargs)
+            return CaseAnalysisOutput(
+                answer="Analysis completed without technical context.",
+                trace=trace,
+                execution_receipt={"calls": []},
+            )
+
+        fake_db = AsyncMock()
+        fake_db.execute = AsyncMock()
+        fake_db.scalars = AsyncMock(return_value=AsyncMock(all=lambda: []))
+
+        class FakeSessionFactory:
+            async def __aenter__(self):
+                return fake_db
+
+            async def __aexit__(self, *args):
+                pass
+
+        with patch("app.services.workflow.case_run_execution.load_followup_exchanges", return_value=()):
+            output = await execute_claimed_work(
+                claimed,
+                session_factory=FakeSessionFactory,
+                analysis_request=fake_analysis,
+                answer_request=AsyncMock(),
+                applicability_gate=_gate({"decision": "SKIP", "source_message_ids": [], "trigger_text": []}),
+                rag_request=fake_rag,
+            )
+
+        assert rag_calls == []
+        assert len(analysis_calls) == 1
+        assert analysis_calls[0]["technical_context"] is None
+        assert analysis_calls[0]["retrieval_context_id"] is None
+        assert output.trace.mitre_associations == []
+        assert output.execution_receipt["technical_augmentation"]["status"] == "not_applicable"
+
+    asyncio.run(exercise())
+
+
+def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
+    async def exercise():
+        source_id, trace, source_bundle, applicability, context = _fixtures()
+        claimed = ClaimedCaseRun(
+            id=uuid4(),
+            case_id=uuid4(),
+            source_bundle=source_bundle,
+            attempt_count=1,
+            operation="analysis",
+            pipeline_config={},
+            request_payload={"response_language": "english"},
+        )
+        call_order = []
+
+        async def fake_gate(**kwargs):
+            call_order.append("gate")
+            return applicability
+
+        async def fake_rag(q):
+            call_order.append("rag")
+            return _response(context)
+
+        valid_assoc = CaseMitreAssociation(
+            association_id="MA-01",
+            technique_id="T1059.001",
+            claim_ids=["A-01"],
+            reason="PowerShell script execution detected in evidence.",
+            status="candidate_only",
+            support_role="external_technical_context",
+        )
+        augmented_trace = trace.model_copy(
+            update={
+                "mitre_associations": [valid_assoc],
+                "retrieval_context_id": "retrieval-case-1",
+            }
+        )
+
+        async def fake_analysis(**kwargs):
+            call_order.append("analysis")
+            assert kwargs["technical_context"] == {
+                "context": context.context,
+                "mitre_table": list(context.mitre_table),
+            }
+            assert kwargs["retrieval_context_id"] == "retrieval-case-1"
+            return CaseAnalysisOutput(
+                answer="Analysis with technical context.",
+                trace=augmented_trace,
+                execution_receipt={"calls": []},
+            )
+
+        class FakeBegin:
+            async def __aenter__(self):
+                return None
+
+            async def __aexit__(self, *args):
+                pass
+
+        fake_db = AsyncMock()
+        fake_db.scalar = AsyncMock(return_value=None)
+        fake_db.begin = lambda: FakeBegin()
+        fake_db.add = lambda x: None
+
+        class FakeSessionFactory:
+            async def __aenter__(self):
+                return fake_db
+
+            async def __aexit__(self, *args):
+                pass
+
+        with patch("app.services.workflow.case_run_execution.load_followup_exchanges", return_value=()):
+            output = await execute_claimed_work(
+                claimed,
+                session_factory=FakeSessionFactory,
+                analysis_request=fake_analysis,
+                answer_request=AsyncMock(),
+                applicability_gate=fake_gate,
+                rag_request=fake_rag,
+            )
+
+        assert call_order == ["gate", "rag", "analysis"]
+        assert len(output.trace.mitre_associations) == 1
+        assert output.trace.mitre_associations[0].technique_id == "T1059.001"
+        assert output.execution_receipt["technical_augmentation"]["status"] == "retrieved_with_matches"
+        assert output.execution_receipt["technical_augmentation"]["association_ids"] == ["MA-01"]
+
+    asyncio.run(exercise())
+
+
+def test_scenario_c_invalid_technique_rejected_by_validation():
+    source_id, trace, source_bundle, _, context = _fixtures()
+    invalid_assoc = CaseMitreAssociation(
+        association_id="MA-01",
+        technique_id="T9999",
+        claim_ids=["A-01"],
+        reason="Invented technique.",
+        status="candidate_only",
+        support_role="external_technical_context",
+    )
+    parsed = CaseProviderAnalysis(
+        version="case_analysis_trace_v1",
+        answer="Summary",
+        summary="Summary",
+        involved_parties=[],
+        timeline=[],
+        claims=list(trace.claims),
+        impacts=[],
+        gaps=[],
+        mitre_associations=[invalid_assoc],
+    )
+    with pytest.raises(CaseAnalysisFailure) as err:
+        validate_direct_trace(
+            parsed,
+            mode="case_overview",
+            source_bundle=source_bundle,
+            retrieval_context_id="retrieval-case-1",
+            mitre_table=list(context.mitre_table),
+        )
+    assert err.value.code == "case_trace_mitre_outside_context"
+
+
+def test_workflow_scenario_d_rag_failure_falls_back_to_case_sources():
+    async def exercise():
+        source_id, trace, source_bundle, applicability, _ = _fixtures()
+        claimed = ClaimedCaseRun(
+            id=uuid4(),
+            case_id=uuid4(),
+            source_bundle=source_bundle,
+            attempt_count=1,
+            operation="analysis",
+            pipeline_config={},
+            request_payload={"response_language": "english"},
+        )
+
+        async def fake_rag(_query):
+            raise RagCallFailure("rag_timeout", "RAG service timed out")
+
+        analysis_kwargs = []
+
+        async def fake_analysis(**kwargs):
+            analysis_kwargs.append(kwargs)
+            return CaseAnalysisOutput(
+                answer="Analysis without RAG context.",
+                trace=trace,
+                execution_receipt={"calls": []},
+            )
+
+        fake_db = AsyncMock()
+        fake_db.scalar = AsyncMock(return_value=None)
+
+        class FakeSessionFactory:
+            async def __aenter__(self):
+                return fake_db
+
+            async def __aexit__(self, *args):
+                pass
+
+        with patch("app.services.workflow.case_run_execution.load_followup_exchanges", return_value=()):
+            output = await execute_claimed_work(
+                claimed,
+                session_factory=FakeSessionFactory,
+                analysis_request=fake_analysis,
+                answer_request=AsyncMock(),
+                applicability_gate=_gate(applicability),
+                rag_request=fake_rag,
+            )
+
+        assert len(analysis_kwargs) == 1
+        assert analysis_kwargs[0]["technical_context"] is None
+        assert analysis_kwargs[0]["retrieval_context_id"] is None
+        assert output.trace.mitre_associations == []
+        assert output.execution_receipt["technical_augmentation"]["status"] == "failed"
+        assert output.execution_receipt["technical_augmentation"]["failure_code"] == "rag_timeout"
+
+    asyncio.run(exercise())
+
+
+def test_scenario_e_case_sources_remain_only_allowed_source_ids_for_claims():
+    source_id, trace, source_bundle, _, context = _fixtures()
+    invalid_claim = CaseAnalysisClaim(
+        claim_id="A-02",
+        claim_type="reported",
+        text="A claim citing external non-case source.",
+        epistemic_status="reported",
+        supporting_source_ids=["external-mitre-source-id"],
+        supporting_citations=[
+            CaseSourceCitation(
+                source_id="external-mitre-source-id",
+                exact_quote="Some quote",
+            )
+        ],
+    )
+    parsed = CaseProviderAnalysis(
+        version="case_analysis_trace_v1",
+        answer="Summary",
+        summary="Summary",
+        involved_parties=[],
+        timeline=[],
+        claims=[invalid_claim],
+        impacts=[],
+        gaps=[],
+        mitre_associations=[],
+    )
+    with pytest.raises(CaseAnalysisFailure) as err:
+        validate_direct_trace(
+            parsed,
+            mode="case_overview",
+            source_bundle=source_bundle,
+            retrieval_context_id="retrieval-case-1",
+            mitre_table=list(context.mitre_table),
+        )
+    assert err.value.code == "case_trace_support_outside_evidence"

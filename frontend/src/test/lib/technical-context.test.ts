@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import { buildTechnicalContext } from "@/lib/technicalContext";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
@@ -11,8 +11,8 @@ function technicalContextFixture(
   rows: Record<string, string>[],
   associations: Record<string, unknown>[] = [],
   failureCode?: string,
-): { result: CaseAnalysisResultRead; evidenceSources: EvidenceSourceRead[] } {
-  const evidenceSources: EvidenceSourceRead[] = [{
+): { result: CaseAnalysisResultRead; evidenceSources: CaseSourceRead[] } {
+  const evidenceSources: CaseSourceRead[] = [{
     id: sourceId,
     case_id: caseId,
     source_kind: "narrative",
@@ -65,7 +65,7 @@ function technicalContextFixture(
     execution_receipt_json: {},
     retrieval_context_id: retrievalContextId,
     pipeline_config: {},
-    provider_metadata_json: {
+    external_context_json: {
       technical_augmentation: {
         version: "case_mitre_augmentation_v1",
         status,

@@ -30,6 +30,8 @@ async def analyze_case(
     mode: str = "case_overview",
     question: str | None = None,
     client: httpx.AsyncClient | None = None,
+    technical_context: dict[str, object] | None = None,
+    retrieval_context_id: str | None = None,
 ) -> CaseAnalysisOutput:
     receipt: dict[str, object] = {
         "configuration": config.model_dump(mode="json"),
@@ -40,7 +42,7 @@ async def analyze_case(
         validate_source_bundle(source_bundle)
         language = resolve_response_language(user_message)
         if client is not None:
-            return await execute_direct_pipeline(
+            return await execute_analysis_pipeline(
                 source_bundle,
                 language,
                 config,
@@ -48,9 +50,11 @@ async def analyze_case(
                 receipt=receipt,
                 mode=mode,
                 question=question,
+                technical_context=technical_context,
+                retrieval_context_id=retrieval_context_id,
             )
         async with httpx.AsyncClient() as owned_client:
-            return await execute_direct_pipeline(
+            return await execute_analysis_pipeline(
                 source_bundle,
                 language,
                 config,
@@ -58,6 +62,8 @@ async def analyze_case(
                 receipt=receipt,
                 mode=mode,
                 question=question,
+                technical_context=technical_context,
+                retrieval_context_id=retrieval_context_id,
             )
     except CaseAnalysisFailure as error:
         receipt["failure_code"] = error.code
@@ -70,7 +76,7 @@ async def analyze_case(
         ) from error
 
 
-async def execute_direct_pipeline(
+async def execute_analysis_pipeline(
     source_bundle: CaseSourceBundle,
     language: str,
     config: AnalysisPipelineConfig,
@@ -79,8 +85,22 @@ async def execute_direct_pipeline(
     receipt: dict[str, object],
     mode: str = "case_overview",
     question: str | None = None,
+    technical_context: dict[str, object] | None = None,
+    retrieval_context_id: str | None = None,
 ) -> CaseAnalysisOutput:
     validate_source_bundle(source_bundle)
+    cleaned_technical_context = None
+    if (
+        isinstance(technical_context, dict)
+        and isinstance(technical_context.get("context"), str)
+        and isinstance(technical_context.get("mitre_table"), (list, tuple))
+        and technical_context.get("mitre_table")
+    ):
+        cleaned_technical_context = {
+            "context": technical_context["context"],
+            "mitre_table": list(technical_context["mitre_table"]),
+        }
+
     request_content = {
         "response_language": language,
         "analysis_mode": mode,
@@ -88,6 +108,7 @@ async def execute_direct_pipeline(
             provider_source_payload(source)
             for source in source_bundle.sources
         ],
+        "technical_context": cleaned_technical_context,
         "question": question,
     }
 
@@ -100,12 +121,20 @@ async def execute_direct_pipeline(
         CaseProviderAnalysis,
         receipt,
     )
+    mitre_table = (
+        cleaned_technical_context["mitre_table"]
+        if cleaned_technical_context
+        else None
+    )
+    bound_retrieval_id = retrieval_context_id if cleaned_technical_context else None
     for correction_attempt in range(_DIRECT_TRACE_MAX_CORRECTIONS + 1):
         try:
             trace = validate_direct_trace(
                 parsed,
                 mode=mode,
                 source_bundle=source_bundle,
+                retrieval_context_id=bound_retrieval_id,
+                mitre_table=mitre_table,
             )
             break
         except CaseAnalysisFailure as error:
@@ -188,6 +217,9 @@ _DIRECT_TRACE_CORRECTION_CODES = frozenset(
         "case_trace_impact_without_claim",
         "case_trace_impact_unknown_claim",
         "case_trace_gap_unknown_claim",
+        "case_trace_mitre_without_retrieval",
+        "case_trace_mitre_unknown_claim",
+        "case_trace_mitre_outside_context",
     }
 )
 _DIRECT_TRACE_MAX_CORRECTIONS = 2
@@ -198,6 +230,8 @@ def validate_direct_trace(
     *,
     mode: str,
     source_bundle: CaseSourceBundle,
+    retrieval_context_id: str | None = None,
+    mitre_table: list[dict[str, object]] | tuple[dict[str, object], ...] | None = None,
 ) -> CaseAnalysisTrace:
     return validate_case_trace(
         CaseAnalysisTrace(
@@ -208,9 +242,11 @@ def validate_direct_trace(
             claims=parsed.claims,
             impacts=parsed.impacts,
             gaps=parsed.gaps,
-            mitre_associations=[],
+            mitre_associations=parsed.mitre_associations,
+            retrieval_context_id=retrieval_context_id,
         ),
         source_bundle,
+        mitre_table=list(mitre_table) if mitre_table else [],
     )
 
 
@@ -246,6 +282,8 @@ async def request_case_analysis(
     question: str | None,
     user_message: object,
     client: httpx.AsyncClient | None = None,
+    technical_context: dict[str, object] | None = None,
+    retrieval_context_id: str | None = None,
 ) -> CaseAnalysisOutput:
     validated_mode, validated_question = validate_analysis_request(mode, question)
     return await analyze_case(
@@ -255,12 +293,14 @@ async def request_case_analysis(
         question=validated_question,
         mode=validated_mode,
         client=client,
+        technical_context=technical_context,
+        retrieval_context_id=retrieval_context_id,
     )
 
 
 __all__ = [
     "analyze_case",
-    "execute_direct_pipeline",
+    "execute_analysis_pipeline",
     "request_analysis_stage",
     "request_case_analysis",
 ]

@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.case_runs import CaseRunRead
+from app.schemas.case_followups import CaseFollowUpAnswer
 from app.schemas.message_metadata import MessageMetadata
 
 CaseChatStatus = Literal[
@@ -23,11 +24,12 @@ MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 
 
 class ChatMessageCreate(BaseModel):
-    content: str = Field(min_length=1)
+    content: str = Field(default="")
     idempotency_key: str = Field(min_length=1, max_length=255)
     intent: Literal["ask", "followup_answer"] = "ask"
     in_reply_to_message_id: UUID | None = None
     response_language: Literal["thai", "english"] = "english"
+    followup: CaseFollowUpAnswer | None = None
 
 
 class ChatMessageRead(BaseModel):

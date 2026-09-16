@@ -15,9 +15,9 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisOutput as AnalysisOutput,
     CaseAnalysisTrace,
 )
-from app.services.followup.case_clarification import (
-    CaseClarificationHistoryError,
-    load_case_clarification_exchanges,
+from app.services.followup.case_followup import (
+    CaseFollowUpHistoryError,
+    load_followup_exchanges,
 )
 from app.services.followup.decision import evaluate_followup_outcome
 from app.services.workflow.case_run_claim import claim_case_run
@@ -28,7 +28,8 @@ from app.services.workflow.case_run_completion import (
 from app.services.workflow.case_ask_completion import complete_case_ask
 from app.services.workflow.case_run_context import (
     CaseRunExecutionError,
-    attach_case_augmentation,
+    attach_case_augmentation_receipt,
+    resolve_case_technical_context,
 )
 from app.services.workflow.case_run_service import ClaimedCaseRun, fail_case_run
 
@@ -38,42 +39,29 @@ logger = logging.getLogger("app.case_workflow")
 async def attach_case_followup(
     output: AnalysisOutput,
     claimed: ClaimedCaseRun,
-    clarification_exchanges,
+    followup_exchanges,
 ) -> AnalysisOutput:
     if not isinstance(output.trace, CaseAnalysisTrace):
         return output
     resolution = await evaluate_followup_outcome(
-        clarification_exchanges=clarification_exchanges,
+        followup_exchanges=followup_exchanges,
         followup_root_ordinal=1,
         source_run_id=claimed.id,
+        source_revision=claimed.source_revision,
         canonical_trace=output.trace,
     )
     if resolution.question is None:
         return output
-    metadata = deepcopy(resolution.metadata_json)
-    followup = metadata.get("chat_followup")
-    if not isinstance(followup, dict):
+    followup = resolution.metadata_json.get("chat_followup")
+    if not isinstance(followup, dict) or not isinstance(followup.get("gap"), dict):
         raise CaseRunExecutionError(
-            "clarification_metadata_missing",
-            "Case clarification metadata is missing",
+            "followup_metadata_missing",
+            "Case follow-up gap is missing",
         )
-    detail = followup.get("selected_gap_detail")
-    detail = detail if isinstance(detail, dict) else {}
-    context = followup.get("followup_context")
-    context = context if isinstance(context, dict) else {}
-    topic = detail.get("topic") or followup.get("selected_gap")
-    gap_key = context.get("gap_key")
-    gap_id = detail.get("gap_id") or context.get("gap_id") or gap_key
-    if not all(isinstance(value, str) and value.strip() for value in (gap_id, topic, gap_key)):
-        raise CaseRunExecutionError(
-            "clarification_metadata_missing",
-            "Case clarification has no stable gap identity",
-        )
-    metadata.update({"gap_id": gap_id, "topic": topic, "gap_key": gap_key})
     return replace(
         output,
         followup_question=resolution.question,
-        followup_metadata=metadata,
+        followup_metadata=resolution.metadata_json,
     )
 
 
@@ -150,15 +138,15 @@ async def execute_claimed_work(
     applicability_gate,
     rag_request,
 ) -> AnalysisOutput:
-    clarification_exchanges = ()
+    followup_exchanges = ()
     if claimed.operation == "analysis":
         async with session_factory() as db:
             try:
-                clarification_exchanges = await load_case_clarification_exchanges(
+                followup_exchanges = await load_followup_exchanges(
                     db,
                     claimed.case_id,
                 )
-            except CaseClarificationHistoryError as error:
+            except CaseFollowUpHistoryError as error:
                 raise CaseRunExecutionError(error.code, error.message) from error
     if claimed.operation == "ask":
         async with session_factory() as db:
@@ -171,6 +159,29 @@ async def execute_claimed_work(
             )
         )
     else:
+        augmentation = None
+        if applicability_gate is not None and rag_request is not None:
+            augmentation = await resolve_case_technical_context(
+                claimed,
+                applicability_gate=applicability_gate,
+                rag_request=rag_request,
+                session_factory=session_factory,
+            )
+
+        technical_context = None
+        retrieval_context_id = None
+        if (
+            augmentation is not None
+            and augmentation.status == "retrieved_from_rag"
+            and augmentation.context is not None
+            and augmentation.mitre_table
+        ):
+            technical_context = {
+                "context": augmentation.context.context,
+                "mitre_table": augmentation.mitre_table,
+            }
+            retrieval_context_id = augmentation.retrieval_context_id
+
         output = coerce_analysis_result(
             await analysis_request(
                 source_bundle=claimed.source_bundle,
@@ -178,26 +189,17 @@ async def execute_claimed_work(
                 question=None,
                 user_message=analysis_request_language(claimed),
                 mode="case_overview",
+                technical_context=technical_context,
+                retrieval_context_id=retrieval_context_id,
             )
         )
-    if (
-        claimed.operation == "analysis"
-        and isinstance(output.trace, CaseAnalysisTrace)
-        and applicability_gate is not None
-        and rag_request is not None
-    ):
-        output = await attach_case_augmentation(
-            output,
-            claimed,
-            applicability_gate,
-            rag_request,
-            session_factory=session_factory,
-        )
+        if augmentation is not None:
+            output = attach_case_augmentation_receipt(output, augmentation)
     if claimed.operation == "analysis" and isinstance(output.trace, CaseAnalysisTrace):
         output = await attach_case_followup(
             output,
             claimed,
-            clarification_exchanges,
+            followup_exchanges,
         )
     if output.trace is None:
         raise CaseRunExecutionError(

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
@@ -13,7 +12,6 @@ from app.models.chat import ChatMessage
 from app.models.rag_context import RagContext
 from app.schemas.message_metadata import serialize_message_metadata
 from app.services.case_analysis.contracts import (
-    CaseAnalysisGap,
     CaseAnalysisFailure,
     CaseAnalysisOutput as AnalysisOutput,
     CaseAnalysisTrace,
@@ -40,100 +38,31 @@ def mitre_table_from_output(output: AnalysisOutput) -> list[dict[str, object]]:
     return [dict(item) for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
-def build_clarification_metadata(
-    output: AnalysisOutput,
-    trace: CaseAnalysisTrace,
-) -> dict[str, object]:
-    metadata = deepcopy(output.followup_metadata or {})
-    if not metadata.get("gap_id") or not metadata.get("topic") or not metadata.get("gap_key"):
-        gap = next((item for item in trace.gaps if item.askable), None)
-        if gap is not None:
-            metadata.setdefault("gap_id", gap.gap_id)
-            metadata.setdefault("topic", gap.topic)
-            metadata.setdefault("gap_key", f"{gap.gap_id}:{gap.topic.strip().lower()}")
-    return metadata
-
-
-def build_selected_gap_detail(
-    clarification_topic: str,
-    gap: CaseAnalysisGap | None,
-    existing_detail: dict[str, object] | None = None,
-) -> dict[str, object]:
-    existing = existing_detail or {}
-    topic = str(existing.get("topic") or (gap.topic if gap else clarification_topic)).strip()
-    gap_status = str(existing.get("status") or (gap.status if gap else "NOT_PROVIDED"))
-    if gap_status not in {"NOT_PROVIDED", "EXPLICITLY_UNKNOWN", "AMBIGUOUS", "CONFLICTING"}:
-        gap_status = "NOT_PROVIDED"
-    description = str(
-        existing.get("description")
-        or (gap.description if gap else f"Additional investigative information is required for {topic}.")
-    ).strip()
-    reason = str(
-        existing.get("reason")
-        or (gap.reason if gap else f"Clarifying {topic.lower()} is required to substantiate findings.")
-    ).strip()
-
-    raw_affects = str(existing.get("affects") or "").strip()
-    if raw_affects and raw_affects != "case-level context" and not raw_affects.startswith("A-"):
-        affects = raw_affects
-    elif gap and gap.affected_claim_ids:
-        affects = f"Clarifying {topic.lower()} addresses missing investigative evidence for: {', '.join(gap.affected_claim_ids)}."
-    elif raw_affects:
-        affects = f"Clarifying {topic.lower()} addresses missing investigative evidence for: {raw_affects}."
-    else:
-        affects = f"Clarifying this information helps establish facts and complete the case analysis for {topic.lower()}."
-
-    priority = str(existing.get("priority") or (gap.priority if gap else "high")).lower()
-    if priority not in {"high", "medium", "low"}:
-        priority = "high"
-
-    askable = bool(existing.get("askable", gap.askable if gap else True))
-
-    return {
-        "topic": topic,
-        "status": gap_status,
-        "description": description,
-        "affects": affects,
-        "reason": reason,
-        "priority": priority,
-        "askable": askable,
-    }
-
-
 def build_followup_message_metadata(
     *,
-    clarification_topic: str,
-    gap_id: str,
-    gap_key: str,
+    followup_metadata: dict[str, object],
+    analysis_result_id: UUID,
+    evidence_revision: int,
     thread_ordinal: int,
-    trace: CaseAnalysisTrace,
-    existing_followup: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    gap = next(
-        (
-            item for item in trace.gaps
-            if item.gap_id == gap_id or item.topic.strip().lower() == clarification_topic.strip().lower()
-        ),
-        next((item for item in trace.gaps if item.askable), None),
+    metadata = dict(followup_metadata)
+    chat_followup = metadata.get("chat_followup")
+    if not isinstance(chat_followup, dict):
+        raise CaseRunCompletionError("clarification_metadata_missing", "Case clarification metadata is missing")
+    gap = chat_followup.get("gap")
+    if not isinstance(gap, dict):
+        raise CaseRunCompletionError("clarification_metadata_missing", "Case clarification gap is missing")
+    chat_followup = dict(chat_followup)
+    chat_followup.update(
+        {
+            "root_ordinal": thread_ordinal,
+            "source_analysis_id": str(analysis_result_id),
+            "source_revision": evidence_revision,
+        }
     )
-    existing_detail = existing_followup.get("selected_gap_detail") if isinstance(existing_followup, dict) else None
-    existing_detail_dict = existing_detail if isinstance(existing_detail, dict) else None
-    selected_gap_detail = build_selected_gap_detail(clarification_topic, gap, existing_detail_dict)
-    topic = str(selected_gap_detail["topic"])
-
-    chat_followup: dict[str, object] = {
-        "root_ordinal": thread_ordinal,
-        "round": 1,
-        "gap_id": gap_id,
-        "gap_key": gap_key,
-        "topic": topic,
-        "selected_gap_detail": selected_gap_detail,
-    }
-
-    return {
-        "action": "follow_up",
-        "chat_followup": chat_followup,
-    }
+    metadata["action"] = "follow_up"
+    metadata["chat_followup"] = chat_followup
+    return metadata
 
 
 async def complete_case_run(
@@ -181,21 +110,21 @@ async def complete_case_run(
         )
         if completion.scalar_one_or_none() is None:
             return False
-        provider_metadata = {
+        external_context = {
             "source_reference_type": "case_source",
             "evidence_revision": run.evidence_revision,
         }
         if augmentation is not None:
-            provider_metadata.update(
+            external_context.update(
                 {
-                    "mitre_table": deepcopy(augmentation.get("mitre_table", [])),
-                    "technical_augmentation": deepcopy(augmentation),
+                    "mitre_table": list(augmentation.get("mitre_table", [])),
+                    "technical_augmentation": dict(augmentation),
                 }
             )
         if output.followup_question:
-            provider_metadata["followup_question"] = output.followup_question.strip()
+            external_context["followup_question"] = output.followup_question.strip()
             if output.followup_metadata:
-                provider_metadata["followup_metadata"] = deepcopy(output.followup_metadata)
+                external_context["followup_metadata"] = dict(output.followup_metadata)
         result = PersistedAnalysisResult(
             case_id=case.id,
             run_id=run.id,
@@ -205,10 +134,10 @@ async def complete_case_run(
             answer=output.answer.strip(),
             summary=trace.summary,
             trace_json=trace.model_dump(mode="json"),
-            execution_receipt_json=deepcopy(output.execution_receipt),
+            execution_receipt_json=dict(output.execution_receipt) if isinstance(output.execution_receipt, dict) else output.execution_receipt,
             retrieval_context_id=trace.retrieval_context_id,
-            pipeline_config=deepcopy(run.pipeline_config),
-            provider_metadata_json=provider_metadata,
+            pipeline_config=dict(run.pipeline_config) if isinstance(run.pipeline_config, dict) else run.pipeline_config,
+            external_context_json=external_context,
         )
         db.add(result)
         if augmentation is not None and trace.retrieval_context_id:
@@ -226,23 +155,13 @@ async def complete_case_run(
                     case_run_id=run.id,
                     query_text=query_str,
                     context_text=str(augmentation.get("context", "")),
-                    mitre_table=deepcopy(augmentation.get("mitre_table", [])),
+                    mitre_table=list(augmentation.get("mitre_table", [])),
                 )
                 db.add(rag_context)
         await db.flush()
 
-        has_followup = output.followup_question is not None
+        has_followup = bool(output.followup_question and output.followup_question.strip())
         if has_followup:
-            followup_metadata_raw = output.followup_metadata or {}
-            existing_followup = (
-                followup_metadata_raw.get("chat_followup")
-                if isinstance(followup_metadata_raw, dict)
-                else None
-            )
-            clarification_meta = build_clarification_metadata(output, trace)
-            gap_id = str(clarification_meta.get("gap_id") or "G-001")
-            topic = str(clarification_meta.get("topic") or "")
-            gap_key = str(clarification_meta.get("gap_key") or f"{gap_id}:{topic.lower()}")
             followup_message_id = uuid4()
             next_ordinal = (
                 await db.scalar(
@@ -253,13 +172,13 @@ async def complete_case_run(
                 + 1
             )
             followup_message_meta = build_followup_message_metadata(
-                clarification_topic=topic,
-                gap_id=gap_id,
-                gap_key=gap_key,
+                followup_metadata=output.followup_metadata or {},
+                analysis_result_id=result.id,
+                evidence_revision=run.evidence_revision,
                 thread_ordinal=next_ordinal,
-                trace=trace,
-                existing_followup=existing_followup,
             )
+            external_context["followup_metadata"] = followup_message_meta
+            result.external_context_json = external_context
             question = ChatMessage(
                 id=followup_message_id,
                 case_id=case.id,
@@ -320,7 +239,6 @@ def validated_output(
 
 __all__ = [
     "CaseRunCompletionError",
-    "build_clarification_metadata",
     "build_followup_message_metadata",
     "complete_case_run",
     "mitre_table_from_output",

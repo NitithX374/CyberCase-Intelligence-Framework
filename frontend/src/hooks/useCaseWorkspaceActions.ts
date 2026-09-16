@@ -51,7 +51,7 @@ export function useCaseWorkspaceActions({
       queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(caseId) }),
       queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) }),
       queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) }),
-      queryClient.invalidateQueries({ queryKey: caseQueryKeys.clarifications(caseId) }),
+      queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(caseId) }),
     ]);
   }, [queryClient]);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import { Icon } from "@/components/common/icons";
 import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
 import type { SourceMessageRef } from "@/lib/caseOverviewTypes";
@@ -15,7 +15,7 @@ import {
 
 interface TechnicalContextViewProps {
   analysisResult: CaseAnalysisResultRead | null;
-  evidenceSources: EvidenceSourceRead[] | null;
+  evidenceSources: CaseSourceRead[] | null;
   onOpenIntake?: () => void;
   onNavigateToSource?: (messageId: string) => void;
 }

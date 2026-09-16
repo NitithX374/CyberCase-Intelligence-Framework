@@ -296,7 +296,7 @@ def build_document_recognizer() -> DocumentRecognizer:
 
     return TyphoonDocumentRecognizer(
         TyphoonRecognizerConfig(
-            api_key=settings.typhoon_ocr_api_key,
+            api_key=settings.typhoon_api_key,
             base_url=settings.typhoon_ocr_base_url,
             model=settings.typhoon_ocr_model,
             timeout_seconds=settings.document_recognition_timeout_seconds,

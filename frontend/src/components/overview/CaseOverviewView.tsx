@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { CaseAnalysisResultRead, CaseChatStatus, CaseClarificationRead, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseChatStatus, CaseFollowUpRead, CaseRunRead, CaseSourceRead } from "@/lib/api";
 import type { CaseGap, SourceMessageRef } from "@/lib/caseOverviewTypes";
 import { buildCaseOverview } from "@/lib/caseOverview";
 import { CaseFindingsSection } from "./CaseFindingsSection";
@@ -33,9 +33,9 @@ interface CaseOverviewViewProps {
   onOpenTechnicalContext?: () => void;
   onNavigateToSource?: (messageId: string) => void;
   analysisResult: CaseAnalysisResultRead | null;
-  evidenceSources: EvidenceSourceRead[];
+  evidenceSources: CaseSourceRead[];
   runStatus: CaseRunRead["status"] | null;
-  clarifications: CaseClarificationRead[];
+  followups: CaseFollowUpRead[];
   analysisLoading: boolean;
   evidenceLoading: boolean;
   run: CaseRunRead | null;
@@ -54,7 +54,7 @@ export function CaseOverviewView({
   analysisResult,
   evidenceSources,
   runStatus,
-  clarifications,
+  followups,
   analysisLoading,
   evidenceLoading,
   run,
@@ -105,13 +105,13 @@ export function CaseOverviewView({
     );
   }
 
-  const pendingClarification = clarifications.find((item) => item.state === "pending");
-  const isAwaitingFollowup = chatStatus === "awaiting_followup" || Boolean(pendingClarification);
+  const pendingFollowUp = followups.find((item) => item.state === "pending");
+  const isAwaitingFollowup = chatStatus === "awaiting_followup" || Boolean(pendingFollowUp);
   if (isAwaitingFollowup) {
-    const question = pendingClarification?.question?.trim();
+    const question = pendingFollowUp?.question?.trim();
     return (
       <CaseOverviewState
-        eyebrow={pendingClarification?.topic ? `Clarification needed · ${pendingClarification.topic}` : "Clarification needed"}
+        eyebrow={pendingFollowUp?.topic ? `Follow-up needed · ${pendingFollowUp.topic}` : "Follow-up needed"}
         title="Analysis Needs More Information"
         description={question ? `The case analysis requires additional details: "${question}" Open Ask from the workspace header to follow up.` : "The case analysis requires additional details. Open Ask from the workspace header to follow up."}
       />

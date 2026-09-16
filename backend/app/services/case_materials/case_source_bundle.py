@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -46,8 +45,8 @@ def case_source_item(source: CaseSource) -> CaseSourceItem:
         text=source.exact_text,
         document_id=str(source.document_id) if source.document_id else None,
         filename=source.document.filename if source.document else None,
-        provenance=deepcopy(source.provenance_json),
-        source_metadata=deepcopy(source.source_metadata_json),
+        provenance=source.provenance_json,
+        source_metadata=source.source_metadata_json,
     )
 
 

@@ -12,7 +12,8 @@ import {
 } from "@/lib/api";
 import { caseQueryKeys } from "@/hooks/useCaseQueries";
 import { isChatRequestCanceled, pollCaseRunUntilSettled } from "../runs/chat-polling";
-import { phaseForCaseChat, useChatDraft } from "./use-chat-draft";
+import { determineCaseChatPhase, useChatDraft } from "./use-chat-draft";
+import { activeCaseChatFollowUp } from "@/lib/chat-followup";
 
 export interface CaseChatSelection {
   readonly caseId: string;
@@ -87,7 +88,7 @@ export function useCaseChatSelection({
       void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId) });
       void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) });
       void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
-      void queryClient.invalidateQueries({ queryKey: caseQueryKeys.clarifications(caseId) });
+      void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(caseId) });
       void queryClient.refetchQueries({
         queryKey: caseQueryKeys.chat(selection.caseId),
         exact: true,
@@ -183,15 +184,23 @@ export function useCaseChatSelection({
     queryClient.removeQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true });
   }, [forgetCaseChat, queryClient]);
 
+  const persistedFollowUp = detail
+    ? activeCaseChatFollowUp(detail.messages, detail.status)
+    : null;
+
   useEffect(() => cancelSelection, [cancelSelection]);
 
   return {
     activeCaseChatId,
     messages: detail?.messages ?? [],
     chatStatus: draft.state.activity ? draft.state.activity.chatStatus : detail?.status ?? null,
-    phase: draft.state.activity?.phase ?? phaseForCaseChat(detail),
+    phase: draft.state.activity?.phase ?? determineCaseChatPhase(detail),
     input: draft.state.input,
-    pendingFollowUp: draft.state.pendingFollowUp,
+    pendingFollowUp: draft.state.pendingFollowUp ?? (
+      detail && persistedFollowUp
+        ? { caseId: detail.case_id, followUp: persistedFollowUp }
+        : null
+    ),
     queryError: draft.state.queryError,
     changeInput: draft.changeInput,
     reportError: draft.reportError,
