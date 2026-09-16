@@ -1,4 +1,4 @@
-from app.services.document_ingestion.contracts import IngestedDocument, IngestionMode
+from app.services.document_ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
 from app.services.document_ingestion.errors import DocumentIngestionError
 from app.services.document_ingestion.service import (
     DocumentIngestionLimits,
@@ -12,8 +12,9 @@ __all__ = [
     "DocumentIngestionError",
     "DocumentIngestionLimits",
     "DocumentIngestionService",
+    "DocumentPage",
+    "ExtractionMethod",
     "IngestedDocument",
-    "IngestionMode",
     "build_document_ingestion_service",
     "build_document_recognizer",
     "read_limited",

@@ -9,7 +9,7 @@ beforeEach(() => {
   vi.mocked(useAuth).mockReturnValue({
     user: null, sessionError: null, isLoading: false, isAuthenticated: false,
     devLogin: vi.fn(), isDevLoggingIn: false, logout, isLoggingOut: false,
-    loginWithOAuth: vi.fn(), refetchSession: vi.fn(),
+    refetchSession: vi.fn(),
   });
 });
 it("links anonymous users to the login page", () => {

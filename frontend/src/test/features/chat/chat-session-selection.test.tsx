@@ -71,7 +71,7 @@ describe("chat session selection", () => {
     await tick();
     const key = result.current.session.getPendingSubmission()?.key;
     act(() => { result.current.session.suspendCaseChat("a"); });
-    act(() => { result.current.session.restoreCaseChat("a"); });
+    act(() => { result.current.session.restoreCaseChat(); });
     await act(async () => { await result.current.session.selectCaseChat("a"); });
     await tick();
     expect(result.current.session.getPendingSubmission()?.key).toBe(key);

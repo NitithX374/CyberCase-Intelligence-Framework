@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import axios from "axios";
-import { getApiBaseUrl, getApiErrorMessage, getOAuthLoginUrl, type UserProfile } from "@/lib/api";
+import { getApiBaseUrl, getApiErrorMessage, type UserProfile } from "@/lib/api";
 
 export function AccountForm({ register = false }: { register?: boolean }) {
   const [error, setError] = useState<string | null>(() => {
@@ -11,30 +11,9 @@ export function AccountForm({ register = false }: { register?: boolean }) {
     const params = new URLSearchParams(window.location.search);
     const err = params.get("error");
     if (!err) return null;
-    if (err === "cancelled") {
-      return "Google sign-in was cancelled. Please try again or sign in with credentials.";
-    }
-    if (err === "account_exists_with_password") {
-      return "This email already has an account registered with password. Please sign in with your password.";
-    }
-    if (err === "invalid_state") {
-      return "Sign-in session expired or was invalid. Please try again.";
-    }
-    return "Google sign-in failed. Please try again or use your credentials.";
+    return "Authentication failed. Please check your credentials and try again.";
   });
   const [busy, setBusy] = useState(false);
-  const [providers, setProviders] = useState<string[]>([]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    axios
-      .get<string[]>(`${getApiBaseUrl()}/auth/providers`, { signal: controller.signal })
-      .then(({ data }) => setProviders(data))
-      .catch((error: unknown) => {
-        if (!axios.isCancel(error)) setError("Unable to load sign-in options.");
-      });
-    return () => controller.abort();
-  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,16 +95,6 @@ export function AccountForm({ register = false }: { register?: boolean }) {
           <p role="alert" className="mt-4 text-sm text-critical">
             {error}
           </p>
-        )}
-        {providers.includes("google") && (
-          <div className="mt-6 space-y-2 border-t border-line pt-6">
-            <a
-              href={getOAuthLoginUrl("google")}
-              className="block rounded-lg border border-line p-3 text-center text-sm font-medium transition hover:border-line-strong hover:bg-surface-hover"
-            >
-              Continue with Google
-            </a>
-          </div>
         )}
         <p className="mt-6 text-sm">
           {register ? "Already have an account? " : "New to CyberCase? "}

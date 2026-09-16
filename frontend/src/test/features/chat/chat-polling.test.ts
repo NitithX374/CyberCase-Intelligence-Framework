@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
-import { pollCaseRunUntilSettled, waitForNextChatPoll } from "@/features/chat/runs/chat-polling";
+import { pollCaseRunUntilSettled, waitForNextChatPoll } from "@/features/chat/chatPolling";
 import { caseAccepted, deferred, message, caseChat } from "./chat-session-test-support";
 
 beforeEach(() => { vi.useFakeTimers(); });

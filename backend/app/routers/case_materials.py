@@ -95,20 +95,22 @@ async def add_case_document(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    service = build_document_ingestion_service()
     try:
         content = await read_limited(file)
-        ingested = await build_document_ingestion_service().ingest(content, file.filename or "document")
+        ingested = await service.ingest(content, file.filename or "document")
     except DocumentIngestionError as error:
         raise ingestion_http_error(error) from error
+    finally:
+        await service.aclose()
     extraction = {
         "provider": ingested.extraction_method.value,
-        "config_json": {"mode": ingested.mode.value},
+        "config_json": {},
         "extracted_text": ingested.full_text,
         "provenance_json": {
             "document_id": ingested.document_id,
             "media_type": ingested.media_type,
             "extraction_method": ingested.extraction_method.value,
-            "mode": ingested.mode.value,
             "pages": [page.model_dump(mode="json") for page in ingested.pages],
             "warnings": list(ingested.warnings),
         },

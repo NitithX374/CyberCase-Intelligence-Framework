@@ -1,8 +1,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeAccountValue } from "@/lib/account-storage";
-import { useChatDraft } from "@/features/chat/workspace/use-chat-draft";
-import type { PendingChatSubmission } from "@/features/chat/workspace/use-chat-draft";
+import { useChatDraft, type PendingChatSubmission } from "@/features/chat/useChatDraft";
 import { message, caseChat } from "./chat-session-test-support";
 
 afterEach(() => {
@@ -33,5 +32,4 @@ describe("Case Chat interrupted recovery", () => {
     });
     expect(result.current.state.queryError).toContain("Retry the saved message");
   });
-
 });

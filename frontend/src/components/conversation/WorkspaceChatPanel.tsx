@@ -55,10 +55,6 @@ export function WorkspaceChatPanel({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [clarifyingQuestionId, setClarifyingQuestionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) closeButtonRef.current?.focus();
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
   const followUp = chatStatus === "awaiting_followup" ? pendingFollowUp : null;

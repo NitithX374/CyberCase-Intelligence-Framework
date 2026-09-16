@@ -89,4 +89,68 @@ function renderMaterials(overrides: Partial<React.ComponentProps<typeof CaseMate
     expect(screen.getByText("No source files yet.")).toBeInTheDocument();
     expect(screen.getByText("Add a source file to begin reviewing materials.")).toBeInTheDocument();
   });
+
+  it("renders page cards and jump links for multi-page extraction", () => {
+    const multiPageDocument: CaseDocumentRead = {
+      ...document,
+      id: "document-multi",
+      filename: "multi-page.pdf",
+      extractions: [{
+        id: "extraction-multi",
+        document_id: "document-multi",
+        provider: "native_pdf",
+        extracted_text: "First page content\n\nSecond page content",
+        config_json: {},
+        provenance_json: {
+          pages: [
+            { page_number: 1, text: "First page content", text_method: "native" },
+            { page_number: 2, text: "Second page content", text_method: "ocr" },
+          ],
+        },
+        warnings_json: [],
+        created_at: "2026-09-11T00:00:00Z",
+      }],
+    };
+
+    renderMaterials({ documents: [multiPageDocument] });
+    fireEvent.click(screen.getByRole("tab", { name: "System OCR" }));
+
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(screen.getByText("First page content")).toBeInTheDocument();
+    expect(screen.getByText("Page 2")).toBeInTheDocument();
+    expect(screen.getByText("Second page content")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Page navigation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "P.1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "P.2" })).toBeInTheDocument();
+  });
+
+  it("renders side-by-side comparison view with original file and OCR", async () => {
+    const multiPageDocument: CaseDocumentRead = {
+      ...document,
+      id: "document-multi",
+      filename: "multi-page.pdf",
+      extractions: [{
+        id: "extraction-multi",
+        document_id: "document-multi",
+        provider: "native_pdf",
+        extracted_text: "First page content\n\nSecond page content",
+        config_json: {},
+        provenance_json: {
+          pages: [
+            { page_number: 1, text: "First page content", text_method: "native" },
+            { page_number: 2, text: "Second page content", text_method: "ocr" },
+          ],
+        },
+        warnings_json: [],
+        created_at: "2026-09-11T00:00:00Z",
+      }],
+    };
+
+    renderMaterials({ documents: [multiPageDocument] });
+    fireEvent.click(screen.getByRole("tab", { name: "Side by Side" }));
+
+    expect(await screen.findByTitle("Original file: multi-page.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(screen.getByText("First page content")).toBeInTheDocument();
+  });
 });

@@ -1,0 +1,229 @@
+"use client";
+
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  getApiErrorMessage,
+  getCaseChat,
+  type CaseChatDetail,
+  type CaseChatStatus,
+  type CaseRead,
+  type ChatMessageRead,
+} from "@/lib/api";
+import { caseQueryKeys } from "@/hooks/useCaseQueries";
+import type { RunPhase } from "@/components/common/types";
+import {
+  activeCaseChatFollowUp,
+} from "@/lib/chat-followup";
+import { determineCaseChatPhase, useChatDraft } from "./useChatDraft";
+import { useCaseChatSubmission } from "./useCaseChatSubmission";
+
+export interface UseCaseChatOptions {
+  caseId: string | null;
+  isChatOpen?: boolean;
+  currentCase?: CaseRead | null;
+  cases?: CaseRead[];
+  upsertCase?: (caseRecord: CaseRead) => void;
+}
+
+export function useCaseChat({
+  caseId: routeCaseId,
+  isChatOpen = true,
+  currentCase,
+  cases,
+  upsertCase,
+}: UseCaseChatOptions) {
+  const queryClient = useQueryClient();
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [prevRouteCaseId, setPrevRouteCaseId] = useState<string | null>(routeCaseId);
+
+  if (prevRouteCaseId !== routeCaseId) {
+    setPrevRouteCaseId(routeCaseId);
+    setSelectedCaseId(null);
+  }
+
+  const effectiveCaseId = selectedCaseId ?? routeCaseId;
+  const draft = useChatDraft();
+
+  // Route-driven declarative query
+  const chatQuery = useQuery<CaseChatDetail>({
+    queryKey: caseQueryKeys.chat(effectiveCaseId ?? "none"),
+    queryFn: async ({ signal }) => {
+      const response = await getCaseChat(effectiveCaseId!, signal);
+      return {
+        ...response,
+        messages: [...response.messages].sort((a, b) => a.ordinal - b.ordinal),
+      };
+    },
+    enabled: Boolean(effectiveCaseId) && isChatOpen,
+    retry: false,
+    staleTime: 0,
+  });
+
+  const detail = chatQuery.data;
+
+  // Synchronize draft state on case change
+  const selectDraft = draft.selectDraft;
+  const clearDraft = draft.clearDraft;
+  useEffect(() => {
+    if (effectiveCaseId) {
+      selectDraft(effectiveCaseId);
+    } else {
+      clearDraft();
+    }
+  }, [clearDraft, effectiveCaseId, selectDraft]);
+
+  // Capture query error in draft state
+  const reportError = draft.reportError;
+  useEffect(() => {
+    if (chatQuery.error) {
+      reportError(getApiErrorMessage(chatQuery.error, "The Case Chat could not be loaded."));
+    }
+  }, [chatQuery.error, reportError]);
+
+  const persistedFollowUp = useMemo(() => (
+    detail ? activeCaseChatFollowUp(detail.messages, detail.status) : null
+  ), [detail]);
+
+  const pendingFollowUpItem = useMemo(() => (
+    draft.state.pendingFollowUp ?? (
+      detail && persistedFollowUp
+        ? { caseId: detail.case_id, followUp: persistedFollowUp }
+        : null
+    )
+  ), [detail, draft.state.pendingFollowUp, persistedFollowUp]);
+
+  const messages: ChatMessageRead[] = useMemo(
+    () => detail?.messages ?? [],
+    [detail?.messages],
+  );
+  const chatStatus: CaseChatStatus | null = draft.state.activity
+    ? draft.state.activity.chatStatus
+    : detail?.status ?? null;
+  const phase: RunPhase = draft.state.activity?.phase ?? determineCaseChatPhase(detail);
+
+  const resolvedCase = currentCase ?? (
+    cases && effectiveCaseId
+      ? cases.find((c) => c.id === effectiveCaseId) ?? null
+      : null
+  );
+
+  const submission = useCaseChatSubmission({
+    caseId: effectiveCaseId,
+    draft,
+    messages,
+    chatStatus,
+    phase,
+    pendingFollowUp: pendingFollowUpItem,
+    currentCase: resolvedCase,
+    upsertCase,
+  });
+
+  const selectCaseChat = useCallback(async (targetCaseId: string) => {
+    setSelectedCaseId(targetCaseId);
+    draft.selectDraft(targetCaseId);
+    if (targetCaseId === effectiveCaseId) {
+      await queryClient.refetchQueries({
+        queryKey: caseQueryKeys.chat(targetCaseId),
+        exact: true,
+      });
+    }
+  }, [draft, effectiveCaseId, queryClient]);
+
+  const refreshCaseChat = useCallback(async (targetId?: string) => {
+    const id = targetId ?? effectiveCaseId;
+    if (!id) return;
+    await queryClient.refetchQueries({
+      queryKey: caseQueryKeys.chat(id),
+      exact: true,
+    });
+  }, [effectiveCaseId, queryClient]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedCaseId(null);
+    draft.clearDraft();
+  }, [draft]);
+
+  const suspendCaseChat = useCallback((id: string) => {
+    const wasActive = effectiveCaseId === id;
+    if (wasActive) {
+      void queryClient.cancelQueries({ queryKey: caseQueryKeys.chat(id), exact: true });
+    }
+    return wasActive;
+  }, [effectiveCaseId, queryClient]);
+
+  const restoreCaseChat = useCallback(() => {}, []);
+
+  const sessionObj = useMemo(() => ({
+    activeCaseChatId: effectiveCaseId,
+    messages,
+    chatStatus,
+    phase,
+    input: draft.state.input,
+    pendingFollowUp: pendingFollowUpItem,
+    queryError: draft.state.queryError,
+    changeInput: draft.changeInput,
+    reportError: draft.reportError,
+    selectCaseChat,
+    refreshCaseChat,
+    clearSelection,
+    suspendCaseChat,
+    restoreCaseChat,
+    getActiveCaseChatId: () => effectiveCaseId,
+    getSelection: () => (
+      effectiveCaseId
+        ? { caseId: effectiveCaseId, signal: new AbortController().signal }
+        : null
+    ),
+    getPendingSubmission: draft.getPendingSubmission,
+  }), [
+    clearSelection,
+    draft.changeInput,
+    draft.getPendingSubmission,
+    draft.reportError,
+    draft.state.input,
+    draft.state.queryError,
+    effectiveCaseId,
+    messages,
+    pendingFollowUpItem,
+    phase,
+    refreshCaseChat,
+    restoreCaseChat,
+    selectCaseChat,
+    chatStatus,
+    suspendCaseChat,
+  ]);
+
+  return {
+    ...submission,
+    activeCaseChatId: effectiveCaseId,
+    messages,
+    input: draft.state.input,
+    changeInput: draft.changeInput,
+    chatStatus,
+    phase,
+    pendingFollowUp: pendingFollowUpItem ? pendingFollowUpItem.followUp : null,
+    pendingFollowUpItem,
+    queryError: draft.state.queryError,
+    reportError: draft.reportError,
+    isLoading: chatQuery.isLoading,
+    isFetching: chatQuery.isFetching,
+    refetch: chatQuery.refetch,
+    selectCaseChat,
+    refreshCaseChat,
+    clearSelection,
+    suspendCaseChat,
+    restoreCaseChat,
+    getActiveCaseChatId: useCallback(() => effectiveCaseId, [effectiveCaseId]),
+    getSelection: useCallback(() => (
+      effectiveCaseId
+        ? { caseId: effectiveCaseId, signal: new AbortController().signal }
+        : null
+    ), [effectiveCaseId]),
+    getPendingSubmission: draft.getPendingSubmission,
+    draft,
+    session: sessionObj,
+  };
+}
+
+export type CaseChatSession = ReturnType<typeof useCaseChat>;

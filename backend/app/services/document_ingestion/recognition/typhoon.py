@@ -6,10 +6,6 @@ from typing import Any
 
 import httpx
 
-from app.services.document_ingestion.contracts import (
-    RecognitionMethod,
-    VerificationStatus,
-)
 from app.services.document_ingestion.errors import (
     RecognitionConfigurationError,
     RecognitionProviderError,
@@ -18,9 +14,7 @@ from app.services.document_ingestion.errors import (
 )
 from app.services.document_ingestion.recognition.base import (
     RecognizedPage,
-    RecognitionResult,
     RenderedPage,
-    RenderedRegion,
     separate_generated_visual_descriptions,
 )
 
@@ -58,31 +52,36 @@ def prepare_messages(image_bytes: bytes, target_image_dimension: int):
 
 
 class TyphoonDocumentRecognizer:
-    def __init__(self, config: TyphoonRecognizerConfig) -> None:
+    def __init__(
+        self,
+        config: TyphoonRecognizerConfig,
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
         self._config = config
+        self._client = client
+        self._owned_client = client is None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                timeout=self._config.timeout_seconds,
+                limits=httpx.Limits(max_connections=4, max_keepalive_connections=4),
+            )
+            self._owned_client = True
+        return self._client
+
+    async def aclose(self) -> None:
+        if self._client and not self._client.is_closed and self._owned_client:
+            await self._client.aclose()
 
     async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
-        text, descriptions, provider_output = await self.request(page.image_bytes)
+        text, _provider_output = await self.request(page.image_bytes)
         return RecognizedPage(
             text=text,
             recognizer=self._config.model,
-            layout_markdown=text,
-            generated_visual_descriptions=descriptions,
-            raw_provider_output=provider_output,
         )
 
-    async def recognize(self, region: RenderedRegion) -> RecognitionResult:
-        text, descriptions, provider_output = await self.request(region.image_bytes)
-        return RecognitionResult(
-            text=text,
-            recognition_method=RecognitionMethod.OCR,
-            recognizer=self._config.model,
-            verification_status=VerificationStatus.MACHINE_READ,
-            generated_visual_descriptions=descriptions,
-            raw_provider_output=provider_output,
-        )
-
-    async def request(self, image_bytes: bytes) -> tuple[str, list[str], Any]:
+    async def request(self, image_bytes: bytes) -> tuple[str, Any]:
         if not self._config.api_key:
             raise RecognitionConfigurationError(
                 "TYPHOON_OCR_API_KEY is required for document recognition."
@@ -109,8 +108,8 @@ class TyphoonDocumentRecognizer:
             ) from error
         if not raw_text:
             raise RecognitionResponseError("Typhoon OCR returned no document text.")
-        text, descriptions = separate_generated_visual_descriptions(raw_text)
-        return text, descriptions, provider_output
+        transcription, _ = separate_generated_visual_descriptions(raw_text)
+        return transcription, provider_output
 
     async def post(self, messages: list[dict[str, Any]]) -> Any:
         payload = {
@@ -123,13 +122,11 @@ class TyphoonDocumentRecognizer:
         }
         endpoint = f"{self._config.base_url.rstrip('/')}/chat/completions"
         headers = {"Authorization": f"Bearer {self._config.api_key}"}
+        client = self._get_client()
         try:
-            async with httpx.AsyncClient(
-                timeout=self._config.timeout_seconds
-            ) as client:
-                response = await client.post(endpoint, headers=headers, json=payload)
-                response.raise_for_status()
-                return response.json()
+            response = await client.post(endpoint, headers=headers, json=payload)
+            response.raise_for_status()
+            return response.json()
         except httpx.TimeoutException as error:
             raise RecognitionTimeoutError("Typhoon OCR timed out.") from error
         except httpx.HTTPStatusError as error:
@@ -140,3 +137,10 @@ class TyphoonDocumentRecognizer:
             raise RecognitionProviderError(
                 "Typhoon OCR could not be reached."
             ) from error
+
+
+__all__ = [
+    "TyphoonDocumentRecognizer",
+    "TyphoonRecognizerConfig",
+    "prepare_messages",
+]

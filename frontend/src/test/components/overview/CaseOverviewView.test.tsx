@@ -187,8 +187,9 @@ describe("CaseOverviewView", () => {
       updated_at: "2026-09-10T01:00:00Z",
     };
     renderOverview({ chatStatus: "awaiting_followup", followups: [followup] });
-    expect(screen.getByText("Analysis Needs More Information")).toBeInTheDocument();
-    expect(screen.getByText(/Open Ask from the workspace header/i)).toBeInTheDocument();
+    expect(screen.getByText(/Analysis Needs More Information/i)).toBeInTheDocument();
+    expect(screen.getByText(/Respond in the Ask panel on the right/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Executive Summary/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Proceed to Chat" })).not.toBeInTheDocument();
   });
 

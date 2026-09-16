@@ -3,9 +3,8 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
-import { useCaseWorkspaceActions } from "@/hooks/useCaseWorkspaceActions";
+import { useCaseIntakeActions } from "@/hooks/useCaseIntakeActions";
 import type { CaseRead, CaseRunRead } from "@/lib/api";
-import type { CaseChatSession } from "@/features/chat/workspace/use-case-chat-selection";
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
@@ -61,7 +60,7 @@ function wrapper({ children }: PropsWithChildren) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
-describe("useCaseWorkspaceActions", () => {
+describe("useCaseIntakeActions", () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem("cybercase:account", "analyst-a");
@@ -76,20 +75,12 @@ describe("useCaseWorkspaceActions", () => {
   });
 
   it("reuses the received evidence and logical Analyze identity after an uncertain response", async () => {
-    const session = {
-      clearSelection: vi.fn(),
-      selectCaseChat: vi.fn(),
-    } as unknown as CaseChatSession;
     const { result } = renderHook(
-      () => useCaseWorkspaceActions({
+      () => useCaseIntakeActions({
         activeCaseId: "case-1",
-        isChatOpen: false,
-        setIsChatOpen: vi.fn(),
-        session,
         upsertCase: vi.fn(),
         updateCase: vi.fn().mockResolvedValue(initialCase),
         router: { push: vi.fn() },
-        setActiveView: vi.fn(),
       }),
       { wrapper },
     );

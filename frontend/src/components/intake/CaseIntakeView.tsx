@@ -40,7 +40,7 @@ export function CaseIntakeView({
   const [title, setTitle] = useAccountState(`case-intake:${caseId}:title`, "");
   const [description, setDescription] = useAccountState(`case-intake:${caseId}:description`, "");
   const hasEvidence = evidence.length > 0;
-  const isBusy = isSubmitting || isCaseDataLoading;
+  const isBusy = isSubmitting || isCaseDataLoading || isUploadingDocument;
   const canSubmit = !isBusy && Boolean(description.trim() || hasEvidence);
   const status = intakeStatus({ isSubmitting, isCaseDataLoading, failed: run?.status === "failed", analysisResult, hasEvidence });
 

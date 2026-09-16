@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { casePath } from "@/features/chat/routing/workspaceRoutes";
+import { casePath } from "@/lib/workspaceRoutes";
 
 export default function CaseIndexPage() {
   const params = useParams();

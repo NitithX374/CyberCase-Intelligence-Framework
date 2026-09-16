@@ -8,50 +8,8 @@ from typing import Any
 
 from app.config import settings
 from app.models.user import User
-from app.services.auth.oauth_clients import OAuthUserProfile
-from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
-async def get_or_create_oauth_user(
-    db: AsyncSession,
-    profile: OAuthUserProfile,
-) -> User:
-    """Find existing user by (provider, subject_id) or email, or create a new user."""
-    query = select(User).where(
-        User.oauth_provider == profile.provider,
-        User.oauth_subject_id == profile.subject_id,
-    )
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-
-    email = profile.email.strip().lower()
-    if user is None:
-        existing = await db.scalar(select(User).where(User.email == email))
-        if existing is not None:
-            raise HTTPException(409, "This email already has an account. Use its original sign-in method.")
-
-    if user is None:
-        user = User(
-            id=uuid.uuid4(),
-            email=email,
-            email_verified_at=datetime.now(timezone.utc),
-            name=profile.name,
-            avatar_url=profile.avatar_url,
-            oauth_provider=profile.provider,
-            oauth_subject_id=profile.subject_id,
-        )
-        db.add(user)
-    else:
-        if profile.name and user.name != profile.name:
-            user.name = profile.name
-        if profile.avatar_url and user.avatar_url != profile.avatar_url:
-            user.avatar_url = profile.avatar_url
-
-    await db.commit()
-    await db.refresh(user)
-    return user
 
 
 async def get_or_create_dev_user(
@@ -61,14 +19,35 @@ async def get_or_create_dev_user(
     avatar_url: str | None = None,
 ) -> User:
     """Create or retrieve a developer user for local development and test runs."""
-    profile = OAuthUserProfile(
-        provider="local_dev",
-        subject_id=f"dev_{email}",
-        email=email,
-        name=name,
-        avatar_url=avatar_url,
+    normalized_email = email.strip().lower()
+    subject_id = f"dev_{normalized_email}"
+    query = select(User).where(
+        User.oauth_provider == "local_dev",
+        User.oauth_subject_id == subject_id,
     )
-    return await get_or_create_oauth_user(db, profile)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        user = User(
+            id=uuid.uuid4(),
+            email=normalized_email,
+            email_verified_at=datetime.now(timezone.utc),
+            name=name,
+            avatar_url=avatar_url,
+            oauth_provider="local_dev",
+            oauth_subject_id=subject_id,
+        )
+        db.add(user)
+    else:
+        if name and user.name != name:
+            user.name = name
+        if avatar_url and user.avatar_url != avatar_url:
+            user.avatar_url = avatar_url
+
+    await db.commit()
+    await db.refresh(user)
+    return user
 
 
 def build_auth_cookie_options() -> dict[str, Any]:
@@ -86,5 +65,4 @@ def build_auth_cookie_options() -> dict[str, Any]:
 __all__ = [
     "build_auth_cookie_options",
     "get_or_create_dev_user",
-    "get_or_create_oauth_user",
 ]

@@ -1,36 +1,32 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
 import {
+  useCase,
   useCaseAnalysis,
   useCaseEvidence,
   useCaseFollowUps,
-  useCases,
-  caseQueryKeys,
   useCaseRunPolling,
+  useStartCaseAnalysis,
 } from "@/hooks/useCaseQueries";
-import { casePath } from "@/features/chat/routing/workspaceRoutes";
-import { detectResponseLanguage, startCaseAnalysis } from "@/lib/api";
+import { casePath } from "@/lib/workspaceRoutes";
+import { detectResponseLanguage } from "@/lib/api";
 
 export default function OverviewPage() {
   const params = useParams();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const caseId = params?.caseId as string;
 
-  const casesQuery = useCases();
-  const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
-  const activeCase = cases.find((c) => c.id === caseId) ?? null;
+  const caseQuery = useCase(caseId ?? null);
+  const activeCase = caseQuery.data ?? null;
 
   const analysisQuery = useCaseAnalysis(caseId ?? null);
   const evidenceQuery = useCaseEvidence(caseId ?? null);
   const followupsQuery = useCaseFollowUps(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId, caseId);
+  const runQuery = useCaseRunPolling(caseId ?? null, runId);
   const runStatus =
     runQuery.data?.status ??
     (activeCase?.processing_status === "queued" ||
@@ -39,21 +35,18 @@ export default function OverviewPage() {
       ? activeCase.processing_status
       : null);
 
+  const startAnalysisMutation = useStartCaseAnalysis(caseId ?? null);
+
   const handleRunAnalysis = async () => {
-    if (!caseId) return;
+    if (!caseId || startAnalysisMutation.isPending) return;
     try {
-      const accepted = await startCaseAnalysis(caseId, {
+      await startAnalysisMutation.mutateAsync({
         idempotency_key: globalThis.crypto.randomUUID(),
         response_language: detectResponseLanguage(
           evidenceQuery.data?.map((source) => source.exact_text).join("\n") ?? "",
         ),
         expected_evidence_revision: activeCase?.evidence_revision ?? 0,
       });
-      queryClient.setQueryData(caseQueryKeys.run(caseId, accepted.run.id), accepted.run);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
-        queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) }),
-      ]);
     } catch {
       // Handled by run state / error modals
     }

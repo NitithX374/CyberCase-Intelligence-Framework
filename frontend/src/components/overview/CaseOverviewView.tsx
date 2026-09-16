@@ -107,16 +107,6 @@ export function CaseOverviewView({
 
   const pendingFollowUp = followups.find((item) => item.state === "pending");
   const isAwaitingFollowup = chatStatus === "awaiting_followup" || Boolean(pendingFollowUp);
-  if (isAwaitingFollowup) {
-    const question = pendingFollowUp?.question?.trim();
-    return (
-      <CaseOverviewState
-        eyebrow={pendingFollowUp?.topic ? `Follow-up needed · ${pendingFollowUp.topic}` : "Follow-up needed"}
-        title="Analysis Needs More Information"
-        description={question ? `The case analysis requires additional details: "${question}" Open Ask from the workspace header to follow up.` : "The case analysis requires additional details. Open Ask from the workspace header to follow up."}
-      />
-    );
-  }
 
   if (overview.unavailableReason) {
     return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Intake" onAction={onOpenIntake} actionIcon="intake" />;
@@ -175,6 +165,29 @@ export function CaseOverviewView({
           onOpenReport={onOpenReport}
           onOpenMaterials={onOpenMaterials}
         />
+
+        {isAwaitingFollowup && (
+          <div
+            role="status"
+            aria-label="Follow-up needed"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-unresolved/50 bg-unresolved/10 px-4 py-3 text-xs text-ink"
+          >
+            <div className="flex items-start gap-2.5">
+              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-unresolved motion-safe:animate-ping" />
+              <div>
+                <p className="font-semibold text-ink">
+                  Analysis Needs More Information
+                  {pendingFollowUp?.topic ? ` · ${pendingFollowUp.topic}` : ""}
+                </p>
+                <p className="mt-0.5 text-ink-muted">
+                  {pendingFollowUp?.question?.trim()
+                    ? `The case analysis requires additional details: "${pendingFollowUp.question.trim()}". Respond in the Ask panel on the right.`
+                    : "The case analysis requires additional details. Check the Ask panel on the right to follow up."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isStale && (
           <div

@@ -7,7 +7,7 @@ import { Icon } from "@/components/common/icons";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
 import { getApiErrorMessage, type CaseRead } from "@/lib/api";
 import { useCaseMutations, useCases } from "@/hooks/useCaseQueries";
-import { casePath } from "@/features/chat/routing/workspaceRoutes";
+import { casePath } from "@/lib/workspaceRoutes";
 
 export function CaseLibraryPage() {
   const router = useRouter();

@@ -7,14 +7,19 @@ import { useCallback, useEffect, useRef } from "react";
 import {
   createCase,
   deleteCase,
+  getCase,
   getCaseRun,
   getCaseAnalysis,
   listCaseDocuments,
   listCaseEvidence,
   listCaseFollowUps,
   listCases,
+  startCaseAnalysis,
   updateCase,
+  uploadCaseDocument,
   type CaseRead,
+  type CaseAnalysisAccepted,
+  type CaseAnalysisCreate,
   type CaseAnalysisResultRead,
   type CaseDocumentRead,
   type CaseFollowUpRead,
@@ -77,6 +82,15 @@ export function useCaseFollowUps(caseId: string | null) {
   });
 }
 
+export function useCase(caseId: string | null) {
+  return useQuery<CaseRead>({
+    queryKey: caseQueryKeys.case(caseId ?? "none"),
+    queryFn: ({ signal }) => getCase(caseId!, signal),
+    enabled: caseId !== null,
+    retry: false,
+  });
+}
+
 export function useCases() {
   return useQuery({
     queryKey: caseQueryKeys.cases(),
@@ -88,7 +102,6 @@ export function useCases() {
 export function useCaseRunPolling(
   caseId: string | null,
   runId: string | null | undefined,
-  caseChatId: string | null | undefined,
 ) {
   const queryClient = useQueryClient();
   const lastInvalidated = useRef<string | null>(null);
@@ -115,12 +128,48 @@ export function useCaseRunPolling(
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(caseId) });
-    if (caseChatId) {
-      void queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseChatId), exact: true, type: "all" });
-    }
-  }, [caseChatId, caseId, query.data?.status, query.data?.attempt_count, queryClient, runId]);
+    void queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true, type: "all" });
+  }, [caseId, query.data?.status, query.data?.attempt_count, queryClient, runId]);
 
   return query;
+}
+
+export function useUploadCaseDocument(caseId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      if (!caseId) throw new Error("Case ID is required for upload.");
+      return uploadCaseDocument(caseId, file);
+    },
+    onSuccess: async () => {
+      if (!caseId) return;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(caseId) }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
+      ]);
+    },
+  });
+}
+
+export function useStartCaseAnalysis(caseId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CaseAnalysisCreate) => {
+      if (!caseId) throw new Error("Case ID is required to start analysis.");
+      return startCaseAnalysis(caseId, request);
+    },
+    onSuccess: async (accepted: CaseAnalysisAccepted) => {
+      if (!caseId) return;
+      queryClient.setQueryData(caseQueryKeys.run(caseId, accepted.run.id), accepted.run);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(caseId) }),
+      ]);
+    },
+  });
 }
 
 export function useCaseMutations() {
@@ -156,8 +205,8 @@ export function useCaseMutations() {
         caseQueryKeys.cases(),
         (current) => (current ?? []).filter((item) => item.id !== deletedCaseId),
       );
+      // Explicitly removes the entire case subtree (case, chat, documents, evidence, analysis, followups, runs)
       queryClient.removeQueries({ queryKey: caseQueryKeys.case(deletedCaseId) });
-      queryClient.removeQueries({ queryKey: caseQueryKeys.chat(deletedCaseId) });
     },
   });
 

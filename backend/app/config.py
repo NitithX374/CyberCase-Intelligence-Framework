@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 # ── 1. Database Configuration ────────────────────────────────────────────────
@@ -112,18 +113,16 @@ class DocumentIngestionConfig(BaseModel):
     typhoon_api_key: str = ""
     typhoon_ocr_base_url: str = "https://api.opentyphoon.ai/v1"
     typhoon_ocr_model: str = "typhoon-ocr"
+    document_ingestion_max_concurrent_ocr: int = Field(default=4, ge=1, le=16)
 
 
-# ── 9. Authentication & OAuth Configuration ─────────────────────────────────────
+# ── 9. Authentication Configuration ─────────────────────────────────────────────
 class AuthConfig(BaseModel):
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7
     jwt_cookie_name: str = "cybercase_auth_token"
     jwt_cookie_secure: bool = False
-    oauth_google_client_id: str = ""
-    oauth_google_client_secret: str = ""
-    oauth_google_redirect_uri: str = "http://localhost:8000/api/v1/auth/callback/google"
     frontend_base_url: str = "http://localhost:3000"
     auth_dev_login_enabled: bool = False
 

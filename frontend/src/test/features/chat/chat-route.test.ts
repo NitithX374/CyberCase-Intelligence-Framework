@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   casePath,
   caseRouteState,
-} from "@/features/chat/routing/workspaceRoutes";
+} from "@/lib/workspaceRoutes";
 
 describe("Case workspace routes", () => {
   it("supports every current Case workspace view", () => {
