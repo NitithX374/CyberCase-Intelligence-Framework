@@ -102,7 +102,7 @@ def technical_augmentation_input(
     result: CaseAnalysisResult,
     trace: CaseAnalysisTrace,
 ) -> CaseReportTechnicalAugmentation | None:
-    metadata = result.provider_metadata_json if isinstance(result.provider_metadata_json, dict) else {}
+    metadata = result.external_context_json if isinstance(result.external_context_json, dict) else {}
     raw = metadata.get("technical_augmentation")
     if raw is None:
         return None
@@ -154,7 +154,7 @@ def validate_augmentation_outcome(
 
 
 def mitre_table_for_validation(result: CaseAnalysisResult) -> list[dict[str, object]]:
-    metadata = result.provider_metadata_json if isinstance(result.provider_metadata_json, dict) else {}
+    metadata = result.external_context_json if isinstance(result.external_context_json, dict) else {}
     raw = metadata.get("technical_augmentation")
     table = raw.get("mitre_table", []) if isinstance(raw, dict) else metadata.get("mitre_table", [])
     return [dict(item) for item in table if isinstance(item, dict)] if isinstance(table, list) else []

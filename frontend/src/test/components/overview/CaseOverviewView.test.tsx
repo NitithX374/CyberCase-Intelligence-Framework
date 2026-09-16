@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
-import type { CaseAnalysisResultRead, CaseClarificationRead, CaseRunRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseFollowUpRead, CaseRunRead, CaseSourceRead } from "@/lib/api";
 import { mockNativeDialog } from "./mock-native-dialog";
 
 mockNativeDialog();
@@ -11,10 +11,10 @@ const caseId = "22222222-2222-4222-8222-222222222222";
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const analysisId = "44444444-4444-4444-8444-444444444444";
 
-function caseProjection(options: { technical?: boolean; rag?: boolean; page?: boolean; stale?: boolean } = {}): { result: CaseAnalysisResultRead; evidenceSources: EvidenceSourceRead[] } {
+function caseProjection(options: { technical?: boolean; rag?: boolean; page?: boolean; stale?: boolean } = {}): { result: CaseAnalysisResultRead; evidenceSources: CaseSourceRead[] } {
   const text = options.page ? "Page 4: received 52,000 baht." : "The reporting party named Account A.";
   const exactQuote = options.page ? "received 52,000 baht" : text;
-  const evidenceSources: EvidenceSourceRead[] = [{
+  const evidenceSources: CaseSourceRead[] = [{
     id: sourceId,
     case_id: caseId,
     source_kind: options.page ? "document" : "narrative",
@@ -59,7 +59,7 @@ function caseProjection(options: { technical?: boolean; rag?: boolean; page?: bo
     execution_receipt_json: {},
     retrieval_context_id: options.technical ? "retrieval-1" : null,
     pipeline_config: {},
-    provider_metadata_json: options.rag
+    external_context_json: options.rag
       ? {
           technical_augmentation: {
             version: "case_mitre_augmentation_v1",
@@ -90,7 +90,7 @@ function renderOverview(overrides: Partial<ComponentProps<typeof CaseOverviewVie
     analysisResult: projection.result,
     evidenceSources: projection.evidenceSources,
     runStatus: "completed",
-    clarifications: [],
+    followups: [],
     analysisLoading: false,
     evidenceLoading: false,
     run: null,
@@ -167,8 +167,8 @@ describe("CaseOverviewView", () => {
     expect(screen.getByText("Case analysis extraction failed.")).toBeInTheDocument();
   });
 
-  it("shows the pending clarification from the Case analysis", () => {
-    const clarification: CaseClarificationRead = {
+  it("shows the pending follow-up from the Case analysis", () => {
+    const followup: CaseFollowUpRead = {
       id: "66666666-6666-4666-8666-666666666666",
       case_id: caseId,
       origin_analysis_result_id: analysisId,
@@ -186,7 +186,7 @@ describe("CaseOverviewView", () => {
       created_at: "2026-09-10T01:00:00Z",
       updated_at: "2026-09-10T01:00:00Z",
     };
-    renderOverview({ chatStatus: "awaiting_followup", clarifications: [clarification] });
+    renderOverview({ chatStatus: "awaiting_followup", followups: [followup] });
     expect(screen.getByText("Analysis Needs More Information")).toBeInTheDocument();
     expect(screen.getByText(/Open Ask from the workspace header/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Proceed to Chat" })).not.toBeInTheDocument();
@@ -202,7 +202,7 @@ describe("CaseOverviewView", () => {
   });
 });
 
-function renderProps(result: CaseAnalysisResultRead, evidenceSources: EvidenceSourceRead[]): ComponentProps<typeof CaseOverviewView> {
+function renderProps(result: CaseAnalysisResultRead, evidenceSources: CaseSourceRead[]): ComponentProps<typeof CaseOverviewView> {
   return {
     caseId,
     caseTitle: "Transfer Review",
@@ -211,7 +211,7 @@ function renderProps(result: CaseAnalysisResultRead, evidenceSources: EvidenceSo
     analysisResult: result,
     evidenceSources,
     runStatus: "completed",
-    clarifications: [],
+    followups: [],
     analysisLoading: false,
     evidenceLoading: false,
     run: null,

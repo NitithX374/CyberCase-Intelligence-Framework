@@ -18,7 +18,7 @@ const sampleCase: CaseRead = {
   status: "answered",
   evidence_revision: 3,
   processing_status: "idle",
-  has_pending_clarification: false,
+  has_pending_followup: false,
   analysis_freshness: "current",
   created_at: "2026-09-14T08:00:00Z",
   updated_at: "2026-09-14T08:10:00Z",

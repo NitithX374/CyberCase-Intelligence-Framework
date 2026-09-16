@@ -1,86 +1,51 @@
-"""Strict contracts for deterministic follow-up."""
+"""Contracts for deterministic Case follow-up and policy evaluation."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+from typing import Literal, Protocol, runtime_checkable
 import unicodedata
-from typing import Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.message_metadata import MessageMetadata
 from app.services.case_analysis.contracts import CaseAnalysisGap
 
 
-_COMPOUND_QUESTION_RE = re.compile(
-    r"\b(?:and|or|but)\s+"
-    r"(?:what|which|when|where|who|whom|why|how|"
-    r"did|does|do|is|are|was|were|can|could|has|have|had)\b",
-    re.IGNORECASE,
-)
+@dataclass(frozen=True)
+class FollowUpExchange:
+    question: str
+    answer: str
+    disposition: Literal["answered", "unavailable", "skipped"] = "answered"
+    gap_id: str | None = None
+    gap_topic: str | None = None
+    gap_key: str | None = None
+    question_message_id: str | None = None
+    answer_message_id: str | None = None
+    round_number: int = 1
+
+
+
+
+@dataclass(frozen=True)
+class FollowUpResolution:
+    """The gate result and the audit record carried into the final message."""
+
+    question: str | None
+    metadata_json: MessageMetadata
 
 
 class FollowUpDecision(BaseModel):
-    """One bounded decision made from an already-selected case gap."""
-
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     decision: Literal["ask_followup", "proceed"]
     selected_gap: str | None = None
-    question: str = ""
-
-    @field_validator("decision", mode="before")
-    @classmethod
-    def normalize_decision_mode(cls, value: object) -> object:
-        if not isinstance(value, str):
-            return value
-        val = value.strip().lower().replace("-", "_").replace(" ", "_")
-        if val in ("ask_followup", "ask_follow_up", "ask", "followup", "ask_question"):
-            return "ask_followup"
-        if val in ("proceed", "continue", "skip", "no_followup", "none"):
-            return "proceed"
-        return val
-
-    @field_validator("selected_gap", mode="before")
-    @classmethod
-    def validate_selected_gap(cls, value: object) -> str | None:
-        if value is None:
-            return None
-        if not isinstance(value, str):
-            return str(value)
-        cleaned = value.strip()
-        if not cleaned or cleaned.lower() in ("none", "null", "n/a"):
-            return None
-        if len(cleaned) > 240:
-            return cleaned[:240]
-        return cleaned
-
-    @model_validator(mode="after")
-    def validate_decision(self) -> "FollowUpDecision":
-        self.question = self.question.strip()
-        if self.decision == "proceed":
-            self.selected_gap = None
-            self.question = ""
-            return self
-
-        if self.selected_gap is None:
-            raise ValueError("Follow-up decisions require a selected gap")
-        if (
-            not self.question
-            or len(self.question) > 300
-            or any(character in self.question for character in "\r\n\u2028\u2029")
-            or sum(self.question.count(mark) for mark in ("?", "？", "؟")) > 1
-            or _COMPOUND_QUESTION_RE.search(self.question) is not None
-        ):
-            raise ValueError("Follow-up must be one concise question")
-        return self
+    question: str = Field(default="")
 
 
 @dataclass(frozen=True)
 class FollowUpPolicyResult:
-    """Decision plus safe provider metrics when the adapter supplies them."""
-
     decision: FollowUpDecision
     latency_ms: float | None = None
     input_tokens: int | None = None
@@ -89,30 +54,21 @@ class FollowUpPolicyResult:
     model: str | None = None
 
 
-@dataclass(frozen=True)
-class ClarificationExchange:
-    question: str
-    answer: str
-    gap_id: str | None = None
-    gap_topic: str | None = None
-    gap_key: str | None = None
-    question_message_id: str | None = None
-    answer_message_id: str | None = None
-
-
+@runtime_checkable
 class FollowUpPolicy(Protocol):
     async def decide(
         self,
         *,
         selected_gap: CaseAnalysisGap,
+        client: object | None = None,
     ) -> FollowUpDecision: ...
 
-@dataclass(frozen=True)
-class FollowUpResolution:
-    """The gate result and the audit record carried into the final message."""
-
-    question: str | None
-    metadata_json: MessageMetadata
+    async def decide_with_metadata(
+        self,
+        *,
+        selected_gap: CaseAnalysisGap,
+        client: object | None = None,
+    ) -> FollowUpPolicyResult: ...
 
 
 _UNAVAILABLE_ANSWER_PHRASES = (
@@ -192,8 +148,8 @@ def answer_indicates_unavailable(answer: str) -> bool:
 
 
 __all__ = [
-    "ClarificationExchange",
     "FollowUpDecision",
+    "FollowUpExchange",
     "FollowUpPolicy",
     "FollowUpPolicyResult",
     "FollowUpResolution",

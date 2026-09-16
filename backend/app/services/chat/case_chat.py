@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -12,12 +11,12 @@ from sqlalchemy.orm import selectinload
 from app.models.case import Case
 from app.models.case_run import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage
-from app.schemas.case_clarifications import CaseClarificationAnswer
+from app.schemas.case_followups import CaseFollowUpAnswer
 from app.schemas.chat import CaseChatRead, ChatMessageCreate, ChatMessageRead
 from app.schemas.message_metadata import serialize_message_metadata
-from app.services.followup.case_clarification import (
-    CaseClarificationError,
-    submit_clarification_answer,
+from app.services.followup.case_followup import (
+    CaseFollowUpError,
+    submit_followup_answer,
 )
 from app.services.workflow.case_run_service import (
     CaseRunError,
@@ -119,12 +118,14 @@ def build_chat_request_payload(request: ChatMessageCreate, operation: str = "ask
     }
 
 
-def build_clarification_request(request: ChatMessageCreate) -> CaseClarificationAnswer:
-    return CaseClarificationAnswer(
-        answer=request.content,
-        idempotency_key=request.idempotency_key,
-        response_language=request.response_language,
-    )
+def build_followup_answer(request: ChatMessageCreate) -> CaseFollowUpAnswer:
+    if request.followup is None:
+        raise CaseChatError(
+            "followup_answers_required",
+            "Follow-up answer is required",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+    return request.followup
 
 
 async def create_case_chat_message_and_run(
@@ -134,8 +135,6 @@ async def create_case_chat_message_and_run(
     user_id: UUID | None,
     request: ChatMessageCreate,
 ) -> tuple[ChatMessage, CaseRun]:
-    if not request.content.strip():
-        raise CaseChatError("case_chat_content_empty", "Case Chat message is empty", 422)
     case = await lock_case_chat(db, case_id, user_id)
 
     if request.intent == "followup_answer":
@@ -147,19 +146,21 @@ async def create_case_chat_message_and_run(
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         try:
-            clarification_read, run = await submit_clarification_answer(
+            message, run = await submit_followup_answer(
                 db,
                 case_id=case.id,
-                clarification_id=target_id,
+                followup_id=target_id,
                 user_id=user_id,
-                request=build_clarification_request(request),
+                answer=build_followup_answer(request),
+                idempotency_key=request.idempotency_key,
+                response_language=request.response_language,
             )
-        except CaseClarificationError as error:
+        except CaseFollowUpError as error:
             raise CaseChatError(error.code, error.message, error.status_code) from error
-        message = await db.get(ChatMessage, clarification_read.answer_message_id)
-        if message is None:
-            raise CaseChatError("case_chat_message_missing", "Clarification answer message is missing")
         return message, run
+
+    if not request.content.strip():
+        raise CaseChatError("case_chat_content_empty", "Case Chat message is empty", 422)
 
     expected_payload = build_chat_request_payload(request, "ask")
     existing = await find_case_run_by_idempotency_key(db, case.id, request.idempotency_key, expected_payload)
@@ -226,7 +227,7 @@ async def create_case_chat_message_and_run(
         request_message_id=message.id,
         idempotency_key=request.idempotency_key,
         request_payload=payload,
-        pipeline_config=deepcopy(context_result.pipeline_config),
+        pipeline_config=context_result.pipeline_config,
     )
     db.add(run)
     case.updated_at = datetime.now(timezone.utc)

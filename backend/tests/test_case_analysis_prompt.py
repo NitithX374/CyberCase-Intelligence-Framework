@@ -4,7 +4,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from app.services.case_analysis.case_analysis import execute_direct_pipeline
+from app.services.case_analysis.case_analysis import execute_analysis_pipeline
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisFailure,
@@ -97,7 +97,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             "app.services.case_analysis.case_analysis.request_analysis_stage",
             new=request_stage,
         ):
-            await execute_direct_pipeline(
+            await execute_analysis_pipeline(
                 CaseSourceBundle(revision=1, sources=(source,)),
                 "english",
                 AnalysisPipelineConfig(),
@@ -124,12 +124,13 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
                         },
                     }
                 ],
+                "technical_context": None,
                 "question": None,
             },
         )
         self.assertEqual(
             set(content),
-            {"response_language", "analysis_mode", "case_sources", "question"},
+            {"response_language", "analysis_mode", "case_sources", "technical_context", "question"},
         )
 
     async def test_provenance_failure_gets_one_corrective_provider_pass(self) -> None:
@@ -148,7 +149,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             "app.services.case_analysis.case_analysis.request_analysis_stage",
             new=request_stage,
         ):
-            result = await execute_direct_pipeline(
+            result = await execute_analysis_pipeline(
                 CaseSourceBundle(revision=1, sources=(source,)),
                 "english",
                 AnalysisPipelineConfig(),

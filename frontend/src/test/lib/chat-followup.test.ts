@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { ChatMessageRead } from "@/lib/api";
 import {
   activeCaseChatFollowUp,
   chatTranscriptMessages,
@@ -10,10 +10,10 @@ import {
 
 function message(
   ordinal: number,
-  role: PersistedChatMessage["role"],
+  role: ChatMessageRead["role"],
   content: string,
   metadata_json: Record<string, unknown> = {},
-): PersistedChatMessage {
+): ChatMessageRead {
   return {
     id: `message-${ordinal}`,
     case_id: "caseChat-1",
@@ -32,7 +32,7 @@ function clarification(
   ordinal: number,
   content: string,
   round: number,
-): PersistedChatMessage {
+): ChatMessageRead {
   return {
     ...message(ordinal, "assistant", content),
     message_kind: "followup_question",
@@ -41,6 +41,20 @@ function clarification(
       chat_followup: {
         root_ordinal: 1,
         round,
+        source_analysis_id: "analysis-1",
+        source_revision: 1,
+        gap: {
+          gap_id: "gap-1",
+          gap_key: "affected_host",
+          topic: "affected host",
+          status: "NOT_PROVIDED",
+          description: "The affected host was not provided.",
+          affects: "The affected host remains unresolved.",
+          reason: "The host is needed to scope the incident.",
+          priority: "high",
+          askable: true,
+          clarification_question: content,
+        },
       },
     },
   };
@@ -60,6 +74,8 @@ describe("chat follow-up projection", () => {
 
   it("returns the exact persisted selected gap detail", () => {
     const selectedGapDetail = {
+      gap_id: "gap-authentication",
+      gap_key: "authentication_records",
       topic: "authentication records",
       status: "NOT_PROVIDED",
       description: "Authentication records were not provided.",
@@ -67,6 +83,7 @@ describe("chat follow-up projection", () => {
       reason: "The reported access cannot be linked to a specific credential.",
       priority: "high",
       askable: true,
+      clarification_question: "Do you have authentication logs?",
     };
     const question = clarification(2, "Do you have authentication logs?", 1);
     question.metadata_json = {
@@ -74,21 +91,36 @@ describe("chat follow-up projection", () => {
       chat_followup: {
         root_ordinal: 1,
         round: 1,
-        selected_gap_detail: selectedGapDetail,
+        source_analysis_id: "analysis-1",
+        source_revision: 1,
+        gap: selectedGapDetail,
       },
     };
 
-    expect(followUpGapDetailForMessage(question)).toEqual(selectedGapDetail);
+    expect(followUpGapDetailForMessage(question)).toEqual({
+      gapId: "gap-authentication",
+      gapKey: "authentication_records",
+      topic: selectedGapDetail.topic,
+      status: selectedGapDetail.status,
+      description: selectedGapDetail.description,
+      affects: selectedGapDetail.affects,
+      reason: selectedGapDetail.reason,
+      priority: selectedGapDetail.priority,
+      askable: selectedGapDetail.askable,
+      question: selectedGapDetail.clarification_question,
+    });
   });
 
-  it("rejects malformed selected gap detail without hiding the message", () => {
+  it("rejects malformed gap metadata without hiding the message", () => {
     const question = clarification(2, "Do you have authentication logs?", 1);
     question.metadata_json = {
       action: "follow_up",
       chat_followup: {
         root_ordinal: 1,
         round: 1,
-        selected_gap_detail: { topic: "authentication records" },
+        source_analysis_id: "analysis-1",
+        source_revision: 1,
+        gap: { topic: "authentication records" },
       },
     };
 
@@ -117,6 +149,7 @@ describe("chat follow-up projection", () => {
       ),
     ).toMatchObject({
       question: nextQuestion.content,
+      gap: { gapId: "gap-1" },
       entries: [{ question: question.content, answer: editedAnswer.content }],
     });
   });
@@ -147,19 +180,13 @@ describe("chat follow-up projection", () => {
     ]);
   });
 
-  it("uses the latest assistant message for metadata-free legacy fallback", () => {
+  it("does not invent a follow-up from metadata-free messages", () => {
     const messages = [
       message(1, "user", "Investigate this event."),
       message(2, "assistant", "The first clarification question."),
       message(3, "assistant", "The latest clarification question."),
     ];
 
-    expect(
-      activeCaseChatFollowUp(messages, "awaiting_followup"),
-    ).toEqual({
-      question: "The latest clarification question.",
-      entries: [],
-      rootOrdinal: 1,
-    });
+    expect(activeCaseChatFollowUp(messages, "awaiting_followup")).toBeNull();
   });
 });

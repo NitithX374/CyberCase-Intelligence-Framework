@@ -56,13 +56,6 @@ function responseFor(body) {
   if (typeof content === "string" && content.includes("Return all relevant case-specific gaps")) {
     return { gaps: [] };
   }
-  if (system.includes("You phrase one backend-selected material gap")) {
-    return {
-      decision: "ask_followup",
-      selected_gap: "Workstation Owner",
-      question: "Which identification is correct: the primary operator or the secondary contractor?",
-    };
-  }
   if (system.includes("Answer only the current question")) {
     return {
       insufficient_context: false,
@@ -112,12 +105,14 @@ function responseFor(body) {
     ? [
         {
           gap_id: "G-01",
+          gap_key: "workstation_owner",
           topic: "Workstation Owner",
           status: "AMBIGUOUS",
           description: "Which identification is correct: the primary operator or the secondary contractor?",
           reason: "Clarifying workstation ownership is required to substantiate findings.",
           priority: "high",
           askable: true,
+          clarification_question: "Which identification is correct: the primary operator or the secondary contractor?",
           affected_claim_ids: ["A-01"],
         },
       ]

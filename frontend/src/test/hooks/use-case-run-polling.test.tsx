@@ -12,7 +12,7 @@ function createWrapper(queryClient: QueryClient) {
 }
 
 describe("useCaseRunPolling", () => {
-  it("invalidates native clarifications when a Case run settles", async () => {
+  it("invalidates native follow-ups when a Case run settles", async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     vi.spyOn(api, "getCaseRun").mockResolvedValue({
       id: "run-1",
@@ -38,7 +38,7 @@ describe("useCaseRunPolling", () => {
 
     await waitFor(() => expect(invalidate).toHaveBeenCalled());
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: caseQueryKeys.clarifications("case-1"),
+      queryKey: caseQueryKeys.followups("case-1"),
     });
   });
 });

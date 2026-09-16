@@ -1,4 +1,4 @@
-import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import {
   asArray,
   asRecord,
@@ -66,7 +66,7 @@ export function groupCaseFindings(findings: CaseFinding[]) {
 
 export function buildCaseOverview(
   result: CaseAnalysisResultRead | null,
-  evidenceSources: EvidenceSourceRead[] | null,
+  evidenceSources: CaseSourceRead[] | null,
   runStatus: string | null,
 ): CaseOverviewData {
   const isProcessing = runStatus === "queued" || runStatus === "running";
@@ -145,7 +145,7 @@ function buildMitreCards(associations: CaseTraceAssociation[], findings: CaseFin
 }
 
 function buildRagCards(result: CaseAnalysisResultRead): MitreExplainedCard[] {
-  const augmentation = asRecord(result.provider_metadata_json.technical_augmentation);
+  const augmentation = asRecord(result.external_context_json?.technical_augmentation);
   if (asString(augmentation?.status) !== "retrieved_from_rag") return [];
   const seen = new Set<string>();
   return asArray(augmentation?.mitre_table).flatMap((value) => {
@@ -171,13 +171,13 @@ function technicalContextStatus(
   ragRowCount: number,
 ): TechnicalContextStatus {
   if (associations.length) return "available";
-  const augmentation = asRecord(result.provider_metadata_json.technical_augmentation);
+  const augmentation = asRecord(result.external_context_json?.technical_augmentation);
   const augmentationStatus = asString(augmentation?.status);
   if (augmentationStatus === "failed") return "unavailable";
   if (augmentationStatus === "retrieved_from_rag") return ragRowCount ? "retrieved_from_rag" : "no_matches";
   if (augmentationStatus === "insufficient_context" || augmentationStatus === "retrieved_without_supported_match") return "no_matches";
   if (augmentationStatus === "not_applicable") return "hidden";
-  const ragAttempt = asRecord(result.provider_metadata_json.rag_attempt);
+  const ragAttempt = asRecord(result.external_context_json?.rag_attempt);
   if (asString(ragAttempt?.status) === "unavailable") return "unavailable";
   return retrievalContextId ? "no_matches" : "hidden";
 }

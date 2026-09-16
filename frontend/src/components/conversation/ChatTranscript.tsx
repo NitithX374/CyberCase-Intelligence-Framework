@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CaseAnalysisResultRead, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
 import {
   followUpGapDetailForMessage,
 } from "@/lib/chat-followup";
@@ -15,10 +15,10 @@ import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer
 import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip";
 
 interface ChatTranscriptProps {
-  messages: PersistedChatMessage[];
+  messages: ChatMessageRead[];
   isProcessing: boolean;
   leadResult?: CaseAnalysisResultRead | null;
-  evidenceSources?: EvidenceSourceRead[] | null;
+  evidenceSources?: CaseSourceRead[] | null;
   onOpenOverview?: () => void;
   onNavigateToSource?: (messageId: string) => void;
 }
@@ -152,7 +152,7 @@ function messageCreatedBeforeResult(messageCreatedAt: string, resultCreatedAt: s
 }
 
 function messageLabel(
-  message: PersistedChatMessage,
+  message: ChatMessageRead,
   isClarificationQuestion: boolean,
   isClarificationAnswer: boolean,
 ): string {
@@ -164,7 +164,7 @@ function messageLabel(
 }
 
 function isLeadAnalysisPublication(
-  message: PersistedChatMessage,
+  message: ChatMessageRead,
   leadResultId: string,
 ): boolean {
   if (
@@ -186,7 +186,7 @@ function CaseAnalysisLeadCard({
   onOpenOverview,
 }: {
   result: CaseAnalysisResultRead;
-  evidenceSources?: EvidenceSourceRead[] | null;
+  evidenceSources?: CaseSourceRead[] | null;
   isUpdated?: boolean;
   onOpenOverview?: () => void;
 }) {
@@ -241,8 +241,8 @@ interface AnalysisSourceReference {
 }
 
 function sourceReferencesForAnalysisMessage(
-  analysisMessage: PersistedChatMessage,
-  evidenceSources: EvidenceSourceRead[],
+  analysisMessage: ChatMessageRead,
+  evidenceSources: CaseSourceRead[],
 ): AnalysisSourceReference[] {
   if (analysisMessage.role !== "assistant") return [];
   const trace = asRecord(analysisMessage.metadata_json.analysis_trace);
@@ -271,8 +271,8 @@ function AnalysisEvidenceReferences({
   evidenceSources,
   onNavigateToSource,
 }: {
-  analysisMessage: PersistedChatMessage;
-  evidenceSources: EvidenceSourceRead[];
+  analysisMessage: ChatMessageRead;
+  evidenceSources: CaseSourceRead[];
   onNavigateToSource?: (messageId: string) => void;
 }) {
   const references = sourceReferencesForAnalysisMessage(analysisMessage, evidenceSources);

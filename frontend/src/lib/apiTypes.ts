@@ -10,12 +10,12 @@ import type {
 } from "./generated/reportTypes";
 
 export type CaseRead = import("./generated/caseTypes").CaseRead;
-export type PersistedChatMessage = ChatMessageRead;
+export type { ChatMessageRead } from "./generated/chatTypes";
 export type CaseChatDetail = Omit<
   CaseChatRead,
   "messages"
 > & {
-  messages: PersistedChatMessage[];
+  messages: ChatMessageRead[];
 };
 export type CaseChatStatus = CaseChatRead["status"];
 
@@ -30,21 +30,18 @@ export type {
   CaseAnalysisCreate,
   CaseAnalysisResultRead,
   CaseChatMessageAccepted,
-  CaseClarificationRead,
+  CaseFollowUpAnswer,
+  CaseFollowUpRead,
   CaseRunRead,
 } from "./generated/runTypes";
 export type {
   CaseDocumentRead,
   DocumentExtractionRead,
 } from "./generated/caseTypes";
-import type {
-  CaseEvidenceCreate,
-  EvidenceSourceRead,
-} from "./generated/evidenceTypes";
 export type {
-  CaseEvidenceCreate,
-  EvidenceSourceRead,
-};
+  CaseSourceCreate,
+  CaseSourceRead,
+} from "./generated/evidenceTypes";
 export type { CaseReportCreate } from "./generated/reportTypes";
 export type CaseReportClaim = Omit<ReportClaim, "source_evidence_ids" | "mitre_technique_ids"> & {
   source_evidence_ids: string[];

@@ -159,7 +159,7 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                     trace_json=trace.model_dump(mode="json"),
                     execution_receipt_json={"calls": []},
                     pipeline_config=configured_pipeline().model_dump(mode="json"),
-                    provider_metadata_json={},
+                    external_context_json={},
                 )
                 db.add(result)
                 await db.flush()

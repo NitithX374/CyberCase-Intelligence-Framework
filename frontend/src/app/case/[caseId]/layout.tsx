@@ -161,7 +161,12 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     [caseId, router],
   );
 
-  const { clearQueryError: handleClearQueryError, retryQuery: handleRetryQuery, submitMessage: handleSubmit } = useCaseChatSubmission({
+  const {
+    clearQueryError: handleClearQueryError,
+    retryQuery: handleRetryQuery,
+    submitMessage: handleSubmit,
+    submitFollowUp: handleFollowUp,
+  } = useCaseChatSubmission({
     session,
     cases,
     upsertCase,
@@ -249,6 +254,8 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
         onNavigateToSource={() => handleViewChange("materials")}
         onInputChange={changeInput}
         onSubmit={handleSubmit}
+        pendingFollowUp={session.pendingFollowUp?.followUp ?? null}
+        onSubmitFollowUp={handleFollowUp}
         onToggleChat={() => void toggleChat()}
       />
 

@@ -1,4 +1,4 @@
-export type CaseEvidenceCreate = {
+export type CaseSourceCreate = {
     exact_text: string;
     provenance_json?: {
         [key: string]: unknown;
@@ -9,7 +9,7 @@ export type CaseEvidenceCreate = {
     };
 };
 
-export type EvidenceSourceRead = {
+export type CaseSourceRead = {
     id: string;
     case_id: string;
     source_kind: string;

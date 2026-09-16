@@ -1,8 +1,8 @@
 """Pydantic request and response schemas for all API domains."""
 
-from app.schemas.case_clarifications import (
-    CaseClarificationAnswer,
-    CaseClarificationRead,
+from app.schemas.case_followups import (
+    CaseFollowUpAnswer,
+    CaseFollowUpRead,
 )
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 from app.schemas.chat import (
@@ -33,8 +33,8 @@ __all__ = [
     "CaseChatMessageAccepted",
     "CaseChatRead",
     "CaseChatStatus",
-    "CaseClarificationAnswer",
-    "CaseClarificationRead",
+    "CaseFollowUpAnswer",
+    "CaseFollowUpRead",
     "CaseCreate",
     "CaseRead",
     "CaseReportCreate",

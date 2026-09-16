@@ -2,9 +2,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { CaseIntakeView } from "@/components/intake/CaseIntakeView";
-import type { CaseDocumentRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseDocumentRead, CaseSourceRead } from "@/lib/api";
 
-const evidence: EvidenceSourceRead = {
+const evidence: CaseSourceRead = {
   id: "source-1",
   case_id: "case-1",
   source_kind: "narrative",

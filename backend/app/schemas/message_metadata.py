@@ -8,10 +8,10 @@ class FollowUpMetadata(TypedDict, total=False):
     __pydantic_config__ = ConfigDict(extra="ignore")
     root_ordinal: int
     round: int
-    gap_id: str
-    gap_key: str
-    topic: str
-    selected_gap_detail: dict[str, object]
+    source_analysis_id: str
+    source_revision: int
+    gap: dict[str, object]
+    answer: dict[str, object]
 
 
 class MessageMetadata(TypedDict, total=False):

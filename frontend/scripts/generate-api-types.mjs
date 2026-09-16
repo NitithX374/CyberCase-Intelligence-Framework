@@ -29,15 +29,16 @@ export const SCHEMA_GROUPS = Object.freeze({
     "DocumentExtractionRead",
   ],
   evidenceTypes: [
-    "CaseEvidenceCreate",
-    "EvidenceSourceRead",
+    "CaseSourceCreate",
+    "CaseSourceRead",
   ],
   runTypes: [
     "CaseAnalysisAccepted",
     "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
     "CaseChatMessageAccepted",
-    "CaseClarificationRead",
+    "CaseFollowUpAnswer",
+    "CaseFollowUpRead",
     "CaseRunRead",
   ],
   chatTypes: [

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
+import type { CaseSourceRead, ChatMessageRead } from "@/lib/api";
 import { ChatTranscript } from "@/components/conversation/ChatTranscript";
 
 function message(
@@ -8,7 +8,7 @@ function message(
   role: "user" | "assistant",
   content: string,
   metadata: Record<string, unknown>,
-): PersistedChatMessage {
+): ChatMessageRead {
   return {
     id,
     case_id: "caseChat-1",
@@ -30,7 +30,7 @@ function evidenceSource(
   documentId: string | null = null,
   filename: string | null = null,
   pageNumber: number | null = null,
-): EvidenceSourceRead {
+): CaseSourceRead {
   return {
     id,
     case_id: "caseChat-1",

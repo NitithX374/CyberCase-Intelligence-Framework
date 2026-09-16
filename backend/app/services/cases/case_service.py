@@ -29,20 +29,20 @@ def serialize_case(case: Case) -> CaseRead:
         processing_status = "failed"
     else:
         processing_status = "idle"
-    has_pending_clarification = False
+    has_pending_followup = False
     if case.chat_messages:
         answered_ids = {
             m.in_reply_to_message_id
             for m in case.chat_messages
             if m.in_reply_to_message_id is not None
         }
-        has_pending_clarification = any(
+        has_pending_followup = any(
             m.message_kind == "followup_question" and m.id not in answered_ids
             for m in case.chat_messages
         )
     status_value = "processing" if processing_status in {"queued", "running"} else (
         "failed" if processing_status == "failed" else
-        "awaiting_followup" if has_pending_clarification else
+        "awaiting_followup" if has_pending_followup else
         "answered" if case.latest_analysis_result is not None else
         "idle"
     )
@@ -56,7 +56,7 @@ def serialize_case(case: Case) -> CaseRead:
         evidence_revision=case.evidence_revision,
         latest_analysis_result_id=case.latest_analysis_result_id,
         processing_status=processing_status,
-        has_pending_clarification=has_pending_clarification,
+        has_pending_followup=has_pending_followup,
         analysis_freshness=freshness,
         active_run_id=(latest_run.id if latest_run is not None and latest_run.status in {"queued", "running"} else None),
         latest_run_id=latest_run.id if latest_run is not None else None,

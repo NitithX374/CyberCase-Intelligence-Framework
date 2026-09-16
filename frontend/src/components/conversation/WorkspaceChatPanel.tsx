@@ -1,33 +1,36 @@
 "use client";
 
-import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Icon } from "@/components/common/icons";
 import type {
   CaseAnalysisResultRead,
   CaseChatStatus,
-  EvidenceSourceRead,
-  PersistedChatMessage,
+  CaseSourceRead,
+  ChatMessageRead,
 } from "@/lib/api";
 import type {
   RunPhase,
   WorkspaceView,
 } from "@/components/common/types";
+import type { ActiveChatFollowUp, ChatFollowUpAnswer, ClarificationDisposition } from "@/lib/chat-followup";
 import { ChatTranscript } from "./ChatTranscript";
 
 interface WorkspaceChatPanelProps {
   isOpen: boolean;
   phase: RunPhase;
-  messages: PersistedChatMessage[];
-  visibleMessages: PersistedChatMessage[];
+  messages: ChatMessageRead[];
+  visibleMessages: ChatMessageRead[];
   chatStatus: CaseChatStatus | null;
   input: string;
   hasAnalysisContext: boolean;
   leadResult?: CaseAnalysisResultRead | null;
-  evidenceSources?: EvidenceSourceRead[] | null;
+  evidenceSources?: CaseSourceRead[] | null;
   onViewChange: (view: WorkspaceView) => void;
   onNavigateToSource?: (messageId: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  pendingFollowUp?: ActiveChatFollowUp | null;
+  onSubmitFollowUp?: (answer: ChatFollowUpAnswer) => void;
   onToggleChat?: () => void;
 }
 
@@ -45,15 +48,43 @@ export function WorkspaceChatPanel({
   onNavigateToSource,
   onInputChange,
   onSubmit,
+  pendingFollowUp = null,
+  onSubmitFollowUp,
   onToggleChat,
 }: WorkspaceChatPanelProps) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [clarifyingQuestionId, setClarifyingQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) closeButtonRef.current?.focus();
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const followUp = chatStatus === "awaiting_followup" ? pendingFollowUp : null;
+  const clarification = followUp && clarifyingQuestionId === followUp.questionMessageId ? followUp : null;
+  const isFollowUpSubmitting = phase === "querying" || phase === "analyzing";
+
+  const continueFollowUp = (disposition: ClarificationDisposition) => {
+    if (!clarification) return;
+    const answer = {
+      gapId: clarification.gap.gapId,
+      answer: disposition === "answered" ? input.trim() : null,
+      disposition,
+    } satisfies ChatFollowUpAnswer;
+    if (disposition === "answered" && !input.trim()) return;
+    setClarifyingQuestionId(null);
+    onSubmitFollowUp?.(answer);
+  };
+
+  const handleComposerSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (!clarification) {
+      onSubmit(event);
+      return;
+    }
+    event.preventDefault();
+    continueFollowUp("answered");
+  };
 
   const evidenceRevisionLabel = leadResult
     ? ` · Evidence revision ${leadResult.evidence_revision}`
@@ -134,11 +165,20 @@ export function WorkspaceChatPanel({
 
           <div className="shrink-0 border-t border-line bg-surface px-3.5 pb-3.5 pt-3 md:px-4 md:pb-4">
             <div className="mx-auto w-full max-w-4xl">
-              {chatStatus === "awaiting_followup" ? (
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-l-2 border-unresolved bg-unresolved/5 px-3 py-2 text-xs text-ink">
-                  <span className="font-semibold text-unresolved">CyberCase needs one more detail<span className="sr-only">Clarification needed</span></span>
-                  <span className="text-ink-secondary">Answer below to update the Case analysis.</span>
-                </div>
+              {clarification ? (
+                <FollowUpStepper
+                  followUp={clarification}
+                  onDisposition={continueFollowUp}
+                  onCancel={() => setClarifyingQuestionId(null)}
+                />
+              ) : chatStatus === "awaiting_followup" ? (
+                <FollowUpReminder
+                  followUp={followUp}
+                  onClarify={() => {
+                    setClarifyingQuestionId(followUp?.questionMessageId ?? null);
+                    onInputChange("");
+                  }}
+                />
               ) : !hasAnalysisContext ? (
                 <ChatBoundaryNotice
                   message="Complete the Case analysis from Intake before using Chat. Chat will not start analysis."
@@ -148,10 +188,10 @@ export function WorkspaceChatPanel({
               ) : null}
               <ChatComposer
                 input={input}
-                isSubmitting={phase === "querying" || phase === "analyzing" || (chatStatus !== "awaiting_followup" && !hasAnalysisContext)}
+                isSubmitting={isFollowUpSubmitting || (chatStatus !== "awaiting_followup" && !hasAnalysisContext)}
                 onInputChange={onInputChange}
-                onSubmit={onSubmit}
-                placeholder={chatStatus === "awaiting_followup" ? "Type your answer to the clarification question…" : undefined}
+                onSubmit={handleComposerSubmit}
+                placeholder={clarification ? `Answer: ${clarification.gap.topic}…` : undefined}
               />
               <p className="mt-2 text-center text-[10px] leading-relaxed text-ink-muted">Ctrl+Enter to send.</p>
             </div>
@@ -159,6 +199,55 @@ export function WorkspaceChatPanel({
         </div>
       </div>
     </aside>
+  );
+}
+
+function FollowUpStepper({
+  followUp,
+  onDisposition,
+  onCancel,
+}: {
+  followUp: ActiveChatFollowUp;
+  onDisposition: (disposition: ClarificationDisposition) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="mb-3 overflow-hidden rounded-md border border-unresolved/30 bg-unresolved/5">
+      <div className="border-l-2 border-unresolved px-3 py-3">
+        <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.05em] text-unresolved">
+          <span>Clarification round {followUp.round}</span>
+          <button type="button" onClick={onCancel} className="normal-case tracking-normal text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">Continue with Ask</button>
+        </div>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-ink">{followUp.gap.question}</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-ink-secondary">{followUp.gap.reason}</p>
+      </div>
+      <div className="flex flex-wrap gap-2 border-t border-unresolved/20 px-3 py-2">
+        <button type="button" onClick={() => onDisposition("unavailable")} className="text-[11px] font-semibold text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">I don’t have this information</button>
+        <button type="button" onClick={() => onDisposition("skipped")} className="text-[11px] font-semibold text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">Skip</button>
+      </div>
+    </div>
+  );
+}
+
+function FollowUpReminder({
+  followUp,
+  onClarify,
+}: {
+  followUp: ActiveChatFollowUp | null;
+  onClarify: () => void;
+}) {
+  if (!followUp) {
+    return (
+      <div className="mb-3 border-l-2 border-unresolved bg-unresolved/5 px-3 py-2 text-xs text-ink-secondary">
+        CyberCase found a gap in the current analysis. Reload the Case to review it.
+      </div>
+    );
+  }
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-l-2 border-unresolved bg-unresolved/5 px-3 py-2 text-xs text-ink">
+      <span><strong className="font-semibold text-unresolved">One gap remains:</strong> {followUp.gap.topic}</span>
+      <button type="button" onClick={onClarify} className="font-bold text-unresolved underline decoration-line underline-offset-2 hover:text-ink">Clarify this gap</button>
+    </div>
   );
 }
 

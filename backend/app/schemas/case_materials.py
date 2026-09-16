@@ -35,17 +35,15 @@ class CaseDocumentRead(BaseModel):
     extractions: list[DocumentExtractionRead] = Field(default_factory=list)
 
 
-class CaseEvidenceCreate(BaseModel):
-    model_config = ConfigDict(title="CaseEvidenceCreate")
-
+class CaseSourceCreate(BaseModel):
     exact_text: str = Field(min_length=1, max_length=400_000)
     provenance_json: dict[str, object] = Field(default_factory=dict)
     source_kind: Literal["narrative", "followup_answer"] = "narrative"
     source_metadata_json: dict[str, object] = Field(default_factory=dict)
 
 
-class EvidenceSourceRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True, title="EvidenceSourceRead")
+class CaseSourceRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     case_id: UUID
@@ -59,15 +57,9 @@ class EvidenceSourceRead(BaseModel):
     archived_at: datetime | None
 
 
-CaseSourceCreate = CaseEvidenceCreate
-CaseSourceRead = EvidenceSourceRead
-
-
 __all__ = [
     "CaseDocumentRead",
-    "CaseEvidenceCreate",
     "CaseSourceCreate",
-    "DocumentExtractionRead",
-    "EvidenceSourceRead",
     "CaseSourceRead",
+    "DocumentExtractionRead",
 ]

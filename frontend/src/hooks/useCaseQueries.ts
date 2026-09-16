@@ -9,16 +9,16 @@ import {
   deleteCase,
   getCaseRun,
   getCaseAnalysis,
-  listCaseClarifications,
   listCaseDocuments,
   listCaseEvidence,
+  listCaseFollowUps,
   listCases,
   updateCase,
   type CaseRead,
   type CaseAnalysisResultRead,
-  type CaseClarificationRead,
   type CaseDocumentRead,
-  type EvidenceSourceRead,
+  type CaseFollowUpRead,
+  type CaseSourceRead,
   type CaseRunRead,
 } from "@/lib/api";
 
@@ -30,7 +30,7 @@ export const caseQueryKeys = {
   documents: (caseId: string) => [...caseQueryKeys.case(caseId), "documents"] as const,
   evidence: (caseId: string) => [...caseQueryKeys.case(caseId), "evidence"] as const,
   analysis: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis"] as const,
-  clarifications: (caseId: string) => [...caseQueryKeys.case(caseId), "clarifications"] as const,
+  followups: (caseId: string) => [...caseQueryKeys.case(caseId), "followups"] as const,
   run: (caseId: string, runId: string) => [...caseQueryKeys.case(caseId), "runs", runId] as const,
   reports: (caseId: string) => [...caseQueryKeys.case(caseId), "reports"] as const,
 };
@@ -51,7 +51,7 @@ export function useCaseDocuments(caseId: string | null) {
 }
 
 export function useCaseEvidence(caseId: string | null) {
-  return useQuery<EvidenceSourceRead[]>({
+  return useQuery<CaseSourceRead[]>({
     queryKey: caseQueryKeys.evidence(caseId ?? "none"),
     queryFn: ({ signal }) => listCaseEvidence(caseId!, signal),
     enabled: caseId !== null,
@@ -68,10 +68,10 @@ export function useCaseAnalysis(caseId: string | null) {
   });
 }
 
-export function useCaseClarifications(caseId: string | null) {
-  return useQuery<CaseClarificationRead[]>({
-    queryKey: caseQueryKeys.clarifications(caseId ?? "none"),
-    queryFn: ({ signal }) => listCaseClarifications(caseId!, signal),
+export function useCaseFollowUps(caseId: string | null) {
+  return useQuery<CaseFollowUpRead[]>({
+    queryKey: caseQueryKeys.followups(caseId ?? "none"),
+    queryFn: ({ signal }) => listCaseFollowUps(caseId!, signal),
     enabled: caseId !== null,
     retry: false,
   });
@@ -114,7 +114,7 @@ export function useCaseRunPolling(
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId) });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
-    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.clarifications(caseId) });
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(caseId) });
     if (caseChatId) {
       void queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseChatId), exact: true, type: "all" });
     }

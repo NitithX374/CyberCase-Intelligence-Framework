@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { CaseAnalysisResultRead, EvidenceSourceRead, PersistedChatMessage } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
 import { ChatTranscript } from "@/components/conversation/ChatTranscript";
 
 const sampleResult: CaseAnalysisResultRead = {
@@ -16,12 +16,12 @@ const sampleResult: CaseAnalysisResultRead = {
   execution_receipt_json: null,
   retrieval_context_id: null,
   pipeline_config: {},
-  provider_metadata_json: {},
+  external_context_json: {},
   created_at: "2026-09-10T12:00:00Z",
   freshness: "current",
 };
 
-const evidenceSources: EvidenceSourceRead[] = [{
+const evidenceSources: CaseSourceRead[] = [{
   id: "source-1",
   case_id: "case-123",
   source_kind: "narrative",
@@ -48,13 +48,13 @@ describe("ChatTranscript lead card", () => {
 
 describe("ChatTranscript with Lead Card", () => {
   it("renders the lead card and removes its historical publication", () => {
-    const historicalDuplicateMessage: PersistedChatMessage = {
+    const historicalDuplicateMessage: ChatMessageRead = {
       id: "msg-pub-1", case_id: "case-123", ordinal: 1, role: "assistant",
       content: "Duplicate publication of analysis findings", retrieval_context_id: null,
       message_kind: "conversation", analysis_result_id: "analysis-result-1", metadata_json: {},
       created_at: "2026-09-10T12:00:01Z",
     };
-    const regularQAMessage: PersistedChatMessage = {
+    const regularQAMessage: ChatMessageRead = {
       id: "msg-qa-1", case_id: "case-123", ordinal: 2, role: "user",
       content: "What malware family was identified?", retrieval_context_id: null,
       message_kind: "conversation", analysis_result_id: null, metadata_json: {},
@@ -67,15 +67,29 @@ describe("ChatTranscript with Lead Card", () => {
   });
 
   it("renders a follow-up question linked to the current analysis", () => {
-    const followupQuestionMessage: PersistedChatMessage = {
+    const followupQuestionMessage: ChatMessageRead = {
       id: "msg-followup-1", case_id: "case-123", ordinal: 3, role: "assistant",
       content: "What was the destination IP address for the exfiltration traffic?",
       message_kind: "followup_question", retrieval_context_id: null, analysis_result_id: "analysis-result-1",
       metadata_json: {
         action: "follow_up",
         chat_followup: {
-          root_ordinal: 3, round: 1,
-          selected_gap_detail: { topic: "Destination IP", status: "NOT_PROVIDED", description: "Missing destination IP for exfiltration", affects: "Technical attribution", reason: "Required to verify C2 infrastructure", priority: "high", askable: true },
+          root_ordinal: 3,
+          round: 1,
+          source_analysis_id: "analysis-result-1",
+          source_revision: 1,
+          gap: {
+            gap_id: "gap-destination-ip",
+            gap_key: "destination_ip",
+            topic: "Destination IP",
+            status: "NOT_PROVIDED",
+            description: "Missing destination IP for exfiltration",
+            affects: "Technical attribution",
+            reason: "Required to verify C2 infrastructure",
+            priority: "high",
+            askable: true,
+            clarification_question: "What was the destination IP address for the exfiltration traffic?",
+          },
         },
       },
       created_at: "2026-09-10T12:06:00Z",

@@ -12,7 +12,7 @@ from app.database import async_session, engine
 from app.routers import (
     auth,
     case_analysis,
-    case_clarifications,
+    case_followups,
     case_materials,
     case_reports,
     cases,
@@ -64,7 +64,7 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(cases.router, prefix="/api/v1")
 app.include_router(case_materials.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(case_analysis.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
-app.include_router(case_clarifications.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(case_followups.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(case_reports.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
 # Wrap the full ASGI app so even unhandled 500 responses carry CORS headers.

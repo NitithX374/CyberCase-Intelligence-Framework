@@ -2,9 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { WorkspaceChatPanel } from "@/components/conversation/WorkspaceChatPanel";
-import type { PersistedChatMessage } from "@/lib/api";
+import type { ChatMessageRead } from "@/lib/api";
+import type { ActiveChatFollowUp } from "@/lib/chat-followup";
 
-const messages: PersistedChatMessage[] = [
+const messages: ChatMessageRead[] = [
   {
     id: "message-1",
     case_id: "caseChat-1",
@@ -31,7 +32,11 @@ const messages: PersistedChatMessage[] = [
       chat_followup: {
         root_ordinal: 1,
         round: 1,
-        selected_gap_detail: {
+        source_analysis_id: "analysis-1",
+        source_revision: 1,
+        gap: {
+          gap_id: "gap-host",
+          gap_key: "affected_host",
           topic: "affected host",
           status: "NOT_PROVIDED",
           description: "The affected host was not provided.",
@@ -39,6 +44,7 @@ const messages: PersistedChatMessage[] = [
           reason: "The reported event has no host identifier.",
           priority: "high",
           askable: true,
+          clarification_question: "Which affected host produced this event?",
         },
       },
     },
@@ -46,10 +52,34 @@ const messages: PersistedChatMessage[] = [
   },
 ];
 
+const pendingFollowUp: ActiveChatFollowUp = {
+  question: "Which affected host produced this event?",
+  gap: {
+    gapId: "gap-host",
+    gapKey: "affected_host",
+    topic: "affected host",
+    status: "NOT_PROVIDED",
+    description: "The affected host was not provided.",
+    affects: "The impacted system cannot be scoped.",
+    reason: "The reported event has no host identifier.",
+    priority: "high",
+    askable: true,
+    question: "Which affected host produced this event?",
+  },
+  entries: [],
+  rootOrdinal: 1,
+  round: 1,
+  questionMessageId: "message-2",
+  sourceAnalysisId: "analysis-1",
+  sourceRevision: 1,
+};
+
 describe("WorkspaceChatPanel boundaries", () => {
   it("renders the persisted clarification and enables composer to answer in Chat", () => {
     Element.prototype.scrollIntoView = vi.fn();
     const onInputChange = vi.fn();
+    const onSubmit = vi.fn();
+    const onSubmitFollowUp = vi.fn();
 
     render(
       <WorkspaceChatPanel
@@ -62,17 +92,24 @@ describe("WorkspaceChatPanel boundaries", () => {
         hasAnalysisContext
         onViewChange={vi.fn()}
         onInputChange={onInputChange}
-        onSubmit={vi.fn()}
+        onSubmit={onSubmit}
+        pendingFollowUp={pendingFollowUp}
+        onSubmitFollowUp={onSubmitFollowUp}
       />,
     );
 
     expect(
       screen.getByText("Which affected host produced this event?"),
     ).toBeInTheDocument();
-    expect(screen.getByText("affected host")).toBeInTheDocument();
+    expect(screen.getAllByText("affected host").length).toBeGreaterThanOrEqual(2);
     const composer = screen.getByLabelText("Chat message");
-    expect(screen.getByText("Clarification needed")).toBeInTheDocument();
-    expect(screen.getByText(/Answer below to update the Case analysis/i)).toBeInTheDocument();
+    expect(screen.getByText("One gap remains:")).toBeInTheDocument();
+    fireEvent.submit(composer.closest("form")!);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmitFollowUp).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Clarify this gap" }));
+    expect(screen.getByText("Clarification round 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue with Ask" })).toBeInTheDocument();
     expect(composer).not.toBeDisabled();
     expect(screen.getByRole("button", { name: "Send message" })).not.toBeDisabled();
 

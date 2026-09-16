@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { CaseAnalysisResultRead, EvidenceSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import { buildCaseOverview } from "@/lib/caseOverview";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const caseId = "22222222-2222-4222-8222-222222222222";
 const quote = "The witness saw a blue vehicle.";
 
-function evidence(text: string, kind = "narrative", options: Record<string, unknown> = {}): EvidenceSourceRead {
+function evidence(text: string, kind = "narrative", options: Record<string, unknown> = {}): CaseSourceRead {
   return {
     id: sourceId,
     case_id: caseId,
@@ -53,7 +53,7 @@ function result(text: string, citation: Record<string, unknown>): CaseAnalysisRe
     execution_receipt_json: {},
     retrieval_context_id: null,
     pipeline_config: {},
-    provider_metadata_json: {},
+    external_context_json: {},
     created_at: "2026-09-10T00:00:00Z",
     freshness: "current",
   };

@@ -8,6 +8,7 @@ import {
   hasCompletedAssistantOutput,
   persistedRequestOrdinal,
   type ActiveChatFollowUp,
+  type ChatFollowUpAnswer,
 } from "@/lib/chat-followup";
 
 export interface PendingChatSubmission {
@@ -17,6 +18,8 @@ export interface PendingChatSubmission {
   kind: "message" | "followup";
   lastKnownMessageOrdinal: number;
   requestOrdinal?: number;
+  followUpAnswer?: ChatFollowUpAnswer;
+  followUpQuestionId?: string;
 }
 
 interface ChatDraftState {
@@ -38,8 +41,6 @@ export function determineCaseChatPhase(detail: CaseChatDetail | undefined): RunP
   if (detail.status === "failed") return "error";
   return detail.messages.length > 0 ? "ready" : "idle";
 }
-
-export const phaseForCaseChat = determineCaseChatPhase;
 
 export function useChatDraft() {
   const [state, setState] = useState(() => ({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" }));
