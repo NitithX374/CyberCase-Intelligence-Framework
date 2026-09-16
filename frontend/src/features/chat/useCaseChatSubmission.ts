@@ -160,13 +160,17 @@ export function useCaseChatSubmission({
             },
           });
         } else {
+          draft.completeSubmissionWithoutRun(targetCaseId);
           void queryClient.invalidateQueries({ queryKey: caseQueryKeys.chat(targetCaseId) });
           void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
-          void queryClient.refetchQueries({
-            queryKey: caseQueryKeys.chat(targetCaseId),
-            exact: true,
-            type: "all",
-          });
+          try {
+            const res = await getCaseChat(targetCaseId, controller.signal);
+            const detail = { ...res, messages: [...res.messages].sort((a, b) => a.ordinal - b.ordinal) };
+            queryClient.setQueryData(caseQueryKeys.chat(targetCaseId), detail);
+            draft.reconcile(detail);
+          } catch {
+            // Already cleared by completeSubmissionWithoutRun
+          }
         }
       } catch (error) {
         if (isChatRequestCanceled(controller.signal, error) || activeCaseIdRef.current !== targetCaseId) return;
@@ -288,8 +292,17 @@ export function useCaseChatSubmission({
             draft.reportError("The completed run did not persist an assistant response. Retry the saved message.");
           }
         } else {
+          draft.completeSubmissionWithoutRun(targetCaseId);
           void queryClient.invalidateQueries({ queryKey: caseQueryKeys.chat(targetCaseId) });
           void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(targetCaseId) });
+          try {
+            const res = await getCaseChat(targetCaseId, controller.signal);
+            const detail = { ...res, messages: [...res.messages].sort((a, b) => a.ordinal - b.ordinal) };
+            queryClient.setQueryData(caseQueryKeys.chat(targetCaseId), detail);
+            draft.reconcile(detail);
+          } catch {
+            // Already cleared by completeSubmissionWithoutRun
+          }
         }
       } catch (error) {
         if (isChatRequestCanceled(controller.signal, error) || activeCaseIdRef.current !== targetCaseId) return;

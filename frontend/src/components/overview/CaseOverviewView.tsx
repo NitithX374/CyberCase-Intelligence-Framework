@@ -5,7 +5,6 @@ import type { CaseAnalysisResultRead, CaseChatStatus, CaseFollowUpRead, CaseRunR
 import type { CaseGap, SourceMessageRef } from "@/lib/caseOverviewTypes";
 import { buildCaseOverview } from "@/lib/caseOverview";
 import { CaseFindingsSection } from "./CaseFindingsSection";
-import { MitreExplainedSimply } from "./MitreExplainedSimply";
 import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
 import { OverviewStatusRail } from "./OverviewStatusRail";
 import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
@@ -66,6 +65,7 @@ export function CaseOverviewView({
     sourceKey: string;
     citationRole?: "supporting" | "conflicting";
   } | null>(null);
+  const [overviewTab, setOverviewTab] = useState<"findings" | "questions">("findings");
   const overview = useMemo(
     () => buildCaseOverview(analysisResult, evidenceSources, runStatus),
     [analysisResult, evidenceSources, runStatus],
@@ -222,21 +222,83 @@ export function CaseOverviewView({
 
         <OverviewSummarySection summary={overview.incidentSummary} />
 
-        <CaseFindingsSection
-          key={analysisKey}
-          findings={overview.findings}
-          onNavigateToSource={sourceNavigation}
-          onSelectSource={handleSelectSource}
-          activeSourceKey={activeSource?.sourceKey ?? null}
-        />
+        <div className="space-y-4">
+          <div
+            role="tablist"
+            aria-label="Analysis findings and questions"
+            className="flex items-center gap-6 border-b border-line text-xs font-semibold"
+          >
+            <button
+              role="tab"
+              type="button"
+              id="tab-findings"
+              aria-controls="panel-findings"
+              aria-selected={overviewTab === "findings"}
+              onClick={() => setOverviewTab("findings")}
+              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${overviewTab === "findings"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-muted hover:text-ink"
+                }`}
+            >
+              <span>Case Findings</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${overviewTab === "findings"
+                  ? "bg-accent text-ivory"
+                  : "bg-surface-nested text-ink-secondary"
+                  }`}
+              >
+                {overview.findings.length}
+              </span>
+            </button>
 
-        <OpenQuestionsSection gaps={overview.gaps} />
+            <button
+              role="tab"
+              type="button"
+              id="tab-questions"
+              aria-controls="panel-questions"
+              aria-selected={overviewTab === "questions"}
+              onClick={() => setOverviewTab("questions")}
+              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${overviewTab === "questions"
+                ? "border-accent text-accent"
+                : "border-transparent text-ink-muted hover:text-ink"
+                }`}
+            >
+              <span>Open Questions</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${overviewTab === "questions"
+                  ? "bg-unresolved text-ivory"
+                  : "bg-surface-nested text-ink-secondary"
+                  }`}
+              >
+                {overview.gaps.length}
+              </span>
+            </button>
+          </div>
 
-        <MitreExplainedSimply
-          techniques={overview.mitreContext}
-          status={overview.technicalContextStatus}
-          onOpenTechnicalContext={onOpenTechnicalContext}
-        />
+          <div
+            id="panel-findings"
+            role="tabpanel"
+            aria-labelledby="tab-findings"
+            className={overviewTab === "findings" ? "block" : "hidden"}
+          >
+            <CaseFindingsSection
+              key={analysisKey}
+              findings={overview.findings}
+              onNavigateToSource={sourceNavigation}
+              onSelectSource={handleSelectSource}
+              activeSourceKey={activeSource?.sourceKey ?? null}
+            />
+          </div>
+
+          <div
+            id="panel-questions"
+            role="tabpanel"
+            aria-labelledby="tab-questions"
+            className={overviewTab === "questions" ? "block" : "hidden"}
+          >
+            <OpenQuestionsSection gaps={overview.gaps} />
+          </div>
+        </div>
       </div>
 
       {activeSource && (
@@ -306,19 +368,76 @@ const gapLabels: Record<CaseGap["status"], string> = {
 };
 
 function OpenQuestionsSection({ gaps }: { gaps: CaseGap[] }) {
+  const getStatusBadgeStyle = (status: CaseGap["status"]) => {
+    switch (status) {
+      case "CONFLICTING":
+        return "bg-critical/10 text-critical border border-critical/20";
+      case "AMBIGUOUS":
+        return "bg-unresolved/15 text-unresolved border border-unresolved/25";
+      case "EXPLICITLY_UNKNOWN":
+        return "bg-surface-nested text-ink-secondary border border-line";
+      case "NOT_PROVIDED":
+      default:
+        return "bg-amber-500/10 text-amber-700 border border-amber-500/20";
+    }
+  };
+
   return (
-    <section aria-labelledby="overview-open-questions-heading" className="order-4 min-w-0 border-t border-line pt-4 lg:order-2">
-      <h2 id="overview-open-questions-heading" className="flex items-baseline gap-2 text-sm font-semibold text-ink">Open Questions {gaps.length > 0 && <span className="text-xs font-normal text-ink-muted">{gaps.length}</span>}</h2>
-      {gaps.length === 0 ? <p className="pt-2 text-xs leading-5 text-ink-secondary">No open questions recorded.</p> : (
-        <div className="divide-y divide-line">
-          {gaps.map((gap) => (
-            <article key={gap.id} className="space-y-2 py-4 last:pb-1">
-              <p className="text-[11px] text-ink-muted">{gapLabels[gap.status]}{gap.askable && " · Needs clarification"}</p>
-              <h3 className="text-sm font-semibold leading-6 text-ink">{gap.topic}</h3>
-              <p className="text-xs leading-6 text-ink-secondary">{gap.description}</p>
-              {gap.reason && <p className="text-xs leading-6 text-ink-secondary"><span className="font-medium">Why it matters: </span>{gap.reason}</p>}
-            </article>
-          ))}
+    <section aria-labelledby="overview-open-questions-heading" className="space-y-4">
+      <WorkspaceSectionHeader
+        headingId="overview-open-questions-heading"
+        title="Open Questions"
+        aside={<span className="text-xs text-ink-muted">{gaps.length} total</span>}
+      />
+      {gaps.length === 0 ? (
+        <p className="text-sm text-ink-muted">No open questions recorded.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-line bg-surface shadow-xs">
+          <div className="grid min-w-[640px] grid-cols-[10rem_minmax(0,1fr)_minmax(14rem,0.8fr)] gap-4 border-b border-line bg-surface-nested px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+            <span>Status</span>
+            <span>Topic &amp; Description</span>
+            <span>Why It Matters</span>
+          </div>
+          <div className="divide-y divide-line/60">
+            {gaps.map((gap) => (
+              <article
+                key={gap.id}
+                className="grid min-w-[640px] grid-cols-[10rem_minmax(0,1fr)_minmax(14rem,0.8fr)] gap-4 px-4 py-3.5 items-start hover:bg-surface-hover/30 transition-colors"
+              >
+                <div className="min-w-0 space-y-1">
+                  <span
+                    className={`inline-flex rounded px-2 py-0.5 text-[10px] font-bold tracking-tight ${getStatusBadgeStyle(
+                      gap.status,
+                    )}`}
+                  >
+                    {gapLabels[gap.status]}
+                  </span>
+                  {gap.askable && (
+                    <div>
+                      <span className="inline-flex items-center gap-1 rounded bg-unresolved/10 px-1.5 py-0.5 text-[10px] font-medium text-unresolved">
+                        <span className="h-1.5 w-1.5 rounded-full bg-unresolved" />
+                        Needs clarification
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <h3 className="text-xs sm:text-sm font-semibold leading-snug text-ink">{gap.topic}</h3>
+                  <p className="text-xs leading-relaxed text-ink-secondary">{gap.description}</p>
+                </div>
+                <div className="min-w-0">
+                  {gap.reason ? (
+                    <div className="rounded border border-line/60 bg-surface-nested/40 p-2 text-xs">
+                      <span className="font-semibold text-ink-muted">Why it matters: </span>
+                      <span className="leading-relaxed text-ink-secondary">{gap.reason}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-ink-muted">—</span>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       )}
     </section>

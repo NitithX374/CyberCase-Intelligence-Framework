@@ -141,23 +141,11 @@ describe("CaseOverviewView", () => {
     expect(navigateToSource).toHaveBeenCalledWith(sourceId);
   });
 
-  it("shows technical context only when the Case projection contains an association", () => {
-    const nonTechnical = caseProjection();
-    const { unmount } = render(<CaseOverviewView {...renderProps(nonTechnical.result, nonTechnical.evidenceSources)} />);
-    expect(screen.queryByText(/MITRE ATT&CK/i)).not.toBeInTheDocument();
-    unmount();
-    const technical = caseProjection({ technical: true });
+  it("does not render external cyber references in the Case Overview", () => {
+    const technical = caseProjection({ technical: true, rag: true });
     render(<CaseOverviewView {...renderProps(technical.result, technical.evidenceSources)} />);
-    expect(screen.getByRole("heading", { name: /External Cyber Reference/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/T1059.001/).length).toBeGreaterThan(0);
-  });
-
-  it("shows every RAG row without requiring a Case association", () => {
-    const technical = caseProjection({ rag: true });
-    render(<CaseOverviewView {...renderProps(technical.result, technical.evidenceSources)} />);
-    expect(screen.getByRole("heading", { name: /External Cyber Reference/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/T1059.001/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/S0096/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("heading", { name: /External Cyber Reference/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/External cyber reference unavailable/i)).not.toBeInTheDocument();
   });
 
   it("renders the failed run state without an analysis result", () => {
@@ -200,6 +188,29 @@ describe("CaseOverviewView", () => {
     expect(screen.getByText(/Analysis is based on older evidence/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Analyze latest evidence/i }));
     expect(runAnalysis).toHaveBeenCalledOnce();
+  });
+
+  it("switches between Case Findings and Open Questions tabs", () => {
+    const projection = caseProjection();
+    renderOverview({ analysisResult: projection.result, evidenceSources: projection.evidenceSources });
+
+    const findingsTab = screen.getByRole("tab", { name: /Case Findings/i });
+    const questionsTab = screen.getByRole("tab", { name: /Open Questions/i });
+
+    expect(findingsTab).toHaveAttribute("aria-selected", "true");
+    expect(questionsTab).toHaveAttribute("aria-selected", "false");
+
+    const findingsPanel = document.getElementById("panel-findings");
+    const questionsPanel = document.getElementById("panel-questions");
+    expect(findingsPanel).toHaveClass("block");
+    expect(questionsPanel).toHaveClass("hidden");
+
+    fireEvent.click(questionsTab);
+
+    expect(findingsTab).toHaveAttribute("aria-selected", "false");
+    expect(questionsTab).toHaveAttribute("aria-selected", "true");
+    expect(findingsPanel).toHaveClass("hidden");
+    expect(questionsPanel).toHaveClass("block");
   });
 });
 

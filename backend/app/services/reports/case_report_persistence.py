@@ -42,7 +42,7 @@ class CaseReportService:
             case = await self.locked_case(case_id, user_id)
             result = await self.selected_result(case, request.analysis_result_id)
             report_input = build_case_report_input(case, result)
-            idempotency_key = request.idempotency_key or f"report-{result.id}-{case.evidence_revision}"
+            idempotency_key = request.idempotency_key or f"report-{result.id}-{result.evidence_revision}"
             existing = await self.existing_report(case.id, idempotency_key)
             if existing is not None:
                 return serialize_case_report(existing)

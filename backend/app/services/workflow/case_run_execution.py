@@ -155,8 +155,13 @@ async def execute_claimed_work(
                     db,
                     claimed.case_id,
                 )
-            except CaseFollowUpHistoryError as error:
-                raise CaseRunExecutionError(error.code, error.message) from error
+            except Exception as error:
+                logger.warning(
+                    "Failed to load follow-up exchanges for case %s: %s; continuing analysis without follow-up history",
+                    claimed.case_id,
+                    error,
+                )
+                followup_exchanges = ()
     if claimed.operation == "ask":
         async with session_factory() as db:
             context = await load_case_answer_context(db, claimed.id, claimed.source_bundle)
