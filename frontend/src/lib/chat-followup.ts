@@ -1,4 +1,5 @@
 import type {
+  CaseChatDetail,
   CaseChatStatus,
   ChatMessageRead,
 } from "@/lib/api";
@@ -15,10 +16,10 @@ export interface ChatFollowUpGapDetail {
   gapKey: string;
   topic: string;
   status:
-    | "NOT_PROVIDED"
-    | "EXPLICITLY_UNKNOWN"
-    | "AMBIGUOUS"
-    | "CONFLICTING";
+  | "NOT_PROVIDED"
+  | "EXPLICITLY_UNKNOWN"
+  | "AMBIGUOUS"
+  | "CONFLICTING";
   description: string;
   affects: string;
   reason: string;
@@ -247,4 +248,36 @@ export function chatTranscriptMessages(
   persistedMessages: ChatMessageRead[],
 ): ChatMessageRead[] {
   return filterSupersededClarificationAnswers(persistedMessages);
+}
+
+export function persistedRequestOrdinal(
+  detail: CaseChatDetail,
+  lastKnownMessageOrdinal: number,
+  content: string,
+): number | undefined {
+  return orderedMessages(detail.messages).find(
+    (message) =>
+      message.role === "user" &&
+      message.ordinal > lastKnownMessageOrdinal &&
+      message.content === content,
+  )?.ordinal;
+}
+
+export function hasCompletedAssistantOutput(
+  detail: CaseChatDetail,
+  requestOrdinal: number,
+): boolean {
+  if (
+    detail.status !== "idle" &&
+    detail.status !== "answered" &&
+    detail.status !== "awaiting_followup"
+  ) {
+    return false;
+  }
+  return detail.messages.some(
+    (message) =>
+      message.role === "assistant" &&
+      message.ordinal > requestOrdinal &&
+      Boolean(message.content.trim()),
+  );
 }

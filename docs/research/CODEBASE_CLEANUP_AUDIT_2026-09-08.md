@@ -1,5 +1,7 @@
 # Codebase cleanup audit — 2026-09-08
 
+> Status: historical research/audit record. Its recommendations and line-count observations are not active coding policy; current source, tests, and root `AGENTS.md` decide implementation.
+
 ## Scope and evidence
 
 Read-only code audit of local main at b21b74c, including the uncommitted attribute-first implementation. No source files deleted, merged, staged, or committed. Remote parity was not checked. Inventory: 144 Python files under backend/app; 142 TS/TSX files under frontend/src including tests/generated types; 61 Python files under rag_service/app including evaluation tools. Research and evaluation references were searched when judging retirement candidates.

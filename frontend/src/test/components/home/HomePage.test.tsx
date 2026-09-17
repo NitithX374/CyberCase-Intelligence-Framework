@@ -40,7 +40,6 @@ describe("HomePage", () => {
       name: "Kritsakorn Analyst",
       email: "analyst@example.com",
       created_at: "2026-09-09",
-      oauth_provider: "password",
     });
 
     render(<HomePage />);

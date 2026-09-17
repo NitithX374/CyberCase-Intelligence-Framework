@@ -24,7 +24,7 @@ export function UserProfileMenu() {
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 px-1 py-1 text-xs text-ink-muted" role="status">
-        <span className="h-2 w-2 rounded-full bg-ink-muted/40 animate-pulse" />
+        <span className="h-2 w-2 rounded-full bg-ink-muted/40" />
         <span>Loading…</span>
       </div>
     );

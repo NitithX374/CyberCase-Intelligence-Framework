@@ -1,5 +1,7 @@
 # Attribute-first Phase 1 implementation
 
+> Status: experimental research record, not the default runtime contract or current implementation instruction. Use current source, tests, API/schema contracts, and root `AGENTS.md` for runtime behavior.
+
 Implemented 2026-09-08. This implements the bounded, case-only claim-anchored adaptation proposed in MAIN_ANALYSIS_V11_MIGRATION_AUDIT.md. It is not a full CAMS or ACL Attribute First reproduction. NLI/XNLI inference is not installed or enabled.
 
 ## Behavior

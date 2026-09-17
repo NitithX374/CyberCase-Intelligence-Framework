@@ -1,9 +1,0 @@
-{
-  "calls": [],
-  "condition": "D1",
-  "failure": null,
-  "intermediate": null,
-  "not_attempted_reason": "not attempted after harness configuration failure in D1",
-  "report": null,
-  "status": "not_attempted"
-}

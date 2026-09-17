@@ -464,18 +464,18 @@
       <header class="header">
         <p class="header-eyebrow">
           <span>CyberCase Intelligence Framework · System Architecture</span>
-          <span class="badge">EVIDENCE-FIRST PIPELINE</span>
+          <span class="badge">CASE-SOURCE PIPELINE</span>
         </p>
         <h1>API Dataflow &amp; File Architecture</h1>
         <p class="subtitle">
           Comprehensive end-to-end trace mapping every component, state hook, typed client, FastAPI router, worker lease, claim-anchored analysis service, and PostgreSQL data model across frontend and backend.
         </p>
         <div class="flow-nav">
-          <div class="flow-badge"><span class="flow-dot f1"></span>Flow 1: Intake &amp; Evidence Admittance</div>
+          <div class="flow-badge"><span class="flow-dot f1"></span>Flow 1: Intake &amp; Case Source Receipt</div>
           <div class="flow-badge"><span class="flow-dot f2"></span>Flow 2: Background Run Leasing &amp; Execution</div>
-          <div class="flow-badge"><span class="flow-dot f3"></span>Flow 3: Claim-Anchored Provenance Binding (Focal)</div>
+          <div class="flow-badge"><span class="flow-dot f3"></span>Flow 3: Claim-Anchored Case Source Citations (Focal)</div>
           <div class="flow-badge"><span class="flow-dot f4"></span>Flow 4: Clarification Gating &amp; Interactive Follow-Up</div>
-          <div class="flow-badge"><span class="flow-dot f5"></span>Flow 5: Admitted Findings, Citations &amp; Reports</div>
+          <div class="flow-badge"><span class="flow-dot f5"></span>Flow 5: Analysis Results, Citations &amp; Reports</div>
         </div>
       </header>
 
@@ -576,7 +576,7 @@
 
           <line x1="172" y1="736" x2="172" y2="808" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
           <rect x="122" y="764" width="100" height="14" rx="2" fill="#f5f5f5"/>
-          <text x="172" y="774" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">COMMIT SNAPSHOT</text>
+          <text x="172" y="774" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="500">COMMIT CASE SOURCE</text>
 
           <!-- FLOW 2: Analysis Trigger & Lease Worker (Col 3: x_attach = 712) -->
           <line x1="712" y1="144" x2="712" y2="220" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
@@ -629,11 +629,11 @@
           <rect x="896" y="342" width="104" height="14" rx="2" fill="#f5f5f5"/>
           <text x="948" y="352" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">POST /clarifications</text>
 
-          <!-- Orthogonal connector: Follow-up answer feeds new snapshot & analysis re-run -->
-          <!-- From Router (948, 464) left-and-down to Snapshot / Analysis Queue (x=736, y=540) -->
+          <!-- Orthogonal connector: Follow-up answer feeds a new CaseSource and analysis re-run -->
+          <!-- From Router (948, 464) left-and-down to the CaseSource / Analysis Queue (x=736, y=540) -->
           <path d="M 948,464 V 480 Q 948,488 940,488 H 744 Q 736,488 736,496 V 540" fill="none" stroke="#a66a20" stroke-width="1.2" marker-end="url(#arrow-amber)"/>
           <rect x="800" y="480" width="112" height="14" rx="2" fill="#f5f5f5"/>
-          <text x="856" y="490" fill="#a66a20" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">NEW EVIDENCE &amp; RE-RUN</text>
+          <text x="856" y="490" fill="#a66a20" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">NEW CASE SOURCE &amp; RE-RUN</text>
 
           <!-- FLOW 5: Findings & Overview Queries (Col 2: Sage #4f725b) -->
           <line x1="452" y1="808" x2="452" y2="736" stroke="#4f725b" stroke-width="1.2" marker-end="url(#arrow-sage)"/>
@@ -815,29 +815,29 @@
 
           <!-- ══ TIER 4: WORKFLOW & ANALYSIS PIPELINE NODES (y=540, h=196) ══ -->
 
-          <!-- Node 4.1: Material Lifecycle & Snapshot Service (x=48, w=248) -->
+          <!-- Node 4.1: Material Lifecycle & Case Source Service (x=48, w=248) -->
           <rect x="48" y="540" width="248" height="196" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
           <rect x="56" y="546" width="42" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
           <text x="77" y="555" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
-          <text x="172" y="568" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Material &amp; Snapshot Service</text>
+          <text x="172" y="568" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Material &amp; Case Source Service</text>
           <text x="172" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">case_materials/material_service.py</text>
-          <text x="172" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">snapshot_builder.py (SHA-256 Hashing)</text>
+          <text x="172" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case_source_bundle.py (revision-bound sources)</text>
           <!-- Internal Detail Box -->
           <rect x="60" y="616" width="224" height="108" rx="4" fill="#ffffff" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
           <text x="72" y="632" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Material Ingestion Flow:</text>
           <text x="72" y="648" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">1. Parse intake narrative &amp; OCR text</text>
-          <text x="72" y="664" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">2. Create EvidenceSource &amp; Revision</text>
-          <text x="72" y="680" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">3. Calculate normalized sha256 hash</text>
-          <text x="72" y="696" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">4. Lock CaseEvidenceSnapshot</text>
-          <text x="72" y="712" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">5. Invariant: Immutable evidence base</text>
+          <text x="72" y="664" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">2. Create CaseSource &amp; increment revision</text>
+          <text x="72" y="680" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">3. Preserve text and provenance metadata</text>
+          <text x="72" y="696" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">4. Load CaseSourceBundle(revision, sources)</text>
+          <text x="72" y="712" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace">5. Invariant: active source set is revision-bound</text>
 
           <!-- Node 4.2: Case Findings Parsing & Projection (x=328, w=248) -->
           <rect x="328" y="540" width="248" height="196" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
           <rect x="336" y="546" width="42" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.3)" stroke-width="0.8"/>
           <text x="357" y="555" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
           <text x="452" y="568" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Findings Projection &amp; Quotes</text>
-          <text x="452" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">cases/case_management.py</text>
-          <text x="452" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case_analysis_response_parser.py</text>
+          <text x="452" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">reports/case_report_projection.py</text>
+          <text x="452" y="602" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">case_analysis/source_quote_resolver.py</text>
           <!-- Internal Detail Box -->
           <rect x="340" y="616" width="224" height="108" rx="4" fill="#ffffff" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
           <text x="352" y="632" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Grounded Projection Pipeline:</text>
@@ -852,16 +852,16 @@
           <rect x="616" y="546" width="68" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.5)" stroke-width="0.8"/>
           <text x="650" y="555" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CORE · FOCAL</text>
           <text x="736" y="568" fill="#2d3142" font-size="12.5" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Claim-Anchored Analysis Engine</text>
-          <text x="736" y="586" fill="#eb6c36" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">case_native_analysis · binding.py</text>
+          <text x="736" y="586" fill="#eb6c36" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">case_analysis/case_analysis.py · validation.py</text>
           <text x="736" y="602" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">workflow/case_run_execution.py</text>
           <!-- Internal Detail Box -->
           <rect x="618" y="616" width="236" height="108" rx="4" fill="#ffffff" stroke="rgba(235,108,54,0.3)" stroke-width="0.8"/>
           <text x="628" y="632" fill="#eb6c36" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Execution &amp; Provenance Binding:</text>
           <text x="628" y="648" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">1. Worker claims lease: case_run_claim.py</text>
           <text x="628" y="664" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">2. LLM claim extraction &amp; exact quotes</text>
-          <text x="628" y="680" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">3. Budget selection: case_native_selection.py</text>
+          <text x="628" y="680" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">3. Structured provider input: case_sources[]</text>
           <text x="628" y="696" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">4. Deterministic quote offset verification</text>
-          <text x="628" y="712" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">5. Contracts: case_native_validation.py</text>
+          <text x="628" y="712" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace">5. Contracts: case_analysis/validation.py</text>
 
           <!-- Node 4.4: Clarification & Follow-up Policy Engine (x=896, w=248) -->
           <rect x="896" y="540" width="248" height="196" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
@@ -898,13 +898,13 @@
 
           <!-- ══ TIER 5: PERSISTENCE & EXTERNAL ENGINE NODES (y=808, h=80) ══ -->
 
-          <!-- Node 5.1: Case & Snapshot DB Models (x=48, w=248) -->
+          <!-- Node 5.1: Case & Case Source DB Models (x=48, w=248) -->
           <rect x="48" y="808" width="248" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
           <rect x="56" y="814" width="28" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.4)" stroke-width="0.8"/>
           <text x="70" y="823" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
-          <text x="172" y="834" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Evidence Snapshot Storage</text>
-          <text x="172" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">models/case.py (SQLAlchemy)</text>
-          <text x="172" y="868" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">EvidenceSource · EvidenceRevision · Snapshot</text>
+          <text x="172" y="834" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Case Source Storage</text>
+          <text x="172" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">models/case.py · models/case_materials.py</text>
+          <text x="172" y="868" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">CaseSource · Case.evidence_revision</text>
 
           <!-- Node 5.2: Analysis Results DB Model (x=328, w=248) -->
           <rect x="328" y="808" width="248" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
@@ -985,13 +985,13 @@
           <h3>Claim-Anchored Provenance Pipeline</h3>
         </div>
         <p>
-          Unlike naive RAG systems that summarize unstructured case narratives directly, CyberCase enforces strict deterministic evidence provenance before generating findings:
+          Unlike naive RAG systems that summarize unstructured case narratives directly, CyberCase keeps deterministic CaseSource provenance through analysis:
         </p>
         <ul>
-          <li><strong>Decomposition:</strong> <code>case_native_analysis.py</code> decomposes narratives and OCR transcripts into atomic claims and exact quotes.</li>
-          <li><strong>Character-Span Binding:</strong> <code>case_native_binding.py</code> validates that each quote resolves to a deterministic character offset and page in the immutable <code>CaseEvidenceSnapshot</code>.</li>
-          <li><strong>Budget Selection:</strong> <code>case_native_selection.py</code> enforces deterministic coverage and token caps, recording omitted claims.</li>
-          <li><strong>Grounded Output:</strong> Assistant findings reference only admitted claim IDs—no citation without an exact evidence quote.</li>
+          <li><strong>Structured input:</strong> <code>case_analysis/case_analysis.py</code> sends one <code>case_sources[]</code> collection to the provider.</li>
+          <li><strong>Character-Span Binding:</strong> <code>case_analysis/validation.py</code> validates each quote against its CaseSource text and document locator.</li>
+          <li><strong>Deterministic validation:</strong> The same <code>CaseSourceBundle</code> supplies source IDs, text, and provenance to analysis and correction retries.</li>
+          <li><strong>Grounded Output:</strong> Assistant findings reference only validated claim IDs and exact CaseSource citations.</li>
         </ul>
       </div>
 
@@ -1027,7 +1027,7 @@
           <li><strong>Conditional Trigger:</strong> <code>case_mitre_augmentation.py</code> queries <code>rag_service</code> only when confirmed cyber threat indicators appear.</li>
           <li><strong>Hybrid Graph Search:</strong> Vector similarity in Qdrant (BGE-M3 1024-dim) combined with 2-hop graph expansion in Neo4j (STIX 2.1).</li>
           <li><strong>Source-Role Isolation:</strong> ATT&amp;CK techniques are displayed strictly in a technical appendix, never as incident evidence.</li>
-          <li><strong>Export Engine:</strong> <code>case_report_generation.py</code> compiles findings, citations, and audit trails into Markdown and publication-grade PDF.</li>
+          <li><strong>Export Engine:</strong> <code>reports/case_report_template.py</code> and <code>case_report_rendering.py</code> compile deterministic findings, citations, and audit trails into Markdown and PDF.</li>
         </ul>
       </div>
     </div>
@@ -1117,7 +1117,7 @@
               <td class="tier-col"><span class="tag-tier">Tier 1 · UI</span></td>
               <td class="file-col">frontend/.../CaseReportView.tsx</td>
               <td>Publication-grade case findings report with Markdown viewer and PDF download action.</td>
-              <td>Case analysis &amp; snapshot</td>
+              <td>Case analysis &amp; source bundle</td>
               <td>Report rendering &amp; download</td>
             </tr>
 
@@ -1132,7 +1132,7 @@
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
               <td class="file-col">frontend/.../use-case-workspace-actions.ts</td>
-              <td>Central action orchestrator: case creation, adding materials, admitting evidence, updating title.</td>
+              <td>Central action orchestrator: case creation, adding materials, starting analysis, updating title.</td>
               <td>User actions in workspace</td>
               <td>API client invocations</td>
             </tr>
@@ -1181,8 +1181,8 @@
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 2 · Client</span></td>
               <td class="file-col">frontend/src/lib/evidence-citation.ts</td>
-              <td>Extracts claim anchors and matches quote character spans against admitted evidence snapshot texts.</td>
-              <td>Analysis claims &amp; snapshot</td>
+              <td>Extracts claim anchors and matches quote character spans against CaseSource texts.</td>
+              <td>Analysis claims &amp; source bundle</td>
               <td>Grounded citation models</td>
             </tr>
 
@@ -1204,9 +1204,9 @@
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
               <td class="file-col">backend/app/routers/case_materials.py</td>
-              <td>Endpoints: <code>POST /materials</code> (create narrative/document) and <code>POST /evidence</code> (admit revision).</td>
+              <td>Endpoints: <code>POST /documents</code> (receive document and extraction) and <code>POST /evidence</code> (receive a narrative or follow-up CaseSource).</td>
               <td>Material payloads</td>
-              <td><code>EvidenceSourceRead</code></td>
+              <td><code>CaseSourceRead</code></td>
             </tr>
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 3 · Router</span></td>
@@ -1241,16 +1241,16 @@
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
               <td class="file-col">backend/.../material_service.py</td>
-              <td>Ingestion, text normalization, and revision tracking for narratives and OCR extractions.</td>
+              <td>Ingestion, text normalization, and revision tracking for narratives, documents, and OCR extractions.</td>
               <td>Raw text / OCR result</td>
-              <td><code>EvidenceRevision</code> record</td>
+              <td><code>Case.evidence_revision</code> and <code>CaseSource</code> records</td>
             </tr>
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
-              <td class="file-col">backend/.../snapshot_builder.py</td>
-              <td>Assembles immutable <code>CaseEvidenceSnapshot</code> with deterministic SHA-256 hashes of admitted text.</td>
-              <td>Admitted evidence revisions</td>
-              <td>Immutable <code>CaseEvidenceSnapshot</code></td>
+              <td class="file-col">backend/.../case_source_bundle.py</td>
+              <td>Loads the active <code>CaseSourceBundle</code> with one revision-bound collection of source text and provenance.</td>
+              <td>Case sources and current revision</td>
+              <td><code>CaseSourceBundle</code></td>
             </tr>
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
@@ -1269,28 +1269,28 @@
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 4 · Service</span></td>
               <td class="file-col">backend/.../case_run_execution.py</td>
-              <td>Coordinates end-to-end execution: snapshot loading, claim extraction, follow-up gating, outcome decision.</td>
+              <td>Coordinates end-to-end execution: source-bundle loading, claim extraction, follow-up gating, outcome decision.</td>
               <td>Leased run</td>
               <td>Execution result state</td>
             </tr>
             <tr>
               <td class="tier-col"><span class="tag-tier focal">Tier 4 · Core (Focal)</span></td>
-              <td class="file-col">backend/.../case_native_analysis.py</td>
-              <td>Core claim-anchored analysis engine: calls LLM to decompose snapshot into claims and exact verbatim quotes.</td>
-              <td>Snapshot text</td>
+              <td class="file-col">backend/.../case_analysis/case_analysis.py</td>
+              <td>Core claim-anchored analysis engine: calls the LLM with structured CaseSource items and exact-quote requirements.</td>
+              <td>CaseSourceBundle</td>
               <td>Extracted atomic claims</td>
             </tr>
             <tr>
               <td class="tier-col"><span class="tag-tier focal">Tier 4 · Core (Focal)</span></td>
-              <td class="file-col">backend/.../case_native_binding.py</td>
-              <td>Deterministically verifies each quote against snapshot text; computes exact start/end character offsets.</td>
-              <td>Extracted quotes &amp; snapshot</td>
+              <td class="file-col">backend/.../case_analysis/validation.py</td>
+              <td>Deterministically verifies each quote against CaseSource text and resolves document page locators.</td>
+              <td>Extracted quotes &amp; source bundle</td>
               <td>Verified quote spans</td>
             </tr>
             <tr>
               <td class="tier-col"><span class="tag-tier focal">Tier 4 · Core (Focal)</span></td>
-              <td class="file-col">backend/.../case_native_selection.py</td>
-              <td>Applies deterministic coverage and token budget constraints, recording all omitted claims in trace.</td>
+              <td class="file-col">backend/.../case_analysis/source_quote_resolver.py</td>
+              <td>Resolves exact quote occurrences and document locator spans used by CaseSource citations.</td>
               <td>Bound claims list</td>
               <td>Admitted claims subset</td>
             </tr>
@@ -1341,7 +1341,7 @@
             <tr>
               <td class="tier-col"><span class="tag-tier">Tier 5 · Store</span></td>
               <td class="file-col">backend/app/models/case.py</td>
-              <td>Database entities: <code>Case</code>, <code>EvidenceSource</code>, <code>EvidenceRevision</code>, <code>CaseEvidenceSnapshot</code>.</td>
+              <td>Database entities: <code>Case</code>, <code>CaseDocument</code>, <code>DocumentExtraction</code>, and <code>CaseSource</code>.</td>
               <td>SQLAlchemy ORM</td>
               <td>Case &amp; Evidence tables</td>
             </tr>

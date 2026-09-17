@@ -185,7 +185,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
             className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-unresolved/50 bg-unresolved/10 px-4 py-3 text-xs text-ink"
           >
             <div className="flex items-start gap-2.5">
-              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-unresolved motion-safe:animate-ping" />
+              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-unresolved" />
               <div>
                 <p className="font-semibold text-ink">
                   Analysis Needs More Information
@@ -372,7 +372,7 @@ function CaseOverviewState({
     <div className="mx-auto flex h-full min-h-[360px] w-full max-w-5xl flex-col justify-center px-5 py-10 sm:px-8 lg:px-10">
       <div className="max-w-xl border-y border-line py-8">
         {processing ? (
-          <div className="mb-4 flex items-center gap-2 text-evidence"><span className="h-2 w-2 rounded-full bg-evidence motion-safe:animate-pulse motion-reduce:animate-none" /><span className="text-[11px] font-semibold">Analysis in progress</span></div>
+          <div className="mb-4 flex items-center gap-2 text-evidence"><span className="h-2 w-2 rounded-full bg-evidence" /><span className="text-[11px] font-semibold">Analysis in progress</span></div>
         ) : eyebrow ? <p className="section-eyebrow">{eyebrow}</p> : null}
         <h2 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">{title}</h2>
         <p className="mt-2 max-w-lg text-xs leading-6 text-ink-secondary">{description}</p>

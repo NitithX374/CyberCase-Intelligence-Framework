@@ -68,7 +68,6 @@ export interface UserProfile {
   email: string;
   name: string;
   avatar_url?: string | null;
-  oauth_provider: string;
   created_at: string;
 }
 

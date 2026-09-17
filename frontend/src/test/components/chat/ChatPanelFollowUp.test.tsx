@@ -117,7 +117,7 @@ describe("WorkspaceChatPanel boundaries", () => {
     expect(onInputChange).toHaveBeenCalledWith("host-9");
   });
 
-  it("explains that Chat has no context before Case analysis", () => {
+  it("shows intake notice and keeps composer available before Case analysis", () => {
     render(
       <WorkspaceChatPanel
         isOpen
@@ -133,8 +133,7 @@ describe("WorkspaceChatPanel boundaries", () => {
       />,
     );
 
-    expect(screen.getByText(/Complete the Case analysis from Intake before using Chat/i)).toBeInTheDocument();
-    expect(screen.getByText(/Chat will not start analysis/i)).toBeInTheDocument();
-    expect(screen.getByLabelText("Chat message")).toBeDisabled();
+    expect(screen.getByText(/ยังไม่ได้บันทึกรายละเอียดสำนวนคดี/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Chat message")).not.toBeDisabled();
   });
 });

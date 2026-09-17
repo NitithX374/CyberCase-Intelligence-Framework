@@ -51,29 +51,16 @@ async def get_case_chat(
         select(Case)
         .options(
             selectinload(Case.chat_messages),
-            selectinload(Case.latest_analysis_result),
         )
         .where(Case.id == case_id)
     )
     if case is None or case.user_id != user_id:
         raise CaseChatError("case_not_found", "Case not found", 404)
-    messages = [ChatMessageRead.model_validate(message) for message in case.chat_messages]
-    answered_ids = {
-        message.in_reply_to_message_id
-        for message in case.chat_messages
-        if message.in_reply_to_message_id is not None
-    }
-    has_pending_followup = any(
-        message.message_kind == "followup_question" and message.id not in answered_ids
-        for message in case.chat_messages
-    )
-    if has_pending_followup:
-        chat_status = "awaiting_followup"
-    elif case.latest_analysis_result is not None or messages:
-        chat_status = "answered"
-    else:
-        chat_status = "idle"
-    return CaseChatRead(case_id=case.id, status=chat_status, messages=messages)
+    messages = [
+        ChatMessageRead.model_validate(message)
+        for message in sorted(case.chat_messages, key=lambda m: m.ordinal)
+    ]
+    return CaseChatRead(case_id=case.id, status="idle", messages=messages)
 
 
 def build_followup_answer(request: ChatMessageCreate) -> CaseFollowUpAnswer:
@@ -137,7 +124,7 @@ async def ask_case(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
-    # ── Transaction A: Validation, User message persistence, Idempotency, Context loading ──
+    # ── Transaction A: User message persistence, Idempotency, Context loading ──
     case = await db.scalar(select(Case).where(Case.id == case_id))
     if case is None or case.user_id != user_id:
         raise CaseChatError("case_not_found", "Case not found", 404)
@@ -146,25 +133,8 @@ async def ask_case(
         select(CaseAnalysisResult).where(
             CaseAnalysisResult.id == case.latest_analysis_result_id,
             CaseAnalysisResult.case_id == case.id,
-            CaseAnalysisResult.status == "validated",
         )
     )
-    if context_result is None:
-        raise CaseChatError(
-            "analysis_required",
-            "Analyze the Case before asking a Chat question",
-            status.HTTP_412_PRECONDITION_FAILED,
-        )
-
-    if context_result.evidence_revision != case.evidence_revision:
-        raise CaseChatError(
-            "analysis_stale",
-            "Case analysis is stale; run analysis before asking",
-            status.HTTP_409_CONFLICT,
-        )
-
-    if not isinstance(context_result.pipeline_config, dict) or not context_result.pipeline_config.get("version"):
-        raise CaseChatError("case_ask_context_invalid", "Latest Case analysis configuration is unavailable")
 
     existing_user_msg = await db.scalar(
         select(ChatMessage).where(
@@ -202,7 +172,7 @@ async def ask_case(
             role="user",
             content=request.content.strip(),
             message_kind="conversation",
-            analysis_result_id=context_result.id,
+            analysis_result_id=context_result.id if context_result is not None else None,
             metadata_json=serialize_message_metadata(
                 {
                     "action": "conversation",
@@ -216,8 +186,9 @@ async def ask_case(
 
     context, source_bundle = await load_case_answer_context(
         db,
-        analysis_result_id=context_result.id,
+        case_id=case.id,
         question_message_id=user_message.id,
+        analysis_result_id=context_result.id if context_result is not None else None,
     )
 
     # Commit Transaction A and release DB lock before external LLM call
@@ -246,7 +217,7 @@ async def ask_case(
         role="assistant",
         content=output.answer,
         message_kind="conversation",
-        analysis_result_id=context_result.id,
+        analysis_result_id=context_result.id if context_result is not None else None,
         in_reply_to_message_id=user_read.id,
         metadata_json=serialize_message_metadata(
             {

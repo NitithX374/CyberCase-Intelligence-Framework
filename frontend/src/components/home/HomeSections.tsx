@@ -269,7 +269,7 @@ export function HomeNavigation() {
               {isDropdownOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 mt-2.5 w-56 rounded-xl border border-primary/15 bg-surface p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute right-0 mt-2.5 w-56 rounded-xl border border-primary/15 bg-surface p-2 shadow-xl z-50"
                 >
                   <div className="px-3 py-2.5 border-b border-primary/10">
                     <p className="text-xs font-bold text-ink truncate">

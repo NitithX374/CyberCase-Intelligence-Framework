@@ -58,13 +58,12 @@ export function AccountGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Loading state for protected routes
   if (isLoading || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-canvas p-10" role="status">
         <div className="flex items-center gap-3 text-xs font-mono tracking-widest text-ink-secondary">
           <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          VERIFYING WORKSPACE ACCESS…
+          Loading
         </div>
       </main>
     );

@@ -1,11 +1,10 @@
-# Primer — รู้อะไรก่อน ถึงจะอ่าน ARCHITECTURE.md รู้เรื่อง
+# RAG Service Primer — MITRE ATT&CK and GraphRAG
 
 > ⚠️ **ตรวจเมื่อ 2026-08-15** — เนื้อหาปูพื้นยังใช้ได้ แต่สองจุดไม่ตรงกับโค้ดแล้ว:
 > โหมด `--local` (Ollama) ไม่มีใน pipeline ที่ให้บริการ เหลือเฉพาะสคริปต์ใน `evaluation/`
 > และ env `USE_LOCAL` ถูกลบไปแล้ว
 
-> เอกสารปูพื้น สำหรับคนที่เพิ่งเข้าโปรเจกต์ `rag_service` อ่านอันนี้ให้จบก่อน แล้วค่อยไป [ARCHITECTURE.md](../ARCHITECTURE.md)
-> เป้าหมาย: พาจาก "เป็น dev ทั่วไป" → "อ่านสถาปัตยกรรมและโค้ดของ pipeline นี้เข้าใจ"
+เอกสารนี้เป็นพื้นฐานโดเมนและศัพท์สำหรับคนที่เพิ่งเข้าโปรเจกต์ `rag_service` ไม่ใช่ runtime contract ให้ยึด source code, tests, และ API schema ของบริการเป็นหลัก
 
 ความรู้ที่ต้องมีแบ่งเป็น **4 กลุ่ม** — แนะนำอ่านตามลำดับนี้:
 
@@ -13,7 +12,7 @@
 (1) โดเมน MITRE ATT&CK   →  (2) RAG พื้นฐาน  →  (3) GraphRAG + เทคนิค retrieval  →  (4) Agentic / Cross-lingual / Stack
 ```
 
-ถ้ามีเวลาน้อย: อ่าน **ส่วนที่ 1 + 2 + 9 (glossary)** ก็พอเริ่มอ่าน ARCHITECTURE.md ส่วนภาพรวมได้
+ถ้ามีเวลาน้อย: อ่าน **ส่วนที่ 1 + 2 + 9 (glossary)** แล้วเปิด source ใน `rag_service/app/RAG/GraphRAG` ตามงานที่ต้องทำ
 
 ---
 
@@ -51,7 +50,7 @@ Lateral Movement → Collection → Command & Control → Exfiltration → Impac
 | **Exfiltration (TA0010)** | **ขโมยข้อมูลออกไป** | copy ฐานข้อมูลส่งออกนอก |
 | **Impact (TA0040)** | **สร้างความเสียหาย** | ransomware เข้ารหัส, ลบข้อมูล |
 
-> **Exfiltration / Impact อยู่ท้ายสุด** และเป็นสิ่งที่คดีสนใจมากสุด (ข้อมูลรั่ว/ถูกทำลาย = ความเสียหายจริง) — นี่คือเหตุผลที่ใน ARCHITECTURE.md ย้ำว่าห้ามให้ขั้น "decompose" ตัดสองอันนี้ทิ้ง
+> **Exfiltration / Impact อยู่ท้ายสุด** และเป็นสิ่งที่คดีสนใจมากสุด (ข้อมูลรั่ว/ถูกทำลาย = ความเสียหายจริง) — ขั้น decomposition ต้องไม่ตัดสัญญาณสองกลุ่มนี้ทิ้ง
 
 ### 1.3 ชนิด Entity ที่เก็บในฐานข้อมูล
 นอกจาก Technique/Tactic ยังมี entity อื่นที่เชื่อมโยงกัน:
@@ -75,7 +74,7 @@ ATT&CK ไม่ใช่แค่ลิสต์ แต่เป็น **กร
 - `HAS_COMPONENT` — DataSource มี DataComponent
 
 ### 1.5 STIX
-**STIX 2.1** = ฟอร์แมต JSON มาตรฐานที่ MITRE ใช้แจกข้อมูล ATT&CK — ในโปรเจกต์เราเอาไฟล์ STIX มา "parse" (แยกออกเป็น entity + relationship) แล้วโหลดเข้า DB (ดู `ingestion/` ใน ARCHITECTURE.md)
+**STIX 2.1** = ฟอร์แมต JSON มาตรฐานที่ MITRE ใช้แจกข้อมูล ATT&CK — ในโปรเจกต์เราเอาไฟล์ STIX มา "parse" (แยกออกเป็น entity + relationship) แล้วโหลดเข้า DB (ดู `rag_service/app/RAG/GraphRAG/ingestion/`)
 
 ---
 
@@ -105,7 +104,7 @@ Retrieve (ค้นเอกสารที่เกี่ยว) → Augment (�
 - **Graph (Neo4j)** เก็บความสัมพันธ์ตรงๆ (technique นี้กลุ่มไหนใช้, ป้องกันยังไง)
 - **GraphRAG = รวมสองอย่าง:** vector หา node ตั้งต้น → "ขยายกราฟ" (graph expansion) ดูเพื่อนบ้าน → ได้ context ครบทั้งความหมาย + โครงสร้าง
 
-### 3.2 ศัพท์ retrieval ที่จะเจอใน ARCHITECTURE.md
+### 3.2 ศัพท์ retrieval ที่จะเจอใน source
 | ศัพท์ | ความหมายสั้น |
 |---|---|
 | **Dense / Sparse** | dense = เวกเตอร์เชิงความหมาย; sparse = เชิงคำ/keyword (จับคำตรง เช่น "T1566") — ใช้คู่กัน |
@@ -132,7 +131,7 @@ Retrieve (ค้นเอกสารที่เกี่ยว) → Augment (�
 - **edge** = เส้นเชื่อม node; **conditional edge** = แยกทางตามเงื่อนไข (เช่น "พอ" → ไปตอบ, "ไม่พอ" → ไปถาม)
 - คำที่จะเจอ: **self-reflection / evaluator** (LLM ประเมิน context ตัวเอง), **broaden** (เขียน query ใหม่แล้วค้นกว้างขึ้น)
 
-> ดูรูป "LangGraph state machine" ใน ARCHITECTURE.md §6.2 จะเห็นภาพชัด
+> ดู state และ node ใน `rag_service/app/RAG/GraphRAG/pipeline/agent_graph.py` เพื่อเห็นภาพการทำงานจริง
 
 ---
 
@@ -222,15 +221,14 @@ Retrieve (ค้นเอกสารที่เกี่ยว) → Augment (�
 
 ---
 
-## 10. ไกด์ลำดับการอ่าน ARCHITECTURE.md
+## 10. ไกด์ลำดับการอ่าน source
 
 | ถ้าคุณอยาก... | อ่านส่วนไหนก่อน |
 |---|---|
-| เข้าใจภาพรวมว่าระบบทำอะไร | §1 ภาพรวม + ดู mermaid diagram |
-| เข้าใจ "เทคนิคอะไรถูกใช้ ทำไม" | §2 เทคนิค/Method |
-| รู้ว่าใช้โมเดล/DB อะไร | §3 โมเดล + §4 DB Schema |
-| ตามรอย request หนึ่งอัน | §6 Request Lifecycle |
-| ลงลึกโค้ดฟังก์ชันใดฟังก์ชันหนึ่ง | §7 อ้างอิงโค้ดทุกฟังก์ชัน (เปิดเฉพาะไฟล์ที่สนใจ) |
-| รู้ข้อจำกัด/จุดที่ต้องระวัง | ภาคผนวกท้ายเอกสาร |
+| เข้าใจภาพรวมว่าระบบทำอะไร | `rag_service/app/main.py` และ `rag_service/app/routers/rag.py` |
+| เข้าใจ retrieval | `rag_service/app/RAG/GraphRAG/retrieval/` |
+| ตามรอย request หนึ่งอัน | `rag_service/app/RAG/GraphRAG/pipeline/agent_graph.py` |
+| เข้าใจข้อมูล MITRE | `rag_service/app/RAG/GraphRAG/ingestion/` |
+| เข้าใจข้อจำกัดและผลวัด | `rag_service/app/RAG/GraphRAG/evaluation/` และผลการทดลองที่อยู่ใกล้กัน |
 
-**เส้นทางแนะนำสำหรับมือใหม่:** §1 → §2 → ดู diagram §6 → แล้วค่อยเจาะ §7 เฉพาะ pipeline ที่ทำงานด้วย (เช่น `agent_graph.py` หรือ backend `generator.py`)
+**เส้นทางแนะนำสำหรับมือใหม่:** อ่านส่วนที่ 1 → 2 → 3 → แล้วเจาะ source เฉพาะ pipeline ที่ทำงานด้วย

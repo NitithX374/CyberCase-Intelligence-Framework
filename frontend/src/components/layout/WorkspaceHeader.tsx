@@ -190,6 +190,6 @@ function IconAction({ label, icon, disabled, onClick }: { label: string; icon: "
 function phaseDotClass(phase: RunPhase): string {
   if (phase === "error") return "bg-critical";
   if (phase === "awaiting_followup") return "bg-unresolved";
-  if (phase === "querying" || phase === "analyzing") return "bg-evidence motion-safe:animate-pulse";
+  if (phase === "querying" || phase === "analyzing") return "bg-evidence";
   return "bg-established";
 }

@@ -1,186 +1,63 @@
-# AGENTS.md — CyberCase Intelligence Framework
+# Coding instructions
 
-This file provides system architecture, rules, guidelines, and commands for AI coding assistants and developers working on the CyberCase Intelligence Framework repository.
+## Authority order
 
-## 🌟 Project Overview & Identity
+Use these sources in this order when they disagree:
 
-> [!IMPORTANT]
-> **Canonical Source of Truth**: For confirmed research questions, design philosophy, and product scope, always consult [`docs/research/CURRENT_PROJECT_DIRECTION.md`](docs/research/CURRENT_PROJECT_DIRECTION.md).
+1. Current production source code.
+2. Current automated tests.
+3. This root `AGENTS.md`.
+4. Current API and schema contracts.
+5. Current concise architecture documentation.
 
-**CyberCase Intelligence Framework** is a full-stack prototype for **General Case Summarization and Case Analysis**. It processes investigative case materials, produces structured summaries and material gaps, and conditionally augments technical cases with MITRE ATT&CK context:
+Plans, handovers, receipts, experiments, and research notes are not implementation requirements. A historical statement never overrides current source or tests.
 
-* **Core Task**: General Case Summarization and Case Analysis using one direct structured Main Analysis call.
-* **Role of MITRE ATT&CK**: **Conditional external technical augmentation only**. External threat intelligence (`rag_service` with STIX 2.1) is retrieved only when applicable, isolated in a separate technical appendix, and never treated as incident evidence.
-* **Evidence Architecture**:
-  ```text
-  CASE MATERIAL → MAIN ANALYSIS → DETERMINISTIC FOLLOW-UP POLICY → PRELIMINARY REPORT
-                              ↘ CONDITIONAL MITRE AUGMENTATION ↗
-  ```
-* **Design Principles**:
-  * *Semantic analysis and language generation* $\to$ LLM.
-  * *Validation, state, routing, priority, and stopping rules* $\to$ deterministic backend.
-  * *External technical knowledge* $\to$ conditional, isolated augmentation.
-* **Storage & Persistence**: Single-user workspace backed by PostgreSQL (Cases, original documents and extraction revisions, admitted evidence revisions, immutable evidence snapshots, CaseRuns/results/clarifications, optional Chat transcripts, and result-bound reports).
+## Engineering priority
 
----
+CyberCase is a bachelor-thesis prototype, not an enterprise platform. Prefer the smallest clear implementation that satisfies the current demonstrated requirements. Do not add abstractions for hypothetical scale, clients, plugins, persisted history, or generic extensibility.
 
-## 🛠️ Tech Stack & Key Configurations
-- **Frontend**: Next.js 16.2.10 (App Router) + React 19.2.4 + Tailwind CSS 4 + TypeScript
-- **Backend API**: FastAPI + SQLAlchemy (Async) + PostgreSQL + Alembic
-- **Agentic Pipeline**: LangGraph (State Machine) + LangChain LCEL
-- **Graph Database**: Neo4j (Enterprise/Community)
-- **Vector Database**: Qdrant (1024-dim, BGE-M3 embeddings)
-- **Primary LLM Models** (`rag_service/app/RAG/GraphRAG/config.py` & `backend/app/config.py`):
-  - **OpenRouter Default**: `openai/gpt-5.6-luna` (alias: `luna`)
-  - **Ready-Selection Aliases**:
-    - `luna` $\to$ `openai/gpt-5.6-luna` (Default)
-    - `4o-mini` $\to$ `openai/gpt-4o-mini`
-    - `oss` $\to$ `openai/gpt-oss-120b`
-    - `sonnet` $\to$ `anthropic/claude-3.5-sonnet`
-    - `haiku` $\to$ `anthropic/claude-3.5-haiku`
-    - `4o` $\to$ `openai/gpt-4o`
-  - **Embedding**: `BAAI/bge-m3` (FP16 on CUDA, FP32 on CPU, 1024-dim)
-  - **Reranker**: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`
-  - **RAGAS Evaluator**: `meta-llama/llama-3.3-70b-instruct:free` (via OpenRouter)
+There is no hard production LOC limit. Cohesion and comprehension matter more than physical line count. Do not split a file solely to satisfy a numeric threshold; a cohesive 300–500 line feature file is acceptable when it is clearer than several one-use files.
 
----
+## Abstraction rule
 
-## 📂 Key Project Structure & Paths
-```
-Cybercase Framework/
-├── backend/                  # FastAPI chat persistence/orchestration API
-│   ├── app/
-│   │   ├── main.py           # FastAPI entrypoint
-│   │   ├── models/           # SQLAlchemy models (chat, rag_context, report)
-│   │   ├── routers/          # Health and chat endpoints
-│   │   ├── schemas/          # Domain request/response schemas (chat, rag, reports)
-│   │   ├── services/         # Domain service modules:
-│   │   │   ├── case_analysis/# Grounded case overview & Q&A prompt reasoning
-│   │   │   ├── chat/         # Thread & message management + compatibility facade
-│   │   │   ├── clients/      # HTTP service clients (GraphRAG API client)
-│   │   │   ├── followup/     # Deterministic gap selection & question realization
-│   │   │   ├── llm/          # LLM provider routing & model registry
-│   │   │   ├── reports/      # Markdown & PDF report generation service
-│   │   │   └── workflow/     # Background run lease worker, pipeline & outcomes
-│   │   └── database.py       # Async engine and session management
-│   └── alembic/              # Async PostgreSQL migrations
-├── rag_service/              # Standalone GraphRAG FastAPI service
-│   └── app/RAG/GraphRAG/
-│       ├── ingestion/         # Parse STIX JSON and ingest into Neo4j + Qdrant
-│       ├── pipeline/          # LangGraph, context builder, and evaluator
-│       ├── retrieval/         # Dense + graph retrieval and fusion
-│       ├── evaluation/        # RAG evaluation tools
-│       ├── model_registry.py  # Central OpenRouter presets & alias resolver
-│       └── config.py          # RAG settings and model routing
-├── frontend/                 # Next.js 16 Web Application
-│   └── src/
-│       ├── app/chat/         # Persisted chat workspace
-│       └── components/       # Tailwind v4 reusable UI blocks
-├── Documents/                # Reference documents and case-analysis knowledge assets
-├── Mitre_ATT&CK Doc/         # STIX 2.1 JSON enterprise, mobile, ICS attack patterns
-└── docker-compose.yml        # PostgreSQL, backend, rag-service, and frontend
-```
+Before creating a module, component, hook, service, adapter, compatibility layer, DTO, wrapper, persistence entity, repository abstraction, or worker abstraction, identify the concrete current requirement that needs it. Without one, do not create it.
 
----
+A helper used by one production consumer should normally remain local unless it owns substantial state or side effects, represents a real domain boundary, is complex enough to improve comprehension when isolated, or has a concrete independent reuse/test reason. Do not create 20–80 line files for conceptual purity.
 
-## 💻 Common Commands
+## Compatibility rule
 
-### Virtual Environment & Backend Setup (Windows)
-```bash
-# Activate virtual environment (Windows MSYS Bash / Git Bash)
-source env_mitre/Scripts/activate  # Or in Cmd/PowerShell: .\env_mitre\Scripts\activate
+Preserve compatibility only for a concrete supported caller, current persisted-data requirement, or explicit user requirement. Historical documentation is not a supported caller. Do not add aliases, wrappers, fallback readers, version adapters, or parallel legacy/new paths just in case. Delete obsolete paths after supported callers migrate.
 
-# Install dependencies for all services
-python install_deps.py
+Do not introduce event sourcing, generic repositories, plugin architecture, service locators, new microservices, queues, broker infrastructure, worker coordination systems, speculative snapshots, generic version adapters, broad compatibility DTOs, extra persistence layers, frontend global state, or speculative extension points without an explicit current requirement.
 
-# Run FastAPI backend with Doppler secret management
-cd backend
-doppler run -- uvicorn app.main:app --reload
+Do not refactor merely to satisfy an architectural ideal. Reduce navigation and conceptual cost, and prefer direct code over wrapper chains. Do not replace one unnecessary abstraction with another.
 
-# Upgrade the single-head DB migration graph
-python -m alembic upgrade head
-```
+## Current product boundary
 
-### RAG Pipeline CLI & Interactivity
-```bash
-cd rag_service/app
+- `/case` is the frontend Case Library. `/case/[caseId]` is the Case workspace; there is no standalone `/chat` route.
+- `Case` owns documents, received evidence sources, chat messages, processing runs, analysis results, optional external RAG context, and reports. `Case.evidence_revision` is the evidence revision coordinate.
+- The backend exposes authenticated Case, material, evidence, analysis, clarification, Case Ask/Chat, and report routes under `/api/v1`.
+- Main analysis runs on Case evidence. Follow-up selection is deterministic; an answer becomes new case evidence and triggers re-analysis.
+- MITRE ATT&CK retrieval is conditional external technical context. Assistant output and external RAG/MITRE text are not case evidence.
+- Reports are Case-scoped, preliminary, deterministic, and template-first.
 
-# Display available OpenRouter models catalog
-python -m RAG.GraphRAG.main --list-models
+Do not reconstruct deleted chat-first, identity-binding, worker-coordination, standalone-gap, or compatibility architecture because an old document mentions it.
 
-# Ingest all STIX 2.1 bundle data into Qdrant & Neo4j
-python -m RAG.GraphRAG.main --ingest
+## Working method
 
-# Run interactive RAG playground with default GPT-OSS model
-python -m RAG.GraphRAG.main
+Read `CONTINUITY.md` at the start of each turn and update it only for meaningful changes. Inspect routes, models, schemas, tests, generated contracts, and real callers before changing behavior. Design UI for the user rather than for database fields.
 
-# Run with specific model alias (e.g. Sonnet, GPT-OSS, GPT-4o)
-python -m RAG.GraphRAG.main --model sonnet
-python -m RAG.GraphRAG.main --model oss
-python -m RAG.GraphRAG.main --model 4o
+Use existing libraries and project entry points. Let development failures surface instead of hiding them with broad default fallbacks or empty exception handlers. Keep Python and TypeScript typed, follow the installed framework versions, and keep code self-explanatory with comments only for unavoidable non-obvious behavior.
 
-# Run pipeline in LangGraph Agentic mode
-python -m RAG.GraphRAG.main --agent
+Before handoff, review the final diff, run the narrowest relevant checks, run `git diff --check`, and report exactly what was and was not verified.
 
-# Run RAGAS metrics evaluation
-python -m RAG.GraphRAG.evaluation.eval_runner
-```
+## Useful current paths
 
-### Frontend Development
-```bash
-cd frontend
-npm install
-npm run dev     # Run Dev server on http://localhost:3000
-npm run lint    # ESLint checking
-npm run test    # Vitest suite
-npm run build   # Production compile
-```
-
-### Docker Infrastructure
-```bash
-# Start PostgreSQL, backend, rag-service, and frontend
-doppler run -- docker compose up --build
-```
-
----
-
-## 📝 Coding Guidelines & Standards
-
-### Python & FastAPI
-1. **Async Everywhere**: Use `async def` and await async DB operations (`SQLAlchemy` or `Motor`/`Redis` calls). Never block the main FastAPI thread.
-2. **Type-Safety & Pydantic**: Ensure all incoming requests and response payloads are strictly typed using Pydantic models.
-3. **Database Sessions**: Obtain the async DB session through the existing `get_db` FastAPI dependency.
-
-### LangGraph Agentic Loops
-1. **State Immutability**: Ensure state updates in `agent_graph.py` return a modified state dictionary instead of modifying keys in-place.
-2. **Confidence checks**: The RAG evaluator returns `SUFFICIENT` or `INSUFFICIENT`; an insufficient result selects a bounded recovery strategy such as `BROADEN_SEARCH` or `ACKNOWLEDGE_LIMIT`. It does not pause for user input.
-3. **Grace Limit**: Limit loop iterations strictly. Never let self-reflection run for more than 2-3 iterations to avoid infinite API cost.
-
-### Next.js & React
-1. **React 19 & Tailwind v4**: Use utility-first styling with native Tailwind v4 class names. Use React 19 primitives.
-2. **Strict TypeScript**: Avoid `any`. Define interfaces for all props, states, and API return values.
-
----
-
-## 🔄 Analysis Module & External Technical Augmentation
-
-### Main Case Analysis Pipeline
-The core analysis module (`backend/app/services/case_analysis/`) executes on admitted case evidence:
-1. **Direct Analysis**: One structured LLM call returns a summary, key findings, material gaps, and lightweight source references.
-2. **Validation**: The backend validates identifiers and supplied source references without adding a second semantic analysis pipeline.
-3. **Follow-up Policy**: Deterministic rules filter answered or explicitly unknown gaps, apply priority and round limits, and select one gap.
-4. **Question Realization**: A small optional LLM call phrases only the selected gap as a concise question.
-
-### Conditional Technical Augmentation (`rag_service`)
-When admitted case findings describe cyber threat activity, the backend conditionally gates retrieval to `rag_service` (STIX 2.1 ATT&CK):
-1. **Dense Vector Search**: Embeds technical query using `BAAI/bge-m3` $\to$ matches vectors in Qdrant.
-2. **Graph Expansion**: Performs 2-hop depth Cypher queries in Neo4j (techniques, mitigations, groups).
-3. **Fusion (RRF)**: Merges results using Reciprocal Rank Fusion + Cross-Encoder reranking.
-4. **Source-Role Isolation**: The retrieved technical context is rendered strictly as an analytical appendix, never as an admitted case fact.
-
-### Clarification Gating
-The Main Analysis emits material unresolved gaps. The backend deterministically selects at most one eligible gap and persists a focused clarification question. The subsequent answer enters the Case evidence snapshot. The retired separate Gap Analysis LLM is not part of the production Case path.
-
-### Backend Route Boundary
-
-The backend exposes `/api/v1/health`, authenticated Case CRUD/material/evidence/snapshot/analysis/run/clarification/report routes, and optional Case Chat Assistant endpoints under `/api/v1/cases/{case_id}/chat` (`GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages`, `GET /cases/{case_id}/chat/runs/{run_id}`). ChatThread has no independent user-facing lifecycle; it is scoped 0..1 to its parent Case, created on demand (when the user opens Chat or when analysis emits a follow-up question), and destroyed strictly when the Case is deleted. Existing `/api/v1/chats` thread/message/run/report routes remain a compatibility interaction surface; `DELETE /chats/{thread_id}` is a protected compatibility endpoint rather than a primary user workflow. Do not add top-level `/api/v1/reports`, public upload/OCR, or standalone RAG-proxy endpoints. Chat messages, assistant analysis publications, and external RAG context are not authoritative evidence; native citations resolve Case evidence source revisions and snapshots.
+- Backend entrypoint and route registration: `backend/app/main.py`
+- SQLAlchemy models: `backend/app/models/`
+- Pydantic contracts: `backend/app/schemas/`
+- Case workflow: `backend/app/services/workflow/`, `backend/app/services/case_analysis/`, and `backend/app/services/followup/`
+- Route-surface tests: `backend/tests/test_route_surface.py`
+- Canonical frontend routes: `frontend/src/app/case/`
+- Generated frontend API contracts: `frontend/src/lib/generated/`
+- Separate MITRE retrieval service: `rag_service/`

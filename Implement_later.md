@@ -1,3 +1,5 @@
+> Status: historical experiment note, not runtime implementation guidance. Current source, tests, API/schema contracts, and root `AGENTS.md` define implementation behavior.
+
 technique_coverage
 วิธีที่ 2 — ATT&CK Technique Coverage (แนะนำเพิ่ม) ⭐
 เหมาะมากสำหรับโปรเจกต์นี้โดยเฉพาะ ไม่ต้องใช้ LLM judge เลย

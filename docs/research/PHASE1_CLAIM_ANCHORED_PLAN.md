@@ -1,9 +1,10 @@
 # Phase 1 Claim-Anchored Analysis Plan (HOW)
 
 > [!NOTE]
-> **Document Role**: Implementation Architecture Plan (**HOW**).
-> * **Canonical Project Direction (WHY / WHAT)**: [`CURRENT_PROJECT_DIRECTION.md`](CURRENT_PROJECT_DIRECTION.md)
+> **Document Role**: Historical research plan (**HOW**), not current implementation guidance.
+> * **Research direction (WHY / WHAT)**: [`CURRENT_PROJECT_DIRECTION.md`](CURRENT_PROJECT_DIRECTION.md)
 > * **Actual Implemented Code (STATUS)**: [`ATTRIBUTE_FIRST_IMPLEMENTATION.md`](ATTRIBUTE_FIRST_IMPLEMENTATION.md)
+> * **Runtime authority**: current source, tests, API/schema contracts, and root [`AGENTS.md`](../../AGENTS.md)
 > * **Historical Ledger**: Retained in the appendix at the bottom of this document.
 
 ## 1. Recommendation
@@ -100,4 +101,3 @@ Implement the limited opt-in case-overview branch (`CASE_ANALYSIS_PIPELINE=claim
 * **2026-09-08 [USER]**: Attribute-first implementation authorized and documented in `ATTRIBUTE_FIRST_IMPLEMENTATION.md`. NLI remains the next separate integration step, with a verifier interface provided by Phase 1.
 * **2026-09-08 [USER]**: Subsequent clarification: User prefers dedicated learned components (NLI/learned verification) beyond pure generative LLM prompts. Candidate scope includes evidence-to-claim NLI support checks and evidence-to-generated-proposition checks.
 * **2026-09-08 [USER]**: Initial request for proposed Phase 1 plan and CAMS v4 suitability assessment.
-

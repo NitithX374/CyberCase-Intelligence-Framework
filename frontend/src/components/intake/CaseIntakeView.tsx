@@ -61,7 +61,7 @@ export function CaseIntakeView({
             <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">Add the information and documents that should be included in the next Case analysis.</p>
           </div>
           <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs font-medium text-ink-secondary">
-            <span className={`h-1.5 w-1.5 rounded-full ${run?.status === "failed" ? "bg-critical" : isBusy ? "bg-evidence motion-safe:animate-pulse" : "bg-established"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${run?.status === "failed" ? "bg-critical" : isBusy ? "bg-evidence" : "bg-established"}`} />
             {status}
           </div>
         </header>
@@ -101,12 +101,9 @@ export function CaseIntakeView({
               </div>
               <div className="divide-y divide-line">
                 {isUploadingDocument && (
-                  <article aria-live="polite" className="grid gap-3 bg-accent-soft/30 px-3 py-3.5 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.7fr)] sm:items-center sm:gap-4 animate-pulse">
+                  <article aria-live="polite" className="grid gap-3 bg-accent-soft/30 px-3 py-3.5 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.7fr)] sm:items-center sm:gap-4">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-                      </span>
+                      <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-accent" />
                       <p className="break-words text-xs font-semibold text-ink">
                         {uploadingFilename || "Uploading document…"}
                       </p>

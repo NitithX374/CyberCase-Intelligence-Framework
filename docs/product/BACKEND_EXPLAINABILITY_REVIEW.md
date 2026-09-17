@@ -1,6 +1,6 @@
 # Backend explainability and prosecutor comprehension review
 
-2026-09-06. Inspection of the current working tree on `main`, HEAD `d889226`, including pre-existing uncommitted refactors. This is an assessment and proposed design, not an implementation. No production code or case material was changed.
+2026-09-06. Historical product/research assessment based on the then-current working tree. This is not runtime documentation or an implementation requirement; current source, tests, contracts, and root `AGENTS.md` supersede its implementation observations. No production code or case material was changed by the assessment.
 
 ## Assessment
 

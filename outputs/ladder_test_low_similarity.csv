@@ -1,0 +1,68 @@
+sample_id,label,text_en,text_th_nllb,bge_m3_cosine,random_pair_cosine
+560,0,c228a534535b22a316a97908595a2d793d0fecabadc32846c6d1bfb08ca9a658,สาขาประจําปี 2020,0.260917,0.330525
+347,0,LESS-SOPHISTICATED EXODUS IOS VERSION ALSO DISCOVERED,หน่วยงานที่ไม่ค่อยมีความยุ่งยาก,0.324766,0.407471
+404,0,"browsing cookies,",ข้อบอบอบอุ่น,0.414985,0.422503
+427,0,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,สีปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลาปลา,0.422007,0.329216
+461,0,Turkey,เทอร์กี,0.428914,0.268104
+362,0,Exodus Two,ออกมาจาก พ่าเรือ,0.440999,0.387283
+349,0,Pornhub,โปร์นฮับ,0.500711,0.372436
+235,1,Pushing overlays,หมุนผูก,0.505268,0.388127
+483,0,Belarus,เบลารัสเซีย,0.52007,0.210015
+45,1,"The malware steals the contacts and writes them as a local array before they’re exfiltrated, Desai said.",แมวแวร์ขโมยสัญลักษณ์ และเขียนมันเป็นเรียงส่วนท้องถิ่น ก่อนที่มันจะถูกฉีดออกมา,0.563615,0.501576
+319,1,Recovers contacts saved on the device;,คบ คอนเทคต์ที่บันทึกไว้บนเครื่อง,0.579021,0.439249
+442,0,a42a05bf9b412cd84ea92b166d790e8e72f1d01764f93b05ace62237fbabe40e,สีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบีบี,0.579432,0.713042
+341,0,"This piece of malware has a number of vicious backdoor features, which include the ability to:",แมวแวร์นี้มีคุณสมบัติด้านหลังหลายอย่าง,0.601791,0.441925
+527,0,Insidious mobile malware with crippling options,โมวเลอรี่มือถือที่น่ารังเกียจ,0.615106,0.422689
+373,0,These include:,ประกอบด้วย,0.61813,0.335081
+451,0,Tactic FlashLight or PROFlashLight,แฟชล็อตคติก หรือ โปรฟล็อตชล็อต,0.63605,0.359508
+467,0,Luxembourg,ลักเซมเบิร์ก,0.64301,0.249861
+64,1,clickjacking via Accessibility Services,คลิกเจคผ่านบริการรับรองความสามารถ,0.651388,0.409849
+585,0,The malware was rented privately to a limited number of “customers”; criminals willing to use such malware to perform fraud.,โมวเลอรถูกเช่าให้บริการโดยส่วนตัวให้กับจํานวนจํากัดของลูกค้า,0.656823,0.522548
+322,1,Locks the device screen and shows a persistent ransom message;,ปิดหน้าจอของอุปกรณ์ และแสดงข้อความค่าตอบแทนที่คงอยู่,0.66211,0.40255
+635,0,Canada,กาเนด้า,0.664006,0.274009
+76,1,Exodus is equipped with extensive collection and interception capabilities.,เอ็กซอ๊ด มีความสามารถในการเก็บและจับเสียง,0.668096,0.399595
+624,0,The encrypted body is composed of various identifiers which are joined together:,สารที่ถูกรหัสประกอบด้วยตัวประชากรต่าง ๆ ที่เชื่อมโยงกัน,0.668769,0.424801
+454,0,"To circumvent ever-evolving app store defenses, mobile malware distributors rely on a strategy from the PC malware realms: Instead of uploading the actual malware to the store, which can result in sampling and detection at a very early stage in the distribution chain, they upload a downloader that may seem rather innocuous compared to actual malware.",เพื่อเลี่ยงแนวรับของ App Store ที่กําลังพัฒนาอยู่เสมอ ผู้จําหน่ายแวร์มือถือมุ่งมั่นในยุทธศาสตร์จากอาณาจักรของแวร์พีซี,0.670073,0.440214
+283,1,Remote actions: Back-connect proxy,การกระทําระยะไกล: โปรแกรมสกอร์กลับ,0.672483,0.400711
+62,1,access microphone,มิโครฟอนเข้า,0.675518,0.409744
+395,0,Taiwan,ไต้หวัน,0.677571,0.26281
+437,0,it.offertetelefonicheperte,มัน.ออฟอร์ทโทรศัพท์ที่เชียร์,0.678388,0.402326
+626,0,"Apps designed to mimic Instagram, WhatsApp, Facebook, Super Mario Run, and Pokemon Go are all making the rounds in the hacking community.",แอพพลิเคชันที่ออกแบบเพื่อเลียนแบบอินสตาแกรม แวตแซป แฟสบุ๊ก ซูเปอร์มาริโอ รัน และโปคเกมอนโก้,0.686818,0.308923
+274,1,Overlaying: Static (hardcoded in bot),การฝาก: สแตติก (ติดตั้งในบอท),0.687322,0.381811
+472,0,ExoBot,อีคโซโบ๊ต,0.689274,0.354847
+501,0,Georgia,จอร์เจีย,0.693707,0.227266
+141,1,It was nonetheless able to exfiltrate a variety of sensitive data including:,แต่ก็สามารถเอาข้อมูลที่มีความสัมผัสหลายประเภทออกมาได้ เช่น,0.695455,0.393851
+411,0,Stage 2: Exodus Two,ขั้นตอนที่ 2: ออกมาจากประเทศไทย,0.698261,0.255225
+476,0,"The new control panel will add features that provide even more insight so attackers can fully take advantage of a device, Alex Holden, founder and chief information security officer of Hold Security, told Bank Info Security.",แผนควบคุมใหม่จะเพิ่มฟังก์ชันที่ให้ความเข้าใจมากขึ้น เพื่อให้ผู้โจมตีสามารถใช้ประโยชน์อย่างเต็มที่จากอุปกรณ์หนึ่งได้ อเล็กซ์ โฮลเด่น ผู้ประกอบและหัวหน้าเจ้าหน้าที่รักษาความปลอดภัยข้อมูลของฮอลด์เซคูรี่ท์ บอกว่า,0.698728,0.335499
+181,1,The app then stays in the background listening to commands from the cybercrooks.,แอพพลิเคชันนั้นจะอยู่ในพื้นฐานฟังคําสั่งจากนักซับเออร์,0.699413,0.585799
+518,0,Trump Dash,ทรัมป์ดัช,0.699801,0.336685
+22,1,Activate a device’s camera or mic remotely,กิจกรรมกล้องหรือไมโครโครงการจากระยะทาง,0.703808,0.51174
+119,1,Extract the calls log,ถอนบันทึกการโทร,0.705722,0.366349
+257,1,"This malware is also able to take screen captures of the user’s screen, which it likely uses to steal credentials since the keyboard strokes are visible.",โมวเลอร์นี้ยังสามารถถ่ายภาพจอของผู้ใช้ได้ ซึ่งมันอาจใช้ในการขโมยใบรับรอง เพราะการตีคีย์บอร์ดเห็นได้,0.707074,0.490218
+40,1,"Leveraging this feature, the malware developer can root the device using a range of vulnerabilities, well-known or zero-day,” Shivang Desai, a researcher with the firm wrote Tuesday.",การใช้คุณสมบัตินี้ ผู้พัฒนาแวร์สามารถก่อตั้งเครื่องมือได้โดยใช้ความเสื่อมหลายประเภท หรือที่รู้จักกันดี หรือไม่มีวันเป็นไร้ค่า  Shivang Desai นักวิจัยจากบริษัทได้เขียนในวันอังคารนี้,0.710148,0.249304
+95,1,Extract information on pictures from the Gallery.,ถอดข้อมูลจากภาพจากห้องแสดงภาพ,0.711858,0.369253
+402,0,"And it’s not just customers of big banks at risk, the researchers added: Virtual payment platforms and crypto wallets are also being targeted.",และมันไม่ใช่แค่ลูกค้าของธนาคารใหญ่เท่านั้นที่มีความเสี่ยง นักวิจัยเพิ่มเติมว่า:,0.713372,0.291613
+419,0,Command execution,การดําเนินการบัญชาการ,0.713583,0.519584
+326,1,Surveils active apps to imitate and execute overlay attacks;,ติดตามแอพที่ใช้ในการจําลองและดําเนินการโจมตีแบบฝากผิว,0.713876,0.469086
+123,1,Extract the address book,ถอนหนังสือที่อยู่,0.715182,0.45601
+168,1,Polipo proxy and Man-in-the-Middle Attack,พอร์คี้โพลิโป และโจมตีคนกลาง,0.717979,0.336737
+448,0,Exodus consisted of three distinct stages.,การ ออก ออก ประกอบด้วย สาม ขั้นตอน,0.72069,0.344311
+134,1,Extract logs from WhatsApp,ถอนบันทึกจาก WhatsApp,0.721258,0.427505
+618,0,Marcher,มาร์เชอร์,0.721373,0.243304
+543,0,Oman,โอมาน,0.721712,0.258817
+230,1,Locking the device,ปิดเครื่อง,0.722036,0.360642
+458,0,Official App Stores: A Fraudster’s Holy Grail,ร้านแอพพลิเคชั่นทางการ: กรัลลักษณ์ของนักโกง,0.722076,0.303166
+12,1,Stealing contacts,การขโมยสื่อ,0.722831,0.425534
+102,1,Extract logs from WhatsApp.,ถอนบันทึกจาก WhatsApp,0.722848,0.31888
+318,1,Sends mass text messages from the device to predefined receivers;,ส่งข้อความวัสดุจากเครื่องไปยังเครื่องรับที่กําหนดก่อน,0.724158,0.581994
+197,1,"“The malware sets itself up as a default telephony provider, mostly for intercepting SMS messages,” researchers said.",แวร์แวร์ตั้งตัวเป็นผู้ให้บริการโทรศัพท์แบบจํากัด โดยส่วนใหญ่เพื่อรับข้อความ SMS  นักวิจัยกล่าวว่า,0.725819,0.478891
+276,1,Screen streaming,การถ่ายทอดจอ,0.729573,0.36379
+329,1,"Following deactivation, the malware gains complete control of the device and is now able to send and receive data from the C2 without any interference.",หลังจากปิดการใช้งาน โมวเลอร์ได้ควบคุมอุปกรณ์อย่างเต็มที่ และตอนนี้สามารถส่งและรับข้อมูลจาก C2 โดยไม่ต้องมีการขัดขวาง,0.73151,0.479174
+239,1,The malware searches both internal and external storage and encrypts them using RC4.,แมวแวร์ค้นหาที่เก็บภายในและภายนอก และรหัสมันโดยใช้ RC4,0.732352,0.493079
+179,1,"Once installed, the malware requests Device Administrator privileges.",เมื่อติดตั้งแล้ว แมวแวร์จะขอสิทธิของผู้บริหารอุปกรณ์,0.732448,0.539132
+209,1,"As part of the analyzed Red Alert 2.0 attack, the malware was being distributed attached to spam messages.",ในส่วนหนึ่งของการโจมตี Red Alert 2.0 ที่วิเคราะห์ การแพร่แวร์มาวเลอรี่,0.733954,0.444797
+498,0,The fake doesn’t quite nail the app name.,แปลงไม่ค่อยเข้าใจชื่อแอพเลย,0.734766,0.500466
+381,0,Hotstar,โฮตสตาร์,0.737811,0.276741
+74,1,The collected data exfiltration is achieved over the command and control channel.,การขัดขัดข้อมูลที่รวบรวมจะเกิดขึ้นผ่านช่องทางบัญชาการและควบคุม,0.737945,0.35617
+453,0,Anubis Android banking malware returns with extensive financial app hit list,Anubis แอนดรอยด์ แมวแวร์การเงินกลับด้วยรายการการติดตามแอพการเงิน,0.737997,0.322951
+183,1,Banking Trojans that rely on the overlay mechanism to steal information need to know what application is in the foreground.,ทรอยานการธนาคาร ที่เชื่อมโยงกลไกในการขโมยข้อมูล ต้องรู้ว่าการใช้งานคืออะไรที่อยู่ในพื้นฐานแรก,0.738152,0.528238

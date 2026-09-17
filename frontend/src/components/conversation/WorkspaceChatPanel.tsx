@@ -41,7 +41,6 @@ export function WorkspaceChatPanel({
   visibleMessages,
   chatStatus,
   input,
-  hasAnalysisContext,
   leadResult,
   evidenceSources,
   onViewChange,
@@ -82,19 +81,6 @@ export function WorkspaceChatPanel({
     continueFollowUp("answered");
   };
 
-  const evidenceRevisionLabel = leadResult
-    ? ` · Evidence revision ${leadResult.evidence_revision}`
-    : evidenceSources
-      ? ` · ${evidenceSources.length} sources`
-      : "";
-  const contextLabel = leadResult
-    ? leadResult.freshness === "stale"
-      ? `Using older analysis${evidenceRevisionLabel}`
-      : leadResult.freshness === "current"
-        ? `Using current analysis${evidenceRevisionLabel}`
-        : "Analysis freshness unavailable"
-    : "Ask becomes available after Case analysis";
-
   const handleClose = () => {
     onToggleChat?.();
     window.requestAnimationFrame(() => {
@@ -109,37 +95,20 @@ export function WorkspaceChatPanel({
       aria-label="Ask about this case"
       className="fixed inset-0 z-50 flex h-full w-full shrink-0 flex-col overflow-hidden border-l border-line bg-surface md:static md:z-auto md:w-[clamp(360px,34vw,480px)] md:max-w-[42vw]"
     >
-      <div className="flex min-h-14 shrink-0 items-center border-b border-line bg-surface px-5 py-2.5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-sm font-bold text-ink">Ask about this case</h2>
-            <p className="mt-1 text-[11px] leading-4 text-ink-muted">{contextLabel}</p>
-          </div>
-          <span
-            className={`mt-2 h-2 w-2 shrink-0 rounded-full ${phase === "error"
-              ? "bg-critical"
-              : phase === "querying" || phase === "analyzing"
-                ? "bg-evidence motion-safe:animate-pulse motion-reduce:animate-none"
-                : phase === "awaiting_followup"
-                  ? "bg-unresolved motion-safe:animate-ping"
-                  : "bg-established"
-            }`}
-            title={`Status: ${phase}`}
-          />
-          {onToggleChat && (
-            <button
-              type="button"
-              ref={closeButtonRef}
-              onClick={handleClose}
-              aria-label="Close Ask"
-              title="Close Ask"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <Icon name="close" className="h-4 w-4" />
-            </button>
-          )}
+      {onToggleChat && (
+        <div className="flex shrink-0 items-center justify-end border-b border-line bg-surface px-3 py-2">
+          <button
+            type="button"
+            ref={closeButtonRef}
+            onClick={handleClose}
+            aria-label="Close Ask"
+            title="Close Ask"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <Icon name="close" className="h-4 w-4" />
+          </button>
         </div>
-      </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {messages.length === 0 && (
@@ -175,16 +144,10 @@ export function WorkspaceChatPanel({
                     onInputChange("");
                   }}
                 />
-              ) : !hasAnalysisContext ? (
-                <ChatBoundaryNotice
-                  message="Complete the Case analysis from Intake before using Chat. Chat will not start analysis."
-                  actionLabel="Open Case Intake"
-                  onAction={() => onViewChange("intake")}
-                />
               ) : null}
               <ChatComposer
                 input={input}
-                isSubmitting={isFollowUpSubmitting || (chatStatus !== "awaiting_followup" && !hasAnalysisContext)}
+                isSubmitting={isFollowUpSubmitting}
                 onInputChange={onInputChange}
                 onSubmit={handleComposerSubmit}
                 placeholder={clarification ? `Answer: ${clarification.gap.topic}…` : undefined}
@@ -255,14 +218,6 @@ function EmptyChatIntakeNotice({ onOpenIntake }: { onOpenIntake: () => void }) {
   );
 }
 
-function ChatBoundaryNotice({ message, actionLabel, onAction }: { message: string; actionLabel: string; onAction?: () => void }) {
-  return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-ink-secondary">
-      <span>{message}</span>
-      {onAction && <button type="button" onClick={onAction} className="font-bold text-ink underline decoration-line underline-offset-2 hover:text-accent">{actionLabel}</button>}
-    </div>
-  );
-}
 
 function ChatComposer({ input, isSubmitting, onInputChange, onSubmit, placeholder }: {
   input: string;

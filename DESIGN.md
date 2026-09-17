@@ -228,25 +228,25 @@ Source provenance connects analytical claims directly to raw user-submitted evid
 - Flattened prose and timeline; MITRE associations presented as quiet analytical annotations.
 - Facts and gaps indicated with quiet glyphs (`✓`, `?`), not saturated green/yellow blocks.
 
-### Case Materials (`/materials`)
+### Case Materials (`/case/[caseId]/materials`)
 - Document-oriented presentation of user-authored evidence (initial narrative, clarifications, add-info).
 - Thin evidence marker (`#356C8A`) on headers; avoids blue card collections.
 
-### Technical Context (`/technical-context`)
+### Technical Context (`/case/[caseId]/technical-context`)
 - Flattened reference notes separated by thin horizontal rules (`divide-y divide-line/60`).
 - Technique headings with small `#6654A3` ID tag; concise plain-language summary in main reading flow.
 - Full MITRE definition tucked inside collapsible `คำอธิบายทางเทคนิค ▾`.
 - Quiet 2-line external reference notice under header; no purple alert banner.
 
-### Chat (`/chat`)
+### Case Ask / Chat panel (`/case/[caseId]`)
 - Conversation integrated seamlessly into the case workspace.
 - Avoids loud blue-user / gray-assistant bubbles; user messages distinguished through clean structure and evidence attribution.
 
-### Report (`/report`)
+### Report (`/case/[caseId]/report`)
 - Workspace shell remains warm neutral (`#F6F3EA`).
 - Embedded PDF viewer is the primary hero element, surrounded by quiet charcoal/neutral toolbar controls.
 
-### New Case Intake (`/intake`)
+### New Case Intake (`/case/[caseId]/intake`)
 - Focused case intake workspace. Large document-like narrative textarea (`#FCFAF5` on `#F6F3EA`).
 - Primary action: Charcoal `#262522` button. No glowing inputs, neon borders, or hero gradients.
 
