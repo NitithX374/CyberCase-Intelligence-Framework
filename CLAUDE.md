@@ -113,7 +113,8 @@ User Input (Thai/English)
 [HYBRID RETRIEVAL] retrieve_multi_quota — per-query quota, round-robin
     interleaved so every sub-query's technique survives the trim
     ├── Dense vector search (Qdrant + BGE-M3) + rerank
-    └── Graph expansion (Neo4j, 2 hops)
+    └── Graph expansion (Neo4j, 1 hop in+out from each seed; seeds come
+        only from the hits that survive the per-query quota)
     ↓
 [EVALUATOR] Context sufficiency check (evaluator.py)
     ├── SUFFICIENT → proceed
@@ -173,7 +174,12 @@ The frontend loads and generates reports through the chat-scoped report endpoint
 - **`DUAL_QUERY_RETRIEVAL`**: read only by `pipeline/chain.py`, which is evaluation-only. The served agent does no input translation
 - **RAGAS eval LLM**: `qwen/qwen-2.5-72b-instruct` via OpenRouter
 - **Local models (`evaluation/` only)**: Ollama `qwen2.5:7b` + `gemma3:4b`, `OLLAMA_BASE_URL` (default `http://localhost:11434`). Not reachable from the service
-- **Vector top-K**: 10, **Graph depth**: 2 hops, **Final top-K**: 5
+- **Vector top-K**: 10, **Final top-K**: 5 (`FINAL_TOP_K` — graph seeds on the
+  single-query path), **Graph expansion**: 1 hop, incoming + outgoing, batched
+  into 3 Cypher statements per retrieval. There is no `GRAPH_DEPTH` setting;
+  `get_multi_hop_path()` (4 hops) is a standalone utility the pipeline never calls.
+  Under `retrieve_multi_quota` the graph seed count is the per-query quota (3),
+  not `FINAL_TOP_K`, so a hit the quota drops cannot return as a subgraph
 - **Qdrant collections**: `mitre_entities`, `mitre_relationships`
 
 ## Secrets & Environment
