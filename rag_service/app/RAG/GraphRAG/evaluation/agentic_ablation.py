@@ -469,15 +469,29 @@ def _roll_up(ids: set[str]) -> set[str]:
     return {i.split(".")[0] for i in ids}
 
 
-def score_answer(answer: str, sample: dict, alias_map: dict) -> dict:
-    """Technique P/R/F1 of one answer, plus per-step recall by cue type."""
+def score_answer(
+    answer: str, sample: dict, alias_map: dict, context: str | None = None
+) -> dict:
+    """Technique P/R/F1 of one answer, per-step recall by cue type, grounding.
+
+    Primary prediction set = technique IDs the answer cites, rolled up to the
+    parent. Name matching through ``alias_map`` is reported separately only:
+    the exported map keeps one ID per lowercased name, and where an enterprise
+    and a mobile technique share a name the mobile ID won ("screen capture" ->
+    T1513, not T1113; "ingress tool transfer" -> T1544, not T1105), alongside
+    revoked IDs ("data encrypted" -> T1022). On the smoke run every name-only
+    prediction was one of these, so name matching added spurious IDs to answers
+    that had already cited the right enterprise ID.
+    """
     gold = {g.upper() for g in sample["gold_attack_ids"]}
-    predicted_raw = extract_all_techniques(answer, alias_map)
-    predicted = _roll_up(predicted_raw)
+    cited_raw = extract_technique_ids(answer)
+    predicted = _roll_up(cited_raw)
 
     main = technique_set_score(predicted, gold)
-    raw = technique_set_score(predicted_raw, gold)
-    ids_only = technique_set_score(_roll_up(extract_technique_ids(answer)), gold)
+    raw = technique_set_score(cited_raw, gold)
+    with_names = technique_set_score(
+        _roll_up(extract_all_techniques(answer, alias_map)), gold
+    )
 
     step_recall: dict[str, list[float]] = {}
     for step in sample.get("attack_steps", []):
@@ -487,7 +501,7 @@ def score_answer(answer: str, sample: dict, alias_map: dict) -> dict:
                 technique_set_score(predicted, step_gold)["recall"]
             )
 
-    return {
+    out = {
         "precision": main["precision"],
         "recall": main["recall"],
         "f1": main["f1"],
@@ -496,15 +510,28 @@ def score_answer(answer: str, sample: dict, alias_map: dict) -> dict:
         "n_pred": len(predicted),
         "n_gold": len(gold),
         "f1_raw": raw["f1"],
-        "f1_ids_only": ids_only["f1"],
+        "f1_with_names": with_names["f1"],
         "step_recall": step_recall,
     }
+    if context is not None:
+        in_context = _roll_up(extract_technique_ids(context))
+        correct = predicted & gold
+        out.update(
+            ungrounded_share=(len(predicted - in_context) / len(predicted)) if predicted else None,
+            n_correct=len(correct),
+            n_correct_ungrounded=len(correct - in_context),
+        )
+    return out
 
 
-def context_recall(context: str, sample: dict, alias_map: dict) -> float:
-    """Share of gold techniques mentioned anywhere in the rendered context."""
+def context_recall(context: str, sample: dict) -> float:
+    """Share of gold techniques whose ID appears in the rendered context.
+
+    Vector-hit and subgraph headers carry the ATT&CK ID; relationship documents
+    and subgraph neighbour lists carry names only, so this is a lower bound.
+    """
     gold = {g.upper() for g in sample["gold_attack_ids"]}
-    found = _roll_up(extract_all_techniques(context or "", alias_map))
+    found = _roll_up(extract_technique_ids(context or ""))
     return technique_set_score(found, gold)["recall"]
 
 
@@ -574,7 +601,14 @@ def phase_score(
     if not common:
         print(f"[SCORE] No sample has a row for every arm in {arms}")
         return
-    scores = {a: {sid: score_answer(rows[(sid, a)]["answer"], by_id[sid], alias_map)
+    # The context each arm's reasoning LLM actually saw.
+    ctx_of = {
+        "A": lambda sid: rows[(sid, "A")]["final_context"] or rows[(sid, "A")]["first_context"],
+        "B": lambda sid: rows[(sid, "A")]["first_context"],
+        "C": lambda sid: rows[(sid, "C")]["context"],
+    }
+    scores = {a: {sid: score_answer(rows[(sid, a)]["answer"], by_id[sid], alias_map,
+                                    context=ctx_of[a](sid))
                   for sid in common} for a in arms}
     n_steps = {ct: sum(1 for sid in common for st in by_id[sid]["attack_steps"]
                        if st.get("cue_type") == ct) for ct in ("named", "described")}
@@ -590,10 +624,11 @@ def phase_score(
         "- Arms: **A** full agent (headline) · **B** A without the evaluator/broaden "
         "loop (derived from A's first pass) · **C** `query_fast()`",
         "",
-        "Scoring: techniques cited in the answer by ID or canonical English name "
-        "(`extract_all_techniques`), rolled up to the parent technique because all "
-        "gold IDs are parent-level, then `technique_set_score` against the sample's "
-        "`gold_attack_ids`. Macro = mean over samples; micro = pooled matches.",
+        "Scoring: technique IDs cited in the answer (`extract_technique_ids`), rolled "
+        "up to the parent technique because all gold IDs are parent-level, then "
+        "`technique_set_score` against the sample's `gold_attack_ids`. Macro = mean "
+        "over samples; micro = pooled matches. Name matching is reported as a "
+        "secondary row only — see §6.",
         "",
         "## 1. Technique precision / recall / F1",
         "",
@@ -610,9 +645,9 @@ def phase_score(
     for idx, key in enumerate(("precision", "recall", "f1")):
         row(f"Micro {key}", lambda a, i=idx: f"{micro[a][i]:.3f}")
     row("Macro F1, no parent roll-up", lambda a: f"{_mean([s['f1_raw'] for s in scores[a].values()]):.3f}")
-    row("Macro F1, cited IDs only (no name match)",
-        lambda a: f"{_mean([s['f1_ids_only'] for s in scores[a].values()]):.3f}")
-    row("Mean techniques predicted", lambda a: f"{_mean([s['n_pred'] for s in scores[a].values()]):.2f}")
+    row("Macro F1, + name matching (defective alias map, §6)",
+        lambda a: f"{_mean([s['f1_with_names'] for s in scores[a].values()]):.3f}")
+    row("Mean techniques cited", lambda a: f"{_mean([s['n_pred'] for s in scores[a].values()]):.2f}")
     row("Answers citing no technique",
         lambda a: f"{sum(1 for s in scores[a].values() if s['n_pred'] == 0)}")
 
@@ -659,6 +694,8 @@ def phase_score(
         insuff_judged = [t for t in judged if t["verdict"] == "INSUFFICIENT"]
         parse_fallback = [t for t in judged if t["reason"].startswith("Could not parse")
                           or "fell back to sufficient" in t["reason"]]
+        partial = [t for t in judged if t["verdict"] == "SUFFICIENT"
+                   and t["strategy"] == "PARTIAL_ANSWER"]
         strategies: dict[str, int] = {}
         for t in insuff_judged:
             strategies[t["strategy"] or "(none)"] = strategies.get(t["strategy"] or "(none)", 0) + 1
@@ -673,6 +710,7 @@ def phase_score(
                   f"| … of which INSUFFICIENT | {len(insuff_judged)} |",
                   f"| … INSUFFICIENT strategies | "
                   + (", ".join(f"{k} {v}" for k, v in sorted(strategies.items())) or "—") + " |",
+                  f"| … SUFFICIENT with strategy PARTIAL_ANSWER (gap warning never reaches the answer) | {len(partial)} |",
                   f"| … evaluator parse / exception fallbacks to SUFFICIENT | {len(parse_fallback)} |"]
 
         if "B" in arms:
@@ -690,36 +728,38 @@ def phase_score(
                 lines.append(_fmt_paired(label, st))
 
             if fired:
-                ctx_first = {s: context_recall(a_rows[s]["first_context"], by_id[s], alias_map) for s in fired}
+                ctx_first = {s: context_recall(a_rows[s]["first_context"], by_id[s]) for s in fired}
                 ctx_final = {s: context_recall(a_rows[s]["final_context"] or a_rows[s]["first_context"],
-                                               by_id[s], alias_map) for s in fired}
+                                               by_id[s]) for s in fired}
                 st = paired(ctx_final, ctx_first, fired)
                 lines += ["", "Did broadening put more gold techniques into the context? "
-                          "(gold techniques mentioned anywhere in the rendered context, by ID "
-                          "or canonical name — includes subgraph neighbour lists)", "",
+                          "(share of gold technique IDs appearing in the rendered context)", "",
                           "| Subset | first-pass ctx recall | final ctx recall | mean Δ | 95% CI | n |",
                           "|---|---|---|---|---|---|",
                           f"| broadening fired | {_mean(list(ctx_first.values())):.3f} | "
                           f"{_mean(list(ctx_final.values())):.3f} | {st['mean']:+.3f} | "
                           f"[{st['ci'][0]:+.3f}, {st['ci'][1]:+.3f}] | {st['n']} |"]
 
-    # ── Context recall vs answer recall, all arms ─────────────────────────
-    ctx_of = {
-        "A": lambda r: r["final_context"] or r["first_context"],
-        "B": lambda r: rows[(r["sample_id"], "A")]["first_context"],
-        "C": lambda r: r["context"],
-    }
-    lines += ["", "## 4. Context recall vs answer recall", "",
-              "Context recall: share of gold techniques mentioned anywhere in the context "
-              "the reasoning LLM saw (ID or canonical name, subgraph neighbour lists "
-              "included, so it is an upper-bound-style measure). The gap to answer recall "
-              "is what generation did not carry through.", "",
+    # ── Grounding: what the context held vs what the answer cited ─────────
+    lines += ["", "## 4. Grounding — context vs answer", "",
+              "Context recall: share of gold technique IDs that appear in the context the "
+              "reasoning LLM saw. Only vector-hit and subgraph headers carry IDs "
+              "(relationship documents and neighbour lists carry names), so both context "
+              "recall and \"absent from context\" are conservative: a technique present "
+              "only by name counts as absent. Answer recall above context recall means the "
+              "model cited techniques from its own parametric knowledge.", "",
               "| | " + " | ".join(arms) + " |", "|---|" + "---|" * len(arms)]
-    ctx_recall = {a: _mean([context_recall(ctx_of[a](rows[(s, a)]), by_id[s], alias_map)
-                            for s in common]) for a in arms}
-    lines.append("| Context recall | " + " | ".join(f"{ctx_recall[a]:.3f}" for a in arms) + " |")
-    lines.append("| Answer recall (macro) | " + " | ".join(
-        f"{_mean([s['recall'] for s in scores[a].values()]):.3f}" for a in arms) + " |")
+    row("Context recall", lambda a: f"{_mean([context_recall(ctx_of[a](s), by_id[s]) for s in common]):.3f}")
+    row("Answer recall (macro)", lambda a: f"{_mean([s['recall'] for s in scores[a].values()]):.3f}")
+    row("Cited IDs absent from context (mean share per answer)",
+        lambda a: f"{_mean([s['ungrounded_share'] for s in scores[a].values() if s['ungrounded_share'] is not None]):.3f}")
+
+    def _correct_ungrounded(a: str) -> str:
+        hits = sum(s["n_correct"] for s in scores[a].values())
+        off = sum(s["n_correct_ungrounded"] for s in scores[a].values())
+        return f"{off}/{hits} ({off / hits:.1%})" if hits else "—"
+
+    row("Correct (gold) citations absent from context", _correct_ungrounded)
 
     # ── Cost ──────────────────────────────────────────────────────────────
     lines += ["", "## 5. Latency and LLM cost per sample", "",
@@ -754,9 +794,15 @@ def phase_score(
               "guaranteed deterministic; comparisons involving an independent generation "
               "(B − C, A − C, and A − B on the loop subset) include run-to-run variance, "
               "which the paired CI reflects but cannot separate out.",
-              "- **Extraction.** Techniques are found by ID or canonical English name; a "
-              "technique described only in Thai without its name or ID is not counted, and "
-              "a name mentioned in a negative sense counts as predicted.",
+              "- **Extraction.** Predictions are the technique IDs an answer cites. A "
+              "technique described only in prose without its ID is not counted, and an ID "
+              "mentioned in a negative sense counts as predicted. Name matching was the "
+              "intended complement but is not used for the headline: `attack_lookup.json`'s "
+              "alias map keeps one ID per name and resolves names shared by enterprise and "
+              "mobile techniques to the mobile ID (e.g. \"screen capture\" → T1513, "
+              "\"system information discovery\" → T1426), plus some revoked IDs "
+              "(\"data encrypted\" → T1022). Found on the 5-sample smoke run, before the "
+              "full run; the name-matched F1 is still reported for transparency.",
               "- **Gold coverage.** One gold ID (T0827) is ICS, which is not ingested, so it "
               "is unreachable for every arm. The ATT&CK version of the index (v19) differs "
               "from the source advisories' version; drifted IDs penalise all arms equally.",

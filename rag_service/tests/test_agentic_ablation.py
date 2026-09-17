@@ -155,12 +155,15 @@ def test_score_rolls_subtechniques_up_to_parent_gold():
             {"cue_type": "described", "gold_attack_ids": ["T1190"]},
         ],
     }
-    s = score_answer("พบ T1566.001 และ T1566.002 กับ T1059", sample, alias_map={})
+    s = score_answer("พบ T1566.001 และ T1566.002 กับ T1059", sample, alias_map={},
+                     context="[1] Node: Technique — Phishing (T1566)")
     # T1566.001/.002 collapse to one T1566 match; T1059 is spurious.
     assert (s["n_pred"], s["matched"]) == (2, 1.0)
     assert (s["precision"], s["recall"]) == (0.5, 0.5)
     assert s["f1_raw"] < s["f1"]  # without roll-up only same-family credit
     assert s["step_recall"] == {"named": [1.0], "described": [0.0]}
+    # T1059 is cited but not in the context; the one correct citation is grounded.
+    assert (s["ungrounded_share"], s["n_correct"], s["n_correct_ungrounded"]) == (0.5, 1, 0)
 
 
 def test_micro_pools_and_paired_counts():
