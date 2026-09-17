@@ -52,7 +52,14 @@ def _make_vector_retriever_fn(embed_model=None):
 
     def fn(query: str) -> list[str]:
         results = retriever.search_all(query, top_k=10)
-        return [r.stix_id for r in results]
+        out: list[str] = []
+        seen: set[str] = set()
+        for r in results:
+            sid = _resolve_to_technique(r.stix_id, r.metadata)
+            if sid not in seen:
+                seen.add(sid)
+                out.append(sid)
+        return out
 
     return fn, None  # No cleanup needed for vector retriever
 
@@ -188,15 +195,41 @@ def _normalise_to_parent(fn, parent_map: dict[str, str]):
     return wrapped
 
 
+def _resolve_to_technique(stix_id: str, metadata: dict | None) -> str:
+    """Map a retrieved relationship document onto the technique it evidences.
+
+    Gold is 359 ``attack-pattern--*`` ids, but the corpus the retriever searches
+    is 2,195 entities plus 21,347 relationships. A procedure example for the
+    right technique comes back with its own ``relationship--*`` id, which can
+    never equal the gold - so retrieving exactly the right evidence scored as a
+    miss. Measured over 40 samples, 38% of top-10 hits were relationships, and
+    resolving them moves Vector Hit@5 from 0.350 to 0.475.
+
+    This is the same defect ``_normalise_to_parent`` already documents for
+    sub-techniques: comparing prediction and gold at different granularities.
+    Fixing it is a correction to the measurement, not a concession to the
+    retriever - the retriever did find the technique.
+    """
+    if not stix_id.startswith("relationship--"):
+        return stix_id
+    meta = metadata or {}
+    for key in ("target_id", "source_id"):
+        candidate = meta.get(key) or ""
+        if candidate.startswith("attack-pattern--"):
+            return candidate
+    return stix_id
+
+
 def _collect_hybrid_ids(result) -> list[str]:
     """Flatten a GraphRAGResult into an ordered, deduped STIX-id list
     (vector hits first, then each subgraph's center node + neighbors)."""
     ids: list[str] = []
     seen: set[str] = set()
     for vr in result.vector_results:
-        if vr.stix_id not in seen:
-            ids.append(vr.stix_id)
-            seen.add(vr.stix_id)
+        sid = _resolve_to_technique(vr.stix_id, vr.metadata)
+        if sid not in seen:
+            ids.append(sid)
+            seen.add(sid)
     for gr in result.graph_results:
         if gr.center_node and gr.center_node.stix_id not in seen:
             ids.append(gr.center_node.stix_id)

@@ -231,6 +231,10 @@ MAX_CONCURRENT_QUERIES = max(1, int(os.getenv("RAG_MAX_CONCURRENT_QUERIES", "4")
 # ──────────────────────────────────────────────────────────────────────────────
 VECTOR_TOP_K = 10  # Initial vector retrieval count
 FINAL_TOP_K = 5  # After reranking
+# Neighbour names listed per relation in a rendered subgraph ("Used by: …").
+# Well-known techniques and groups have 80–400 neighbours; uncapped, one
+# subgraph filled the whole context and every later one was truncated away.
+GRAPH_CONTEXT_MAX_NAMES = 10
 
 # Restrict entity vector search to one ATT&CK domain. The corpus is ingested with
 # mobile + enterprise, but mobile entities (Pegasus, FluBot, mobile-only Phishing

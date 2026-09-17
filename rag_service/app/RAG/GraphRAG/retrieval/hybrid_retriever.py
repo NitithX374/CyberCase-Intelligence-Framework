@@ -73,6 +73,9 @@ _TYPE_WEIGHTS = {
     "Campaign": 0.75,
 }
 
+# Subgraph centres ranked ahead of groups/software when the graph cap is filled.
+_STRUCTURAL_LABELS = {"Technique", "Subtechnique", "Tactic"}
+
 
 class HybridRetriever:
     """Orchestrates Vector + Graph retrieval for GraphRAG."""
@@ -108,12 +111,35 @@ class HybridRetriever:
         vector_results.sort(key=lambda r: r.score, reverse=True)
         return vector_results
 
+    @staticmethod
+    def _graph_seeds(vector_results: list, limit: int) -> dict[str, float]:
+        """Graph seed STIX IDs in relevance order → score of the hit that seeded them.
+
+        A node hit seeds itself; a relationship hit seeds both endpoints, so the
+        result can run one past ``limit``.
+        """
+        seeds: dict[str, float] = {}
+        for vr in vector_results[:limit]:
+            md = vr.metadata
+            if md.get("entity_type") == "Node":
+                ids = [vr.stix_id]
+            elif md.get("entity_type") == "Relationship":
+                ids = [md.get("source_id"), md.get("target_id")]
+            else:
+                ids = []
+            for sid in filter(None, ids):
+                seeds.setdefault(sid, vr.score)
+            if len(seeds) >= limit:
+                break
+        return seeds
+
     def retrieve(
         self,
         query: str,
         top_k: int = VECTOR_TOP_K,
         node_label_filter: Optional[str] = None,
         expand_graph: bool = True,
+        graph_seed_k: Optional[int] = None,
     ) -> GraphRAGResult:
         """Execute the full GraphRAG retrieval pipeline.
 
@@ -124,6 +150,9 @@ class HybridRetriever:
             expand_graph: When False, skip Neo4j graph expansion and return
                 vector + rerank results only (used by --ultrafast to drop the
                 graph round-trips entirely).
+            graph_seed_k: How many top-ranked vector results may seed the graph
+                expansion (default FINAL_TOP_K). Quota retrieval passes its own
+                quota here so the graph never expands a hit the quota discards.
 
         Returns:
             GraphRAGResult with combined vector + graph context.
@@ -148,27 +177,14 @@ class HybridRetriever:
         # ── Step 2: Extract STIX IDs for graph expansion (relevance order) ──
         # Use an ordered dedup list so graph seeds reflect reranker ranking,
         # not arbitrary set iteration order.
-        seen_stix: set[str] = set()
-        stix_ids_list: list[str] = []
-
-        for vr in vector_results:
-            if vr.metadata.get("entity_type") == "Node":
-                if vr.stix_id not in seen_stix:
-                    seen_stix.add(vr.stix_id)
-                    stix_ids_list.append(vr.stix_id)
-            elif vr.metadata.get("entity_type") == "Relationship":
-                for sid in filter(
-                    None,
-                    [
-                        vr.metadata.get("source_id"),
-                        vr.metadata.get("target_id"),
-                    ],
-                ):
-                    if sid not in seen_stix:
-                        seen_stix.add(sid)
-                        stix_ids_list.append(sid)
-            if len(stix_ids_list) >= FINAL_TOP_K:
-                break
+        #
+        # Seeds come ONLY from results the caller will actually keep. Under
+        # quota retrieval the caller keeps the top ``graph_seed_k`` hits, so
+        # expanding beyond that would re-admit through the graph section a
+        # technique the quota deliberately dropped — recall the pipeline did
+        # not ask for, paid in precision.
+        seed_limit = graph_seed_k if graph_seed_k is not None else FINAL_TOP_K
+        stix_ids_list = list(self._graph_seeds(vector_results, seed_limit))
 
         # ── Step 3: Graph expansion ───────────────────────────────────────
         graph_results = self.graph_retriever.expand(stix_ids_list)
@@ -279,24 +295,42 @@ class HybridRetriever:
             per_query_k:  How many top results to KEEP from each sub-query.
             top_k:        How many to retrieve per sub-query before keeping top-k.
             max_vector:   Hard cap on merged vector results (fits the LLM ctx).
-            max_graph:    Hard cap on merged subgraphs.
+            max_graph:    Hard cap on merged subgraphs, filled technique-first
+                          and round-robin across sub-queries.
+
+        The quota binds BOTH modalities: each sub-query seeds the graph from
+        the same ``per_query_k`` hits it contributes to the vector list, so a
+        technique the quota drops cannot re-enter the context as a subgraph.
         """
         if not queries:
             return GraphRAGResult(vector_results=[], graph_results=[])
 
         per_query_vectors: list[list] = []
-        seen_graph: dict[str, "SubgraphResult"] = {}
+        # center stix_id → (sort key, subgraph); the best key across sub-queries wins
+        graph_candidates: dict[str, tuple[tuple, SubgraphResult]] = {}
 
         for i, query in enumerate(queries, 1):
             print(f"[RETRIEVE-QUOTA] Query {i}/{len(queries)}: {query[:80]}...")
             result = self.retrieve(
-                query, top_k=top_k, node_label_filter=node_label_filter
+                query,
+                top_k=top_k,
+                node_label_filter=node_label_filter,
+                graph_seed_k=per_query_k,
             )
             per_query_vectors.append(result.vector_results[:per_query_k])
+
+            seed_scores = self._graph_seeds(result.vector_results, per_query_k)
+            tier_rank = [0, 0]
             for sg in result.graph_results:
-                cid = sg.center_node.stix_id if sg.center_node else str(id(sg))
-                if cid not in seen_graph:
-                    seen_graph[cid] = sg
+                if not sg.center_node:
+                    continue
+                tier = 0 if sg.center_node.label in _STRUCTURAL_LABELS else 1
+                score = seed_scores.get(sg.center_node.stix_id, 0.0)
+                key = (tier, tier_rank[tier], -score)
+                tier_rank[tier] += 1
+                cid = sg.center_node.stix_id
+                if cid not in graph_candidates or key < graph_candidates[cid][0]:
+                    graph_candidates[cid] = (key, sg)
 
         # Round-robin interleave: every sub-query's best hit before anyone's
         # second, so the top of the list spans all sub-queries and no technique
@@ -325,7 +359,17 @@ class HybridRetriever:
             if len(merged_vector) >= max_vector:
                 break
         merged_vector = merged_vector[:max_vector]
-        merged_graph = list(seen_graph.values())[:max_graph]
+
+        # Subgraphs get the same round-robin, with technique-like centres ahead
+        # of groups and software. Taking them in sub-query order let the first
+        # query — the whole incident, whose hits are the weakest — fill the cap
+        # with group and software subgraphs, so the ones for the techniques the
+        # later sub-queries pinned never reached the context. A technique
+        # subgraph carries the structure the mapping needs (tactic, parent,
+        # mitigations); a group's is a list of everything it has ever used.
+        # Groups and software still fill whatever slots remain.
+        ranked = sorted(graph_candidates.values(), key=lambda c: c[0])
+        merged_graph = [sg for _, sg in ranked][:max_graph]
 
         print(
             f"[RETRIEVE-QUOTA] {len(merged_vector)} vectors "
