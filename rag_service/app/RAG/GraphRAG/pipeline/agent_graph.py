@@ -373,7 +373,23 @@ class GraphRAGAgent:
         Returns:
             ``AgentResponse`` with ``status="completed"``.
         """
-        initial_state: AgentState = {
+        result = self.graph.invoke(self.initial_state(user_query, verbose))
+
+        return AgentResponse(
+            status="completed",
+            answer=result.get("answer", ""),
+            context=result.get("context", ""),
+            graphrag_result=result.get("graphrag_result"),
+        )
+
+    @staticmethod
+    def initial_state(user_query: str, verbose: bool = True) -> AgentState:
+        """The state ``query()`` starts the graph from.
+
+        Public so evaluation can ``graph.stream()`` the served graph node by
+        node from exactly the state production uses.
+        """
+        return {
             "original_query": user_query,
             "verbose": verbose,
             "broaden_count": 0,
@@ -382,15 +398,6 @@ class GraphRAGAgent:
             "gap_warning": "",
             "acknowledgement_message": "",
         }
-
-        result = self.graph.invoke(initial_state)
-
-        return AgentResponse(
-            status="completed",
-            answer=result.get("answer", ""),
-            context=result.get("context", ""),
-            graphrag_result=result.get("graphrag_result"),
-        )
 
     # ------------------------------------------------------------------
     # Graph construction
