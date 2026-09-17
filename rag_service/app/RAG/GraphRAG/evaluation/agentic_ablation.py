@@ -108,6 +108,11 @@ ARM_LABELS = {
 # ContextEvaluator._build_prompt shows the evaluator only this much context.
 EVALUATOR_CONTEXT_CHARS = 4000
 
+# The four phases EVALUATOR_SYSTEM_PROMPT checks, as ATT&CK tactic shortnames.
+EVALUATOR_CHECKLIST_TACTICS = {
+    "initial-access", "credential-access", "privilege-escalation", "impact",
+}
+
 # OpenRouter list price for openai/gpt-5.6-luna, USD per 1M tokens, read from
 # https://openrouter.ai/api/v1/models on 2026-09-17. Override with --price-*.
 DEFAULT_PRICE_IN = 0.20
@@ -636,7 +641,10 @@ def _mcnemar_p(b: int, c: int) -> float | None:
         return None
 
 
-def _evaluator_section(lines: list[str], common: list[str], rows: dict, by_id: dict) -> None:
+def _evaluator_section(
+    lines: list[str], common: list[str], rows: dict, by_id: dict,
+    technique_to_tactics: dict[str, list[str]] | None = None,
+) -> None:
     """Can the evaluator tell a weak context from a strong one?"""
     a_judged = []  # (sample_id, verdict, context) for A's first pass
     for sid in common:
@@ -697,6 +705,36 @@ def _evaluator_section(lines: list[str], common: list[str], rows: dict, by_id: d
         suff = sum(1 for v in in_bucket if v == "SUFFICIENT")
         lines.append(f"| {label} | {len(in_bucket)} | {suff} | {len(in_bucket) - suff} |")
 
+    if not technique_to_tactics:
+        return
+    # The evaluator prompt scores coverage against four fixed phases. An
+    # incident whose techniques sit in other tactics (discovery, collection,
+    # defense evasion, ...) reads as "phases missing" however good the context.
+    s_verdict = {sid: v for sid, v, _ in s_judged}
+    by_overlap: dict[int, list[tuple[str, str, str]]] = {}
+    for sid, verdict, ctx in a_judged:
+        tactics = {t for g in by_id[sid]["gold_attack_ids"]
+                   for t in technique_to_tactics.get(g.upper(), [])}
+        by_overlap.setdefault(len(tactics & EVALUATOR_CHECKLIST_TACTICS), []).append((sid, verdict, ctx))
+    lines += ["", "Evaluator checklist vs the incident's own tactics. The prompt checks four "
+              "fixed phases (Initial Access, Credential Access, Privilege Escalation, Impact); "
+              "the column counts how many of them occur among the sample's gold tactics. "
+              "If verdicts track this count rather than visible recall, the loop is "
+              "triggered by the rubric, not by what the context is missing.", "",
+              "| Checklist phases in gold | n | A first pass INSUFFICIENT | visible recall (A) "
+              "| probe S INSUFFICIENT |", "|---|---|---|---|---|"]
+    for k in sorted(by_overlap):
+        group = by_overlap[k]
+        insuff = sum(1 for _, v, _ in group if v == "INSUFFICIENT")
+        s_group = [s_verdict[sid] for sid, _, _ in group if sid in s_verdict]
+        s_insuff = sum(1 for v in s_group if v == "INSUFFICIENT")
+        lines.append(
+            f"| {k} | {len(group)} | {insuff} ({insuff / len(group):.0%}) | "
+            f"{_mean([context_recall(visible(c), by_id[sid]) for sid, _, c in group]):.3f} | "
+            + (f"{s_insuff}/{len(s_group)} ({s_insuff / len(s_group):.0%})" if s_group else "—")
+            + " |"
+        )
+
 
 def _pct(xs: list[float], q: float) -> float:
     if not xs:
@@ -712,7 +750,8 @@ def phase_score(
     by_id = {s["id"]: s for s in samples}
     rows = _load_rows(runs_path)
     with open(LOOKUP_PATH, "r", encoding="utf-8") as f:
-        alias_map = json.load(f)["alias_map"]
+        lookup = json.load(f)
+    alias_map = lookup["alias_map"]
 
     arms = [a for a in ("A", "B", "C") if any(k[1] == a for k in rows)]
     if not arms:
@@ -867,7 +906,7 @@ def phase_score(
 
     # ── Evaluator sensitivity + calibration ───────────────────────────────
     if "A" in arms:
-        _evaluator_section(lines, common, rows, by_id)
+        _evaluator_section(lines, common, rows, by_id, lookup["technique_to_tactics"])
 
     # ── Grounding: what the context held vs what the answer cited ─────────
     lines += ["", "## 4. Grounding — context vs answer", "",
