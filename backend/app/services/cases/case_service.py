@@ -21,8 +21,7 @@ from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 
 
 def serialize_case(case: Case) -> CaseRead:
-    analysis_runs = [run for run in case.case_runs if run.operation == "analysis"]
-    latest_run = max(analysis_runs, key=lambda run: run.created_at, default=None)
+    latest_run = max(case.case_runs, key=lambda run: run.created_at, default=None)
     if latest_run is not None and latest_run.status in {"queued", "running"}:
         processing_status = latest_run.status
     elif latest_run is not None and latest_run.status == "failed":

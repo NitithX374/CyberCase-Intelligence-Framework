@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 CaseRunStatus = Literal["queued", "running", "completed", "failed"]
-CaseRunOperation = Literal["analysis", "ask"]
 AnalysisFreshness = Literal["missing", "current", "stale"]
 
 
@@ -22,9 +21,7 @@ class CaseRunRead(BaseModel):
 
     id: UUID
     case_id: UUID
-    operation: CaseRunOperation
     evidence_revision: int
-    request_message_id: UUID | None
     status: CaseRunStatus
     attempt_count: int
     error_code: str | None
@@ -64,7 +61,6 @@ __all__ = [
     "CaseAnalysisAccepted",
     "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
-    "CaseRunOperation",
     "CaseRunRead",
     "CaseRunStatus",
 ]

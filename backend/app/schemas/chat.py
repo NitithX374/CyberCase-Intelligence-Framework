@@ -14,10 +14,8 @@ from app.schemas.message_metadata import MessageMetadata
 
 CaseChatStatus = Literal[
     "idle",
-    "processing",
     "awaiting_followup",
     "answered",
-    "failed",
 ]
 MessageRole = Literal["user", "assistant"]
 MessageKind = Literal["conversation", "followup_question", "followup_answer"]
@@ -25,11 +23,17 @@ MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 
 class ChatMessageCreate(BaseModel):
     content: str = Field(default="")
-    idempotency_key: str = Field(min_length=1, max_length=255)
+    idempotency_key: str | None = Field(default=None, max_length=255)
+    client_request_id: str | None = Field(default=None, max_length=255)
     intent: Literal["ask", "followup_answer"] = "ask"
     in_reply_to_message_id: UUID | None = None
     response_language: Literal["thai", "english"] = "english"
     followup: CaseFollowUpAnswer | None = None
+
+    @property
+    def request_key(self) -> str:
+        key = self.client_request_id or self.idempotency_key or ""
+        return key.strip()
 
 
 class ChatMessageRead(BaseModel):
@@ -37,6 +41,7 @@ class ChatMessageRead(BaseModel):
 
     id: UUID
     case_id: UUID
+    client_request_id: str | None = None
     ordinal: int
     role: MessageRole
     content: str
@@ -54,13 +59,14 @@ class CaseChatRead(BaseModel):
     messages: list[ChatMessageRead] = Field(default_factory=list)
 
 
-class CaseChatMessageAccepted(BaseModel):
+class CaseChatMessageResult(BaseModel):
     message: ChatMessageRead
+    assistant_message: ChatMessageRead | None = None
     run: CaseRunRead | None = None
 
 
 __all__ = [
-    "CaseChatMessageAccepted",
+    "CaseChatMessageResult",
     "CaseChatRead",
     "CaseChatStatus",
     "ChatMessageCreate",

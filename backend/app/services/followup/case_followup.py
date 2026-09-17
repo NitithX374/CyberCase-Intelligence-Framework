@@ -284,7 +284,7 @@ async def submit_followup_answer(
         existing_run = await db.scalar(
             select(CaseRun).where(
                 CaseRun.case_id == case.id,
-                CaseRun.request_message_id == existing_answer.id,
+                CaseRun.idempotency_key == idempotency_key,
             )
         )
         return existing_answer, existing_run
@@ -357,6 +357,7 @@ async def submit_followup_answer(
     }
     answer_message = ChatMessage(
         case_id=case.id,
+        client_request_id=idempotency_key,
         ordinal=next_ordinal,
         role="user",
         content=answer_content,
@@ -408,7 +409,6 @@ async def submit_followup_answer(
                     response_language=response_language,
                     expected_evidence_revision=case.evidence_revision,
                 ),
-                request_message_id=answer_message.id,
                 request_payload_extra={
                     "content": answer_content,
                     "action": "follow_up",
@@ -497,9 +497,12 @@ async def answer_message_for_run(
     db: AsyncSession,
     run: CaseRun,
 ) -> ChatMessage | None:
-    if run.request_message_id is None:
-        return None
-    return await db.get(ChatMessage, run.request_message_id)
+    return await db.scalar(
+        select(ChatMessage).where(
+            ChatMessage.case_id == run.case_id,
+            ChatMessage.client_request_id == run.idempotency_key,
+        )
+    )
 
 
 async def requeue_existing_run(

@@ -20,11 +20,11 @@ describe("Case Chat interrupted recovery", () => {
       lastKnownMessageOrdinal: 0,
     };
     writeAccountValue("pending-case-chat:case", JSON.stringify(pending));
-    const detail = caseChat("case", "failed", [message("case", 1, "user", pending.content)]);
+    const detail = caseChat("case", "idle", [message("case", 1, "user", pending.content)]);
     const { result } = renderHook(() => useChatDraft());
 
     act(() => result.current.selectDraft("case"));
-    act(() => result.current.reconcile(detail));
+    act(() => result.current.reconcile(detail, "Background processing failed. Retry the saved message."));
 
     expect(result.current.getPendingSubmission()).toMatchObject({
       ...pending,

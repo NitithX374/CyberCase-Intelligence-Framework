@@ -36,7 +36,7 @@ export const SCHEMA_GROUPS = Object.freeze({
     "CaseAnalysisAccepted",
     "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
-    "CaseChatMessageAccepted",
+    "CaseChatMessageResult",
     "CaseFollowUpAnswer",
     "CaseFollowUpRead",
     "CaseRunRead",

@@ -36,8 +36,9 @@ export type CaseAnalysisResultRead = {
     freshness: "missing" | "current" | "stale";
 };
 
-export type CaseChatMessageAccepted = {
+export type CaseChatMessageResult = {
     message: ChatMessageRead;
+    assistant_message?: ChatMessageRead | null;
     run?: CaseRunRead | null;
 };
 
@@ -71,9 +72,7 @@ export type CaseFollowUpRead = {
 export type CaseRunRead = {
     id: string;
     case_id: string;
-    operation: "analysis" | "ask";
     evidence_revision: number;
-    request_message_id: string | null;
     status: "queued" | "running" | "completed" | "failed";
     attempt_count: number;
     error_code: string | null;

@@ -128,7 +128,6 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     chat.clearQueryError();
   }, [chat]);
 
-  const workspaceChatStatus = caseChatStatus(activeCase, runStatus);
   const workspacePhase = determineCaseRunPhase(runStatus, Boolean(activeCase?.latest_analysis_result_id));
   const casesError = casesQuery.error
     ? getApiErrorMessage(casesQuery.error, "Saved cases could not be loaded.")
@@ -180,7 +179,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
         phase={workspacePhase}
         messages={chat.messages}
         visibleMessages={visibleMessages}
-        chatStatus={workspaceChatStatus}
+        chatStatus={chat.chatStatus}
         input={chat.input}
         hasAnalysisContext={Boolean(activeCase?.latest_analysis_result_id)}
         leadResult={analysisQuery.data ?? null}
@@ -221,11 +220,6 @@ function caseRunStatus(caseRecord: CaseRead | null): "queued" | "running" | "fai
   return status === "queued" || status === "running" || status === "failed" ? status : null;
 }
 
-function caseChatStatus(caseRecord: CaseRead | null, runStatus: string | null) {
-  if (runStatus === "queued" || runStatus === "running") return "processing" as const;
-  if (runStatus === "failed") return "failed" as const;
-  return caseRecord?.status ?? null;
-}
 
 function determineCaseRunPhase(status: string | null, hasResult: boolean): RunPhase {
   if (status === "queued") return "querying";

@@ -16,7 +16,6 @@ from app.services.case_analysis.contracts import (
 )
 from app.services.case_materials import CaseMaterialsService
 from app.services.case_analysis.pipeline_config import configured_pipeline
-from app.services.workflow.case_ask_completion import complete_case_ask
 from app.services.workflow.case_run_claim import claim_case_run
 from app.services.workflow.case_run_service import cleanup_abandoned_case_runs
 from run_recovery_support import isolated_database
@@ -91,7 +90,7 @@ def test_interrupted_request_can_be_read_and_retried_through_http(monkeypatch):
     asyncio.run(exercise())
 
 
-def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
+def test_case_ask_creates_and_completes_synchronously_through_http(monkeypatch):
     async def exercise():
         async with isolated_database() as factory:
             async def database():
@@ -119,7 +118,6 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                 )
                 analysis_run = CaseRun(
                     case_id=case.id,
-                    operation="analysis",
                     evidence_revision=case.evidence_revision,
                     idempotency_key="analysis-for-ask",
                     request_payload={"operation": "analysis"},
@@ -165,43 +163,16 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                 await db.flush()
                 case.latest_analysis_result_id = result.id
 
-            async def complete_ask(run_id):
-                async with factory() as db:
-                    claimed = await claim_case_run(db, run_id)
-                assert claimed is not None
-                ask_trace = CaseAnalysisTrace(
-                    analysis_mode="question_answer",
-                    summary="The answer is grounded in the reported vehicle description.",
-                    claims=[
-                        CaseAnalysisClaim(
-                            claim_id="A-01",
-                            claim_type="reported",
-                            text="The witness reported a blue vehicle.",
-                            epistemic_status="reported",
-                            supporting_source_ids=[str(source.id)],
-                            supporting_citations=[
-                                CaseSourceCitation(
-                                    source_id=str(source.id),
-                                    exact_quote="The witness reported a blue vehicle.",
-                                )
-                            ],
-                        )
-                    ],
-                )
+            async def mock_generate_case_answer(*, context, source_bundle, user_message, client=None):
                 from app.services.case_analysis.contracts import CaseAnalysisOutput as AnalysisOutput
 
-                async with factory() as db:
-                    assert await complete_case_ask(
-                        db,
-                        run_id,
-                        claimed.attempt_count,
-                        AnalysisOutput(
-                            answer="The answer is grounded in the reported vehicle description.",
-                            trace=ask_trace,
-                        ),
-                    )
+                return AnalysisOutput(
+                    answer="The answer is grounded in the reported vehicle description.",
+                    trace=trace,
+                    execution_receipt={"calls": []},
+                )
 
-            monkeypatch.setattr(cases, "process_case_run", complete_ask)
+            monkeypatch.setattr("app.services.chat.case_chat.generate_case_answer", mock_generate_case_answer)
             monkeypatch.setattr(settings, "jwt_secret_key", "test-secret-for-case-auth-1234567890")
             headers = {"Authorization": f"Bearer {create_access_token(owner.id, owner.email)}"}
             application = app.app
@@ -221,10 +192,27 @@ def test_case_ask_creates_and_completes_a_case_run_through_http(monkeypatch):
                         },
                         headers=headers,
                     )
-                    assert response.status_code == 202
+                    assert response.status_code == 200
                     payload = response.json()
                     assert payload["message"]["message_kind"] == "conversation"
-                    assert payload["run"]["operation"] == "ask"
+                    assert payload["run"] is None
+                    assert payload["assistant_message"]["content"] == (
+                        "The answer is grounded in the reported vehicle description."
+                    )
+
+                    # Test idempotency retry returns the same result immediately
+                    retry_resp = await client.post(
+                        f"/api/v1/cases/{case.id}/chat/messages",
+                        json={
+                            "content": "What vehicle was reported?",
+                            "idempotency_key": "ask-message",
+                            "intent": "ask",
+                            "response_language": "english",
+                        },
+                        headers=headers,
+                    )
+                    assert retry_resp.status_code == 200
+                    assert retry_resp.json()["assistant_message"]["id"] == payload["assistant_message"]["id"]
 
                     chat = await client.get(
                         f"/api/v1/cases/{case.id}/chat",

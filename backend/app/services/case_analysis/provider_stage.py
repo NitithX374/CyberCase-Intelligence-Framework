@@ -85,6 +85,7 @@ async def request_stage(
     calls: list[dict[str, object]],
     checkpoint: Callable[[], Awaitable[None]] | None = None,
 ) -> ProviderResult:
+
     payload = stage_payload(config, system, content, schema)
     estimated = await asyncio.to_thread(token_count, payload)
     if estimated > input_budget(config):

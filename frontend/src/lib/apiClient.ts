@@ -4,7 +4,7 @@ import type {
   CaseAnalysisAccepted,
   CaseAnalysisCreate,
   CaseAnalysisResultRead,
-  CaseChatMessageAccepted,
+  CaseChatMessageResult,
   CaseChatDetail,
   CaseChatRead,
   CaseFollowUpAnswer,
@@ -23,7 +23,7 @@ import type { CaseReportRead } from "./generated/reportTypes";
 
 axios.defaults.withCredentials = true;
 
-const CHAT_POLL_REQUEST_TIMEOUT_MS = 15_000;
+const CHAT_REQUEST_TIMEOUT_MS = 15_000;
 
 export type ResponseLanguage = "thai" | "english";
 
@@ -60,7 +60,7 @@ export const getCaseChat = async (
 ): Promise<CaseChatDetail> => {
   const response = await axios.get<CaseChatRead>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat`,
-    { signal, timeout: CHAT_POLL_REQUEST_TIMEOUT_MS },
+    { signal, timeout: CHAT_REQUEST_TIMEOUT_MS },
   );
   return { ...response.data, messages: response.data.messages ?? [] };
 };
@@ -141,16 +141,17 @@ export const createCaseChatMessage = async (
   intent?: "ask" | "followup_answer",
   inReplyToMessageId?: string,
   followup?: CaseFollowUpAnswer,
-): Promise<CaseChatMessageAccepted> => {
-  const response = await axios.post<CaseChatMessageAccepted>(
+): Promise<CaseChatMessageResult> => {
+  const response = await axios.post<CaseChatMessageResult>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat/messages`,
     {
       content,
       idempotency_key: idempotencyKey,
+      client_request_id: idempotencyKey,
       ...(intent ? { intent } : {}),
       response_language: detectResponseLanguage(content),
       ...(inReplyToMessageId ? { in_reply_to_message_id: inReplyToMessageId } : {}),
-       ...(followup ? { followup } : {}),
+      ...(followup ? { followup } : {}),
     },
     { signal },
   );
@@ -253,19 +254,19 @@ function normalizeCaseReport(report: CaseReportRead): CaseReport {
     ...report,
     report: report.report
       ? {
-          ...report.report,
-          sections: report.report.sections.map((section) => ({
-            ...section,
-            paragraphs: section.paragraphs ?? [],
-            items: section.items ?? [],
-          })),
-          claims: (report.report.claims ?? []).map((claim) => ({
-            ...claim,
-            source_evidence_ids: claim.source_evidence_ids ?? [],
-            mitre_technique_ids: claim.mitre_technique_ids ?? [],
-          })),
-          limitations: report.report.limitations ?? [],
-        }
+        ...report.report,
+        sections: report.report.sections.map((section) => ({
+          ...section,
+          paragraphs: section.paragraphs ?? [],
+          items: section.items ?? [],
+        })),
+        claims: (report.report.claims ?? []).map((claim) => ({
+          ...claim,
+          source_evidence_ids: claim.source_evidence_ids ?? [],
+          mitre_technique_ids: claim.mitre_technique_ids ?? [],
+        })),
+        limitations: report.report.limitations ?? [],
+      }
       : null,
   };
 }

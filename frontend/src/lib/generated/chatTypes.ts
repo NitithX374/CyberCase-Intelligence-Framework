@@ -2,13 +2,14 @@ import type { CaseFollowUpAnswer } from "./runTypes";
 
 export type CaseChatRead = {
     case_id: string;
-    status: "idle" | "processing" | "awaiting_followup" | "answered" | "failed";
+    status: "idle" | "awaiting_followup" | "answered";
     messages?: ChatMessageRead[];
 };
 
 export type ChatMessageCreate = {
     content: string;
-    idempotency_key: string;
+    idempotency_key?: string | null;
+    client_request_id?: string | null;
     intent: "ask" | "followup_answer";
     in_reply_to_message_id?: string | null;
     response_language: "thai" | "english";
@@ -18,6 +19,7 @@ export type ChatMessageCreate = {
 export type ChatMessageRead = {
     id: string;
     case_id: string;
+    client_request_id?: string | null;
     ordinal: number;
     role: "user" | "assistant";
     content: string;

@@ -36,9 +36,7 @@ const emptyDraft: ChatDraftState = {
 
 export function determineCaseChatPhase(detail: CaseChatDetail | undefined): RunPhase {
   if (!detail) return "idle";
-  if (detail.status === "processing") return "querying";
   if (detail.status === "awaiting_followup") return "awaiting_followup";
-  if (detail.status === "failed") return "error";
   return detail.messages.length > 0 ? "ready" : "idle";
 }
 
@@ -75,7 +73,7 @@ export function useChatDraft() {
         input,
         pendingFollowUp: current.pendingFollowUp?.caseId === caseId ? current.pendingFollowUp : null,
         queryError: pending?.caseId === caseId ? current.queryError : null,
-        activity: pending ? { phase: "querying", chatStatus: "processing" } : null,
+        activity: pending ? { phase: "querying", chatStatus: null } : null,
       };
     });
   }, []);
@@ -84,7 +82,7 @@ export function useChatDraft() {
     persistPendingSubmission(pending);
     setState((current) => ({
       ...current, queryError: null,
-      activity: { phase: "querying", chatStatus: "processing" },
+      activity: { phase: "querying", chatStatus: null },
       pendingFollowUp: followUp ? { caseId: pending.caseId, followUp } : current.pendingFollowUp,
     }));
   }, []);
@@ -134,9 +132,7 @@ export function useChatDraft() {
     }
     setState((current) => ({
       ...current, activity: null,
-      queryError: failureMessage || (detail.status === "failed"
-        ? "Background processing failed. Retry the saved message."
-        : current.queryError || (pending?.caseId !== detail.case_id || requestOrdinal !== undefined ? null : current.queryError)),
+      queryError: failureMessage || (pending?.caseId !== detail.case_id || requestOrdinal !== undefined ? null : current.queryError),
       ...(completed ? { input: "", pendingFollowUp: null, queryError: null } : {}),
     }));
   }, []);
@@ -166,7 +162,7 @@ export function useChatDraft() {
   return {
     state, getPendingSubmission, changeInput, reportError,
     selectDraft, beginSubmission, acceptSubmission, failSubmission, failSelection,
-    reconcile, completeSubmissionWithoutRun, clearDraft, forgetCaseChat,
+    reconcile, completeSubmission: completeSubmissionWithoutRun, completeSubmissionWithoutRun, clearDraft, forgetCaseChat,
   };
 }
 

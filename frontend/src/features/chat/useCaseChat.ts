@@ -81,6 +81,17 @@ export function useCaseChat({
     }
   }, [chatQuery.error, reportError]);
 
+  // Reconcile draft when chatQuery refreshes after a run settles via useCaseRunPolling.
+  // Uses getPendingSubmission (ref-based) rather than activity state because reconcile
+  // clears activity on every call, while the pending ref persists until completion.
+  const reconcile = draft.reconcile;
+  const getPending = draft.getPendingSubmission;
+  useEffect(() => {
+    if (detail && getPending()) {
+      reconcile(detail);
+    }
+  }, [detail, reconcile, getPending]);
+
   const persistedFollowUp = useMemo(() => (
     detail ? activeCaseChatFollowUp(detail.messages, detail.status) : null
   ), [detail]);

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import type { CaseChatDetail, CaseChatMessageAccepted, CaseChatStatus, CaseRead, ChatMessageRead } from "@/lib/api";
+import type { CaseChatDetail, CaseChatMessageResult, CaseChatStatus, CaseRead, ChatMessageRead } from "@/lib/api";
 import { useCaseChat } from "@/features/chat/useCaseChat";
 
 export function message(caseId: string, ordinal: number, role: "user" | "assistant", content: string = role): ChatMessageRead {
@@ -25,7 +25,7 @@ export function caseRecord(id = "a", status: CaseChatStatus = "idle"): CaseRead 
     title: "Saved case",
     status,
     evidence_revision: 1,
-    processing_status: status === "processing" ? "running" : "idle",
+    processing_status: "idle",
     has_pending_followup: status === "awaiting_followup",
     analysis_freshness: "current",
     created_at: "2026-09-05T00:00:00Z",
@@ -35,16 +35,13 @@ export function caseRecord(id = "a", status: CaseChatStatus = "idle"): CaseRead 
 
 export function caseAccepted(
   request: ChatMessageRead,
-  operation: "analysis" | "ask" = "analysis",
-): CaseChatMessageAccepted {
+): CaseChatMessageResult {
   return {
     message: request,
     run: {
       id: "run-1",
       case_id: request.case_id,
-      operation,
       evidence_revision: 1,
-      request_message_id: request.id,
       status: "running",
       attempt_count: 0,
       error_code: null,

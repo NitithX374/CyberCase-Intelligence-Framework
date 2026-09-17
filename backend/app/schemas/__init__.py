@@ -6,7 +6,7 @@ from app.schemas.case_followups import (
 )
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 from app.schemas.chat import (
-    CaseChatMessageAccepted,
+    CaseChatMessageResult,
     CaseChatRead,
     CaseChatStatus,
     ChatMessageCreate,
@@ -30,7 +30,7 @@ from app.schemas.reports import (
 )
 
 __all__ = [
-    "CaseChatMessageAccepted",
+    "CaseChatMessageResult",
     "CaseChatRead",
     "CaseChatStatus",
     "CaseFollowUpAnswer",

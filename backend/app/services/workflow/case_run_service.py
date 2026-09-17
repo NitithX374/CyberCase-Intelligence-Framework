@@ -35,7 +35,6 @@ async def enqueue_case_analysis(
     case_id: UUID,
     user_id: UUID | None,
     request: CaseAnalysisCreate,
-    request_message_id: UUID | None = None,
     request_payload_extra: dict[str, object] | None = None,
 ) -> CaseRun:
     case = await locked_case(db, case_id, user_id)
@@ -80,9 +79,7 @@ async def enqueue_case_analysis(
     pipeline = configured_pipeline().model_dump(mode="json")
     run = CaseRun(
         case_id=case.id,
-        operation="analysis",
         evidence_revision=case.evidence_revision,
-        request_message_id=request_message_id,
         idempotency_key=request.idempotency_key,
         request_payload={
             **saved_payload,
@@ -209,7 +206,6 @@ class ClaimedCaseRun:
     case_id: UUID
     source_bundle: CaseSourceBundle
     attempt_count: int
-    operation: str
     pipeline_config: dict[str, object]
     request_payload: dict[str, object]
 

@@ -17,9 +17,7 @@ describe("useCaseRunPolling", () => {
     vi.spyOn(api, "getCaseRun").mockResolvedValue({
       id: "run-1",
       case_id: "case-1",
-      operation: "analysis",
       evidence_revision: 1,
-      request_message_id: null,
       status: "completed",
       attempt_count: 1,
       error_code: null,

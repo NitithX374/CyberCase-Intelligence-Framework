@@ -29,7 +29,7 @@ export type {
   CaseAnalysisAccepted,
   CaseAnalysisCreate,
   CaseAnalysisResultRead,
-  CaseChatMessageAccepted,
+  CaseChatMessageResult,
   CaseFollowUpAnswer,
   CaseFollowUpRead,
   CaseRunRead,

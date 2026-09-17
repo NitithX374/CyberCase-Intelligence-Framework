@@ -7,18 +7,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import commit_dependency_transaction, get_db
 from app.models.user import User
+from app.schemas.case_runs import CaseRunRead
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 from app.schemas.chat import (
-    CaseChatMessageAccepted,
+    CaseChatMessageResult,
     CaseChatRead,
     ChatMessageCreate,
+    ChatMessageRead,
 )
 from app.services.auth.dependencies import get_current_user
 from app.services.cases import CaseService
+from app.services.case_analysis.contracts import CaseAnalysisFailure
 from app.services.chat.case_chat import (
     CaseChatError,
-    create_case_chat_message_and_run,
+    ask_case,
     get_case_chat as get_case_chat_service,
+    submit_case_followup_answer,
 )
 from app.services.workflow import process_case_run
 
@@ -42,8 +46,8 @@ async def get_case_chat(
 
 @router.post(
     "/{case_id}/chat/messages",
-    response_model=CaseChatMessageAccepted,
-    status_code=status.HTTP_202_ACCEPTED,
+    response_model=CaseChatMessageResult,
+    status_code=status.HTTP_200_OK,
 )
 async def create_case_chat_message(
     case_id: UUID,
@@ -54,21 +58,49 @@ async def create_case_chat_message(
 ):
     await commit_dependency_transaction(db)
     try:
-        async with db.begin():
-            message, run = await create_case_chat_message_and_run(
+        if request.intent == "followup_answer":
+            async with db.begin():
+                message, run = await submit_case_followup_answer(
+                    db,
+                    case_id=case_id,
+                    user_id=user.id,
+                    request=request,
+                )
+                result = CaseChatMessageResult(
+                    message=ChatMessageRead.model_validate(message),
+                    assistant_message=None,
+                    run=CaseRunRead.model_validate(run) if run is not None else None,
+                )
+            if result.run is not None:
+                background_tasks.add_task(process_case_run, result.run.id)
+            return result
+        else:
+            user_read, assistant_read = await ask_case(
                 db,
                 case_id=case_id,
                 user_id=user.id,
                 request=request,
+            )
+            return CaseChatMessageResult(
+                message=user_read,
+                assistant_message=assistant_read,
+                run=None,
             )
     except CaseChatError as error:
         raise HTTPException(
             status_code=error.status_code,
             detail={"code": error.code, "message": error.message},
         ) from error
-    if run is not None:
-        background_tasks.add_task(process_case_run, run.id)
-    return CaseChatMessageAccepted(message=message, run=run)
+    except CaseAnalysisFailure as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": error.code, "message": error.message},
+        ) from error
+    except TimeoutError as error:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail={"code": "chat_answer_timeout", "message": "Chat answer generation timed out"},
+        ) from error
 
 
 @router.get("", response_model=list[CaseRead], status_code=status.HTTP_200_OK)

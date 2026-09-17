@@ -29,14 +29,11 @@ EXPECTED_CANONICAL_TABLES = {
 
 
 def _load_migration_modules():
-    names = (
-        "0001_canonical_case_system.py",
-        "0002_case_run_active_index.py",
-        "0003_received_case_material.py",
-    )
+    dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../alembic/baseline_versions"))
+    files = sorted(f for f in os.listdir(dir_path) if f.endswith(".py") and not f.startswith("__"))
     modules = []
-    for index, name in enumerate(names, start=1):
-        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../alembic/baseline_versions", name))
+    for index, name in enumerate(files, start=1):
+        path = os.path.join(dir_path, name)
         spec = importlib.util.spec_from_file_location(f"alembic_{index}", path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -111,28 +108,10 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     assert rag_run_fk is not None, "FK from rag_contexts to case_runs missing"
                     assert rag_run_fk.get("options", {}).get("ondelete") == "CASCADE"
 
-                    # case_runs.request_message_id -> chat_messages (NO ACTION)
-                    cr_fks = inspector.get_foreign_keys("case_runs", schema=schema)
-                    request_fk = next(
-                        (fk for fk in cr_fks if fk["referred_table"] == "chat_messages"),
-                        None,
-                    )
-                    assert request_fk is not None
-                    assert request_fk.get("options", {}).get("ondelete") in (None, "NO ACTION")
-                    constraint_state = sync_conn.execute(
-                        text(
-                            """
-                            SELECT condeferrable, condeferred, confdeltype
-                            FROM pg_constraint
-                            JOIN pg_namespace ON pg_namespace.oid = pg_constraint.connamespace
-                            WHERE conname = :constraint_name AND nspname = :schema
-                            """
-                        ),
-                        {"constraint_name": "fk_case_runs_request_message_id", "schema": schema},
-                    ).mappings().one()
-                    assert constraint_state["condeferrable"] is False
-                    assert constraint_state["condeferred"] is False
-                    assert constraint_state["confdeltype"] in ("a", b"a")
+                    # case_runs does not have request_message_id or operation
+                    cr_cols = {c["name"] for c in inspector.get_columns("case_runs", schema=schema)}
+                    assert "request_message_id" not in cr_cols
+                    assert "operation" not in cr_cols
 
                     # 3. Check unique constraints
                     rag_uniques = inspector.get_unique_constraints("rag_contexts", schema=schema)
@@ -149,9 +128,15 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                         for index in case_run_indexes
                     ), "ux_case_runs_one_active_per_case missing"
 
-                    # 4. Check chat_messages.in_reply_to_message_id exists
+                    # 4. Check chat_messages columns and indexes
                     msg_cols = {c["name"] for c in inspector.get_columns("chat_messages", schema=schema)}
                     assert "in_reply_to_message_id" in msg_cols
+                    assert "client_request_id" in msg_cols
+                    msg_indexes = inspector.get_indexes("chat_messages", schema=schema)
+                    assert any(
+                        index["name"] == "ux_chat_messages_case_id_client_request_id"
+                        for index in msg_indexes
+                    )
 
                 await conn.run_sync(inspect_schema)
 

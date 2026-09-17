@@ -1,4 +1,3 @@
-from app.services.workflow.case_ask_completion import complete_case_ask
 from app.services.workflow.case_run_claim import claim_case_run
 from app.services.workflow.case_run_completion import complete_case_run
 from app.services.workflow.case_run_execution import (
@@ -19,7 +18,6 @@ __all__ = [
     "ClaimedCaseRun",
     "claim_case_run",
     "cleanup_abandoned_case_runs",
-    "complete_case_ask",
     "complete_case_run",
     "enqueue_case_analysis",
     "execute_case_run",

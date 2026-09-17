@@ -105,9 +105,7 @@ function failedRun(): CaseRunRead {
   return {
     id: "55555555-5555-4555-8555-555555555555",
     case_id: caseId,
-    operation: "analysis",
     evidence_revision: 1,
-    request_message_id: null,
     status: "failed",
     attempt_count: 1,
     error_code: "analysis_failed",

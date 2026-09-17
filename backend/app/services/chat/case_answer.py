@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.case_run import CaseAnalysisResult, CaseRun
+from app.models.case_run import CaseAnalysisResult
 from app.models.chat import ChatMessage
 from app.services.case_analysis.contracts import (
     CaseAnalysisFailure,
@@ -53,19 +53,15 @@ class CaseAnswerResponse(BaseModel):
 
 async def load_case_answer_context(
     db: AsyncSession,
-    run_id: UUID,
-    source_bundle: CaseSourceBundle,
-) -> dict[str, object]:
-    run = await db.get(CaseRun, run_id)
-    if run is None or run.operation != "ask" or run.request_message_id is None or not isinstance(run.request_payload, Mapping):
-        raise CaseAnalysisFailure("case_ask_request_missing", "Pinned Chat question is unavailable")
-    message = await db.get(ChatMessage, run.request_message_id)
-    if message is None or message.analysis_result_id is None or message.role != "user":
-        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat question has no pinned analysis result")
-    if message.case_id != run.case_id:
-        raise CaseAnalysisFailure("case_ask_request_missing", "Pinned Chat question is unavailable")
-    result = await db.get(CaseAnalysisResult, message.analysis_result_id)
-    if result is None or result.case_id != run.case_id or result.status != "validated":
+    *,
+    analysis_result_id: UUID,
+    question_message_id: UUID,
+) -> tuple[dict[str, object], CaseSourceBundle]:
+    message = await db.get(ChatMessage, question_message_id)
+    if message is None or message.role != "user":
+        raise CaseAnalysisFailure("case_ask_request_missing", "Chat question is unavailable")
+    result = await db.get(CaseAnalysisResult, analysis_result_id)
+    if result is None or result.case_id != message.case_id or result.status != "validated":
         raise CaseAnalysisFailure("case_ask_context_invalid", "Pinned Chat analysis is unavailable")
     trace = parse_trace(result.trace_json, "Pinned Chat analysis trace is invalid")
     if trace.analysis_mode != "case_overview":
@@ -80,10 +76,11 @@ async def load_case_answer_context(
     mitre_table = augmentation.get("mitre_table", metadata.get("mitre_table", []))
     if mitre_table is not None and not isinstance(mitre_table, list):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Pinned Chat augmentation table is invalid")
+
+    from app.services.case_materials import load_case_source_bundle
+
+    source_bundle = await load_case_source_bundle(db, case_id=result.case_id, user_id=None)
     trace = validate_case_trace(trace, source_bundle, mitre_table=mitre_table)
-    request_content = run.request_payload.get("content")
-    if not isinstance(request_content, str) or message.content.strip() != request_content:
-        raise CaseAnalysisFailure("case_ask_request_invalid", "Pinned Chat question changed")
     history = list((await db.scalars(
         select(ChatMessage).where(
             ChatMessage.case_id == message.case_id,
@@ -92,7 +89,7 @@ async def load_case_answer_context(
             ChatMessage.analysis_result_id == result.id,
         ).order_by(ChatMessage.ordinal.desc()).limit(12)
     )).all())
-    return {
+    context = {
         "analysis_result_id": str(result.id),
         "source_revision": source_bundle.revision,
         "pipeline_config": dict(result.pipeline_config) if isinstance(result.pipeline_config, dict) else result.pipeline_config,
@@ -104,6 +101,7 @@ async def load_case_answer_context(
             for item in reversed(history)
         ],
     }
+    return context, source_bundle
 
 
 async def generate_case_answer(

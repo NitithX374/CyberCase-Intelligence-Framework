@@ -47,8 +47,8 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const startAnalysisMutation = useStartCaseAnalysis(caseId);
 
   const analysisResult = analysisQuery.data ?? null;
-  const evidenceSources = evidenceQuery.data ?? [];
-  const followups = followupsQuery.data ?? [];
+  const evidenceSources = useMemo(() => evidenceQuery.data ?? [], [evidenceQuery.data]);
+  const followups = useMemo(() => followupsQuery.data ?? [], [followupsQuery.data]);
   const run = runQuery.data ?? null;
   const caseTitle = activeCase?.title || "New case";
   const chatStatus = activeCase?.status ?? "idle";
@@ -65,7 +65,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
     [analysisResult, evidenceSources, runStatus],
   );
 
-  const navigateToIntake = () => { if (caseId) router.push(casePath(caseId, "intake")); };
+  const navigateToIntake = () => { router.push(caseId ? casePath(caseId, "intake") : "/case"); };
   const navigateToMaterials = () => { if (caseId) router.push(casePath(caseId, "materials")); };
   const navigateToReport = () => { if (caseId) router.push(casePath(caseId, "report")); };
 

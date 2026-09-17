@@ -33,7 +33,6 @@ class CaseRun(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_case_runs"),
         UniqueConstraint("case_id", "idempotency_key", name="uq_case_runs_case_id_idempotency_key"),
-        CheckConstraint("operation IN ('analysis', 'ask')", name="ck_case_runs_operation"),
         CheckConstraint("status IN ('queued', 'running', 'completed', 'failed')", name="ck_case_runs_status"),
         CheckConstraint("attempt_count >= 0", name="ck_case_runs_attempt_count_nonnegative"),
         Index("ux_case_runs_one_active_per_case", "case_id", unique=True, postgresql_where=text("status IN ('queued', 'running')")),
@@ -44,18 +43,7 @@ class CaseRun(Base):
     case_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("cases.id", name="fk_case_runs_case_id", ondelete="CASCADE"), nullable=False
     )
-    operation: Mapped[str] = mapped_column(String(16), nullable=False)
     evidence_revision: Mapped[int] = mapped_column(Integer, nullable=False)
-    request_message_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey(
-            "chat_messages.id",
-            name="fk_case_runs_request_message_id",
-            ondelete="NO ACTION",
-            deferrable=False,
-        ),
-        nullable=True,
-    )
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     request_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     pipeline_config: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
@@ -69,7 +57,6 @@ class CaseRun(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     case: Mapped["Case"] = relationship("Case", back_populates="case_runs")
-    request_message: Mapped["ChatMessage | None"] = relationship("ChatMessage")
     analysis_result: Mapped["CaseAnalysisResult | None"] = relationship(
         "CaseAnalysisResult",
         back_populates="run",

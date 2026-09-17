@@ -10,7 +10,6 @@ from uuid import UUID
 
 from app.config import settings
 from app.services.case_analysis import CaseAnalysisFailure, request_case_analysis
-from app.services.chat.case_answer import generate_case_answer, load_case_answer_context
 from app.services.case_analysis.contracts import (
     CaseAnalysisOutput as AnalysisOutput,
     CaseAnalysisTrace,
@@ -25,7 +24,6 @@ from app.services.workflow.case_run_completion import (
     CaseRunCompletionError,
     complete_case_run,
 )
-from app.services.workflow.case_ask_completion import complete_case_ask
 from app.services.workflow.case_run_context import (
     CaseRunExecutionError,
     attach_case_augmentation_receipt,
@@ -79,7 +77,6 @@ async def execute_case_run(
     *,
     session_factory: Callable,
     analysis_request=request_case_analysis,
-    answer_request=generate_case_answer,
     applicability_gate=None,
     rag_request=None,
 ) -> None:
@@ -93,15 +90,11 @@ async def execute_case_run(
                 claimed,
                 session_factory=session_factory,
                 analysis_request=analysis_request,
-                answer_request=answer_request,
                 applicability_gate=applicability_gate,
                 rag_request=rag_request,
             )
         async with session_factory() as db:
-            if claimed.operation == "ask":
-                await complete_case_ask(db, run_id, claimed.attempt_count, output)
-            else:
-                await complete_case_run(db, run_id, claimed.attempt_count, output)
+            await complete_case_run(db, run_id, claimed.attempt_count, output)
     except asyncio.CancelledError:
         await record_cancellation_failure(
             session_factory,
@@ -143,73 +136,61 @@ async def execute_claimed_work(
     *,
     session_factory: Callable,
     analysis_request,
-    answer_request,
-    applicability_gate,
-    rag_request,
+    applicability_gate=None,
+    rag_request=None,
+    **_kwargs,
 ) -> AnalysisOutput:
-    followup_exchanges = ()
-    if claimed.operation == "analysis":
-        async with session_factory() as db:
-            try:
-                followup_exchanges = await load_followup_exchanges(
-                    db,
-                    claimed.case_id,
-                )
-            except Exception as error:
-                logger.warning(
-                    "Failed to load follow-up exchanges for case %s: %s; continuing analysis without follow-up history",
-                    claimed.case_id,
-                    error,
-                )
-                followup_exchanges = ()
-    if claimed.operation == "ask":
-        async with session_factory() as db:
-            context = await load_case_answer_context(db, claimed.id, claimed.source_bundle)
-        output = coerce_analysis_result(
-            await answer_request(
-                context=context,
-                source_bundle=claimed.source_bundle,
-                user_message=analysis_request_language(claimed),
+    async with session_factory() as db:
+        try:
+            followup_exchanges = await load_followup_exchanges(
+                db,
+                claimed.case_id,
             )
-        )
-    else:
-        augmentation = None
-        if applicability_gate is not None and rag_request is not None:
-            augmentation = await resolve_case_technical_context(
-                claimed,
-                applicability_gate=applicability_gate,
-                rag_request=rag_request,
-                session_factory=session_factory,
+        except Exception as error:
+            logger.warning(
+                "Failed to load follow-up exchanges for case %s: %s; continuing analysis without follow-up history",
+                claimed.case_id,
+                error,
             )
+            followup_exchanges = ()
 
-        technical_context = None
-        retrieval_context_id = None
-        if (
-            augmentation is not None
-            and augmentation.status == "retrieved_from_rag"
-            and augmentation.context is not None
-            and augmentation.mitre_table
-        ):
-            technical_context = {
-                "context": augmentation.context.context,
-                "mitre_table": augmentation.mitre_table,
-            }
-            retrieval_context_id = augmentation.retrieval_context_id
-
-        output = coerce_analysis_result(
-            await analysis_request(
-                source_bundle=claimed.source_bundle,
-                pipeline_config=claimed.pipeline_config,
-                question=None,
-                user_message=analysis_request_language(claimed),
-                mode="case_overview",
-                technical_context=technical_context,
-                retrieval_context_id=retrieval_context_id,
-            )
+    augmentation = None
+    if applicability_gate is not None and rag_request is not None:
+        augmentation = await resolve_case_technical_context(
+            claimed,
+            applicability_gate=applicability_gate,
+            rag_request=rag_request,
+            session_factory=session_factory,
         )
-        if augmentation is not None:
-            output = attach_case_augmentation_receipt(output, augmentation)
-    if claimed.operation == "analysis" and isinstance(output.trace, CaseAnalysisTrace):
+
+    technical_context = None
+    retrieval_context_id = None
+    if (
+        augmentation is not None
+        and augmentation.status == "retrieved_from_rag"
+        and augmentation.context is not None
+        and augmentation.mitre_table
+    ):
+        technical_context = {
+            "context": augmentation.context.context,
+            "mitre_table": augmentation.mitre_table,
+        }
+        retrieval_context_id = augmentation.retrieval_context_id
+
+    output = coerce_analysis_result(
+        await analysis_request(
+            source_bundle=claimed.source_bundle,
+            pipeline_config=claimed.pipeline_config,
+            question=None,
+            user_message=analysis_request_language(claimed),
+            mode="case_overview",
+            technical_context=technical_context,
+            retrieval_context_id=retrieval_context_id,
+        )
+    )
+    if augmentation is not None:
+        output = attach_case_augmentation_receipt(output, augmentation)
+    if isinstance(output.trace, CaseAnalysisTrace):
         output = await attach_case_followup(
             output,
             claimed,

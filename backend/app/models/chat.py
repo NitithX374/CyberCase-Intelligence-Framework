@@ -50,6 +50,13 @@ class ChatMessage(Base):
             name="ck_chat_messages_message_kind",
         ),
         Index("ix_chat_messages_case_id_ordinal", "case_id", "ordinal"),
+        Index(
+            "ux_chat_messages_case_id_client_request_id",
+            "case_id",
+            "client_request_id",
+            unique=True,
+            postgresql_where=text("client_request_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -65,6 +72,10 @@ class ChatMessage(Base):
             ondelete="CASCADE",
         ),
         nullable=False,
+    )
+    client_request_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)

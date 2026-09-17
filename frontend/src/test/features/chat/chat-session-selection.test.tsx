@@ -33,15 +33,15 @@ describe("chat session selection", () => {
     expect(queryClient.getQueryData<api.CaseChatDetail>(caseQueryKeys.chat("a"))?.messages[0].content).toBe("Current");
   });
 
-  it("loads a processing Case Chat without starting the retired ChatRun poll", async () => {
-    const processing = caseChat("a", "processing");
-    const reads = vi.spyOn(api, "getCaseChat").mockResolvedValue(processing);
+  it("loads an answered Case Chat without starting the retired ChatRun poll", async () => {
+    const answered = caseChat("a", "answered", [message("a", 1, "assistant", "Answer")]);
+    const reads = vi.spyOn(api, "getCaseChat").mockResolvedValue(answered);
     const { result, queryClient } = renderSession();
     await act(async () => { await result.current.session.selectCaseChat("a"); });
     await tick();
-    expect(result.current.session.chatStatus).toBe("processing");
-    expect(result.current.session.messages).toEqual(processing.messages);
-    expect(queryClient.getQueryData(caseQueryKeys.chat("a"))).toEqual(processing);
+    expect(result.current.session.chatStatus).toBe("answered");
+    expect(result.current.session.messages).toEqual(answered.messages);
+    expect(queryClient.getQueryData(caseQueryKeys.chat("a"))).toEqual(answered);
     expect(reads).toHaveBeenCalledTimes(1);
   });
 

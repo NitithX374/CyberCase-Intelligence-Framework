@@ -49,7 +49,8 @@ def test_case_first_workflow_schema_is_case_owned() -> None:
     messages = Base.metadata.tables["chat_messages"]
     assert cases.c["evidence_revision"].nullable is False
     assert cases.c["latest_analysis_result_id"].nullable
-    assert runs.c["request_message_id"].nullable
+    assert "request_message_id" not in runs.c
+    assert "operation" not in runs.c
     assert "context_analysis_result_id" not in runs.c
     assert results.c["run_id"].nullable is False
     assert any(fk.ondelete == "CASCADE" for fk in results.c["run_id"].foreign_keys)
@@ -57,13 +58,8 @@ def test_case_first_workflow_schema_is_case_owned() -> None:
     assert messages.c["message_kind"].nullable is False
     assert "in_reply_to_message_id" in messages.c
     assert messages.c["in_reply_to_message_id"].nullable
+    assert messages.c["client_request_id"].nullable
     assert "clarification_id" not in runs.c
-    request_fk = next(
-        fk for fk in runs.c["request_message_id"].foreign_keys
-        if fk.target_fullname == "chat_messages.id"
-    )
-    assert request_fk.ondelete == "NO ACTION"
-    assert request_fk.deferrable is False
 
 
 def test_rag_context_is_bound_one_to_one_to_case_run() -> None:

@@ -202,7 +202,6 @@ def test_workflow_scenario_a_non_cyber_case_gate_skip():
             case_id=uuid4(),
             source_bundle=source_bundle,
             attempt_count=1,
-            operation="analysis",
             pipeline_config={},
             request_payload={"response_language": "english"},
         )
@@ -261,7 +260,6 @@ def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
             case_id=uuid4(),
             source_bundle=source_bundle,
             attempt_count=1,
-            operation="analysis",
             pipeline_config={},
             request_payload={"response_language": "english"},
         )
@@ -381,7 +379,6 @@ def test_workflow_scenario_d_rag_failure_falls_back_to_case_sources():
             case_id=uuid4(),
             source_bundle=source_bundle,
             attempt_count=1,
-            operation="analysis",
             pipeline_config={},
             request_payload={"response_language": "english"},
         )

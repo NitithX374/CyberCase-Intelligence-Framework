@@ -99,6 +99,18 @@ export function useCases() {
   });
 }
 
+export function useCaseRun(
+  caseId: string | null,
+  runId: string | null | undefined,
+) {
+  return useQuery<CaseRunRead>({
+    queryKey: caseQueryKeys.run(caseId ?? "none", runId ?? "none"),
+    queryFn: ({ signal }) => getCaseRun(caseId!, runId!, signal),
+    enabled: Boolean(caseId && runId),
+    retry: false,
+  });
+}
+
 export function useCaseRunPolling(
   caseId: string | null,
   runId: string | null | undefined,
@@ -124,11 +136,10 @@ export function useCaseRunPolling(
     if (lastInvalidated.current === invalidationKey) return;
     lastInvalidated.current = invalidationKey;
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() });
-    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId) });
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId) });
-    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.evidence(caseId) });
     void queryClient.invalidateQueries({ queryKey: caseQueryKeys.followups(caseId) });
-    void queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true, type: "all" });
+    void queryClient.invalidateQueries({ queryKey: caseQueryKeys.chat(caseId) });
   }, [caseId, query.data?.status, query.data?.attempt_count, queryClient, runId]);
 
   return query;

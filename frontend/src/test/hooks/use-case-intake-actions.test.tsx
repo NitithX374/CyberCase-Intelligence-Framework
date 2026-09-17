@@ -42,9 +42,7 @@ const receivedCase: CaseRead = {
 const acceptedRun: CaseRunRead = {
   id: "run-1",
   case_id: "case-1",
-  operation: "analysis",
   evidence_revision: 1,
-  request_message_id: null,
   status: "queued",
   attempt_count: 0,
   error_code: null,

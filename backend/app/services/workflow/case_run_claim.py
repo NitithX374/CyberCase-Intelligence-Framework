@@ -35,7 +35,6 @@ async def claim_case_run(
                 CaseRun.id,
                 CaseRun.case_id,
                 CaseRun.evidence_revision,
-                CaseRun.operation,
                 CaseRun.attempt_count,
                 CaseRun.pipeline_config,
                 CaseRun.request_payload,
@@ -71,7 +70,6 @@ async def claim_case_run(
             case_id=row["case_id"],
             source_bundle=source_bundle,
             attempt_count=row["attempt_count"],
-            operation=row["operation"],
             pipeline_config=deepcopy(row["pipeline_config"]),
             request_payload=deepcopy(row["request_payload"]),
         )
