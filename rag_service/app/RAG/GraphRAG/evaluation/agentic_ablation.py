@@ -783,7 +783,8 @@ def phase_score(
         "",
         f"- Dataset: real-CTI tier (`{DEFAULT_DATASET.name}`), {len(common)} samples "
         f"({n_steps['named']} named / {n_steps['described']} described steps)",
-        f"- Core LLM: `{first.get('model', '?')}`; commit `{first.get('commit', '?')}`",
+        f"- Core LLM: `{first.get('model', '?')}`; commit(s) "
+        + ", ".join(f"`{c}`" for c in sorted({r.get("commit", "?") for r in rows.values()})),
         f"- Run file: `{runs_path.name}`",
         "- Arms: **A** full agent (headline) · **B** A without the evaluator/broaden "
         "loop (derived from A's first pass) · **C** `query_fast()`",
