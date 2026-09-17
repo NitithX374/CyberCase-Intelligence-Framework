@@ -17,6 +17,11 @@ Arms:
                        raw query, no decomposition / quota, no evaluator.
                        Ablation.
 
+Evaluator probe (no answer, not an arm):
+
+  S  sensitivity       the served evaluator, unchanged, judging C's context —
+                       a naturally weaker context for the same incident.
+
 A - B isolates the self-reflection loop. B - C isolates decomposition + quota,
 together with the smaller context query_fast renders (build_context defaults:
 5 vector hits and 3 subgraphs, against the agent's 15 and 8). That context-size
@@ -34,9 +39,16 @@ where the loop did nothing. The served graph is streamed node by node
 (graph.stream) from GraphRAGAgent.initial_state(), so A is production, not a
 re-implementation of it.
 
+Why S: if the evaluator says SUFFICIENT on (nearly) every sample, A - B is 0
+and says only that the loop never acted, not whether it could. S asks whether
+the evaluator can tell a weak context from a strong one at all: the same
+incident judged on A's first-pass context and on C's. The score phase adds a
+calibration table — verdict against the share of gold technique IDs actually
+visible to the evaluator (it reads only the first 4000 characters).
+
 Phases:
 
-  run    paid. Per sample: A (+ derived B), then C. Appends one JSON row per
+  run    paid. Per sample: A (+ derived B), then C, then S. Appends one JSON row per
          (sample, arm) to results/agentic_ablation[_tag].jsonl; rerunning
          resumes. Rows whose run hit an LLM exception are NOT written, so a
          resume retries them.
@@ -86,12 +98,15 @@ from .crosslingual_generation_benchmark import (
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
-ARM_GROUPS = {"agent": ("A", "B"), "fast": ("C",)}
+ARM_GROUPS = {"agent": ("A", "B"), "fast": ("C",), "sensitivity": ("S",)}
 ARM_LABELS = {
     "A": "A  full agent (headline)",
     "B": "B  agent - self-reflection",
     "C": "C  fast path",
 }
+
+# ContextEvaluator._build_prompt shows the evaluator only this much context.
+EVALUATOR_CONTEXT_CHARS = 4000
 
 # OpenRouter list price for openai/gpt-5.6-luna, USD per 1M tokens, read from
 # https://openrouter.ai/api/v1/models on 2026-09-17. Override with --price-*.
@@ -381,6 +396,31 @@ def run_fast(agent, meter: _LlmMeter, query: str) -> dict:
     }
 
 
+def run_sensitivity(agent, meter: _LlmMeter, query: str, context: str) -> dict:
+    """Probe S: the served evaluator, first-pass settings, on C's context.
+
+    Same call ``_node_evaluate_context`` makes on the first pass
+    (english_query mirrors the query, retry_count 0); only the context differs.
+    """
+    mark = len(meter.events)
+    t0 = time.perf_counter()
+    ev = agent.evaluator.evaluate(
+        original_query=query, english_query=query, context=context,
+        retry_count=0, verbose=False,
+    )
+    return {
+        "arm": "S",
+        "judged_context": "C",
+        "verdict": ev.verdict,
+        "strategy": ev.strategy or "",
+        "reason": ev.reason or "",
+        "new_query": ev.new_query or "",
+        "missing_phases": list(ev.missing_phases or []),
+        "latency_ms": round((time.perf_counter() - t0) * 1000, 1),
+        **_summarise_events(meter.events[mark:]),
+    }
+
+
 def phase_run(
     samples: list[dict], groups: list[str], runs_path: Path, max_failures: int
 ) -> None:
@@ -439,6 +479,18 @@ def phase_run(
                         rows[(sid, "C")] = c_row
                         print(f"[RUN]   C: {c_row['latency_ms'] / 1000:.1f}s "
                               f"{c_row['llm_calls']} calls")
+                    elif group == "sensitivity":
+                        c_row = rows.get((sid, "C"))
+                        if c_row is None:
+                            print("[RUN]   S: skipped — needs this sample's C row first")
+                            continue
+                        s_row = {"sample_id": sid, **meta,
+                                 **run_sensitivity(agent, meter, query, c_row["context"])}
+                        if s_row["llm_errors"]:
+                            raise RuntimeError(f"{s_row['llm_errors']} LLM call(s) failed")
+                        _append_row(runs_path, s_row)
+                        rows[(sid, "S")] = s_row
+                        print(f"[RUN]   S: verdict on C context = {s_row['verdict']}")
                     failures = 0
                 except Exception as e:  # noqa: BLE001 — keep going, resume later
                     failures += 1
@@ -571,6 +623,79 @@ def _fmt_paired(label: str, st: dict) -> str:
     sig = " *" if lo > 0 or hi < 0 else ""
     return (f"| {label} | {st['mean']:+.3f}{sig} | [{lo:+.3f}, {hi:+.3f}] | {p} | "
             f"{st['n']} | {st['wins']}/{st['ties']}/{st['losses']} |")
+
+
+def _mcnemar_p(b: int, c: int) -> float | None:
+    """Exact two-sided McNemar p on the discordant counts (scipy if available)."""
+    if b + c == 0:
+        return None
+    try:
+        from scipy.stats import binomtest
+        return float(binomtest(b, b + c, 0.5).pvalue)
+    except ImportError:
+        return None
+
+
+def _evaluator_section(lines: list[str], common: list[str], rows: dict, by_id: dict) -> None:
+    """Can the evaluator tell a weak context from a strong one?"""
+    a_judged = []  # (sample_id, verdict, context) for A's first pass
+    for sid in common:
+        first = next(t for t in rows[(sid, "A")]["trace"] if t["node"] == "evaluate_context")
+        a_judged.append((sid, first["verdict"], rows[(sid, "A")]["first_context"]))
+    s_judged = [(sid, rows[(sid, "S")]["verdict"], rows[(sid, "C")]["context"])
+                for sid in common if (sid, "S") in rows]
+
+    def visible(ctx: str) -> str:
+        return ctx[:EVALUATOR_CONTEXT_CHARS]
+
+    lines += ["", "## 3b. Evaluator sensitivity and calibration", "",
+              f"The evaluator reads only the first {EVALUATOR_CONTEXT_CHARS} characters of "
+              "the context. \"Visible recall\" = share of gold technique IDs inside that "
+              "window; \"full recall\" = in the whole context the reasoning LLM gets. Both "
+              "count IDs only, so a technique present by name alone counts as missing.", "",
+              "| Context judged | n | INSUFFICIENT | visible recall | full recall | mean context chars |",
+              "|---|---|---|---|---|---|"]
+    for label, judged in (("A first pass (served)", a_judged), ("C fast-path context (probe S)", s_judged)):
+        if not judged:
+            lines.append(f"| {label} | 0 | — | — | — | — |")
+            continue
+        insuff = sum(1 for _, v, _ in judged if v == "INSUFFICIENT")
+        lines.append(
+            f"| {label} | {len(judged)} | {insuff} ({insuff / len(judged):.1%}) | "
+            f"{_mean([context_recall(visible(c), by_id[sid]) for sid, _, c in judged]):.3f} | "
+            f"{_mean([context_recall(c, by_id[sid]) for sid, _, c in judged]):.3f} | "
+            f"{_mean([len(c) for _, _, c in judged]):.0f} |"
+        )
+
+    if s_judged:
+        a_verdict = {sid: v for sid, v, _ in a_judged}
+        pairs = [(a_verdict[sid], v) for sid, v, _ in s_judged]
+        ss = sum(1 for a, c in pairs if a == "SUFFICIENT" and c == "SUFFICIENT")
+        si = sum(1 for a, c in pairs if a == "SUFFICIENT" and c == "INSUFFICIENT")
+        is_ = sum(1 for a, c in pairs if a == "INSUFFICIENT" and c == "SUFFICIENT")
+        ii = sum(1 for a, c in pairs if a == "INSUFFICIENT" and c == "INSUFFICIENT")
+        p = _mcnemar_p(si, is_)
+        lines += ["", "Same incident, two contexts (rows: verdict on A's first pass; columns: "
+                  "verdict on C's context). A sensitive evaluator puts mass in the "
+                  "SUFFICIENT → INSUFFICIENT cell.", "",
+                  "| A \\ C | SUFFICIENT | INSUFFICIENT |", "|---|---|---|",
+                  f"| SUFFICIENT | {ss} | {si} |",
+                  f"| INSUFFICIENT | {is_} | {ii} |", "",
+                  f"Exact McNemar p (discordant {si} vs {is_}): "
+                  + (f"{p:.4f}" if p is not None else "n/a")]
+
+    pooled = [(v, context_recall(visible(c), by_id[sid])) for sid, v, c in a_judged + s_judged]
+    buckets = (("visible recall < 0.5", lambda r: r < 0.5),
+               ("0.5 ≤ visible recall < 1", lambda r: 0.5 <= r < 1.0),
+               ("visible recall = 1", lambda r: r >= 1.0))
+    lines += ["", f"Calibration, pooled over all {len(pooled)} judgements. A SUFFICIENT "
+              "verdict in the first row is a likely miss: most of the incident's gold "
+              "techniques are not in what the evaluator read.", "",
+              "| Visible gold recall | n | SUFFICIENT | INSUFFICIENT |", "|---|---|---|---|"]
+    for label, test in buckets:
+        in_bucket = [v for v, r in pooled if test(r)]
+        suff = sum(1 for v in in_bucket if v == "SUFFICIENT")
+        lines.append(f"| {label} | {len(in_bucket)} | {suff} | {len(in_bucket) - suff} |")
 
 
 def _pct(xs: list[float], q: float) -> float:
@@ -740,6 +865,10 @@ def phase_score(
                           f"{_mean(list(ctx_final.values())):.3f} | {st['mean']:+.3f} | "
                           f"[{st['ci'][0]:+.3f}, {st['ci'][1]:+.3f}] | {st['n']} |"]
 
+    # ── Evaluator sensitivity + calibration ───────────────────────────────
+    if "A" in arms:
+        _evaluator_section(lines, common, rows, by_id)
+
     # ── Grounding: what the context held vs what the answer cited ─────────
     lines += ["", "## 4. Grounding — context vs answer", "",
               "Context recall: share of gold technique IDs that appear in the context the "
@@ -803,6 +932,9 @@ def phase_score(
               "\"system information discovery\" → T1426), plus some revoked IDs "
               "(\"data encrypted\" → T1022). Found on the 5-sample smoke run, before the "
               "full run; the name-matched F1 is still reported for transparency.",
+              "- **Evaluator probe.** S reuses C's context, so its verdicts share C's "
+              "retrieval; calibration buckets use ID-visible recall, which undercounts "
+              "techniques the context names without an ID and so overstates likely misses.",
               "- **Gold coverage.** One gold ID (T0827) is ICS, which is not ingested, so it "
               "is unreachable for every arm. The ATT&CK version of the index (v19) differs "
               "from the source advisories' version; drifted IDs penalise all arms equally.",
@@ -825,8 +957,9 @@ def main() -> None:
     parser.add_argument("--phase", choices=["run", "score", "all"], required=True)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--max-samples", type=int, default=0)
-    parser.add_argument("--arms", default="agent,fast",
-                        help="agent (A + derived B), fast (C); default both")
+    parser.add_argument("--arms", default="agent,fast,sensitivity",
+                        help="agent (A + derived B), fast (C), sensitivity (S, needs C); "
+                             "default all")
     parser.add_argument("--run-tag", default="",
                         help="suffix for the results files, e.g. 'smoke'")
     parser.add_argument("--max-consecutive-failures", type=int, default=3)

@@ -16,6 +16,7 @@ if str(_APP_DIR) not in sys.path:
     sys.path.insert(0, str(_APP_DIR))
 
 from RAG.GraphRAG.evaluation.agentic_ablation import (
+    _evaluator_section,
     _LlmMeter,
     _micro,
     _record_decompositions,
@@ -164,6 +165,30 @@ def test_score_rolls_subtechniques_up_to_parent_gold():
     assert s["step_recall"] == {"named": [1.0], "described": [0.0]}
     # T1059 is cited but not in the context; the one correct citation is grounded.
     assert (s["ungrounded_share"], s["n_correct"], s["n_correct_ungrounded"]) == (0.5, 1, 0)
+
+
+def test_evaluator_section_crosstabs_and_calibrates():
+    by_id = {sid: {"gold_attack_ids": ["T1566", "T1190"]} for sid in ("s1", "s2")}
+    strong = "[1] Node: Technique — Phishing (T1566)\n[2] (T1190)"
+    weak = "[1] Node: Software — Mimikatz (S0002)"
+
+    def a_row(verdict):
+        return {"trace": [{"node": "evaluate_context", "verdict": verdict}], "first_context": strong}
+
+    rows = {
+        ("s1", "A"): a_row("SUFFICIENT"), ("s1", "C"): {"context": weak},
+        ("s1", "S"): {"verdict": "INSUFFICIENT"},
+        ("s2", "A"): a_row("SUFFICIENT"), ("s2", "C"): {"context": weak},
+        ("s2", "S"): {"verdict": "SUFFICIENT"},
+    }
+    lines: list[str] = []
+    _evaluator_section(lines, ["s1", "s2"], rows, by_id)
+    text = "\n".join(lines)
+
+    assert "| C fast-path context (probe S) | 2 | 1 (50.0%) | 0.000 | 0.000 |" in text
+    assert "| SUFFICIENT | 1 | 1 |" in text  # A SUFFICIENT: C SUFFICIENT 1, INSUFFICIENT 1
+    assert "| visible recall < 0.5 | 2 | 1 | 1 |" in text  # both weak-context judgements
+    assert "| visible recall = 1 | 2 | 2 | 0 |" in text  # both strong-context judgements
 
 
 def test_micro_pools_and_paired_counts():
