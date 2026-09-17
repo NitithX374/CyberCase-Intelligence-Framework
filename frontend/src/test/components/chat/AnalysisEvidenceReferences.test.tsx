@@ -76,9 +76,9 @@ describe("ChatTranscript evidence references", () => {
     render(
       <ChatTranscript messages={[analysis]} isProcessing={false} evidenceSources={[source]} />,
     );
-    expect(screen.getByRole("button", { name: "Source source-1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Case narrative" })).toBeInTheDocument();
     expect(screen.queryByText(/p\. 1/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Source source-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Case narrative" }));
     expect(screen.getByText("seeing a blue vehicle").tagName).toBe("MARK");
   });
 

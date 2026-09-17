@@ -93,7 +93,7 @@ describe("TechnicalContextView", () => {
     render(<TechnicalContextView analysisResult={projection.result} evidenceSources={projection.evidenceSources} onNavigateToSource={navigateToSource} />);
     expect(screen.getByText("Validated Case mappings")).toBeInTheDocument();
     expect(screen.getByText("PowerShell")).toBeInTheDocument();
-    const source = screen.getByRole("button", { name: /Source — Source .*/i });
+    const source = screen.getByRole("button", { name: "Source — Case narrative" });
     fireEvent.click(source);
     expect(screen.getByRole("dialog")).toHaveTextContent(exactQuote);
     fireEvent.click(screen.getByRole("button", { name: /View in Materials/i }));
