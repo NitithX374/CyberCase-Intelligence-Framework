@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { CaseReportView } from "@/components/report/CaseReportView";
-import { useCase, useCaseAnalysis, useCaseRunPolling } from "@/hooks/useCaseQueries";
+import { caseProcessingStatus, useCase, useCaseAnalysis, useCaseRunState } from "@/hooks/useCaseQueries";
 import { casePath } from "@/lib/workspaceRoutes";
 
 export default function ReportPage() {
@@ -16,14 +16,8 @@ export default function ReportPage() {
   const analysisQuery = useCaseAnalysis(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId);
-  const runStatus =
-    runQuery.data?.status ??
-    (activeCase?.processing_status === "queued" ||
-    activeCase?.processing_status === "running" ||
-    activeCase?.processing_status === "failed"
-      ? activeCase.processing_status
-      : null);
+  const runQuery = useCaseRunState(caseId ?? null, runId);
+  const runStatus = runQuery.data?.status ?? caseProcessingStatus(activeCase);
 
   return (
     <CaseReportView

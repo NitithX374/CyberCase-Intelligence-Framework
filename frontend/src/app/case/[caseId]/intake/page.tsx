@@ -10,7 +10,7 @@ import {
   useCaseDocuments,
   useCaseEvidence,
   useCaseMutations,
-  useCaseRunPolling,
+  useCaseRunState,
 } from "@/hooks/useCaseQueries";
 import { useCaseIntakeActions } from "@/hooks/useCaseIntakeActions";
 import { casePath } from "@/lib/workspaceRoutes";
@@ -29,7 +29,7 @@ export default function IntakePage() {
   const analysisQuery = useCaseAnalysis(caseId ?? null);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId);
+  const runQuery = useCaseRunState(caseId ?? null, runId);
 
   const actions = useCaseIntakeActions({
     activeCaseId: caseId,

@@ -13,12 +13,12 @@ describe("chat submission lifecycle", () => {
     vi.spyOn(api, "getCaseChat").mockResolvedValue(caseChat("a", "idle"));
     const send = vi.spyOn(api, "createCaseChatMessage").mockRejectedValue(new Error("Analyze the Case before asking a Chat question"));
     const { result } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     act(() => result.current.submitContent("What happened?", "message"));
     await tick();
     expect(send.mock.calls[0]).toHaveLength(4);
-    expect(result.current.session.queryError).toContain("Analyze the Case");
+    expect(result.current.queryError).toContain("Analyze the Case");
   });
 
   it("sends a clarification answer when caseChat status is awaiting_followup", async () => {
@@ -26,7 +26,7 @@ describe("chat submission lifecycle", () => {
     vi.spyOn(api, "getCaseChat").mockResolvedValue(caseChat("a", "awaiting_followup", [question]));
     const send = vi.spyOn(api, "createCaseChatMessage").mockRejectedValue(new Error("Testing follow-up"));
     const { result } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     act(() => result.current.submitFollowUp({
       gapId: "gap-host",
@@ -58,25 +58,25 @@ describe("chat submission lifecycle", () => {
       .mockRejectedValueOnce(new Error("Network failure"))
       .mockResolvedValueOnce(receipt);
     const { result, queryClient } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     act(() => {
-      result.current.session.changeInput("Evidence");
+      result.current.changeInput("Evidence");
       result.current.submitContent("Evidence", "message");
     });
     await tick();
     const key = send.mock.calls[0][2];
-    expect(result.current.session.input).toBe("Evidence");
-    expect(result.current.session.queryError).toBeTruthy();
+    expect(result.current.input).toBe("Evidence");
+    expect(result.current.queryError).toBeTruthy();
     act(() => result.current.submitContent("Evidence", "message"));
     await tick();
     expect(send.mock.calls[1][2]).toBe(key);
-    expect(result.current.session.messages).toEqual([request, assistant]);
+    expect(result.current.messages).toEqual([request, assistant]);
     expect(queryClient.getQueryData<api.CaseChatDetail>(caseQueryKeys.chat("a"))?.messages).toEqual([request, assistant]);
-    expect(result.current.session.input).toBe("");
-    expect(result.current.session.getPendingSubmission()).toBeNull();
+    expect(result.current.input).toBe("");
+    expect(result.current.getPendingSubmission()).toBeNull();
     expect(readAccountValue("pending-case-chat:a")).toBeNull();
-    expect(result.current.session.messages).toHaveLength(2);
+    expect(result.current.messages).toHaveLength(2);
   });
 
   it("does not send duplicate messages when submit is triggered twice before rerender", async () => {
@@ -84,7 +84,7 @@ describe("chat submission lifecycle", () => {
     const waiting = deferred<api.CaseChatMessageResult>();
     const send = vi.spyOn(api, "createCaseChatMessage").mockReturnValue(waiting.promise);
     const { result } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     act(() => {
       result.current.submitContent("Evidence", "message");
@@ -95,36 +95,63 @@ describe("chat submission lifecycle", () => {
     await tick();
   });
 
+  it("shows the outgoing Ask message while the response is pending", async () => {
+    vi.spyOn(api, "getCaseChat")
+      .mockResolvedValueOnce(caseChat())
+      .mockResolvedValue(caseChat("a", "answered", [message("a", 1, "user", "Evidence")]));
+    const waiting = deferred<api.CaseChatMessageResult>();
+    vi.spyOn(api, "createCaseChatMessage").mockReturnValue(waiting.promise);
+    const { result, queryClient } = renderSession();
+    await act(async () => { await result.current.selectCaseChat("a"); });
+    await tick();
+
+    act(() => result.current.submitContent("Evidence", "message"));
+
+    const pending = queryClient.getQueryData<api.CaseChatDetail>(caseQueryKeys.chat("a"));
+    expect(pending?.messages).toHaveLength(1);
+    expect(pending?.messages[0]).toMatchObject({
+      role: "user",
+      content: "Evidence",
+      id: expect.stringMatching(/^optimistic:/),
+    });
+
+    waiting.resolve(caseAccepted(message("a", 1, "user", "Evidence")));
+    await tick();
+    expect(queryClient.getQueryData<api.CaseChatDetail>(caseQueryKeys.chat("a"))?.messages).toEqual([
+      message("a", 1, "user", "Evidence"),
+    ]);
+  });
+
   it("ignores a late message receipt after switching chats", async () => {
     vi.spyOn(api, "getCaseChat").mockImplementation(async (id) => caseChat(id));
     const waiting = deferred<api.CaseChatMessageResult>();
     vi.spyOn(api, "createCaseChatMessage").mockReturnValue(waiting.promise);
     const { result } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     act(() => result.current.submitContent("Evidence", "message"));
-    await act(async () => { await result.current.session.selectCaseChat("b"); });
+    await act(async () => { await result.current.selectCaseChat("b"); });
     await tick();
     await act(async () => { waiting.resolve(caseAccepted(message("a", 1, "user"))); });
     await tick();
-    expect(result.current.session.activeCaseChatId).toBe("b");
-    expect(result.current.session.messages).toEqual([]);
+    expect(result.current.activeCaseChatId).toBe("b");
+    expect(result.current.messages).toEqual([]);
   });
 
   it("retains a failed clarification answer and the same request key for retry", async () => {
     vi.spyOn(api, "getCaseChat").mockResolvedValue(caseChat("a", "awaiting_followup", [followUpQuestion()]));
     const send = vi.spyOn(api, "createCaseChatMessage").mockRejectedValue(new Error("Network failure"));
     const { result } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     const answer = { gapId: "gap-host", answer: "Unknown", disposition: "answered" as const };
     act(() => {
       result.current.submitFollowUp(answer);
     });
     await tick();
-    expect(result.current.session.chatStatus).toBe("awaiting_followup");
-    expect(result.current.session.pendingFollowUp?.followUp.question).toBe("When?");
-    expect(result.current.session.getPendingSubmission()?.followUpAnswer).toEqual(answer);
+    expect(result.current.chatStatus).toBe("awaiting_followup");
+    expect(result.current.pendingFollowUp?.question).toBe("When?");
+    expect(result.current.getPendingSubmission()?.followUpAnswer).toEqual(answer);
     act(() => result.current.retryQuery());
     await tick();
     expect(send.mock.calls[1][2]).toBe(send.mock.calls[0][2]);
@@ -139,7 +166,7 @@ describe("chat submission lifecycle", () => {
       .mockResolvedValue(caseChat("a", "answered", [question, answer]));
     vi.spyOn(api, "createCaseChatMessage").mockResolvedValue(receipt);
     const { result, queryClient, upsert } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     act(() => result.current.submitFollowUp({
       gapId: "gap-host",
@@ -166,10 +193,10 @@ describe("chat submission lifecycle", () => {
       .mockResolvedValue(caseChat("a", "answered", [request, assistant]));
     const send = vi.spyOn(api, "createCaseChatMessage").mockResolvedValue(nativeReceipt);
     const { result, queryClient } = renderSession("a");
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
     act(() => {
-      result.current.session.changeInput("What happened?");
+      result.current.changeInput("What happened?");
       result.current.submitContent("What happened?", "message");
     });
     await tick();
@@ -177,10 +204,10 @@ describe("chat submission lifecycle", () => {
       "a", "What happened?", expect.any(String),
       expect.any(AbortSignal),
     );
-    expect(result.current.session.messages).toEqual([request, assistant]);
+    expect(result.current.messages).toEqual([request, assistant]);
     expect(queryClient.getQueryData<api.CaseChatDetail>(caseQueryKeys.chat("a"))?.messages).toEqual([request, assistant]);
-    expect(result.current.session.input).toBe("");
-    expect(result.current.session.getPendingSubmission()).toBeNull();
+    expect(result.current.input).toBe("");
+    expect(result.current.getPendingSubmission()).toBeNull();
   });
 
   it("clears activity and localStorage pending submission when accepted.run is null (e.g. skipped follow-up)", async () => {
@@ -195,7 +222,7 @@ describe("chat submission lifecycle", () => {
     });
 
     const { result } = renderSession();
-    await act(async () => { await result.current.session.selectCaseChat("a"); });
+    await act(async () => { await result.current.selectCaseChat("a"); });
     await tick();
 
     act(() => {
@@ -208,7 +235,7 @@ describe("chat submission lifecycle", () => {
     await tick(50);
 
     expect(send).toHaveBeenCalled();
-    expect(result.current.session.phase).not.toBe("querying");
+    expect(result.current.phase).not.toBe("querying");
     expect(readAccountValue("pending-case-chat:a")).toBeNull();
   });
 });

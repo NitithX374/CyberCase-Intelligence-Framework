@@ -105,11 +105,6 @@ export function useChatDraft() {
         : { phase: "error", chatStatus: statusBeforeSubmit },
     }));
   }, []);
-  const failSelection = useCallback((queryError: string) => {
-    setState((current) => ({
-      ...current, queryError, activity: { phase: "error", chatStatus: null },
-    }));
-  }, []);
   const reconcile = useCallback((detail: CaseChatDetail, failureMessage?: string) => {
     if (!pendingRef.current) pendingRef.current = readPendingSubmission(detail.case_id);
     const pending = pendingRef.current;
@@ -130,8 +125,10 @@ export function useChatDraft() {
       removePendingSubmission(detail.case_id);
       writeAccountValue(`draft:${detail.case_id}`, "");
     }
+    const clearActivity = Boolean(failureMessage) || completed || pending?.caseId !== detail.case_id;
     setState((current) => ({
-      ...current, activity: null,
+      ...current,
+      ...(clearActivity ? { activity: null } : {}),
       queryError: failureMessage || (pending?.caseId !== detail.case_id || requestOrdinal !== undefined ? null : current.queryError),
       ...(completed ? { input: "", pendingFollowUp: null, queryError: null } : {}),
     }));
@@ -152,17 +149,10 @@ export function useChatDraft() {
     draftCaseRef.current = "new";
     setState({ ...emptyDraft, input: readAccountValue("draft:new") ?? "" });
   }, []);
-  const forgetCaseChat = useCallback((caseId: string) => {
-    if (pendingRef.current?.caseId === caseId) pendingRef.current = null;
-    removePendingSubmission(caseId);
-    setState((current) => current.pendingFollowUp?.caseId === caseId
-      ? { ...current, pendingFollowUp: null } : current);
-  }, []);
-
   return {
     state, getPendingSubmission, changeInput, reportError,
-    selectDraft, beginSubmission, acceptSubmission, failSubmission, failSelection,
-    reconcile, completeSubmission: completeSubmissionWithoutRun, completeSubmissionWithoutRun, clearDraft, forgetCaseChat,
+    selectDraft, beginSubmission, acceptSubmission, failSubmission,
+    reconcile, completeSubmission: completeSubmissionWithoutRun, completeSubmissionWithoutRun, clearDraft,
   };
 }
 

@@ -56,7 +56,7 @@ export const homeIntelligencePillars = [
   ["Clear handoff", "Keep questions, answers, and analysis together."],
 ] as const;
 
-export function HomeMiniVisual({ type }: { type: HomePillarVisual }) {
+function HomeMiniVisual({ type }: { type: HomePillarVisual }) {
   if (type === "bars") {
     return (
       <div className="space-y-3 pt-2">

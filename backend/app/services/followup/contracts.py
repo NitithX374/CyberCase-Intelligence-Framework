@@ -1,75 +1,9 @@
-"""Contracts for deterministic Case follow-up and policy evaluation."""
+"""Contracts and utilities for Case follow-up evaluation."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
-from typing import Literal, Protocol, runtime_checkable
 import unicodedata
-
-from pydantic import BaseModel, ConfigDict, Field
-
-from app.schemas.message_metadata import MessageMetadata
-from app.services.case_analysis.contracts import CaseAnalysisGap
-
-
-@dataclass(frozen=True)
-class FollowUpExchange:
-    question: str
-    answer: str
-    disposition: Literal["answered", "unavailable", "skipped"] = "answered"
-    gap_id: str | None = None
-    gap_topic: str | None = None
-    gap_key: str | None = None
-    question_message_id: str | None = None
-    answer_message_id: str | None = None
-    round_number: int = 1
-
-
-
-
-@dataclass(frozen=True)
-class FollowUpResolution:
-    """The gate result and the audit record carried into the final message."""
-
-    question: str | None
-    metadata_json: MessageMetadata
-
-
-class FollowUpDecision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    decision: Literal["ask_followup", "proceed"]
-    selected_gap: str | None = None
-    question: str = Field(default="")
-
-
-@dataclass(frozen=True)
-class FollowUpPolicyResult:
-    decision: FollowUpDecision
-    latency_ms: float | None = None
-    input_tokens: int | None = None
-    output_tokens: int | None = None
-    provider: str | None = None
-    model: str | None = None
-
-
-@runtime_checkable
-class FollowUpPolicy(Protocol):
-    async def decide(
-        self,
-        *,
-        selected_gap: CaseAnalysisGap,
-        client: object | None = None,
-    ) -> FollowUpDecision: ...
-
-    async def decide_with_metadata(
-        self,
-        *,
-        selected_gap: CaseAnalysisGap,
-        client: object | None = None,
-    ) -> FollowUpPolicyResult: ...
-
 
 _UNAVAILABLE_ANSWER_PHRASES = (
     "unknown",
@@ -148,10 +82,5 @@ def answer_indicates_unavailable(answer: str) -> bool:
 
 
 __all__ = [
-    "FollowUpDecision",
-    "FollowUpExchange",
-    "FollowUpPolicy",
-    "FollowUpPolicyResult",
-    "FollowUpResolution",
     "answer_indicates_unavailable",
 ]

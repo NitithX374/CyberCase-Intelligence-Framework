@@ -1,24 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import logging
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
 from app.models.case_run import CaseAnalysisResult as PersistedAnalysisResult, CaseRun
-from app.models.chat import ChatMessage
 from app.models.rag_context import RagContext
-from app.schemas.message_metadata import serialize_message_metadata
 from app.services.case_analysis.contracts import (
     CaseAnalysisOutput as AnalysisOutput,
     CaseAnalysisTrace,
 )
-
-
-logger = logging.getLogger("app.case_workflow")
 
 
 class CaseRunCompletionError(Exception):
@@ -37,33 +31,6 @@ def technical_augmentation(output: AnalysisOutput) -> dict[str, object] | None:
 def mitre_table_from_output(output: AnalysisOutput) -> list[dict[str, object]]:
     value = (technical_augmentation(output) or {}).get("mitre_table", [])
     return [dict(item) for item in value if isinstance(item, dict)] if isinstance(value, list) else []
-
-
-def build_followup_message_metadata(
-    *,
-    followup_metadata: dict[str, object],
-    analysis_result_id: UUID,
-    evidence_revision: int,
-    thread_ordinal: int,
-) -> dict[str, object]:
-    metadata = dict(followup_metadata)
-    chat_followup = metadata.get("chat_followup")
-    if not isinstance(chat_followup, dict):
-        raise CaseRunCompletionError("clarification_metadata_missing", "Case clarification metadata is missing")
-    gap = chat_followup.get("gap")
-    if not isinstance(gap, dict):
-        raise CaseRunCompletionError("clarification_metadata_missing", "Case clarification gap is missing")
-    chat_followup = dict(chat_followup)
-    chat_followup.update(
-        {
-            "root_ordinal": thread_ordinal,
-            "source_analysis_id": str(analysis_result_id),
-            "source_revision": evidence_revision,
-        }
-    )
-    metadata["action"] = "follow_up"
-    metadata["chat_followup"] = chat_followup
-    return metadata
 
 
 async def complete_case_run(
@@ -121,10 +88,6 @@ async def complete_case_run(
                     "technical_augmentation": dict(augmentation),
                 }
             )
-        if output.followup_question:
-            external_context["followup_question"] = output.followup_question.strip()
-            if output.followup_metadata:
-                external_context["followup_metadata"] = dict(output.followup_metadata)
         result = PersistedAnalysisResult(
             case_id=case.id,
             run_id=run.id,
@@ -159,46 +122,6 @@ async def complete_case_run(
                 )
                 db.add(rag_context)
         await db.flush()
-
-        has_followup = bool(output.followup_question and output.followup_question.strip())
-        if has_followup:
-            try:
-                async with db.begin_nested():
-                    followup_message_id = uuid4()
-                    next_ordinal = (
-                        await db.scalar(
-                            select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
-                                ChatMessage.case_id == case.id
-                            )
-                        )
-                        + 1
-                    )
-                    followup_message_meta = build_followup_message_metadata(
-                        followup_metadata=output.followup_metadata or {},
-                        analysis_result_id=result.id,
-                        evidence_revision=run.evidence_revision,
-                        thread_ordinal=next_ordinal,
-                    )
-                    external_context["followup_metadata"] = followup_message_meta
-                    result.external_context_json = external_context
-                    question = ChatMessage(
-                        id=followup_message_id,
-                        case_id=case.id,
-                        ordinal=next_ordinal,
-                        role="assistant",
-                        content=output.followup_question.strip(),
-                        message_kind="followup_question",
-                        analysis_result_id=result.id,
-                        metadata_json=serialize_message_metadata(followup_message_meta),
-                    )
-                    db.add(question)
-                    await db.flush()
-            except Exception as exc:
-                logger.warning(
-                    "Failed to create follow-up chat message for run %s: %s; persisting analysis without follow-up",
-                    run.id,
-                    exc,
-                )
 
         case.latest_analysis_result_id = result.id
         case.updated_at = now
@@ -239,7 +162,6 @@ def validated_output(
 
 __all__ = [
     "CaseRunCompletionError",
-    "build_followup_message_metadata",
     "complete_case_run",
     "mitre_table_from_output",
     "technical_augmentation",

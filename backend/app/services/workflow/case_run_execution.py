@@ -5,20 +5,17 @@ import logging
 from builtins import BaseExceptionGroup
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import replace
 from uuid import UUID
 
 from app.config import settings
 from app.services.case_analysis import CaseAnalysisFailure, request_case_analysis
 from app.services.case_analysis.contracts import (
     CaseAnalysisOutput as AnalysisOutput,
-    CaseAnalysisTrace,
 )
-from app.services.followup.case_followup import (
-    CaseFollowUpHistoryError,
-    load_followup_exchanges,
+from app.services.gap_clarification import (
+    GapClarificationError,
+    start_gap_clarification_for_run,
 )
-from app.services.followup.decision import evaluate_followup_outcome
 from app.services.workflow.case_run_claim import claim_case_run
 from app.services.workflow.case_run_completion import (
     CaseRunCompletionError,
@@ -32,44 +29,6 @@ from app.services.workflow.case_run_context import (
 from app.services.workflow.case_run_service import ClaimedCaseRun, fail_case_run
 
 logger = logging.getLogger("app.case_workflow")
-
-
-async def attach_case_followup(
-    output: AnalysisOutput,
-    claimed: ClaimedCaseRun,
-    followup_exchanges,
-) -> AnalysisOutput:
-    if not isinstance(output.trace, CaseAnalysisTrace):
-        return output
-    try:
-        resolution = await evaluate_followup_outcome(
-            followup_exchanges=followup_exchanges,
-            followup_root_ordinal=1,
-            source_run_id=claimed.id,
-            source_revision=claimed.source_revision,
-            canonical_trace=output.trace,
-        )
-        if resolution.question is None:
-            return output
-        followup = resolution.metadata_json.get("chat_followup")
-        if not isinstance(followup, dict) or not isinstance(followup.get("gap"), dict):
-            logger.warning(
-                "Case follow-up metadata or gap missing for run %s; skipping follow-up attachment",
-                claimed.id,
-            )
-            return output
-        return replace(
-            output,
-            followup_question=resolution.question,
-            followup_metadata=resolution.metadata_json,
-        )
-    except Exception as exc:
-        logger.warning(
-            "Failed to evaluate follow-up for run %s: %s; continuing analysis without follow-up",
-            claimed.id,
-            exc,
-        )
-        return output
 
 
 async def execute_case_run(
@@ -94,7 +53,25 @@ async def execute_case_run(
                 rag_request=rag_request,
             )
         async with session_factory() as db:
-            await complete_case_run(db, run_id, claimed.attempt_count, output)
+            completed = await complete_case_run(db, run_id, claimed.attempt_count, output)
+        if completed:
+            try:
+                await start_gap_clarification_for_run(
+                    run_id=run_id,
+                    session_factory=session_factory,
+                )
+            except GapClarificationError as error:
+                logger.warning(
+                    "Adaptive clarification did not start for run %s: %s (%s)",
+                    run_id,
+                    error.message,
+                    error.code,
+                )
+            except Exception:
+                logger.exception(
+                    "Adaptive clarification failed after completed analysis run %s",
+                    run_id,
+                )
     except asyncio.CancelledError:
         await record_cancellation_failure(
             session_factory,
@@ -140,20 +117,6 @@ async def execute_claimed_work(
     rag_request=None,
     **_kwargs,
 ) -> AnalysisOutput:
-    async with session_factory() as db:
-        try:
-            followup_exchanges = await load_followup_exchanges(
-                db,
-                claimed.case_id,
-            )
-        except Exception as error:
-            logger.warning(
-                "Failed to load follow-up exchanges for case %s: %s; continuing analysis without follow-up history",
-                claimed.case_id,
-                error,
-            )
-            followup_exchanges = ()
-
     augmentation = None
     if applicability_gate is not None and rag_request is not None:
         augmentation = await resolve_case_technical_context(
@@ -190,12 +153,6 @@ async def execute_claimed_work(
     )
     if augmentation is not None:
         output = attach_case_augmentation_receipt(output, augmentation)
-    if isinstance(output.trace, CaseAnalysisTrace):
-        output = await attach_case_followup(
-            output,
-            claimed,
-            followup_exchanges,
-        )
     if output.trace is None:
         raise CaseRunExecutionError(
             "analysis_trace_missing",
@@ -285,4 +242,4 @@ async def process_case_run(run_id: UUID) -> None:
     )
 
 
-__all__ = ["CaseRunExecutionError", "attach_case_followup", "execute_case_run", "process_case_run"]
+__all__ = ["CaseRunExecutionError", "execute_case_run", "process_case_run"]

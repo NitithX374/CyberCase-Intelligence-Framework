@@ -9,62 +9,67 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseProviderAnalysis,
+    CaseQuestionAnswerOutput,
+    CaseQuestionAnswerResponse,
+    ResponseLanguage,
     resolve_response_language,
 )
 from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig, read_pipeline
 from app.services.case_analysis.prompts import (
     CASE_TRACE_CORRECTION_PROMPT,
+    CASE_REASONING_PROMPT_VERSION,
     case_system_prompt,
     validate_analysis_request,
 )
 from app.services.case_analysis.provider_stage import request_stage, resolve_target
 from app.services.case_analysis.validation import validate_case_trace
-from app.services.case_materials import CaseSourceBundle, CaseSourceItem
+from app.services.case_materials import CaseSourceBundle
+from app.services.case_materials.case_source_bundle import build_case_reasoning_payload
 
 
-async def analyze_case(
+async def request_case_reasoning(
     *,
     source_bundle: CaseSourceBundle,
     user_message: object,
-    config: AnalysisPipelineConfig,
-    mode: str = "case_overview",
+    pipeline_config: dict[str, object],
+    mode: CaseAnalysisMode,
     question: str | None = None,
     client: httpx.AsyncClient | None = None,
     technical_context: dict[str, object] | None = None,
     retrieval_context_id: str | None = None,
-) -> CaseAnalysisOutput:
+    conversation_history: list[dict[str, str]] | None = None,
+    analysis_context: dict[str, object] | None = None,
+    active_clarification: dict[str, object] | None = None,
+    current_evidence_revision: int | None = None,
+    analysis_evidence_revision: int | None = None,
+) -> CaseAnalysisOutput | CaseQuestionAnswerOutput:
+    mode, question = validate_analysis_request(mode, question)
+    config = read_pipeline(pipeline_config)
     receipt: dict[str, object] = {
         "configuration": config.model_dump(mode="json"),
+        "prompt_version": CASE_REASONING_PROMPT_VERSION,
         "calls": [],
         "source_reference_type": "case_source",
     }
     try:
-        validate_source_bundle(source_bundle)
+        validate_source_bundle(source_bundle, require_sources=mode == "case_overview")
         language = resolve_response_language(user_message)
-        if client is not None:
-            return await execute_analysis_pipeline(
-                source_bundle,
-                language,
-                config,
-                client,
-                receipt=receipt,
-                mode=mode,
-                question=question,
-                technical_context=technical_context,
-                retrieval_context_id=retrieval_context_id,
-            )
-        async with httpx.AsyncClient() as owned_client:
-            return await execute_analysis_pipeline(
-                source_bundle,
-                language,
-                config,
-                owned_client,
-                receipt=receipt,
-                mode=mode,
-                question=question,
-                technical_context=technical_context,
-                retrieval_context_id=retrieval_context_id,
-            )
+        return await execute_analysis_pipeline(
+            source_bundle,
+            language,
+            config,
+            client,
+            receipt=receipt,
+            mode=mode,
+            question=question,
+            technical_context=technical_context,
+            retrieval_context_id=retrieval_context_id,
+            conversation_history=conversation_history,
+            analysis_context=analysis_context,
+            active_clarification=active_clarification,
+            current_evidence_revision=current_evidence_revision,
+            analysis_evidence_revision=analysis_evidence_revision,
+        )
     except CaseAnalysisFailure as error:
         receipt["failure_code"] = error.code
         raise
@@ -78,39 +83,51 @@ async def analyze_case(
 
 async def execute_analysis_pipeline(
     source_bundle: CaseSourceBundle,
-    language: str,
+    language: ResponseLanguage,
     config: AnalysisPipelineConfig,
     client: httpx.AsyncClient | None,
     *,
     receipt: dict[str, object],
-    mode: str = "case_overview",
+    mode: CaseAnalysisMode = "case_overview",
     question: str | None = None,
     technical_context: dict[str, object] | None = None,
     retrieval_context_id: str | None = None,
-) -> CaseAnalysisOutput:
-    validate_source_bundle(source_bundle)
-    cleaned_technical_context = None
-    if (
-        isinstance(technical_context, dict)
-        and isinstance(technical_context.get("context"), str)
-        and isinstance(technical_context.get("mitre_table"), (list, tuple))
-        and technical_context.get("mitre_table")
-    ):
-        cleaned_technical_context = {
-            "context": technical_context["context"],
-            "mitre_table": list(technical_context["mitre_table"]),
-        }
-
-    request_content = {
-        "response_language": language,
-        "analysis_mode": mode,
-        "case_sources": [
-            provider_source_payload(source)
-            for source in source_bundle.sources
-        ],
-        "technical_context": cleaned_technical_context,
-        "question": question,
-    }
+    conversation_history: list[dict[str, str]] | None = None,
+    analysis_context: dict[str, object] | None = None,
+    active_clarification: dict[str, object] | None = None,
+    current_evidence_revision: int | None = None,
+    analysis_evidence_revision: int | None = None,
+) -> CaseAnalysisOutput | CaseQuestionAnswerOutput:
+    mode, question = validate_analysis_request(mode, question)
+    validate_source_bundle(source_bundle, require_sources=mode == "case_overview")
+    request_content = build_case_reasoning_payload(
+        source_bundle=source_bundle,
+        response_language=language,
+        mode=mode,
+        question=question,
+        technical_context=technical_context,
+        conversation_history=conversation_history,
+        analysis_context=analysis_context,
+        active_clarification=active_clarification,
+        current_evidence_revision=current_evidence_revision,
+        analysis_evidence_revision=analysis_evidence_revision,
+    )
+    if mode == "question_answer":
+        parsed = await request_analysis_stage(
+            client, config, "question_answer", case_system_prompt(mode),
+            request_content, CaseQuestionAnswerResponse, receipt,
+        )
+        source_ids = {source.source_id for source in source_bundle.sources}
+        if any(source_id not in source_ids for source_id in parsed.cited_source_ids):
+            raise CaseAnalysisFailure(
+                "case_question_answer_unknown_source", "Answer cites an unknown Case source",
+            )
+        return CaseQuestionAnswerOutput(
+            answer=parsed.answer,
+            cited_source_ids=tuple(parsed.cited_source_ids),
+            clarification_question=parsed.clarification_question,
+            execution_receipt=receipt,
+        )
 
     parsed = await request_analysis_stage(
         client,
@@ -121,6 +138,7 @@ async def execute_analysis_pipeline(
         CaseProviderAnalysis,
         receipt,
     )
+    cleaned_technical_context = request_content["technical_context"]
     mitre_table = (
         cleaned_technical_context["mitre_table"]
         if cleaned_technical_context
@@ -163,33 +181,12 @@ async def execute_analysis_pipeline(
     )
 
 
-def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "source_id": source.source_id,
-        "source_kind": source.source_kind,
-        "text": source.text,
-    }
-    if source.source_kind == "document" or source.document_id or source.filename:
-        document: dict[str, object] = {
-            "document_id": source.document_id,
-            "filename": source.filename,
-        }
-        for quality_key in (
-            "extraction_method",
-            "provider",
-            "verification_status",
-            "confidence_status",
-            "minimum_confidence",
-            "warnings",
-        ):
-            if quality_key in source.provenance:
-                document[quality_key] = source.provenance[quality_key]
-        payload["document"] = document
-    return payload
-
-
-def validate_source_bundle(source_bundle: CaseSourceBundle) -> None:
-    if not isinstance(source_bundle, CaseSourceBundle) or not source_bundle.sources:
+def validate_source_bundle(
+    source_bundle: CaseSourceBundle,
+    *,
+    require_sources: bool = True,
+) -> None:
+    if not isinstance(source_bundle, CaseSourceBundle) or (require_sources and not source_bundle.sources):
         raise CaseAnalysisFailure("case_sources_invalid", "Case source bundle is invalid")
     source_ids = [source.source_id for source in source_bundle.sources]
     if (
@@ -251,7 +248,7 @@ def validate_direct_trace(
 
 
 async def request_analysis_stage(
-    client: httpx.AsyncClient,
+    client: httpx.AsyncClient | None,
     config: AnalysisPipelineConfig,
     stage: str,
     system: str,
@@ -285,21 +282,24 @@ async def request_case_analysis(
     technical_context: dict[str, object] | None = None,
     retrieval_context_id: str | None = None,
 ) -> CaseAnalysisOutput:
-    validated_mode, validated_question = validate_analysis_request(mode, question)
-    return await analyze_case(
+    if mode != "case_overview":
+        raise CaseAnalysisFailure("analysis_invalid_request", "Main Analysis requires case_overview mode")
+    output = await request_case_reasoning(
         source_bundle=source_bundle,
         user_message=user_message,
-        config=read_pipeline(pipeline_config),
-        question=validated_question,
-        mode=validated_mode,
+        pipeline_config=pipeline_config,
+        question=question,
+        mode=mode,
         client=client,
         technical_context=technical_context,
         retrieval_context_id=retrieval_context_id,
     )
-
+    if not isinstance(output, CaseAnalysisOutput):
+        raise CaseAnalysisFailure("case_analysis_invalid", "Main Analysis returned an invalid result")
+    return output
 
 __all__ = [
-    "analyze_case",
+    "request_case_reasoning",
     "execute_analysis_pipeline",
     "request_analysis_stage",
     "request_case_analysis",

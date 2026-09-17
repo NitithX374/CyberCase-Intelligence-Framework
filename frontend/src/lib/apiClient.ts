@@ -141,6 +141,7 @@ export const createCaseChatMessage = async (
   intent?: "ask" | "followup_answer",
   inReplyToMessageId?: string,
   followup?: CaseFollowUpAnswer,
+  clarificationSessionId?: string,
 ): Promise<CaseChatMessageResult> => {
   const response = await axios.post<CaseChatMessageResult>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat/messages`,
@@ -152,6 +153,7 @@ export const createCaseChatMessage = async (
       response_language: detectResponseLanguage(content),
       ...(inReplyToMessageId ? { in_reply_to_message_id: inReplyToMessageId } : {}),
       ...(followup ? { followup } : {}),
+      ...(clarificationSessionId ? { clarification_session_id: clarificationSessionId } : {}),
     },
     { signal },
   );
@@ -255,7 +257,7 @@ function normalizeCaseReport(report: CaseReportRead): CaseReport {
     report: report.report
       ? {
         ...report.report,
-        sections: report.report.sections.map((section) => ({
+        sections: (report.report.sections ?? []).map((section) => ({
           ...section,
           paragraphs: section.paragraphs ?? [],
           items: section.items ?? [],

@@ -7,7 +7,7 @@ import {
   useCaseAnalysis,
   useCaseEvidence,
   useCaseFollowUps,
-  useCaseRunPolling,
+  useCaseRunState,
   useStartCaseAnalysis,
 } from "@/hooks/useCaseQueries";
 import { mockNativeDialog } from "./mock-native-dialog";
@@ -24,7 +24,8 @@ vi.mock("@/hooks/useCaseQueries", () => ({
   useCaseAnalysis: vi.fn(),
   useCaseEvidence: vi.fn(),
   useCaseFollowUps: vi.fn(),
-  useCaseRunPolling: vi.fn(),
+  caseProcessingStatus: vi.fn(),
+  useCaseRunState: vi.fn(),
   useStartCaseAnalysis: vi.fn(),
 }));
 
@@ -174,7 +175,7 @@ function configureAndRender(overrides: MockOverrides = {}) {
     isLoading: false,
   } as never);
 
-  vi.mocked(useCaseRunPolling).mockReturnValue({
+  vi.mocked(useCaseRunState).mockReturnValue({
     data: run ? { ...run, status: runStatus ?? run.status } : undefined,
     isLoading: false,
   } as never);

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import select
@@ -11,6 +12,9 @@ from app.models.case import Case
 from app.models.case_materials import CaseSource
 from app.models.case_run import CaseAnalysisResult
 from app.services.case_materials.material_service import CaseMaterialsError
+
+if TYPE_CHECKING:
+    from app.services.case_analysis.contracts import CaseAnalysisMode, ResponseLanguage
 
 
 @dataclass(frozen=True)
@@ -28,6 +32,85 @@ class CaseSourceItem:
 class CaseSourceBundle:
     revision: int
     sources: tuple[CaseSourceItem, ...]
+
+
+def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "source_id": source.source_id,
+        "source_kind": source.source_kind,
+        "text": source.text,
+    }
+    if source.source_kind == "document" or source.document_id or source.filename:
+        document: dict[str, object] = {
+            "document_id": source.document_id,
+            "filename": source.filename,
+        }
+        for quality_key in (
+            "extraction_method", "provider", "verification_status",
+            "confidence_status", "minimum_confidence", "warnings",
+        ):
+            if quality_key in source.provenance:
+                document[quality_key] = source.provenance[quality_key]
+        payload["document"] = document
+    if source.source_kind == "followup_answer":
+        payload["followup_context"] = {
+            key: source.provenance[key]
+            for key in ("gap_id", "gap_key", "topic", "clarification_question")
+            if key in source.provenance
+        }
+    return payload
+
+
+def build_case_reasoning_payload(
+    *,
+    source_bundle: CaseSourceBundle,
+    response_language: ResponseLanguage,
+    mode: CaseAnalysisMode,
+    question: str | None,
+    technical_context: dict[str, object] | None = None,
+    conversation_history: list[dict[str, str]] | None = None,
+    analysis_context: dict[str, object] | None = None,
+    active_clarification: dict[str, object] | None = None,
+    current_evidence_revision: int | None = None,
+    analysis_evidence_revision: int | None = None,
+) -> dict[str, object]:
+    cleaned_technical_context = None
+    if (
+        isinstance(technical_context, dict)
+        and isinstance(technical_context.get("context"), str)
+        and isinstance(technical_context.get("mitre_table"), (list, tuple))
+        and technical_context.get("mitre_table")
+    ):
+        cleaned_technical_context = {
+            "context": technical_context["context"],
+            "mitre_table": list(technical_context["mitre_table"]),
+        }
+        for context_id_key in ("retrieval_context_id", "case_run_id"):
+            context_id = technical_context.get(context_id_key)
+            if isinstance(context_id, str) and context_id.strip():
+                cleaned_technical_context[context_id_key] = context_id
+    payload: dict[str, object] = {
+        "response_language": response_language,
+        "analysis_mode": mode,
+        "case_sources": [provider_source_payload(source) for source in source_bundle.sources],
+        "technical_context": cleaned_technical_context,
+        "question": question,
+        "conversation_history": list(conversation_history or [])[-12:] if mode == "question_answer" else [],
+    }
+    if mode == "question_answer":
+        payload.update(
+            {
+                "current_evidence_revision": (
+                    current_evidence_revision
+                    if current_evidence_revision is not None
+                    else source_bundle.revision
+                ),
+                "analysis_evidence_revision": analysis_evidence_revision,
+                "analysis_context": analysis_context,
+                "active_clarification": active_clarification,
+            }
+        )
+    return payload
 
 
 def source_label(source: CaseSourceItem) -> str:
@@ -101,6 +184,7 @@ async def load_case_source_bundle(
     *,
     case_id: UUID,
     user_id: UUID | None,
+    require_sources: bool = True,
 ) -> CaseSourceBundle:
     result = await db.execute(
         select(Case)
@@ -116,7 +200,7 @@ async def load_case_source_bundle(
     for source in bundle.sources:
         if not source.text.strip():
             raise CaseMaterialsError("evidence_text_empty", "Case evidence text is empty")
-    if not bundle.sources:
+    if require_sources and not bundle.sources:
         raise CaseMaterialsError("case_evidence_missing", "Add Case material before analysis")
     return bundle
 
@@ -157,10 +241,12 @@ __all__ = [
     "CaseSourceBundle",
     "CaseSourceItem",
     "build_document_source_context",
+    "build_case_reasoning_payload",
     "build_rag_query",
     "case_source_bundle_for_analysis",
     "case_source_bundle_from_case",
     "case_source_item",
     "load_case_source_bundle",
+    "provider_source_payload",
     "source_label",
 ]

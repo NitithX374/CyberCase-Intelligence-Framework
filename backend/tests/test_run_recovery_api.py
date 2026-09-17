@@ -163,16 +163,17 @@ def test_case_ask_creates_and_completes_synchronously_through_http(monkeypatch):
                 await db.flush()
                 case.latest_analysis_result_id = result.id
 
-            async def mock_generate_case_answer(*, context, source_bundle, user_message, client=None):
-                from app.services.case_analysis.contracts import CaseAnalysisOutput as AnalysisOutput
+            async def mock_request_case_reasoning(**kwargs):
+                from app.services.case_analysis.contracts import CaseQuestionAnswerOutput
 
-                return AnalysisOutput(
+                assert kwargs["mode"] == "question_answer"
+                return CaseQuestionAnswerOutput(
                     answer="The answer is grounded in the reported vehicle description.",
-                    trace=trace,
+                    cited_source_ids=(str(source.id),),
                     execution_receipt={"calls": []},
                 )
 
-            monkeypatch.setattr("app.services.chat.case_chat.generate_case_answer", mock_generate_case_answer)
+            monkeypatch.setattr("app.services.chat.case_chat.request_case_reasoning", mock_request_case_reasoning)
             monkeypatch.setattr(settings, "jwt_secret_key", "test-secret-for-case-auth-1234567890")
             headers = {"Authorization": f"Bearer {create_access_token(owner.id, owner.email)}"}
             application = app.app

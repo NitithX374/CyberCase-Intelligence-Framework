@@ -7,7 +7,7 @@ import {
   type CaseRead,
 } from "@/lib/api";
 import type { RunPhase, WorkspaceView } from "@/components/common/types";
-import { chatTranscriptMessages } from "@/lib/chat-followup";
+import { filterSupersededClarificationAnswers } from "@/lib/chat-followup";
 import {
   useCase,
   useCaseAnalysis,
@@ -121,7 +121,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     setDeleteCandidate,
   });
 
-  const visibleMessages = chatTranscriptMessages(chat.messages);
+  const visibleMessages = filterSupersededClarificationAnswers(chat.messages);
   const visibleWorkspaceError = chatActionError ?? chat.queryError;
   const clearWorkspaceError = useCallback(() => {
     setChatActionError(null);
@@ -177,11 +177,11 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
       <WorkspaceChatPanel
         isOpen={isChatOpen}
         phase={workspacePhase}
+        isChatResponding={chat.phase === "querying"}
         messages={chat.messages}
         visibleMessages={visibleMessages}
         chatStatus={chat.chatStatus}
         input={chat.input}
-        hasAnalysisContext={Boolean(activeCase?.latest_analysis_result_id)}
         leadResult={analysisQuery.data ?? null}
         evidenceSources={evidenceQuery.data ?? []}
         onViewChange={handleViewChange}

@@ -9,9 +9,8 @@ export function AccountGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const isLandingPage = pathname === "/";
   const isAuthPage = pathname === "/login" || pathname === "/register";
-  const isPreviewPage = pathname === "/casefleet-preview";
-  const isPublicPage = isLandingPage || isAuthPage || isPreviewPage;
-  const { user, isLoading, sessionError, refetchSession } = useAuth({ enabled: !isPreviewPage });
+  const isPublicPage = isLandingPage || isAuthPage;
+  const { user, isLoading, sessionError, refetchSession } = useAuth();
 
   useEffect(() => {
     // If authenticated user visits login or register, redirect them to their workspace

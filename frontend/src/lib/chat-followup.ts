@@ -43,6 +43,7 @@ export interface ActiveChatFollowUp {
   questionMessageId: string;
   sourceAnalysisId: string;
   sourceRevision: number;
+  clarificationSessionId?: string;
 }
 
 interface FollowUpMetadata {
@@ -51,6 +52,7 @@ interface FollowUpMetadata {
   sourceAnalysisId: string;
   sourceRevision: number;
   gap: ChatFollowUpGapDetail;
+  clarificationSessionId?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -80,12 +82,18 @@ function isGapPriority(
 
 function parseGap(value: unknown): ChatFollowUpGapDetail | null {
   if (!isRecord(value)) return null;
+  const affectedClaimIds = Array.isArray(value.affected_claim_ids)
+    ? value.affected_claim_ids.filter(isNonEmptyString)
+    : [];
+  const affects = isNonEmptyString(value.affects)
+    ? value.affects
+    : affectedClaimIds.join(", ") || (isNonEmptyString(value.reason) ? value.reason : "");
   if (
     !isNonEmptyString(value.gap_id) ||
     !isNonEmptyString(value.gap_key) ||
     !isNonEmptyString(value.topic) ||
     !isNonEmptyString(value.description) ||
-    !isNonEmptyString(value.affects) ||
+    !isNonEmptyString(affects) ||
     !isNonEmptyString(value.reason) ||
     !isNonEmptyString(value.clarification_question) ||
     !isGapStatus(value.status) ||
@@ -100,7 +108,7 @@ function parseGap(value: unknown): ChatFollowUpGapDetail | null {
     topic: value.topic,
     status: value.status,
     description: value.description,
-    affects: value.affects,
+    affects,
     reason: value.reason,
     priority: value.priority,
     askable: value.askable,
@@ -135,6 +143,9 @@ function parseFollowUpMetadata(
     sourceAnalysisId: value.source_analysis_id,
     sourceRevision: value.source_revision,
     gap,
+    clarificationSessionId: isNonEmptyString(value.clarification_session_id)
+      ? value.clarification_session_id
+      : undefined,
   };
 }
 
@@ -216,6 +227,7 @@ export function activeCaseChatFollowUp(
     questionMessageId: active.message.id,
     sourceAnalysisId: active.metadata.sourceAnalysisId,
     sourceRevision: active.metadata.sourceRevision,
+    clarificationSessionId: active.metadata.clarificationSessionId,
   };
 }
 
@@ -244,12 +256,6 @@ export function filterSupersededClarificationAnswers(
   return ordered.filter((message) => !supersededMessageIds.has(message.id));
 }
 
-export function chatTranscriptMessages(
-  persistedMessages: ChatMessageRead[],
-): ChatMessageRead[] {
-  return filterSupersededClarificationAnswers(persistedMessages);
-}
-
 export function persistedRequestOrdinal(
   detail: CaseChatDetail,
   lastKnownMessageOrdinal: number,
@@ -257,6 +263,7 @@ export function persistedRequestOrdinal(
 ): number | undefined {
   return orderedMessages(detail.messages).find(
     (message) =>
+      !message.id.startsWith("optimistic:") &&
       message.role === "user" &&
       message.ordinal > lastKnownMessageOrdinal &&
       message.content === content,

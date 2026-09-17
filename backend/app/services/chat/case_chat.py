@@ -6,20 +6,22 @@ from uuid import UUID
 
 from fastapi import status
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.models.case import Case
-from app.models.case_run import CaseAnalysisResult, CaseRun
+from app.models.case_run import CaseRun
 from app.models.chat import ChatMessage
 from app.schemas.case_followups import CaseFollowUpAnswer
 from app.schemas.chat import CaseChatRead, ChatMessageCreate, ChatMessageRead
 from app.schemas.message_metadata import serialize_message_metadata
-from app.services.chat.case_answer import generate_case_answer, load_case_answer_context
-from app.services.followup.case_followup import (
-    CaseFollowUpError,
-    submit_followup_answer,
-)
+from app.services.case_analysis.case_analysis import request_case_reasoning
+from app.services.case_analysis.contracts import CaseQuestionAnswerOutput
+from app.services.case_analysis.pipeline_config import configured_pipeline
+from app.services.case_materials import load_case_source_bundle
+from app.services.chat.case_chat_context import load_case_chat_context
+from app.services.gap_clarification import GapClarificationError, resume_gap_clarification
 
 
 class CaseChatError(Exception):
@@ -60,7 +62,19 @@ async def get_case_chat(
         ChatMessageRead.model_validate(message)
         for message in sorted(case.chat_messages, key=lambda m: m.ordinal)
     ]
-    return CaseChatRead(case_id=case.id, status="idle", messages=messages)
+    answered_followup_ids = {
+        message.in_reply_to_message_id
+        for message in case.chat_messages
+        if message.in_reply_to_message_id is not None
+    }
+    has_pending_followup = any(
+        message.message_kind == "followup_question" and message.id not in answered_followup_ids
+        for message in case.chat_messages
+    )
+    status_value = "awaiting_followup" if has_pending_followup else (
+        "answered" if case.latest_analysis_result_id is not None else "idle"
+    )
+    return CaseChatRead(case_id=case.id, status=status_value, messages=messages)
 
 
 def build_followup_answer(request: ChatMessageCreate) -> CaseFollowUpAnswer:
@@ -79,8 +93,13 @@ async def submit_case_followup_answer(
     case_id: UUID,
     user_id: UUID | None,
     request: ChatMessageCreate,
-) -> tuple[ChatMessage, CaseRun | None]:
-    case = await lock_case_chat(db, case_id, user_id)
+) -> tuple[ChatMessage, ChatMessage | None, ChatMessage | None, CaseRun | None]:
+    if not request.request_key:
+        raise CaseChatError(
+            "idempotency_key_required",
+            "client_request_id or idempotency_key is required",
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
     target_id = request.in_reply_to_message_id
     if target_id is None:
         raise CaseChatError(
@@ -88,19 +107,27 @@ async def submit_case_followup_answer(
             "in_reply_to_message_id is required when intent is followup_answer",
             status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
+    answer = build_followup_answer(request)
+    session_factory = async_sessionmaker(
+        bind=db.bind,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
     try:
-        message, run = await submit_followup_answer(
-            db,
-            case_id=case.id,
-            followup_id=target_id,
+        result = await resume_gap_clarification(
+            case_id=case_id,
             user_id=user_id,
-            answer=build_followup_answer(request),
-            idempotency_key=request.request_key,
-            response_language=request.response_language,
+            question_id=target_id,
+            content=answer.answer or "",
+            disposition=answer.disposition,
+            request_key=request.request_key,
+            gap_id=answer.gap_id,
+            clarification_session_id=request.clarification_session_id,
+            session_factory=session_factory,
         )
-    except CaseFollowUpError as error:
+    except GapClarificationError as error:
         raise CaseChatError(error.code, error.message, error.status_code) from error
-    return message, run
+    return result.answer_message, result.next_question, result.reply_message, result.run
 
 
 async def ask_case(
@@ -124,17 +151,9 @@ async def ask_case(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
-    # ── Transaction A: User message persistence, Idempotency, Context loading ──
     case = await db.scalar(select(Case).where(Case.id == case_id))
     if case is None or case.user_id != user_id:
         raise CaseChatError("case_not_found", "Case not found", 404)
-
-    context_result = await db.scalar(
-        select(CaseAnalysisResult).where(
-            CaseAnalysisResult.id == case.latest_analysis_result_id,
-            CaseAnalysisResult.case_id == case.id,
-        )
-    )
 
     existing_user_msg = await db.scalar(
         select(ChatMessage).where(
@@ -172,7 +191,6 @@ async def ask_case(
             role="user",
             content=request.content.strip(),
             message_kind="conversation",
-            analysis_result_id=context_result.id if context_result is not None else None,
             metadata_json=serialize_message_metadata(
                 {
                     "action": "conversation",
@@ -184,25 +202,46 @@ async def ask_case(
 
     user_read = ChatMessageRead.model_validate(user_message)
 
-    context, source_bundle = await load_case_answer_context(
+    source_bundle = await load_case_source_bundle(
         db,
         case_id=case.id,
-        question_message_id=user_message.id,
-        analysis_result_id=context_result.id if context_result is not None else None,
+        user_id=user_id,
+        require_sources=False,
+    )
+    await db.refresh(case)
+    chat_context = await load_case_chat_context(
+        db,
+        case=case,
+        current_message_ordinal=user_message.ordinal,
     )
 
-    # Commit Transaction A and release DB lock before external LLM call
     await db.commit()
 
-    # ── Outside DB: LLM call with 45s timeout ──
+    await asyncio.sleep(settings.chat_ask_start_delay_seconds)
     async with asyncio.timeout(45):
-        output = await generate_case_answer(
-            context=context,
+        output = await request_case_reasoning(
+            mode="question_answer",
             source_bundle=source_bundle,
-            user_message=request,
+            pipeline_config=configured_pipeline().model_dump(mode="json"),
+            question=user_read.content,
+            user_message=user_read.content,
+            technical_context=chat_context.technical_context,
+            conversation_history=chat_context.conversation_history,
+            analysis_context=chat_context.analysis_context,
+            active_clarification=chat_context.active_clarification,
+            current_evidence_revision=chat_context.current_evidence_revision,
+            analysis_evidence_revision=chat_context.analysis_evidence_revision,
         )
+    if not isinstance(output, CaseQuestionAnswerOutput):
+        raise CaseChatError(
+            "case_chat_answer_invalid",
+            "Case Chat returned an invalid answer",
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+    assistant_content = output.answer
+    if output.clarification_question:
+        assistant_content = f"{assistant_content}\n\n{output.clarification_question}"
 
-    # ── Transaction B: Persist Assistant reply ──
     next_ordinal = (
         await db.scalar(
             select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
@@ -215,9 +254,8 @@ async def ask_case(
         case_id=case_id,
         ordinal=next_ordinal,
         role="assistant",
-        content=output.answer,
+        content=assistant_content,
         message_kind="conversation",
-        analysis_result_id=context_result.id if context_result is not None else None,
         in_reply_to_message_id=user_read.id,
         metadata_json=serialize_message_metadata(
             {

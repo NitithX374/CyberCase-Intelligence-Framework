@@ -18,6 +18,11 @@ import {
   type ChatFollowUpAnswer,
 } from "@/lib/chat-followup";
 import type { ChatDraftSession, PendingChatSubmission } from "./useChatDraft";
+import {
+  addOptimisticChatMessage,
+  mergeChatMessageResult,
+  removeOptimisticChatMessage,
+} from "./chatSubmissionMessages";
 
 export interface UseCaseChatSubmissionOptions {
   caseId: string | null;
@@ -103,17 +108,27 @@ export function useCaseChatSubmission({
           "followup_answer",
           activeFollowUp.questionMessageId,
           toApiFollowUpAnswer(answer),
+          activeFollowUp.clarificationSessionId,
         );
 
-        const nextStatus: CaseChatStatus = "answered";
+        const nextStatus: CaseChatStatus = accepted.assistant_message?.message_kind === "followup_question"
+          ? "awaiting_followup"
+          : "answered";
 
         // RACE GUARD: If active case changed during in-flight POST
         if (activeCaseIdRef.current !== targetCaseId) {
           queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => {
             if (!current) return current;
-            const updated = current.messages.some((m) => m.id === accepted.message.id)
+            const newMessages = [
+              accepted.message,
+              ...(accepted.assistant_message ? [accepted.assistant_message] : []),
+              ...(accepted.reply_message ? [accepted.reply_message] : []),
+            ];
+            const existingIds = new Set(current.messages.map((message) => message.id));
+            const toAdd = newMessages.filter((message) => !existingIds.has(message.id));
+            const updated = toAdd.length === 0
               ? current.messages
-              : [...current.messages, accepted.message].sort((a, b) => a.ordinal - b.ordinal);
+              : [...current.messages, ...toAdd].sort((a, b) => a.ordinal - b.ordinal);
             return { ...current, status: nextStatus, messages: updated };
           });
           return;
@@ -122,9 +137,16 @@ export function useCaseChatSubmission({
         draft.acceptSubmission(submission.key, accepted.message.ordinal);
         queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => {
           const base = current ?? { case_id: targetCaseId, status: nextStatus, messages: [] };
-          const updated = base.messages.some((m) => m.id === accepted.message.id)
+          const newMessages = [
+            accepted.message,
+            ...(accepted.assistant_message ? [accepted.assistant_message] : []),
+            ...(accepted.reply_message ? [accepted.reply_message] : []),
+          ];
+          const existingIds = new Set(base.messages.map((message) => message.id));
+          const toAdd = newMessages.filter((message) => !existingIds.has(message.id));
+          const updated = toAdd.length === 0
             ? base.messages
-            : [...base.messages, accepted.message].sort((a, b) => a.ordinal - b.ordinal);
+            : [...base.messages, ...toAdd].sort((a, b) => a.ordinal - b.ordinal);
           return { ...base, status: nextStatus, messages: updated };
         });
 
@@ -196,6 +218,15 @@ export function useCaseChatSubmission({
     void (async () => {
       try {
         draft.beginSubmission(submission);
+        queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => (
+          addOptimisticChatMessage(
+            current,
+            targetCaseId,
+            content,
+            submission.key,
+            submission.lastKnownMessageOrdinal,
+          )
+        ));
         const result = await createCaseChatMessage(
           targetCaseId,
           content,
@@ -203,35 +234,25 @@ export function useCaseChatSubmission({
           controller.signal,
         );
 
-        const newMessages = [
-          result.message,
-          ...(result.assistant_message ? [result.assistant_message] : []),
-        ];
-
         // RACE GUARD: If active case changed during in-flight POST
         if (activeCaseIdRef.current !== targetCaseId) {
           queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => {
-            if (!current) return current;
-            const existingIds = new Set(current.messages.map((m) => m.id));
-            const toAdd = newMessages.filter((m) => !existingIds.has(m.id));
-            const updated = [...current.messages, ...toAdd].sort((a, b) => a.ordinal - b.ordinal);
-            return { ...current, status: "answered", messages: updated };
+            return mergeChatMessageResult(current, result, submission.key);
           });
           return;
         }
 
         queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => {
-          const base = current ?? { case_id: targetCaseId, status: "answered", messages: [] };
-          const existingIds = new Set(base.messages.map((m) => m.id));
-          const toAdd = newMessages.filter((m) => !existingIds.has(m.id));
-          const updated = [...base.messages, ...toAdd].sort((a, b) => a.ordinal - b.ordinal);
-          return { ...base, status: "answered", messages: updated };
+          return mergeChatMessageResult(current, result, submission.key);
         });
 
         draft.completeSubmission(targetCaseId);
         void queryClient.invalidateQueries({ queryKey: caseQueryKeys.chat(targetCaseId) });
       } catch (error) {
         if (isRequestCanceled(controller.signal, error) || activeCaseIdRef.current !== targetCaseId) return;
+        queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(targetCaseId), (current) => (
+          removeOptimisticChatMessage(current, submission.key)
+        ));
         draft.failSubmission("message", statusBeforeSubmit, getApiErrorMessage(
           error,
           "The message could not be submitted.",
@@ -259,7 +280,6 @@ export function useCaseChatSubmission({
     }
     submitContent(pending.content);
   }, [caseId, draft, submitContent, submitFollowUp]);
-
   return {
     submitContent,
     submitFollowUp,
@@ -268,7 +288,6 @@ export function useCaseChatSubmission({
     submitMessage,
   };
 }
-
 function toApiFollowUpAnswer(answer: ChatFollowUpAnswer): CaseFollowUpAnswer {
   return {
     gap_id: answer.gapId,
@@ -276,7 +295,6 @@ function toApiFollowUpAnswer(answer: ChatFollowUpAnswer): CaseFollowUpAnswer {
     disposition: answer.disposition,
   };
 }
-
 function formatFollowUpAnswer(answer: ChatFollowUpAnswer): string {
   return answer.disposition === "answered" ? answer.answer ?? "" : answer.disposition;
 }

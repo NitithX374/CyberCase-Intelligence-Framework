@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 import * as api from "@/lib/api";
-import { caseQueryKeys, useCaseRunPolling } from "@/hooks/useCaseQueries";
+import { caseQueryKeys, useCaseRunPolling, useCaseRunState } from "@/hooks/useCaseQueries";
 
 function createWrapper(queryClient: QueryClient) {
   return function Wrapper({ children }: PropsWithChildren) {
@@ -38,5 +38,36 @@ describe("useCaseRunPolling", () => {
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: caseQueryKeys.followups("case-1"),
     });
+  });
+
+  it("reads a seeded run without fetching or owning polling", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const run = {
+      id: "run-1",
+      case_id: "case-1",
+      evidence_revision: 1,
+      status: "running" as const,
+      attempt_count: 1,
+      error_code: null,
+      error_message: null,
+      created_at: "2026-09-10T01:00:00Z",
+      started_at: "2026-09-10T01:00:01Z",
+      finished_at: null,
+      updated_at: "2026-09-10T01:00:01Z",
+    };
+    queryClient.setQueryData(caseQueryKeys.run("case-1", "run-1"), run);
+    const getCaseRun = vi.spyOn(api, "getCaseRun");
+    getCaseRun.mockClear();
+
+    const { result } = renderHook(
+      () => useCaseRunState("case-1", "run-1"),
+      { wrapper: createWrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.data).toEqual(run));
+    expect(getCaseRun).not.toHaveBeenCalled();
+
+    queryClient.setQueryData(caseQueryKeys.run("case-1", "run-1"), { ...run, status: "completed" as const });
+    await waitFor(() => expect(result.current.data?.status).toBe("completed"));
   });
 });

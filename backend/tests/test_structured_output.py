@@ -8,9 +8,7 @@ from app.services.llm.structured_output import (
 
 def test_report_schema_is_provider_compatible() -> None:
     schema = anthropic_json_schema(StructuredReport)
-    assert schema["properties"]["report_version"]["const"] == (
-        "preliminary_analysis_report_v1"
-    )
+    assert schema["properties"]["report_version"]["type"] == "string"
 
 
 def test_report_contract_is_case_evidence_bound() -> None:

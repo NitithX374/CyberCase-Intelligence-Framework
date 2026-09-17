@@ -13,6 +13,7 @@ def test_migration_chain_is_clean_and_linear() -> None:
         "0003_received_case_material.py",
         "0004_external_context_json.py",
         "0005_decouple_case_ask_chat.py",
+        "0006_case_run_concurrent_active_index.py",
     ]
     baseline_source = migrations[0].read_text(encoding="utf-8")
     assert 'revision = "0001_canonical_case_system"' in baseline_source
@@ -41,3 +42,10 @@ def test_baseline_declares_only_canonical_tables() -> None:
     assert "chat_runs" not in created
     assert "chat_reports" not in created
     assert "case_state_versions" not in source
+
+
+def test_migration_revision_ids_fit_alembic_version_column() -> None:
+    migration_source = (BASELINE / "0006_case_run_concurrent_active_index.py").read_text(encoding="utf-8")
+    revision = re.search(r'^revision = "([^"]+)"$', migration_source, re.MULTILINE)
+    assert revision is not None
+    assert len(revision.group(1)) <= 32

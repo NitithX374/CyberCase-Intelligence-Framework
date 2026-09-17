@@ -122,11 +122,11 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
 
                     case_run_indexes = inspector.get_indexes("case_runs", schema=schema)
                     assert any(
-                        index["name"] == "ux_case_runs_one_active_per_case"
-                        and index["unique"]
+                        index["name"] == "ix_case_runs_active_per_case"
+                        and not index["unique"]
                         and index["column_names"] == ["case_id"]
                         for index in case_run_indexes
-                    ), "ux_case_runs_one_active_per_case missing"
+                    ), "ix_case_runs_active_per_case missing"
 
                     # 4. Check chat_messages columns and indexes
                     msg_cols = {c["name"] for c in inspector.get_columns("chat_messages", schema=schema)}

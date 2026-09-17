@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 FollowUpState = Literal["pending", "answered", "superseded"]
 FollowUpDisposition = Literal["answered", "unavailable", "skipped"]
@@ -36,11 +36,21 @@ class CaseFollowUpAnswer(BaseModel):
     answer: str | None = Field(default=None, max_length=400_000)
     disposition: FollowUpDisposition
 
+    @field_validator("gap_id")
+    @classmethod
+    def normalize_gap_id(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("answer")
+    @classmethod
+    def normalize_answer(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
     @model_validator(mode="after")
     def validate_disposition(self) -> "CaseFollowUpAnswer":
-        self.gap_id = self.gap_id.strip()
-        if self.answer is not None:
-            self.answer = self.answer.strip()
         if self.disposition == "answered" and not self.answer:
             raise ValueError("Answered follow-ups require an answer")
         if self.disposition != "answered" and self.answer:

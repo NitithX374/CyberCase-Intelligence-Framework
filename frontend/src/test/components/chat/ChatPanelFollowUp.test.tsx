@@ -75,6 +75,27 @@ const pendingFollowUp: ActiveChatFollowUp = {
 };
 
 describe("WorkspaceChatPanel boundaries", () => {
+  it("shows the LLM response indicator and disables the composer while Chat is waiting", () => {
+    render(
+      <WorkspaceChatPanel
+        isOpen
+        messages={messages}
+        visibleMessages={messages}
+        input="What happened next?"
+        chatStatus="idle"
+        phase="ready"
+        isChatResponding
+        onViewChange={vi.fn()}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("status", { name: "CyberCase is responding" })).toBeInTheDocument();
+    expect(screen.getByText("...")).toBeInTheDocument();
+    expect(screen.getByLabelText("Chat message")).toBeDisabled();
+  });
+
   it("renders the persisted clarification and enables composer to answer in Chat", () => {
     Element.prototype.scrollIntoView = vi.fn();
     const onInputChange = vi.fn();
@@ -89,7 +110,7 @@ describe("WorkspaceChatPanel boundaries", () => {
         input="host-7"
         chatStatus="awaiting_followup"
         phase="awaiting_followup"
-        hasAnalysisContext
+        isChatResponding={false}
         onViewChange={vi.fn()}
         onInputChange={onInputChange}
         onSubmit={onSubmit}
@@ -126,7 +147,7 @@ describe("WorkspaceChatPanel boundaries", () => {
         input=""
         chatStatus="idle"
         phase="idle"
-        hasAnalysisContext={false}
+        isChatResponding={false}
         onViewChange={vi.fn()}
         onInputChange={vi.fn()}
         onSubmit={vi.fn()}

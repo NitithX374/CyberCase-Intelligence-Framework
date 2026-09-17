@@ -11,7 +11,7 @@ const databaseUrl = process.env.E2E_DATABASE_URL ?? "postgresql+asyncpg://postgr
 
 const child = spawn(
   pythonExecutable,
-  ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "18000"],
+  ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "18000", "--loop", "app.uvicorn_loop:selector_loop_factory"],
   {
     cwd: backendDirectory,
     env: {

@@ -25,7 +25,7 @@ import type {
 } from "./caseOverviewTypes";
 
 export const claimTypeLabels: Record<ClaimType, string> = {
-  reported: "Reported information",
+  reported: "Current information",
   analytical_inference: "Analytical inference",
   unknown: "Unknown information",
 };

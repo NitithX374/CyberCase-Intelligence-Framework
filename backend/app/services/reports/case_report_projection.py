@@ -92,60 +92,34 @@ def technical_augmentation_input(
 ) -> CaseReportTechnicalAugmentation | None:
     metadata = result.external_context_json if isinstance(result.external_context_json, dict) else {}
     raw = metadata.get("technical_augmentation")
-    if raw is None:
+    if not isinstance(raw, dict):
         return None
-    try:
-        augmentation = CaseReportTechnicalAugmentation.model_validate(raw)
-    except Exception as error:
-        raise ReportGenerationConflict(
-            "case_technical_augmentation_invalid",
-            "The persisted Case technical augmentation outcome is invalid",
-        ) from error
-    if augmentation.retrieval_context_id != trace.retrieval_context_id:
-        raise ReportGenerationConflict(
-            "case_technical_augmentation_invalid",
-            "The persisted technical retrieval context is not bound to the analysis trace",
-        )
-    if augmentation.association_ids != [item.association_id for item in trace.mitre_associations]:
-        raise ReportGenerationConflict(
-            "case_technical_augmentation_invalid",
-            "The persisted technical associations are not bound to the analysis trace",
-        )
-    validate_augmentation_outcome(augmentation, trace)
-    return augmentation
-
-
-def validate_augmentation_outcome(
-    augmentation: CaseReportTechnicalAugmentation,
-    trace: CaseAnalysisTrace,
-) -> None:
-    has_context = bool(augmentation.retrieval_context_id)
-    has_rows = bool(augmentation.mitre_table)
-    has_associations = bool(trace.mitre_associations)
-    if augmentation.status == "not_applicable":
-        valid = augmentation.applicability.decision == "SKIP" and not has_context and not has_rows and not has_associations
-    elif augmentation.status == "insufficient_context":
-        valid = augmentation.applicability.decision == "RETRIEVE" and has_context and not has_associations
-    elif augmentation.status == "retrieved_from_rag":
-        valid = augmentation.applicability.decision == "RETRIEVE" and has_context and has_rows and not has_associations
-    elif augmentation.status == "retrieved_without_supported_match":
-        valid = augmentation.applicability.decision == "RETRIEVE" and has_context and has_rows and not has_associations
-    elif augmentation.status == "retrieved_with_matches":
-        valid = augmentation.applicability.decision == "RETRIEVE" and has_context and has_rows and has_associations
-    else:
-        valid = bool(augmentation.failure_code) and not has_associations
-    if not valid:
-        raise ReportGenerationConflict(
-            "case_technical_augmentation_invalid",
-            "The persisted technical augmentation outcome is internally inconsistent",
-        )
-
-
-def mitre_table_for_validation(result: CaseAnalysisResult) -> list[dict[str, object]]:
-    metadata = result.external_context_json if isinstance(result.external_context_json, dict) else {}
-    raw = metadata.get("technical_augmentation")
-    table = raw.get("mitre_table", []) if isinstance(raw, dict) else metadata.get("mitre_table", [])
-    return [dict(item) for item in table if isinstance(item, dict)] if isinstance(table, list) else []
+    raw_status = raw.get("status")
+    status = str(raw_status) if raw_status else "not_applicable"
+    retrieval_context_id = raw.get("retrieval_context_id")
+    if retrieval_context_id is not None and not isinstance(retrieval_context_id, str):
+        retrieval_context_id = str(retrieval_context_id)
+    raw_table = raw.get("mitre_table")
+    mitre_table = [
+        dict(item)
+        for item in raw_table
+        if isinstance(item, dict)
+    ] if isinstance(raw_table, list) else []
+    raw_associations = raw.get("association_ids")
+    association_ids = [
+        str(item)
+        for item in raw_associations
+        if isinstance(item, (str, int))
+    ] if isinstance(raw_associations, list) else []
+    failure_code = str(raw["failure_code"]) if raw.get("failure_code") else None
+    return CaseReportTechnicalAugmentation(
+        status=status,
+        retrieval_context_id=retrieval_context_id,
+        retrieval_context_reused=bool(raw.get("retrieval_context_reused", False)),
+        mitre_table=mitre_table,
+        association_ids=association_ids,
+        failure_code=failure_code,
+    )
 
 
 __all__ = ["build_case_report_input", "serialize_case_report"]

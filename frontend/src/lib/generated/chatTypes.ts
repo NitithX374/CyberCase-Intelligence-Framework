@@ -10,8 +10,9 @@ export type ChatMessageCreate = {
     content: string;
     idempotency_key?: string | null;
     client_request_id?: string | null;
-    intent: "ask" | "followup_answer";
+    intent: "ask" | "followup_answer" | "reply";
     in_reply_to_message_id?: string | null;
+    clarification_session_id?: string | null;
     response_language: "thai" | "english";
     followup?: CaseFollowUpAnswer | null;
 };
@@ -42,6 +43,9 @@ export type FollowUpMetadata = {
     answer?: {
         [key: string]: unknown;
     };
+    clarification_session_id?: string;
+    workflow_thread_id?: string;
+    target_information?: string | null;
 };
 
 export type MessageMetadata = {

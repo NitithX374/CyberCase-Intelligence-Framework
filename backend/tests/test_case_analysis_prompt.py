@@ -126,11 +126,12 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
                 ],
                 "technical_context": None,
                 "question": None,
+                "conversation_history": [],
             },
         )
         self.assertEqual(
             set(content),
-            {"response_language", "analysis_mode", "case_sources", "technical_context", "question"},
+            {"response_language", "analysis_mode", "case_sources", "technical_context", "question", "conversation_history"},
         )
 
     async def test_provenance_failure_gets_one_corrective_provider_pass(self) -> None:

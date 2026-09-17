@@ -116,8 +116,9 @@ export function sourceRefs(
 function buildSourceRef(source: CaseEvidenceSource, citation: CaseCitation | null): SourceMessageRef {
   const pageBinding = citation ? resolvePageBinding(source, citation) : null;
   const sourceType = sourceTypeFor(source.kind);
+  const friendlyName = source.filename ?? sourceTypeLabel(sourceType);
   const documentLabel = source.filename ? `${source.filename} · ` : "";
-  const label = pageBinding ? `${documentLabel}${formatPageReference(pageBinding.pageNumbers)}` : `${documentLabel}Source ${source.id}`;
+  const label = pageBinding ? `${documentLabel}${formatPageReference(pageBinding.pageNumbers)}` : friendlyName;
   return {
     id: source.id,
     ordinal: source.ordinal,

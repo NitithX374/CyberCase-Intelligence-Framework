@@ -29,7 +29,14 @@ function sendJson(response, status, payload) {
 
 function firstMessageContent(body) {
   const messages = Array.isArray(body?.messages) ? body.messages : [];
-  return messages[0]?.content ?? "";
+  const input = [...messages].reverse().find((message) => message?.role === "user" || message?.role === "human");
+  return input?.content ?? messages[0]?.content ?? "";
+}
+
+function systemContent(body) {
+  if (typeof body?.system === "string") return body.system;
+  const messages = Array.isArray(body?.messages) ? body.messages : [];
+  return messages.find((message) => message?.role === "system")?.content ?? "";
 }
 
 function asObject(value) {
@@ -44,8 +51,14 @@ function asObject(value) {
 }
 
 function responseFor(body) {
-  const system = typeof body?.system === "string" ? body.system : "";
+  const system = systemContent(body);
   const content = firstMessageContent(body);
+  const request = asObject(content);
+  const caseSources = Array.isArray(request?.case_sources)
+    ? request.case_sources.filter(
+        (source) => source && typeof source === "object" && typeof source.source_id === "string" && source.source_id,
+      )
+    : [];
   if (system.includes("MITRE ATT&CK applicability gate")) {
     return {
       decision: "SKIP",
@@ -56,23 +69,36 @@ function responseFor(body) {
   if (typeof content === "string" && content.includes("Return all relevant case-specific gaps")) {
     return { gaps: [] };
   }
-  if (system.includes("Answer only the current question")) {
+  if (system.includes("analysis_mode is question_answer")) {
+    const source = caseSources[0];
     return {
-      insufficient_context: false,
-      units: [
-        {
-          text: "The deterministic test provider answered from the persisted case analysis.",
-          claim_ids: ["A-01"],
-        },
-      ],
+      answer: "The deterministic test provider answered from the current Case source.",
+      cited_source_ids: source ? [source.source_id] : [],
+      clarification_question: null,
     };
   }
-  const request = asObject(content);
-  const caseSources = Array.isArray(request?.case_sources)
-    ? request.case_sources.filter(
-        (source) => source && typeof source === "object" && typeof source.source_id === "string" && source.source_id,
-      )
-    : [];
+  if (system.includes("You select the next single question")) {
+    const asked = Array.isArray(request?.questions_asked) ? request.questions_asked : [];
+    if (asked.length > 0) {
+      return { action: "resolved", question: null, target_information: null };
+    }
+    return {
+      action: "ask",
+      question: "Which identification is correct: the primary operator or the secondary contractor?",
+      target_information: "workstation owner",
+      rationale_summary: "The current gap affects attribution of the workstation activity.",
+    };
+  }
+  if (system.includes("You interpret one user's answer")) {
+    const answer = request?.answer && typeof request.answer === "object" ? request.answer : {};
+    const answerText = typeof answer.content === "string" ? answer.content : "";
+    return {
+      response_type: "case_fact",
+      normalized_fact: answerText,
+      resolved_information: answerText,
+      gap_resolution: "resolved",
+    };
+  }
   if (caseSources.length === 0) {
     throw new Error("Unsupported E2E provider request");
   }
@@ -136,18 +162,31 @@ const server = http.createServer(async (request, response) => {
     sendJson(response, 200, { status: "ok", requests: requestCount });
     return;
   }
-  if (request.method !== "POST" || request.url !== "/v1/messages") {
+  const isAnthropic = request.url === "/v1/messages";
+  const isOpenAi = request.url === "/v1/chat/completions";
+  if (request.method !== "POST" || (!isAnthropic && !isOpenAi)) {
     sendJson(response, 404, { error: "not_found" });
     return;
   }
   requestCount += 1;
   try {
     const body = await readBody(request);
+    const payload = responseFor(body);
+    if (isOpenAi) {
+      sendJson(response, 200, {
+        id: `e2e-provider-${requestCount}`,
+        object: "chat.completion",
+        model: body?.model ?? "e2e-provider",
+        choices: [{ index: 0, message: { role: "assistant", content: JSON.stringify(payload) }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      });
+      return;
+    }
     sendJson(response, 200, {
       id: `e2e-provider-${requestCount}`,
       model: body?.model ?? "e2e-provider",
       stop_reason: "end_turn",
-      content: [{ type: "text", text: JSON.stringify(responseFor(body)) }],
+      content: [{ type: "text", text: JSON.stringify(payload) }],
       usage: { input_tokens: 1, output_tokens: 1 },
     });
   } catch (error) {

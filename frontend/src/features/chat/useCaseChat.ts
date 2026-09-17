@@ -141,20 +141,6 @@ export function useCaseChat({
     }
   }, [draft, effectiveCaseId, queryClient]);
 
-  const refreshCaseChat = useCallback(async (targetId?: string) => {
-    const id = targetId ?? effectiveCaseId;
-    if (!id) return;
-    await queryClient.refetchQueries({
-      queryKey: caseQueryKeys.chat(id),
-      exact: true,
-    });
-  }, [effectiveCaseId, queryClient]);
-
-  const clearSelection = useCallback(() => {
-    setSelectedCaseId(null);
-    draft.clearDraft();
-  }, [draft]);
-
   const suspendCaseChat = useCallback((id: string) => {
     const wasActive = effectiveCaseId === id;
     if (wasActive) {
@@ -162,48 +148,6 @@ export function useCaseChat({
     }
     return wasActive;
   }, [effectiveCaseId, queryClient]);
-
-  const restoreCaseChat = useCallback(() => {}, []);
-
-  const sessionObj = useMemo(() => ({
-    activeCaseChatId: effectiveCaseId,
-    messages,
-    chatStatus,
-    phase,
-    input: draft.state.input,
-    pendingFollowUp: pendingFollowUpItem,
-    queryError: draft.state.queryError,
-    changeInput: draft.changeInput,
-    reportError: draft.reportError,
-    selectCaseChat,
-    refreshCaseChat,
-    clearSelection,
-    suspendCaseChat,
-    restoreCaseChat,
-    getActiveCaseChatId: () => effectiveCaseId,
-    getSelection: () => (
-      effectiveCaseId
-        ? { caseId: effectiveCaseId, signal: new AbortController().signal }
-        : null
-    ),
-    getPendingSubmission: draft.getPendingSubmission,
-  }), [
-    clearSelection,
-    draft.changeInput,
-    draft.getPendingSubmission,
-    draft.reportError,
-    draft.state.input,
-    draft.state.queryError,
-    effectiveCaseId,
-    messages,
-    pendingFollowUpItem,
-    phase,
-    refreshCaseChat,
-    restoreCaseChat,
-    selectCaseChat,
-    chatStatus,
-    suspendCaseChat,
-  ]);
 
   return {
     ...submission,
@@ -221,20 +165,8 @@ export function useCaseChat({
     isFetching: chatQuery.isFetching,
     refetch: chatQuery.refetch,
     selectCaseChat,
-    refreshCaseChat,
-    clearSelection,
     suspendCaseChat,
-    restoreCaseChat,
-    getActiveCaseChatId: useCallback(() => effectiveCaseId, [effectiveCaseId]),
-    getSelection: useCallback(() => (
-      effectiveCaseId
-        ? { caseId: effectiveCaseId, signal: new AbortController().signal }
-        : null
-    ), [effectiveCaseId]),
     getPendingSubmission: draft.getPendingSubmission,
     draft,
-    session: sessionObj,
   };
 }
-
-export type CaseChatSession = ReturnType<typeof useCaseChat>;

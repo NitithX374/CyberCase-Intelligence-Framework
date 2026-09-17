@@ -16,7 +16,7 @@ ReportSupportType = Literal[
 ReportStatus = Literal["provisional_unverified"]
 ReportPersistenceStatus = Literal["completed", "failed"]
 ReportValidationStatus = Literal["validated", "failed"]
-ReportVersion = Literal["preliminary_analysis_report_v1"]
+ReportVersion = str
 ReportSectionId = Literal[
     "case_summary",
     "case_evidence",
@@ -48,14 +48,6 @@ PRELIMINARY_REPORT_SECTION_HEADINGS: dict[str, str] = {
     "system_limitations": "7. ข้อจำกัดของระบบ",
 }
 
-REPORT_SECTION_IDS_BY_VERSION: dict[str, tuple[str, ...]] = {
-    "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_IDS,
-}
-
-REPORT_SECTION_HEADINGS_BY_VERSION: dict[str, dict[str, str]] = {
-    "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_HEADINGS,
-}
-
 
 class ReportClaim(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -80,10 +72,10 @@ class ReportSection(BaseModel):
 class StructuredReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    report_version: ReportVersion
-    status: ReportStatus
+    report_version: ReportVersion = "preliminary_analysis_report_v1"
+    status: ReportStatus = "provisional_unverified"
     title: str = Field(min_length=1, max_length=200)
-    sections: list[ReportSection] = Field(min_length=7, max_length=7)
+    sections: list[ReportSection] = Field(default_factory=list)
     claims: list[ReportClaim] = Field(default_factory=list, max_length=96)
     limitations: list[str] = Field(default_factory=list, max_length=32)
 
@@ -129,8 +121,6 @@ class CaseReportRead(BaseModel):
 __all__ = [
     "CaseReportCreate",
     "CaseReportRead",
-    "REPORT_SECTION_HEADINGS_BY_VERSION",
-    "REPORT_SECTION_IDS_BY_VERSION",
     "PRELIMINARY_REPORT_SECTION_HEADINGS",
     "PRELIMINARY_REPORT_SECTION_IDS",
     "ReportClaim",

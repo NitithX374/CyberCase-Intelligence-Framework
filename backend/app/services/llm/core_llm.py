@@ -69,12 +69,14 @@ def resolve_core_llm_target(
     api_key = active_settings.anthropic_api_key.strip()
     if require_key and not api_key:
         raise CoreLlmConfigurationError("anthropic", "ANTHROPIC_API_KEY")
+    messages_url = active_settings.anthropic_messages_url.rstrip("/")
+    base_url = messages_url.removesuffix("/v1/messages") or "https://api.anthropic.com"
     return CoreLlmTarget(
         provider="anthropic",
         model=feature_anthropic_model,
         api_key=api_key,
-        base_url="https://api.anthropic.com",
-        messages_url=active_settings.anthropic_messages_url,
+        base_url=base_url,
+        messages_url=messages_url,
         headers={
             "x-api-key": api_key,
             "anthropic-version": "2023-06-01",

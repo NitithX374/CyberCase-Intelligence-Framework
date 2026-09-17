@@ -33,8 +33,6 @@ async def run_case_report_generation(report_input: CaseReportInput) -> ReportRun
             status="completed",
             report=report,
             prompt_version=CASE_REPORT_PROMPT_VERSION,
-            provider="deterministic",
-            model="case-template",
             latency_ms=round((time.perf_counter() - started) * 1000, 3),
         )
     except Exception as error:
@@ -42,8 +40,6 @@ async def run_case_report_generation(report_input: CaseReportInput) -> ReportRun
             status="failed",
             report=None,
             prompt_version=CASE_REPORT_PROMPT_VERSION,
-            provider="deterministic",
-            model="case-template",
             validation_errors=(str(error),),
             failure_code="case_report_generation_failed",
             failure_message="The Case report could not be generated from the selected analysis.",
@@ -59,14 +55,11 @@ def build_case_template_report(
     sections = build_case_report_sections(report_input, trace)
     limitations = build_case_report_limitations(report_input)
     return StructuredReport(
-        report_version="preliminary_analysis_report_v1",
-        status="provisional_unverified",
         title=report_input.case_title or "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น",
         sections=sections,
         claims=claims,
         limitations=limitations,
     )
-
 
 __all__ = [
     "CASE_REPORT_PROMPT_VERSION",

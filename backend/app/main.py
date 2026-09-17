@@ -1,8 +1,12 @@
 """FastAPI application for the Case-owned API."""
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+
+if os.name == "nt":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 

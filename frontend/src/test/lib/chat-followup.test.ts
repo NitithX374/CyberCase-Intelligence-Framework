@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { ChatMessageRead } from "@/lib/api";
 import {
   activeCaseChatFollowUp,
-  chatTranscriptMessages,
   filterSupersededClarificationAnswers,
   followUpGapDetailForMessage,
   latestUserAnswerBetween,
@@ -67,7 +66,7 @@ describe("chat follow-up projection", () => {
       clarification(2, "Which host was affected?", 1),
     ];
 
-    expect(chatTranscriptMessages(messages).map((item) => item.content)).toEqual(
+    expect(filterSupersededClarificationAnswers(messages).map((item) => item.content)).toEqual(
       ["Investigate this event.", "Which host was affected?"],
     );
   });
@@ -125,7 +124,36 @@ describe("chat follow-up projection", () => {
     };
 
     expect(followUpGapDetailForMessage(question)).toBeNull();
-    expect(chatTranscriptMessages([question])).toEqual([question]);
+    expect(filterSupersededClarificationAnswers([question])).toEqual([question]);
+  });
+
+  it("restores a gap without claim links using its reason as the display detail", () => {
+    const question = clarification(2, "Do you have authentication logs?", 1);
+    question.metadata_json = {
+      action: "follow_up",
+      chat_followup: {
+        root_ordinal: 1,
+        round: 1,
+        source_analysis_id: "analysis-1",
+        source_revision: 1,
+        gap: {
+          gap_id: "gap-authentication",
+          gap_key: "authentication_records",
+          topic: "authentication records",
+          status: "NOT_PROVIDED",
+          description: "Authentication records were not provided.",
+          reason: "The reported access cannot be linked to a specific credential.",
+          priority: "high",
+          askable: true,
+          clarification_question: "Do you have authentication logs?",
+          affected_claim_ids: [],
+        },
+      },
+    };
+
+    expect(followUpGapDetailForMessage(question)?.affects).toBe(
+      "The reported access cannot be linked to a specific credential.",
+    );
   });
 
   it("selects the latest user answer before the next assistant message", () => {

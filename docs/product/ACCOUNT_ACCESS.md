@@ -35,7 +35,7 @@ No SMTP host, sender address or mail-service credentials are required.
 
 Provider callback URLs must exactly match `/api/v1/auth/callback/google` or `/api/v1/auth/callback/github`. Cookies use SameSite=Lax, so frontend and backend should share a site; localhost with different ports works.
 
-Install backend requirements, apply `python -m alembic upgrade head` against the intended PostgreSQL component settings, and rebuild the application services. The existing migration through 0004 is unchanged. Its nullable email-verification token fields remain unused; format-only registration neither populates them nor fabricates a verification timestamp. Existing account data is preserved.
+Install backend requirements, apply `python -m alembic upgrade head` against the intended PostgreSQL component settings, and rebuild the application services. Its nullable email-verification token fields remain unused; format-only registration neither populates them nor fabricates a verification timestamp. Existing account data is preserved.
 
 ## Validation
 

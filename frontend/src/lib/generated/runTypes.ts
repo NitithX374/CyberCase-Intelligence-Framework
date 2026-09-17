@@ -39,6 +39,7 @@ export type CaseAnalysisResultRead = {
 export type CaseChatMessageResult = {
     message: ChatMessageRead;
     assistant_message?: ChatMessageRead | null;
+    reply_message?: ChatMessageRead | null;
     run?: CaseRunRead | null;
 };
 

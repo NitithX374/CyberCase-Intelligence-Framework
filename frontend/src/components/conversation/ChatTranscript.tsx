@@ -17,6 +17,7 @@ import { EvidenceCitationChip } from "@/components/evidence/EvidenceCitationChip
 interface ChatTranscriptProps {
   messages: ChatMessageRead[];
   isProcessing: boolean;
+  isResponding?: boolean;
   leadResult?: CaseAnalysisResultRead | null;
   evidenceSources?: CaseSourceRead[] | null;
   onOpenOverview?: () => void;
@@ -26,6 +27,7 @@ interface ChatTranscriptProps {
 export function ChatTranscript({
   messages,
   isProcessing,
+  isResponding = false,
   leadResult,
   evidenceSources,
   onOpenOverview,
@@ -56,12 +58,12 @@ export function ChatTranscript({
       return;
     }
     const hasNewMessage = messages.some((message) => !initialMessageIdsRef.current?.has(message.id));
-    if (!hasNewMessage && !isProcessing) return;
+    if (!hasNewMessage && !isProcessing && !isResponding) return;
     initialMessageIdsRef.current = new Set(messages.map((message) => message.id));
     bottomRef.current?.scrollIntoView?.({ behavior: "smooth" });
-  }, [isProcessing, leadResult?.id, messages]);
+  }, [isProcessing, isResponding, leadResult?.id, messages]);
 
-  if (displayMessages.length === 0 && !leadResult) {
+  if (displayMessages.length === 0 && !leadResult && !isResponding) {
     return (
       <div className="flex h-full min-h-[400px] flex-col items-center justify-center p-8 text-center">
         <div className="max-w-md space-y-3 border-l-2 border-evidence/50 px-5 py-2 text-left">
@@ -132,7 +134,19 @@ export function ChatTranscript({
         );
       })}
 
-      {isProcessing && (
+      {isResponding && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="CyberCase is responding"
+          className="flex items-center gap-2 px-1 py-5 text-xs font-semibold text-ink-secondary"
+        >
+          <span className="text-evidence">CyberCase</span>
+          <span aria-hidden="true" className="tracking-[0.2em]">...</span>
+        </div>
+      )}
+
+      {isProcessing && !isResponding && (
         <div className="flex items-center gap-2 px-1 py-5 text-xs font-semibold text-ink-secondary">
           <StatusPill tone="evidence">Analysis in progress</StatusPill>
           <span>Reviewing the current case material…</span>

@@ -84,7 +84,9 @@ class LLMProviderConfig(BaseModel):
 # ── 5. Deterministic follow-up selection ─────────────────────────────────────
 class FollowupConfig(BaseModel):
     chat_followup_enabled: bool = True
-    chat_followup_max_rounds: int = Field(default=2, ge=1, le=16)
+    chat_followup_max_rounds: int = Field(default=3, ge=1, le=16)
+    gap_clarification_max_attempts: int = Field(default=3, ge=1, le=8)
+    langgraph_checkpoint_database_url: str = ""
 
 
 # ── 6. Case Analysis & Post-Answer Q&A ────────────────────────────────────────
@@ -93,6 +95,7 @@ class CaseAnalysisConfig(BaseModel):
     case_run_failure_persistence_timeout_seconds: float = Field(default=5.0, gt=0)
     chat_ask_model: str = "openai/gpt-5.6-luna"
     chat_ask_timeout_seconds: float = 120.0
+    chat_ask_start_delay_seconds: float = Field(default=1.0, ge=0)
 
 
 # ── 7. Persisted Report Generation ───────────────────────────────────────────

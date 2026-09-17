@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from typing import Literal
 from uuid import UUID
-
-from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, StructuredReport
 from app.services.case_materials.case_source_bundle import CaseSourceBundle
@@ -21,31 +19,63 @@ CaseTechnicalAugmentationStatus = Literal[
 ]
 
 
-class CaseReportTechnicalAugmentation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_mitre_augmentation_v1"]
-    status: CaseTechnicalAugmentationStatus
-    applicability: MitreApplicabilityRecord
+@dataclass(frozen=True)
+class CaseReportTechnicalAugmentation:
+    status: CaseTechnicalAugmentationStatus = "not_applicable"
+    applicability: MitreApplicabilityRecord | None = None
     retrieval_context_id: str | None = None
     retrieval_context_reused: bool = False
-    mitre_table: list[dict[str, object]] = Field(default_factory=list, max_length=256)
-    association_ids: list[str] = Field(default_factory=list, max_length=64)
-    failure_code: str | None = Field(default=None, max_length=120)
+    mitre_table: list[dict[str, object]] = field(default_factory=list)
+    association_ids: list[str] = field(default_factory=list)
+    failure_code: str | None = None
+    version: str = "case_mitre_augmentation_v1"
+
+    def model_dump(self, *args: object, **kwargs: object) -> dict[str, object]:
+        return {
+            "status": self.status,
+            "applicability": self.applicability,
+            "retrieval_context_id": self.retrieval_context_id,
+            "retrieval_context_reused": self.retrieval_context_reused,
+            "mitre_table": self.mitre_table,
+            "association_ids": self.association_ids,
+            "failure_code": self.failure_code,
+            "version": self.version,
+        }
+
+    @classmethod
+    def model_validate(cls, value: object) -> CaseReportTechnicalAugmentation:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, dict):
+            raise TypeError(f"Expected dict, got {type(value)}")
+        return cls(
+            status=str(value.get("status") or "not_applicable"),
+            applicability=value.get("applicability"),
+            retrieval_context_id=value.get("retrieval_context_id"),
+            retrieval_context_reused=bool(value.get("retrieval_context_reused", False)),
+            mitre_table=list(value.get("mitre_table") or []),
+            association_ids=list(value.get("association_ids") or []),
+            failure_code=value.get("failure_code"),
+            version=str(value.get("version") or "case_mitre_augmentation_v1"),
+        )
 
 
-class CaseReportInput(BaseModel):
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-
+@dataclass(frozen=True)
+class CaseReportInput:
     case_id: UUID
-    case_title: str = "CyberCase Investigation"
     analysis_result_id: UUID
     source_bundle: CaseSourceBundle
-    analysis_answer: str = Field(min_length=1)
-    analysis_summary: str = Field(min_length=1)
+    analysis_answer: str
+    analysis_summary: str
     analysis_trace: dict[str, object]
+    case_title: str = "CyberCase Investigation"
     technical_augmentation: CaseReportTechnicalAugmentation | None = None
-    unresolved_issues: list[str] = Field(default_factory=list, max_length=64)
+    unresolved_issues: list[str] = field(default_factory=list)
+
+    def model_copy(self, *, update: dict[str, object] | None = None) -> CaseReportInput:
+        if not update:
+            return self
+        return replace(self, **update)
 
 
 def case_source_ids(report_input: CaseReportInput) -> set[str]:
@@ -76,8 +106,8 @@ class ReportRunResult:
     status: Literal["completed", "failed"]
     report: StructuredReport | None
     prompt_version: str
-    provider: str
-    model: str
+    provider: str = "deterministic"
+    model: str = "case-template"
     validation_errors: tuple[str, ...] = ()
     failure_code: str | None = None
     failure_message: str | None = None

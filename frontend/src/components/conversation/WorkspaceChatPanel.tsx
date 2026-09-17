@@ -18,11 +18,11 @@ import { ChatTranscript } from "./ChatTranscript";
 interface WorkspaceChatPanelProps {
   isOpen: boolean;
   phase: RunPhase;
+  isChatResponding: boolean;
   messages: ChatMessageRead[];
   visibleMessages: ChatMessageRead[];
   chatStatus: CaseChatStatus | null;
   input: string;
-  hasAnalysisContext: boolean;
   leadResult?: CaseAnalysisResultRead | null;
   evidenceSources?: CaseSourceRead[] | null;
   onViewChange: (view: WorkspaceView) => void;
@@ -37,6 +37,7 @@ interface WorkspaceChatPanelProps {
 export function WorkspaceChatPanel({
   isOpen,
   phase,
+  isChatResponding,
   messages,
   visibleMessages,
   chatStatus,
@@ -58,7 +59,7 @@ export function WorkspaceChatPanel({
 
   const followUp = chatStatus === "awaiting_followup" ? pendingFollowUp : null;
   const clarification = followUp && clarifyingQuestionId === followUp.questionMessageId ? followUp : null;
-  const isFollowUpSubmitting = phase === "querying" || phase === "analyzing";
+  const isSubmitting = isChatResponding || phase === "querying" || phase === "analyzing";
 
   const continueFollowUp = (disposition: ClarificationDisposition) => {
     if (!clarification) return;
@@ -121,6 +122,7 @@ export function WorkspaceChatPanel({
             <ChatTranscript
               messages={visibleMessages}
               isProcessing={phase === "querying" || phase === "analyzing"}
+              isResponding={isChatResponding}
               leadResult={leadResult}
               evidenceSources={evidenceSources}
               onOpenOverview={() => onViewChange("overview")}
@@ -147,7 +149,7 @@ export function WorkspaceChatPanel({
               ) : null}
               <ChatComposer
                 input={input}
-                isSubmitting={isFollowUpSubmitting}
+                isSubmitting={isSubmitting}
                 onInputChange={onInputChange}
                 onSubmit={handleComposerSubmit}
                 placeholder={clarification ? `Answer: ${clarification.gap.topic}…` : undefined}
@@ -177,11 +179,12 @@ function FollowUpStepper({
           <span>Clarification round {followUp.round}</span>
           <button type="button" onClick={onCancel} className="normal-case tracking-normal text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">Continue with Ask</button>
         </div>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-ink">{followUp.gap.question}</p>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-ink">{followUp.question}</p>
         <p className="mt-1 text-[11px] leading-relaxed text-ink-secondary">{followUp.gap.reason}</p>
       </div>
       <div className="flex flex-wrap gap-2 border-t border-unresolved/20 px-3 py-2">
         <button type="button" onClick={() => onDisposition("unavailable")} className="text-[11px] font-semibold text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">I don’t have this information</button>
+        <button type="button" onClick={() => onDisposition("skipped")} className="text-[11px] font-semibold text-ink-secondary underline decoration-line underline-offset-2 hover:text-ink">Skip clarification</button>
       </div>
     </div>
   );

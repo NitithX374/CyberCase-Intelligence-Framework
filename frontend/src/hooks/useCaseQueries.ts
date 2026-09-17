@@ -99,14 +99,14 @@ export function useCases() {
   });
 }
 
-export function useCaseRun(
+export function useCaseRunState(
   caseId: string | null,
   runId: string | null | undefined,
 ) {
   return useQuery<CaseRunRead>({
     queryKey: caseQueryKeys.run(caseId ?? "none", runId ?? "none"),
     queryFn: ({ signal }) => getCaseRun(caseId!, runId!, signal),
-    enabled: Boolean(caseId && runId),
+    enabled: false,
     retry: false,
   });
 }
@@ -143,6 +143,11 @@ export function useCaseRunPolling(
   }, [caseId, query.data?.status, query.data?.attempt_count, queryClient, runId]);
 
   return query;
+}
+
+export function caseProcessingStatus(caseRecord: CaseRead | null): CaseRunRead["status"] | null {
+  const status = caseRecord?.processing_status;
+  return status === "queued" || status === "running" || status === "failed" ? status : null;
 }
 
 export function useUploadCaseDocument(caseId: string | null) {

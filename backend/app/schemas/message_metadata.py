@@ -12,6 +12,9 @@ class FollowUpMetadata(TypedDict, total=False):
     source_revision: int
     gap: dict[str, object]
     answer: dict[str, object]
+    clarification_session_id: str
+    workflow_thread_id: str
+    target_information: str | None
 
 
 class MessageMetadata(TypedDict, total=False):

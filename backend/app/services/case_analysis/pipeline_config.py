@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class AnalysisPipelineConfig(BaseModel):
@@ -17,25 +17,19 @@ class AnalysisPipelineConfig(BaseModel):
     timeout_seconds: float = Field(default=120, gt=0)
     encoding: Literal["o200k_base"] = "o200k_base"
 
-    @model_validator(mode="before")
+    @field_validator("model")
     @classmethod
-    def assign_version(cls, value: object) -> object:
-        if isinstance(value, dict) and "version" not in value:
-            value = dict(value)
-            value["version"] = "main_case_analysis_v1"
-        return value
+    def normalize_model(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            raise ValueError("model identifier must be non-empty")
+        return trimmed
 
     @model_validator(mode="after")
     def validate_budget(self) -> "AnalysisPipelineConfig":
-        if self.version != "main_case_analysis_v1":
-            raise ValueError("Pipeline version does not match selected method")
         if self.output_tokens + self.safety_tokens >= self.context_tokens:
             raise ValueError("Analysis output and safety budgets exhaust context")
-        if (
-            self.model != self.model.strip()
-            or "/" not in self.model
-            and self.provider == "openrouter"
-        ):
+        if "/" not in self.model and self.provider == "openrouter":
             raise ValueError("Use an explicit provider model identifier")
         return self
 

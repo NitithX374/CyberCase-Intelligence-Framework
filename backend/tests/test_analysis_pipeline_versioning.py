@@ -40,7 +40,6 @@ def test_historical_raw_direct_version_reads_without_mutating_saved_payload():
     assert payload["version"] == "main_case_analysis_v10"
 
 
-
 def test_historical_version_cannot_select_claim_anchored():
     with pytest.raises(ValidationError):
         read_pipeline({"pipeline": "claim_anchored", "version": "main_case_analysis_v10"})
@@ -52,3 +51,25 @@ def test_raw_direct_pipeline_matches_current_prompt_version():
     )
 
     assert AnalysisPipelineConfig().version == CASE_ANALYSIS_PROMPT_VERSION
+
+
+def test_analysis_pipeline_config_normalization_and_invariants():
+    # model whitespace is normalized
+    config = AnalysisPipelineConfig(model="  openai/gpt-4o  ")
+    assert config.model == "openai/gpt-4o"
+
+    # empty model raises ValidationError
+    with pytest.raises(ValidationError):
+        AnalysisPipelineConfig(model="   ")
+
+    # budget exhaust raises ValidationError
+    with pytest.raises(ValidationError):
+        AnalysisPipelineConfig(output_tokens=100_000, safety_tokens=30_000, context_tokens=128_000)
+
+    # openrouter model requires slash
+    with pytest.raises(ValidationError):
+        AnalysisPipelineConfig(provider="openrouter", model="gpt-4o")
+
+    # missing version in dict still defaults to main_case_analysis_v1 without assign_version validator
+    read = AnalysisPipelineConfig.model_validate({"model": "openai/gpt-4o"})
+    assert read.version == "main_case_analysis_v1"

@@ -41,10 +41,10 @@ export type ReportSection = {
 };
 
 export type StructuredReport = {
-    report_version: "preliminary_analysis_report_v1";
+    report_version: string;
     status: "provisional_unverified";
     title: string;
-    sections: ReportSection[];
+    sections?: ReportSection[];
     claims?: ReportClaim[];
     limitations?: string[];
 };

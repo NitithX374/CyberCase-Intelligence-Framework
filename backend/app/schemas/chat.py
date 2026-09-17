@@ -25,8 +25,9 @@ class ChatMessageCreate(BaseModel):
     content: str = Field(default="")
     idempotency_key: str | None = Field(default=None, max_length=255)
     client_request_id: str | None = Field(default=None, max_length=255)
-    intent: Literal["ask", "followup_answer"] = "ask"
+    intent: Literal["ask", "followup_answer", "reply"] = "ask"
     in_reply_to_message_id: UUID | None = None
+    clarification_session_id: str | None = Field(default=None, max_length=160)
     response_language: Literal["thai", "english"] = "english"
     followup: CaseFollowUpAnswer | None = None
 
@@ -62,6 +63,7 @@ class CaseChatRead(BaseModel):
 class CaseChatMessageResult(BaseModel):
     message: ChatMessageRead
     assistant_message: ChatMessageRead | None = None
+    reply_message: ChatMessageRead | None = None
     run: CaseRunRead | None = None
 
 

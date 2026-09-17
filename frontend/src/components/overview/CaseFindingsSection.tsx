@@ -22,7 +22,7 @@ export interface FindingSourceActions {
   activeSourceKey?: string | null;
 }
 
-export function FindingRow({ finding, ...sourceActions }: FindingSourceActions & { finding: CaseFinding }) {
+function FindingRow({ finding, ...sourceActions }: FindingSourceActions & { finding: CaseFinding }) {
   const isReportedDefault = finding.claimType === "reported" && finding.epistemicStatus === "reported";
 
   const getBadgeStyle = (status: string) => {
@@ -69,12 +69,6 @@ export function FindingRow({ finding, ...sourceActions }: FindingSourceActions &
             </summary>
             <div className="mt-2 space-y-1.5 border-t border-line/60 pt-2">
               {finding.reasoningSummary && <p className="leading-relaxed text-ink-secondary">{finding.reasoningSummary}</p>}
-              {finding.mitreTechniques.length > 0 && (
-                <p className="text-[11px] leading-relaxed text-ink-muted">
-                  <span className="font-semibold text-mitre">External cyber reference: </span>
-                  {finding.mitreTechniques.map((technique) => `${technique.techniqueId} · ${technique.techniqueName}`).join("; ")}
-                </p>
-              )}
             </div>
           </details>
         )}
@@ -133,8 +127,8 @@ export function CaseFindingsSection({ findings, ...sourceActions }: FindingSourc
                 <div className="overflow-x-auto rounded-lg border border-line bg-surface shadow-xs">
                   <div className="grid min-w-[640px] grid-cols-[10rem_minmax(0,1fr)_minmax(12rem,0.7fr)] gap-4 border-b border-line bg-surface-nested px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                     <span>Assessment</span>
-                    <span>Finding &amp; Details</span>
-                    <span>Evidence</span>
+                    <span>Finding</span>
+                    <span>Source</span>
                   </div>
                   <div id={`findings-${group.id}`} className="divide-y divide-line/60">
                     {visible.map((finding) => <FindingRow key={finding.id} finding={finding} {...sourceActions} />)}

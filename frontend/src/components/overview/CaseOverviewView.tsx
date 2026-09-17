@@ -10,7 +10,8 @@ import {
   useCaseAnalysis,
   useCaseEvidence,
   useCaseFollowUps,
-  useCaseRunPolling,
+  caseProcessingStatus,
+  useCaseRunState,
   useStartCaseAnalysis,
 } from "@/hooks/useCaseQueries";
 import { casePath } from "@/lib/workspaceRoutes";
@@ -35,14 +36,10 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const followupsQuery = useCaseFollowUps(caseId);
 
   const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId, runId);
+  const runQuery = useCaseRunState(caseId, runId);
   const runStatus =
     runQuery.data?.status ??
-    (activeCase?.processing_status === "queued" ||
-    activeCase?.processing_status === "running" ||
-    activeCase?.processing_status === "failed"
-      ? activeCase.processing_status
-      : null);
+    caseProcessingStatus(activeCase);
 
   const startAnalysisMutation = useStartCaseAnalysis(caseId);
 
@@ -80,7 +77,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
         expected_evidence_revision: activeCase?.evidence_revision ?? 0,
       });
     } catch {
-      // Handled by run state / error modals
+
     }
   };
 
@@ -125,7 +122,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
     return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Intake" onAction={navigateToIntake} actionIcon="intake" />;
   }
 
-  if (!overview.hasAnalysis && overview.isProcessing) {
+  if (overview.isProcessing) {
     return (
       <CaseOverviewState
         title="Analyzing Case Material…"
@@ -369,7 +366,7 @@ function CaseOverviewState({
   processing?: boolean;
 }) {
   return (
-    <div className="mx-auto flex h-full min-h-[360px] w-full max-w-5xl flex-col justify-center px-5 py-10 sm:px-8 lg:px-10">
+    <div className="mx-auto flex h-full min-h-[360px] w-full max-w-5xl flex-col justify-center px-5 py-10 sm:px-8 lg:px-10 blur">
       <div className="max-w-xl border-y border-line py-8">
         {processing ? (
           <div className="mb-4 flex items-center gap-2 text-evidence"><span className="h-2 w-2 rounded-full bg-evidence" /><span className="text-[11px] font-semibold">Analysis in progress</span></div>

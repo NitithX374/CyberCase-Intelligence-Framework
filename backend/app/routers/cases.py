@@ -60,7 +60,7 @@ async def create_case_chat_message(
     try:
         if request.intent == "followup_answer":
             async with db.begin():
-                message, run = await submit_case_followup_answer(
+                message, assistant_message, reply_message, run = await submit_case_followup_answer(
                     db,
                     case_id=case_id,
                     user_id=user.id,
@@ -68,7 +68,16 @@ async def create_case_chat_message(
                 )
                 result = CaseChatMessageResult(
                     message=ChatMessageRead.model_validate(message),
-                    assistant_message=None,
+                    assistant_message=(
+                        ChatMessageRead.model_validate(assistant_message)
+                        if assistant_message is not None
+                        else None
+                    ),
+                    reply_message=(
+                        ChatMessageRead.model_validate(reply_message)
+                        if reply_message is not None
+                        else None
+                    ),
                     run=CaseRunRead.model_validate(run) if run is not None else None,
                 )
             if result.run is not None:

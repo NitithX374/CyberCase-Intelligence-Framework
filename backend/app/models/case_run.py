@@ -35,7 +35,7 @@ class CaseRun(Base):
         UniqueConstraint("case_id", "idempotency_key", name="uq_case_runs_case_id_idempotency_key"),
         CheckConstraint("status IN ('queued', 'running', 'completed', 'failed')", name="ck_case_runs_status"),
         CheckConstraint("attempt_count >= 0", name="ck_case_runs_attempt_count_nonnegative"),
-        Index("ux_case_runs_one_active_per_case", "case_id", unique=True, postgresql_where=text("status IN ('queued', 'running')")),
+        Index("ix_case_runs_active_per_case", "case_id", postgresql_where=text("status IN ('queued', 'running')")),
         Index("ix_case_runs_case_id_created_at", "case_id", "created_at"),
     )
 

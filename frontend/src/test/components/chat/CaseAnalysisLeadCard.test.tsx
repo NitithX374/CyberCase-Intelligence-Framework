@@ -35,6 +35,13 @@ const evidenceSources: CaseSourceRead[] = [{
 }];
 
 describe("ChatTranscript lead card", () => {
+  it("shows the response indicator before the first assistant message arrives", () => {
+    render(<ChatTranscript messages={[]} isProcessing={false} isResponding />);
+
+    expect(screen.getByRole("status", { name: "CyberCase is responding" })).toBeInTheDocument();
+    expect(screen.getByText("...")).toBeInTheDocument();
+  });
+
   it("renders grounded case analysis summary and validated pill", () => {
     const onOpenOverview = vi.fn();
     render(<ChatTranscript messages={[]} isProcessing={false} leadResult={sampleResult} evidenceSources={evidenceSources} onOpenOverview={onOpenOverview} />);

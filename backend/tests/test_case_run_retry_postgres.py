@@ -51,7 +51,7 @@ async def _fail(factory, run_id):
         run.finished_at = datetime.now(timezone.utc)
 
 
-def test_failed_case_retry_rejects_newer_work_and_active_work():
+def test_failed_case_retry_rejects_newer_work_but_allows_older_active_work():
     async def exercise():
         async with isolated_database() as factory:
             case_id = await _case_with_source(factory)
@@ -67,11 +67,10 @@ def test_failed_case_retry_rejects_newer_work_and_active_work():
             assert superseded.value.code == "case_run_superseded"
 
             active_case = await _case_with_source(factory)
-            active_old = await _enqueue(factory, active_case, "active-old")
-            await _fail(factory, active_old)
-            await _enqueue(factory, active_case, "active-new")
-            with pytest.raises(CaseRunError, match="active") as active:
-                await _enqueue(factory, active_case, "active-old")
-            assert active.value.code == "case_run_active"
+            await _enqueue(factory, active_case, "active-existing")
+            retry_target = await _enqueue(factory, active_case, "retry-target")
+            await _fail(factory, retry_target)
+            retried = await _enqueue(factory, active_case, "retry-target")
+            assert retried == retry_target
 
     asyncio.run(exercise())

@@ -67,14 +67,6 @@ async def enqueue_case_analysis(
             "Case evidence changed; reload the Case before starting analysis",
         )
 
-    active = await db.scalar(
-        select(CaseRun.id)
-        .where(CaseRun.case_id == case.id, CaseRun.status.in_(("queued", "running")))
-        .with_for_update()
-    )
-    if active is not None:
-        raise CaseRunError("case_run_active", "Case already has an active analysis run")
-
     await load_case_source_bundle(db, case_id=case.id, user_id=user_id)
     pipeline = configured_pipeline().model_dump(mode="json")
     run = CaseRun(
@@ -153,17 +145,6 @@ async def requeue_failed_case_run(
 ) -> CaseRun:
     if run.status != "failed":
         return run
-    active = await db.scalar(
-        select(CaseRun.id)
-        .where(
-            CaseRun.case_id == case.id,
-            CaseRun.id != run.id,
-            CaseRun.status.in_(("queued", "running")),
-        )
-        .with_for_update()
-    )
-    if active is not None:
-        raise CaseRunError("case_run_active", "Case already has an active analysis run")
     if run.evidence_revision != case.evidence_revision:
         raise CaseRunError(
             "case_run_superseded",

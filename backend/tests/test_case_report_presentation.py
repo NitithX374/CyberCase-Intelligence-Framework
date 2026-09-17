@@ -188,3 +188,36 @@ def test_pdf_report_is_generated_from_the_readable_report_content() -> None:
 
     assert pdf.startswith(b"%PDF-")
     assert len(PdfReader(BytesIO(pdf)).pages) >= 1
+
+
+def test_structured_report_defaults_and_dataclass_contracts() -> None:
+    from app.schemas.reports import StructuredReport
+    from dataclasses import is_dataclass
+
+    # StructuredReport defaults report_version and status
+    report = StructuredReport(title="Test Report")
+    assert report.report_version == "preliminary_analysis_report_v1"
+    assert report.status == "provisional_unverified"
+    assert report.sections == []
+
+    # CaseReportInput is a dataclass
+    inp = _input()
+    assert is_dataclass(inp)
+    copied = inp.model_copy(update={"case_title": "Updated Title"})
+    assert copied.case_title == "Updated Title"
+    assert inp.case_title == "คดีทดสอบ"
+
+    # CaseReportTechnicalAugmentation is a dataclass with compatibility methods
+    aug = CaseReportTechnicalAugmentation(status="not_applicable")
+    assert is_dataclass(aug)
+    dumped = aug.model_dump()
+    assert dumped["status"] == "not_applicable"
+    restored = CaseReportTechnicalAugmentation.model_validate(dumped)
+    assert restored.status == "not_applicable"
+
+
+def test_speculative_version_dictionaries_are_removed() -> None:
+    import app.schemas.reports as report_schemas
+
+    assert not hasattr(report_schemas, "REPORT_SECTION_IDS_BY_VERSION")
+    assert not hasattr(report_schemas, "REPORT_SECTION_HEADINGS_BY_VERSION")
