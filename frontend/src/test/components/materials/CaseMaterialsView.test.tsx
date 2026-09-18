@@ -87,7 +87,7 @@ function renderMaterials(overrides: Partial<React.ComponentProps<typeof CaseMate
   it("renders the canonical empty Case state", () => {
     renderMaterials();
     expect(screen.getByText("No source files yet.")).toBeInTheDocument();
-    expect(screen.getByText("Add a source file to begin reviewing materials.")).toBeInTheDocument();
+    expect(screen.getByText("Add a source file using Add files above.")).toBeInTheDocument();
   });
 
   it("renders page cards and jump links for multi-page extraction", () => {

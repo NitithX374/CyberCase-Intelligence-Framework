@@ -42,19 +42,15 @@ describe("ChatTranscript lead card", () => {
     expect(screen.getByText("...")).toBeInTheDocument();
   });
 
-  it("renders grounded case analysis summary and validated pill", () => {
+  it("renders the exploration hint when messages are empty", () => {
     const onOpenOverview = vi.fn();
     render(<ChatTranscript messages={[]} isProcessing={false} leadResult={sampleResult} evidenceSources={evidenceSources} onOpenOverview={onOpenOverview} />);
-    expect(screen.getByText("Analysis Result")).toBeInTheDocument();
-    expect(screen.getByText("Validated")).toBeInTheDocument();
-    expect(screen.getByText(sampleResult.summary)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /view full case overview/i }));
-    expect(onOpenOverview).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Ask a question below to explore the case analysis or review details.")).toBeInTheDocument();
   });
 });
 
 describe("ChatTranscript with Lead Card", () => {
-  it("renders the lead card and removes its historical publication", () => {
+  it("renders messages and filters historical publication", () => {
     const historicalDuplicateMessage: ChatMessageRead = {
       id: "msg-pub-1", case_id: "case-123", ordinal: 1, role: "assistant",
       content: "Duplicate publication of analysis findings", retrieval_context_id: null,
@@ -68,7 +64,6 @@ describe("ChatTranscript with Lead Card", () => {
       created_at: "2026-09-10T12:05:00Z",
     };
     render(<ChatTranscript messages={[historicalDuplicateMessage, regularQAMessage]} isProcessing={false} leadResult={sampleResult} evidenceSources={evidenceSources} />);
-    expect(screen.getByText("Analysis Result")).toBeInTheDocument();
     expect(screen.getByText("What malware family was identified?")).toBeInTheDocument();
     expect(screen.queryByText("Duplicate publication of analysis findings")).not.toBeInTheDocument();
   });

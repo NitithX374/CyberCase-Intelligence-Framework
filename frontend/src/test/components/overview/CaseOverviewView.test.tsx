@@ -196,7 +196,7 @@ describe("CaseOverviewView", () => {
   it("renders the empty Case state without a selected Case", () => {
     configureAndRender({ caseId: null, analysisResult: null, evidenceSources: [], runStatus: null });
     expect(screen.getByText("No Case Material Yet")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open Intake" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Materials" }));
     expect(routerPush).toHaveBeenCalledOnce();
   });
 

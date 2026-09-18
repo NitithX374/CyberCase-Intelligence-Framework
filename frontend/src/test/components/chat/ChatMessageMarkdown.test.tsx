@@ -180,21 +180,11 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
 
     render(<ChatTranscript messages={messages} isProcessing={false} />);
 
-    const summary = screen.getByText("Why is CyberCase asking this?");
-    const details = summary.closest("details");
-    expect(details).not.toHaveAttribute("open");
-
-    fireEvent.click(summary);
-
-    expect(details).toHaveAttribute("open");
     expect(
       screen.getByText("Authentication records for VM access"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("The reported access cannot be linked to a credential."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("The account used for VM access remains unresolved."),
     ).toBeInTheDocument();
     expect(screen.getByText("Needs clarification")).toBeInTheDocument();
   });

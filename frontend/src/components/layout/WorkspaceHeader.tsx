@@ -31,9 +31,8 @@ const phasePresentation: Record<RunPhase, string> = {
 };
 
 const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
-  { view: "intake", label: "Intake" },
-  { view: "overview", label: "Overview" },
   { view: "materials", label: "Materials" },
+  { view: "overview", label: "Overview" },
   { view: "technical-context", label: "Technical" },
   { view: "report", label: "Report" },
 ];

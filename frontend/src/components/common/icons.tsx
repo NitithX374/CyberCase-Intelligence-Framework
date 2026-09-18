@@ -1,7 +1,6 @@
 import type { SVGProps } from "react";
 
 export type IconName =
-  | "intake"
   | "overview"
   | "materials"
   | "technical"
@@ -24,14 +23,6 @@ const paths: Record<IconName, React.ReactNode> = {
       <circle cx="12" cy="12" r="10" />
       <line x1="12" y1="8" x2="12" y2="12" />
       <line x1="12" y1="16" x2="12.01" y2="16" />
-    </>
-  ),
-  intake: (
-    <>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="12" y1="18" x2="12" y2="12" />
-      <line x1="9" y1="15" x2="15" y2="15" />
     </>
   ),
   overview: (

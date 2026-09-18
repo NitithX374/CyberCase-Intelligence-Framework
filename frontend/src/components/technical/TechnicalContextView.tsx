@@ -16,7 +16,7 @@ import {
 interface TechnicalContextViewProps {
   analysisResult: CaseAnalysisResultRead | null;
   evidenceSources: CaseSourceRead[] | null;
-  onOpenIntake?: () => void;
+  onOpenMaterials?: () => void;
   onNavigateToSource?: (messageId: string) => void;
 }
 
@@ -187,7 +187,7 @@ function ContextStatus({ data }: { data: TechnicalContextData }) {
 export function TechnicalContextView({
   analysisResult,
   evidenceSources,
-  onOpenIntake,
+  onOpenMaterials,
   onNavigateToSource,
 }: TechnicalContextViewProps) {
   const contextData = buildTechnicalContext(analysisResult, evidenceSources);
@@ -233,10 +233,10 @@ export function TechnicalContextView({
             <h2 className="mt-4 text-sm font-extrabold text-ink">{statusMessage(contextData).title}</h2>
             <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-ink-muted">{statusMessage(contextData).body}</p>
             {contextData.failureCode && <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-critical">Failure code: {contextData.failureCode}</p>}
-            {onOpenIntake && (
-              <button type="button" onClick={onOpenIntake} className="btn-primary mt-5 inline-flex items-center gap-2 rounded-md">
-                <Icon name="intake" className="h-3.5 w-3.5" />
-                Go to Intake
+            {onOpenMaterials && (
+              <button type="button" onClick={onOpenMaterials} className="btn-primary mt-5 inline-flex items-center gap-2 rounded-md">
+                <Icon name="materials" className="h-3.5 w-3.5" />
+                Go to Materials
               </button>
             )}
           </div>

@@ -80,11 +80,11 @@ function technicalProjection(): { result: CaseAnalysisResultRead; evidenceSource
 
 describe("TechnicalContextView", () => {
   it("shows the optional-context empty state without Case analysis", () => {
-    const openIntake = vi.fn();
-    render(<TechnicalContextView analysisResult={null} evidenceSources={null} onOpenIntake={openIntake} />);
+    const openMaterials = vi.fn();
+    render(<TechnicalContextView analysisResult={null} evidenceSources={null} onOpenMaterials={openMaterials} />);
     expect(screen.getByText("Technical augmentation outcome is unavailable")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Go to Intake/i }));
-    expect(openIntake).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: /Go to Materials/i }));
+    expect(openMaterials).toHaveBeenCalledOnce();
   });
 
   it("shows validated Case mappings and inspects their exact source", () => {

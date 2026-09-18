@@ -7,7 +7,7 @@ import {
 
 describe("Case workspace routes", () => {
   it("supports every current Case workspace view", () => {
-    expect(caseRouteState("/case/case-1/intake")).toEqual({ caseId: "case-1", view: "intake" });
+    expect(caseRouteState("/case/case-1")).toEqual({ caseId: "case-1", view: "materials" });
     expect(caseRouteState("/case/case-1/overview")).toEqual({ caseId: "case-1", view: "overview" });
     expect(caseRouteState("/case/case-1/materials")).toEqual({ caseId: "case-1", view: "materials" });
     expect(caseRouteState("/case/case-1/technical-context")).toEqual({ caseId: "case-1", view: "technical-context" });

@@ -22,8 +22,8 @@ interface WorkspaceNavigationProps {
 }
 
 const railDestinations: Array<{ view: WorkspaceView; label: string; icon: IconName }> = [
-  { view: "overview", label: "Case analysis", icon: "overview" },
   { view: "materials", label: "Case materials", icon: "materials" },
+  { view: "overview", label: "Case analysis", icon: "overview" },
   { view: "technical-context", label: "Technical context", icon: "technical" },
   { view: "report", label: "Case report", icon: "report" },
 ];

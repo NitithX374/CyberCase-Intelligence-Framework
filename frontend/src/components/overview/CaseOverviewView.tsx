@@ -62,8 +62,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
     [analysisResult, evidenceSources, runStatus],
   );
 
-  const navigateToIntake = () => { router.push(caseId ? casePath(caseId, "intake") : "/case"); };
-  const navigateToMaterials = () => { if (caseId) router.push(casePath(caseId, "materials")); };
+  const navigateToMaterials = () => { router.push(caseId ? casePath(caseId, "materials") : "/case"); };
   const navigateToReport = () => { if (caseId) router.push(casePath(caseId, "report")); };
 
   const handleRunAnalysis = async () => {
@@ -86,16 +85,16 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
       <CaseOverviewState
         eyebrow="Case overview"
         title="No Case Material Yet"
-        description="Add a case narrative or document in Intake to begin."
-        actionLabel="Open Intake"
-        onAction={navigateToIntake}
-        actionIcon="intake"
+        description="Add a case narrative or document in Materials to begin."
+        actionLabel="Open Materials"
+        onAction={navigateToMaterials}
+        actionIcon="materials"
       />
     );
   }
 
   if (analysisQuery.isLoading && !analysisResult) {
-    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Intake" onAction={navigateToIntake} processing />;
+    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Materials" onAction={navigateToMaterials} processing />;
   }
 
   if (evidenceQuery.isLoading && analysisResult) {
@@ -107,10 +106,10 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
       <CaseOverviewState
         eyebrow="Case overview"
         title="Analysis Failed"
-        description={run?.error_message || "The case analysis failed to complete. Return to Intake to verify the received Case material and retry."}
-        actionLabel="Open Intake"
-        onAction={navigateToIntake}
-        actionIcon="intake"
+        description={run?.error_message || "The case analysis failed to complete. Return to Materials to verify the received Case material and retry."}
+        actionLabel="Open Materials"
+        onAction={navigateToMaterials}
+        actionIcon="materials"
       />
     );
   }
@@ -119,7 +118,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const isAwaitingFollowup = chatStatus === "awaiting_followup" || Boolean(pendingFollowUp);
 
   if (overview.unavailableReason) {
-    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Intake" onAction={navigateToIntake} actionIcon="intake" />;
+    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Materials" onAction={navigateToMaterials} actionIcon="materials" />;
   }
 
   if (overview.isProcessing) {
@@ -137,10 +136,10 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
       <CaseOverviewState
         eyebrow="Case overview"
         title="Analysis Required"
-        description="This case has material but no completed case-level analysis yet. Return to Intake to run the analysis."
-        actionLabel="Open Intake"
-        onAction={navigateToIntake}
-        actionIcon="intake"
+        description="This case has material but no completed case-level analysis yet. Return to Materials to run the analysis."
+        actionLabel="Open Materials"
+        onAction={navigateToMaterials}
+        actionIcon="materials"
       />
     );
   }
@@ -362,7 +361,7 @@ function CaseOverviewState({
   description: string;
   actionLabel?: string;
   onAction?: () => void;
-  actionIcon?: "intake";
+  actionIcon?: "materials";
   processing?: boolean;
 }) {
   return (

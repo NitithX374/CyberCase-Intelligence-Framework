@@ -97,7 +97,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     setIsChatOpen(false);
     try {
       const caseRecord = await createMutation.mutateAsync();
-      router.push(casePath(caseRecord.id, "intake"));
+      router.push(casePath(caseRecord.id, "materials"));
     } catch {
       return;
     }

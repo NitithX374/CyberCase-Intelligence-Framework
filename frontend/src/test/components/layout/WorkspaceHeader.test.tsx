@@ -25,7 +25,7 @@ const sampleCase: CaseRead = {
 };
 
 describe("WorkspaceHeader", () => {
-  it("keeps the current five route meanings in the case header", () => {
+  it("keeps the current four route meanings in the case header", () => {
     const onViewChange = vi.fn();
 
     render(
@@ -47,7 +47,7 @@ describe("WorkspaceHeader", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Payment Review" })).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    expect(screen.getAllByRole("tab")).toHaveLength(4);
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: "Open Ask" })).toBeInTheDocument();
 

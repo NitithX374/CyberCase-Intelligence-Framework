@@ -26,7 +26,7 @@ export default function ReportPage() {
       caseTitle={activeCase?.title || "New case"}
       analysisResult={analysisQuery.data ?? null}
       runStatus={runStatus}
-      onOpenOverview={() => router.push(casePath(caseId, activeCase?.latest_analysis_result_id ? "overview" : "intake"))}
+      onOpenOverview={() => router.push(casePath(caseId, activeCase?.latest_analysis_result_id ? "overview" : "materials"))}
     />
   );
 }

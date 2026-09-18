@@ -1,10 +1,8 @@
 import asyncio
-from unittest.mock import Mock
 from uuid import UUID
 
 import httpx
-import pytest
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.config import settings
 from app.database import get_db
@@ -12,10 +10,11 @@ from app.main import app
 from app.models import Case, CaseAnalysisResult, CaseRun, CaseSource, ChatMessage, User
 from app.services.auth.jwt import create_access_token
 from app.services.case_analysis import case_analysis
-from app.services.case_analysis.contracts import CaseAnalysisGap, CaseProviderAnalysis, CaseQuestionAnswerResponse
+from app.services.case_analysis.contracts import CaseAnalysisGap, CaseProviderAnalysis
 from app.services.gap_clarification.contracts import GapAnswerInterpretation, GapNextStep
 from app.services.case_materials import CaseMaterialsService
 from app.services.workflow.case_run_execution import execute_case_run
+from app.services.workflow import case_run_execution
 from app.routers import cases
 from run_recovery_support import isolated_database
 def test_formal_followup_answer_reaches_real_reanalysis_with_bounded_provenance(monkeypatch):
@@ -82,7 +81,28 @@ def test_formal_followup_answer_reaches_real_reanalysis_with_bounded_provenance(
             monkeypatch.setattr(settings, "openrouter_cybercase", "test-key")
             monkeypatch.setattr(settings, "jwt_secret_key", "case-reasoning-test-secret-1234567890")
             monkeypatch.setattr(settings, "chat_followup_enabled", True)
+            clarification_run_statuses = []
+            original_start_gap = case_run_execution.start_gap_clarification_for_run
+
+            async def start_gap_and_capture(*, run_id, session_factory):
+                async with factory() as inspect_db:
+                    clarification_run_statuses.append(
+                        await inspect_db.scalar(
+                            select(CaseRun.status).where(CaseRun.id == run_id)
+                        )
+                    )
+                return await original_start_gap(
+                    run_id=run_id,
+                    session_factory=session_factory,
+                )
+
+            monkeypatch.setattr(
+                case_run_execution,
+                "start_gap_clarification_for_run",
+                start_gap_and_capture,
+            )
             await execute_case_run(run.id, session_factory=factory)
+            assert clarification_run_statuses == ["running"]
             async with factory() as db:
                 question = await db.scalar(select(ChatMessage).where(ChatMessage.message_kind == "followup_question"))
                 assert question is not None

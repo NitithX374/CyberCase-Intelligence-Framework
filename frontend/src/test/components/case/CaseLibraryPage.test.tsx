@@ -85,12 +85,12 @@ describe("CaseLibraryPage", () => {
     expect(screen.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("creates a Case and routes to Intake when the new Case has no analysis", async () => {
+  it("creates a Case and routes to Materials when the new Case has no analysis", async () => {
     render(<CaseLibraryPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "New case" }));
 
-    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/case/new-case/intake"));
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/case/new-case/materials"));
     expect(mutateAsync).toHaveBeenCalledTimes(1);
   });
 
@@ -101,6 +101,6 @@ describe("CaseLibraryPage", () => {
     expect(screen.getByRole("heading", { name: "No saved cases yet" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Create your first case" }));
 
-    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/case/new-case/intake"));
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/case/new-case/materials"));
   });
 });

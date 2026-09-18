@@ -27,6 +27,7 @@
 - 2026-09-18 [CODE] Added in-memory Case Chat context loading from latest analysis, bounded chat messages, active clarification metadata, and run-linked RAG context; ordinary Chat now sends that context through the existing reasoning payload.
 - 2026-09-18 [CODE] Removed the obsolete `GapNextStep.reply` action and graph reply node; acknowledgement persistence remains in the answer transaction.
 - 2026-09-18 [CODE] Shortened migration `0006` revision to `0006_case_run_active_idx` so it fits Alembic's `version_num varchar(32)` column; added a regression assertion.
+- 2026-09-18 [CODE] CaseRun completion now finalizes after post-analysis gap clarification setup; the run remains `running` until the persisted follow-up question/checkpoint is ready, eliminating the frontend invalidation race.
 
 ## Decisions
 
@@ -45,6 +46,8 @@
 - 2026-09-18 [USER] D039 ACTIVE: the newest-created analysis run has precedence; a late completion from an older run must not replace the newest Case result pointer.
 - 2026-09-18 [USER] D040 PROPOSED: slim `GapClarificationState` to workflow identity/lineage, a gap pointer, transient answer/interpretation, and control/result fields; move DB-derived history and runtime/config values out of checkpoint state.
 - 2026-09-18 [CODE] D041 ACTIVE: ordinary Case Chat may read the latest analysis, active clarification, bounded conversation history, and run-linked RAG context from existing Case child rows through an in-memory loader; only Case sources remain factual authority.
+- 2026-09-18 [USER] D043 ACTIVE: explicitly unavailable clarification answers should also persist into `CaseSource` so later analyses know the requested information was checked and unavailable; this status must not be treated as event evidence.
+- 2026-09-18 [USER] D042 ACTIVE: Case Materials is the canonical first Case workspace view; the Intake route/component are removed, and the Analysis action starts from the upper-right preparation header.
 
 ## Now / Next
 
@@ -57,6 +60,7 @@
 - 2026-09-18 [TOOL] Frontend baseline for the simplification audit: API type check and strict TypeScript compile passed; lint passed with the existing `HomeSections.tsx:239` image warning; Vitest had 106 passed and 2 label-contract failures.
 - 2026-09-18 [DOC] The frontend report now includes the one-use and prop-hop appendix: 57 static one-use JSX component definitions, one confirmed dead `hasAnalysisContext` prop, and seven traced multi-hop chains.
 - 2026-09-18 [CODE] Frontend Phase 2 cleanup removed zero-caller route/hooks/props/icons/exports, removed the preview route exception, centralized run polling in `CaseShellLayout`, and removed the `useCaseChat` session compatibility facade.
+- 2026-09-18 [CODE] Case Materials now owns preparation fields, received evidence, source-file review, and the upper-right Analysis action; new and empty Cases route there first.
 - 2026-09-18 [TOOL] Baseline label expectations were committed as `6e0b7aa`; the post-cleanup frontend suite has 109 passing tests and the production build succeeds.
 - 2026-09-18 [TOOL] Chat regression validation passed: backend follow-up integration, frontend Vitest, three rendered Playwright flows, strict TypeScript, API types, production build, compileall, and diff check; the full backend suite has one unrelated pypdfium2 concurrent-render crash.
 - 2026-09-18 [TOOL] SUPERSEDED: Phase 1 traced Run Analysis, normal Chat, Gap Clarification, revision freshness, current-gap derivation, MITRE persistence, and frontend query ownership; at audit time normal Chat omitted analysis and active clarification context.
@@ -73,12 +77,14 @@
 - 2026-09-18 [CODE] Completed the contained Chat context path and focused tests; production behavior now follows D041 without adding persisted projections.
 - 2026-09-18 [TOOL] Current checkout has no normalized Gap/Question/Answer tables: gaps are validated from `CaseAnalysisResult.trace_json`, while questions/answers are `ChatMessage` rows plus metadata; any `gap_id`-only state refactor must derive the gap from the source analysis and preserve message metadata without inventing new tables.
 - 2026-09-18 [USER] Case context may be rooted at the existing `Case` aggregate; prefer existing child foreign keys and relationships, with only justified singular current pointers, over arrays of child IDs or a new persisted projection.
+- 2026-09-18 [USER] Current behavior example: separate re-analysis after the answer `คนร้ายชื่อนาย A` creates a refined gap for the evidence basis linking that name to the event; policy distinction between reported identity and attribution linkage remains under review.
 
 ## Working set
 
 - 2026-09-18 [DOC] `docs/audits/2026-09-18-frontend-simplification/frontend-simplification-audit.md`
 - 2026-09-18 [CODE] `frontend/src/app/case/[caseId]/layout.tsx`
-- 2026-09-18 [CODE] `frontend/src/app/case/[caseId]/intake/page.tsx`
+- 2026-09-18 [CODE] `frontend/src/app/case/[caseId]/materials/page.tsx`
+- 2026-09-18 [CODE] `frontend/src/components/materials/CasePreparationPanel.tsx`
 - 2026-09-18 [CODE] `frontend/src/app/case/[caseId]/report/page.tsx`
 - 2026-09-18 [CODE] `frontend/src/components/overview/CaseOverviewView.tsx`
 - 2026-09-18 [CODE] `frontend/src/components/conversation/WorkspaceChatPanel.tsx`
@@ -110,4 +116,9 @@
 - 2026-09-18 [TOOL] Streaming audit found no SSE/WebSocket/ReadableStream or LangChain/LangGraph stream path; Chat waits on `ainvoke`, analysis exposes only run polling and post-completion execution receipts.
 - 2026-09-18 [TOOL] Context implementation validation passed PostgreSQL-backed Chat/reasoning integration (6 tests including the new aggregate-context case), backend tests excluding the known pypdfium2 crash file (186 passed, 2 subtests), frontend Vitest (112 passed), strict TypeScript, API type check, Ruff, compileall, and diff check.
 - 2026-09-18 [TOOL] PostgreSQL logs traced recurring `unexpected EOF ... open transaction` to the backend restart loop caused by migration `0006` string truncation; after the slug fix, migration applied and backend/PostgreSQL remained up without new EOFs during verification.
+- 2026-09-18 [TOOL] Clarification lifecycle regression passed 15 PostgreSQL-backed backend tests, targeted Ruff/compileall/diff checks, and the rendered Playwright clarification flow (1 passed, 38.8s); the question appeared without an extra Chat message.
 - 2026-09-18 [USER] SUPERSEDED: work was paused before hotfix after a new Case Sources → Analysis → sufficiency/gaps flow sketch; implementation resumed after the user's approval to follow the original plan.
+- 2026-09-18 [TOOL] Read-only trace confirmed follow-up answers become raw `CaseSource` text while question/gap metadata remains provenance; a separate overview analysis therefore may re-evaluate the name as reported information but still request linkage evidence.
+- 2026-09-18 [TOOL] Materials merge validation: production build, strict TypeScript, API contract check, targeted Vitest 28/28, and Playwright lifecycle 3/3 passed; full Vitest retains three failures caused by the pre-existing dirty `ChatTranscript.tsx` diff.
+- 2026-09-18 [USER] CORRECTION: target example is the direct-evidence gap; the user answered `I don’t have this information`, then a similar question appeared in a separate analysis.
+- 2026-09-18 [TOOL] Current trace shows the unavailable button ends the active clarification without re-analysis, while a separately started analysis can rediscover the gap because unavailable answers are not CaseSource evidence and no cross-analysis suppression exists; typed free text follows the answered path.

@@ -12,7 +12,6 @@ interface CaseMaterialsViewProps {
   uploadingFilename?: string | null;
   uploadingFileSize?: number | null;
   onUploadDocument: (file: File) => void;
-  onOpenIntake?: () => void;
 }
 
 export function CaseMaterialsView({
@@ -22,7 +21,6 @@ export function CaseMaterialsView({
   uploadingFilename,
   uploadingFileSize,
   onUploadDocument,
-  onOpenIntake,
 }: CaseMaterialsViewProps) {
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<MaterialPreviewMode>("original");
@@ -57,7 +55,6 @@ export function CaseMaterialsView({
           extraction={selectedExtraction}
           mode={previewMode}
           onModeChange={setPreviewMode}
-          onOpenIntake={onOpenIntake}
         />
       </div>
     </div>
@@ -72,7 +69,6 @@ interface MaterialPreviewViewportProps {
   extraction: DocumentExtractionRead | null;
   mode: MaterialPreviewMode;
   onModeChange: (mode: MaterialPreviewMode) => void;
-  onOpenIntake?: () => void;
 }
 
 function MaterialPreviewViewport({
@@ -81,7 +77,6 @@ function MaterialPreviewViewport({
   extraction,
   mode,
   onModeChange,
-  onOpenIntake,
 }: MaterialPreviewViewportProps) {
   return (
     <section aria-label="Source preview" className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface">
@@ -101,7 +96,7 @@ function MaterialPreviewViewport({
 
       <div className="min-h-0 flex-1 bg-canvas">
         {!document ? (
-          <EmptyPreview onOpenIntake={onOpenIntake} />
+          <EmptyPreview />
         ) : mode === "original" ? (
           <OriginalFilePreview caseId={caseId} document={document} />
         ) : mode === "ocr" ? (
@@ -282,12 +277,8 @@ function SystemOcrPreview({ extraction }: { extraction: DocumentExtractionRead |
   );
 }
 
-function EmptyPreview({ onOpenIntake }: { onOpenIntake?: () => void }) {
-  return (
-    <ViewportMessage title="Add a source file to begin reviewing materials.">
-      {onOpenIntake && <button type="button" onClick={onOpenIntake} className="mt-4 text-xs font-semibold text-accent underline underline-offset-4">Go to Intake</button>}
-    </ViewportMessage>
-  );
+function EmptyPreview() {
+  return <ViewportMessage title="Add a source file using Add files above." />;
 }
 
 function ViewportMessage({ title, children }: { title: string; children?: ReactNode }) {

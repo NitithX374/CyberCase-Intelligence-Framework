@@ -4,7 +4,6 @@ import asyncio
 import logging
 from builtins import BaseExceptionGroup
 from collections.abc import Callable
-from copy import deepcopy
 from uuid import UUID
 
 from app.config import settings
@@ -20,6 +19,7 @@ from app.services.workflow.case_run_claim import claim_case_run
 from app.services.workflow.case_run_completion import (
     CaseRunCompletionError,
     complete_case_run,
+    finalize_case_run,
 )
 from app.services.workflow.case_run_context import (
     CaseRunExecutionError,
@@ -53,7 +53,13 @@ async def execute_case_run(
                 rag_request=rag_request,
             )
         async with session_factory() as db:
-            completed = await complete_case_run(db, run_id, claimed.attempt_count, output)
+            completed = await complete_case_run(
+                db,
+                run_id,
+                claimed.attempt_count,
+                output,
+                finalize=False,
+            )
         if completed:
             try:
                 await start_gap_clarification_for_run(
@@ -72,6 +78,9 @@ async def execute_case_run(
                     "Adaptive clarification failed after completed analysis run %s",
                     run_id,
                 )
+            finally:
+                async with session_factory() as db:
+                    await finalize_case_run(db, run_id, claimed.attempt_count)
     except asyncio.CancelledError:
         await record_cancellation_failure(
             session_factory,

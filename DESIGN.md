@@ -246,9 +246,9 @@ Source provenance connects analytical claims directly to raw user-submitted evid
 - Workspace shell remains warm neutral (`#F6F3EA`).
 - Embedded PDF viewer is the primary hero element, surrounded by quiet charcoal/neutral toolbar controls.
 
-### New Case Intake (`/case/[caseId]/intake`)
-- Focused case intake workspace. Large document-like narrative textarea (`#FCFAF5` on `#F6F3EA`).
-- Primary action: Charcoal `#262522` button. No glowing inputs, neon borders, or hero gradients.
+### Case Preparation in Materials (`/case/[caseId]/materials`)
+- The first workspace view combines case narrative, received evidence, and source-file review in one preparation flow.
+- The primary Analysis action stays in the upper-right of the preparation header. Large document-like narrative input (`#FCFAF5` on `#F6F3EA`) remains quiet and readable.
 
 ---
 

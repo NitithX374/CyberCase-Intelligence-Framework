@@ -138,7 +138,7 @@ describe("WorkspaceChatPanel boundaries", () => {
     expect(onInputChange).toHaveBeenCalledWith("host-9");
   });
 
-  it("shows intake notice and keeps composer available before Case analysis", () => {
+  it("shows the materials notice and keeps composer available before Case analysis", () => {
     render(
       <WorkspaceChatPanel
         isOpen

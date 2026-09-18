@@ -30,13 +30,9 @@ export function casePath(caseId: string, view: WorkspaceView): string {
 }
 
 function viewForSegment(segment: string | undefined): WorkspaceView {
-  return segment === "intake"
-    ? "intake"
-    : segment === "materials"
-      ? "materials"
-      : segment === "technical-context"
-        ? "technical-context"
-        : segment === "report"
-          ? "report"
-          : "overview";
+  if (segment === undefined || segment === "materials") return "materials";
+  if (segment === "overview") return "overview";
+  if (segment === "technical-context") return "technical-context";
+  if (segment === "report") return "report";
+  return "overview";
 }

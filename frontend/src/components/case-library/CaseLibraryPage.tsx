@@ -155,7 +155,7 @@ const statusLabels: Record<CaseRead["status"], string> = {
 };
 
 function caseDestination(caseRecord: CaseRead): string {
-  return casePath(caseRecord.id, caseRecord.latest_analysis_result_id ? "overview" : "intake");
+  return casePath(caseRecord.id, caseRecord.latest_analysis_result_id ? "overview" : "materials");
 }
 
 function caseStatusLabel(caseRecord: CaseRead): string {

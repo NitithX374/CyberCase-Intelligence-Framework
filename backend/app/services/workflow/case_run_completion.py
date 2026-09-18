@@ -38,6 +38,8 @@ async def complete_case_run(
     run_id: UUID,
     claimed_attempt: int,
     output: AnalysisOutput,
+    *,
+    finalize: bool = True,
 ) -> bool:
     now = datetime.now(timezone.utc)
     async with db.begin():
@@ -59,24 +61,6 @@ async def complete_case_run(
             await mark_superseded(run, now)
             return False
         augmentation = technical_augmentation(output)
-        completion = await db.execute(
-            update(CaseRun)
-            .where(
-                CaseRun.id == run_id,
-                CaseRun.status == "running",
-                CaseRun.attempt_count == claimed_attempt,
-            )
-            .values(
-                status="completed",
-                error_code=None,
-                error_message=None,
-                finished_at=now,
-                updated_at=now,
-            )
-            .returning(CaseRun.id)
-        )
-        if completion.scalar_one_or_none() is None:
-            return False
         external_context = {
             "source_reference_type": "case_source",
             "evidence_revision": run.evidence_revision,
@@ -126,7 +110,48 @@ async def complete_case_run(
         case.latest_analysis_result_id = result.id
         case.updated_at = now
         await db.flush()
+        if finalize:
+            await _finalize_case_run(db, run_id, claimed_attempt, now)
     return True
+
+
+async def finalize_case_run(
+    db: AsyncSession,
+    run_id: UUID,
+    claimed_attempt: int,
+) -> bool:
+    async with db.begin():
+        return await _finalize_case_run(
+            db,
+            run_id,
+            claimed_attempt,
+            datetime.now(timezone.utc),
+        )
+
+
+async def _finalize_case_run(
+    db: AsyncSession,
+    run_id: UUID,
+    claimed_attempt: int,
+    finished_at: datetime,
+) -> bool:
+    completion = await db.execute(
+        update(CaseRun)
+        .where(
+            CaseRun.id == run_id,
+            CaseRun.status == "running",
+            CaseRun.attempt_count == claimed_attempt,
+        )
+        .values(
+            status="completed",
+            error_code=None,
+            error_message=None,
+            finished_at=finished_at,
+            updated_at=finished_at,
+        )
+        .returning(CaseRun.id)
+    )
+    return completion.scalar_one_or_none() is not None
 
 
 async def mark_superseded(
@@ -163,6 +188,7 @@ def validated_output(
 __all__ = [
     "CaseRunCompletionError",
     "complete_case_run",
+    "finalize_case_run",
     "mitre_table_from_output",
     "technical_augmentation",
 ]

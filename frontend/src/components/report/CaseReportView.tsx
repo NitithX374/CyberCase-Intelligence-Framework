@@ -160,12 +160,12 @@ function NoSavedReport({
       <Icon name="report" className="mx-auto h-5 w-5 text-ink-muted" />
       <div>
         <h2 className="mt-3 text-base font-semibold tracking-tight text-ink sm:text-lg">
-          {canGenerate ? "No Saved Report for This Case" : "Case Intake Required · ยังไม่มีข้อมูลสำนวนคดี"}
+          {canGenerate ? "No Saved Report for This Case" : "Case material required · ยังไม่มีข้อมูลสำนวนคดี"}
         </h2>
         <p className="mx-auto mt-1 max-w-xl text-xs leading-relaxed text-ink-secondary">
           {canGenerate
             ? "A preliminary case analysis report can be compiled from submitted case material and optional external technical context when applicable."
-            : "กรุณากรอกรายละเอียดสำนวนคดีในหน้า Case Intake เพื่อให้ระบบประมวลผลก่อนสร้างรายงานวิเคราะห์คดี"}
+            : "กรุณากรอกรายละเอียดสำนวนคดีในหน้า Case Materials เพื่อให้ระบบประมวลผลก่อนสร้างรายงานวิเคราะห์คดี"}
         </p>
       </div>
 
@@ -176,8 +176,8 @@ function NoSavedReport({
           </button>
         ) : (
           <button type="button" onClick={onOpenOverview} className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-md">
-            <Icon name="intake" className="h-3.5 w-3.5" />
-            <span>Go to Case Intake · เปิดสำนวนคดี</span>
+            <Icon name="materials" className="h-3.5 w-3.5" />
+            <span>Go to Case Materials · เปิดสำนวนคดี</span>
           </button>
         )}
       </div>

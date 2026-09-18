@@ -81,14 +81,6 @@ export function ChatTranscript({
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-1 px-4 py-4 md:px-5 md:py-6">
-      {leadResult && (
-        <CaseAnalysisLeadCard
-          result={leadResult}
-          evidenceSources={evidenceSources}
-          isUpdated={hasClarificationUpdate}
-          onOpenOverview={onOpenOverview}
-        />
-      )}
       {displayMessages.length === 0 && leadResult && (
         <div className="rounded-md border border-line bg-surface/40 p-4 text-center text-xs text-ink-muted">
           Ask a question below to explore the case analysis or review details.
@@ -108,13 +100,12 @@ export function ChatTranscript({
             </header>
 
             <div
-              className={`mt-3 ${
-                isUser
-                  ? "ml-auto max-w-[90%] rounded-md bg-primary px-4 py-3 text-ivory sm:max-w-[82%] sm:px-5"
-                  : isClarificationQuestion
-                    ? "border-l-2 border-unresolved bg-unresolved/5 pl-4 pr-3 sm:pl-5"
-                    : "border-l-2 border-evidence/50 pl-4 pr-1 sm:pl-5"
-              }`}
+              className={`mt-3 ${isUser
+                ? "ml-auto max-w-[90%] rounded-md bg-primary px-4 py-3 text-ivory sm:max-w-[82%] sm:px-5"
+                : isClarificationQuestion
+                  ? "border-l-2 border-unresolved bg-unresolved/5 pl-4 pr-3 sm:pl-5"
+                  : "border-l-2 border-evidence/50 pl-4 pr-1 sm:pl-5"
+                }`}
             >
               {isUser ? (
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
@@ -193,52 +184,7 @@ function isLeadAnalysisPublication(
   return message.analysis_result_id === leadResultId;
 }
 
-function CaseAnalysisLeadCard({
-  result,
-  evidenceSources,
-  isUpdated = false,
-  onOpenOverview,
-}: {
-  result: CaseAnalysisResultRead;
-  evidenceSources?: CaseSourceRead[] | null;
-  isUpdated?: boolean;
-  onOpenOverview?: () => void;
-}) {
-  const summaryText = result.summary?.trim() || result.answer?.trim() || "";
-  const isValidated = result.status === "validated";
-  const overview = useMemo(() => buildCaseOverview(result, evidenceSources ?? null, null), [result, evidenceSources]);
-  const findingCount = overview.hasAnalysis ? overview.findings.length : 0;
-  const openQuestionCount = overview.hasAnalysis ? overview.gaps.length : 0;
-  const freshnessLabel = result.freshness === "stale"
-    ? "Based on older evidence"
-    : result.freshness === "current"
-      ? "Current"
-      : "Freshness unavailable";
 
-  return (
-    <aside aria-label="Analysis Result" className="mb-5 overflow-hidden rounded-md border border-line bg-surface p-4 sm:p-5">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold text-ink">Analysis Result</span>
-          {isValidated && <span className="inline-flex items-center gap-1 rounded-full bg-established/10 px-2 py-0.5 text-[10px] font-semibold text-established"><span className="h-1.5 w-1.5 rounded-full bg-established" />Validated</span>}
-        </div>
-        {onOpenOverview && <button type="button" onClick={onOpenOverview} aria-label="View full Case Overview" className="text-[11px] font-semibold text-evidence transition-colors hover:text-accent-strong hover:underline">Open full analysis</button>}
-      </header>
-
-      <div className="mt-4 space-y-4">
-        <div><h3 className="text-sm font-bold text-ink">{isUpdated ? "Updated analysis" : "Analysis complete"}</h3></div>
-        <div className="text-sm leading-relaxed text-ink"><ChatMessageMarkdown content={summaryText} /></div>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3 sm:grid-cols-4">
-          <Metric label="Findings" value={String(findingCount)} />
-          <Metric label="Open questions" value={String(openQuestionCount)} />
-          <Metric label="Evidence revision" value={String(result.evidence_revision)} />
-          <Metric label="Analysis state" value={freshnessLabel} emphasis={result.freshness === "stale" ? "attention" : "positive"} />
-        </dl>
-        <p className="text-[10px] leading-relaxed text-ink-muted">Ask uses this persisted result. Ordinary questions do not change evidence.</p>
-      </div>
-    </aside>
-  );
-}
 
 function Metric({ label, value, emphasis }: { label: string; value: string; emphasis?: "positive" | "attention" }) {
   return (
@@ -331,10 +277,6 @@ function FollowUpActionCard({ detail }: { detail: NonNullable<ReturnType<typeof 
           <div><p className="text-[10px] font-semibold tracking-[0.04em] text-ink-muted">Why this matters</p><p className="mt-1 text-xs leading-relaxed text-ink-secondary">{detail.reason}</p></div>
         </div>
       </div>
-      <details className="group border-t border-unresolved/20 px-4 py-2.5 sm:px-5">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-bold text-ink outline-none marker:hidden focus-visible:ring-2 focus-visible:ring-primary"><span>Why is CyberCase asking this?</span><Icon name="chevron" className="h-3.5 w-3.5 text-ink-muted transition-transform duration-150 group-open:rotate-180" /></summary>
-        <p className="pt-2 text-[11px] leading-relaxed text-ink-secondary">{detail.affects}</p>
-      </details>
     </aside>
   );
 }
