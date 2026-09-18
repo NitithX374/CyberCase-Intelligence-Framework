@@ -30,6 +30,13 @@ Fix arm:
                        means the incident text has nothing to map; afterwards
                        the note rides along as a caveat). Identical to A wherever
                        A did not acknowledge, so F - A isolates that one change.
+  M  F + merge         F, with the broaden round replayed the way the pipeline
+                       now does it: the second retrieval is merged into the
+                       first and the render budget grows by one BROADEN_* step,
+                       instead of the two competing for one budget. Retrieval is
+                       deterministic and the agent's own sub-queries and rewrite
+                       are replayed, so M - F isolates that change; identical to
+                       F wherever the agent never broadened.
 
 A - B isolates the self-reflection loop. B - C isolates decomposition + quota,
 together with the smaller context query_fast renders (build_context defaults:
@@ -109,14 +116,15 @@ from .crosslingual_generation_benchmark import (
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 ARM_GROUPS = {"agent": ("A", "B"), "fast": ("C",), "sensitivity": ("S",),
-              "ackfix": ("F",)}
+              "ackfix": ("F",), "mergefix": ("M",)}
 ARM_LABELS = {
     "A": "A  full agent (headline)",
     "B": "B  agent - self-reflection",
     "C": "C  fast path",
     "F": "F  A + ACK fix",
+    "M": "M  F + broaden merge",
 }
-SCORED_ARMS = ("A", "B", "C", "F")
+SCORED_ARMS = ("A", "B", "C", "F", "M")
 
 # ContextEvaluator._build_prompt shows the evaluator only this much context.
 EVALUATOR_CONTEXT_CHARS = 4000
@@ -495,6 +503,104 @@ def run_ack_fix(agent, meter: _LlmMeter, a_row: dict, query: str) -> dict:
     }
 
 
+def run_merge_fix(agent, meter: _LlmMeter, a_row: dict, f_row: dict, query: str) -> dict:
+    """Arm M: F with the broaden round merged instead of replaced.
+
+    Replays the agent's own two query sets (recorded in A's trace) through
+    retrieval, which is deterministic — the replay reproduces the stored
+    contexts exactly (evaluation/results/broaden_merge_probe.md) — then answers
+    once from the merged context.
+    """
+    if a_row["broaden_rounds"] == 0:
+        return {**{k: v for k, v in f_row.items()
+                   if k not in ("sample_id", "arm", "model", "commit")},
+                "arm": "M", "derived_from": "F", "identical_to_F": True}
+
+    from ..config import (
+        AGENT_MAX_CONTEXT_CHARS, AGENT_MAX_GRAPH, AGENT_MAX_VECTOR,
+        BROADEN_CONTEXT_CHARS_STEP, BROADEN_GRAPH_STEP, BROADEN_VECTOR_STEP,
+        VECTOR_TOP_K,
+    )
+    from ..pipeline.context_builder import build_context
+    from ..retrieval.hybrid_retriever import merge_results
+
+    retrieves = [t for t in a_row["trace"] if t["node"] == "retrieve"][:2]
+    query_sets = []
+    for entry in retrieves:
+        queries: list[str] = []
+        for q in [query, *entry["sub_queries"], *entry["rewrites"]]:
+            if q and q.strip() and q not in queries:
+                queries.append(q)
+        query_sets.append(queries)
+
+    rounds = a_row["broaden_rounds"]
+    wide_vector = AGENT_MAX_VECTOR + BROADEN_VECTOR_STEP * rounds
+    wide_graph = AGENT_MAX_GRAPH + BROADEN_GRAPH_STEP * rounds
+    wide_chars = AGENT_MAX_CONTEXT_CHARS + BROADEN_CONTEXT_CHARS_STEP * rounds
+
+    t0 = time.perf_counter()
+    first = agent.retriever.retrieve_multi_quota(
+        query_sets[0], per_query_k=3, top_k=VECTOR_TOP_K,
+        max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH,
+    )
+    broadened = agent.retriever.retrieve_multi_quota(
+        query_sets[1], per_query_k=3, top_k=VECTOR_TOP_K,
+        max_vector=wide_vector, max_graph=wide_graph,
+    )
+    context = build_context(
+        merge_results(first, broadened), max_context_length=wide_chars,
+        max_vector=wide_vector, max_graph=wide_graph,
+    )
+    retrieval_ms = (time.perf_counter() - t0) * 1000
+
+    # Same answer stage as F, including the acknowledgement caveat where the
+    # evaluator asked for one, so the context is the only thing that differs.
+    last_eval = [t for t in a_row["trace"] if t["node"] == "evaluate_context"][-1]
+    state = dict(agent.initial_state(query, verbose=False))
+    state.update(agent._node_prepare(state))
+    state.update(
+        context=context,
+        strategy=last_eval["strategy"] if a_row["ack_limit"] else "",
+        acknowledgement_message=a_row["answer"] if a_row["ack_limit"] else "",
+        evaluation=SimpleNamespace(verdict=last_eval["verdict"]),
+        broaden_count=rounds,
+    )
+
+    mark = len(meter.events)
+    t1 = time.perf_counter()
+    state.update(agent._node_reasoning(state))
+    if agent._edge_after_reasoning(state) == "translate":
+        state.update(agent._node_translate_output(state))
+    answer_ms = (time.perf_counter() - t1) * 1000
+    branch = _summarise_events(meter.events[mark:])
+
+    # Everything A spent before its final answer stage still applies.
+    kept = [t for t in a_row["trace"] if t["node"] not in ("reasoning", "translate_output")]
+    for t in kept:
+        for stage in t["calls"]:
+            branch["calls_by_stage"][stage] = branch["calls_by_stage"].get(stage, 0) + 1
+    return {
+        "arm": "M",
+        "derived_from": "F",
+        "identical_to_F": False,
+        "answer": state.get("answer", ""),
+        "context": context,
+        # The replay reuses A's sub-queries, so it skips the decomposition call
+        # each retrieve node paid for; add that LLM time back or M reads faster
+        # than it would run.
+        "latency_ms": round(
+            retrieval_ms + answer_ms
+            + sum(t["ms"] for t in kept if t["node"] != "retrieve")
+            + sum(t["llm_ms"] for t in kept if t["node"] == "retrieve"), 1),
+        "llm_calls": sum(branch["calls_by_stage"].values()),
+        "calls_by_stage": branch["calls_by_stage"],
+        "llm_errors": branch["llm_errors"],
+        "llm_ms": round(sum(t["llm_ms"] for t in kept) + branch["llm_ms"], 1),
+        "input_tokens": sum(t["in"] for t in kept) + branch["input_tokens"],
+        "output_tokens": sum(t["out"] for t in kept) + branch["output_tokens"],
+    }
+
+
 def phase_run(
     samples: list[dict], groups: list[str], runs_path: Path, max_failures: int
 ) -> None:
@@ -577,6 +683,18 @@ def phase_run(
                         _append_row(runs_path, f_row)
                         rows[(sid, "F")] = f_row
                         print(f"[RUN]   F: {'unchanged (A did not acknowledge)' if f_row['identical_to_A'] else 're-answered from A context'}")
+                    elif group == "mergefix":
+                        a_row, f_row = rows.get((sid, "A")), rows.get((sid, "F"))
+                        if a_row is None or f_row is None:
+                            print("[RUN]   M: skipped — needs this sample's A and F rows first")
+                            continue
+                        m_row = {"sample_id": sid, **meta,
+                                 **run_merge_fix(agent, meter, a_row, f_row, query)}
+                        if m_row["llm_errors"]:
+                            raise RuntimeError(f"{m_row['llm_errors']} LLM call(s) failed")
+                        _append_row(runs_path, m_row)
+                        rows[(sid, "M")] = m_row
+                        print(f"[RUN]   M: {'unchanged (no broaden round)' if m_row['identical_to_F'] else 'answered from merged context'}")
                     failures = 0
                 except Exception as e:  # noqa: BLE001 — keep going, resume later
                     failures += 1
@@ -852,6 +970,8 @@ def phase_score(
         "B": lambda sid: rows[(sid, "A")]["first_context"],
         "C": lambda sid: rows[(sid, "C")]["context"],
         "F": lambda sid: rows[(sid, "A")]["final_context"] or rows[(sid, "A")]["first_context"],
+        "M": lambda sid: rows[(sid, "M")].get("context")
+        or rows[(sid, "A")]["final_context"] or rows[(sid, "A")]["first_context"],
     }
     scores = {a: {sid: score_answer(rows[(sid, a)]["answer"], by_id[sid], alias_map,
                                     context=ctx_of[a](sid))
@@ -912,7 +1032,7 @@ def phase_score(
 
     # ── Paired comparisons ────────────────────────────────────────────────
     comparisons = [(l, r) for l, r in (("A", "B"), ("B", "C"), ("A", "C"),
-                                       ("F", "A"), ("F", "B"))
+                                       ("F", "A"), ("F", "B"), ("M", "F"), ("M", "B"))
                    if l in arms and r in arms]
     if comparisons:
         lines += ["", "## 2. Paired comparisons (same samples)", "",
@@ -974,6 +1094,14 @@ def phase_score(
                 st = paired({s: scores["A"][s]["f1"] for s in ids},
                             {s: scores["B"][s]["f1"] for s in ids}, ids)
                 lines.append(_fmt_paired(label, st))
+            if "M" in arms and fired:
+                lines += ["", "With the broaden merge (arm M: the broadened samples "
+                          "re-answered from the merged context):", "",
+                          "| Subset | mean Δ F1 | 95% CI | Wilcoxon p | n | W/T/L |",
+                          "|---|---|---|---|---|---|",
+                          _fmt_paired("M − F, broadened samples",
+                                      paired({s: scores["M"][s]["f1"] for s in fired},
+                                             {s: scores["F"][s]["f1"] for s in fired}, fired))]
             if "F" in arms and acked:
                 lines += ["", "With the ACK fix (arm F: the same samples re-answered from "
                           "A's own context, acknowledgement kept as a caveat):", "",
@@ -1093,7 +1221,8 @@ def main() -> None:
     parser.add_argument("--max-samples", type=int, default=0)
     parser.add_argument("--arms", default="agent,fast,sensitivity",
                         help="agent (A + derived B), fast (C), sensitivity (S, needs C), "
-                             "ackfix (F, needs A); default all but ackfix")
+                             "ackfix (F, needs A), mergefix (M, needs A and F); "
+                             "default agent,fast,sensitivity")
     parser.add_argument("--run-tag", default="",
                         help="suffix for the results files, e.g. 'smoke'")
     parser.add_argument("--max-consecutive-failures", type=int, default=3)

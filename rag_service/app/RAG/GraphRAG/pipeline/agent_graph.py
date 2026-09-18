@@ -38,6 +38,12 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 
 from ..config import (
+    AGENT_MAX_CONTEXT_CHARS,
+    AGENT_MAX_GRAPH,
+    AGENT_MAX_VECTOR,
+    BROADEN_CONTEXT_CHARS_STEP,
+    BROADEN_GRAPH_STEP,
+    BROADEN_VECTOR_STEP,
     EMBED_MODEL,
     LLM_MAX_TOKENS,
     LLM_MODEL,
@@ -55,7 +61,7 @@ from ..llm_provider import (
     create_core_chat_model,
     resolve_core_llm_target,
 )
-from ..retrieval.hybrid_retriever import HybridRetriever
+from ..retrieval.hybrid_retriever import HybridRetriever, merge_results
 from .context_builder import build_context, build_generation_prompt
 from .cross_lingual import CrossLingualLayer
 from .query_decomposer import QueryDecomposer
@@ -223,9 +229,12 @@ class GraphRAGAgent:
         sub_queries = self.decomposer.decompose(incident=user_query, verbose=False)
         all_queries = [user_query] + [q for q in sub_queries if q and q != user_query]
         rag_result = self.retriever.retrieve_multi_quota(
-            all_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
+            all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
+            max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH,
         )
-        return build_context(rag_result, max_vector=15, max_graph=8)
+        return build_context(
+            rag_result, max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH
+        )
 
     def query_fast(self, user_query: str, verbose: bool = True) -> AgentResponse:
         """Minimal-latency path — single retrieve → one combined reason+answer call.
@@ -554,6 +563,7 @@ class GraphRAGAgent:
         original_query = state.get("original_query", "")
         rewritten_queries: list = list(state.get("rewritten_queries") or [])
         verbose = state.get("verbose", True)
+        broaden_round = state.get("broaden_count", 0)
 
         # Full original query goes FIRST as a holistic channel — it preserves the
         # incident's full context (the report path proved this gives better
@@ -569,10 +579,25 @@ class GraphRAGAgent:
             for i, q in enumerate(all_queries, 1):
                 print(f"  [{i}] {q[:100]}")
 
+        # A broaden round extends the context rather than competing for its
+        # space: the rewrite exists to add the phase the first pass missed, and
+        # the first pass already fills the character budget, so displacing it
+        # was measured as a wash (see BROADEN_* in config.py).
+        max_vector = AGENT_MAX_VECTOR + BROADEN_VECTOR_STEP * broaden_round
+        max_graph = AGENT_MAX_GRAPH + BROADEN_GRAPH_STEP * broaden_round
+        max_chars = AGENT_MAX_CONTEXT_CHARS + BROADEN_CONTEXT_CHARS_STEP * broaden_round
+
         graphrag_result = self.retriever.retrieve_multi_quota(
-            all_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
+            all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
+            max_vector=max_vector, max_graph=max_graph,
         )
-        context = build_context(graphrag_result, max_vector=15, max_graph=8)
+        if broaden_round and state.get("graphrag_result") is not None:
+            graphrag_result = merge_results(state["graphrag_result"], graphrag_result)
+
+        context = build_context(
+            graphrag_result, max_context_length=max_chars,
+            max_vector=max_vector, max_graph=max_graph,
+        )
 
         if verbose:
             sep("CONTEXT PREVIEW")
