@@ -646,13 +646,26 @@ class GraphRAGAgent:
         # ── Fast path for ACKNOWLEDGE_LIMIT ───────────────────────────────
         # Honour it only alongside an INSUFFICIENT verdict — guard against
         # local LLMs that output strategy=ACKNOWLEDGE_LIMIT while simultaneously
-        # returning verdict=SUFFICIENT. Reaching reasoning WITH an INSUFFICIENT
-        # verdict already means broaden is spent or unavailable
-        # (see _edge_after_evaluation), so no separate budget check is needed —
-        # and the answerability gate can legitimately fire on the first pass.
+        # returning verdict=SUFFICIENT.
+        #
+        # And only on the first pass. That is the answerability gate: it is
+        # checked before the context is judged and means the incident text
+        # itself describes no attacker action, so there is nothing to analyse.
+        # After a broaden round the message means "the knowledge base did not
+        # cover every phase I looked for", which is not a reason to throw the
+        # analysis away: on 100 real-CTI incidents that replaced 10 answers and
+        # cost 0.704 F1 each, half of them with every gold technique already in
+        # the retrieved context (evaluation/results/agentic_ablation.md). Those
+        # cases now answer from the context and carry the limitation as a
+        # caveat instead.
         evaluation = state.get("evaluation")
         verdict = getattr(evaluation, "verdict", "") if evaluation else ""
-        if strategy == "ACKNOWLEDGE_LIMIT" and ack_message and verdict == VERDICT_INSUFFICIENT:
+        acknowledged = (
+            strategy == "ACKNOWLEDGE_LIMIT"
+            and bool(ack_message)
+            and verdict == VERDICT_INSUFFICIENT
+        )
+        if acknowledged and state.get("broaden_count", 0) == 0:
             if verbose:
                 sep("AGENT — REASONING LLM (ACKNOWLEDGE_LIMIT)")
                 print(ack_message)
@@ -691,6 +704,12 @@ class GraphRAGAgent:
             ]
         )
         answer = require_message_text(response, operation="grounded answer generation")
+
+        # The evaluator's limitation note rides along instead of replacing the
+        # analysis. It is written in the query's language, so it needs no
+        # translation stage of its own.
+        if acknowledged:
+            answer = f"{answer}\n\n{ack_message}"
 
         if verbose:
             sep("ANSWER (Thai, single-call)" if single_call else "ENGLISH ANSWER")
