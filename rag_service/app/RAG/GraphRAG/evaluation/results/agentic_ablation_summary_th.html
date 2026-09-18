@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Agentic Ablation — สรุปผลการทดลอง</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Leelawadee UI", Tahoma, sans-serif;
+    font-size: 10.5pt; line-height: 1.62; color: #1b1f24; margin: 0;
+  }
+  h1 { font-size: 20pt; line-height: 1.3; margin: 0 0 6px; letter-spacing: -0.2px; }
+  h2 {
+    font-size: 13pt; margin: 22px 0 8px; padding-bottom: 5px;
+    border-bottom: 2px solid #1b1f24;
+  }
+  h3 { font-size: 11pt; margin: 16px 0 6px; color: #33393f; }
+  p { margin: 7px 0; }
+  ul { margin: 7px 0; padding-left: 18px; }
+  li { margin: 4px 0; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 9pt; background: #f2f3f5;
+         padding: 1px 4px; border-radius: 3px; }
+  .lead { color: #4a5158; font-size: 10pt; }
+  .meta { font-size: 9pt; color: #5a6068; border-left: 3px solid #b3272d; padding-left: 10px;
+          margin: 14px 0 18px; }
+  .meta span { display: inline-block; margin-right: 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 9.5pt;
+          page-break-inside: avoid; }
+  th { text-align: left; background: #1b1f24; color: #fff; padding: 6px 8px; font-weight: 600; }
+  td { padding: 5px 8px; border-bottom: 1px solid #e3e5e8; }
+  tbody tr:nth-child(even) { background: #f7f8f9; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .best { font-weight: 700; color: #0f7b3f; }
+  .bad { color: #b3272d; font-weight: 600; }
+  .sig::after { content: " *"; color: #0f7b3f; }
+  .box { border: 1px solid #d8dbdf; border-left: 4px solid #b3272d; background: #fcfcfd;
+         padding: 10px 12px; margin: 12px 0; page-break-inside: avoid; }
+  .box.good { border-left-color: #0f7b3f; }
+  .box h4 { margin: 0 0 4px; font-size: 10.5pt; }
+  .box p { margin: 3px 0; font-size: 10pt; }
+  .bars { margin: 8px 0 14px; page-break-inside: avoid; }
+  .bar-row { display: flex; align-items: center; margin: 5px 0; font-size: 9.5pt; }
+  .bar-label { width: 150px; flex-shrink: 0; }
+  .bar-track { flex-grow: 1; background: #eef0f2; height: 16px; position: relative; }
+  .bar-fill { height: 16px; background: #5a6068; }
+  .bar-fill.hl { background: #0f7b3f; }
+  .bar-fill.dim { background: #b9bec4; }
+  .bar-val { width: 46px; text-align: right; font-variant-numeric: tabular-nums;
+             flex-shrink: 0; padding-left: 8px; }
+  .note { font-size: 9pt; color: #5a6068; margin-top: -6px; }
+  .pagebreak { page-break-before: always; }
+  footer { margin-top: 24px; border-top: 1px solid #d8dbdf; padding-top: 8px;
+           font-size: 8.5pt; color: #6b7178; }
+</style>
+</head>
+<body>
+
+<h1>Agentic RAG — self-reflection loop ช่วยหรือทำให้แย่ลง</h1>
+<p class="lead">สรุปผลการทดลอง ablation และการแก้ไข pipeline สำหรับ CyberCase Intelligence Framework</p>
+
+<div class="meta">
+  <span><strong>ชุดข้อมูล:</strong> real-CTI tier 100 เหตุการณ์ (347 attack steps: named 61 / described 286) gold จาก CTID + CISA</span>
+  <span><strong>โมเดล:</strong> <code>openai/gpt-5.6-luna</code> ผ่าน OpenRouter</span>
+  <span><strong>Branch:</strong> <code>eval/agentic-ablation</code></span>
+  <span><strong>วันที่:</strong> 17–19 กันยายน 2569</span>
+  <span><strong>ค่าใช้จ่ายรวม:</strong> 1.23 USD (1,058 LLM calls)</span>
+</div>
+
+<h2>1. สรุปผู้บริหาร</h2>
+<ul>
+  <li><strong>ของเดิมที่ serve อยู่ self-reflection loop ทำให้คะแนนแย่ลง</strong> เปิด loop ได้ macro F1 0.629 ส่วนปิด loop ได้ 0.693 ต่างกัน &minus;0.064 (95% CI [&minus;0.113, &minus;0.021], p = 0.012) ทั้งที่จ่ายเพิ่ม 1.5 LLM call และ 15 วินาทีต่อเหตุการณ์</li>
+  <li><strong>ต้นเหตุคือ ACKNOWLEDGE_LIMIT ทิ้งบทวิเคราะห์</strong> 10 จาก 100 เหตุการณ์ถูกแทนที่ด้วยข้อความ "ข้อมูลไม่เพียงพอ" ทั้งที่ครึ่งหนึ่งมี gold ครบอยู่ใน context แล้ว เสีย F1 เฉลี่ย &minus;0.704 ต่อเหตุการณ์</li>
+  <li><strong>แก้ 2 จุดแล้วได้ผล</strong> หลังแก้ macro F1 ขึ้นเป็น 0.705 และ recall 0.794 ทำให้การเปิด loop <em>ดีกว่า</em> ปิด loop อย่างมีนัยสำคัญ (+0.012 F1, p = 0.030; recall +0.029, p = 0.002 ชนะ 10 เสมอ 90 แพ้ 0)</li>
+  <li><strong>fast path ที่ดูคะแนนใกล้เคียงกันนั้นไม่ grounded</strong> เทคนิคที่ fast path ตอบถูก 60% ไม่ปรากฏใน context ที่ retrieve มาเลย โมเดลตอบจากความรู้ในตัวเอง เทียบกับ agent ที่อยู่ที่ 1%</li>
+  <li><strong>วิธีที่ทดลองแล้วไม่ได้ผล</strong> การให้ evaluator อ่าน context ทั้งหมดแทน 4000 ตัวอักษรแรก ทำให้ตรวจจับ context ที่ขาดข้อมูลได้ <em>แย่ลง</em> (detector F1 0.442 &rarr; 0.277) จึงไม่นำมาใช้</li>
+</ul>
+
+<h2>2. วิธีทดลอง</h2>
+<p>ทุก arm ทำงานบน pipeline ที่ให้บริการจริง ไม่ได้เขียนขึ้นใหม่ โดย arm A รันผ่าน <code>graph.stream()</code> ทีละ node เพื่อบันทึกทุกอย่างที่เกิดขึ้น</p>
+<table>
+  <thead><tr><th style="width:62px">Arm</th><th>ประกอบด้วย</th><th style="width:95px">LLM calls</th></tr></thead>
+  <tbody>
+    <tr><td><strong>A</strong></td><td>full agent ตามที่ serve จริง: router &rarr; decompose &rarr; retrieve แบบ quota &rarr; evaluator &rarr; broaden &rarr; ตอบ</td><td>4–6</td></tr>
+    <tr><td><strong>B</strong></td><td>เหมือน A แต่ตัด evaluator และ broaden ออก ตอบจาก context รอบแรกของ A เอง</td><td>3</td></tr>
+    <tr><td><strong>C</strong></td><td><code>query_fast()</code>: ไม่ decompose ไม่มี quota ไม่มี evaluator context เล็กกว่า (5 vector / 3 subgraph)</td><td>1</td></tr>
+    <tr><td><strong>F</strong></td><td>A + การแก้ที่ 1 (ACK ไม่ทับคำตอบ) ใช้ retrieval ชุดเดียวกับ A</td><td>4–6</td></tr>
+    <tr><td><strong>M</strong></td><td>F + การแก้ที่ 4 (broaden รวมผลสองรอบ) เป็นเวอร์ชันล่าสุดของ pipeline</td><td>4–6</td></tr>
+    <tr><td><strong>S</strong></td><td>probe: เอา evaluator ตัวจริงไปตัดสิน context ของ C เพื่อวัดความไวในการตรวจจับ</td><td>1</td></tr>
+  </tbody>
+</table>
+<p class="note">B, F และ M สร้างจากรอบเดียวกับ A ไม่ได้รันแยก เมื่อส่วนที่แก้ไม่ได้ทำงาน คำตอบจะเหมือน A ทุกตัวอักษร ทำให้ส่วนต่างสะท้อนเฉพาะสิ่งที่แก้ ไม่มี noise จากการรันซ้ำ</p>
+
+<h3>การวัดผล</h3>
+<p>นับ ATT&amp;CK technique ID ที่คำตอบอ้างถึง ยุบเป็น parent technique (gold ทั้ง 366 ID เป็นระดับ parent ทั้งหมด) แล้วคิด precision / recall / F1 ด้วย <code>technique_set_score</code> เทียบกับ <code>gold_attack_ids</code> รายงานค่า macro (เฉลี่ยต่อเหตุการณ์) เป็นหลัก การเปรียบเทียบใช้ paired bootstrap 95% CI และ Wilcoxon signed-rank บนเหตุการณ์ชุดเดียวกัน</p>
+
+<h2>3. ผลหลัก</h2>
+<table>
+  <thead><tr><th>Metric</th><th class="num">A เดิม</th><th class="num">B ปิด loop</th><th class="num">C fast</th><th class="num">F แก้ที่ 1</th><th class="num">M แก้ 1+4</th></tr></thead>
+  <tbody>
+    <tr><td>Macro F1</td><td class="num">0.629</td><td class="num">0.693</td><td class="num">0.623</td><td class="num">0.698</td><td class="num best">0.705</td></tr>
+    <tr><td>Macro recall</td><td class="num">0.700</td><td class="num">0.765</td><td class="num">0.655</td><td class="num">0.777</td><td class="num best">0.794</td></tr>
+    <tr><td>Macro precision</td><td class="num">0.583</td><td class="num">0.648</td><td class="num best">0.707</td><td class="num">0.648</td><td class="num">0.650</td></tr>
+    <tr><td>Micro F1</td><td class="num">0.657</td><td class="num">0.687</td><td class="num">0.657</td><td class="num">0.691</td><td class="num best">0.698</td></tr>
+    <tr><td>Step recall — named (61)</td><td class="num">0.836</td><td class="num">0.921</td><td class="num">0.899</td><td class="num">0.926</td><td class="num best">0.943</td></tr>
+    <tr><td>Step recall — described (286)</td><td class="num">0.679</td><td class="num">0.749</td><td class="num">0.603</td><td class="num">0.763</td><td class="num best">0.784</td></tr>
+    <tr><td>เทคนิคที่อ้างถึงเฉลี่ย</td><td class="num">4.10</td><td class="num">4.49</td><td class="num">3.68</td><td class="num">4.53</td><td class="num">4.65</td></tr>
+    <tr><td>คำตอบที่ไม่อ้างเทคนิคเลย</td><td class="num bad">10</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+  </tbody>
+</table>
+
+<div class="bars">
+  <div class="bar-row"><div class="bar-label">M (แก้แล้ว)</div><div class="bar-track"><div class="bar-fill hl" style="width:70.5%"></div></div><div class="bar-val">0.705</div></div>
+  <div class="bar-row"><div class="bar-label">F (แก้ที่ 1)</div><div class="bar-track"><div class="bar-fill hl" style="width:69.8%"></div></div><div class="bar-val">0.698</div></div>
+  <div class="bar-row"><div class="bar-label">B (ปิด loop)</div><div class="bar-track"><div class="bar-fill" style="width:69.3%"></div></div><div class="bar-val">0.693</div></div>
+  <div class="bar-row"><div class="bar-label">A (ของเดิม)</div><div class="bar-track"><div class="bar-fill dim" style="width:62.9%"></div></div><div class="bar-val">0.629</div></div>
+  <div class="bar-row"><div class="bar-label">C (fast path)</div><div class="bar-track"><div class="bar-fill dim" style="width:62.3%"></div></div><div class="bar-val">0.623</div></div>
+  <p class="note">Macro F1 ต่อ arm (สเกล 0–1)</p>
+</div>
+
+<h3>การเปรียบเทียบแบบจับคู่ (100 เหตุการณ์เดียวกัน)</h3>
+<table>
+  <thead><tr><th>เทียบ</th><th class="num">ผลต่าง F1</th><th class="num">95% CI</th><th class="num">p</th><th class="num">ชนะ/เสมอ/แพ้</th></tr></thead>
+  <tbody>
+    <tr><td>A &minus; B — ผลของ loop เดิม</td><td class="num bad">&minus;0.064</td><td class="num">[&minus;0.113, &minus;0.021]</td><td class="num">0.012</td><td class="num">6 / 80 / 14</td></tr>
+    <tr><td>B &minus; C — ผลของ decomposition + quota</td><td class="num best">+0.070</td><td class="num">[+0.015, +0.127]</td><td class="num">0.045</td><td class="num">50 / 14 / 36</td></tr>
+    <tr><td>A &minus; C — agent เดิมเทียบ fast path</td><td class="num">+0.006</td><td class="num">[&minus;0.066, +0.076]</td><td class="num">0.588</td><td class="num">46 / 16 / 38</td></tr>
+    <tr><td>F &minus; A — ผลของการแก้ที่ 1</td><td class="num best">+0.069</td><td class="num">[+0.030, +0.115]</td><td class="num">0.002</td><td class="num">10 / 90 / 0</td></tr>
+    <tr><td>M &minus; F — ผลของการแก้ที่ 4</td><td class="num">+0.007</td><td class="num">[&minus;0.009, +0.024]</td><td class="num">0.236</td><td class="num">8 / 83 / 9</td></tr>
+    <tr><td><strong>M &minus; B — loop หลังแก้ เทียบ ไม่มี loop</strong></td><td class="num best">+0.012</td><td class="num">[+0.001, +0.025]</td><td class="num">0.030</td><td class="num">10 / 84 / 6</td></tr>
+  </tbody>
+</table>
+<p class="note">CI ที่ไม่คร่อม 0 ถือว่ามีนัยสำคัญ ค่า recall ของ M &minus; B คือ +0.029 (p = 0.002, ชนะ 10 เสมอ 90 แพ้ 0)</p>
+
+<div class="box">
+  <h4>ข้อสังเกตสำคัญ: A กับ C เสมอกันด้วยเหตุผลคนละแบบ</h4>
+  <p>agent เดิม (A) กับ fast path (C) ได้ F1 ไม่ต่างกันอย่างมีนัยสำคัญ (+0.006, p = 0.59) ถ้าดูแค่ตัวเลขนี้จะสรุปผิดว่า pipeline ที่ซับซ้อนไม่จำเป็น ความจริงคือ decomposition + quota ให้ผลบวก (+0.070) แต่ loop เดิมกินกลับไปหมด (&minus;0.064)</p>
+</div>
+
+<div class="pagebreak"></div>
+<h2>4. ทำไม loop เดิมถึงทำให้แย่ลง</h2>
+<table>
+  <thead><tr><th>ตัวชี้วัด (arm A)</th><th class="num" style="width:150px">ค่า</th></tr></thead>
+  <tbody>
+    <tr><td>รอบแรกตัดสินว่า INSUFFICIENT</td><td class="num">25 / 100</td></tr>
+    <tr><td>จำนวนรอบ broaden ที่ใช้ (0 / 1 / 2)</td><td class="num">75 / 25 / 0</td></tr>
+    <tr><td>คำตอบถูกแทนที่ด้วย ACKNOWLEDGE_LIMIT</td><td class="num bad">10 / 100</td></tr>
+    <tr><td>การตัดสินโดย LLM ทั้งหมด</td><td class="num">125</td></tr>
+    <tr><td>&mdash; ตอบ SUFFICIENT คู่กับ PARTIAL_ANSWER (คำเตือนไม่เคยถึงผู้ใช้)</td><td class="num">3</td></tr>
+    <tr><td>&mdash; parse ไม่ได้แล้ว fallback เป็น SUFFICIENT</td><td class="num">0</td></tr>
+  </tbody>
+</table>
+
+<h3>4.1 ACKNOWLEDGE_LIMIT ทิ้งบทวิเคราะห์ทั้งก้อน</h3>
+<ul>
+  <li>เกิดหลัง broaden 1 รอบทั้ง 10 ครั้ง ไม่ใช่ตั้งแต่รอบแรก แปลว่าจ่ายค่า LLM เพิ่ม 2 call เพื่อให้ได้คำตอบที่แย่ลง</li>
+  <li>5 ใน 10 ครั้งนั้น context มี gold ครบ 100% อยู่แล้ว</li>
+  <li>ข้อความที่ตอบกลับอ้างว่าขาด "Initial Access, Credential Access, Impact" ซึ่งเป็น phase ใน prompt ไม่ใช่เทคนิคที่เกิดในคดี</li>
+</ul>
+
+<h3>4.2 broaden แค่สลับของ ไม่ได้เพิ่มข้อมูล</h3>
+<ul>
+  <li>context รอบแรกยาวเฉลี่ย 9,258 ตัวอักษร จากเพดาน 10,000 คือเต็มอยู่แล้ว</li>
+  <li>รอบสองใช้เพดานเดียวกัน ผลลัพธ์จึงเบียดของเดิมออก: gold recall 0.761 &rarr; 0.759 (ดีขึ้น 6 เท่าเดิม 13 แย่ลง 6 แย่สุด &minus;0.33)</li>
+  <li>บน 25 เหตุการณ์ที่ loop ทำงาน A แพ้ B ถึง &minus;0.257 F1 (95% CI [&minus;0.422, &minus;0.095])</li>
+</ul>
+
+<h3>4.3 rubric 4 phase ตายตัวไม่ตรงกับคดีจริง</h3>
+<p>prompt ของ evaluator ตรวจแค่ Initial Access, Credential Access, Privilege Escalation และ Impact แต่คดีจริงจำนวนมากอยู่นอกกลุ่มนี้ (discovery, collection, persistence, C2)</p>
+<table>
+  <thead><tr><th>จำนวน phase ใน checklist ที่ตรงกับ gold</th><th class="num">เหตุการณ์</th><th class="num">ตัดสิน INSUFFICIENT</th><th class="num">gold recall ในส่วนที่อ่าน</th></tr></thead>
+  <tbody>
+    <tr><td>0 phase</td><td class="num">31</td><td class="num bad">52%</td><td class="num">0.404</td></tr>
+    <tr><td>1 phase</td><td class="num">45</td><td class="num">18%</td><td class="num">0.588</td></tr>
+    <tr><td>2 phase</td><td class="num">21</td><td class="num">0%</td><td class="num">0.677</td></tr>
+    <tr><td>3 phase</td><td class="num">3</td><td class="num">33%</td><td class="num">0.717</td></tr>
+  </tbody>
+</table>
+
+<h2>5. evaluator ตรวจจับได้ดีแค่ไหน</h2>
+<p>ใช้ probe S เอา evaluator ตัวเดียวกันไปตัดสิน context ของ fast path ซึ่งอ่อนกว่าชัดเจน บนเหตุการณ์เดียวกัน</p>
+<table>
+  <thead><tr><th>context ที่ถูกตัดสิน</th><th class="num">INSUFFICIENT</th><th class="num">gold recall ในส่วนที่อ่าน</th><th class="num">gold recall ทั้งหมด</th></tr></thead>
+  <tbody>
+    <tr><td>context รอบแรกของ agent</td><td class="num">25%</td><td class="num">0.553</td><td class="num">0.815</td></tr>
+    <tr><td>context ของ fast path</td><td class="num">65%</td><td class="num">0.272</td><td class="num">0.272</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>ไวจริง:</strong> บนเหตุการณ์เดียวกัน verdict พลิกไปทาง INSUFFICIENT เมื่อ context แย่ลง 44 ครั้ง กลับกันเพียง 4 ครั้ง (exact McNemar p &lt; 0.0001)</li>
+  <li><strong>แต่ calibrate ไม่ตรง:</strong> จาก 128 การตัดสินที่ context มี gold ไม่ถึงครึ่ง มันยังตอบ SUFFICIENT ถึง 51 ครั้ง</li>
+  <li><strong>เห็นไม่ครบ:</strong> evaluator อ่าน context แค่ 4,000 ตัวอักษรแรก จากค่าเฉลี่ย 9,258 ตัวอักษร ทำให้ gold recall ที่มันเห็นเหลือ 0.553 จาก 0.815</li>
+</ul>
+
+<div class="pagebreak"></div>
+<h2>6. การแก้ไขที่ทดลอง</h2>
+<table>
+  <thead><tr><th style="width:34%">วิธี</th><th>ผลที่วัดได้</th><th style="width:78px">สถานะ</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>1. ACK ไม่ทับคำตอบ</strong><br><span class="note">ยอมให้ ACKNOWLEDGE_LIMIT แทนที่คำตอบเฉพาะรอบแรก (กรณีเหตุการณ์ไม่มีพฤติกรรมให้วิเคราะห์) หลัง broaden แล้วให้แนบเป็นหมายเหตุแทน</span></td>
+      <td>F &minus; A = <strong>+0.069 F1</strong> (CI [+0.030, +0.115], p = 0.002) ชนะ 10 เสมอ 90 แพ้ 0<br>เฉพาะ 10 เหตุการณ์ที่เคยโดน ACK: <strong>+0.692</strong></td>
+      <td><span class="best">ใช้แล้ว</span></td>
+    </tr>
+    <tr>
+      <td><strong>4. broaden รวมผลแทนการแทนที่</strong><br><span class="note">รวมผล retrieval รอบแรกกับรอบสอง และขยาย budget ขึ้นหนึ่งขั้นต่อรอบ</span></td>
+      <td>context gold recall <strong>0.759 &rarr; 0.837</strong> ชนะ 7 เสมอ 18 แพ้ 0 และไม่เคยต่ำกว่ารอบแรก (ของเดิมต่ำกว่า 6 ครั้ง)<br>ด้าน F1: M &minus; F = +0.007 (p = 0.24) ยังไม่มีนัยสำคัญในตัวเอง</td>
+      <td><span class="best">ใช้แล้ว</span></td>
+    </tr>
+    <tr>
+      <td><strong>3. ให้ evaluator เห็น context ทั้งหมด</strong><br><span class="note">แทนที่จะอ่านแค่ 4,000 ตัวอักษรแรก</span></td>
+      <td>ยิง INSUFFICIENT ลดจาก 25% เหลือ 13% และตรวจจับ context ที่ขาด gold ได้แย่ลง: detector F1 <strong>0.442 &rarr; 0.277</strong></td>
+      <td><span class="bad">ตัดทิ้ง</span></td>
+    </tr>
+    <tr>
+      <td><strong>2. rubric ตาม sub-query</strong><br><span class="note">ตรวจว่า context ครอบคลุมพฤติกรรมที่เหตุการณ์บรรยาย แทน checklist 4 phase</span></td>
+      <td>detector F1 <strong>0.442 &rarr; 0.625</strong> (recall 0.327 &rarr; 0.673) แต่ยิง INSUFFICIENT ถี่ขึ้นเป็น 60%</td>
+      <td>ยังไม่วัด F1</td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">detector F1 คือความแม่นในการตรวจจับว่า context ขาด gold technique จริงหรือไม่ วัดจากการเอา evaluator ไปตัดสิน context ชุดเดิมที่บันทึกไว้ 100 ชุด</p>
+
+<div class="box good">
+  <h4>ผลรวมหลังแก้ 2 จุด</h4>
+  <p>เดิม A &minus; B = &minus;0.064 (เปิด loop แย่กว่าปิด) หลังแก้ M &minus; B = <strong>+0.012 F1</strong> (95% CI [+0.001, +0.025], p = 0.030) และ recall <strong>+0.029</strong> (p = 0.002, ชนะ 10 เสมอ 90 แพ้ 0) กล่าวคือ self-reflection loop เปลี่ยนจากตัวถ่วงเป็นผลบวกที่มีนัยสำคัญ แม้ขนาดผลยังเล็ก</p>
+</div>
+
+<h2>7. Grounding — คะแนนที่ได้มาจากไหน</h2>
+<table>
+  <thead><tr><th>ตัวชี้วัด</th><th class="num">A</th><th class="num">B</th><th class="num">C</th><th class="num">F</th><th class="num">M</th></tr></thead>
+  <tbody>
+    <tr><td>gold ที่ปรากฏใน context (context recall)</td><td class="num">0.814</td><td class="num">0.815</td><td class="num bad">0.272</td><td class="num">0.814</td><td class="num best">0.833</td></tr>
+    <tr><td>gold ที่คำตอบอ้างถึง (answer recall)</td><td class="num">0.700</td><td class="num">0.765</td><td class="num">0.655</td><td class="num">0.777</td><td class="num best">0.794</td></tr>
+    <tr><td>คำตอบที่ถูก แต่ไม่มีใน context</td><td class="num">0.8%</td><td class="num">0.4%</td><td class="num bad">60.2%</td><td class="num">0.7%</td><td class="num">1.0%</td></tr>
+  </tbody>
+</table>
+<p>fast path มี context recall เพียง 0.272 แต่ตอบได้ recall 0.655 ส่วนต่างมาจากความรู้ในตัวโมเดลเอง ไม่ใช่จากฐานข้อมูล MITRE ที่ retrieve มา สำหรับงานที่ต้องอ้างอิงหลักฐานได้ ตัวเลข F1 เพียงอย่างเดียวจึงตัดสินใจแทนไม่ได้</p>
+
+<h2>8. ต้นทุนและเวลา (ต่อหนึ่งเหตุการณ์)</h2>
+<table>
+  <thead><tr><th>Metric</th><th class="num">A</th><th class="num">B</th><th class="num">C</th><th class="num">F</th><th class="num">M</th></tr></thead>
+  <tbody>
+    <tr><td>เวลาเฉลี่ย (วินาที)</td><td class="num">59.1</td><td class="num">43.6</td><td class="num best">21.1</td><td class="num">60.5</td><td class="num">53.3</td></tr>
+    <tr><td>&mdash; เฉพาะเวลา LLM</td><td class="num">26.4</td><td class="num">17.4</td><td class="num">12.8</td><td class="num">27.8</td><td class="num">26.8</td></tr>
+    <tr><td>LLM calls</td><td class="num">4.50</td><td class="num">3.00</td><td class="num">1.00</td><td class="num">4.50</td><td class="num">4.50</td></tr>
+    <tr><td>ค่าใช้จ่าย (USD)</td><td class="num">0.0045</td><td class="num">0.0030</td><td class="num">0.0022</td><td class="num">0.0047</td><td class="num">0.0047</td></tr>
+  </tbody>
+</table>
+<p class="note">เวลาที่ไม่ใช่ LLM คือ BGE-M3, reranker, Neo4j และ Qdrant บนเครื่องทดลอง (GPU) ซึ่งไม่เท่ากับ production ที่รันบน CPU</p>
+
+<h2>9. ข้อจำกัดของผลการทดลอง</h2>
+<ul>
+  <li><strong>B, F และ M แตกกิ่งจากรอบของ A</strong> ไม่ใช่การรันแยก ข้อดีคือส่วนต่างสะท้อนเฉพาะสิ่งที่แก้ ข้อเสียคือค่าเฉลี่ยทั้งชุดถูกเจือจางโดยเหตุการณ์ที่ส่วนที่แก้ไม่ได้ทำงาน</li>
+  <li><strong>B &minus; C ไม่ใช่ผลของ decomposition อย่างเดียว</strong> เพราะ <code>query_fast</code> ใช้ context เล็กกว่าและไม่เรียก router ด้วย</li>
+  <li><strong>decomposer ไม่ deterministic</strong> แม้ตั้ง temperature 0 การรันซ้ำให้ sub-queries ต่างกัน และ verdict ของเหตุการณ์ก้ำกึ่งพลิกได้ (เทียบ smoke run: ตรงกัน 4 จาก 5)</li>
+  <li><strong>รัน arm ละครั้งเดียว</strong> การเทียบที่มีการสร้างคำตอบใหม่จึงมี noise ปนอยู่ ซึ่ง CI สะท้อนไว้แล้วแต่แยกออกจากกันไม่ได้</li>
+  <li><strong>การนับเทคนิคใช้เฉพาะ ID ที่คำตอบอ้างถึง</strong> เทคนิคที่อธิบายด้วยถ้อยคำโดยไม่ระบุ ID จะไม่ถูกนับ ส่วนการจับคู่ด้วยชื่อใช้ไม่ได้เพราะ alias map ชี้ชื่อที่ซ้ำกันไปที่ ID ของ mobile (เช่น "screen capture" &rarr; T1513 แทน T1113)</li>
+  <li><strong>gold 1 ID (T0827) เป็นเทคนิคฝั่ง ICS</strong> ซึ่งไม่ได้ ingest ไว้ ทุก arm จึงหาไม่เจอเท่ากัน</li>
+</ul>
+
+<h2>10. สิ่งที่ยังเหลือ</h2>
+<p>วิธีที่ 2 (rubric ตาม sub-query) ตรวจจับได้ดีขึ้นชัดเจนในระดับ probe และตอนนี้ broaden ไม่ทำข้อมูลหายแล้ว ความเสี่ยงเดิมจึงหมดไป เหลือการวัด F1 แบบ end-to-end ซึ่งต้องรันใหม่ทั้ง 100 เหตุการณ์ ประมาณ 550 calls, 0.55 USD, ราว 2 ชั่วโมง</p>
+
+<h2>ภาคผนวก — ไฟล์และ commit</h2>
+<table>
+  <thead><tr><th style="width:44%">ไฟล์</th><th>เนื้อหา</th></tr></thead>
+  <tbody>
+    <tr><td><code>evaluation/agentic_ablation.py</code></td><td>ตัวรัน ablation ทุก arm และการให้คะแนน</td></tr>
+    <tr><td><code>evaluation/evaluator_variants.py</code></td><td>probe เปรียบเทียบ prompt ของ evaluator</td></tr>
+    <tr><td><code>evaluation/broaden_merge_probe.py</code></td><td>probe วัดผลการรวม context ของ broaden (ไม่เรียก LLM)</td></tr>
+    <tr><td><code>results/agentic_ablation.md</code> + <code>.jsonl</code></td><td>รายงานหลักและข้อมูลรายเหตุการณ์ (คำตอบ, context, trace)</td></tr>
+    <tr><td><code>results/evaluator_variants.md</code>, <code>results/broaden_merge_probe.md</code></td><td>รายงานของ probe ทั้งสอง</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th style="width:86px">Commit</th><th>การเปลี่ยนแปลง</th></tr></thead>
+  <tbody>
+    <tr><td><code>2e4c9f6</code></td><td>สร้าง ablation harness (A / B / C)</td></tr>
+    <tr><td><code>07276d6</code></td><td>เปลี่ยน metric หลักเป็น ID ที่อ้างถึง และเพิ่มการวัด grounding</td></tr>
+    <tr><td><code>7ffe0d8</code>, <code>9537e7c</code></td><td>probe S และตาราง calibration / checklist</td></tr>
+    <tr><td><code>36efe38</code></td><td>ผลการทดลองหลัก 100 เหตุการณ์</td></tr>
+    <tr><td><code>9c90719</code></td><td><strong>แก้ที่ 1:</strong> ACK ไม่ทับคำตอบหลัง broaden</td></tr>
+    <tr><td><code>28cf762</code></td><td>probe เปรียบเทียบ prompt ของ evaluator</td></tr>
+    <tr><td><code>73c19d2</code></td><td><strong>แก้ที่ 4:</strong> broaden รวมผลและขยาย budget</td></tr>
+  </tbody>
+</table>
+
+<footer>
+CyberCase Intelligence Framework — branch <code>eval/agentic-ablation</code> · ข้อมูลทุกตัวเลขมาจาก <code>results/agentic_ablation.md</code>, <code>results/evaluator_variants.md</code> และ <code>results/broaden_merge_probe.md</code> · ยังไม่ push และยังไม่เปิด PR
+</footer>
+
+</body>
+</html>
