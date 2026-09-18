@@ -22,6 +22,15 @@ Evaluator probe (no answer, not an arm):
   S  sensitivity       the served evaluator, unchanged, judging C's context —
                        a naturally weaker context for the same incident.
 
+Fix arm:
+
+  F  A + ACK fix       A's own retrieval, re-answered by the reasoning node
+                       after ACKNOWLEDGE_LIMIT stopped replacing the analysis
+                       (agent_graph honours it only on the first pass, where it
+                       means the incident text has nothing to map; afterwards
+                       the note rides along as a caveat). Identical to A wherever
+                       A did not acknowledge, so F - A isolates that one change.
+
 A - B isolates the self-reflection loop. B - C isolates decomposition + quota,
 together with the smaller context query_fast renders (build_context defaults:
 5 vector hits and 3 subgraphs, against the agent's 15 and 8). That context-size
@@ -71,6 +80,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 # Fix relative imports when run directly
 if __package__ is None or __package__ == "evaluation":
@@ -98,12 +108,15 @@ from .crosslingual_generation_benchmark import (
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
-ARM_GROUPS = {"agent": ("A", "B"), "fast": ("C",), "sensitivity": ("S",)}
+ARM_GROUPS = {"agent": ("A", "B"), "fast": ("C",), "sensitivity": ("S",),
+              "ackfix": ("F",)}
 ARM_LABELS = {
     "A": "A  full agent (headline)",
     "B": "B  agent - self-reflection",
     "C": "C  fast path",
+    "F": "F  A + ACK fix",
 }
+SCORED_ARMS = ("A", "B", "C", "F")
 
 # ContextEvaluator._build_prompt shows the evaluator only this much context.
 EVALUATOR_CONTEXT_CHARS = 4000
@@ -426,6 +439,62 @@ def run_sensitivity(agent, meter: _LlmMeter, query: str, context: str) -> dict:
     }
 
 
+def run_ack_fix(agent, meter: _LlmMeter, a_row: dict, query: str) -> dict:
+    """Arm F: A re-answered with the ACKNOWLEDGE_LIMIT fix, same retrieval.
+
+    Only A's acknowledged samples change; the rest are A's own row, so the
+    comparison costs one reasoning call per affected sample and carries no
+    rerun noise anywhere else.
+    """
+    if not a_row["ack_limit"]:
+        return {
+            "arm": "F", "derived_from": "A", "identical_to_A": True,
+            "answer": a_row["answer"], "latency_ms": a_row["latency_ms"],
+            "llm_calls": a_row["llm_calls"], "calls_by_stage": a_row["calls_by_stage"],
+            "llm_errors": 0, "llm_ms": a_row["llm_ms"],
+            "input_tokens": a_row["input_tokens"], "output_tokens": a_row["output_tokens"],
+        }
+
+    # A's answer IS the acknowledgement message — it replaced the analysis.
+    last_eval = [t for t in a_row["trace"] if t["node"] == "evaluate_context"][-1]
+    state = dict(agent.initial_state(query, verbose=False))
+    state.update(agent._node_prepare(state))
+    state.update(
+        context=a_row["final_context"] or a_row["first_context"],
+        strategy=last_eval["strategy"],
+        acknowledgement_message=a_row["answer"],
+        evaluation=SimpleNamespace(verdict=last_eval["verdict"]),
+        broaden_count=a_row["broaden_rounds"],
+    )
+
+    mark = len(meter.events)
+    t0 = time.perf_counter()
+    state.update(agent._node_reasoning(state))
+    if agent._edge_after_reasoning(state) == "translate":
+        state.update(agent._node_translate_output(state))
+    branch_ms = (time.perf_counter() - t0) * 1000
+    branch = _summarise_events(meter.events[mark:])
+
+    # A's own answer stage is replaced, so its reasoning/translate cost drops out.
+    kept = [t for t in a_row["trace"] if t["node"] not in ("reasoning", "translate_output")]
+    for t in kept:
+        for stage in t["calls"]:
+            branch["calls_by_stage"][stage] = branch["calls_by_stage"].get(stage, 0) + 1
+    return {
+        "arm": "F",
+        "derived_from": "A",
+        "identical_to_A": False,
+        "answer": state.get("answer", ""),
+        "latency_ms": round(sum(t["ms"] for t in kept) + branch_ms, 1),
+        "llm_calls": sum(branch["calls_by_stage"].values()),
+        "calls_by_stage": branch["calls_by_stage"],
+        "llm_errors": branch["llm_errors"],
+        "llm_ms": round(sum(t["llm_ms"] for t in kept) + branch["llm_ms"], 1),
+        "input_tokens": sum(t["in"] for t in kept) + branch["input_tokens"],
+        "output_tokens": sum(t["out"] for t in kept) + branch["output_tokens"],
+    }
+
+
 def phase_run(
     samples: list[dict], groups: list[str], runs_path: Path, max_failures: int
 ) -> None:
@@ -496,6 +565,18 @@ def phase_run(
                         _append_row(runs_path, s_row)
                         rows[(sid, "S")] = s_row
                         print(f"[RUN]   S: verdict on C context = {s_row['verdict']}")
+                    elif group == "ackfix":
+                        a_row = rows.get((sid, "A"))
+                        if a_row is None:
+                            print("[RUN]   F: skipped — needs this sample's A row first")
+                            continue
+                        f_row = {"sample_id": sid, **meta,
+                                 **run_ack_fix(agent, meter, a_row, query)}
+                        if f_row["llm_errors"]:
+                            raise RuntimeError(f"{f_row['llm_errors']} LLM call(s) failed")
+                        _append_row(runs_path, f_row)
+                        rows[(sid, "F")] = f_row
+                        print(f"[RUN]   F: {'unchanged (A did not acknowledge)' if f_row['identical_to_A'] else 're-answered from A context'}")
                     failures = 0
                 except Exception as e:  # noqa: BLE001 — keep going, resume later
                     failures += 1
@@ -753,7 +834,7 @@ def phase_score(
         lookup = json.load(f)
     alias_map = lookup["alias_map"]
 
-    arms = [a for a in ("A", "B", "C") if any(k[1] == a for k in rows)]
+    arms = [a for a in SCORED_ARMS if any(k[1] == a for k in rows)]
     if not arms:
         print(f"[SCORE] No rows in {runs_path}")
         return
@@ -770,6 +851,7 @@ def phase_score(
         "A": lambda sid: rows[(sid, "A")]["final_context"] or rows[(sid, "A")]["first_context"],
         "B": lambda sid: rows[(sid, "A")]["first_context"],
         "C": lambda sid: rows[(sid, "C")]["context"],
+        "F": lambda sid: rows[(sid, "A")]["final_context"] or rows[(sid, "A")]["first_context"],
     }
     scores = {a: {sid: score_answer(rows[(sid, a)]["answer"], by_id[sid], alias_map,
                                     context=ctx_of[a](sid))
@@ -829,7 +911,8 @@ def phase_score(
         lines.append(f"| {ct} ({n_steps[ct]}) | " + " | ".join(cells) + " |")
 
     # ── Paired comparisons ────────────────────────────────────────────────
-    comparisons = [(l, r) for l, r in (("A", "B"), ("B", "C"), ("A", "C"))
+    comparisons = [(l, r) for l, r in (("A", "B"), ("B", "C"), ("A", "C"),
+                                       ("F", "A"), ("F", "B"))
                    if l in arms and r in arms]
     if comparisons:
         lines += ["", "## 2. Paired comparisons (same samples)", "",
@@ -891,6 +974,17 @@ def phase_score(
                 st = paired({s: scores["A"][s]["f1"] for s in ids},
                             {s: scores["B"][s]["f1"] for s in ids}, ids)
                 lines.append(_fmt_paired(label, st))
+            if "F" in arms and acked:
+                lines += ["", "With the ACK fix (arm F: the same samples re-answered from "
+                          "A's own context, acknowledgement kept as a caveat):", "",
+                          "| Subset | mean Δ F1 | 95% CI | Wilcoxon p | n | W/T/L |",
+                          "|---|---|---|---|---|---|",
+                          _fmt_paired("F − A, acknowledged samples",
+                                      paired({s: scores["F"][s]["f1"] for s in acked},
+                                             {s: scores["A"][s]["f1"] for s in acked}, acked)),
+                          _fmt_paired("F − B, acknowledged samples",
+                                      paired({s: scores["F"][s]["f1"] for s in acked},
+                                             {s: scores["B"][s]["f1"] for s in acked}, acked))]
 
             if fired:
                 ctx_first = {s: context_recall(a_rows[s]["first_context"], by_id[s]) for s in fired}
@@ -998,8 +1092,8 @@ def main() -> None:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--max-samples", type=int, default=0)
     parser.add_argument("--arms", default="agent,fast,sensitivity",
-                        help="agent (A + derived B), fast (C), sensitivity (S, needs C); "
-                             "default all")
+                        help="agent (A + derived B), fast (C), sensitivity (S, needs C), "
+                             "ackfix (F, needs A); default all but ackfix")
     parser.add_argument("--run-tag", default="",
                         help="suffix for the results files, e.g. 'smoke'")
     parser.add_argument("--max-consecutive-failures", type=int, default=3)
