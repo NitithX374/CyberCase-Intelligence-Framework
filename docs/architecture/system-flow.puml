@@ -1,0 +1,130 @@
+@startuml system-flow
+' What happens when an investigator analyses a case, and what happens next.
+' Drawn from case_workflow/analysis.py, case_analysis/pipeline.py,
+' technical_context/mitre_augmentation.py and chat/.
+
+title CyberCase — Analysing a case, and the question it leaves behind
+
+skinparam shadowing false
+skinparam ArrowColor #444444
+skinparam sequence {
+  ParticipantBorderColor #666666
+  ParticipantBackgroundColor #FAFAFA
+  LifeLineBorderColor #999999
+  BoxBorderColor #BBBBBB
+}
+
+actor Investigator as user
+participant "Frontend" as fe
+participant "routers/analysis.py" as api
+participant "case_workflow" as flow
+participant "pipeline.py" as pipe
+participant "mitre_gate" as gate
+participant "rag_client" as ragc
+participant "RAG service" as rag
+participant "provider_stage" as prov
+participant "OpenRouter" as llm
+participant "validation" as val
+database "PostgreSQL" as db
+
+== Adding what the case knows ==
+
+user -> fe : narrative, or a PDF / DOCX
+fe -> api : POST /cases/{id}/sources\nor /documents
+note right of api
+  A document is detected, parsed, rendered
+  to page images and read by Typhoon OCR.
+  Either way it lands as a case source.
+end note
+api -> db : store source, bump source_revision
+
+== Running the analysis ==
+
+user -> fe : Analyze
+fe -> api : POST /cases/{id}/analysis
+api -> flow : run_case_analysis(case_id, user_id)
+
+flow -> db : read_case_for_analysis\n(bundle + the revision it was read at)
+db --> flow : CaseSourceBundle(revision = N)
+note right of flow
+  The connection closes here. The pipeline
+  runs with no database open, which is what
+  lets an ablation run it over a dataset
+  instead of a case row.
+end note
+
+flow -> pipe : run_pipeline(AnalysisInput, stages)
+
+group Stage 1 — TechnicalContextStage
+  pipe -> gate : does ATT&CK apply to this case?
+  alt MITRE_GATE_MODE = llm
+    gate -> llm : the whole case, one prompt
+    llm --> gate : RETRIEVE + quoted spans, or SKIP
+  else MITRE_GATE_MODE = encoder
+    gate -> gate : PyThaiNLP splits the sources\nXLM-R scores one sentence at a time
+  else MITRE_GATE_MODE = never
+    gate -> gate : always SKIP\n<i>the ablation arm</i>
+  end
+
+  alt decision = RETRIEVE
+    gate --> pipe : trigger sentences
+    pipe -> ragc : the triggers become the query
+    ragc -> rag : POST /query
+    rag --> ragc : context + mitre_table + retrieval_context_id
+  else decision = SKIP
+    gate --> pipe : no technical context
+  end
+end
+
+group Stage 2 — AnalysisStage
+  pipe -> prov : sources + technical context
+  prov -> llm : one call, output pinned to a JSON schema
+  llm --> prov : CaseProviderAnalysis
+  note right of prov
+    A payload that does not fit the schema
+    fails here, and the log now says which
+    field, never its contents.
+  end note
+  prov -> val : resolve the trace against the sources
+  val -> val : find each quotation in the source it cites\nlocate its page\ncount what could not be found
+  val --> pipe : CaseAnalysisTrace + CaseGroundingReport
+end
+
+pipe --> flow : artifacts
+
+flow -> db : store_analysis
+alt source_revision still N
+  db --> flow : written
+else the sources changed while this ran
+  flow --> api : 409 — analyse again
+end
+
+== The question the analysis leaves ==
+
+flow -> flow : next_gap(trace) — the highest-priority\nunresolved question worth asking
+flow -> db : write it as an assistant chat message
+flow --> api : CaseAnalysisResult
+api --> fe : 200
+fe -> fe : go to /overview, and open Ask\nbecause a question is waiting
+
+user -> fe : answers the question
+fe -> api : POST /cases/{id}/chat/messages
+api -> db : the answer becomes a case source\n(source_revision bumps)
+note right of api
+  One question is open at a time, so a reply
+  needs no marking: it answers the one above
+  it. When a round's questions run out, the
+  case is analysed again — a round of three
+  costs one analysis, not three.
+end note
+api -> flow : run_case_analysis(continuing_followup = true)
+
+== Reading it ==
+
+user -> fe : Report
+fe -> api : POST /cases/{id}/reports
+api -> db : build from the persisted snapshot,\nstore a version
+user -> fe : Download PDF
+fe -> api : GET /cases/{id}/reports/{report_id}/pdf
+
+@enduml

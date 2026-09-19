@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AxiosError, AxiosHeaders } from "axios";
-import { toUserFacingError } from "@/lib/user-facing-error";
+import { toUserFacingError } from "@/lib/userFacingError";
 
 describe("user-facing-error classifier", () => {
   it("maps Axios timeout error to human-facing timeout copy without claiming analysis definitively failed", () => {
@@ -89,9 +89,7 @@ describe("user-facing-error classifier", () => {
 
     expect(userError.category).toBe("rate_limit");
     expect(userError.title).toBe("มีคำขอจำนวนมากในขณะนี้");
-    expect(userError.message).toBe(
-      "ระบบกำลังรองรับคำขอจำนวนมาก กรุณารอสักครู่แล้วลองอีกครั้ง",
-    );
+    expect(userError.message).toBe("ระบบกำลังรองรับคำขอจำนวนมาก กรุณารอสักครู่แล้วลองอีกครั้ง");
     expect(userError.retryable).toBe(true);
   });
 
@@ -114,9 +112,7 @@ describe("user-facing-error classifier", () => {
 
     expect(userError.category).toBe("server");
     expect(userError.title).toBe("ระบบไม่สามารถดำเนินการได้");
-    expect(userError.message).toBe(
-      "เกิดข้อผิดพลาดระหว่างประมวลผลคำขอ กรุณาลองอีกครั้ง",
-    );
+    expect(userError.message).toBe("เกิดข้อผิดพลาดระหว่างประมวลผลคำขอ กรุณาลองอีกครั้ง");
     expect(userError.technicalDetail).toContain("Database connection crashed");
   });
 
@@ -139,9 +135,7 @@ describe("user-facing-error classifier", () => {
 
     expect(userError.category).toBe("validation");
     expect(userError.title).toBe("ข้อมูลไม่ถูกต้องหรือยังไม่สมบูรณ์");
-    expect(userError.message).toBe(
-      "กรุณาระบุรายละเอียดเหตุการณ์อย่างน้อย 10 ตัวอักษร",
-    );
+    expect(userError.message).toBe("กรุณาระบุรายละเอียดเหตุการณ์อย่างน้อย 10 ตัวอักษร");
     expect(userError.retryable).toBe(false);
     expect(userError.actionLabel).toBe("ปิด");
   });
@@ -153,12 +147,8 @@ describe("user-facing-error classifier", () => {
 
     expect(userError.category).toBe("unknown");
     expect(userError.title).toBe("ไม่สามารถดำเนินการได้ในขณะนี้");
-    expect(userError.message).toBe(
-      "เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองอีกครั้ง",
-    );
+    expect(userError.message).toBe("เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองอีกครั้ง");
     expect(userError.message).not.toContain("TypeError");
-    expect(userError.technicalDetail).toBe(
-      "Unexpected TypeError at Line 42 Object.evaluate",
-    );
+    expect(userError.technicalDetail).toBe("Unexpected TypeError at Line 42 Object.evaluate");
   });
 });

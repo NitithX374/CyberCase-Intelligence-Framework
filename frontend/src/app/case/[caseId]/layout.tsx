@@ -1,30 +1,26 @@
 "use client";
 
 import { usePathname, useRouter, useParams } from "next/navigation";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
-import {
-  getApiErrorMessage,
-  type CaseRead,
-} from "@/lib/api";
-import type { RunPhase, WorkspaceView } from "@/components/common/types";
-import { chatTranscriptMessages } from "@/lib/chat-followup";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { detectResponseLanguage, getApiErrorMessage, type CaseRead } from "@/lib/api";
+import type { WorkspaceView } from "@/components/common/types";
 import {
   useCase,
   useCaseAnalysis,
-  useCaseEvidence,
+  useCaseSources,
   useCaseMutations,
   useCases,
-  useCaseRunPolling,
+  useStartCaseAnalysis,
 } from "@/hooks/useCaseQueries";
 import { casePath, caseRouteState } from "@/lib/workspaceRoutes";
-import { useCaseChat } from "@/features/chat/useCaseChat";
+import { useCaseChat } from "@/hooks/useCaseChat";
 import { useCaseDeletion } from "@/hooks/useCaseDeletion";
 import { WorkspaceHeader } from "@/components/layout/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/layout/WorkspaceSidebar";
-import { WorkspaceChatPanel } from "@/components/conversation/WorkspaceChatPanel";
+import { WorkspaceChatPanel } from "@/components/chat/WorkspaceChatPanel";
 import { DeleteCaseDialog } from "@/components/common/DeleteDialog";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
-import { toUserFacingError } from "@/lib/user-facing-error";
+import { toUserFacingError } from "@/lib/userFacingError";
+import { WorkspaceActivityProvider } from "@/components/layout/WorkspaceActivityContext";
 
 interface CaseShellLayoutProps {
   children: ReactNode;
@@ -56,22 +52,43 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   const casesQuery = useCases();
   const caseQuery = useCase(caseId ?? null);
   const analysisQuery = useCaseAnalysis(caseId ?? null);
-  const evidenceQuery = useCaseEvidence(caseId ?? null);
-  const { upsertCase, createMutation, deleteMutation } = useCaseMutations();
+  const sourcesQuery = useCaseSources(caseId ?? null);
+  const { createMutation, deleteMutation, updateMutation } = useCaseMutations();
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
   const activeCase = caseQuery.data ?? null;
 
-  const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId ?? null, runId);
-  const runStatus = runQuery.data?.status ?? caseRunStatus(activeCase);
+  const chat = useCaseChat({ caseId: caseId ?? null });
+  const sources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
+  const startAnalysis = useStartCaseAnalysis(caseId ?? null);
+  const isFollowupPending = chat.isAnsweringQuestion;
 
-  const chat = useCaseChat({
-    caseId: caseId ?? null,
-    isChatOpen,
-    currentCase: activeCase,
-    cases,
-    upsertCase,
-  });
+  // The analysis belongs to the case, not to one of its pages, so the header
+  // runs it and every view can see it running.
+  const runAnalysis = useCallback(async () => {
+    if (!caseId || startAnalysis.isPending) return;
+    try {
+      await startAnalysis.mutateAsync({
+        response_language: detectResponseLanguage(
+          sources.map((source) => source.exact_text).join("\n"),
+        ),
+      });
+      router.push(casePath(caseId, "overview"));
+    } catch (error) {
+      setChatActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
+    }
+  }, [caseId, router, sources, startAnalysis]);
+
+  const renameCase = useCallback(
+    async (title: string) => {
+      if (!caseId) return;
+      try {
+        await updateMutation.mutateAsync({ caseId, title });
+      } catch (error) {
+        setChatActionError(getApiErrorMessage(error, "The Case could not be renamed."));
+      }
+    },
+    [caseId, updateMutation],
+  );
 
   const toggleChat = useCallback(() => {
     setIsChatOpen((prev) => {
@@ -85,19 +102,22 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     });
   }, []);
 
-  const handleSelectCase = useCallback(
-    (targetCaseId: string) => {
-      router.push(casePath(targetCaseId, activeView));
-    },
-    [activeView, router],
-  );
+  // A question the analysis left waiting is worth interrupting for, once. If
+  // the reader closes the panel it stays closed until a different one arrives.
+  const pendingQuestionId = chat.pendingQuestionId;
+  const announcedQuestionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingQuestionId || announcedQuestionRef.current === pendingQuestionId) return;
+    announcedQuestionRef.current = pendingQuestionId;
+    setIsChatOpen(true);
+  }, [pendingQuestionId]);
 
   const handleNewCase = useCallback(async () => {
     if (createMutation.isPending) return;
     setIsChatOpen(false);
     try {
       const caseRecord = await createMutation.mutateAsync();
-      router.push(casePath(caseRecord.id, "intake"));
+      router.push(casePath(caseRecord.id, "sources"));
     } catch {
       return;
     }
@@ -112,7 +132,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
 
   const { cancelDelete, confirmDelete } = useCaseDeletion({
     deleteCandidate,
-    deletingCaseId: deleteMutation.isPending ? deleteMutation.variables ?? null : null,
+    deletingCaseId: deleteMutation.isPending ? (deleteMutation.variables ?? null) : null,
     activeView,
     activeCaseId: caseId ?? null,
     cases,
@@ -121,76 +141,50 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     setDeleteCandidate,
   });
 
-  const visibleMessages = chatTranscriptMessages(chat.messages);
   const visibleWorkspaceError = chatActionError ?? chat.queryError;
   const clearWorkspaceError = useCallback(() => {
     setChatActionError(null);
     chat.clearQueryError();
   }, [chat]);
 
-  const workspaceChatStatus = caseChatStatus(activeCase, runStatus);
-  const workspacePhase = determineCaseRunPhase(runStatus, Boolean(activeCase?.latest_analysis_result_id));
-  const casesError = casesQuery.error
-    ? getApiErrorMessage(casesQuery.error, "Saved cases could not be loaded.")
-    : createMutation.error
-      ? getApiErrorMessage(createMutation.error, "A new case could not be created.")
-      : deleteMutation.error
-        ? getApiErrorMessage(deleteMutation.error, "The case could not be deleted.")
-        : null;
-
   return (
     <div className="flex h-dvh overflow-hidden bg-surface text-ink">
-      <WorkspaceSidebar
-        cases={cases}
-        activeCaseId={caseId ?? null}
-        casesLoading={casesQuery.isLoading}
-        casesError={casesError}
-        onSelectCase={handleSelectCase}
-        onNewCase={handleNewCase}
-        onRequestDelete={setDeleteCandidate}
-        deletingCaseId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}
-        activeView={activeView}
-        onViewChange={handleViewChange}
-      />
-
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
         <WorkspaceHeader
           activeCase={activeCase}
-          activeCaseId={caseId ?? null}
           activeView={activeView}
-          cases={cases}
           creatingCase={createMutation.isPending}
-          deletingCaseId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}
-          phase={workspacePhase}
+          hasAnalysis={Boolean(activeCase?.latest_analysis_result_id)}
+          canAnalyze={sources.length > 0}
+          isAnalyzing={startAnalysis.isPending || isFollowupPending}
+          isStale={activeCase?.analysis_freshness === "stale"}
+          onAnalyze={() => void runAnalysis()}
           onViewChange={handleViewChange}
-          onSelectCase={handleSelectCase}
           onNewCase={handleNewCase}
-          onRequestDelete={setDeleteCandidate}
+          onRenameCase={(title) => void renameCase(title)}
           isChatOpen={isChatOpen}
           onToggleChat={() => void toggleChat()}
         />
-
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
-          {children}
+          <WorkspaceActivityProvider isFollowupPending={isFollowupPending}>
+            {children}
+          </WorkspaceActivityProvider>
         </main>
       </div>
 
       <WorkspaceChatPanel
         isOpen={isChatOpen}
-        phase={workspacePhase}
+        isSending={chat.isSending}
         messages={chat.messages}
-        visibleMessages={visibleMessages}
-        chatStatus={workspaceChatStatus}
+        isAnsweringQuestion={isFollowupPending}
         input={chat.input}
         hasAnalysisContext={Boolean(activeCase?.latest_analysis_result_id)}
         leadResult={analysisQuery.data ?? null}
-        evidenceSources={evidenceQuery.data ?? []}
+        sources={sourcesQuery.data ?? []}
         onViewChange={handleViewChange}
-        onNavigateToSource={() => handleViewChange("materials")}
+        onNavigateToSource={() => handleViewChange("sources")}
         onInputChange={chat.changeInput}
         onSubmit={chat.submitMessage}
-        pendingFollowUp={chat.pendingFollowUp}
-        onSubmitFollowUp={chat.submitFollowUp}
         onToggleChat={() => void toggleChat()}
       />
 
@@ -205,7 +199,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
         error={
           visibleWorkspaceError
             ? toUserFacingError(visibleWorkspaceError, {
-                isUncertain: workspacePhase === "querying" || workspacePhase === "analyzing",
+                isUncertain: chat.isSending,
               })
             : null
         }
@@ -214,22 +208,4 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
       />
     </div>
   );
-}
-
-function caseRunStatus(caseRecord: CaseRead | null): "queued" | "running" | "failed" | null {
-  const status = caseRecord?.processing_status;
-  return status === "queued" || status === "running" || status === "failed" ? status : null;
-}
-
-function caseChatStatus(caseRecord: CaseRead | null, runStatus: string | null) {
-  if (runStatus === "queued" || runStatus === "running") return "processing" as const;
-  if (runStatus === "failed") return "failed" as const;
-  return caseRecord?.status ?? null;
-}
-
-function determineCaseRunPhase(status: string | null, hasResult: boolean): RunPhase {
-  if (status === "queued") return "querying";
-  if (status === "running") return "analyzing";
-  if (status === "failed") return "error";
-  return hasResult ? "ready" : "idle";
 }

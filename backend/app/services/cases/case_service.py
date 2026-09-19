@@ -7,59 +7,37 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
-from app.models.case_materials import (
+from app.models.chat import ChatMessage
+from app.models.report import CaseReport
+from app.models.sources import (
     CaseDocument,
     CaseSource,
     DocumentExtraction,
 )
-from app.models.report import CaseReport
-from app.models.case_run import CaseAnalysisResult, CaseRun
-from app.models.chat import ChatMessage
-from app.models.rag_context import RagContext
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
+from app.services.case_workflow import analysis_freshness
 
 
 def serialize_case(case: Case) -> CaseRead:
-    analysis_runs = [run for run in case.case_runs if run.operation == "analysis"]
-    latest_run = max(analysis_runs, key=lambda run: run.created_at, default=None)
-    if latest_run is not None and latest_run.status in {"queued", "running"}:
-        processing_status = latest_run.status
-    elif latest_run is not None and latest_run.status == "failed":
-        processing_status = "failed"
-    else:
-        processing_status = "idle"
-    has_pending_followup = False
-    if case.chat_messages:
-        answered_ids = {
-            m.in_reply_to_message_id
-            for m in case.chat_messages
-            if m.in_reply_to_message_id is not None
-        }
-        has_pending_followup = any(
-            m.message_kind == "followup_question" and m.id not in answered_ids
-            for m in case.chat_messages
-        )
-    status_value = "processing" if processing_status in {"queued", "running"} else (
-        "failed" if processing_status == "failed" else
-        "awaiting_followup" if has_pending_followup else
-        "answered" if case.latest_analysis_result is not None else
-        "idle"
-    )
-    from app.services.workflow.case_run_service import analysis_freshness
+    """A case is waiting on the user, has an analysis, or has neither.
+
+    There is no "processing" state: an analysis runs inside the request that
+    asked for it, so by the time a case is serialised it has either finished or
+    failed with an error the caller already saw.
+    """
+
+    status_value = "answered" if case.latest_analysis_result is not None else "idle"
     freshness = analysis_freshness(case, case.latest_analysis_result)
     return CaseRead(
         id=case.id,
         user_id=case.user_id,
         title=case.title,
         status=status_value,
-        evidence_revision=case.evidence_revision,
+        source_revision=case.source_revision,
         latest_analysis_result_id=case.latest_analysis_result_id,
-        processing_status=processing_status,
-        has_pending_followup=has_pending_followup,
         analysis_freshness=freshness,
-        active_run_id=(latest_run.id if latest_run is not None and latest_run.status in {"queued", "running"} else None),
-        latest_run_id=latest_run.id if latest_run is not None else None,
         created_at=case.created_at,
         updated_at=case.updated_at,
     )
@@ -88,11 +66,14 @@ class CaseService:
         return await self.get_case(case.id, user_id=user_id)
 
     async def list_cases(self, user_id: UUID | None = None) -> list[CaseRead]:
-        statement = select(Case).options(
-            selectinload(Case.chat_messages),
-            selectinload(Case.case_runs),
-            selectinload(Case.latest_analysis_result),
-        ).order_by(Case.updated_at.desc())
+        statement = (
+            select(Case)
+            .options(
+                selectinload(Case.chat_messages),
+                selectinload(Case.latest_analysis_result),
+            )
+            .order_by(Case.updated_at.desc())
+        )
         if user_id is None:
             statement = statement.where(Case.user_id.is_(None))
         else:
@@ -135,14 +116,16 @@ class CaseService:
         await self.db.execute(
             update(Case).where(Case.id == case.id).values(latest_analysis_result_id=None)
         )
-        await self.db.execute(delete(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case.id))
-        await self.db.execute(delete(RagContext).where(RagContext.case_id == case.id))
-        await self.db.execute(delete(CaseRun).where(CaseRun.case_id == case.id))
+        await self.db.execute(
+            delete(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case.id)
+        )
         await self.db.execute(delete(ChatMessage).where(ChatMessage.case_id == case.id))
         await self.db.execute(delete(CaseSource).where(CaseSource.case_id == case.id))
 
         doc_ids_subq = select(CaseDocument.id).where(CaseDocument.case_id == case.id)
-        await self.db.execute(delete(DocumentExtraction).where(DocumentExtraction.document_id.in_(doc_ids_subq)))
+        await self.db.execute(
+            delete(DocumentExtraction).where(DocumentExtraction.document_id.in_(doc_ids_subq))
+        )
         await self.db.execute(delete(CaseDocument).where(CaseDocument.case_id == case.id))
 
         self.db.expunge_all()
@@ -154,7 +137,6 @@ class CaseService:
             select(Case)
             .options(
                 selectinload(Case.chat_messages),
-                selectinload(Case.case_runs),
                 selectinload(Case.latest_analysis_result),
             )
             .where(Case.id == case_id)

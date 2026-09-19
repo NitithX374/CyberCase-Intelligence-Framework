@@ -19,9 +19,7 @@ function caseRecord(id: string): CaseRead {
     id,
     title: `Case ${id}`,
     status: "idle",
-    evidence_revision: 1,
-    processing_status: "idle",
-    has_pending_followup: false,
+    source_revision: 1,
     analysis_freshness: "current",
     created_at: "2026-09-05T00:00:00Z",
     updated_at: "2026-09-05T00:00:00Z",
@@ -32,25 +30,30 @@ function renderDeletion(
   deleteThread: (id: string) => Promise<void>,
   options: { activeCaseId?: string | null; cases?: CaseRead[] } = {},
 ) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+  });
   const router = { replace: vi.fn() };
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
-  const hook = renderHook(() => {
-    const [candidate, setCandidate] = useState<CaseRead | null>(caseRecord("a"));
-    const deletion = useCaseDeletion({
-      deleteCandidate: candidate,
-      setDeleteCandidate: setCandidate,
-      deletingCaseId: null,
-      activeView: "overview",
-      activeCaseId: options.activeCaseId ?? "a",
-      cases: options.cases ?? [caseRecord("a"), caseRecord("b")],
-      deleteCase: deleteThread,
-      router,
-    });
-    return { deletion, candidate, setCandidate };
-  }, { wrapper });
+  const hook = renderHook(
+    () => {
+      const [candidate, setCandidate] = useState<CaseRead | null>(caseRecord("a"));
+      const deletion = useCaseDeletion({
+        deleteCandidate: candidate,
+        setDeleteCandidate: setCandidate,
+        deletingCaseId: null,
+        activeView: "overview",
+        activeCaseId: options.activeCaseId ?? "a",
+        cases: options.cases ?? [caseRecord("a"), caseRecord("b")],
+        deleteCase: deleteThread,
+        router,
+      });
+      return { deletion, candidate, setCandidate };
+    },
+    { wrapper },
+  );
   return { ...hook, router };
 }
 

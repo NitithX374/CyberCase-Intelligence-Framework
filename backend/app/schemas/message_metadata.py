@@ -4,21 +4,10 @@ from pydantic import ConfigDict, TypeAdapter
 from typing_extensions import TypedDict
 
 
-class FollowUpMetadata(TypedDict, total=False):
-    __pydantic_config__ = ConfigDict(extra="ignore")
-    root_ordinal: int
-    round: int
-    source_analysis_id: str
-    source_revision: int
-    gap: dict[str, object]
-    answer: dict[str, object]
-
-
 class MessageMetadata(TypedDict, total=False):
     __pydantic_config__ = ConfigDict(extra="ignore")
-    action: Literal["conversation", "follow_up"]
+    action: Literal["conversation"]
     analysis_trace: dict[str, object]
-    chat_followup: FollowUpMetadata
 
 
 _metadata_adapter = TypeAdapter(MessageMetadata)

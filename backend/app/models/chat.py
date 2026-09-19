@@ -50,6 +50,13 @@ class ChatMessage(Base):
             name="ck_chat_messages_message_kind",
         ),
         Index("ix_chat_messages_case_id_ordinal", "case_id", "ordinal"),
+        Index(
+            "ux_chat_messages_case_id_client_request_id",
+            "case_id",
+            "client_request_id",
+            unique=True,
+            postgresql_where=text("client_request_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -66,6 +73,8 @@ class ChatMessage(Base):
         ),
         nullable=False,
     )
+    # Set by the client so a retried send cannot create a second message.
+    client_request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -79,14 +88,23 @@ class ChatMessage(Base):
         default="conversation",
         server_default=text("'conversation'"),
     )
+    # Set on an assistant message that asks about one analysis gap. Null on
+    # every other message, which is what makes "already asked" a single query.
+    gap_key: Mapped[str | None] = mapped_column(String(160), nullable=True)
     analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("case_analysis_results.id", name="fk_chat_messages_analysis_result_id", ondelete="SET NULL"),
+        ForeignKey(
+            "case_analysis_results.id",
+            name="fk_chat_messages_analysis_result_id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
     )
     in_reply_to_message_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("chat_messages.id", name="fk_chat_messages_in_reply_to_message_id", ondelete="SET NULL"),
+        ForeignKey(
+            "chat_messages.id", name="fk_chat_messages_in_reply_to_message_id", ondelete="SET NULL"
+        ),
         nullable=True,
     )
     metadata_json: Mapped[dict[str, object]] = mapped_column(
@@ -101,13 +119,14 @@ class ChatMessage(Base):
         server_default=func.now(),
     )
 
-    case: Mapped["Case"] = relationship(
+    case: Mapped[Case] = relationship(
         "Case",
         back_populates="chat_messages",
         foreign_keys=[case_id],
     )
-    in_reply_to_message: Mapped["ChatMessage | None"] = relationship(
+    in_reply_to_message: Mapped[ChatMessage | None] = relationship(
         "ChatMessage", remote_side=[id], foreign_keys=[in_reply_to_message_id]
     )
+
 
 __all__ = ["ChatMessage"]

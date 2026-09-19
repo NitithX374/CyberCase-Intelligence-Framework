@@ -2,6 +2,8 @@
 
 ## Snapshot
 
+- 2026-09-19 [USER] Fix the backend error, restyle the UI, and merge Intake into the Material page: the `+` button adds a Case Narrative (popup) or a File, and the page lists follow-up answers and files together.
+- 2026-09-19 [USER] On `main`: audit where complexity comes from, with permission to remove `CaseRun`. This is a thesis prototype — readability first, reduce whatever can be reduced, and no defensive programming.
 - 2026-09-15 [USER] Documentation authority reset is in scope; application code and generated runtime contracts must remain unchanged.
 - 2026-09-15 [USER] Supersedes the documentation-only constraint: backend function naming cleanup is now in scope; behavior, schemas, API routes, and database contracts remain unchanged.
 - 2026-09-15 [CODE] Current runtime is Case-owned: documents, received evidence sources, messages, runs/results, optional technical context, and reports belong to a Case.
@@ -17,6 +19,9 @@
 
 ## Done (recent)
 
+- 2026-09-19 [CODE] Merged Intake into the sources page. `/case/[caseId]/intake`, `CaseIntakeView` and `useCaseIntakeActions` are deleted, and `WorkspaceView` no longer has an `intake` member, so the workspace has four tabs. `CaseSourcesView` lists files, case narratives and follow-up answers in one rail; its `+` opens a menu for a narrative (a dialog) or a file, and the rail footer runs the analysis. `useCaseSourceActions` replaces the intake hook without the persisted idempotency key, which nothing sent. Palette moved from green-tinted paper to neutral zinc with a teal accent.
+- 2026-09-19 [CODE] The frontend was calling `/api/v1/cases/{id}/evidence`, which the source-vocabulary rename had already moved to `/sources` — listing sources and adding a narrative both 404'd. The client, the query key and `generated/evidenceTypes.ts` now say source.
+- 2026-09-19 [CODE] Removed `CaseRun` from backend and frontend. `workflow/` 1,438 → 379 lines; new `services/case_workflow.py` runs an analysis and answers a question in short transactions around the model call. Deleted `case_run_claim`, `case_run_service`, `case_run_execution`, `case_run_completion`, `case_ask_completion`, `models/case_run.py`, `models/rag_context.py` and `features/chat/chatPolling.ts`. Migration `0005_remove_case_runs` drops both tables, `run_id`, `execution_receipt_json` and the retrieval foreign keys, and aligns two indexes that drifted from the models in `0001`.
 - 2026-09-15 [TOOL] Source audit confirmed current models, registered routes, frontend App Router pages, generated contracts, route-surface tests, and workflow services; the known compatibility ghosts were re-evaluated against current callers.
 - 2026-09-15 [CODE] Backend cleanup removed 18 dead app modules, the chat-only manual smoke script, four stale ingestion tests, consolidated report/workflow/analysis contracts, normalized production function names to snake_case, and now receives uploaded document evidence atomically.
 - 2026-09-15 [CODE] Report presentation, Case Chat contracts, provider error classification, and authority documents were simplified in the preceding implementation work.
@@ -39,6 +44,9 @@
 
 ## Decisions
 
+- 2026-09-19 [USER] D058 ACTIVE: `CaseRun` is removed. Analysis and Case Ask run inside the request that asks for them; there is no job row, no claiming, no attempts, no idempotency key and no polling. A failure is an HTTP error the caller already saw.
+- 2026-09-19 [USER] D059 ACTIVE: `rag_contexts` is removed with it — it was written only by run completion and read by nothing, while the same query, context and MITRE table are stored on `case_analysis_results.external_context_json`.
+- 2026-09-19 [USER] D060 ACTIVE: in code, a thing the case knows is a **source**. Do not spread `evidence` or `material` through identifiers.
 - 2026-09-15 [USER] D001 ACTIVE: CyberCase is a thesis prototype; implement the smallest clear current requirement.
 - 2026-09-15 [USER] D002 ACTIVE: Do not preserve compatibility layers without a supported caller, current persisted-data requirement, or explicit user requirement.
 - 2026-09-15 [USER] D003 ACTIVE: Cohesion matters more than a numeric source-file line limit.
@@ -67,6 +75,7 @@
 
 ## Now / Next
 
+- 2026-09-19 [TOOL] Run removal verified: backend 162 passed / 0 failed against PostgreSQL; `alembic check` reports no drift; frontend `tsc` clean, lint back to the baseline 2 warnings, production build succeeds, Vitest 89 passed with 1 failure that also fails on the stashed baseline (`CaseOverviewView` empty-case navigation). Live provider, OCR and browser flows were not exercised. Next: rename `evidence`/`material` to `source` across table, package, module, route and component (D060).
 - 2026-09-15 [TOOL] Now: backend cleanup, confirmed Case Chat/follow-up fixes, production function naming cleanup, and automatic material receipt are complete; current Docker OpenAPI exposes 23 Case-owned paths and no removed route families.
 - 2026-09-15 [TOOL] Superseded: the dependency-graph audit confirmed the old non-snake_case modules and duplicate source representations before implementation.
 - 2026-09-15 [ASSUMPTION] Superseded: ORM/application symbol renames, structured bundle propagation, tests, and compatibility classification are complete.
@@ -105,6 +114,8 @@
 
 ## Receipts
 
+- 2026-09-19 [TOOL] Frontend after the Intake merge: 23 test files / 89 tests passed (the previously failing `CaseOverviewView` empty-state test is fixed — that state no longer renders a button that cannot navigate), `npx tsc --noEmit` clean, `npm run check:api-types` clean, lint back to the baseline two warnings, and `npm run build` succeeds with no `/case/[caseId]/intake` route. The Playwright lifecycle spec now adds its narrative through the `+` menu; it was not run.
+- 2026-09-19 [DOC] Complexity audit at `docs/audits/2026-09-19-main-complexity-audit.md`: eight sources ranked, ~4,100 of ~20,800 lines removable. The run was #1 and #2 — an ordinary question was a background job, and the job table served a single-process app that `validate_single_process_runtime` refuses to run with more than one worker.
 - 2026-09-17 [TOOL] Older 2026-09-15 smoke-fix receipts are compressed here because the later cleanup and full validation receipts below supersede their intermediate results.
 - 2026-09-15 [TOOL] Full Playwright E2E after fixes: 3 passed in 1.4 minutes; current E2E header regex matches assembled `[... SOURCE id]` evidence sections and Case Chat receives analysis/evidence data.
 - 2026-09-15 [TOOL] Backend full suite after cleanup: `154 passed, 5 skipped, 1 warning, 2 subtests passed`; the warning is the existing Starlette/httpx TestClient deprecation.

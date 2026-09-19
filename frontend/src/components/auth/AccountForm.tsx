@@ -47,7 +47,9 @@ export function AccountForm({ register = false }: { register?: boolean }) {
     <main className="flex min-h-screen items-center justify-center bg-canvas px-6 py-12 text-ink">
       <section className="w-full max-w-md rounded-2xl border border-line bg-surface p-8 shadow-sm">
         <p className="mb-8 text-sm font-bold tracking-widest">CYBERCASE</p>
-        <h1 className="text-2xl font-semibold">{register ? "Create your account" : "Welcome back"}</h1>
+        <h1 className="text-2xl font-semibold">
+          {register ? "Create your account" : "Welcome back"}
+        </h1>
         <p className="mt-2 mb-6 text-sm text-ink-secondary">
           {register
             ? "Keep your case work in your own workspace."
@@ -57,7 +59,13 @@ export function AccountForm({ register = false }: { register?: boolean }) {
           {register && (
             <label className="block text-sm">
               Name
-              <input name="name" autoComplete="name" required maxLength={255} className={inputClass} />
+              <input
+                name="name"
+                autoComplete="name"
+                required
+                maxLength={255}
+                className={inputClass}
+              />
             </label>
           )}
           <label className="block text-sm">

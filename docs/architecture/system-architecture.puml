@@ -1,0 +1,138 @@
+@startuml system-architecture
+' CyberCase Intelligence Framework — deployed components and what they own.
+' Drawn from docker-compose.yml, backend/app/, and rag_service/app/.
+
+title CyberCase Intelligence Framework — System Architecture
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor #444444
+skinparam rectangle {
+  BorderColor #666666
+  BackgroundColor #FFFFFF
+}
+skinparam component {
+  BorderColor #666666
+  BackgroundColor #FAFAFA
+}
+skinparam database {
+  BorderColor #666666
+  BackgroundColor #FAFAFA
+}
+skinparam cloud {
+  BorderColor #888888
+  BackgroundColor #F5F5F5
+}
+
+actor "Investigator" as user
+
+rectangle "Frontend — Next.js 16 : 3000" as fe {
+  component "App Router\n/case, /case/{id}/{overview|sources|technical-context|report}" as fe_routes
+  component "AccountGate\nnothing is public except /login" as fe_gate
+  component "TanStack Query\nserver state; a send is the mutation's own state" as fe_query
+}
+
+rectangle "Backend API — FastAPI : 8000  (prefix /api/v1)" as be {
+
+  component "routers/\nhealth · auth · cases · chat\ndocuments · sources · analysis · reports" as be_routers
+
+  package "Case material" {
+    component "document_ingestion/\ndetection -> parsers (pdf, docx)\n-> rendering -> recognition" as be_ingest
+    component "sources/\nthe bundle one analysis reads,\nand its revision" as be_sources
+  }
+
+  package "Analysis" {
+    component "case_analysis/pipeline.py\nStage protocol + run_pipeline + without()\n<i>the seam an ablation runs through</i>" as be_pipeline
+    component "mitre_gate/\nMITRE_GATE_MODE = llm | encoder | never\nllm.py · encoder.py (XLM-R) · sentences.py" as be_gate
+    component "provider_stage.py\none model call, structured output" as be_provider
+    component "validation.py + source_quote_resolver.py\nresolve the quote, locate its page,\ncount what could not be found" as be_validation
+  }
+
+  package "Around the analysis" {
+    component "technical_context/\nMITRE augmentation outcome" as be_tech
+    component "chat/\ncase_chat · case_answer · followup" as be_chat
+    component "reports/\ncontent -> render_html | render_pdf\n+ persisted versions" as be_reports
+    component "case_workflow/\nreads at a revision, stores at the same one" as be_workflow
+  }
+
+  component "llm/\ncore_llm · model_registry · structured_output" as be_llm
+  component "clients/rag_client.py" as be_ragclient
+  component "auth/\ncookie session; every case route is ownership-scoped" as be_auth
+}
+
+rectangle "RAG Service — FastAPI : 8001  (no prefix)" as rag {
+  component "GET /health\nPOST /query\nGET /retrieval-contexts/{id}" as rag_api
+  component "LangGraph agent\nroute -> prepare -> decompose\n-> retrieve -> evaluate -> answer" as rag_agent
+  component "Hybrid retriever\ndense + graph, RRF fusion" as rag_retrieval
+  component "BGE-M3 (1024d)\nbge-reranker-v2-m3" as rag_models
+}
+
+database "PostgreSQL\nhost :5433" as pg
+cloud "Neo4j\nATT&CK STIX graph" as neo4j
+cloud "Qdrant\nmitre_entities\nmitre_relationships" as qdrant
+cloud "OpenRouter\n/v1/messages" as openrouter
+cloud "Typhoon OCR" as typhoon
+
+user --> fe_routes
+fe_routes --> fe_gate
+fe_gate --> fe_query
+fe_query --> be_routers : HTTPS, cookie session
+
+be_routers --> be_auth
+be_routers --> be_ingest
+be_routers --> be_sources
+be_routers --> be_workflow
+be_routers --> be_chat
+be_routers --> be_reports
+
+be_workflow --> be_pipeline
+be_pipeline --> be_tech
+be_pipeline --> be_provider
+be_tech --> be_gate
+be_tech --> be_ragclient
+be_provider --> be_validation
+be_provider --> be_llm
+be_gate --> be_llm
+be_chat --> be_pipeline
+be_reports --> be_validation
+
+be_ingest --> typhoon : page images
+be_llm --> openrouter : analysis, gate, chat answer
+be_ragclient --> rag_api : POST /query
+
+rag_api --> rag_agent
+rag_agent --> rag_retrieval
+rag_retrieval --> rag_models
+rag_retrieval --> qdrant
+rag_retrieval --> neo4j
+rag_agent --> openrouter
+
+be_workflow --> pg
+be_sources --> pg
+be_chat --> pg
+be_reports --> pg
+be_auth --> pg
+
+note right of be_gate
+  Decides whether ATT&CK applies at all.
+  Most of a police case has no cyber
+  behaviour in it, and retrieving
+  techniques for it invents mappings.
+end note
+
+note bottom of be_validation
+  Nothing here rejects the analysis.
+  A quotation that cannot be found in
+  a source loses its link and is
+  counted, so the loss is on the record
+  instead of being silent.
+end note
+
+note bottom of rag
+  Owned by a collaborator.
+  The backend only ever calls /query
+  and never pauses for input.
+end note
+
+@enduml

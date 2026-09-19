@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { SignOutDialog } from "@/components/common/DeleteDialog";
 
 export function UserProfileMenu() {
@@ -37,7 +37,9 @@ export function UserProfileMenu() {
         className="flex w-full items-center justify-between rounded-lg border border-line bg-surface/50 px-2.5 py-2 text-xs font-semibold text-ink transition hover:border-line-strong hover:bg-surface hover:text-accent"
       >
         <span>Sign in</span>
-        <span aria-hidden="true" className="text-[10px] text-ink-muted">→</span>
+        <span aria-hidden="true" className="text-[10px] text-ink-muted">
+          →
+        </span>
       </Link>
     );
   }

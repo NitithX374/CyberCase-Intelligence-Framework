@@ -1,6 +1,6 @@
 import asyncio
-import pytest
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -42,12 +42,10 @@ def test_health_case_and_nested_report_api_routes_are_registered() -> None:
         ("GET", "/api/v1/cases/{case_id}/documents"),
         ("POST", "/api/v1/cases/{case_id}/documents"),
         ("GET", "/api/v1/cases/{case_id}/documents/{document_id}/content"),
-        ("GET", "/api/v1/cases/{case_id}/evidence"),
-        ("POST", "/api/v1/cases/{case_id}/evidence"),
+        ("GET", "/api/v1/cases/{case_id}/sources"),
+        ("POST", "/api/v1/cases/{case_id}/sources"),
         ("GET", "/api/v1/cases/{case_id}/analysis"),
         ("POST", "/api/v1/cases/{case_id}/analysis"),
-        ("GET", "/api/v1/cases/{case_id}/runs/{run_id}"),
-        ("GET", "/api/v1/cases/{case_id}/followups"),
         ("POST", "/api/v1/cases/{case_id}/reports"),
         ("GET", "/api/v1/cases/{case_id}/reports"),
         ("GET", "/api/v1/cases/{case_id}/reports/{report_id}/pdf"),

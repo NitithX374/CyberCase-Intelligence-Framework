@@ -24,9 +24,7 @@ def render_pdf_page(content: bytes, page_number: int, longest_edge: int) -> byte
         image = page.render(scale=scale).to_pil()
         return encode_png(image)
     except Exception as error:
-        raise InvalidDocumentError(
-            f"PDF page {page_number} could not be rendered."
-        ) from error
+        raise InvalidDocumentError(f"PDF page {page_number} could not be rendered.") from error
     finally:
         if page is not None:
             page.close()
@@ -50,11 +48,3 @@ def normalize_image(content: bytes, longest_edge: int, max_pixels: int) -> bytes
         raise
     except Exception as error:
         raise InvalidDocumentError("The image file could not be decoded.") from error
-
-
-def image_dimensions(content: bytes) -> tuple[int, int]:
-    try:
-        with Image.open(BytesIO(content)) as image:
-            return image.width, image.height
-    except Exception as error:
-        raise InvalidDocumentError("The rendered page could not be decoded.") from error

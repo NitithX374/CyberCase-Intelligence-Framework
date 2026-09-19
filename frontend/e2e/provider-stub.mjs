@@ -58,7 +58,7 @@ function responseFor(body) {
   }
   if (system.includes("Answer only the current question")) {
     return {
-      insufficient_context: false,
+      outcome: "answered",
       units: [
         {
           text: "The deterministic test provider answered from the persisted case analysis.",
@@ -70,7 +70,11 @@ function responseFor(body) {
   const request = asObject(content);
   const caseSources = Array.isArray(request?.case_sources)
     ? request.case_sources.filter(
-        (source) => source && typeof source === "object" && typeof source.source_id === "string" && source.source_id,
+        (source) =>
+          source &&
+          typeof source === "object" &&
+          typeof source.source_id === "string" &&
+          source.source_id,
       )
     : [];
   if (caseSources.length === 0) {
@@ -99,28 +103,31 @@ function responseFor(body) {
     contradicting_citations: [],
   }));
 
-  const hasClarificationAnswer = caseSources.some((source) => source.source_kind === "followup_answer") || sections.length > 1;
+  const hasClarificationAnswer =
+    caseSources.some((source) => source.source_kind === "followup_answer") || sections.length > 1;
 
-  const gaps = (sourceText.includes("needs-clarification") && !hasClarificationAnswer)
-    ? [
-        {
-          gap_id: "G-01",
-          gap_key: "workstation_owner",
-          topic: "Workstation Owner",
-          status: "AMBIGUOUS",
-          description: "Which identification is correct: the primary operator or the secondary contractor?",
-          reason: "Clarifying workstation ownership is required to substantiate findings.",
-          priority: "high",
-          askable: true,
-          clarification_question: "Which identification is correct: the primary operator or the secondary contractor?",
-          affected_claim_ids: ["A-01"],
-        },
-      ]
-    : [];
+  const gaps =
+    sourceText.includes("needs-clarification") && !hasClarificationAnswer
+      ? [
+          {
+            gap_id: "G-01",
+            gap_key: "workstation_owner",
+            topic: "Workstation Owner",
+            status: "AMBIGUOUS",
+            description:
+              "Which identification is correct: the primary operator or the secondary contractor?",
+            reason: "Clarifying workstation ownership is required to substantiate findings.",
+            priority: "high",
+            askable: true,
+            clarification_question:
+              "Which identification is correct: the primary operator or the secondary contractor?",
+            affected_claim_ids: ["A-01"],
+          },
+        ]
+      : [];
 
   return {
     version: "case_analysis_trace_v1",
-    answer: `Deterministic E2E analysis: ${sourceText}`,
     summary: `Deterministic E2E summary: ${sourceText}`,
     involved_parties: [],
     timeline: [],

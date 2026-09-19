@@ -4,19 +4,18 @@ from uuid import uuid4
 
 import httpx
 
-from app.services.case_analysis.mitre_applicability_gate import (
+from app.services.case_analysis.mitre_gate.llm import (
     MITRE_APPLICABILITY_GATE_VERSION,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
     MitreApplicabilityGate,
     evaluate_mitre_applicability,
 )
-from app.services.case_materials import CaseSourceItem
 from app.services.llm.core_llm import CoreLlmTarget
+from app.services.sources import CaseSourceItem
 
 
 def target():
     return CoreLlmTarget(
-        provider="openrouter",
         model="test-model",
         api_key="test-key",
         base_url="https://provider.test",
@@ -45,7 +44,7 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
         return httpx.Response(200, json={"output_text": json.dumps(output)})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
+        "app.services.case_analysis.mitre_gate.llm.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -78,13 +77,12 @@ def test_malformed_provider_output_fails_closed(monkeypatch) -> None:
         return httpx.Response(200, json={"output_text": "```json\n{}\n```"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
+        "app.services.case_analysis.mitre_gate.llm.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     result = asyncio.run(
         evaluate_mitre_applicability(
-            source_run_id=uuid4(),
             case_sources=[source],
             gate=MitreApplicabilityGate(client=client),
         )
@@ -106,13 +104,12 @@ def test_provider_error_fails_closed(monkeypatch) -> None:
         return httpx.Response(503, json={"error": "unavailable"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_applicability_gate.resolve_core_llm_target",
+        "app.services.case_analysis.mitre_gate.llm.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     result = asyncio.run(
         evaluate_mitre_applicability(
-            source_run_id=uuid4(),
             case_sources=[source],
             gate=MitreApplicabilityGate(client=client),
         )

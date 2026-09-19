@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Icon } from "@/components/common/icons";
-import type { UserFacingError } from "@/lib/user-facing-error";
+import type { UserFacingError } from "@/lib/userFacingError";
 
 export interface MeaningfulErrorModalProps {
   isOpen: boolean;
@@ -23,8 +23,7 @@ export function MeaningfulErrorModal({
   useEffect(() => {
     if (!isOpen || !error) return;
 
-    previouslyFocusedElementRef.current =
-      document.activeElement as HTMLElement | null;
+    previouslyFocusedElementRef.current = document.activeElement as HTMLElement | null;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -61,14 +60,11 @@ export function MeaningfulErrorModal({
 
     const timer = window.setTimeout(() => {
       if (!modalRef.current) return;
-      const primaryBtn = modalRef.current.querySelector<HTMLElement>(
-        '[data-autofocus="true"]',
-      );
+      const primaryBtn = modalRef.current.querySelector<HTMLElement>('[data-autofocus="true"]');
       if (primaryBtn) {
         primaryBtn.focus();
       } else {
-        const firstFocusable =
-          modalRef.current.querySelector<HTMLElement>("button");
+        const firstFocusable = modalRef.current.querySelector<HTMLElement>("button");
         firstFocusable?.focus();
       }
     }, 50);

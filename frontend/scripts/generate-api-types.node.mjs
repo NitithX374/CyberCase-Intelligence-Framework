@@ -36,13 +36,10 @@ test("schema groups have unique ownership and stable output names", async () => 
   const second = await buildGeneratedFiles(createSchemaFixture());
 
   assert.deepEqual([...first], [...second]);
-  assert.deepEqual([...first.keys()], [
-    "caseTypes.ts",
-    "chatTypes.ts",
-    "evidenceTypes.ts",
-    "reportTypes.ts",
-    "runTypes.ts",
-  ]);
+  assert.deepEqual(
+    [...first.keys()],
+    ["caseTypes.ts", "chatTypes.ts", "evidenceTypes.ts", "reportTypes.ts", "runTypes.ts"],
+  );
 });
 
 test("check mode rejects obsolete legacy generated files", async () => {
@@ -76,10 +73,7 @@ test("generation removes only known legacy files and rejects unknown files", asy
     );
 
     await writeFile(join(output, "unexpected.ts"), "");
-    await assert.rejects(
-      syncGeneratedFiles(output, generated),
-      /Unexpected generated output/,
-    );
+    await assert.rejects(syncGeneratedFiles(output, generated), /Unexpected generated output/);
   } finally {
     await rm(output, { recursive: true, force: true });
   }

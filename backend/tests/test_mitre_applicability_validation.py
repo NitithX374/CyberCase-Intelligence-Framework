@@ -2,11 +2,10 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.case_analysis.mitre_applicability_gate import (
+from app.services.case_analysis.mitre_gate.llm import (
     validate_mitre_applicability,
 )
-from app.services.case_materials import CaseSourceItem
-
+from app.services.sources import CaseSourceItem
 
 SEMANTIC_FIXTURES = [
     ("phone_theft_th", "โทรศัพท์มือถือที่วางไว้บนโต๊ะสูญหาย", "SKIP", None),

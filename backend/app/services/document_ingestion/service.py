@@ -147,9 +147,7 @@ class DocumentIngestionService:
                 page_warnings.extend(ocr_warnings)
                 return doc_page, page_warnings
 
-        results = await asyncio.gather(
-            *(process_page(page) for page in inspection.pages)
-        )
+        results = await asyncio.gather(*(process_page(page) for page in inspection.pages))
 
         pages = [page for page, _ in results]
         warnings = [warning for _, page_warnings in results for warning in page_warnings]
@@ -174,9 +172,7 @@ class DocumentIngestionService:
             self._limits.render_longest_edge,
             self._limits.max_image_pixels,
         )
-        page, warnings = await self.process_rendered_page(
-            RenderedPage(document_id, 1, image_bytes)
-        )
+        page, warnings = await self.process_rendered_page(RenderedPage(document_id, 1, image_bytes))
         return [page], warnings
 
     async def process_rendered_page(

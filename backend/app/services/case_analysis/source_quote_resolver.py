@@ -1,8 +1,50 @@
 import re
+import unicodedata
 from collections.abc import Mapping
 
 MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
+# Enough of a quote's character trigrams present in the source to call it a
+# clumsy quotation of something real rather than an invention.
+PARAPHRASE_TRIGRAM_SHARE = 0.6
+
+
+def folded(text: str) -> tuple[str, list[int]]:
+    """The text with compatibility forms folded, and where each piece came from.
+
+    Thai SARA AM (ำ) is one character that Unicode will not let NFC compose, so
+    a model writing it as NIKHAHIT + SARA AA produces a string that looks
+    identical and compares unequal. NFKC folds both to the same pair. Folding
+    one character at a time keeps an index back to the original, so a quote
+    matched this way can still be cut from the untouched source and located on
+    its page.
+    """
+
+    pieces: list[str] = []
+    index: list[int] = []
+    for position, character in enumerate(text):
+        for piece in unicodedata.normalize("NFKC", character):
+            pieces.append(piece)
+            index.append(position)
+    return "".join(pieces), index
+
+
+def trigrams(text: str) -> set[str]:
+    stripped = "".join(text.split())
+    return {stripped[i : i + 3] for i in range(len(stripped) - 2)}
+
+
+def looks_like_a_paraphrase(content: str, quote: str) -> bool:
+    """Whether a quote that is not in the source is at least drawn from it.
+
+    Character trigrams, so it reads Thai — which has no word boundaries — the
+    same way it reads English.
+    """
+
+    wanted = trigrams(quote)
+    if not wanted:
+        return False
+    return len(wanted & trigrams(content)) / len(wanted) >= PARAPHRASE_TRIGRAM_SHARE
 
 
 def resolve_document_locator(
@@ -31,9 +73,7 @@ def resolve_document_locator(
     }
 
 
-def extract_documents_for_source(
-    source_id: str, context: object
-) -> list[Mapping[str, object]]:
+def extract_documents_for_source(source_id: str, context: object) -> list[Mapping[str, object]]:
     if not isinstance(context, list):
         return []
     documents: list[Mapping[str, object]] = []
@@ -45,9 +85,7 @@ def extract_documents_for_source(
             continue
         raw_documents = entry.get("documents")
         if isinstance(raw_documents, list):
-            documents.extend(
-                value for value in raw_documents if isinstance(value, Mapping)
-            )
+            documents.extend(value for value in raw_documents if isinstance(value, Mapping))
     return documents
 
 
@@ -85,12 +123,19 @@ def find_document_locator(
 
 
 def verify_quote_coverage(spans: list[tuple[int, int, int]], start: int, end: int) -> bool:
+    """Whether the spans cover the quote end to end, without a hole.
+
+    Every span here came from validate_page_spans, which already refused
+    anything whose page number was not an integer in range, so the only thing
+    left to establish is that one span starts where the last one stopped.
+    """
+
     cursor = start
     covered = 0
-    for page, lower, upper in spans:
+    for _page, lower, upper in spans:
         if upper <= cursor:
             continue
-        if type(page) is not int or not 1 <= page <= MAX_SUPPORTED_DOCUMENT_PAGES or lower > cursor:
+        if lower > cursor:
             return False
         covered += 1
         cursor = upper
@@ -145,6 +190,10 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
     if len(occurrences) > 1:
         return None
 
+    compatibility_aligned = find_folded_quote(content, quote)
+    if compatibility_aligned is not None:
+        return compatibility_aligned
+
     ellipsis_aligned = expand_unique_ellipsis_quote(content, quote)
     if ellipsis_aligned is not None:
         return ellipsis_aligned
@@ -182,6 +231,21 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
     return None
 
 
+def find_folded_quote(content: str, quote: str) -> str | None:
+    """The original span whose folded form is the quote's, when there is one."""
+
+    folded_content, index = folded(content)
+    folded_quote, _ = folded(quote)
+    if not folded_quote:
+        return None
+    positions = quote_occurrences(folded_content, folded_quote)
+    if len(positions) != 1:
+        return None
+    start = index[positions[0]]
+    end_piece = positions[0] + len(folded_quote) - 1
+    return content[start : index[end_piece] + 1]
+
+
 def expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
     parts = [part.strip() for part in re.split(r"(?:\.{3,}|…+)", quote)]
     if len(parts) < 2 or any(len(part) < 2 for part in parts):
@@ -216,6 +280,7 @@ def expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
 
 __all__ = [
     "MAX_PAGE_SPANS_PER_QUOTE",
+    "looks_like_a_paraphrase",
     "MAX_SUPPORTED_DOCUMENT_PAGES",
     "extract_documents_for_source",
     "find_document_locator",

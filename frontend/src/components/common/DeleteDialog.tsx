@@ -65,10 +65,7 @@ export function ConfirmDialog({
       <h2 id={titleId} className="text-base font-bold tracking-tight">
         {title}
       </h2>
-      <p
-        id={descriptionId}
-        className="mt-2 text-xs leading-relaxed text-ink-secondary"
-      >
+      <p id={descriptionId} className="mt-2 text-xs leading-relaxed text-ink-secondary">
         {description}
       </p>
       <div className="mt-5 flex flex-wrap justify-end gap-2.5">

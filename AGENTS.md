@@ -11,23 +11,30 @@ This file provides system architecture, rules, guidelines, and commands for AI c
 
 * **Core Task**: General Case Summarization and Case Analysis using one direct structured Main Analysis call.
 * **Role of MITRE ATT&CK**: **Conditional external technical augmentation only**. External threat intelligence (`rag_service` with STIX 2.1) is retrieved only when applicable, isolated in a separate technical appendix, and never treated as incident evidence.
-* **Evidence Architecture**:
+* **Flow**:
   ```text
-  CASE MATERIAL → MAIN ANALYSIS → DETERMINISTIC FOLLOW-UP POLICY → PRELIMINARY REPORT
-                              ↘ CONDITIONAL MITRE AUGMENTATION ↗
+  CASE SOURCES → MAIN ANALYSIS → DETERMINISTIC FOLLOW-UP POLICY → PRELIMINARY REPORT
+                             ↘ CONDITIONAL MITRE AUGMENTATION ↗
   ```
+* **Vocabulary**: a thing the case knows is a **source** — a narrative, an extracted
+  document, or an answer to a clarification question. Do not name identifiers
+  `evidence` or `material`; "evidence" belongs in prose, not in code. The table is
+  `case_sources`, the revision coordinate is `Case.source_revision`, the route is
+  `/cases/{case_id}/sources`.
+* **No run row**: an analysis and a Case Ask happen inside the request that asks for
+  them. There is no job table, no claiming and no polling.
 * **Design Principles**:
   * *Semantic analysis and language generation* $\to$ LLM.
   * *Validation, state, routing, priority, and stopping rules* $\to$ deterministic backend.
   * *External technical knowledge* $\to$ conditional, isolated augmentation.
-* **Storage & Persistence**: Single-user workspace backed by PostgreSQL (Cases, original documents and extraction revisions, admitted evidence revisions, immutable evidence snapshots, CaseRuns/results/clarifications, optional Chat transcripts, and result-bound reports).
+* **Storage & Persistence**: Single-user workspace backed by PostgreSQL — users, cases, documents and their extractions, case sources, chat messages, analysis results, and reports bound to the analysis they came from.
 
 ---
 
 ## 🛠️ Tech Stack & Key Configurations
 - **Frontend**: Next.js 16.2.10 (App Router) + React 19.2.4 + Tailwind CSS 4 + TypeScript
 - **Backend API**: FastAPI + SQLAlchemy (Async) + PostgreSQL + Alembic
-- **Agentic Pipeline**: LangGraph (State Machine) + LangChain LCEL
+- **Agentic Pipeline**: LangGraph (State Machine) + LangChain message/LLM abstractions. The LCEL chain is evaluation-only (`pipeline/chain.py`)
 - **Graph Database**: Neo4j (Enterprise/Community)
 - **Vector Database**: Qdrant (1024-dim, BGE-M3 embeddings)
 - **Primary LLM Models** (`rag_service/app/RAG/GraphRAG/config.py` & `backend/app/config.py`):
@@ -40,28 +47,32 @@ This file provides system architecture, rules, guidelines, and commands for AI c
     - `haiku` $\to$ `anthropic/claude-3.5-haiku`
     - `4o` $\to$ `openai/gpt-4o`
   - **Embedding**: `BAAI/bge-m3` (FP16 on CUDA, FP32 on CPU, 1024-dim)
-  - **Reranker**: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`
-  - **RAGAS Evaluator**: `meta-llama/llama-3.3-70b-instruct:free` (via OpenRouter)
+  - **Reranker**: `BAAI/bge-reranker-v2-m3` (the mmarco cross-encoder is commented-out legacy in `config.py`)
+  - **RAGAS Evaluator**: `qwen/qwen-2.5-72b-instruct` (via OpenRouter)
 
 ---
 
 ## 📂 Key Project Structure & Paths
 ```
 Cybercase Framework/
-├── backend/                  # FastAPI chat persistence/orchestration API
+├── backend/                  # FastAPI API for cases, analysis, chat and reports
 │   ├── app/
-│   │   ├── main.py           # FastAPI entrypoint
-│   │   ├── models/           # SQLAlchemy models (chat, rag_context, report)
-│   │   ├── routers/          # Health and chat endpoints
-│   │   ├── schemas/          # Domain request/response schemas (chat, rag, reports)
+│   │   ├── main.py           # FastAPI entrypoint (one worker, by refusal)
+│   │   ├── models/           # SQLAlchemy models (case, sources, analysis, chat, report, user)
+│   │   ├── routers/          # One file per resource + errors.py
+│   │   ├── schemas/          # Domain request/response schemas
 │   │   ├── services/         # Domain service modules:
-│   │   │   ├── case_analysis/# Grounded case overview & Q&A prompt reasoning
-│   │   │   ├── chat/         # Thread & message management + compatibility facade
+│   │   │   ├── auth/         # Sessions, passwords, browser-request guard
+│   │   │   ├── cases/        # Case CRUD
+│   │   │   ├── document_ingestion/ # Upload to text: parsers, OCR, provenance
+│   │   │   ├── sources/      # Documents and the bundle an analysis reads
+│   │   │   ├── case_analysis/# The analysis: prompts, contracts/, mitre_gate/, pipeline
+│   │   │   ├── technical_context/ # The MITRE retrieval a stage asks RAG for
+│   │   │   ├── case_workflow/# Running an analysis, answering a question about one
+│   │   │   ├── chat/         # The case conversation and its follow-up questions
 │   │   │   ├── clients/      # HTTP service clients (GraphRAG API client)
-│   │   │   ├── followup/     # Deterministic gap selection & question realization
 │   │   │   ├── llm/          # LLM provider routing & model registry
-│   │   │   ├── reports/      # Markdown & PDF report generation service
-│   │   │   └── workflow/     # Background run lease worker, pipeline & outcomes
+│   │   │   └── reports/      # Template-first report, HTML & PDF rendering
 │   │   └── database.py       # Async engine and session management
 │   └── alembic/              # Async PostgreSQL migrations
 ├── rag_service/              # Standalone GraphRAG FastAPI service
@@ -74,7 +85,7 @@ Cybercase Framework/
 │       └── config.py          # RAG settings and model routing
 ├── frontend/                 # Next.js 16 Web Application
 │   └── src/
-│       ├── app/chat/         # Persisted chat workspace
+│       ├── app/case/         # Case workspace: overview, sources, chat, report
 │       └── components/       # Tailwind v4 reusable UI blocks
 ├── Documents/                # Reference documents and case-analysis knowledge assets
 ├── Mitre_ATT&CK Doc/         # STIX 2.1 JSON enterprise, mobile, ICS attack patterns
@@ -169,7 +180,7 @@ The core analysis module (`backend/app/services/case_analysis/`) executes on adm
 1. **Direct Analysis**: One structured LLM call returns a summary, key findings, material gaps, and lightweight source references.
 2. **Validation**: The backend validates identifiers and supplied source references without adding a second semantic analysis pipeline.
 3. **Follow-up Policy**: Deterministic rules filter answered or explicitly unknown gaps, apply priority and round limits, and select one gap.
-4. **Question Realization**: A small optional LLM call phrases only the selected gap as a concise question.
+4. **Question Realization**: No extra model call. The analysis already wrote the question for each gap it raised; the follow-up policy only picks which one to ask.
 
 ### Conditional Technical Augmentation (`rag_service`)
 When admitted case findings describe cyber threat activity, the backend conditionally gates retrieval to `rag_service` (STIX 2.1 ATT&CK):
@@ -179,8 +190,8 @@ When admitted case findings describe cyber threat activity, the backend conditio
 4. **Source-Role Isolation**: The retrieved technical context is rendered strictly as an analytical appendix, never as an admitted case fact.
 
 ### Clarification Gating
-The Main Analysis emits material unresolved gaps. The backend deterministically selects at most one eligible gap and persists a focused clarification question. The subsequent answer enters the Case evidence snapshot. The retired separate Gap Analysis LLM is not part of the production Case path.
+The Main Analysis emits material unresolved gaps. The backend deterministically selects at most one eligible gap and persists a focused clarification question. The reply becomes a Case source bound to that gap, and the Case is analysed again only once the round's questions are spent — a round of three costs one analysis, not three. The retired separate Gap Analysis LLM is not part of the production Case path.
 
 ### Backend Route Boundary
 
-The backend exposes `/api/v1/health`, authenticated Case CRUD/material/evidence/snapshot/analysis/run/clarification/report routes, and optional Case Chat Assistant endpoints under `/api/v1/cases/{case_id}/chat` (`GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages`, `GET /cases/{case_id}/chat/runs/{run_id}`). ChatThread has no independent user-facing lifecycle; it is scoped 0..1 to its parent Case, created on demand (when the user opens Chat or when analysis emits a follow-up question), and destroyed strictly when the Case is deleted. Existing `/api/v1/chats` thread/message/run/report routes remain a compatibility interaction surface; `DELETE /chats/{thread_id}` is a protected compatibility endpoint rather than a primary user workflow. Do not add top-level `/api/v1/reports`, public upload/OCR, or standalone RAG-proxy endpoints. Chat messages, assistant analysis publications, and external RAG context are not authoritative evidence; native citations resolve Case evidence source revisions and snapshots.
+Everything is `/api/v1`, one router per resource, and `backend/tests/test_route_surface.py` asserts the exact set: `/health`, the `/auth` session routes, and authenticated Case routes for the case itself, its documents, its sources, its analysis, its chat and its reports. Messages belong to the Case directly — there is no thread resource and no `/api/v1/chats`. There is no run resource either: an analysis and an answer each happen in the request that asked for them, which is why `main.py` refuses to start with more than one worker. Do not add top-level `/api/v1/reports`, public upload/OCR, or standalone RAG-proxy endpoints. Chat messages, assistant analysis publications, and external RAG context are not authoritative Case sources; native citations resolve Case source revisions and snapshots.

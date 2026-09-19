@@ -1,106 +1,144 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
 import { Icon } from "@/components/common/icons";
 import { UserProfileMenu } from "@/components/common/UserProfileMenu";
 import type { CaseRead } from "@/lib/api";
-import { workspaceViewDescriptions, type RunPhase, type WorkspaceView } from "@/components/common/types";
+import { workspaceViewDescriptions, type WorkspaceView } from "@/components/common/types";
 
 interface WorkspaceHeaderProps {
   activeCase: CaseRead | null;
-  activeCaseId: string | null;
   activeView: WorkspaceView;
-  cases: CaseRead[];
   creatingCase: boolean;
-  deletingCaseId: string | null;
-  phase: RunPhase;
+  hasAnalysis: boolean;
+  canAnalyze: boolean;
+  isAnalyzing: boolean;
+  isStale: boolean;
+  onAnalyze: () => void;
   onViewChange: (view: WorkspaceView) => void;
-  onSelectCase: (caseId: string) => void;
   onNewCase: () => void;
-  onRequestDelete: (caseRecord: CaseRead) => void;
+  onRenameCase?: (title: string) => void;
   isChatOpen?: boolean;
   onToggleChat?: () => void;
 }
 
-const phasePresentation: Record<RunPhase, string> = {
-  idle: "Ready",
-  querying: "Processing",
-  awaiting_followup: "Input needed",
-  analyzing: "Analyzing",
-  ready: "Analysis available",
-  error: "Needs attention",
-};
+/** What the case is doing, in the two states the workspace can be in. */
+function caseStatus(hasAnalysis: boolean, isAnalyzing: boolean, isStale: boolean) {
+  if (isAnalyzing) return { label: "Analysing", dot: "bg-accent motion-safe:animate-pulse" };
+  if (isStale) return { label: "Analysis is out of date", dot: "bg-unresolved" };
+  if (hasAnalysis) return { label: "Analysis available", dot: "bg-established" };
+  return { label: "Ready", dot: "bg-line-strong" };
+}
 
 const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
-  { view: "intake", label: "Intake" },
   { view: "overview", label: "Overview" },
-  { view: "materials", label: "Materials" },
+  { view: "sources", label: "Sources" },
   { view: "technical-context", label: "Technical" },
   { view: "report", label: "Report" },
 ];
 
 export function WorkspaceHeader({
   activeCase,
-  activeCaseId,
   activeView,
-  cases,
   creatingCase,
-  deletingCaseId,
-  phase,
+  hasAnalysis,
+  canAnalyze,
+  isAnalyzing,
+  isStale,
+  onAnalyze,
   onViewChange,
-  onSelectCase,
   onNewCase,
-  onRequestDelete,
+  onRenameCase,
   isChatOpen = true,
   onToggleChat,
 }: WorkspaceHeaderProps) {
+  const status = caseStatus(hasAnalysis, isAnalyzing, isStale);
+  const [renaming, setRenaming] = useState(false);
   const displayCaseTitle = activeCase?.title || "New case";
 
   return (
     <header className="shrink-0 border-b border-line bg-surface">
       <div className="flex min-h-14 items-center gap-3 px-4 sm:px-5 lg:px-6">
         <Link
-          href="/"
-          aria-label="CyberCase home"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:ring-accent md:hidden"
+          href="/case"
+          aria-label="All cases"
+          title="All cases"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <CyberCaseLogo size={30} />
+          <CyberCaseLogo size={28} />
         </Link>
 
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2.5">
-            <h1 className="truncate text-[15px] font-semibold tracking-[-0.015em] text-ink sm:text-base">
-              {displayCaseTitle}
-            </h1>
+            {renaming ? (
+              <CaseTitleField
+                title={displayCaseTitle}
+                onCommit={(next) => {
+                  setRenaming(false);
+                  if (next && next !== displayCaseTitle) onRenameCase?.(next);
+                }}
+              />
+            ) : (
+              <>
+                <h1 className="truncate text-[15px] font-semibold tracking-[-0.015em] text-ink sm:text-base">
+                  {displayCaseTitle}
+                </h1>
+                {onRenameCase && activeCase && (
+                  <button
+                    type="button"
+                    onClick={() => setRenaming(true)}
+                    aria-label="Rename case"
+                    title="Rename case"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-ink-muted outline-none hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <Icon name="edit" className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </>
+            )}
             <span className="hidden shrink-0 items-center gap-1.5 text-[10px] font-medium text-ink-muted sm:inline-flex">
-              <span className={`h-1.5 w-1.5 rounded-full ${phaseDotClass(phase)}`} aria-hidden="true" />
-              {phasePresentation[phase]}
+              <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} aria-hidden="true" />
+              {status.label}
             </span>
           </div>
-          <p className="mt-0.5 truncate text-[10px] text-ink-muted sm:hidden">{phasePresentation[phase]}</p>
+          <p className="mt-0.5 truncate text-[10px] text-ink-muted sm:hidden">{status.label}</p>
         </div>
 
-        <div className="hidden items-center gap-1.5 md:flex">
-          {cases.length > 1 && (
-            <select
-              value={activeCaseId ?? ""}
-              onChange={(event) => event.target.value && onSelectCase(event.target.value)}
-              aria-label="Select saved case"
-              className="h-8 max-w-52 rounded-md border border-line bg-surface px-2.5 text-[11px] font-medium text-ink outline-none hover:border-line-strong focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <option value="">Select case</option>
-              {cases.map((caseRecord) => <option key={caseRecord.id} value={caseRecord.id}>{caseRecord.title}</option>)}
-            </select>
-          )}
-          <IconAction label="New case" icon="plus" disabled={creatingCase} onClick={onNewCase} />
-          {activeCase && (
-            <IconAction
-              label={`Delete ${displayCaseTitle}`}
-              icon="trash"
-              disabled={deletingCaseId !== null}
-              onClick={() => onRequestDelete(activeCase)}
-            />
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={onAnalyze}
+          disabled={!canAnalyze || isAnalyzing}
+          title={canAnalyze ? undefined : "Add a case source before analysing"}
+          className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled ${
+            isStale
+              ? "bg-unresolved text-ivory hover:brightness-110"
+              : "bg-primary text-ivory hover:bg-charcoal-hover"
+          }`}
+        >
+          {isAnalyzing ? "Analyzing…" : isStale ? "Analyze latest" : "Analyze"}
+        </button>
+
+        <Link
+          href="/case"
+          aria-label="All cases"
+          title="All cases"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-secondary outline-none hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <Icon name="list" className="h-3.5 w-3.5" />
+        </Link>
+
+        <button
+          type="button"
+          aria-label="New case"
+          title="New case"
+          disabled={creatingCase}
+          onClick={onNewCase}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-40"
+        >
+          <Icon name="plus" className="h-3.5 w-3.5" />
+        </button>
 
         {onToggleChat && (
           <button
@@ -108,18 +146,22 @@ export function WorkspaceHeader({
             onClick={onToggleChat}
             aria-label={isChatOpen ? "Close Ask" : "Open Ask"}
             title={isChatOpen ? "Close Ask" : "Open Ask"}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-              isChatOpen ? "border-accent bg-accent-soft text-accent" : "border-line text-ink hover:bg-surface-hover"
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              isChatOpen
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-line text-ink hover:bg-surface-hover"
             }`}
           >
             <Icon name="chat" className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Ask</span>
-            {phase === "awaiting_followup" && <span className="h-1.5 w-1.5 rounded-full bg-unresolved" aria-hidden="true" />}
           </button>
         )}
 
-        <details className="relative md:hidden">
-          <summary aria-label="Open account menu" className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent">
+        <details className="relative shrink-0">
+          <summary
+            aria-label="Open account menu"
+            className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
+          >
             <Icon name="account" className="h-4 w-4" />
           </summary>
           <div className="absolute right-0 top-10 z-50 w-64 border border-line bg-surface p-3 shadow-lg">
@@ -128,24 +170,11 @@ export function WorkspaceHeader({
         </details>
       </div>
 
-      <div className="flex min-h-11 items-center gap-2 border-t border-line/70 px-4 md:hidden">
-        {cases.length > 1 && (
-          <select
-            value={activeCaseId ?? ""}
-            onChange={(event) => event.target.value && onSelectCase(event.target.value)}
-            aria-label="Select saved case"
-            className="h-8 min-w-0 flex-1 rounded-md border border-line bg-surface px-2.5 text-[11px] font-medium text-ink outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <option value="">Select case</option>
-            {cases.map((caseRecord) => <option key={caseRecord.id} value={caseRecord.id}>{caseRecord.title}</option>)}
-          </select>
-        )}
-        {cases.length <= 1 && <span className="flex-1 text-[10px] text-ink-muted">Case workspace</span>}
-        <IconAction label="New case" icon="plus" disabled={creatingCase} onClick={onNewCase} />
-        {activeCase && <IconAction label={`Delete ${displayCaseTitle}`} icon="trash" disabled={deletingCaseId !== null} onClick={() => onRequestDelete(activeCase)} />}
-      </div>
-
-      <nav aria-label="Case workspace views" role="tablist" className="flex min-h-10 gap-5 overflow-x-auto px-4 text-[11px] sm:px-5 lg:px-6">
+      <nav
+        aria-label="Case workspace views"
+        role="tablist"
+        className="flex min-h-10 gap-5 overflow-x-auto px-4 text-[11px] sm:px-5 lg:px-6"
+      >
         {workspaceTabs.map((item) => {
           const selected = item.view === activeView;
           return (
@@ -160,7 +189,9 @@ export function WorkspaceHeader({
               title={workspaceViewDescriptions[item.view]}
               onClick={() => onViewChange(item.view)}
               className={`shrink-0 border-b-2 px-0.5 pt-1 font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                selected ? "border-accent text-accent" : "border-transparent text-ink-muted hover:text-ink"
+                selected
+                  ? "border-accent text-accent"
+                  : "border-transparent text-ink-muted hover:text-ink"
               }`}
             >
               {item.label}
@@ -172,24 +203,42 @@ export function WorkspaceHeader({
   );
 }
 
-function IconAction({ label, icon, disabled, onClick }: { label: string; icon: "plus" | "trash"; disabled: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="flex h-8 w-8 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-40"
-    >
-      <Icon name={icon} className="h-3.5 w-3.5" />
-    </button>
-  );
-}
+/** The title, while it is being changed.
+ *
+ * Enter and leaving the field both keep what was typed; Escape abandons it.
+ * The field starts selected, because renaming usually means replacing.
+ */
+function CaseTitleField({ title, onCommit }: { title: string; onCommit: (next: string) => void }) {
+  const field = useRef<HTMLInputElement | null>(null);
+  const [value, setValue] = useState(title);
 
-function phaseDotClass(phase: RunPhase): string {
-  if (phase === "error") return "bg-critical";
-  if (phase === "awaiting_followup") return "bg-unresolved";
-  if (phase === "querying" || phase === "analyzing") return "bg-evidence motion-safe:animate-pulse";
-  return "bg-established";
+  useEffect(() => {
+    field.current?.focus();
+    field.current?.select();
+  }, []);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    onCommit(value.trim());
+  };
+
+  return (
+    <form onSubmit={submit} className="min-w-0 flex-1">
+      <label className="sr-only" htmlFor="case-title-field">
+        Case title
+      </label>
+      <input
+        id="case-title-field"
+        ref={field}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => onCommit(value.trim())}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onCommit("");
+        }}
+        maxLength={200}
+        className="h-7 w-full min-w-0 rounded border border-accent bg-surface px-2 text-[15px] font-semibold tracking-[-0.015em] text-ink outline-none focus:ring-2 focus:ring-accent/25 sm:text-base"
+      />
+    </form>
+  );
 }

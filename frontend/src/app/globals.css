@@ -1,147 +1,147 @@
 @import "tailwindcss";
 
 @theme {
-    --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 
-    --color-paper: #F3F6F1;
-    --color-paper-raised: #FFFFFF;
-    --color-background: #F3F6F1;
-    --color-canvas: #F3F6F1;
-    --color-surface: #FFFFFF;
-    --color-sidebar: #F8FBF8;
-    --color-workspace: #F3F6F1;
+  --color-paper: #fafafa;
+  --color-paper-raised: #ffffff;
+  --color-background: #fafafa;
+  --color-canvas: #fafafa;
+  --color-surface: #ffffff;
+  --color-sidebar: #f4f4f5;
+  --color-workspace: #fafafa;
 
-    --color-ink: #26352F;
-    --color-ink-secondary: #64736B;
-    --color-ink-muted: #718078;
-    --color-ink-disabled: #9AA79F;
-    --color-neutral: #718078;
-    --color-stone: #E0E9E2;
-    --color-border: #D5E0D8;
-    --color-line: #D5E0D8;
-    --color-line-strong: #A7B9AC;
-    --color-surface-nested: #EFF5F0;
-    --color-surface-hover: #E8F1EB;
-    --color-subdued: #E0E9E2;
-    --color-control-disabled: #DDE6DF;
+  --color-ink: #18181b;
+  --color-ink-secondary: #52525b;
+  --color-ink-muted: #71717a;
+  --color-ink-disabled: #a1a1aa;
+  --color-neutral: #71717a;
+  --color-stone: #e4e4e7;
+  --color-border: #e4e4e7;
+  --color-line: #e4e4e7;
+  --color-line-strong: #d4d4d8;
+  --color-surface-nested: #f4f4f5;
+  --color-surface-hover: #f4f4f5;
+  --color-subdued: #e4e4e7;
+  --color-control-disabled: #e4e4e7;
 
-    --color-accent: #2E6B52;
-    --color-accent-soft: #E8F1EB;
-    --color-accent-strong: #245640;
-    --color-primary: #26352F;
-    --color-secondary: #3E5147;
-    --color-charcoal-hover: #314A3D;
-    --color-charcoal-pressed: #1D2B25;
-    --color-ivory: #FFFFFF;
+  --color-accent: #0f766e;
+  --color-accent-soft: #f0fdfa;
+  --color-accent-strong: #115e59;
+  --color-primary: #18181b;
+  --color-secondary: #3f3f46;
+  --color-charcoal-hover: #27272a;
+  --color-charcoal-pressed: #09090b;
+  --color-ivory: #ffffff;
 
-    /* SEMANTIC ANNOTATIONS (Annotations only, never large surfaces) */
-    --color-evidence: #2E6B52;
-    --color-mitre: #6654A3;
-    --color-unresolved: #9B6A36;
-    --color-established: #2E6B52;
-    --color-critical: #9A4438;
-    --color-danger: #9A4438;
+  /* SEMANTIC ANNOTATIONS (Annotations only, never large surfaces) */
+  --color-source: #0f766e;
+  --color-mitre: #6d28d9;
+  --color-unresolved: #b45309;
+  --color-established: #0f766e;
+  --color-critical: #b91c1c;
+  --color-danger: #b91c1c;
 }
 
 :root {
-    --background: var(--color-background);
-    --foreground: var(--color-ink);
+  --background: var(--color-background);
+  --foreground: var(--color-ink);
 }
 
 html {
-    background: var(--background);
+  background: var(--background);
 }
 
 body {
-    min-height: 100vh;
-    background-color: var(--background);
-    color: var(--foreground);
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 * {
-    scrollbar-color: var(--color-line-strong) transparent;
-    scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+  scrollbar-width: thin;
 }
 
 @utility card {
-    @apply border border-line bg-surface;
+  @apply border border-line bg-surface;
 }
 
 @utility btn-primary {
-    @apply bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors duration-150 hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled motion-reduce:transition-none;
+  @apply bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors duration-150 hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled motion-reduce:transition-none;
 }
 
 @utility btn-secondary {
-    @apply border border-line bg-surface px-4 py-2 text-xs font-bold text-ink transition-colors duration-150 hover:border-ink hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none;
+  @apply border border-line bg-surface px-4 py-2 text-xs font-bold text-ink transition-colors duration-150 hover:border-ink hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none;
 }
 
 @utility btn-inverted {
-    @apply bg-ivory px-4 py-2 text-xs font-bold text-primary transition-colors hover:bg-surface-hover active:bg-control-disabled;
+  @apply bg-ivory px-4 py-2 text-xs font-bold text-primary transition-colors hover:bg-surface-hover active:bg-control-disabled;
 }
 
 @utility btn-outlined {
-    @apply border border-line bg-transparent px-4 py-2 text-xs font-bold text-primary transition-colors hover:border-primary hover:bg-primary/5 active:bg-primary/10;
+  @apply border border-line bg-transparent px-4 py-2 text-xs font-bold text-primary transition-colors hover:border-primary hover:bg-primary/5 active:bg-primary/10;
 }
 
 @utility panel {
-    @apply border border-line bg-surface;
+  @apply border border-line bg-surface;
 }
 
 @utility workspace-card {
-    @apply rounded-md border border-line bg-surface;
+  @apply rounded-md border border-line bg-surface;
 }
 
 @utility section-eyebrow {
-    @apply text-[10px] font-semibold text-ink-muted;
+  @apply text-[10px] font-semibold text-ink-muted;
 }
 
 @utility mono-label {
-    @apply font-mono text-[10px] font-semibold tracking-wider text-ink-muted;
+  @apply font-mono text-[10px] font-semibold tracking-wider text-ink-muted;
 }
 
 ::selection {
-    background: #E8F1EB;
-    color: #26352F;
+  background: #ccfbf1;
+  color: #18181b;
 }
 
 :where(a, button, select):focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 :where(input, textarea):focus-visible {
-    outline: none;
+  outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
-    }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .report-shell {
-    display: grid;
-    grid-template-columns: 1fr;
+  display: grid;
+  grid-template-columns: 1fr;
 }
 
 .report-builder-grid {
-    display: grid;
-    grid-template-columns: 1fr;
+  display: grid;
+  grid-template-columns: 1fr;
 }
 
 @media (min-width: 1024px) {
-    .report-shell {
-        grid-template-columns: 184px minmax(0, 1fr);
-    }
+  .report-shell {
+    grid-template-columns: 184px minmax(0, 1fr);
+  }
 }
 
 @media (min-width: 1280px) {
-    .report-builder-grid {
-        grid-template-columns: 360px minmax(0, 1fr);
-    }
+  .report-builder-grid {
+    grid-template-columns: 360px minmax(0, 1fr);
+  }
 }

@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 
 const frontendDirectory = path.resolve(import.meta.dirname, "..");
 const child = spawn(
-  process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : "npm",
+  process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : "npm",
   process.platform === "win32"
     ? ["/d", "/s", "/c", "npm run dev -- --webpack --port 3100"]
     : ["run", "dev", "--", "--webpack", "--port", "3100"],

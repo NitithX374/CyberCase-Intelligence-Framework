@@ -6,7 +6,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import os
 
 
 # ── 1. Database Configuration ────────────────────────────────────────────────
@@ -20,16 +19,19 @@ class DatabaseConfig(BaseModel):
 
     @property
     def async_database_url(self) -> str:
-        """Ensures the URL uses postgresql+asyncpg:// for SQLAlchemy async engine."""
+        """The URL with the driver SQLAlchemy's async engine needs.
+
+        A URL that already names one, such as postgresql+asyncpg://, starts
+        with neither spelling below and comes back untouched. The branch this
+        replaced ran only when the URL held neither prefix, and then replaced
+        a prefix that by definition was not there.
+        """
+
         if self.database_url:
-            url = self.database_url
-            if url.startswith("postgres://"):
-                url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-            elif url.startswith("postgresql://"):
-                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            elif "asyncpg" not in url:
-                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            return url
+            for spelling in ("postgres://", "postgresql://"):
+                if self.database_url.startswith(spelling):
+                    return self.database_url.replace(spelling, "postgresql+asyncpg://", 1)
+            return self.database_url
 
         # Construct from components if DATABASE_URL is not provided
         from sqlalchemy.engine.url import URL
@@ -71,26 +73,31 @@ class CORSConfig(BaseModel):
 
 # ── 3. LLM Providers & Core Routing ──────────────────────────────────────────
 class LLMProviderConfig(BaseModel):
-    core_llm_provider: Literal["anthropic", "openrouter"] = "openrouter"
-    anthropic_api_key: str = ""
-    anthropic_messages_url: str = "https://api.anthropic.com/v1/messages"
     openrouter_cybercase: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_messages_url: str = "https://openrouter.ai/api/v1/messages"
-    core_llm_openrouter_model: str = "openai/gpt-5.6-luna"
+    # The model the case analysis runs on. An alias from the registry or a
+    # full OpenRouter id.
+    case_analysis_model: str = "openai/gpt-5.6-luna"
     rag_service_url: str = "http://rag-service:8001"
-
-
-# ── 5. Deterministic follow-up selection ─────────────────────────────────────
-class FollowupConfig(BaseModel):
-    chat_followup_enabled: bool = True
-    chat_followup_max_rounds: int = Field(default=2, ge=1, le=16)
 
 
 # ── 6. Case Analysis & Post-Answer Q&A ────────────────────────────────────────
 class CaseAnalysisConfig(BaseModel):
-    case_run_timeout_seconds: float = Field(default=900.0, gt=0)
-    case_run_failure_persistence_timeout_seconds: float = Field(default=5.0, gt=0)
+    # Which applicability gate decides whether a case needs ATT&CK:
+    # "llm" prompts a model with the whole case, "encoder" runs XLM-R over
+    # one sentence at a time, "never" skips retrieval so an ablation can
+    # measure what the technical context was worth.
+    mitre_gate_mode: Literal["llm", "encoder", "never"] = "llm"
+    # Which arm of the analysis the pipeline runs.
+    #   direct  Case -> Analysis                    the baseline: nothing is checked
+    #   verify  Case -> Analysis -> Verify          what the product ships
+    #   revise  Case -> Analysis -> Verify -> Revise  one more model call
+    case_analysis_arm: Literal["direct", "verify", "revise"] = "verify"
+    case_analysis_max_revisions: int = Field(default=1, ge=1, le=3)
+    mitre_gate_model_path: str = "research/mitre_gate/model"
+    chat_followup_max_rounds: int = Field(default=2, ge=0)
+    chat_followup_gaps_per_round: int = Field(default=3, ge=1)
     chat_ask_model: str = "openai/gpt-5.6-luna"
     chat_ask_timeout_seconds: float = 120.0
 
@@ -133,7 +140,6 @@ class Settings(
     CORSConfig,
     AuthConfig,
     LLMProviderConfig,
-    FollowupConfig,
     CaseAnalysisConfig,
     ReportConfig,
     DocumentIngestionConfig,
@@ -162,7 +168,6 @@ __all__ = [
     "CaseAnalysisConfig",
     "DatabaseConfig",
     "DocumentIngestionConfig",
-    "FollowupConfig",
     "LLMProviderConfig",
     "ReportConfig",
     "Settings",

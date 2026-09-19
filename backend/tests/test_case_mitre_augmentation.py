@@ -1,32 +1,32 @@
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-import pytest
-
+from app.services.case_analysis.analysis import validate_direct_trace
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
-    CaseAnalysisFailure,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseMitreAssociation,
     CaseProviderAnalysis,
     CaseSourceCitation,
 )
-from app.services.case_materials import CaseSourceBundle, CaseSourceItem
-from app.services.case_analysis.mitre_applicability_gate import (
+from app.services.case_analysis.mitre_gate.llm import (
     MitreApplicabilityRecord,
 )
+from app.services.case_analysis.pipeline import (
+    AnalysisInput,
+    AnalysisStage,
+    TechnicalContextStage,
+    run_pipeline,
+)
+from app.services.case_workflow import external_context
 from app.services.clients.rag_client import RagCallFailure
-from app.services.workflow.case_mitre_augmentation import (
+from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.technical_context.mitre_augmentation import (
     CaseRagContextPayload,
-    merge_case_mitre_trace,
     run_case_mitre_augmentation,
 )
-from app.services.case_analysis.case_analysis import validate_direct_trace
-from app.services.workflow.case_run_execution import execute_claimed_work
-from app.services.workflow.case_run_service import ClaimedCaseRun
 
 
 def _fixtures():
@@ -52,9 +52,7 @@ def _fixtures():
     )
     source_bundle = CaseSourceBundle(
         revision=1,
-        sources=(
-            CaseSourceItem(source_id=source_id, source_kind="narrative", text=text),
-        ),
+        sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=text),),
     )
     applicability = MitreApplicabilityRecord(
         decision="RETRIEVE",
@@ -106,7 +104,6 @@ def test_nontechnical_case_does_not_call_rag():
             raise AssertionError("nontechnical Case must not call RAG")
 
         result = await run_case_mitre_augmentation(
-            run_id=uuid4(),
             source_bundle=source_bundle,
             applicability_gate=_gate(
                 {"decision": "SKIP", "source_message_ids": [], "trigger_text": []}
@@ -134,7 +131,6 @@ def test_technical_case_accepts_all_rag_rows_without_mapping_call():
             return _response(context)
 
         result = await run_case_mitre_augmentation(
-            run_id=uuid4(),
             source_bundle=source_bundle,
             applicability_gate=gate,
             rag_request=rag,
@@ -143,12 +139,6 @@ def test_technical_case_accepts_all_rag_rows_without_mapping_call():
         assert result.retrieval_context_id == "retrieval-case-1"
         assert result.mitre_table == list(context.mitre_table)
         assert result.associations == ()
-        merged = merge_case_mitre_trace(
-            trace,
-            result,
-            source_bundle,
-        )
-        assert merged.mitre_associations == []
         assert [item[0] for item in observed] == ["gate", "rag"]
 
     asyncio.run(exercise())
@@ -164,7 +154,6 @@ def test_empty_retrieval_is_insufficient():
             )
 
         result = await run_case_mitre_augmentation(
-            run_id=uuid4(),
             source_bundle=source_bundle,
             applicability_gate=_gate(applicability),
             rag_request=rag,
@@ -182,7 +171,6 @@ def test_rag_transport_failure_preserves_failed_augmentation_status():
             raise RagCallFailure("rag_timeout", "timed out")
 
         result = await run_case_mitre_augmentation(
-            run_id=uuid4(),
             source_bundle=source_bundle,
             applicability_gate=_gate(applicability),
             rag_request=rag,
@@ -197,20 +185,11 @@ def test_rag_transport_failure_preserves_failed_augmentation_status():
 def test_workflow_scenario_a_non_cyber_case_gate_skip():
     async def exercise():
         source_id, trace, source_bundle, _, _ = _fixtures()
-        claimed = ClaimedCaseRun(
-            id=uuid4(),
-            case_id=uuid4(),
-            source_bundle=source_bundle,
-            attempt_count=1,
-            operation="analysis",
-            pipeline_config={},
-            request_payload={"response_language": "english"},
-        )
         rag_calls = []
 
         async def fake_rag(q):
             rag_calls.append(q)
-            return None
+            return
 
         analysis_calls = []
 
@@ -222,33 +201,25 @@ def test_workflow_scenario_a_non_cyber_case_gate_skip():
                 execution_receipt={"calls": []},
             )
 
-        fake_db = AsyncMock()
-        fake_db.execute = AsyncMock()
-        fake_db.scalars = AsyncMock(return_value=AsyncMock(all=lambda: []))
-
-        class FakeSessionFactory:
-            async def __aenter__(self):
-                return fake_db
-
-            async def __aexit__(self, *args):
-                pass
-
-        with patch("app.services.workflow.case_run_execution.load_followup_exchanges", return_value=()):
-            output = await execute_claimed_work(
-                claimed,
-                session_factory=FakeSessionFactory,
-                analysis_request=fake_analysis,
-                answer_request=AsyncMock(),
-                applicability_gate=_gate({"decision": "SKIP", "source_message_ids": [], "trigger_text": []}),
-                rag_request=fake_rag,
-            )
+        artifacts = await run_pipeline(
+            AnalysisInput(sources=source_bundle, response_language="english"),
+            stages=(
+                TechnicalContextStage(
+                    applicability_gate=_gate(
+                        {"decision": "SKIP", "source_message_ids": [], "trigger_text": []}
+                    ),
+                    rag_request=fake_rag,
+                ),
+                AnalysisStage(analysis_request=fake_analysis),
+            ),
+        )
 
         assert rag_calls == []
         assert len(analysis_calls) == 1
         assert analysis_calls[0]["technical_context"] is None
         assert analysis_calls[0]["retrieval_context_id"] is None
-        assert output.trace.mitre_associations == []
-        assert output.execution_receipt["technical_augmentation"]["status"] == "not_applicable"
+        assert artifacts.trace.mitre_associations == []
+        assert artifacts.receipt["technical_augmentation"]["status"] == "not_applicable"
 
     asyncio.run(exercise())
 
@@ -256,15 +227,6 @@ def test_workflow_scenario_a_non_cyber_case_gate_skip():
 def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
     async def exercise():
         source_id, trace, source_bundle, applicability, context = _fixtures()
-        claimed = ClaimedCaseRun(
-            id=uuid4(),
-            case_id=uuid4(),
-            source_bundle=source_bundle,
-            attempt_count=1,
-            operation="analysis",
-            pipeline_config={},
-            request_payload={"response_language": "english"},
-        )
         call_order = []
 
         async def fake_gate(**kwargs):
@@ -303,40 +265,22 @@ def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
                 execution_receipt={"calls": []},
             )
 
-        class FakeBegin:
-            async def __aenter__(self):
-                return None
-
-            async def __aexit__(self, *args):
-                pass
-
-        fake_db = AsyncMock()
-        fake_db.scalar = AsyncMock(return_value=None)
-        fake_db.begin = lambda: FakeBegin()
-        fake_db.add = lambda x: None
-
-        class FakeSessionFactory:
-            async def __aenter__(self):
-                return fake_db
-
-            async def __aexit__(self, *args):
-                pass
-
-        with patch("app.services.workflow.case_run_execution.load_followup_exchanges", return_value=()):
-            output = await execute_claimed_work(
-                claimed,
-                session_factory=FakeSessionFactory,
-                analysis_request=fake_analysis,
-                answer_request=AsyncMock(),
-                applicability_gate=fake_gate,
-                rag_request=fake_rag,
-            )
+        artifacts = await run_pipeline(
+            AnalysisInput(sources=source_bundle, response_language="english"),
+            stages=(
+                TechnicalContextStage(applicability_gate=fake_gate, rag_request=fake_rag),
+                AnalysisStage(analysis_request=fake_analysis),
+            ),
+        )
 
         assert call_order == ["gate", "rag", "analysis"]
-        assert len(output.trace.mitre_associations) == 1
-        assert output.trace.mitre_associations[0].technique_id == "T1059.001"
-        assert output.execution_receipt["technical_augmentation"]["status"] == "retrieved_with_matches"
-        assert output.execution_receipt["technical_augmentation"]["association_ids"] == ["MA-01"]
+        assert len(artifacts.trace.mitre_associations) == 1
+        assert artifacts.trace.mitre_associations[0].technique_id == "T1059.001"
+        # Whether the retrieved context was used is only knowable once the trace
+        # exists, so the stored status is settled at persistence time.
+        stored = external_context(artifacts, 1)["technical_augmentation"]
+        assert stored["status"] == "retrieved_with_matches"
+        assert stored["association_ids"] == ["MA-01"]
 
     asyncio.run(exercise())
 
@@ -353,7 +297,6 @@ def test_scenario_c_invalid_technique_rejected_by_validation():
     )
     parsed = CaseProviderAnalysis(
         version="case_analysis_trace_v1",
-        answer="Summary",
         summary="Summary",
         involved_parties=[],
         timeline=[],
@@ -362,29 +305,22 @@ def test_scenario_c_invalid_technique_rejected_by_validation():
         gaps=[],
         mitre_associations=[invalid_assoc],
     )
-    with pytest.raises(CaseAnalysisFailure) as err:
-        validate_direct_trace(
-            parsed,
-            mode="case_overview",
-            source_bundle=source_bundle,
-            retrieval_context_id="retrieval-case-1",
-            mitre_table=list(context.mitre_table),
-        )
-    assert err.value.code == "case_trace_mitre_outside_context"
+    # A technique the retrieval never returned is the model's own invention.
+    # It is dropped and counted, the way an invented quotation is.
+    trace = validate_direct_trace(
+        parsed,
+        mode="case_overview",
+        source_bundle=source_bundle,
+        retrieval_context_id="retrieval-case-1",
+        mitre_table=list(context.mitre_table),
+    )
+    assert trace.mitre_associations == []
+    assert trace.grounding.associations_outside_context == 1
 
 
 def test_workflow_scenario_d_rag_failure_falls_back_to_case_sources():
     async def exercise():
         source_id, trace, source_bundle, applicability, _ = _fixtures()
-        claimed = ClaimedCaseRun(
-            id=uuid4(),
-            case_id=uuid4(),
-            source_bundle=source_bundle,
-            attempt_count=1,
-            operation="analysis",
-            pipeline_config={},
-            request_payload={"response_language": "english"},
-        )
 
         async def fake_rag(_query):
             raise RagCallFailure("rag_timeout", "RAG service timed out")
@@ -399,32 +335,23 @@ def test_workflow_scenario_d_rag_failure_falls_back_to_case_sources():
                 execution_receipt={"calls": []},
             )
 
-        fake_db = AsyncMock()
-        fake_db.scalar = AsyncMock(return_value=None)
-
-        class FakeSessionFactory:
-            async def __aenter__(self):
-                return fake_db
-
-            async def __aexit__(self, *args):
-                pass
-
-        with patch("app.services.workflow.case_run_execution.load_followup_exchanges", return_value=()):
-            output = await execute_claimed_work(
-                claimed,
-                session_factory=FakeSessionFactory,
-                analysis_request=fake_analysis,
-                answer_request=AsyncMock(),
-                applicability_gate=_gate(applicability),
-                rag_request=fake_rag,
-            )
+        artifacts = await run_pipeline(
+            AnalysisInput(sources=source_bundle, response_language="english"),
+            stages=(
+                TechnicalContextStage(
+                    applicability_gate=_gate(applicability), rag_request=fake_rag
+                ),
+                AnalysisStage(analysis_request=fake_analysis),
+            ),
+        )
 
         assert len(analysis_kwargs) == 1
         assert analysis_kwargs[0]["technical_context"] is None
         assert analysis_kwargs[0]["retrieval_context_id"] is None
-        assert output.trace.mitre_associations == []
-        assert output.execution_receipt["technical_augmentation"]["status"] == "failed"
-        assert output.execution_receipt["technical_augmentation"]["failure_code"] == "rag_timeout"
+        assert artifacts.trace.mitre_associations == []
+        augmentation = artifacts.receipt["technical_augmentation"]
+        assert augmentation["status"] == "failed"
+        assert augmentation["failure_code"] == "rag_timeout"
 
     asyncio.run(exercise())
 
@@ -446,7 +373,6 @@ def test_scenario_e_case_sources_remain_only_allowed_source_ids_for_claims():
     )
     parsed = CaseProviderAnalysis(
         version="case_analysis_trace_v1",
-        answer="Summary",
         summary="Summary",
         involved_parties=[],
         timeline=[],
@@ -455,12 +381,14 @@ def test_scenario_e_case_sources_remain_only_allowed_source_ids_for_claims():
         gaps=[],
         mitre_associations=[],
     )
-    with pytest.raises(CaseAnalysisFailure) as err:
-        validate_direct_trace(
-            parsed,
-            mode="case_overview",
-            source_bundle=source_bundle,
-            retrieval_context_id="retrieval-case-1",
-            mitre_table=list(context.mitre_table),
-        )
-    assert err.value.code == "case_trace_support_outside_evidence"
+    # A source id the case does not have is removed from the claim. The claim
+    # survives resting on nothing, which claims_without_citation records.
+    trace = validate_direct_trace(
+        parsed,
+        mode="case_overview",
+        source_bundle=source_bundle,
+        retrieval_context_id="retrieval-case-1",
+        mitre_table=list(context.mitre_table),
+    )
+    assert trace.claims[0].supporting_source_ids == []
+    assert trace.grounding.claims_without_citation == 1

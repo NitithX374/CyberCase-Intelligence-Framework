@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 ReportSupportType = Literal[
     "user_reported",
@@ -14,8 +14,6 @@ ReportSupportType = Literal[
     "unknown",
 ]
 ReportStatus = Literal["provisional_unverified"]
-ReportPersistenceStatus = Literal["completed", "failed"]
-ReportValidationStatus = Literal["validated", "failed"]
 ReportVersion = Literal["preliminary_analysis_report_v1"]
 ReportSectionId = Literal[
     "case_summary",
@@ -48,14 +46,6 @@ PRELIMINARY_REPORT_SECTION_HEADINGS: dict[str, str] = {
     "system_limitations": "7. ข้อจำกัดของระบบ",
 }
 
-REPORT_SECTION_IDS_BY_VERSION: dict[str, tuple[str, ...]] = {
-    "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_IDS,
-}
-
-REPORT_SECTION_HEADINGS_BY_VERSION: dict[str, dict[str, str]] = {
-    "preliminary_analysis_report_v1": PRELIMINARY_REPORT_SECTION_HEADINGS,
-}
-
 
 class ReportClaim(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -64,7 +54,7 @@ class ReportClaim(BaseModel):
     section_id: ReportSectionId
     text: str = Field(min_length=1, max_length=4_000)
     support_type: ReportSupportType
-    source_evidence_ids: list[str] = Field(default_factory=list, max_length=32)
+    source_ids: list[str] = Field(default_factory=list, max_length=32)
     mitre_technique_ids: list[str] = Field(default_factory=list, max_length=32)
 
 
@@ -91,16 +81,8 @@ class StructuredReport(BaseModel):
 class CaseReportCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # Defaults to the case's current analysis.
     analysis_result_id: UUID | None = None
-    idempotency_key: str | None = Field(default=None, max_length=255)
-
-    @field_validator("idempotency_key")
-    @classmethod
-    def normalize_idempotency_key(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
 
 
 class CaseReportRead(BaseModel):
@@ -108,39 +90,23 @@ class CaseReportRead(BaseModel):
 
     report_id: UUID
     version_number: int
-    idempotency_key: str
     case_id: UUID
     analysis_result_id: UUID
-    retrieval_context_id: str | None = None
-    prompt_version: str
-    persistence_status: ReportPersistenceStatus
-    validation_status: ReportValidationStatus
-    report: StructuredReport | None
-    validation_errors: list[str]
-    failure_code: str | None
-    failure_message: str | None
+    report: StructuredReport
     created_at: datetime
-    finished_at: datetime | None
-    latency_ms: float | None
-    input_tokens: int | None
-    output_tokens: int | None
 
 
 __all__ = [
     "CaseReportCreate",
     "CaseReportRead",
-    "REPORT_SECTION_HEADINGS_BY_VERSION",
-    "REPORT_SECTION_IDS_BY_VERSION",
     "PRELIMINARY_REPORT_SECTION_HEADINGS",
     "PRELIMINARY_REPORT_SECTION_IDS",
     "ReportClaim",
     "ReportHeading",
-    "ReportPersistenceStatus",
     "ReportSection",
     "ReportSectionId",
     "ReportStatus",
     "ReportSupportType",
-    "ReportValidationStatus",
     "ReportVersion",
     "StructuredReport",
 ]

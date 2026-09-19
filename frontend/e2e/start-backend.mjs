@@ -4,10 +4,13 @@ import { spawn } from "node:child_process";
 const frontendDirectory = path.resolve(import.meta.dirname, "..");
 const repositoryDirectory = path.resolve(frontendDirectory, "..");
 const backendDirectory = path.join(repositoryDirectory, "backend");
-const pythonExecutable = process.platform === "win32"
-  ? path.join(repositoryDirectory, "env_mitre", "Scripts", "python.exe")
-  : path.join(repositoryDirectory, "env_mitre", "bin", "python");
-const databaseUrl = process.env.E2E_DATABASE_URL ?? "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/cybercase_framework";
+const pythonExecutable =
+  process.platform === "win32"
+    ? path.join(repositoryDirectory, "env_mitre", "Scripts", "python.exe")
+    : path.join(repositoryDirectory, "env_mitre", "bin", "python");
+const databaseUrl =
+  process.env.E2E_DATABASE_URL ??
+  "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/cybercase_framework";
 
 const child = spawn(
   pythonExecutable,

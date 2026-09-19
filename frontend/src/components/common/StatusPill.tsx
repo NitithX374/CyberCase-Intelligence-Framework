@@ -1,12 +1,7 @@
 import type { ReactNode } from "react";
 
 export type StatusPillTone =
-  | "neutral"
-  | "positive"
-  | "attention"
-  | "critical"
-  | "external"
-  | "evidence";
+  "neutral" | "positive" | "attention" | "critical" | "external" | "source";
 
 interface StatusPillProps {
   children: ReactNode;
@@ -20,14 +15,10 @@ const toneClasses: Record<StatusPillTone, string> = {
   attention: "text-unresolved",
   critical: "text-critical",
   external: "text-mitre",
-  evidence: "text-evidence",
+  source: "text-source",
 };
 
-export function StatusPill({
-  children,
-  tone = "neutral",
-  className = "",
-}: StatusPillProps) {
+export function StatusPill({ children, tone = "neutral", className = "" }: StatusPillProps) {
   return (
     <span
       className={`inline-flex items-center text-[11px] font-medium leading-4 ${toneClasses[tone]} ${className}`}

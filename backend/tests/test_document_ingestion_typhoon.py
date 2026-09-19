@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 
 from app.services.document_ingestion.errors import RecognitionResponseError
-from app.services.document_ingestion.service import build_document_recognizer
 from app.services.document_ingestion.recognition.typhoon import (
     TyphoonDocumentRecognizer,
     TyphoonRecognizerConfig,
 )
+from app.services.document_ingestion.service import build_document_recognizer
 
 
 def test_typhoon_recognizer_loads_without_optional_google_packages():

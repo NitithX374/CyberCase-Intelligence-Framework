@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
+
 from app.config import settings
 
 
@@ -19,15 +20,15 @@ def create_access_token(
     if len(settings.jwt_secret_key) < 32:
         raise ValueError("JWT_SECRET_KEY must contain at least 32 characters")
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
+        expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
 
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "email": email,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
     }
 
     return jwt.encode(
@@ -42,12 +43,11 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
     if len(settings.jwt_secret_key) < 32:
         raise ValueError("JWT_SECRET_KEY must contain at least 32 characters")
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             settings.jwt_secret_key,
             algorithms=[settings.jwt_algorithm],
         )
-        return payload
     except jwt.PyJWTError:
         return None
 

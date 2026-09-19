@@ -1,9 +1,8 @@
 import type { SVGProps } from "react";
 
 export type IconName =
-  | "intake"
   | "overview"
-  | "materials"
+  | "sources"
   | "technical"
   | "issues"
   | "chat"
@@ -20,7 +19,8 @@ export type IconName =
   | "collapse"
   | "account"
   | "search"
-  | "list";
+  | "list"
+  | "edit";
 
 const paths: Record<IconName, React.ReactNode> = {
   error: (
@@ -37,14 +37,6 @@ const paths: Record<IconName, React.ReactNode> = {
       <line x1="12" y1="16" x2="12.01" y2="16" />
     </>
   ),
-  intake: (
-    <>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="12" y1="18" x2="12" y2="12" />
-      <line x1="9" y1="15" x2="15" y2="15" />
-    </>
-  ),
   overview: (
     <>
       <rect x="3" y="3" width="7" height="9" rx="1.5" />
@@ -53,7 +45,7 @@ const paths: Record<IconName, React.ReactNode> = {
       <rect x="3" y="16" width="7" height="5" rx="1.5" />
     </>
   ),
-  materials: (
+  sources: (
     <>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
@@ -88,6 +80,12 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6" />
       <path d="M10 11v5M14 11v5" />
+    </>
+  ),
+  edit: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </>
   ),
   close: <path d="M18 6 6 18M6 6l12 12" />,

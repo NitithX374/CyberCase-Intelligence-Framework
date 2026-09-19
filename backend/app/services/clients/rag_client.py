@@ -8,7 +8,6 @@ from pydantic import ValidationError
 from app.config import settings
 from app.schemas.rag import QueryRequest, QueryResponse
 
-
 RAG_HTTP_TIMEOUT_SECONDS = 300.0
 
 

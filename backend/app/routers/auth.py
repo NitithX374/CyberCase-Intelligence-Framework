@@ -62,7 +62,9 @@ async def register(
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "An account already exists for this email") from error
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "An account already exists for this email"
+        ) from error
     await db.refresh(user)
     return start_password_session(user, response)
 

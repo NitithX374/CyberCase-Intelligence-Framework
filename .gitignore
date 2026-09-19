@@ -185,3 +185,6 @@ experiments/ctinexus_extraction_benchmark/**/*.pyc
 experiments/representation_analysis/outputs/
 
 .codex-remote-attachments/
+
+# Model weights: ~1.1 GB, distributed separately and copied into the backend image.
+backend/xlmr_ladder_best/

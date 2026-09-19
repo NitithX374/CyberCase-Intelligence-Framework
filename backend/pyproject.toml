@@ -1,0 +1,27 @@
+[tool.ruff]
+# Matches the frontend's Prettier width, so a file reads the same on either side.
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+  "E4", "E7", "E9", # pycodestyle: the errors, not the whitespace opinions
+  "F",              # pyflakes
+  "I",              # import order
+  "UP",             # syntax this Python version made older
+  "B",              # bugbear
+  "SIM",            # needless complication
+  "RET",            # returns
+  "C4",             # comprehensions
+]
+ignore = [
+  # FastAPI reads dependencies out of default arguments -- Depends(...) and
+  # File(...) in a signature is the framework's idiom, not a mutable default.
+  "B008",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Alembic writes these, and writes them the same way every time.
+"alembic/baseline_versions/*" = ["I001"]
+# The imports here follow logging.basicConfig deliberately; the file says why.
+"app/main.py" = ["E402"]

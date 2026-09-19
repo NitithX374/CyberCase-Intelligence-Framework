@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.6-luna"
 
 
@@ -76,7 +75,7 @@ def resolve_openrouter_model(model_name_or_alias: str | None) -> str:
 
     cleaned = model_name_or_alias.strip()
     if cleaned.lower().startswith("openrouter/"):
-        cleaned = cleaned[len("openrouter/"):]
+        cleaned = cleaned[len("openrouter/") :]
 
     lookup_key = cleaned.lower()
     if lookup_key in _ALIAS_MAP:

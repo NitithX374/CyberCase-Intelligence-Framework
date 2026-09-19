@@ -1,53 +1,35 @@
 import { execFileSync } from "node:child_process";
-import {
-  mkdtemp,
-  mkdir,
-  readFile,
-  readdir,
-  rm,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import openapiTS from "openapi-typescript";
 import ts from "typescript";
 
-const modulePath = import.meta.url.startsWith("file:")
-  ? fileURLToPath(import.meta.url)
-  : null;
-const frontend = modulePath
-  ? resolve(dirname(modulePath), "..")
-  : resolve(process.cwd());
+const modulePath = import.meta.url.startsWith("file:") ? fileURLToPath(import.meta.url) : null;
+const frontend = modulePath ? resolve(dirname(modulePath), "..") : resolve(process.cwd());
 const workspace = resolve(frontend, "..");
 
 export const SCHEMA_GROUPS = Object.freeze({
-  caseTypes: [
-    "CaseDocumentRead",
-    "CaseRead",
-    "DocumentExtractionRead",
-  ],
-  evidenceTypes: [
-    "CaseSourceCreate",
-    "CaseSourceRead",
-  ],
-  runTypes: [
-    "CaseAnalysisAccepted",
+  caseTypes: ["CaseDocumentRead", "CaseRead", "DocumentExtractionRead"],
+  sourceTypes: ["CaseSourceCreate", "CaseSourceRead"],
+  analysisTypes: [
     "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
-    "CaseChatMessageAccepted",
-    "CaseFollowUpAnswer",
-    "CaseFollowUpRead",
-    "CaseRunRead",
+    "CaseChatResponse",
+    // The analysis trace, as the service defines it. The client reads this
+    // instead of re-deriving the shape from an untyped blob.
+    "CaseAnalysisClaim",
+    "CaseAnalysisGap",
+    "CaseAnalysisTrace",
+    "CaseGroundingReport",
+    "CaseImpactItem",
+    "CaseInvolvedParty",
+    "CaseMitreAssociation",
+    "CaseSourceCitation",
+    "CaseTimelineItem",
   ],
-  chatTypes: [
-    "CaseChatRead",
-    "ChatMessageCreate",
-    "ChatMessageRead",
-    "FollowUpMetadata",
-    "MessageMetadata",
-  ],
+  chatTypes: ["CaseChatRead", "ChatMessageCreate", "ChatMessageRead", "MessageMetadata"],
   reportTypes: [
     "CaseReportCreate",
     "CaseReportRead",
@@ -58,17 +40,14 @@ export const SCHEMA_GROUPS = Object.freeze({
 });
 
 export const LEGACY_GENERATED_FILES = Object.freeze([
-  "CaseAnalysisAccepted.ts",
   "CaseAnalysisCreate.ts",
   "CaseAnalysisResultRead.ts",
-  "CaseChatMessageAccepted.ts",
   "CaseClarificationRead.ts",
   "CaseDocumentRead.ts",
   "CaseEvidenceCreate.ts",
   "CaseNarrativeDocumentSource.ts",
   "CaseRead.ts",
   "CaseReportCreate.ts",
-  "CaseRunRead.ts",
   "ChatMessageCreate.ts",
   "ChatMessageRead.ts",
   "DocumentExtractionRead.ts",
@@ -100,9 +79,7 @@ function createSchemaOwners() {
 
 function getOpenApiSchemaTypes(nodes) {
   const components = nodes.find((node) => node.name?.text === "components");
-  const schemas = components?.members.find(
-    (member) => member.name?.text === "schemas",
-  );
+  const schemas = components?.members.find((member) => member.name?.text === "schemas");
 
   if (!schemas) {
     throw new Error("OpenAPI schema components are missing");
@@ -115,22 +92,17 @@ function renderSchemaType(name, type, printer, source, owners) {
   const dependencies = new Set();
   const body = printer
     .printNode(ts.EmitHint.Unspecified, type, source)
-    .replace(
-      /components\["schemas"\]\["([^"]+)"\]/g,
-      (_, dependency) => {
-        if (dependency !== name) {
-          dependencies.add(dependency);
-        }
+    .replace(/components\["schemas"\]\["([^"]+)"\]/g, (_, dependency) => {
+      if (dependency !== name) {
+        dependencies.add(dependency);
+      }
 
-        if (!owners.has(dependency)) {
-          throw new Error(
-            `Schema dependency has no domain owner: ${name} -> ${dependency}`,
-          );
-        }
+      if (!owners.has(dependency)) {
+        throw new Error(`Schema dependency has no domain owner: ${name} -> ${dependency}`);
+      }
 
-        return dependency;
-      },
-    );
+      return dependency;
+    });
 
   return { body, dependencies };
 }
@@ -185,10 +157,7 @@ export async function buildGeneratedFiles(schema) {
         throw new Error(`Missing OpenAPI schema: ${name}`);
       }
 
-      renderedTypes.set(
-        name,
-        renderSchemaType(name, type, printer, source, owners),
-      );
+      renderedTypes.set(name, renderSchemaType(name, type, printer, source, owners));
     }
   }
 
@@ -238,7 +207,10 @@ export async function syncGeneratedFiles(output, generated, { check = false } = 
   const staleEntries = entries.filter((entry) => !expectedNames.has(entry.name));
 
   if (staleEntries.some((entry) => !LEGACY_GENERATED_FILES.includes(entry.name))) {
-    const names = staleEntries.map((entry) => entry.name).sort().join(", ");
+    const names = staleEntries
+      .map((entry) => entry.name)
+      .sort()
+      .join(", ");
     throw new Error(`Unexpected generated output in owned directory: ${names}`);
   }
 
@@ -248,7 +220,10 @@ export async function syncGeneratedFiles(output, generated, { check = false } = 
     }
 
     if (staleEntries.length) {
-      const names = staleEntries.map((entry) => entry.name).sort().join(", ");
+      const names = staleEntries
+        .map((entry) => entry.name)
+        .sort()
+        .join(", ");
       throw new Error(`Generated output is obsolete: ${names}`);
     }
 
@@ -278,19 +253,18 @@ export async function generateApiTypes({
       "env_mitre",
       process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
     ),
-  } = {}) {
+} = {}) {
   const temporary = await mkdtemp(join(tmpdir(), "cybercase-openapi-"));
 
   try {
     const schemaPath = join(temporary, "openapi.json");
-    execFileSync(
-      python,
-      [join(workspace, "backend/scripts/export_openapi.py"), schemaPath],
-      { cwd: workspace, stdio: "inherit" },
-    );
+    execFileSync(python, [join(workspace, "backend/scripts/export_openapi.py"), schemaPath], {
+      cwd: workspace,
+      stdio: "inherit",
+    });
     const schema = JSON.parse(await readFile(schemaPath, "utf8"));
     const generated = await buildGeneratedFiles(schema);
-    const output = join(frontend, "src/lib/generated");
+    const output = join(frontend, "src/lib/api/generated");
 
     await syncGeneratedFiles(output, generated, { check });
   } finally {
@@ -299,9 +273,7 @@ export async function generateApiTypes({
 }
 
 const isMainModule =
-  modulePath &&
-  process.argv[1] &&
-  resolve(process.argv[1]) === resolve(modulePath);
+  modulePath && process.argv[1] && resolve(process.argv[1]) === resolve(modulePath);
 
 if (isMainModule) {
   await generateApiTypes({ check: process.argv.includes("--check") });

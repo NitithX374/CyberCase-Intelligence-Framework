@@ -3,20 +3,19 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.case_analysis.case_analysis import execute_analysis_pipeline
+from app.services.case_analysis.analysis import execute_analysis_pipeline
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
-    CaseAnalysisFailure,
     CaseAnalysisTrace,
-    CaseSourceCitation,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderAnalysis,
+    CaseSourceCitation,
     CaseTimelineItem,
 )
-from app.services.case_materials import CaseSourceBundle, CaseSourceItem
 from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
-from app.services.case_analysis.validation import validate_case_trace
+from app.services.case_analysis.validation import resolve_case_trace
+from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 
 def test_case_overview_models_construct_and_normalize_claim_ids() -> None:
@@ -46,7 +45,7 @@ def test_case_overview_models_construct_and_normalize_claim_ids() -> None:
     assert impact.claim_ids == ["A-03"]
 
 
-def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> None:
+def test_resolve_case_trace_accepts_valid_parties_timeline_and_impacts() -> None:
     source = CaseSourceItem(
         source_id="s1",
         source_kind="narrative",
@@ -67,24 +66,18 @@ def test_validate_case_trace_accepts_valid_parties_timeline_and_impacts() -> Non
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="Breach occurred.",
-        involved_parties=[
-            CaseInvolvedParty(name="Victim Org", role="Target", claim_ids=["A-01"])
-        ],
-        timeline=[
-            CaseTimelineItem(time="Monday", event="Breach", claim_ids=["A-01"])
-        ],
+        involved_parties=[CaseInvolvedParty(name="Victim Org", role="Target", claim_ids=["A-01"])],
+        timeline=[CaseTimelineItem(time="Monday", event="Breach", claim_ids=["A-01"])],
         claims=[claim],
-        impacts=[
-            CaseImpactItem(description="Server compromise", claim_ids=["A-01"])
-        ],
+        impacts=[CaseImpactItem(description="Server compromise", claim_ids=["A-01"])],
     )
-    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
+    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert len(validated.involved_parties) == 1
     assert len(validated.timeline) == 1
     assert len(validated.impacts) == 1
 
 
-def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
+def test_resolve_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
     source = CaseSourceItem(
         source_id="s1",
         source_kind="narrative",
@@ -110,11 +103,11 @@ def test_validate_case_trace_rejects_unknown_claim_in_involved_parties() -> None
         ],
         claims=[claim],
     )
-    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
+    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert validated.involved_parties[0].claim_ids == []
 
 
-def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
+def test_resolve_case_trace_rejects_unknown_claim_in_timeline() -> None:
     source = CaseSourceItem(
         source_id="s1",
         source_kind="narrative",
@@ -135,16 +128,14 @@ def test_validate_case_trace_rejects_unknown_claim_in_timeline() -> None:
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="Breach occurred.",
-        timeline=[
-            CaseTimelineItem(time="Tuesday", event="Lateral movement", claim_ids=["A-05"])
-        ],
+        timeline=[CaseTimelineItem(time="Tuesday", event="Lateral movement", claim_ids=["A-05"])],
         claims=[claim],
     )
-    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
+    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert validated.timeline[0].claim_ids == []
 
 
-def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
+def test_resolve_case_trace_rejects_unknown_claim_in_impacts() -> None:
     source = CaseSourceItem(
         source_id="s1",
         source_kind="narrative",
@@ -165,12 +156,10 @@ def test_validate_case_trace_rejects_unknown_claim_in_impacts() -> None:
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="Breach occurred.",
-        impacts=[
-            CaseImpactItem(description="Financial loss", claim_ids=["A-99"])
-        ],
+        impacts=[CaseImpactItem(description="Financial loss", claim_ids=["A-99"])],
         claims=[claim],
     )
-    validated = validate_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
+    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
     assert validated.impacts[0].claim_ids == []
 
 
@@ -196,11 +185,8 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
         )
         provider_output = CaseProviderAnalysis(
             version="case_analysis_trace_v1",
-            answer="Summary answer",
             summary="Case overview summary",
-            involved_parties=[
-                CaseInvolvedParty(name="ACME", role="Victim", claim_ids=["A-01"])
-            ],
+            involved_parties=[CaseInvolvedParty(name="ACME", role="Victim", claim_ids=["A-01"])],
             timeline=[
                 CaseTimelineItem(time="Monday", event="Unauthorized access", claim_ids=["A-01"])
             ],
@@ -214,7 +200,7 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             return provider_output
 
         with patch(
-            "app.services.case_analysis.case_analysis.request_analysis_stage",
+            "app.services.case_analysis.analysis.request_analysis_stage",
             new=fake_request_stage,
         ):
             result = await execute_analysis_pipeline(
@@ -252,7 +238,6 @@ def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() 
     valid = CaseProviderAnalysis.model_validate(
         {
             "version": "case_analysis_trace_v1",
-            "answer": "Answer",
             "summary": "Summary",
             "involved_parties": [],
             "timeline": [],
@@ -269,7 +254,6 @@ def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() 
         CaseProviderAnalysis.model_validate(
             {
                 "version": "case_analysis_trace_v1",
-                "answer": "Answer",
                 "summary": "Summary",
                 "timeline": [],
                 "impacts": [],
@@ -282,7 +266,6 @@ def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() 
         CaseProviderAnalysis.model_validate(
             {
                 "version": "case_analysis_trace_v1",
-                "answer": "Answer",
                 "summary": "Summary",
                 "involved_parties": [],
                 "impacts": [],
@@ -295,7 +278,6 @@ def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() 
         CaseProviderAnalysis.model_validate(
             {
                 "version": "case_analysis_trace_v1",
-                "answer": "Answer",
                 "summary": "Summary",
                 "involved_parties": [],
                 "timeline": [],

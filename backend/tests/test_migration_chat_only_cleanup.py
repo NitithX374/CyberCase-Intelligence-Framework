@@ -1,6 +1,5 @@
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 BASELINE = Path(__file__).parents[1] / "alembic" / "baseline_versions"
 
@@ -12,6 +11,11 @@ def test_migration_chain_is_clean_and_linear() -> None:
         "0002_case_run_active_index.py",
         "0003_received_case_material.py",
         "0004_external_context_json.py",
+        "0005_remove_case_runs.py",
+        "0006_source_vocabulary.py",
+        "0007_report_content_only.py",
+        "0008_chat_client_request_id.py",
+        "0009_followup_gap_key.py",
     ]
     baseline_source = migrations[0].read_text(encoding="utf-8")
     assert 'revision = "0001_canonical_case_system"' in baseline_source

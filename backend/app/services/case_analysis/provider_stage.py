@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from functools import lru_cache
@@ -11,18 +12,19 @@ import httpx
 import tiktoken
 from pydantic import BaseModel, ValidationError
 
-from app.config import settings
-from app.services.case_analysis.case_analysis_response_parser import (
+from app.services.case_analysis.contracts import CaseAnalysisFailure
+from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
+from app.services.case_analysis.response_parser import (
     extract_visible_text,
     validate_response_payload,
 )
-from app.services.case_analysis.contracts import CaseAnalysisFailure
-from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
 from app.services.llm.core_llm import CoreLlmTarget, resolve_core_llm_target
 from app.services.llm.structured_output import (
     structured_output_request_options,
     structured_output_schema,
 )
+
+logger = logging.getLogger("app.case_analysis")
 
 ProviderResult = TypeVar("ProviderResult", bound=BaseModel)
 
@@ -45,8 +47,7 @@ def input_budget(config: AnalysisPipelineConfig) -> int:
 
 
 def resolve_target(config: AnalysisPipelineConfig) -> CoreLlmTarget:
-    configured = settings.model_copy(update={"core_llm_provider": config.provider})
-    return resolve_core_llm_target(config.model, configured_settings=configured)
+    return resolve_core_llm_target(config.model)
 
 
 def stage_payload(
@@ -58,7 +59,6 @@ def stage_payload(
     return {
         "model": config.model,
         **structured_output_request_options(
-            provider=config.provider,
             feature="case_analysis",
             configured_max_tokens=config.output_tokens,
         ),
@@ -67,7 +67,7 @@ def stage_payload(
         "output_config": {
             "format": {
                 "type": "json_schema",
-                "schema": structured_output_schema(schema, provider=config.provider),
+                "schema": structured_output_schema(schema),
             }
         },
     }
@@ -92,7 +92,6 @@ async def request_stage(
     receipt: dict[str, object] = {
         "stage": stage,
         "model": config.model,
-        "provider": target.provider,
         "estimated_input_tokens": estimated,
         "status": "started",
     }
@@ -114,9 +113,22 @@ async def request_stage(
     except httpx.TimeoutException as error:
         raise CaseAnalysisFailure(f"{stage}_timeout", "Analysis stage timed out") from error
     except httpx.RequestError as error:
-        raise CaseAnalysisFailure(f"{stage}_transport", "Analysis stage transport failed") from error
+        raise CaseAnalysisFailure(
+            f"{stage}_transport", "Analysis stage transport failed"
+        ) from error
     except ValidationError as error:
-        raise CaseAnalysisFailure(f"{stage}_invalid", "Analysis stage violated its schema") from error
+        # Which fields, not what was in them: the values are case material.
+        logger.warning(
+            "Analysis stage %s rejected the provider payload: %s",
+            stage,
+            "; ".join(
+                f"{'.'.join(str(part) for part in item['loc']) or '(root)'}: {item['msg']}"
+                for item in error.errors()[:10]
+            ),
+        )
+        raise CaseAnalysisFailure(
+            f"{stage}_invalid", "Analysis stage violated its schema"
+        ) from error
     finally:
         receipt["elapsed_ms"] = round((time.monotonic() - started) * 1000)
         if receipt["status"] == "started":

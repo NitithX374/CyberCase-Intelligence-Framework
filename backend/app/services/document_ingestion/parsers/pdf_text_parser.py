@@ -39,10 +39,6 @@ def normalize_text(text: str) -> str:
     return "\n".join(line for line in lines if line)
 
 
-def split_native_blocks(text: str) -> list[str]:
-    return [line.strip() for line in text.splitlines() if line.strip()]
-
-
 def is_printable(character: str) -> bool:
     return character.isspace() or not unicodedata.category(character).startswith("C")
 
@@ -52,15 +48,11 @@ def is_meaningful(character: str) -> bool:
     return character.isalpha() or character.isdigit() or category.startswith("M")
 
 
-def has_usable_text(
-    text: str, width: float, height: float, policy: NativeTextPolicy
-) -> bool:
+def has_usable_text(text: str, width: float, height: float, policy: NativeTextPolicy) -> bool:
     compact = [character for character in text if not character.isspace()]
     if not compact:
         return False
-    printable_ratio = sum(is_printable(character) for character in compact) / len(
-        compact
-    )
+    printable_ratio = sum(is_printable(character) for character in compact) / len(compact)
     meaningful = [character for character in compact if is_meaningful(character)]
     meaningful_ratio = len(meaningful) / len(compact)
     square_inches = max((width * height) / math.pow(72, 2), 1)
@@ -77,9 +69,7 @@ def has_usable_text(
     )
 
 
-def inspect_pdf(
-    content: bytes, policy: NativeTextPolicy, max_pages: int
-) -> PdfInspection:
+def inspect_pdf(content: bytes, policy: NativeTextPolicy, max_pages: int) -> PdfInspection:
     try:
         reader = PdfReader(BytesIO(content), strict=False)
         page_count = len(reader.pages)

@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "generate:api-types": "node scripts/generate-api-types.mjs",
-    "start": "next start",
-    "lint": "eslint",
-    "test": "vitest run",
-    "e2e": "playwright test",
     "check:api-types": "node scripts/generate-api-types.mjs --check",
+    "dev": "next dev",
+    "e2e": "playwright test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "generate:api-types": "node scripts/generate-api-types.mjs",
+    "lint": "eslint",
+    "start": "next start",
+    "test": "vitest run",
     "test:api-types": "node --test scripts/generate-api-types.node.mjs"
   },
   "dependencies": {
@@ -37,6 +39,7 @@
     "jsdom": "^29.1.1",
     "openapi-typescript": "^7.13.0",
     "postcss": "^8.5.14",
+    "prettier": "^3.9.8",
     "tailwindcss": "^4.2.4",
     "typescript": "^5",
     "vitest": "^4.1.9"

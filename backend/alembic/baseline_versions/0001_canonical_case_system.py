@@ -34,8 +34,18 @@ def upgrade() -> None:
         sa.Column("avatar_url", sa.String(length=1024), nullable=True),
         sa.Column("oauth_provider", sa.String(length=32), server_default="google", nullable=False),
         sa.Column("oauth_subject_id", sa.String(length=255), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_users"),
         sa.UniqueConstraint("email", name="uq_users_email"),
         sa.UniqueConstraint("oauth_provider", "oauth_subject_id", name="uq_users_provider_subject"),
@@ -50,10 +60,22 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=255), server_default="New case", nullable=False),
         sa.Column("evidence_revision", sa.Integer(), server_default="0", nullable=False),
         sa.Column("latest_analysis_result_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.CheckConstraint("evidence_revision >= 0", name="ck_cases_evidence_revision_nonnegative"),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], name="fk_cases_user_id", ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["user_id"], ["users.id"], name="fk_cases_user_id", ondelete="SET NULL"
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_cases"),
     )
     op.create_index("ix_cases_user_id_updated_at", "cases", ["user_id", "updated_at"])
@@ -68,12 +90,21 @@ def upgrade() -> None:
         sa.Column("size_bytes", sa.Integer(), nullable=False),
         sa.Column("content_bytes", sa.LargeBinary(), nullable=False),
         sa.Column("archived_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.CheckConstraint("size_bytes >= 0", name="ck_case_documents_size_nonnegative"),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_documents_case_id", ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["cases.id"], name="fk_case_documents_case_id", ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_case_documents"),
     )
-    op.create_index("ix_case_documents_case_id_created_at", "case_documents", ["case_id", "created_at"])
+    op.create_index(
+        "ix_case_documents_case_id_created_at", "case_documents", ["case_id", "created_at"]
+    )
 
     # 4. document_extractions
     op.create_table(
@@ -81,15 +112,44 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("document_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("provider", sa.String(length=120), nullable=False),
-        sa.Column("config_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
+        sa.Column(
+            "config_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
         sa.Column("extracted_text", sa.Text(), nullable=False),
-        sa.Column("provenance_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("warnings_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["document_id"], ["case_documents.id"], name="fk_document_extractions_document_id", ondelete="CASCADE"),
+        sa.Column(
+            "provenance_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "warnings_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'[]'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["document_id"],
+            ["case_documents.id"],
+            name="fk_document_extractions_document_id",
+            ondelete="CASCADE",
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_document_extractions"),
     )
-    op.create_index("ix_document_extractions_document_id_created_at", "document_extractions", ["document_id", "created_at"])
+    op.create_index(
+        "ix_document_extractions_document_id_created_at",
+        "document_extractions",
+        ["document_id", "created_at"],
+    )
 
     # 5. chat_messages (created before case_runs and case_evidence_sources due to FK references)
     op.create_table(
@@ -100,19 +160,38 @@ def upgrade() -> None:
         sa.Column("role", sa.String(length=16), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("retrieval_context_id", sa.String(length=160), nullable=True),
-        sa.Column("message_kind", sa.String(length=32), server_default="conversation", nullable=False),
+        sa.Column(
+            "message_kind", sa.String(length=32), server_default="conversation", nullable=False
+        ),
         sa.Column("analysis_result_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("in_reply_to_message_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "metadata_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.CheckConstraint("ordinal > 0", name="ck_chat_messages_ordinal_positive"),
         sa.CheckConstraint("role IN ('user', 'assistant')", name="ck_chat_messages_role"),
         sa.CheckConstraint(
             "message_kind IN ('conversation', 'followup_question', 'followup_answer')",
             name="ck_chat_messages_message_kind",
         ),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_chat_messages_case_id_cases", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["in_reply_to_message_id"], ["chat_messages.id"], name="fk_chat_messages_in_reply_to_message_id", ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["cases.id"], name="fk_chat_messages_case_id_cases", ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["in_reply_to_message_id"],
+            ["chat_messages.id"],
+            name="fk_chat_messages_in_reply_to_message_id",
+            ondelete="SET NULL",
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_chat_messages"),
         sa.UniqueConstraint("case_id", "ordinal", name="uq_chat_messages_case_id_ordinal"),
     )
@@ -128,20 +207,51 @@ def upgrade() -> None:
         sa.Column("document_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("origin_message_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("exact_text", sa.Text(), nullable=False),
-        sa.Column("provenance_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("source_metadata_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "provenance_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "source_metadata_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.Column("archived_at", sa.DateTime(timezone=True), nullable=True),
         sa.CheckConstraint(
             "source_kind IN ('reviewed_document', 'narrative', 'followup_answer')",
             name="ck_case_evidence_sources_kind",
         ),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_evidence_sources_case_id", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["document_id"], ["case_documents.id"], name="fk_case_evidence_sources_document_id", ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["origin_message_id"], ["chat_messages.id"], name="fk_case_evidence_sources_origin_message_id", ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["cases.id"], name="fk_case_evidence_sources_case_id", ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["document_id"],
+            ["case_documents.id"],
+            name="fk_case_evidence_sources_document_id",
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["origin_message_id"],
+            ["chat_messages.id"],
+            name="fk_case_evidence_sources_origin_message_id",
+            ondelete="SET NULL",
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_case_evidence_sources"),
     )
-    op.create_index("ix_case_evidence_sources_case_id_created_at", "case_evidence_sources", ["case_id", "created_at"])
+    op.create_index(
+        "ix_case_evidence_sources_case_id_created_at",
+        "case_evidence_sources",
+        ["case_id", "created_at"],
+    )
 
     # 7. case_runs
     op.create_table(
@@ -152,23 +262,54 @@ def upgrade() -> None:
         sa.Column("evidence_revision", sa.Integer(), nullable=False),
         sa.Column("request_message_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("idempotency_key", sa.String(length=255), nullable=False),
-        sa.Column("request_payload", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("pipeline_config", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
+        sa.Column(
+            "request_payload",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "pipeline_config",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
         sa.Column("status", sa.String(length=16), server_default="queued", nullable=False),
         sa.Column("attempt_count", sa.Integer(), server_default="0", nullable=False),
         sa.Column("error_code", sa.String(length=80), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.CheckConstraint("attempt_count >= 0", name="ck_case_runs_attempt_count_nonnegative"),
         sa.CheckConstraint("operation IN ('analysis', 'ask')", name="ck_case_runs_operation"),
-        sa.CheckConstraint("status IN ('queued', 'running', 'completed', 'failed')", name="ck_case_runs_status"),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_runs_case_id", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["request_message_id"], ["chat_messages.id"], name="fk_case_runs_request_message_id", ondelete="NO ACTION"),
+        sa.CheckConstraint(
+            "status IN ('queued', 'running', 'completed', 'failed')", name="ck_case_runs_status"
+        ),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["cases.id"], name="fk_case_runs_case_id", ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["request_message_id"],
+            ["chat_messages.id"],
+            name="fk_case_runs_request_message_id",
+            ondelete="NO ACTION",
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_case_runs"),
-        sa.UniqueConstraint("case_id", "idempotency_key", name="uq_case_runs_case_id_idempotency_key"),
+        sa.UniqueConstraint(
+            "case_id", "idempotency_key", name="uq_case_runs_case_id_idempotency_key"
+        ),
     )
     op.create_index("ix_case_runs_case_id_created_at", "case_runs", ["case_id", "created_at"])
 
@@ -179,23 +320,53 @@ def upgrade() -> None:
         sa.Column("case_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("run_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("evidence_revision", sa.Integer(), nullable=False),
-        sa.Column("schema_version", sa.String(length=80), server_default=sa.text("'case_analysis_trace_v1'"), nullable=False),
-        sa.Column("status", sa.String(length=24), server_default=sa.text("'validated'"), nullable=False),
+        sa.Column(
+            "schema_version",
+            sa.String(length=80),
+            server_default=sa.text("'case_analysis_trace_v1'"),
+            nullable=False,
+        ),
+        sa.Column(
+            "status", sa.String(length=24), server_default=sa.text("'validated'"), nullable=False
+        ),
         sa.Column("answer", sa.Text(), nullable=False),
         sa.Column("summary", sa.Text(), nullable=False),
         sa.Column("trace_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("execution_receipt_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("retrieval_context_id", sa.String(length=160), nullable=True),
-        sa.Column("pipeline_config", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("provider_metadata_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "pipeline_config",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "provider_metadata_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.CheckConstraint("status IN ('validated')", name="ck_case_analysis_results_status"),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_analysis_results_case_id", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["run_id"], ["case_runs.id"], name="fk_case_analysis_results_run_id", ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["cases.id"], name="fk_case_analysis_results_case_id", ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["run_id"], ["case_runs.id"], name="fk_case_analysis_results_run_id", ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_case_analysis_results"),
         sa.UniqueConstraint("run_id", name="uq_case_analysis_results_run_id"),
     )
-    op.create_index("ix_case_analysis_results_case_id_created_at", "case_analysis_results", ["case_id", "created_at"])
+    op.create_index(
+        "ix_case_analysis_results_case_id_created_at",
+        "case_analysis_results",
+        ["case_id", "created_at"],
+    )
 
     # 9. rag_contexts
     op.create_table(
@@ -205,10 +376,27 @@ def upgrade() -> None:
         sa.Column("case_run_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("query_text", sa.Text(), server_default=sa.text("''"), nullable=False),
         sa.Column("context_text", sa.Text(), server_default=sa.text("''"), nullable=False),
-        sa.Column("mitre_table", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_rag_contexts_case_id_cases", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["case_run_id"], ["case_runs.id"], name="fk_rag_contexts_case_run_id_case_runs", ondelete="CASCADE"),
+        sa.Column(
+            "mitre_table",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'[]'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["cases.id"], name="fk_rag_contexts_case_id_cases", ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["case_run_id"],
+            ["case_runs.id"],
+            name="fk_rag_contexts_case_run_id_case_runs",
+            ondelete="CASCADE",
+        ),
         sa.PrimaryKeyConstraint("retrieval_context_id", name="pk_rag_contexts"),
         sa.UniqueConstraint("case_run_id", name="uq_rag_contexts_case_run_id"),
     )
@@ -226,24 +414,52 @@ def upgrade() -> None:
         sa.Column("prompt_version", sa.String(length=120), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("validation_status", sa.String(length=16), nullable=False),
-        sa.Column("validation_errors_json", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb"), nullable=False),
+        sa.Column(
+            "validation_errors_json",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default=sa.text("'[]'::jsonb"),
+            nullable=False,
+        ),
         sa.Column("structured_report", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("failure_code", sa.String(length=80), nullable=True),
         sa.Column("failure_message", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("latency_ms", sa.Float(), nullable=True),
         sa.Column("input_tokens", sa.Integer(), nullable=True),
         sa.Column("output_tokens", sa.Integer(), nullable=True),
         sa.CheckConstraint("status IN ('completed', 'failed')", name="ck_case_reports_status"),
-        sa.CheckConstraint("validation_status IN ('validated', 'failed')", name="ck_case_reports_validation_status"),
+        sa.CheckConstraint(
+            "validation_status IN ('validated', 'failed')", name="ck_case_reports_validation_status"
+        ),
         sa.CheckConstraint("version_number > 0", name="ck_case_reports_version_number_positive"),
-        sa.ForeignKeyConstraint(["analysis_result_id"], ["case_analysis_results.id"], name="fk_case_reports_analysis_result_id_case_analysis_results", ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], name="fk_case_reports_case_id_cases", ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["retrieval_context_id"], ["rag_contexts.retrieval_context_id"], name="fk_case_reports_retrieval_context_id_rag_contexts", ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["analysis_result_id"],
+            ["case_analysis_results.id"],
+            name="fk_case_reports_analysis_result_id_case_analysis_results",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["cases.id"], name="fk_case_reports_case_id_cases", ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["retrieval_context_id"],
+            ["rag_contexts.retrieval_context_id"],
+            name="fk_case_reports_retrieval_context_id_rag_contexts",
+            ondelete="RESTRICT",
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_case_reports"),
-        sa.UniqueConstraint("case_id", "idempotency_key", name="uq_case_reports_case_id_idempotency_key"),
-        sa.UniqueConstraint("case_id", "version_number", name="uq_case_reports_case_id_version_number"),
+        sa.UniqueConstraint(
+            "case_id", "idempotency_key", name="uq_case_reports_case_id_idempotency_key"
+        ),
+        sa.UniqueConstraint(
+            "case_id", "version_number", name="uq_case_reports_case_id_version_number"
+        ),
     )
     op.create_index("ix_case_reports_analysis_result_id", "case_reports", ["analysis_result_id"])
     op.create_index("ix_case_reports_case_id_created_at", "case_reports", ["case_id", "created_at"])
@@ -278,7 +494,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_constraint("fk_chat_messages_analysis_result_id", "chat_messages", type_="foreignkey")
     op.drop_constraint("fk_cases_latest_analysis_result_id", "cases", type_="foreignkey")
-    op.drop_constraint("fk_case_analysis_results_retrieval_context_id", "case_analysis_results", type_="foreignkey")
+    op.drop_constraint(
+        "fk_case_analysis_results_retrieval_context_id", "case_analysis_results", type_="foreignkey"
+    )
 
     op.drop_table("case_reports")
     op.drop_table("rag_contexts")

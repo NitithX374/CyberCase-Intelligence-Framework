@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 
 class MockResizeObserver {
-  observe() { }
-  unobserve() { }
-  disconnect() { }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
 }
 
 if (typeof window !== "undefined") {
@@ -39,9 +39,7 @@ if (typeof window !== "undefined") {
     typeof SVGElement !== "undefined" &&
     !(SVGElement.prototype as unknown as { getBBox?: () => DOMRect }).getBBox
   ) {
-    (
-      SVGElement.prototype as unknown as { getBBox: () => DOMRect }
-    ).getBBox = () =>
+    (SVGElement.prototype as unknown as { getBBox: () => DOMRect }).getBBox = () =>
       ({
         x: 0,
         y: 0,
