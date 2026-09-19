@@ -1,4 +1,4 @@
-from app.services.case_analysis.case_analysis import analyze_case, request_case_analysis
+from app.services.case_analysis.analysis import analyze_case, request_case_analysis
 from app.services.case_analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisOutput,

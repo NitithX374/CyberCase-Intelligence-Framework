@@ -24,9 +24,7 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                 },
             )
 
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(handler)
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             response = await request_rag("inspect this", client=client)
 
         self.assertEqual(
@@ -46,7 +44,8 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
     async def test_answer_fields_are_rejected(self) -> None:
         for forbidden_field in ("answer", "rag_answer"):
             with self.subTest(forbidden_field=forbidden_field):
-                def handler(request: httpx.Request) -> httpx.Response:
+
+                def handler(request: httpx.Request, field: str = forbidden_field) -> httpx.Response:
                     return httpx.Response(
                         200,
                         json={
@@ -54,13 +53,11 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                             "retrieval_context_id": None,
                             "context": "",
                             "mitre_table": [],
-                            forbidden_field: "must not cross this boundary",
+                            field: "must not cross this boundary",
                         },
                     )
 
-                async with httpx.AsyncClient(
-                    transport=httpx.MockTransport(handler)
-                ) as client:
+                async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
                     with self.assertRaises(RagCallFailure) as raised:
                         await request_rag("inspect this", client=client)
                 self.assertEqual(raised.exception.code, "rag_invalid_response")
@@ -77,9 +74,7 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                 },
             )
 
-        async with httpx.AsyncClient(
-            transport=httpx.MockTransport(handler)
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             with self.assertRaises(RagCallFailure) as raised:
                 await request_rag("inspect this", client=client)
 

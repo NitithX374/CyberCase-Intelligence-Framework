@@ -1,23 +1,45 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CaseFindingsSection } from "@/components/overview/CaseFindingsSection";
-import type { CaseFinding, ClaimType, EpistemicStatus } from "@/lib/caseOverviewTypes";
+import type { CaseFinding, ClaimType, EpistemicStatus } from "@/lib/caseOverview/types";
 import { groupCaseFindings } from "@/lib/caseOverview";
 
-function finding(id: string, claimType: ClaimType = "reported", epistemicStatus: EpistemicStatus = "reported"): CaseFinding {
-  return { id, text: `Original finding ${id}`, claimType, epistemicStatus,
-    reasoningSummary: null, supportingSources: [], contradictingSources: [], mitreTechniques: [] };
+function finding(
+  id: string,
+  claimType: ClaimType = "reported",
+  epistemicStatus: EpistemicStatus = "reported",
+): CaseFinding {
+  return {
+    id,
+    text: `Original finding ${id}`,
+    claimType,
+    epistemicStatus,
+    reasoningSummary: null,
+    supportingSources: [],
+    contradictingSources: [],
+    mitreTechniques: [],
+  };
 }
 
 describe("Grouped case findings", () => {
   it("preserves all combinations of claim type and status without inventing certainty", () => {
     const types: ClaimType[] = ["reported", "analytical_inference", "unknown"];
-    const statuses: EpistemicStatus[] = ["reported", "suspected", "contradicted", "not_established", "unknown", "not_confirmed"];
-    const findings = types.flatMap((type) => statuses.map((status) => finding(`${type}-${status}`, type, status)));
+    const statuses: EpistemicStatus[] = [
+      "reported",
+      "suspected",
+      "contradicted",
+      "not_established",
+      "unknown",
+      "not_confirmed",
+    ];
+    const findings = types.flatMap((type) =>
+      statuses.map((status) => finding(`${type}-${status}`, type, status)),
+    );
     const snapshot = structuredClone(findings);
     const groups = groupCaseFindings(findings);
-    expect(groups.flatMap((group) => group.findings).sort((a, b) => a.id.localeCompare(b.id)))
-      .toEqual([...findings].sort((a, b) => a.id.localeCompare(b.id)));
+    expect(
+      groups.flatMap((group) => group.findings).sort((a, b) => a.id.localeCompare(b.id)),
+    ).toEqual([...findings].sort((a, b) => a.id.localeCompare(b.id)));
     expect(new Set(groups.flatMap((group) => group.findings.map((item) => item.id))).size).toBe(18);
     expect(groups.find((group) => group.id === "not_established")?.findings).toHaveLength(3);
     expect(groups.find((group) => group.id === "reported")?.findings).toEqual([findings[0]]);
@@ -26,7 +48,9 @@ describe("Grouped case findings", () => {
 
   it("keeps uncertainty visible before long reported groups and exposes every remaining finding", () => {
     const reported = Array.from({ length: 12 }, (_, index) => finding(`reported-${index}`));
-    const uncertain = Array.from({ length: 7 }, (_, index) => finding(`uncertain-${index}`, "analytical_inference", "not_established"));
+    const uncertain = Array.from({ length: 7 }, (_, index) =>
+      finding(`uncertain-${index}`, "analytical_inference", "not_established"),
+    );
     const { container } = render(<CaseFindingsSection findings={[...reported, ...uncertain]} />);
     expect(container.querySelector("article")).toHaveTextContent("Original finding uncertain-0");
     const uncertainty = screen.getByRole("region", { name: "Not established 7" });
@@ -41,10 +65,21 @@ describe("Grouped case findings", () => {
   });
 
   it("shows both axes for an inference without established support", () => {
-    render(<CaseFindingsSection findings={[finding("inference", "analytical_inference", "not_established"), finding("missing", "unknown", "unknown")]} />);
+    render(
+      <CaseFindingsSection
+        findings={[
+          finding("inference", "analytical_inference", "not_established"),
+          finding("missing", "unknown", "unknown"),
+        ]}
+      />,
+    );
     const inference = screen.getByRole("region", { name: "Not established 1" });
-    expect(within(inference).getByRole("article")).toHaveTextContent("Analytical inference· Not established");
-    expect(screen.getByRole("region", { name: "Unknown 1" })).toHaveTextContent("Original finding missing");
+    expect(within(inference).getByRole("article")).toHaveTextContent(
+      "Not established · Analytical inference",
+    );
+    expect(screen.getByRole("region", { name: "Unknown 1" })).toHaveTextContent(
+      "Original finding missing",
+    );
     expect(screen.queryByText(/Confirmed fact|Supported fact|False/)).not.toBeInTheDocument();
   });
 });

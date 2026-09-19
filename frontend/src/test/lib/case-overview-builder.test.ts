@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
-import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceCitation, CaseSourceRead } from "@/lib/api";
 import { buildCaseOverview } from "@/lib/caseOverview";
 
 const sourceId = "11111111-1111-4111-8111-111111111111";
 const caseId = "22222222-2222-4222-8222-222222222222";
 const quote = "The witness saw a blue vehicle.";
 
-function evidence(text: string, kind = "narrative", options: Record<string, unknown> = {}): CaseSourceRead {
+function sourceItem(
+  text: string,
+  kind = "narrative",
+  options: Record<string, unknown> = {},
+): CaseSourceRead {
   return {
     id: sourceId,
     case_id: caseId,
@@ -15,18 +19,18 @@ function evidence(text: string, kind = "narrative", options: Record<string, unkn
     origin_message_id: null,
     exact_text: text,
     provenance_json: (options.provenance_json as Record<string, unknown> | undefined) ?? {},
-    source_metadata_json: (options.source_metadata_json as Record<string, unknown> | undefined) ?? {},
+    source_metadata_json:
+      (options.source_metadata_json as Record<string, unknown> | undefined) ?? {},
     created_at: "2026-09-10T00:00:00Z",
     archived_at: null,
   };
 }
 
-function result(text: string, citation: Record<string, unknown>): CaseAnalysisResultRead {
+function result(text: string, citation: CaseSourceCitation): CaseAnalysisResultRead {
   return {
     id: "44444444-4444-4444-8444-444444444444",
     case_id: caseId,
-    run_id: "55555555-5555-4555-8555-555555555555",
-    evidence_revision: 1,
+    source_revision: 1,
     schema_version: "case_analysis_trace_v1",
     status: "validated",
     answer: text,
@@ -36,21 +40,22 @@ function result(text: string, citation: Record<string, unknown>): CaseAnalysisRe
       validation_status: "validated",
       analysis_mode: "case_overview",
       summary: "The submitted material identifies a blue vehicle.",
-      claims: [{
-        claim_id: "A-01",
-        claim_type: "reported",
-        text,
-        epistemic_status: "reported",
-        reasoning_summary: null,
-        supporting_source_ids: [sourceId],
-        contradicting_source_ids: [],
-        supporting_citations: [citation],
-        contradicting_citations: [],
-      }],
+      claims: [
+        {
+          claim_id: "A-01",
+          claim_type: "reported",
+          text,
+          epistemic_status: "reported",
+          reasoning_summary: null,
+          supporting_source_ids: [sourceId],
+          contradicting_source_ids: [],
+          supporting_citations: [citation],
+          contradicting_citations: [],
+        },
+      ],
       gaps: [],
       mitre_associations: [],
     },
-    execution_receipt_json: {},
     retrieval_context_id: null,
     pipeline_config: {},
     external_context_json: {},
@@ -60,16 +65,25 @@ function result(text: string, citation: Record<string, unknown>): CaseAnalysisRe
 }
 
 describe("Case overview projection", () => {
-  it("renders claims from current Case evidence", () => {
-    const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [evidence(quote)], "completed");
+  it("renders claims from current case sources", () => {
+    const overview = buildCaseOverview(
+      result(quote, { source_id: sourceId, exact_quote: quote }),
+      [sourceItem(quote)],
+      "completed",
+    );
     const source = overview.findings[0].supportingSources[0];
     expect(overview.incidentSummary).toContain("blue vehicle");
-    expect(source).toMatchObject({ id: sourceId, ordinal: 1, isNativeEvidence: true, exactQuote: quote });
+    expect(source).toMatchObject({
+      id: sourceId,
+      ordinal: 1,
+      isNativeSource: true,
+      exactQuote: quote,
+    });
   });
 
-  it("renders overview with OCR document evidence", () => {
+  it("renders overview with OCR document sources", () => {
     const documentQuote = "Defendant was seen at the scene.";
-    const documentEvidence = evidence(documentQuote, "document", {
+    const documentSource = sourceItem(documentQuote, "document", {
       document_id: "DOC-001",
       provenance_json: {
         pages: [{ end_offset: documentQuote.length, page_number: 1, start_offset: 0 }],
@@ -83,7 +97,7 @@ describe("Case overview projection", () => {
       filename: "report.pdf",
       page_numbers: [1],
     });
-    const overview = buildCaseOverview(documentResult, [documentEvidence], "completed");
+    const overview = buildCaseOverview(documentResult, [documentSource], "completed");
     expect(overview.hasAnalysis).toBe(true);
     expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
   });
@@ -91,9 +105,11 @@ describe("Case overview projection", () => {
   it("supports repeated quotes when page binding is unambiguous", () => {
     const repeatedQuote = "Suspicious vehicle reported.";
     const fullText = `${repeatedQuote}\nSome intermediate text.\n${repeatedQuote}`;
-    const documentEvidence = evidence(fullText, "document", {
+    const documentSource = sourceItem(fullText, "document", {
       document_id: "DOC-001",
-      provenance_json: { pages: [{ end_offset: fullText.length, page_number: 1, start_offset: 0 }] },
+      provenance_json: {
+        pages: [{ end_offset: fullText.length, page_number: 1, start_offset: 0 }],
+      },
       source_metadata_json: { filename: "report.pdf" },
     });
     const documentResult = result(repeatedQuote, {
@@ -103,7 +119,7 @@ describe("Case overview projection", () => {
       filename: "report.pdf",
       page_numbers: [1],
     });
-    const overview = buildCaseOverview(documentResult, [documentEvidence], "completed");
+    const overview = buildCaseOverview(documentResult, [documentSource], "completed");
     expect(overview.hasAnalysis).toBe(true);
     expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
   });

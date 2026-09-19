@@ -5,13 +5,14 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.services.auth.jwt import decode_access_token
-from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def extract_token_from_request(request: Request) -> str | None:
@@ -52,8 +53,7 @@ async def get_optional_user(
         return None
 
     result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    return user
+    return result.scalar_one_or_none()
 
 
 async def get_current_user(

@@ -1,0 +1,46 @@
+{"text":"ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น.","label":1,"lang":"th","note":"command execution + outbound connection"}
+{"text":"พบการเข้าสู่บัญชีอีเมลของผู้เสียหายจากอุปกรณ์ที่ไม่รู้จักในต่างประเทศ","label":1,"lang":"th","note":"valid accounts"}
+{"text":"ผู้เสียหายได้รับอีเมลปลอมและกรอกรหัสผ่านในเว็บไซต์ที่เลียนแบบหน้าล็อกอินของธนาคาร","label":1,"lang":"th","note":"phishing credential capture"}
+{"text":"เว็บเซิร์ฟเวอร์ของบริษัทถูกโจมตีด้วย SQL injection และมีการวาง web shell ไว้ที่โฟลเดอร์ upload","label":1,"lang":"th","note":"exploitation + web shell"}
+{"text":"ไฟล์ในเครื่องแม่ข่ายถูกเข้ารหัสทั้งหมดและมีไฟล์ข้อความเรียกค่าไถ่วางอยู่ในทุกโฟลเดอร์","label":1,"lang":"th","note":"ransomware impact"}
+{"text":"คนร้ายติดตั้งโปรแกรมควบคุมเครื่องระยะไกลบนคอมพิวเตอร์ของผู้เสียหายผ่านไฟล์แนบ","label":1,"lang":"th","note":"remote access tool"}
+{"text":"มีการคัดลอกฐานข้อมูลลูกค้าออกไปยังพื้นที่จัดเก็บภายนอกในช่วงกลางดึก","label":1,"lang":"th","note":"exfiltration"}
+{"text":"ผู้ต้องหาใช้โปรแกรมดักจับรหัสผ่านที่พิมพ์บนเครื่องของผู้เสียหาย","label":1,"lang":"th","note":"keylogging"}
+{"text":"ตรวจสอบพบบัญชีผู้ดูแลระบบถูกสร้างขึ้นใหม่โดยไม่มีการอนุมัติ","label":1,"lang":"th","note":"persistence via account creation"}
+{"text":"มีการพยายามเข้าสู่ระบบด้วยรหัสผ่านผิดซ้ำกันกว่าสองพันครั้งภายในหนึ่งชั่วโมง","label":1,"lang":"th","note":"brute force"}
+{"text":"คนร้ายส่งข้อความ SMS พร้อมลิงก์ให้ผู้เสียหายติดตั้งแอปพลิเคชันควบคุมเครื่อง","label":1,"lang":"th","note":"smishing + malicious app"}
+{"text":"พบการปิดการทำงานของโปรแกรมป้องกันไวรัสก่อนที่ไฟล์ต้องสงสัยจะถูกเรียกใช้","label":1,"lang":"th","note":"defense evasion"}
+{"text":"ผู้เสียหายแจ้งว่าโทรศัพท์มือถือที่วางไว้บนโต๊ะสูญหาย","label":0,"lang":"th","note":"device theft, no cyber behavior"}
+{"text":"กล้องวงจรปิดบันทึกภาพบุคคลหนึ่งเดินออกจากอาคารเวลา 22.15 น.","label":0,"lang":"th","note":"CCTV is technology, not cyber behavior"}
+{"text":"ผู้เสียหายโอนเงินจำนวน 45,000 บาท หลังถูกหลอกให้ซื้อสินค้าออนไลน์","label":0,"lang":"th","note":"fraud without technical behavior"}
+{"text":"ผู้ต้องหานำคอมพิวเตอร์โน้ตบุ๊กของผู้เสียหายออกจากห้องพัก","label":0,"lang":"th","note":"computer as stolen object"}
+{"text":"พนักงานสอบสวนได้ยึดโทรศัพท์มือถือของผู้ต้องหาไว้เป็นของกลาง","label":0,"lang":"th","note":"seizure"}
+{"text":"เอกสารที่ส่งมาด้วยปรากฏหมายเลขไอพี 203.0.113.9 อยู่ในตารางท้ายรายงาน","label":0,"lang":"th","note":"IP address as document content"}
+{"text":"ผู้เสียหายใช้บัญชีธนาคารของตนโอนเงินค่าเช่าตามปกติทุกเดือน","label":0,"lang":"th","note":"ordinary account use"}
+{"text":"คดีระหว่างนางสาวสุรัตนา ศรีรักษ์ ผู้ต้องหา ซึ่งต้องหาว่าฉ้อโกง","label":0,"lang":"th","note":"case header"}
+{"text":"จึงขอส่งสำนวนการสอบสวนคดีอาญามายังท่านเพื่อดำเนินการตามประมวลกฎหมายวิธีพิจารณาความอาญา","label":0,"lang":"th","note":"procedural boilerplate"}
+{"text":"หมายจับศาลแขวงพระนครเหนือที่ 152/2563 ลงวันที่ 11 มีนาคม 2563 และประกาศสืบจับแล้ว","label":0,"lang":"th","note":"warrant record"}
+{"text":"ผู้กล่าวหาที่ 1 นายถนอม รอดสุข อายุ 52 ปี อยู่บ้านเลขที่ 19/4","label":0,"lang":"th","note":"party details"}
+{"text":"พยานให้การว่าเห็นรถยนต์สีขาวจอดอยู่หน้าบ้านในคืนเกิดเหตุ","label":0,"lang":"th","note":"witness statement, physical"}
+{"text":"ผู้เสียหายพิมพ์ภาพถ่ายหน้าจออีเมลออกมาเป็นเอกสารแนบท้ายคำร้อง","label":0,"lang":"th","note":"email printout as exhibit"}
+{"text":"เจ้าหน้าที่ตรวจยึดเครื่องคอมพิวเตอร์ตั้งโต๊ะจำนวน 2 เครื่องจากที่เกิดเหตุ","label":0,"lang":"th","note":"seizure of computers"}
+{"text":"An encoded PowerShell command downloaded a script from an external domain.","label":1,"lang":"en","note":"obfuscated execution"}
+{"text":"The attacker authenticated to the VPN using credentials belonging to a former employee.","label":1,"lang":"en","note":"valid accounts"}
+{"text":"A scheduled task was created to run a binary from the temporary directory at every boot.","label":1,"lang":"en","note":"persistence"}
+{"text":"Logs show the database was queried and exported to an external host over FTP.","label":1,"lang":"en","note":"exfiltration"}
+{"text":"The victim entered banking credentials on a page that imitated the bank login screen.","label":1,"lang":"en","note":"phishing"}
+{"text":"Mimikatz was executed on the domain controller and credentials were dumped from memory.","label":1,"lang":"en","note":"credential access"}
+{"text":"An unknown service was installed on the file server and started automatically.","label":1,"lang":"en","note":"persistence via service"}
+{"text":"Event logs on the workstation were cleared shortly after the suspicious login.","label":1,"lang":"en","note":"indicator removal"}
+{"text":"The ransomware encrypted the shared drive and renamed every file with a new extension.","label":1,"lang":"en","note":"impact"}
+{"text":"A macro in the attached document launched a hidden command interpreter.","label":1,"lang":"en","note":"user execution"}
+{"text":"A desktop computer was seized from the suspect's home and stored as an exhibit.","label":0,"lang":"en","note":"seizure"}
+{"text":"The complainant reported that his wallet and mobile phone were stolen at the market.","label":0,"lang":"en","note":"physical theft"}
+{"text":"CCTV footage from the lobby was collected and copied to a disc for the file.","label":0,"lang":"en","note":"CCTV handling"}
+{"text":"The victim transferred 30,000 baht to the seller before the goods failed to arrive.","label":0,"lang":"en","note":"fraud, no technical behavior"}
+{"text":"The investigating officer requests that the case file be forwarded to the prosecutor.","label":0,"lang":"en","note":"procedure"}
+{"text":"Printouts of the email correspondence are attached as annex 3 to this report.","label":0,"lang":"en","note":"email as exhibit"}
+{"text":"The suspect used his own laptop to write the receipts that were later found to be forged.","label":0,"lang":"en","note":"computer as a writing tool"}
+{"text":"A warrant was issued by the Criminal Court on 11 March 2020 and remains outstanding.","label":0,"lang":"en","note":"warrant"}
+{"text":"The witness stated that a white sedan was parked outside the building that night.","label":0,"lang":"en","note":"physical observation"}
+{"text":"Account number 123-4-56789-0 appears in the transfer slip submitted by the complainant.","label":0,"lang":"en","note":"account number in a document"}

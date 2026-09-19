@@ -1,22 +1,20 @@
-import pytest
-from builtins import ExceptionGroup
+from datetime import UTC
 
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
-    CaseAnalysisFailure,
     CaseAnalysisGap,
     CaseAnalysisTrace,
-    CaseSourceCitation,
     CaseGeneratedUnit,
     CaseProviderAnalysis,
+    CaseSourceCitation,
 )
-from app.services.case_materials import CaseSourceBundle, CaseSourceItem
-from app.services.case_analysis.validation import validate_case_trace
 from app.services.case_analysis.source_quote_resolver import (
     find_aligned_quote,
     resolve_document_locator,
 )
+from app.services.case_analysis.validation import resolve_case_trace
 from app.services.document_ingestion.provenance import bind_exact_page_spans
+from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 
 def _source(
@@ -55,7 +53,7 @@ def test_case_validation_allows_sources_without_exact_citations():
         contradicting_citations=[],
     )
     trace = _trace(claim, content)
-    validated = validate_case_trace(
+    validated = resolve_case_trace(
         trace,
         CaseSourceBundle(
             revision=1,
@@ -83,30 +81,48 @@ def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_
     assert pages[0]["start_offset"] == 0
     assert pages[0]["end_offset"] == pages[1]["start_offset"]
     assert "text_sha256" not in pages[0]
-    context = [{
-        "source_id": "s1",
-        "documents": [{
-            "document_id": "d1",
-            "filename": "case.pdf",
-            "page_spans": pages,
-        }],
-    }]
+    context = [
+        {
+            "source_id": "s1",
+            "documents": [
+                {
+                    "document_id": "d1",
+                    "filename": "case.pdf",
+                    "page_spans": pages,
+                }
+            ],
+        }
+    ]
     locator = resolve_document_locator("s1", "page\n\nsecond", content, context)
     assert locator["page_numbers"] == [1, 2]
 
     repeated = "same\n\nsame"
     repeated_pages = bind_exact_page_spans(
-        {"pages": [{"page_number": 1, "merged_text": "same"}, {"page_number": 2, "merged_text": "same"}]},
+        {
+            "pages": [
+                {"page_number": 1, "merged_text": "same"},
+                {"page_number": 2, "merged_text": "same"},
+            ]
+        },
         repeated,
     )["pages"]
     repeated_locator = resolve_document_locator(
         "s1",
         "same",
         repeated,
-        [{"source_id": "s1", "documents": [{"document_id": "d1", "filename": "case.pdf", "page_spans": repeated_pages}]}],
+        [
+            {
+                "source_id": "s1",
+                "documents": [
+                    {"document_id": "d1", "filename": "case.pdf", "page_spans": repeated_pages}
+                ],
+            }
+        ],
     )
     assert repeated_locator["page_numbers"] == []
-    edited_locator = resolve_document_locator("s1", "second page", "edited page\n\nsecond page", context)
+    edited_locator = resolve_document_locator(
+        "s1", "second page", "edited page\n\nsecond page", context
+    )
     assert edited_locator["page_numbers"] == []
 
 
@@ -147,7 +163,6 @@ def test_case_claim_normalizes_c_and_claim_identifier_aliases():
 def test_case_provider_analysis_normalizes_model_claim_ids_from_json():
     raw_payload = """{
         "version": "case_analysis_trace_v1",
-        "answer": "Grounded answer text.",
         "summary": "Summary text.",
         "involved_parties": [],
         "timeline": [],
@@ -198,7 +213,6 @@ def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
     parsed = CaseProviderAnalysis.model_validate(
         {
             "version": "case_analysis_trace_v1",
-            "answer": "The incident time remains unresolved.",
             "summary": "A loss was reported, but its timing is not established.",
             "involved_parties": [],
             "timeline": [],
@@ -246,52 +260,51 @@ def test_case_generated_unit_and_gap_identifier_normalization():
     assert gap.affected_claim_ids == ["A-01", "A-02"]
 
 
-def test_unwrap_exception_handles_nested_exception_group():
-    from app.services.workflow.case_run_execution import unwrap_exception
-
-    domain_error = CaseAnalysisFailure("test_code", "Test message")
-    group = ExceptionGroup("outer", [ExceptionGroup("inner", [domain_error])])
-    unwrapped = unwrap_exception(group)
-    assert unwrapped is domain_error
-    assert unwrapped.code == "test_code"
-
-
 def test_case_evidence_citation_normalizes_partial_document_locators():
-    citation_partial = CaseSourceCitation.model_validate({
-        "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
-        "exact_quote": "ผู้ต้องหาหลบหนี",
-        "filename": "ลำดับ01 รายงานการสอบสวน.pdf",
-        "page_numbers": [],
-    })
+    citation_partial = CaseSourceCitation.model_validate(
+        {
+            "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
+            "exact_quote": "ผู้ต้องหาหลบหนี",
+            "filename": "ลำดับ01 รายงานการสอบสวน.pdf",
+            "page_numbers": [],
+        }
+    )
     assert citation_partial.document_id is None
     assert citation_partial.filename is None
     assert citation_partial.page_numbers == []
 
-    citation_complete = CaseSourceCitation.model_validate({
-        "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
-        "exact_quote": "ผู้ต้องหาหลบหนี",
-        "document_id": "doc-01",
-        "filename": "ลำดับ01 รายงานการสอบสวน.pdf",
-        "page_numbers": [1, 2],
-    })
+    citation_complete = CaseSourceCitation.model_validate(
+        {
+            "source_id": "493c59ed-a9ea-48c3-a498-281d17e3030f",
+            "exact_quote": "ผู้ต้องหาหลบหนี",
+            "document_id": "doc-01",
+            "filename": "ลำดับ01 รายงานการสอบสวน.pdf",
+            "page_numbers": [1, 2],
+        }
+    )
     assert citation_complete.document_id == "doc-01"
     assert citation_complete.filename == "ลำดับ01 รายงานการสอบสวน.pdf"
     assert citation_complete.page_numbers == [1, 2]
 
 
 def test_find_aligned_quote_handles_markdown_and_whitespace():
-    content = "Header\n\n**Witness** Statement\n\nThe witness saw \"red car\"."
+    content = 'Header\n\n**Witness** Statement\n\nThe witness saw "red car".'
     assert find_aligned_quote(content, "Witness Statement") == "**Witness** Statement"
     assert find_aligned_quote(content, 'witness saw "red car"') == 'witness saw "red car"'
     assert find_aligned_quote(content, "witness saw “red car”") == 'witness saw "red car"'
     assert find_aligned_quote(content, "Nonexistent Statement") is None
 
 
-def test_validate_case_trace_allows_same_page_multiple_occurrences():
+def test_resolve_case_trace_allows_same_page_multiple_occurrences():
     content = "report\n\npage one fact repeated\n\nfact repeated"
-    provenance = bind_exact_page_spans({"pages": [{"page_number": 1, "merged_text": content}]}, content)
+    provenance = bind_exact_page_spans(
+        {"pages": [{"page_number": 1, "merged_text": content}]}, content
+    )
     claim = CaseAnalysisClaim(
-        claim_id="A-01", claim_type="reported", text="Fact was reported.", epistemic_status="reported",
+        claim_id="A-01",
+        claim_type="reported",
+        text="Fact was reported.",
+        epistemic_status="reported",
         supporting_source_ids=["s1"],
         supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote="fact repeated")],
     )
@@ -303,7 +316,7 @@ def test_validate_case_trace_allows_same_page_multiple_occurrences():
         filename="report.pdf",
         provenance={"pages": provenance["pages"]},
     )
-    validated = validate_case_trace(
+    validated = resolve_case_trace(
         _trace(claim, content),
         CaseSourceBundle(revision=1, sources=(source,)),
         [],
@@ -312,46 +325,52 @@ def test_validate_case_trace_allows_same_page_multiple_occurrences():
 
 
 def test_claim_reasoning_summary_empty_and_whitespace_normalized():
-    claim_empty = CaseAnalysisClaim.model_validate({
-        "claim_id": "A-01",
-        "claim_type": "reported",
-        "text": "Valid factual claim text",
-        "epistemic_status": "reported",
-        "supporting_source_ids": ["s1"],
-        "reasoning_summary": "",
-    })
+    claim_empty = CaseAnalysisClaim.model_validate(
+        {
+            "claim_id": "A-01",
+            "claim_type": "reported",
+            "text": "Valid factual claim text",
+            "epistemic_status": "reported",
+            "supporting_source_ids": ["s1"],
+            "reasoning_summary": "",
+        }
+    )
     assert claim_empty.reasoning_summary is None
 
-    claim_whitespace = CaseAnalysisClaim.model_validate({
-        "claim_id": "A-02",
-        "claim_type": "reported",
-        "text": "Valid factual claim text",
-        "epistemic_status": "reported",
-        "supporting_source_ids": ["s1"],
-        "reasoning_summary": "   ",
-    })
+    claim_whitespace = CaseAnalysisClaim.model_validate(
+        {
+            "claim_id": "A-02",
+            "claim_type": "reported",
+            "text": "Valid factual claim text",
+            "epistemic_status": "reported",
+            "supporting_source_ids": ["s1"],
+            "reasoning_summary": "   ",
+        }
+    )
     assert claim_whitespace.reasoning_summary is None
 
 
 def test_claim_malformed_raw_citations_dropped_without_failing_claim():
-    claim = CaseAnalysisClaim.model_validate({
-        "claim_id": "A-01",
-        "claim_type": "reported",
-        "text": "Valid factual claim text",
-        "epistemic_status": "reported",
-        "supporting_source_ids": ["s1"],
-        "supporting_citations": [
-            {"source_id": "s1", "exact_quote": ""},
-            {"source_id": "", "exact_quote": "some quote"},
-            {
-                "source_id": "s1",
-                "exact_quote": "valid quote",
-                "document_id": "doc-01",
-                "filename": "doc.pdf",
-                "page_numbers": [1, 1, 999, -5],
-            },
-        ],
-    })
+    claim = CaseAnalysisClaim.model_validate(
+        {
+            "claim_id": "A-01",
+            "claim_type": "reported",
+            "text": "Valid factual claim text",
+            "epistemic_status": "reported",
+            "supporting_source_ids": ["s1"],
+            "supporting_citations": [
+                {"source_id": "s1", "exact_quote": ""},
+                {"source_id": "", "exact_quote": "some quote"},
+                {
+                    "source_id": "s1",
+                    "exact_quote": "valid quote",
+                    "document_id": "doc-01",
+                    "filename": "doc.pdf",
+                    "page_numbers": [1, 1, 999, -5],
+                },
+            ],
+        }
+    )
     # Empty quote and empty source_id are dropped; valid quote with duplicate/out-of-range pages is sanitized
     assert len(claim.supporting_citations) == 1
     assert claim.supporting_citations[0].exact_quote == "valid quote"
@@ -359,11 +378,12 @@ def test_claim_malformed_raw_citations_dropped_without_failing_claim():
 
 
 def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources():
+    from datetime import datetime, timedelta
     from types import SimpleNamespace
-    from datetime import datetime, timezone, timedelta
-    from app.services.case_materials.case_source_bundle import case_source_bundle_for_analysis
 
-    t0 = datetime.now(timezone.utc)
+    from app.services.sources.case_source_bundle import case_source_bundle_for_analysis
+
+    t0 = datetime.now(UTC)
     t_result = t0 + timedelta(minutes=10)
     t_archived_later = t0 + timedelta(minutes=20)
 
@@ -404,12 +424,12 @@ def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources(
         document=None,
     )
     case = SimpleNamespace(
-        evidence_revision=3,
+        source_revision=3,
         sources=[s1, s2, s3],
     )
     result = SimpleNamespace(
         created_at=t_result,
-        evidence_revision=2,
+        source_revision=2,
         trace_json={},  # No referenced claims -> triggers fallback
     )
 

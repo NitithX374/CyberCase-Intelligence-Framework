@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
-import type { UserFacingError } from "@/lib/user-facing-error";
+import type { UserFacingError } from "@/lib/userFacingError";
 
 describe("MeaningfulErrorModal component", () => {
   const timeoutError: UserFacingError = {
@@ -28,7 +28,9 @@ describe("MeaningfulErrorModal component", () => {
     );
 
     // 1. Visible Title and Message
-    expect(screen.getByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/ระบบยังไม่สามารถยืนยันผลลัพธ์ได้ในขณะนี้/)).toBeInTheDocument();
 
     // 2. Technical details disclosure is present
@@ -42,13 +44,7 @@ describe("MeaningfulErrorModal component", () => {
   it("calls onClose when 'ปิด' button or close icon is clicked", () => {
     const handleClose = vi.fn();
 
-    render(
-      <MeaningfulErrorModal
-        isOpen={true}
-        error={timeoutError}
-        onClose={handleClose}
-      />,
-    );
+    render(<MeaningfulErrorModal isOpen={true} error={timeoutError} onClose={handleClose} />);
 
     const closeBtn = screen.getByRole("button", { name: "ปิด" });
     fireEvent.click(closeBtn);
@@ -80,13 +76,7 @@ describe("MeaningfulErrorModal component", () => {
   it("dismisses on Escape key press", () => {
     const handleClose = vi.fn();
 
-    render(
-      <MeaningfulErrorModal
-        isOpen={true}
-        error={timeoutError}
-        onClose={handleClose}
-      />,
-    );
+    render(<MeaningfulErrorModal isOpen={true} error={timeoutError} onClose={handleClose} />);
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(handleClose).toHaveBeenCalledTimes(1);
@@ -94,22 +84,12 @@ describe("MeaningfulErrorModal component", () => {
 
   it("does not render when isOpen is false or error is null", () => {
     const { container, rerender } = render(
-      <MeaningfulErrorModal
-        isOpen={false}
-        error={timeoutError}
-        onClose={vi.fn()}
-      />,
+      <MeaningfulErrorModal isOpen={false} error={timeoutError} onClose={vi.fn()} />,
     );
 
     expect(container.firstChild).toBeNull();
 
-    rerender(
-      <MeaningfulErrorModal
-        isOpen={true}
-        error={null}
-        onClose={vi.fn()}
-      />,
-    );
+    rerender(<MeaningfulErrorModal isOpen={true} error={null} onClose={vi.fn()} />);
 
     expect(container.firstChild).toBeNull();
   });

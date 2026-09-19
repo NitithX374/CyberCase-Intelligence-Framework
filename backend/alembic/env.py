@@ -16,14 +16,17 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
-from app.database import Base  # noqa: E402
 # Make sure models are imported so they are registered on the Base metadata
 import app.models  # noqa
+from app.database import Base  # noqa: E402
+
 target_metadata = Base.metadata
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     from app.config import settings
+
     url = settings.async_database_url
     context.configure(
         url=url,

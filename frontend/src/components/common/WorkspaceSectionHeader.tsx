@@ -26,9 +26,7 @@ export function WorkspaceSectionHeader({
           {title}
         </h2>
         {description && (
-          <p className="mt-1 max-w-2xl text-[11px] leading-5 text-ink-secondary">
-            {description}
-          </p>
+          <p className="mt-1 max-w-2xl text-[11px] leading-5 text-ink-secondary">{description}</p>
         )}
       </div>
       {aside && <div className="shrink-0">{aside}</div>}

@@ -1,144 +1,230 @@
+"""Binding an analysis to the case it was written from.
+
+Nothing here rejects an analysis. Everything the model wrote either resolves
+against a source, is trimmed so it stops pointing at something that is not
+there, or is counted as lost — and the counts are what a reader, and an
+experiment, are given instead of a failure.
+
+That was not always true. Nine rules used to raise, so one invented technique
+id or one claim citing a source outside the bundle cost the whole analysis,
+while an invented quotation on the next line was quietly dropped. Two policies
+for the same kind of mistake. This file now has one.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
 
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
-    CaseAnalysisFailure,
     CaseAnalysisTrace,
+    CaseGroundingReport,
     CaseSourceCitation,
 )
 from app.services.case_analysis.source_quote_resolver import (
     find_aligned_quote,
+    looks_like_a_paraphrase,
     quote_occurrences,
     resolve_document_locator,
 )
-from app.services.case_materials import CaseSourceBundle, CaseSourceItem, build_document_source_context
+from app.services.sources import CaseSourceBundle, CaseSourceItem, build_document_source_context
 
 
-def validate_case_trace(
+def resolve_case_trace(
     trace: CaseAnalysisTrace,
     source_bundle: CaseSourceBundle,
     mitre_table: object = None,
 ) -> CaseAnalysisTrace:
     registry = {source.source_id: source for source in source_bundle.sources}
     document_context = build_document_source_context(source_bundle)
-    claim_ids = [claim.claim_id for claim in trace.claims]
-    if len(claim_ids) != len(set(claim_ids)):
-        raise CaseAnalysisFailure(
-            "case_trace_duplicate_claim_id",
-            "Case analysis claims must have unique identifiers",
-        )
-    normalized_claims = [
-        validate_claim(claim, registry, document_context) for claim in trace.claims
-    ]
-    known_claim_ids = set(claim_ids)
-    normalized_parties = [
-        party.model_copy(update={"claim_ids": [cid for cid in party.claim_ids if cid in known_claim_ids]})
-        for party in trace.involved_parties
-    ]
-    normalized_timeline = [
-        item.model_copy(update={"claim_ids": [cid for cid in item.claim_ids if cid in known_claim_ids]})
-        for item in trace.timeline
-    ]
-    normalized_impacts = [
-        impact.model_copy(update={"claim_ids": [cid for cid in impact.claim_ids if cid in known_claim_ids]})
-        for impact in trace.impacts
-    ]
-    normalized_gaps = []
-    for gap in trace.gaps:
-        if gap.status == "EXPLICITLY_UNKNOWN" and gap.askable:
-            raise CaseAnalysisFailure(
-                "case_trace_explicit_unknown_askable",
-                "An explicitly unknown gap cannot be marked askable",
-            )
-        valid_affected = [cid for cid in gap.affected_claim_ids if cid in known_claim_ids]
-        normalized_gaps.append(gap.model_copy(update={"affected_claim_ids": valid_affected}))
-    context_techniques = context_technique_ids(mitre_table)
-    if trace.mitre_associations and trace.retrieval_context_id is None:
-        raise CaseAnalysisFailure(
-            "case_trace_mitre_without_retrieval",
-            "Case MITRE associations require a bound retrieval context",
-        )
-    for association in trace.mitre_associations:
-        if not set(association.claim_ids).issubset(known_claim_ids):
-            raise CaseAnalysisFailure(
-                "case_trace_mitre_unknown_claim",
-                "Case MITRE association references an unknown claim",
-            )
-        if association.technique_id not in context_techniques:
-            raise CaseAnalysisFailure(
-                "case_trace_mitre_outside_context",
-                "Case MITRE association is outside the bound context",
-            )
+
+    claims = deduplicated_claims(trace.claims)
+    known_claim_ids = {claim.claim_id for claim in claims}
+    resolved_claims = [resolve_claim(claim, registry, document_context) for claim in claims]
+
+    associations, dropped_associations = kept_associations(
+        trace.mitre_associations,
+        known_claim_ids,
+        context_technique_ids(mitre_table),
+        has_retrieval=trace.retrieval_context_id is not None,
+    )
+
     return trace.model_copy(
         update={
-            "claims": normalized_claims,
-            "involved_parties": normalized_parties,
-            "timeline": normalized_timeline,
-            "impacts": normalized_impacts,
-            "gaps": normalized_gaps,
+            "claims": resolved_claims,
+            "involved_parties": [
+                bound_to_claims(party, known_claim_ids) for party in trace.involved_parties
+            ],
+            "timeline": [bound_to_claims(item, known_claim_ids) for item in trace.timeline],
+            "impacts": [bound_to_claims(impact, known_claim_ids) for impact in trace.impacts],
+            "gaps": [answerable_gap(gap, known_claim_ids) for gap in trace.gaps],
+            "mitre_associations": associations,
+            "grounding": grounding_report(
+                claims,
+                resolved_claims,
+                registry,
+                associations_dropped=dropped_associations,
+                claims_dropped=len(trace.claims) - len(claims),
+            ),
         }
     )
 
 
-def validate_claim(
+def deduplicated_claims(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
+    """The first claim under each id. Everything keys on it, including the UI."""
+
+    seen: set[str] = set()
+    kept: list[CaseAnalysisClaim] = []
+    for claim in claims:
+        if claim.claim_id in seen:
+            continue
+        seen.add(claim.claim_id)
+        kept.append(claim)
+    return kept
+
+
+def bound_to_claims(item, known_claim_ids: set[str]):
+    """A party, a moment or an impact, pointing only at claims that exist."""
+
+    return item.model_copy(
+        update={"claim_ids": [cid for cid in item.claim_ids if cid in known_claim_ids]}
+    )
+
+
+def answerable_gap(gap, known_claim_ids: set[str]):
+    """A gap the sources say is unknowable is not worth asking the reader about."""
+
+    return gap.model_copy(
+        update={
+            "affected_claim_ids": [cid for cid in gap.affected_claim_ids if cid in known_claim_ids],
+            "askable": gap.askable and gap.status != "EXPLICITLY_UNKNOWN",
+        }
+    )
+
+
+def kept_associations(associations, known_claim_ids, context_techniques, *, has_retrieval):
+    """ATT&CK associations that point at something real.
+
+    An association naming a technique that was not in the retrieved context is
+    the MITRE version of a quotation that is in no source: the model produced
+    it rather than read it. It is dropped, and counted, for the same reason.
+    """
+
+    kept = []
+    for association in associations:
+        if not has_retrieval:
+            continue
+        if association.technique_id not in context_techniques:
+            continue
+        kept.append(
+            association.model_copy(
+                update={
+                    "claim_ids": [cid for cid in association.claim_ids if cid in known_claim_ids]
+                }
+            )
+        )
+    return kept, len(associations) - len(kept)
+
+
+def grounding_report(
+    written: list[CaseAnalysisClaim],
+    kept: list[CaseAnalysisClaim],
+    registry: dict[str, CaseSourceItem],
+    *,
+    associations_dropped: int = 0,
+    claims_dropped: int = 0,
+) -> CaseGroundingReport:
+    """What survived the binding, and what quietly did not.
+
+    A dropped citation is counted twice over: once as dropped, and once as
+    either a loose quotation of wording that is in the source, or wording that
+    is in no source at all. Reporting them together would put a model that
+    quotes sloppily and a model that invents a quotation at the same number.
+    """
+
+    def all_citations(claims: list[CaseAnalysisClaim]) -> list[CaseSourceCitation]:
+        return [
+            c
+            for claim in claims
+            for c in claim.supporting_citations + claim.contradicting_citations
+        ]
+
+    claimed = all_citations(written)
+    survived = {(c.source_id, c.exact_quote) for c in all_citations(kept)}
+    paraphrased = 0
+    unfound = 0
+    for citation in claimed:
+        if (citation.source_id, citation.exact_quote) in survived:
+            continue
+        source = registry.get(citation.source_id)
+        if source is None:
+            unfound += 1
+            continue
+        # A quote that had to be repaired to be found is kept under the
+        # source's spelling, not the model's, so it is missing from the set
+        # above while already counted in citations_verified.
+        if find_aligned_quote(source.text, citation.exact_quote) is not None:
+            continue
+        if looks_like_a_paraphrase(source.text, citation.exact_quote):
+            paraphrased += 1
+        else:
+            unfound += 1
+
+    return CaseGroundingReport(
+        claims=len(kept),
+        citations_claimed=len(claimed),
+        citations_verified=len(all_citations(kept)),
+        citations_paraphrased=paraphrased,
+        citations_unfound=unfound,
+        claims_without_citation=sum(1 for c in kept if not c.supporting_citations),
+        claims_duplicated=claims_dropped,
+        associations_outside_context=associations_dropped,
+        sources_cited=len({c.source_id for c in all_citations(kept)}),
+        sources_total=len(registry),
+    )
+
+
+def resolve_claim(
     claim: CaseAnalysisClaim,
     registry: dict[str, CaseSourceItem],
     document_context: object,
 ) -> CaseAnalysisClaim:
-    supporting = set(claim.supporting_source_ids)
-    contradicting = set(claim.contradicting_source_ids)
-    if not supporting.issubset(registry):
-        raise CaseAnalysisFailure(
-            "case_trace_support_outside_evidence",
-            "Case claim cites supporting sources outside the Case source bundle",
-        )
-    if not contradicting.issubset(registry):
-        raise CaseAnalysisFailure(
-            "case_trace_contradiction_outside_evidence",
-            "Case claim cites contradicting sources outside the Case source bundle",
-        )
-    if supporting & contradicting:
-        raise CaseAnalysisFailure(
-            "case_trace_conflicting_source_role",
-            "A Case source cannot both support and contradict one claim",
-        )
-    if claim.claim_type in {"reported", "analytical_inference"} and not supporting:
-        raise CaseAnalysisFailure(
-            "case_trace_claim_unbound",
-            "Reported and inferred claims need supporting Case sources",
-        )
-    supporting_citations = normalize_citations(
-        claim.supporting_citations,
-        supporting,
-        "supporting",
-        registry,
-        document_context,
-    )
-    contradicting_citations = normalize_citations(
-        claim.contradicting_citations,
-        contradicting,
-        "contradicting",
-        registry,
-        document_context,
-    )
+    """One claim, pointing only at sources the case actually has.
+
+    A source id the bundle does not contain is removed rather than refused. The
+    claim survives without it, and if that leaves it resting on nothing, the
+    grounding report is where that shows.
+    """
+
+    supporting = {sid for sid in claim.supporting_source_ids if sid in registry}
+    contradicting = {sid for sid in claim.contradicting_source_ids if sid in registry}
     return claim.model_copy(
         update={
-            "supporting_citations": supporting_citations,
-            "contradicting_citations": contradicting_citations,
+            "supporting_source_ids": sorted(supporting),
+            "contradicting_source_ids": sorted(contradicting),
+            "supporting_citations": resolved_citations(
+                claim.supporting_citations, supporting, registry, document_context
+            ),
+            "contradicting_citations": resolved_citations(
+                claim.contradicting_citations, contradicting, registry, document_context
+            ),
         }
     )
 
 
-def normalize_citations(
+def resolved_citations(
     citations: list[CaseSourceCitation],
     allowed_ids: set[str],
-    role: str,
     registry: dict[str, CaseSourceItem],
     document_context: object,
 ) -> list[CaseSourceCitation]:
-    normalized: list[CaseSourceCitation] = []
+    """Each citation whose quotation can be found in the source it names.
+
+    Finding it is also what produces the page numbers, which the model never
+    writes and the reader clicks through on.
+    """
+
+    resolved: list[CaseSourceCitation] = []
     seen: set[tuple[str, str]] = set()
     for citation in citations:
         if citation.source_id not in allowed_ids:
@@ -176,25 +262,24 @@ def normalize_citations(
         )
         key = (canonical.source_id, canonical.exact_quote)
         if key not in seen:
-            normalized.append(canonical)
+            resolved.append(canonical)
             seen.add(key)
-    return normalized
+    return resolved
 
 
 def context_technique_ids(value: object) -> set[str]:
     if not isinstance(value, list):
         return set()
-    identifiers: set[str] = set()
-    for row in value:
-        if not isinstance(row, Mapping):
-            continue
-        for key in ("technique_id", "id", "external_id"):
-            candidate = row.get(key)
-            if isinstance(candidate, str) and candidate.startswith("T"):
-                identifiers.add(candidate)
-    return identifiers
+    return {
+        str(row.get("technique_id")).strip()
+        for row in value
+        if isinstance(row, Mapping) and row.get("technique_id")
+    }
 
 
 __all__ = [
-    "validate_case_trace",
+    "context_technique_ids",
+    "grounding_report",
+    "resolve_case_trace",
+    "resolve_claim",
 ]

@@ -8,21 +8,21 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisTrace,
-    CaseSourceCitation,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
+    CaseSourceCitation,
     CaseTimelineItem,
 )
-from app.services.case_analysis.mitre_applicability_gate import MitreApplicabilityRecord
-from app.services.case_materials import CaseSourceBundle, CaseSourceItem
-from app.services.reports.case_report_contracts import (
+from app.services.case_analysis.mitre_gate.llm import MitreApplicabilityRecord
+from app.services.reports.assembly import build_case_template_report
+from app.services.reports.contracts import (
     CaseReportInput,
     CaseReportTechnicalAugmentation,
 )
-from app.services.reports.case_report_html import render_case_report_html
-from app.services.reports.case_report_pdf import render_case_report_pdf
-from app.services.reports.case_report_template import build_case_template_report
+from app.services.reports.render_html import render_case_report_html
+from app.services.reports.render_pdf import render_case_report_pdf
+from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 
 def _input(technical: bool = False) -> CaseReportInput:
@@ -39,8 +39,12 @@ def _input(technical: bool = False) -> CaseReportInput:
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="พบพฤติกรรมทางเทคนิคที่ควรตรวจสอบเพิ่มเติม",
-        involved_parties=[CaseInvolvedParty(name="ผู้ใช้ A", role="ผู้เกี่ยวข้องที่ปรากฏในเอกสาร", claim_ids=["A-01"])],
-        timeline=[CaseTimelineItem(time="10:30 น.", event="มีการเรียกใช้ PowerShell", claim_ids=["A-01"])],
+        involved_parties=[
+            CaseInvolvedParty(name="ผู้ใช้ A", role="ผู้เกี่ยวข้องที่ปรากฏในเอกสาร", claim_ids=["A-01"])
+        ],
+        timeline=[
+            CaseTimelineItem(time="10:30 น.", event="มีการเรียกใช้ PowerShell", claim_ids=["A-01"])
+        ],
         impacts=[CaseImpactItem(description="เกิดการเชื่อมต่อไปยังปลายทางภายนอก", claim_ids=["A-01"])],
         claims=[
             CaseAnalysisClaim(
@@ -49,7 +53,9 @@ def _input(technical: bool = False) -> CaseReportInput:
                 text="<script>กิจกรรม PowerShell ปรากฏในหลักฐาน</script>",
                 epistemic_status="reported",
                 supporting_source_ids=[source_id],
-                supporting_citations=[CaseSourceCitation(source_id=source_id, exact_quote=evidence_text)],
+                supporting_citations=[
+                    CaseSourceCitation(source_id=source_id, exact_quote=evidence_text)
+                ],
             )
         ],
         gaps=[
@@ -104,7 +110,6 @@ def _input(technical: bool = False) -> CaseReportInput:
                 ),
             ),
         ),
-        analysis_answer="ควรตรวจสอบผู้ใช้งานและต้นทางของคำสั่งเพิ่มเติม",
         analysis_summary=trace.summary,
         analysis_trace=trace.model_dump(mode="json"),
         technical_augmentation=augmentation,
@@ -138,7 +143,9 @@ def _rag_only_input() -> CaseReportInput:
     )
     return report_input.model_copy(
         update={
-            "analysis_trace": trace.model_copy(update={"mitre_associations": []}).model_dump(mode="json"),
+            "analysis_trace": trace.model_copy(update={"mitre_associations": []}).model_dump(
+                mode="json"
+            ),
             "technical_augmentation": rag_augmentation,
         }
     )
@@ -147,7 +154,9 @@ def _rag_only_input() -> CaseReportInput:
 def test_report_uses_readable_sections_and_restores_analysis_context() -> None:
     report = build_case_template_report(_input())
 
-    assert [section.heading for section in report.sections] == list(PRELIMINARY_REPORT_SECTION_HEADINGS.values())
+    assert [section.heading for section in report.sections] == list(
+        PRELIMINARY_REPORT_SECTION_HEADINGS.values()
+    )
     assert report.sections[0].items[0].startswith("ผู้เกี่ยวข้อง: ผู้ใช้ A")
     assert "E-01" in report.sections[0].items[0]
     assert report.sections[0].items[1].startswith("ลำดับเหตุการณ์:")

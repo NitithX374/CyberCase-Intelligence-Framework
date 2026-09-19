@@ -2,51 +2,51 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 
+/**
+ * Nothing is public except signing in.
+ *
+ * The root path redirects to the case library (see next.config.ts), so every
+ * page a reader can reach is either the workspace or the way into it.
+ */
 export function AccountGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isLandingPage = pathname === "/";
   const isAuthPage = pathname === "/login" || pathname === "/register";
-  const isPreviewPage = pathname === "/casefleet-preview";
-  const isPublicPage = isLandingPage || isAuthPage || isPreviewPage;
-  const { user, isLoading, sessionError, refetchSession } = useAuth({ enabled: !isPreviewPage });
+  const { user, isLoading, sessionError, refetchSession } = useAuth();
 
   useEffect(() => {
-    // If authenticated user visits login or register, redirect them to their workspace
-    if (isAuthPage && !isLoading && user) {
-      const savedRoute = localStorage.getItem(`cybercase:${user.id}:route`);
-      const targetRoute = savedRoute?.startsWith("/case/") ? savedRoute : "/case";
-      router.replace(targetRoute);
+    if (isLoading) return;
+
+    // Already signed in, and looking at the sign-in page: go back to work.
+    if (isAuthPage && user) {
+      const saved = localStorage.getItem(`cybercase:${user.id}:route`);
+      router.replace(saved?.startsWith("/case/") ? saved : "/case");
       return;
     }
 
-    // If unauthenticated user tries to access a protected route, redirect to login
-    if (!isPublicPage && !isLoading && !user && !sessionError) {
-      const redirectTarget = encodeURIComponent(pathname);
-      router.replace(`/login?redirect=${redirectTarget}`);
+    if (!isAuthPage && !user && !sessionError) {
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
-    // Remember last route for authenticated user
-    if (user && !isAuthPage && !isLandingPage) {
+    // Where to come back to, next time.
+    if (user && !isAuthPage) {
       localStorage.setItem(`cybercase:${user.id}:route`, pathname);
     }
-  }, [isLoading, pathname, isPublicPage, isAuthPage, isLandingPage, router, sessionError, user]);
+  }, [isAuthPage, isLoading, pathname, router, sessionError, user]);
 
-  // Landing page and auth pages are public: render directly
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
+  if (isAuthPage) return <>{children}</>;
 
-  // If there's a fatal session check error on protected routes
   if (sessionError) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-canvas p-10 text-center text-ink">
         <div className="max-w-md rounded-2xl border border-line bg-surface p-8 shadow-sm">
           <p className="font-semibold text-critical">Unable to check your session.</p>
-          <p className="mt-2 text-sm text-ink-secondary">We could not verify your login status with the server.</p>
+          <p className="mt-2 text-sm text-ink-secondary">
+            We could not verify your login status with the server.
+          </p>
           <button
             onClick={() => void refetchSession()}
             className="mt-6 rounded-lg bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-ivory transition hover:bg-charcoal-hover"
@@ -58,7 +58,6 @@ export function AccountGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Loading state for protected routes
   if (isLoading || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-canvas p-10" role="status">

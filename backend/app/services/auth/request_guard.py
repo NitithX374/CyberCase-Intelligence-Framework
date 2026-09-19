@@ -1,5 +1,6 @@
-from app.config import settings
 from starlette.responses import JSONResponse
+
+from app.config import settings
 
 
 async def guard_browser_request(request, call_next):

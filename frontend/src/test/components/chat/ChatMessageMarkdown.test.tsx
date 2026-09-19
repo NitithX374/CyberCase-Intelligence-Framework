@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
-import { ChatTranscript } from "@/components/conversation/ChatTranscript";
+import { ChatMessageMarkdown } from "@/components/chat/ChatMessageMarkdown";
+import { ChatTranscript } from "@/components/chat/ChatTranscript";
 import type { ChatMessageRead } from "@/lib/api";
 
 beforeAll(() => {
@@ -118,17 +118,10 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
       },
     ];
 
-    render(
-      <ChatTranscript
-        messages={messages}
-        isProcessing={false}
-      />
-    );
+    render(<ChatTranscript messages={messages} isProcessing={false} />);
 
     // User message remains plain text
-    expect(
-      screen.getByText("Check this **user message** with `code`.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Check this **user message** with `code`.")).toBeInTheDocument();
 
     // Assistant message renders Markdown (formatted bold text element)
     const boldElement = screen.getByText("assistant response");
@@ -140,62 +133,5 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
       "text-ivory",
     );
     expect(boldElement.closest("article")).toHaveClass("border-b", "border-line");
-  });
-
-  it("expands the exact persisted follow-up explanation", () => {
-    const messages: ChatMessageRead[] = [
-      {
-        id: "msg-follow-up",
-        case_id: "caseChat-1",
-        ordinal: 2,
-        role: "assistant",
-        content: "Do you have authentication logs?",
-        retrieval_context_id: null,
-        message_kind: "followup_question",
-        analysis_result_id: null,
-        metadata_json: {
-          action: "follow_up",
-          chat_followup: {
-            root_ordinal: 2,
-            round: 1,
-            source_analysis_id: "analysis-1",
-            source_revision: 1,
-            gap: {
-              gap_id: "gap-authentication",
-              gap_key: "authentication_records",
-              topic: "Authentication records for VM access",
-              status: "NOT_PROVIDED",
-              description: "Authentication records were not provided.",
-              affects: "The account used for VM access remains unresolved.",
-              reason: "The reported access cannot be linked to a credential.",
-              priority: "high",
-              askable: true,
-              clarification_question: "Do you have authentication logs?",
-            },
-          },
-        },
-        created_at: "2026-08-20T12:00:00Z",
-      },
-    ];
-
-    render(<ChatTranscript messages={messages} isProcessing={false} />);
-
-    const summary = screen.getByText("Why is CyberCase asking this?");
-    const details = summary.closest("details");
-    expect(details).not.toHaveAttribute("open");
-
-    fireEvent.click(summary);
-
-    expect(details).toHaveAttribute("open");
-    expect(
-      screen.getByText("Authentication records for VM access"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("The reported access cannot be linked to a credential."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("The account used for VM access remains unresolved."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Needs clarification")).toBeInTheDocument();
   });
 });

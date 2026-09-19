@@ -7,7 +7,6 @@ from app.services.llm.core_llm import (
 )
 from app.services.llm.structured_output import (
     StructuredOutputFeature,
-    anthropic_json_schema,
     structured_output_request_options,
     structured_output_schema,
 )
@@ -17,7 +16,6 @@ __all__ = [
     "CoreLlmTarget",
     "resolve_core_llm_target",
     "StructuredOutputFeature",
-    "anthropic_json_schema",
     "structured_output_request_options",
     "structured_output_schema",
 ]

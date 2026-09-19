@@ -17,5 +17,9 @@ export default function Providers({ children }: { children: ReactNode }) {
       }),
   );
 
-  return <QueryClientProvider client={queryClient}><AccountGate>{children}</AccountGate></QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AccountGate>{children}</AccountGate>
+    </QueryClientProvider>
+  );
 }

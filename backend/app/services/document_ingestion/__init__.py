@@ -1,4 +1,8 @@
-from app.services.document_ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
+from app.services.document_ingestion.contracts import (
+    DocumentPage,
+    ExtractionMethod,
+    IngestedDocument,
+)
 from app.services.document_ingestion.errors import DocumentIngestionError
 from app.services.document_ingestion.service import (
     DocumentIngestionLimits,

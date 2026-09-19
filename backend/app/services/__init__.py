@@ -1,21 +1,29 @@
 """Backend domain services."""
 
 from app.services import (
+    auth,
     case_analysis,
+    case_workflow,
+    cases,
     chat,
     clients,
-    followup,
+    document_ingestion,
     llm,
     reports,
-    workflow,
+    sources,
+    technical_context,
 )
 
 __all__ = [
+    "auth",
     "case_analysis",
+    "case_workflow",
+    "cases",
     "chat",
     "clients",
-    "followup",
+    "document_ingestion",
     "llm",
     "reports",
-    "workflow",
+    "sources",
+    "technical_context",
 ]

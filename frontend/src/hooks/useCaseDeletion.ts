@@ -51,7 +51,17 @@ export function useCaseDeletion({
     } else {
       router.replace("/case");
     }
-  }, [activeCaseId, activeView, cases, deleteCandidate, deleteCase, deletingCaseId, onDeleted, router, setDeleteCandidate]);
+  }, [
+    activeCaseId,
+    activeView,
+    cases,
+    deleteCandidate,
+    deleteCase,
+    deletingCaseId,
+    onDeleted,
+    router,
+    setDeleteCandidate,
+  ]);
 
   return { cancelDelete, confirmDelete };
 }

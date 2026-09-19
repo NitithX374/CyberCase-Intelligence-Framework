@@ -8,9 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CaseProcessingStatus = Literal["idle", "queued", "running", "failed"]
 CaseAnalysisFreshness = Literal["missing", "current", "stale"]
-CaseStatus = Literal["idle", "processing", "awaiting_followup", "answered", "failed"]
+CaseStatus = Literal["idle", "answered"]
 
 
 class CaseCreate(BaseModel):
@@ -28,12 +27,8 @@ class CaseRead(BaseModel):
     user_id: UUID | None = None
     title: str
     status: CaseStatus
-    evidence_revision: int = 0
+    source_revision: int = 0
     latest_analysis_result_id: UUID | None = None
-    active_run_id: UUID | None = None
-    latest_run_id: UUID | None = None
-    processing_status: CaseProcessingStatus = "idle"
-    has_pending_followup: bool = False
     analysis_freshness: CaseAnalysisFreshness = "missing"
     created_at: datetime
     updated_at: datetime
@@ -43,7 +38,6 @@ __all__ = [
     "CaseAnalysisFreshness",
     "CaseCreate",
     "CaseRead",
-    "CaseProcessingStatus",
     "CaseStatus",
     "CaseUpdate",
 ]

@@ -28,9 +28,7 @@ def table_text(table: Table) -> str:
     return "\n".join(rows)
 
 
-def parse_docx(
-    content: bytes, document_id: str
-) -> tuple[list[DocumentPage], list[str]]:
+def parse_docx(content: bytes, document_id: str) -> tuple[list[DocumentPage], list[str]]:
     try:
         document = Document(BytesIO(content))
     except Exception as error:

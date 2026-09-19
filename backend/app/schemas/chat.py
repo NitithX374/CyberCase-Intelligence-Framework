@@ -8,28 +8,19 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.case_runs import CaseRunRead
-from app.schemas.case_followups import CaseFollowUpAnswer
+from app.schemas.analysis import CaseAnalysisResultRead
 from app.schemas.message_metadata import MessageMetadata
 
-CaseChatStatus = Literal[
-    "idle",
-    "processing",
-    "awaiting_followup",
-    "answered",
-    "failed",
-]
+CaseChatStatus = Literal["idle", "answered"]
 MessageRole = Literal["user", "assistant"]
 MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 
 
 class ChatMessageCreate(BaseModel):
     content: str = Field(default="")
-    idempotency_key: str = Field(min_length=1, max_length=255)
-    intent: Literal["ask", "followup_answer"] = "ask"
-    in_reply_to_message_id: UUID | None = None
+    # Set by the client so a retried send cannot create a second message.
+    client_request_id: str | None = Field(default=None, max_length=255)
     response_language: Literal["thai", "english"] = "english"
-    followup: CaseFollowUpAnswer | None = None
 
 
 class ChatMessageRead(BaseModel):
@@ -42,6 +33,8 @@ class ChatMessageRead(BaseModel):
     content: str
     retrieval_context_id: str | None
     message_kind: MessageKind
+    # Set when this message asks about one gap the analysis left open.
+    gap_key: str | None = None
     analysis_result_id: UUID | None
     in_reply_to_message_id: UUID | None = None
     metadata_json: MessageMetadata
@@ -54,13 +47,15 @@ class CaseChatRead(BaseModel):
     messages: list[ChatMessageRead] = Field(default_factory=list)
 
 
-class CaseChatMessageAccepted(BaseModel):
-    message: ChatMessageRead
-    run: CaseRunRead | None = None
+class CaseChatResponse(BaseModel):
+    """What one send produced: the message, and whatever answered it."""
+
+    messages: list[ChatMessageRead]
+    analysis: CaseAnalysisResultRead | None = None
 
 
 __all__ = [
-    "CaseChatMessageAccepted",
+    "CaseChatResponse",
     "CaseChatRead",
     "CaseChatStatus",
     "ChatMessageCreate",

@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "port": 3000,
+      "autoPort": true,
+      "env": { "NEXT_PUBLIC_API_URL": "http://localhost:8000/api/v1" }
+    }
+  ]
+}

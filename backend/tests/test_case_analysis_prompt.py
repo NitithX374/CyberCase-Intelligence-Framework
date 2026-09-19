@@ -4,18 +4,18 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from app.services.case_analysis.case_analysis import execute_analysis_pipeline
+from app.services.case_analysis.analysis import execute_analysis_pipeline
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisFailure,
-    CaseSourceCitation,
     CaseProviderAnalysis,
+    CaseSourceCitation,
 )
-from app.services.case_materials import CaseSourceBundle, CaseSourceItem
 from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
 from app.services.case_analysis.prompts import case_system_prompt
+from app.services.case_analysis.response_parser import validate_response_payload
 from app.services.case_analysis.source_quote_resolver import find_aligned_quote
-from app.services.case_analysis.case_analysis_response_parser import validate_response_payload
+from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 
 def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
@@ -68,7 +68,6 @@ def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
     )
     return CaseProviderAnalysis(
         version="case_analysis_trace_v1",
-        answer="The report was submitted.",
         summary="The report was submitted.",
         involved_parties=[],
         timeline=[],
@@ -94,7 +93,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             return provider_result(contradicting=False)
 
         with patch(
-            "app.services.case_analysis.case_analysis.request_analysis_stage",
+            "app.services.case_analysis.analysis.request_analysis_stage",
             new=request_stage,
         ):
             await execute_analysis_pipeline(
@@ -133,7 +132,15 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             {"response_language", "analysis_mode", "case_sources", "technical_context", "question"},
         )
 
-    async def test_provenance_failure_gets_one_corrective_provider_pass(self) -> None:
+    async def test_a_source_in_both_roles_costs_no_second_provider_call(self) -> None:
+        """The analysis used to be sent back to be fixed. Now it is shown.
+
+        A source the model marked as both supporting and contradicting one
+        claim is a strange thing to say, but it is what the model said and the
+        reader can see both. Nothing here rejects an analysis any more, so
+        nothing asks for it a second time.
+        """
+
         source = CaseSourceItem(
             source_id="s1",
             source_kind="narrative",
@@ -146,7 +153,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             return provider_result(contradicting=len(calls) == 1)
 
         with patch(
-            "app.services.case_analysis.case_analysis.request_analysis_stage",
+            "app.services.case_analysis.analysis.request_analysis_stage",
             new=request_stage,
         ):
             result = await execute_analysis_pipeline(
@@ -159,14 +166,11 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertIsNotNone(result.trace)
-        self.assertEqual(
-            [stage for stage, _ in calls], ["direct", "direct_correction"]
-        )
-        self.assertIn("CORRECTION REQUIREMENTS", calls[1][1])
-        self.assertEqual(
-            result.execution_receipt["validation_retry"],
-            {"reason": "case_trace_conflicting_source_role"},
-        )
+        self.assertEqual([stage for stage, _ in calls], ["direct"])
+        self.assertNotIn("validation_retry", result.execution_receipt)
+        claim = result.trace.claims[0]
+        self.assertEqual(claim.supporting_source_ids, ["s1"])
+        self.assertEqual(claim.contradicting_source_ids, ["s1"])
 
 
 @pytest.mark.parametrize(

@@ -1,10 +1,11 @@
 import pytest
+from pydantic import ValidationError
+
 from app.services.case_analysis.pipeline_config import (
     AnalysisPipelineConfig,
     configured_pipeline,
     read_pipeline,
 )
-from pydantic import ValidationError
 
 
 @pytest.mark.parametrize(
@@ -38,7 +39,6 @@ def test_historical_raw_direct_version_reads_without_mutating_saved_payload():
     payload["version"] = "main_case_analysis_v10"
     assert read_pipeline(payload).version == "main_case_analysis_v1"
     assert payload["version"] == "main_case_analysis_v10"
-
 
 
 def test_historical_version_cannot_select_claim_anchored():

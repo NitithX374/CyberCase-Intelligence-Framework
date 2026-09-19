@@ -1,0 +1,10 @@
+.next/
+node_modules/
+# Rewritten from the backend's OpenAPI schema; check:api-types compares the
+# generated text, so formatting it here would fail that check.
+src/lib/api/generated/
+package-lock.json
+
+# Managed by a tool that rewrites the block between its markers.
+AGENTS.md
+CLAUDE.md

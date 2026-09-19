@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.user import User
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def get_or_create_dev_user(
@@ -32,7 +33,7 @@ async def get_or_create_dev_user(
         user = User(
             id=uuid.uuid4(),
             email=normalized_email,
-            email_verified_at=datetime.now(timezone.utc),
+            email_verified_at=datetime.now(UTC),
             name=name,
             avatar_url=avatar_url,
             oauth_provider="local_dev",

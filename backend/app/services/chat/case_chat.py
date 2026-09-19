@@ -1,46 +1,54 @@
+"""The case conversation: asking about an analysis, and answering what it asks.
+
+A question is answered in the request that sent it, from the analysis the case
+already has. When the analysis left something open it asks about it here, one
+question at a time, and each reply becomes case material bound to the gap it
+answers. The case is analysed again once the round's questions are spent, not
+after every reply.
+"""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.database import async_session
+from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
-from app.models.case_run import CaseAnalysisResult, CaseRun
 from app.models.chat import ChatMessage
-from app.schemas.case_followups import CaseFollowUpAnswer
 from app.schemas.chat import CaseChatRead, ChatMessageCreate, ChatMessageRead
-from app.schemas.message_metadata import serialize_message_metadata
-from app.services.followup.case_followup import (
-    CaseFollowUpError,
-    submit_followup_answer,
+from app.services.case_analysis.contracts import CaseAnalysisTrace
+from app.services.case_workflow import (
+    CaseWorkflowError,
+    answer_case_question,
+    next_ordinal,
+    owned_case,
+    run_case_analysis,
 )
-from app.services.workflow.case_run_service import (
-    CaseRunError,
-    requeue_failed_case_run,
+from app.services.chat.followup import (
+    answer_message,
+    answer_source,
+    asked_this_round,
+    next_gap,
+    pending_question,
+    question_message,
+    rounds_asked,
 )
 
 
 class CaseChatError(Exception):
-    def __init__(self, code: str, message: str, status_code: int = status.HTTP_409_CONFLICT) -> None:
+    def __init__(
+        self, code: str, message: str, status_code: int = status.HTTP_409_CONFLICT
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.status_code = status_code
-
-
-async def lock_case_chat(
-    db: AsyncSession,
-    case_id: UUID,
-    user_id: UUID | None,
-) -> Case:
-    case = await db.scalar(select(Case).where(Case.id == case_id).with_for_update())
-    if case is None or case.user_id != user_id:
-        raise CaseChatError("case_not_found", "Case not found", 404)
-    return case
 
 
 async def get_case_chat(
@@ -51,188 +59,170 @@ async def get_case_chat(
 ) -> CaseChatRead:
     case = await db.scalar(
         select(Case)
-        .options(
-            selectinload(Case.chat_messages),
-            selectinload(Case.case_runs),
-            selectinload(Case.latest_analysis_result),
-        )
+        .options(selectinload(Case.chat_messages), selectinload(Case.latest_analysis_result))
         .where(Case.id == case_id)
     )
     if case is None or case.user_id != user_id:
-        raise CaseChatError("case_not_found", "Case not found", 404)
+        raise CaseChatError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
+
     messages = [ChatMessageRead.model_validate(message) for message in case.chat_messages]
-    answered_ids = {
-        message.in_reply_to_message_id
-        for message in case.chat_messages
-        if message.in_reply_to_message_id is not None
-    }
-    has_pending_followup = any(
-        message.message_kind == "followup_question" and message.id not in answered_ids
-        for message in case.chat_messages
+    answered = case.latest_analysis_result is not None or messages
+    return CaseChatRead(
+        case_id=case.id,
+        status="answered" if answered else "idle",
+        messages=messages,
     )
-    latest_run = max(case.case_runs, key=lambda item: item.created_at, default=None)
-    if latest_run is not None and latest_run.status in {"queued", "running"}:
-        chat_status = "processing"
-    elif latest_run is not None and latest_run.status == "failed":
-        chat_status = "failed"
-    elif has_pending_followup:
-        chat_status = "awaiting_followup"
-    elif case.latest_analysis_result is not None or messages:
-        chat_status = "answered"
-    else:
-        chat_status = "idle"
-    return CaseChatRead(case_id=case.id, status=chat_status, messages=messages)
 
 
-async def find_case_run_by_idempotency_key(
-    db: AsyncSession,
-    case_id: UUID,
-    idempotency_key: str,
-    expected_payload: dict[str, object],
-) -> tuple[ChatMessage, CaseRun] | None:
-    run = await db.scalar(
-        select(CaseRun)
-        .where(CaseRun.case_id == case_id, CaseRun.idempotency_key == idempotency_key)
-        .with_for_update()
-    )
-    if run is None:
-        return None
-    if not isinstance(run.request_payload, dict) or any(
-        run.request_payload.get(key) != value for key, value in expected_payload.items()
-    ):
-        raise CaseChatError("idempotency_conflict", "Idempotency key was already used with different intent")
-    if run.request_message_id is None:
-        raise CaseChatError("case_chat_request_missing", "Case Chat request message is missing")
-    message = await db.get(ChatMessage, run.request_message_id)
-    if message is None:
-        raise CaseChatError("case_chat_request_missing", "Case Chat request message is missing")
-    return message, run
-
-
-def build_chat_request_payload(request: ChatMessageCreate, operation: str = "ask") -> dict[str, object]:
-    return {
-        "operation": operation,
-        "content": request.content.strip(),
-        "action": "conversation",
-        "response_language": request.response_language,
-    }
-
-
-def build_followup_answer(request: ChatMessageCreate) -> CaseFollowUpAnswer:
-    if request.followup is None:
-        raise CaseChatError(
-            "followup_answers_required",
-            "Follow-up answer is required",
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        )
-    return request.followup
-
-
-async def create_case_chat_message_and_run(
-    db: AsyncSession,
+async def post_case_message(
     *,
     case_id: UUID,
     user_id: UUID | None,
     request: ChatMessageCreate,
-) -> tuple[ChatMessage, CaseRun | None]:
-    case = await lock_case_chat(db, case_id, user_id)
+    session_factory: Callable = async_session,
+) -> tuple[list[ChatMessage], CaseAnalysisResult | None]:
+    """Handle one sent message. Returns the messages it produced.
 
-    if request.intent == "followup_answer":
-        target_id = request.in_reply_to_message_id
-        if target_id is None:
-            raise CaseChatError(
-                "followup_target_required",
-                "in_reply_to_message_id is required when intent is followup_answer",
-                status.HTTP_422_UNPROCESSABLE_CONTENT,
+    A send that follows an unanswered question is that question's answer. The
+    reader does not say so and the client does not mark it: the open question
+    is the one the case is waiting on, and there is only ever one.
+
+    A send that answers a question may then run an analysis, which takes long
+    enough that a client can give up and retry. The retry finds the message its
+    id already created and is given what that send produced.
+    """
+
+    already = await messages_of_send(session_factory, case_id, request.client_request_id)
+    if already is not None:
+        return already, None
+
+    answered = await answer_pending_question(
+        case_id=case_id, user_id=user_id, request=request, session_factory=session_factory
+    )
+    if answered is not None:
+        return answered
+
+    try:
+        question, answer = await answer_case_question(
+            case_id=case_id,
+            user_id=user_id,
+            content=request.content,
+            response_language=request.response_language,
+            client_request_id=request.client_request_id,
+            session_factory=session_factory,
+        )
+    except CaseWorkflowError as error:
+        raise CaseChatError(error.code, error.message, error.status_code) from error
+    return [question, answer], None
+
+
+async def messages_of_send(
+    session_factory: Callable, case_id: UUID, client_request_id: str | None
+) -> list[ChatMessage] | None:
+    """Everything a send already produced, when the client is sending it again."""
+
+    if client_request_id is None:
+        return None
+    async with session_factory() as db:
+        sent = await db.scalar(
+            select(ChatMessage).where(
+                ChatMessage.case_id == case_id,
+                ChatMessage.client_request_id == client_request_id,
             )
+        )
+    if sent is None:
+        return None
+    return await messages_from(session_factory, case_id, sent.ordinal)
+
+
+async def answer_pending_question(
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+    request: ChatMessageCreate,
+    session_factory: Callable,
+) -> tuple[list[ChatMessage], CaseAnalysisResult | None] | None:
+    """Take the reply as case material. None if nothing was asked.
+
+    The round's remaining questions are asked first, one at a time, so each
+    reply answers a named gap. Only when the round is spent does the case cost
+    another analysis.
+    """
+
+    async with session_factory() as db, db.begin():
         try:
-            message, run = await submit_followup_answer(
-                db,
-                case_id=case.id,
-                followup_id=target_id,
-                user_id=user_id,
-                answer=build_followup_answer(request),
-                idempotency_key=request.idempotency_key,
-                response_language=request.response_language,
-            )
-        except CaseFollowUpError as error:
+            case = await owned_case(db, case_id, user_id)
+        except CaseWorkflowError as error:
             raise CaseChatError(error.code, error.message, error.status_code) from error
-        return message, run
-
-    if not request.content.strip():
-        raise CaseChatError("case_chat_content_empty", "Case Chat message is empty", 422)
-
-    expected_payload = build_chat_request_payload(request, "ask")
-    existing = await find_case_run_by_idempotency_key(db, case.id, request.idempotency_key, expected_payload)
-    if existing is not None:
-        try:
-            await requeue_failed_case_run(db, case, existing[1])
-        except CaseRunError as error:
-            raise CaseChatError(error.code, error.message, error.status_code) from error
-        return existing
-    active = await db.scalar(
-        select(CaseRun.id).where(
-            CaseRun.case_id == case.id,
-            CaseRun.status.in_(("queued", "running")),
+        question = await pending_question(db, case.id)
+        if question is None:
+            return None
+        answer = answer_message(
+            case_id=case.id,
+            ordinal=await next_ordinal(db, case.id),
+            content=request.content.strip(),
+            question=question,
+            client_request_id=request.client_request_id,
         )
-    )
-    if active is not None:
-        raise CaseChatError("case_run_active", "Case already has an active analysis run")
+        db.add(answer)
+        await db.flush()
+        db.add(answer_source(case_id=case.id, answer=answer, question=question))
+        case.source_revision += 1
+        first_new_ordinal = answer.ordinal
+        following = await next_question_of_round(db, case_id=case.id, question=question)
+        if following is not None:
+            db.add(following)
 
-    context_result = await db.scalar(
-        select(CaseAnalysisResult).where(
-            CaseAnalysisResult.id == case.latest_analysis_result_id,
-            CaseAnalysisResult.case_id == case.id,
-            CaseAnalysisResult.status == "validated",
+    if following is not None:
+        return await messages_from(session_factory, case_id, first_new_ordinal), None
+
+    try:
+        analysis = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language=request.response_language,
+            session_factory=session_factory,
+            continuing_followup=True,
         )
-    )
-    if context_result is None:
-        raise CaseChatError(
-            "analysis_required",
-            "Analyze the Case before asking a Chat question",
-            status.HTTP_412_PRECONDITION_FAILED,
-        )
-    if not isinstance(context_result.pipeline_config, dict) or not context_result.pipeline_config.get("version"):
-        raise CaseChatError("case_ask_context_invalid", "Latest Case analysis configuration is unavailable")
-    next_ordinal = (
-        await db.scalar(
-            select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
-                ChatMessage.case_id == case.id
-            )
-        )
-        + 1
-    )
-    message = ChatMessage(
-        case_id=case.id,
-        ordinal=next_ordinal,
-        role="user",
-        content=request.content.strip(),
-        message_kind="conversation",
-        analysis_result_id=context_result.id,
-        metadata_json=serialize_message_metadata(
-            {
-                "action": "conversation",
-            }
-        ),
-    )
-    db.add(message)
-    await db.flush()
-    payload = {
-        **build_chat_request_payload(request, "ask"),
-    }
-    run = CaseRun(
-        case_id=case.id,
-        operation="ask",
-        evidence_revision=case.evidence_revision,
-        request_message_id=message.id,
-        idempotency_key=request.idempotency_key,
-        request_payload=payload,
-        pipeline_config=context_result.pipeline_config,
-    )
-    db.add(run)
-    case.updated_at = datetime.now(timezone.utc)
-    await db.flush()
-    return message, run
+    except CaseWorkflowError as error:
+        raise CaseChatError(error.code, error.message, error.status_code) from error
+    return await messages_from(session_factory, case_id, first_new_ordinal), analysis
 
 
-__all__ = ["CaseChatError", "create_case_chat_message_and_run"]
+async def next_question_of_round(
+    db: AsyncSession, *, case_id: UUID, question: ChatMessage
+) -> ChatMessage | None:
+    """The next question from the analysis that asked this one, if any is left."""
+
+    analysis_result_id = question.analysis_result_id
+    result = await db.get(CaseAnalysisResult, analysis_result_id)
+    if result is None:
+        return None
+    gap = next_gap(
+        CaseAnalysisTrace.model_validate(result.trace_json),
+        asked=await asked_this_round(db, analysis_result_id),
+        rounds=await rounds_asked(db, case_id),
+    )
+    if gap is None:
+        return None
+    return question_message(
+        case_id=case_id,
+        ordinal=await next_ordinal(db, case_id),
+        gap=gap,
+        analysis_result_id=analysis_result_id,
+    )
+
+
+async def messages_from(
+    session_factory: Callable, case_id: UUID, first_ordinal: int
+) -> list[ChatMessage]:
+    async with session_factory() as db:
+        rows = await db.scalars(
+            select(ChatMessage)
+            .where(ChatMessage.case_id == case_id, ChatMessage.ordinal >= first_ordinal)
+            .order_by(ChatMessage.ordinal)
+        )
+        return list(rows)
+
+
+__all__ = ["CaseChatError", "get_case_chat", "post_case_message"]

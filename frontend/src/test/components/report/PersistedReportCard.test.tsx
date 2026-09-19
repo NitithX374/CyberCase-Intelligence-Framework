@@ -11,11 +11,7 @@ function sampleReport(): CaseReport {
     report_id: "report-1",
     case_id: "case-1",
     version_number: 1,
-    idempotency_key: "report-request-1",
     analysis_result_id: "analysis-result-1",
-    prompt_version: "deterministic_raw_evidence_report_v1",
-    persistence_status: "completed",
-    validation_status: "validated",
     report: {
       report_version: "preliminary_analysis_report_v1",
       status: "provisional_unverified",
@@ -34,20 +30,13 @@ function sampleReport(): CaseReport {
           section_id: "case_summary",
           text: "A login event was reported.",
           support_type: "user_reported",
-          source_evidence_ids: [],
+          source_ids: [],
           mitre_technique_ids: [],
         },
       ],
       limitations: ["This report is provisional and unverified."],
     },
-    validation_errors: [],
-    failure_code: null,
-    failure_message: null,
     created_at: "2026-08-20T00:00:00Z",
-    finished_at: "2026-08-20T00:00:01Z",
-    latency_ms: 1,
-    input_tokens: 1,
-    output_tokens: 1,
   };
 }
 
@@ -130,40 +119,5 @@ describe("PersistedReportCard with Jinja2 HTML Viewer", () => {
     await waitFor(() => {
       expect(downloadSpy).toHaveBeenCalledTimes(2);
     });
-  });
-
-  it("renders failure details with technical failure code and validation errors inside Technical details disclosure", () => {
-    const failedReport = {
-      ...sampleReport(),
-      persistence_status: "failed" as const,
-      report: null,
-      failure_message: "Validation schema mismatch occurred during report generation.",
-      failure_code: "REPORT_SYNTHESIS_FAILED",
-      validation_errors: ["Missing evidence binding."],
-    };
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <PersistedReportCard
-          report={failedReport}
-          caseId="case-1"
-          caseTitle="Investigation"
-          isDownloading={false}
-          onDownloadPdf={vi.fn()}
-        />
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByText("ไม่สามารถจัดทำรายงานฉบับนี้ได้")).toBeInTheDocument();
-    expect(
-      screen.getByText("Validation schema mismatch occurred during report generation."),
-    ).toBeInTheDocument();
-
-    expect(screen.getByText("Technical details")).toBeInTheDocument();
-    expect(screen.getByText("REPORT_SYNTHESIS_FAILED")).toBeInTheDocument();
-    expect(screen.getByText("Missing evidence binding.")).toBeInTheDocument();
-
-    expect(screen.queryByLabelText("HTML Report Viewer")).not.toBeInTheDocument();
-    expect(screen.queryByText("Claim inspector")).not.toBeInTheDocument();
   });
 });

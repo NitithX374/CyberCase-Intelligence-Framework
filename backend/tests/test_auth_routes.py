@@ -1,9 +1,10 @@
-import pytest
-from datetime import datetime, timezone
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.database import get_db
@@ -20,8 +21,7 @@ def _fastapi_app() -> FastAPI:
 
 @pytest.fixture
 def mock_db():
-    session = AsyncMock()
-    return session
+    return AsyncMock()
 
 
 @pytest.fixture
@@ -53,8 +53,8 @@ def test_dev_login_and_authenticated_session(client, mock_db, monkeypatch):
         avatar_url="https://example.com/avatar.png",
         oauth_provider="dev",
         oauth_subject_id="dev:dev@example.com",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
     with patch(

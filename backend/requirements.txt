@@ -21,3 +21,12 @@ jinja2>=3.1.0
 tiktoken>=0.8.0
 pyjwt>=2.8.0
 email-validator>=2.2.0
+
+# Thai sentence segmentation for the MITRE applicability gate. crfsuite is the
+# engine behind PyThaiNLP crfcut; the encoder gate itself needs torch and
+# transformers on top, which research/mitre_gate/README.md covers.
+pythainlp>=5.0.0
+python-crfsuite>=0.9.11
+
+# Formatting and linting, configured in pyproject.toml.
+ruff>=0.9.0

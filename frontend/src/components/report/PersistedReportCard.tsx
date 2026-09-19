@@ -2,12 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import {
-  downloadCaseReportHtml,
-  type CaseReport,
-} from "@/lib/api";
+import { downloadCaseReportHtml, type CaseReport } from "@/lib/api";
 import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
-import { toUserFacingError } from "@/lib/user-facing-error";
+import { toUserFacingError } from "@/lib/userFacingError";
 
 interface PersistedReportCardProps {
   report: CaseReport;
@@ -25,48 +22,35 @@ export function PersistedReportCard({
   onDownloadPdf,
 }: PersistedReportCardProps) {
   return (
-    <article
-      aria-label="Persisted report"
-      className="space-y-4"
-    >
+    <article aria-label="Persisted report" className="space-y-4">
       <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-3">
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] font-semibold tracking-wider text-ink-muted">
               Version {report.version_number} · Saved
             </span>
-            <span className="text-[10px] font-semibold text-ink-muted">
-              {report.persistence_status === "completed"
-                ? "Provisional"
-                : "Generation failed"}
-            </span>
+            <span className="text-[10px] font-semibold text-ink-muted">Provisional</span>
           </div>
           <h2 className="mt-1 text-lg font-bold tracking-tight text-ink sm:text-xl">
-            {report.report?.title ?? caseTitle}
+            {report.report.title ?? caseTitle}
           </h2>
         </div>
 
-        {report.persistence_status === "completed" && report.report && (
-          <button
-            type="button"
-            onClick={onDownloadPdf}
-            disabled={isDownloading}
-            className="inline-flex items-center gap-1.5 rounded bg-primary px-3.5 py-1.5 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
-          >
-            {isDownloading ? "Preparing PDF..." : "Download PDF"}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onDownloadPdf}
+          disabled={isDownloading}
+          className="inline-flex items-center gap-1.5 rounded bg-primary px-3.5 py-1.5 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed disabled:cursor-wait disabled:bg-control-disabled disabled:text-ink-disabled"
+        >
+          {isDownloading ? "Preparing PDF..." : "Download PDF"}
+        </button>
       </header>
 
-      {report.persistence_status === "failed" || !report.report ? (
-        <ReportFailure report={report} />
-      ) : (
-        <ReportHtmlViewer
-          caseId={caseId}
-          reportId={report.report_id}
-          title={report.report.title ?? caseTitle}
-        />
-      )}
+      <ReportHtmlViewer
+        caseId={caseId}
+        reportId={report.report_id}
+        title={report.report.title ?? caseTitle}
+      />
     </article>
   );
 }
@@ -176,59 +160,12 @@ function ReportHtmlViewer({
   }
 
   return (
-    <div
-      aria-label="HTML Report Viewer"
-      className="overflow-hidden border border-line bg-surface"
-    >
+    <div aria-label="HTML Report Viewer" className="overflow-hidden border border-line bg-surface">
       <iframe
         src={htmlUrl}
         title={`Case report: ${title}`}
         className="h-[800px] w-full border-0 bg-canvas sm:h-[850px]"
       />
-    </div>
-  );
-}
-
-function ReportFailure({ report }: { report: CaseReport }) {
-  return (
-    <div className="space-y-3 border-y border-line py-5 text-xs">
-      <div className="flex items-center gap-2 text-accent">
-        <span className="font-bold text-sm">ไม่สามารถจัดทำรายงานฉบับนี้ได้</span>
-      </div>
-      <p className="text-ink-secondary leading-relaxed">
-        {report.failure_message ?? "ระบบไม่สามารถสร้างรายงานฉบับสมบูรณ์ได้เนื่องจากข้อมูลบางส่วนไม่ผ่านเกณฑ์การตรวจสอบ"}
-      </p>
-      <p className="text-ink-muted text-[11px]">
-        คุณสามารถเริ่มวิเคราะห์ข้อมูลเพิ่มเติมในหน้า Chat หรือสร้างรายงานฉบับใหม่เมื่อปรับปรุงข้อมูลเรียบร้อยแล้ว
-      </p>
-      {(report.failure_code || report.validation_errors.length > 0) && (
-        <details className="mt-3 rounded border border-line/60 bg-surface-nested/30 px-3 py-2 text-xs">
-          <summary className="cursor-pointer font-medium text-ink-muted transition-colors hover:text-ink select-none flex items-center justify-between">
-            <span>Technical details</span>
-            <span className="text-[10px] transition-transform duration-200 group-open:rotate-180">
-              ▾
-            </span>
-          </summary>
-          <div className="mt-2 pt-2 border-t border-line/40 font-mono text-[11px] text-ink-secondary break-all select-text whitespace-pre-wrap space-y-1">
-            {report.failure_code && (
-              <div>
-                <span className="text-ink-muted">Failure code: </span>
-                <span>{report.failure_code}</span>
-              </div>
-            )}
-            {report.validation_errors.length > 0 && (
-              <div>
-                <div className="text-ink-muted">Validation errors:</div>
-                <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                  {report.validation_errors.map((err, i) => (
-                    <li key={`validation-error-${i}`}>{err}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </details>
-      )}
     </div>
   );
 }

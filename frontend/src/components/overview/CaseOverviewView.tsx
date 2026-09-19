@@ -2,24 +2,23 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CaseGap, SourceMessageRef } from "@/lib/caseOverviewTypes";
+import type { CaseGap, SourceMessageRef } from "@/lib/caseOverview/types";
 import { buildCaseOverview } from "@/lib/caseOverview";
 import { detectResponseLanguage } from "@/lib/api";
 import {
   useCase,
   useCaseAnalysis,
-  useCaseEvidence,
-  useCaseFollowUps,
-  useCaseRunPolling,
+  useCaseSources,
   useStartCaseAnalysis,
 } from "@/hooks/useCaseQueries";
 import { casePath } from "@/lib/workspaceRoutes";
 import { CaseFindingsSection } from "./CaseFindingsSection";
-import { SourceEvidenceDrawer } from "@/components/evidence/SourceEvidenceDrawer";
+import { SourceDrawer } from "@/components/sources/SourceDrawer";
 import { OverviewStatusRail } from "./OverviewStatusRail";
-import { ChatMessageMarkdown } from "@/components/conversation/ChatMessageMarkdown";
+import { ChatMessageMarkdown } from "@/components/chat/ChatMessageMarkdown";
 import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
 import { Icon } from "@/components/common/icons";
+import { useWorkspaceActivity } from "@/components/layout/WorkspaceActivityContext";
 
 interface CaseOverviewViewProps {
   caseId: string | null;
@@ -31,27 +30,15 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const caseQuery = useCase(caseId);
   const activeCase = caseQuery.data ?? null;
   const analysisQuery = useCaseAnalysis(caseId);
-  const evidenceQuery = useCaseEvidence(caseId);
-  const followupsQuery = useCaseFollowUps(caseId);
-
-  const runId = activeCase?.active_run_id ?? activeCase?.latest_run_id ?? null;
-  const runQuery = useCaseRunPolling(caseId, runId);
-  const runStatus =
-    runQuery.data?.status ??
-    (activeCase?.processing_status === "queued" ||
-    activeCase?.processing_status === "running" ||
-    activeCase?.processing_status === "failed"
-      ? activeCase.processing_status
-      : null);
+  const sourcesQuery = useCaseSources(caseId);
 
   const startAnalysisMutation = useStartCaseAnalysis(caseId);
 
   const analysisResult = analysisQuery.data ?? null;
-  const evidenceSources = evidenceQuery.data ?? [];
-  const followups = followupsQuery.data ?? [];
-  const run = runQuery.data ?? null;
+  const { isFollowupPending } = useWorkspaceActivity();
+  // A fresh [] on every render would rebuild the overview on every render.
+  const sources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
   const caseTitle = activeCase?.title || "New case";
-  const chatStatus = activeCase?.status ?? "idle";
 
   const [activeSource, setActiveSource] = useState<{
     sourceRef: SourceMessageRef;
@@ -61,26 +48,27 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   } | null>(null);
   const [overviewTab, setOverviewTab] = useState<"findings" | "questions">("findings");
   const overview = useMemo(
-    () => buildCaseOverview(analysisResult, evidenceSources, runStatus),
-    [analysisResult, evidenceSources, runStatus],
+    () => buildCaseOverview(analysisResult, sources, null),
+    [analysisResult, sources],
   );
 
-  const navigateToIntake = () => { if (caseId) router.push(casePath(caseId, "intake")); };
-  const navigateToMaterials = () => { if (caseId) router.push(casePath(caseId, "materials")); };
-  const navigateToReport = () => { if (caseId) router.push(casePath(caseId, "report")); };
+  const navigateToSources = () => {
+    if (caseId) router.push(casePath(caseId, "sources"));
+  };
+  const navigateToReport = () => {
+    if (caseId) router.push(casePath(caseId, "report"));
+  };
 
   const handleRunAnalysis = async () => {
     if (!caseId || startAnalysisMutation.isPending) return;
     try {
       await startAnalysisMutation.mutateAsync({
-        idempotency_key: globalThis.crypto.randomUUID(),
         response_language: detectResponseLanguage(
-          evidenceSources.map((source) => source.exact_text).join("\n"),
+          sources.map((source) => source.exact_text).join("\n"),
         ),
-        expected_evidence_revision: activeCase?.evidence_revision ?? 0,
       });
     } catch {
-      // Handled by run state / error modals
+      // Surfaced by the workspace error modal.
     }
   };
 
@@ -89,40 +77,45 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
       <CaseOverviewState
         eyebrow="Case overview"
         title="No Case Material Yet"
-        description="Add a case narrative or document in Intake to begin."
-        actionLabel="Open Intake"
-        onAction={navigateToIntake}
-        actionIcon="intake"
+        description="Add a case narrative or a file on the sources page to begin."
       />
     );
   }
 
   if (analysisQuery.isLoading && !analysisResult) {
-    return <CaseOverviewState title="Loading Case analysis…" description="Restoring the saved Case analysis and current Case evidence." actionLabel="Open Intake" onAction={navigateToIntake} processing />;
-  }
-
-  if (evidenceQuery.isLoading && analysisResult) {
-    return <CaseOverviewState title="Loading Case evidence…" description="Loading the current Case evidence." actionLabel="Open Materials" onAction={navigateToMaterials} processing />;
-  }
-
-  if (runStatus === "failed" && !analysisResult) {
     return (
       <CaseOverviewState
-        eyebrow="Case overview"
-        title="Analysis Failed"
-        description={run?.error_message || "The case analysis failed to complete. Return to Intake to verify the received Case material and retry."}
-        actionLabel="Open Intake"
-        onAction={navigateToIntake}
-        actionIcon="intake"
+        title="Loading Case analysis…"
+        description="Restoring the saved analysis and the current case sources."
+        actionLabel="Open sources"
+        onAction={navigateToSources}
+        processing
       />
     );
   }
 
-  const pendingFollowUp = followups.find((item) => item.state === "pending");
-  const isAwaitingFollowup = chatStatus === "awaiting_followup" || Boolean(pendingFollowUp);
+  if (sourcesQuery.isLoading && analysisResult) {
+    return (
+      <CaseOverviewState
+        title="Loading case sources…"
+        description="Loading the current case sources."
+        actionLabel="Open sources"
+        onAction={navigateToSources}
+        processing
+      />
+    );
+  }
 
   if (overview.unavailableReason) {
-    return <CaseOverviewState title="Analysis unavailable" description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`} actionLabel="Open Intake" onAction={navigateToIntake} actionIcon="intake" />;
+    return (
+      <CaseOverviewState
+        title="Analysis unavailable"
+        description={`${overview.unavailableReason} Start a new analysis after verifying the Case material.`}
+        actionLabel="Open sources"
+        onAction={navigateToSources}
+        actionIcon="sources"
+      />
+    );
   }
 
   if (!overview.hasAnalysis && overview.isProcessing) {
@@ -140,10 +133,10 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
       <CaseOverviewState
         eyebrow="Case overview"
         title="Analysis Required"
-        description="This case has material but no completed case-level analysis yet. Return to Intake to run the analysis."
-        actionLabel="Open Intake"
-        onAction={navigateToIntake}
-        actionIcon="intake"
+        description="This case has material but no completed case-level analysis yet. Run the analysis from the sources page."
+        actionLabel="Open sources"
+        onAction={navigateToSources}
+        actionIcon="sources"
       />
     );
   }
@@ -175,33 +168,24 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
           key={caseId}
           caseTitle={caseTitle}
           onOpenReport={navigateToReport}
-          onOpenMaterials={navigateToMaterials}
+          onOpenSources={navigateToSources}
         />
 
-        {isAwaitingFollowup && (
+        {isFollowupPending ? (
           <div
             role="status"
-            aria-label="Follow-up needed"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-unresolved/50 bg-unresolved/10 px-4 py-3 text-xs text-ink"
+            className="flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-4 py-3 text-xs text-ink"
           >
-            <div className="flex items-start gap-2.5">
-              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-unresolved motion-safe:animate-ping" />
-              <div>
-                <p className="font-semibold text-ink">
-                  Analysis Needs More Information
-                  {pendingFollowUp?.topic ? ` · ${pendingFollowUp.topic}` : ""}
-                </p>
-                <p className="mt-0.5 text-ink-muted">
-                  {pendingFollowUp?.question?.trim()
-                    ? `The case analysis requires additional details: "${pendingFollowUp.question.trim()}". Respond in the Ask panel on the right.`
-                    : "The case analysis requires additional details. Check the Ask panel on the right to follow up."}
-                </p>
-              </div>
+            <span className="h-2 w-2 shrink-0 rounded-full bg-accent motion-safe:animate-pulse motion-reduce:animate-none" />
+            <div>
+              <p className="font-semibold">Updating the case analysis.</p>
+              <p className="mt-0.5 text-ink-secondary">
+                The follow-up answer was received. The overview will refresh when processing
+                finishes.
+              </p>
             </div>
           </div>
-        )}
-
-        {isStale && (
+        ) : isStale ? (
           <div
             role="alert"
             className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-unresolved/40 bg-unresolved/10 px-4 py-3 text-xs text-ink"
@@ -209,8 +193,10 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
             <div className="flex items-start gap-2">
               <span className="h-2 w-2 shrink-0 rounded-full bg-unresolved" />
               <div>
-                <p className="font-semibold">Analysis is based on older evidence.</p>
-                <p className="mt-0.5 text-ink-secondary">New case material was added after this analysis.</p>
+                <p className="font-semibold">Analysis is based on older sources.</p>
+                <p className="mt-0.5 text-ink-secondary">
+                  New case material was added after this analysis.
+                </p>
               </div>
             </div>
             <button
@@ -218,17 +204,12 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
               onClick={() => void handleRunAnalysis()}
               className="btn-primary rounded-md px-3 py-1.5 text-xs font-semibold"
             >
-              Analyze latest evidence
+              Analyze latest sources
             </button>
           </div>
-        )}
+        ) : null}
 
-        <OverviewStatusRail
-          overview={overview}
-          result={analysisResult}
-          evidenceSources={evidenceSources}
-          runStatus={runStatus}
-        />
+        <OverviewStatusRail overview={overview} result={analysisResult} sources={sources} />
 
         <OverviewSummarySection summary={overview.incidentSummary} />
 
@@ -245,17 +226,19 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
               aria-controls="panel-findings"
               aria-selected={overviewTab === "findings"}
               onClick={() => setOverviewTab("findings")}
-              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${overviewTab === "findings"
-                ? "border-accent text-accent"
-                : "border-transparent text-ink-muted hover:text-ink"
-                }`}
+              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                overviewTab === "findings"
+                  ? "border-accent text-accent"
+                  : "border-transparent text-ink-muted hover:text-ink"
+              }`}
             >
               <span>Case Findings</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${overviewTab === "findings"
-                  ? "bg-accent text-ivory"
-                  : "bg-surface-nested text-ink-secondary"
-                  }`}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  overviewTab === "findings"
+                    ? "bg-accent text-ivory"
+                    : "bg-surface-nested text-ink-secondary"
+                }`}
               >
                 {overview.findings.length}
               </span>
@@ -268,17 +251,19 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
               aria-controls="panel-questions"
               aria-selected={overviewTab === "questions"}
               onClick={() => setOverviewTab("questions")}
-              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${overviewTab === "questions"
-                ? "border-accent text-accent"
-                : "border-transparent text-ink-muted hover:text-ink"
-                }`}
+              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                overviewTab === "questions"
+                  ? "border-accent text-accent"
+                  : "border-transparent text-ink-muted hover:text-ink"
+              }`}
             >
               <span>Open Questions</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${overviewTab === "questions"
-                  ? "bg-unresolved text-ivory"
-                  : "bg-surface-nested text-ink-secondary"
-                  }`}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  overviewTab === "questions"
+                    ? "bg-unresolved text-ivory"
+                    : "bg-surface-nested text-ink-secondary"
+                }`}
               >
                 {overview.gaps.length}
               </span>
@@ -294,7 +279,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
             <CaseFindingsSection
               key={analysisKey}
               findings={overview.findings}
-              onNavigateToSource={navigateToMaterials}
+              onNavigateToSource={navigateToSources}
               onSelectSource={handleSelectSource}
               activeSourceKey={activeSource?.sourceKey ?? null}
             />
@@ -312,11 +297,11 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
       </div>
 
       {activeSource && (
-        <SourceEvidenceDrawer
+        <SourceDrawer
           sourceRef={activeSource.sourceRef}
           anchorElement={activeSource.anchorElement}
           onClose={() => setActiveSource(null)}
-          onNavigateToSource={navigateToMaterials}
+          onNavigateToSource={navigateToSources}
           citationRole={activeSource.citationRole}
         />
       )}
@@ -324,16 +309,44 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   );
 }
 
-function CaseOverviewHeader({ caseTitle, onOpenReport, onOpenMaterials }: { caseTitle: string; onOpenReport: () => void; onOpenMaterials?: () => void }) {
+function CaseOverviewHeader({
+  caseTitle,
+  onOpenReport,
+  onOpenSources,
+}: {
+  caseTitle: string;
+  onOpenReport: () => void;
+  onOpenSources?: () => void;
+}) {
   return (
-    <header aria-label={`${caseTitle} analysis`} className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
+    <header
+      aria-label={`${caseTitle} analysis`}
+      className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5"
+    >
       <div>
         <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">Analysis</h2>
-        <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">Grounded findings from the persisted Case Analysis Result and current Case evidence.</p>
+        <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">
+          Grounded findings from the persisted Case Analysis Result and the current case sources.
+        </p>
       </div>
       <div className="flex items-center gap-3">
-        {onOpenMaterials && <button type="button" onClick={onOpenMaterials} className="text-xs font-medium text-ink-secondary underline decoration-line-strong underline-offset-4 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent">View sources</button>}
-        <button type="button" onClick={onOpenReport} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-xs font-semibold text-ivory hover:bg-charcoal-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"><Icon name="report" className="h-3.5 w-3.5" />View report</button>
+        {onOpenSources && (
+          <button
+            type="button"
+            onClick={onOpenSources}
+            className="text-xs font-medium text-ink-secondary underline decoration-line-strong underline-offset-4 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            View sources
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onOpenReport}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-xs font-semibold text-ivory hover:bg-charcoal-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          <Icon name="report" className="h-3.5 w-3.5" />
+          View report
+        </button>
       </div>
     </header>
   );
@@ -365,18 +378,34 @@ function CaseOverviewState({
   description: string;
   actionLabel?: string;
   onAction?: () => void;
-  actionIcon?: "intake";
+  actionIcon?: "sources";
   processing?: boolean;
 }) {
   return (
     <div className="mx-auto flex h-full min-h-[360px] w-full max-w-5xl flex-col justify-center px-5 py-10 sm:px-8 lg:px-10">
       <div className="max-w-xl border-y border-line py-8">
         {processing ? (
-          <div className="mb-4 flex items-center gap-2 text-evidence"><span className="h-2 w-2 rounded-full bg-evidence motion-safe:animate-pulse motion-reduce:animate-none" /><span className="text-[11px] font-semibold">Analysis in progress</span></div>
-        ) : eyebrow ? <p className="section-eyebrow">{eyebrow}</p> : null}
+          <div className="mb-4 flex items-center gap-2 text-source">
+            <span className="h-2 w-2 rounded-full bg-source motion-safe:animate-pulse motion-reduce:animate-none" />
+            <span className="text-[11px] font-semibold">Analysis in progress</span>
+          </div>
+        ) : eyebrow ? (
+          <p className="section-eyebrow">{eyebrow}</p>
+        ) : null}
         <h2 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">{title}</h2>
         <p className="mt-2 max-w-lg text-xs leading-6 text-ink-secondary">{description}</p>
-        {actionLabel && onAction && <div className="pt-5"><button type="button" onClick={onAction} className="btn-primary inline-flex items-center gap-2 rounded-md">{actionIcon && <Icon name={actionIcon} className="h-3.5 w-3.5" />}{actionLabel}</button></div>}
+        {actionLabel && onAction && (
+          <div className="pt-5">
+            <button
+              type="button"
+              onClick={onAction}
+              className="btn-primary inline-flex items-center gap-2 rounded-md"
+            >
+              {actionIcon && <Icon name={actionIcon} className="h-3.5 w-3.5" />}
+              {actionLabel}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -444,7 +473,9 @@ function OpenQuestionsSection({ gaps }: { gaps: CaseGap[] }) {
                   )}
                 </div>
                 <div className="min-w-0 space-y-1">
-                  <h3 className="text-xs sm:text-sm font-semibold leading-snug text-ink">{gap.topic}</h3>
+                  <h3 className="text-xs sm:text-sm font-semibold leading-snug text-ink">
+                    {gap.topic}
+                  </h3>
                   <p className="text-xs leading-relaxed text-ink-secondary">{gap.description}</p>
                 </div>
                 <div className="min-w-0">

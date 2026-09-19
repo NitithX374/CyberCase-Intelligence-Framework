@@ -17,10 +17,7 @@ export function caseRouteState(pathname: string): CaseRouteState {
   const segments = pathname.split("/").filter(Boolean);
   const isCaseRoute = segments[0] === "case";
   if (!isCaseRoute) return { caseId: null, view: "overview" };
-  const caseId =
-    segments[1]
-      ? decodeCaseId(segments[1])
-      : null;
+  const caseId = segments[1] ? decodeCaseId(segments[1]) : null;
   return { caseId, view: viewForSegment(segments[2]) };
 }
 
@@ -30,13 +27,11 @@ export function casePath(caseId: string, view: WorkspaceView): string {
 }
 
 function viewForSegment(segment: string | undefined): WorkspaceView {
-  return segment === "intake"
-    ? "intake"
-    : segment === "materials"
-      ? "materials"
-      : segment === "technical-context"
-        ? "technical-context"
-        : segment === "report"
-          ? "report"
-          : "overview";
+  return segment === "sources"
+    ? "sources"
+    : segment === "technical-context"
+      ? "technical-context"
+      : segment === "report"
+        ? "report"
+        : "overview";
 }

@@ -57,9 +57,7 @@ class FailingRecognizer:
         raise RecognitionProviderError("provider unavailable")
 
 
-def _service(
-    recognizer, max_concurrent_ocr: int = 4
-) -> DocumentIngestionService:
+def _service(recognizer, max_concurrent_ocr: int = 4) -> DocumentIngestionService:
     return DocumentIngestionService(
         recognizer,
         DocumentIngestionLimits(
@@ -121,11 +119,7 @@ def test_docx_uses_native_extraction() -> None:
 def test_text_pdf_does_not_trigger_recognition() -> None:
     recognizer = RecordingRecognizer()
     native_text = "This is reliable native investigation dossier text 1234567890. " * 6
-    result = asyncio.run(
-        _service(recognizer).ingest(
-            _pdf_bytes([native_text]), "native.pdf"
-        )
-    )
+    result = asyncio.run(_service(recognizer).ingest(_pdf_bytes([native_text]), "native.pdf"))
 
     assert result.extraction_method == ExtractionMethod.NATIVE_PDF
     assert result.pages[0].text_method == "native"
@@ -147,9 +141,7 @@ def test_scanned_pdf_page_is_routed_to_recognizer() -> None:
 
 def test_pdf_with_tiny_text_layer_is_still_routed_to_recognizer() -> None:
     recognizer = RecordingRecognizer("complete recognized page")
-    result = asyncio.run(
-        _service(recognizer).ingest(_pdf_bytes(["x1"]), "scan-with-layer.pdf")
-    )
+    result = asyncio.run(_service(recognizer).ingest(_pdf_bytes(["x1"]), "scan-with-layer.pdf"))
 
     assert recognizer.pages == [1]
     assert result.pages[0].text == "complete recognized page"
@@ -158,9 +150,7 @@ def test_pdf_with_tiny_text_layer_is_still_routed_to_recognizer() -> None:
 
 def test_mixed_pdf_routes_pages_independently_and_preserves_page_numbers() -> None:
     recognizer = RecordingRecognizer("recognized page two")
-    native_text = (
-        "Native page one contains a complete criminal investigation narrative. " * 5
-    )
+    native_text = "Native page one contains a complete criminal investigation narrative. " * 5
     result = asyncio.run(
         _service(recognizer).ingest(
             _pdf_bytes([native_text, None, native_text]),
@@ -218,7 +208,7 @@ def test_generated_visual_descriptions_are_stripped() -> None:
     text, descriptions = separate_generated_visual_descriptions(raw)
     assert "<figure>" not in text
     assert "Generated description of diagram" not in text
-    assert "Evidence text before.\n\nEvidence text after." == text
+    assert text == "Evidence text before.\n\nEvidence text after."
 
 
 def test_prompt_injection_like_document_text_remains_inert_data() -> None:
@@ -242,13 +232,9 @@ def test_ingestion_does_not_call_rag_or_case_analysis(monkeypatch) -> None:
 
     monkeypatch.setattr("app.services.clients.rag_client.request_rag", forbidden_rag)
     monkeypatch.setattr(
-        "app.services.case_analysis.case_analysis.request_case_analysis",
+        "app.services.case_analysis.analysis.request_case_analysis",
         forbidden_analysis,
     )
 
-    asyncio.run(
-        _service(RecordingRecognizer()).ingest(
-            _docx_bytes("evidence only"), "case.docx"
-        )
-    )
+    asyncio.run(_service(RecordingRecognizer()).ingest(_docx_bytes("evidence only"), "case.docx"))
     assert calls == {"rag": 0, "analysis": 0}

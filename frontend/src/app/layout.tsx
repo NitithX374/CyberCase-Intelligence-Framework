@@ -21,8 +21,7 @@ export const metadata: Metadata = {
     icon: "/cybercase-mark.png",
     apple: "/cybercase-mark.png",
   },
-  description:
-    "An evidence-bound workspace for case summarization, analysis, and guided follow-up.",
+  description: "An source-bound workspace for case summarization, analysis, and guided follow-up.",
 };
 
 export default function RootLayout({
@@ -31,7 +30,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${manrope.variable} ${jetbrainsMono.variable}`}
+    >
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>

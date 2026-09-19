@@ -105,13 +105,10 @@ class TyphoonDocumentRecognizer:
             finish_reason = choice.get("finish_reason")
             raw_text = choice["message"]["content"].strip()
         except (KeyError, IndexError, TypeError, ValueError, AttributeError) as error:
-            raise RecognitionResponseError(
-                "Typhoon OCR returned an invalid response."
-            ) from error
+            raise RecognitionResponseError("Typhoon OCR returned an invalid response.") from error
         if finish_reason == "length":
             raise RecognitionResponseError(
-                "Typhoon OCR returned truncated document text "
-                "(finish_reason='length')."
+                "Typhoon OCR returned truncated document text (finish_reason='length')."
             )
         if not raw_text:
             raise RecognitionResponseError("Typhoon OCR returned no document text.")
@@ -141,9 +138,7 @@ class TyphoonDocumentRecognizer:
                 f"Typhoon OCR returned HTTP {error.response.status_code}."
             ) from error
         except (httpx.RequestError, ValueError) as error:
-            raise RecognitionProviderError(
-                "Typhoon OCR could not be reached."
-            ) from error
+            raise RecognitionProviderError("Typhoon OCR could not be reached.") from error
 
 
 __all__ = [

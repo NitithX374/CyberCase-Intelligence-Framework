@@ -5,13 +5,19 @@ export function mockNativeDialog() {
   const originalShow = Object.getOwnPropertyDescriptor(prototype, "showModal");
   const originalClose = Object.getOwnPropertyDescriptor(prototype, "close");
   beforeAll(() => {
-    Object.defineProperty(prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) {
-      this.setAttribute("open", "");
-      this.querySelector<HTMLButtonElement>("button")?.focus();
-    } });
-    Object.defineProperty(prototype, "close", { configurable: true, value(this: HTMLDialogElement) {
-      this.removeAttribute("open");
-    } });
+    Object.defineProperty(prototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+        this.querySelector<HTMLButtonElement>("button")?.focus();
+      },
+    });
+    Object.defineProperty(prototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+      },
+    });
   });
   afterAll(() => {
     if (originalShow) Object.defineProperty(prototype, "showModal", originalShow);
