@@ -14,9 +14,11 @@ export const SCHEMA_GROUPS = Object.freeze({
   caseTypes: ["CaseDocumentRead", "CaseRead", "DocumentExtractionRead"],
   sourceTypes: ["CaseSourceCreate", "CaseSourceRead"],
   analysisTypes: [
+    "AnalysisStepRead",
     "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
     "CaseChatResponse",
+    "FollowupQuestionRead",
     // The analysis trace, as the service defines it. The client reads this
     // instead of re-deriving the shape from an untyped blob.
     "CaseAnalysisClaim",

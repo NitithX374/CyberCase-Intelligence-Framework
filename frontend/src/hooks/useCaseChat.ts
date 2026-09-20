@@ -47,10 +47,9 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
     retry: false,
     staleTime: 0,
   });
-
   const send = useMutation({
     mutationFn: ({ content, key }: Submission) => createCaseChatMessage(caseId!, content, key),
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       setInput("");
       queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(caseId!), (current) =>
         current
@@ -71,10 +70,9 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
             : current,
         );
       }
-      await Promise.all([
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId!), exact: true }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId!) }),
-        queryClient.invalidateQueries({ queryKey: caseQueryKeys.sources(caseId!) }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
       ]);
     },

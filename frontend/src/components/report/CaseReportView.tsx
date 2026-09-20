@@ -19,14 +19,18 @@ interface CaseReportViewProps {
   caseId: string;
   caseTitle: string;
   analysisResult: CaseAnalysisResultRead | null;
-  onOpenOverview: () => void;
+  /** Defaults to scrolling up to the findings, which share this page. */
+  onOpenOverview?: () => void;
 }
 
 export function CaseReportView({
   caseId,
   caseTitle,
   analysisResult,
-  onOpenOverview,
+  onOpenOverview = () =>
+    document
+      .getElementById("workspace-overview-panel")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
 }: CaseReportViewProps) {
   const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -85,9 +89,8 @@ export function CaseReportView({
   return (
     <section
       id="workspace-report-panel"
-      role="tabpanel"
       aria-label="Case report"
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface"
+      className="flex shrink-0 flex-col bg-surface"
     >
       <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
         <header className="border-b border-line pb-5">
@@ -108,7 +111,7 @@ export function CaseReportView({
                 className="inline-flex h-9 items-center gap-1.5 px-2 text-xs font-medium text-ink-secondary underline decoration-line-strong underline-offset-4"
               >
                 <Icon name="overview" className="h-3.5 w-3.5" />
-                View analysis
+                Back to findings
               </button>
               <button
                 type="button"

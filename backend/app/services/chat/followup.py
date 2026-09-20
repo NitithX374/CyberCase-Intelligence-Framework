@@ -1,26 +1,32 @@
 """Asking the reader about the things the analysis could not settle.
 
 The analysis decides which gaps are worth asking about and writes the question
-for each. This adds when to ask them and what to do with the replies.
+for each; `case_analysis.clarification` decides which of those is put to the
+reader. This is the database side of it: what has been asked, what came back,
+and the messages that carry both.
 
 One question is outstanding at a time, so a reply needs no marking: it answers
-the question above it, and becomes a case source bound to that gap. The next
-question follows from the same analysis, until the round's questions run out —
-only then is the case analysed again, so a round of three costs one analysis
-rather than three.
+the question above it. The reply stays a chat message. It is not a case source
+and does not move `source_revision` — the analysis reads it as follow-up
+history, alongside the sources rather than among them.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.models.chat import ChatMessage
-from app.models.sources import CaseSource
-from app.services.case_analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace
+from app.schemas.message_metadata import message_trace, serialize_message_metadata
+from app.services.case_analysis.contracts import (
+    CaseAnalysisGap,
+    CaseAnalysisTrace,
+    CaseFollowupExchange,
+    followup_qa_id,
+)
 
 
 async def rounds_asked(db: AsyncSession, case_id: UUID) -> int:
@@ -50,33 +56,65 @@ async def asked_this_round(db: AsyncSession, analysis_result_id: UUID) -> set[st
     return set(rows)
 
 
-def next_gap(
-    trace: CaseAnalysisTrace,
-    *,
-    asked: set[str],
-    rounds: int,
-) -> CaseAnalysisGap | None:
-    """The next gap to ask about, or None when this round is done.
+async def asked_gap_keys(db: AsyncSession, case_id: UUID) -> set[str]:
+    """Every gap this case has been asked about, across all its analyses.
 
-    Priority, askability and the question itself all come from the analysis, so
-    there is nothing to rank. The keys come from one trace, so they are
-    consistent within a round and matching them needs no normalising.
+    Each analysis writes its own gap keys, so two analyses can name the same
+    gap differently — but when they do agree, asking it twice spends a round on
+    something the reader has already addressed. Deduplicating here makes that
+    a property of the policy rather than something the model has to remember.
     """
 
-    if rounds > settings.chat_followup_max_rounds:
-        return None
-    if len(asked) >= settings.chat_followup_gaps_per_round:
-        return None
-    return next(
-        (
-            gap
-            for gap in trace.gaps
-            if gap.priority == "high"
-            and gap.askable
-            and gap.clarification_question
-            and gap.gap_key not in asked
-        ),
-        None,
+    rows = await db.scalars(
+        select(ChatMessage.gap_key).where(
+            ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None)
+        )
+    )
+    return {key for key in rows if key}
+
+
+async def load_followup_history(
+    db: AsyncSession, case_id: UUID
+) -> tuple[CaseFollowupExchange, ...]:
+    """Every question put to the reader on this case, with its reply if it has one."""
+
+    return followup_history_from(
+        list(
+            await db.scalars(
+                select(ChatMessage)
+                .where(ChatMessage.case_id == case_id)
+                .order_by(ChatMessage.ordinal)
+            )
+        )
+    )
+
+
+def followup_history_from(
+    messages: Sequence[ChatMessage],
+) -> tuple[CaseFollowupExchange, ...]:
+    """The same history, from messages already in hand.
+
+    Ordered by when each question was asked, so the ids are stable for as long
+    as the conversation only grows — which is the only thing a citation written
+    against one needs. The report builder holds the case's messages already,
+    and re-querying for them would let the two disagree.
+    """
+
+    messages = sorted(messages, key=lambda message: message.ordinal)
+    replies = {
+        message.in_reply_to_message_id: message
+        for message in messages
+        if message.in_reply_to_message_id is not None
+    }
+    questions = [message for message in messages if message.gap_key]
+    return tuple(
+        CaseFollowupExchange(
+            qa_id=followup_qa_id(index),
+            gap_key=question.gap_key or "",
+            question=question.content,
+            answer=reply.content if (reply := replies.get(question.id)) else None,
+        )
+        for index, question in enumerate(questions, start=1)
     )
 
 
@@ -92,6 +130,7 @@ def question_message(
         ordinal=ordinal,
         role="assistant",
         content=gap.clarification_question,
+        message_kind="followup_question",
         gap_key=gap.gap_key,
         analysis_result_id=analysis_result_id,
     )
@@ -126,33 +165,41 @@ def answer_message(
         ordinal=ordinal,
         role="user",
         content=content,
+        message_kind="followup_answer",
         analysis_result_id=question.analysis_result_id,
         in_reply_to_message_id=question.id,
         client_request_id=client_request_id,
     )
 
 
-def answer_source(*, case_id: UUID, answer: ChatMessage, question: ChatMessage) -> CaseSource:
-    """The reply as case material, carrying the question it answers."""
+def analysis_result_message(
+    *,
+    case_id: UUID,
+    ordinal: int,
+    trace: CaseAnalysisTrace,
+    analysis_result_id: UUID,
+) -> ChatMessage:
 
-    return CaseSource(
+    return ChatMessage(
         case_id=case_id,
-        source_kind="followup_answer",
-        origin_message_id=answer.id,
-        exact_text=answer.content,
-        provenance_json={
-            "origin": "case_followup",
-            "gap_key": question.gap_key,
-            "question": question.content,
-        },
+        ordinal=ordinal,
+        role="assistant",
+        content=trace.summary,
+        message_kind="conversation",
+        analysis_result_id=analysis_result_id,
+        metadata_json=serialize_message_metadata(
+            {"action": "conversation", "analysis_trace": message_trace(trace)}
+        ),
     )
 
 
 __all__ = [
     "answer_message",
-    "answer_source",
+    "asked_gap_keys",
+    "analysis_result_message",
+    "followup_history_from",
     "asked_this_round",
-    "next_gap",
+    "load_followup_history",
     "pending_question",
     "question_message",
     "rounds_asked",

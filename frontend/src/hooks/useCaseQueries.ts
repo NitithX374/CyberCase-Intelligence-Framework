@@ -11,6 +11,7 @@ import {
   startCaseAnalysis,
   updateCase,
   uploadCaseDocument,
+  type AnalysisStepRead,
   type CaseRead,
   type CaseAnalysisCreate,
   type CaseAnalysisResultRead,
@@ -86,9 +87,9 @@ export function useUploadCaseDocument(caseId: string | null) {
       if (!caseId) throw new Error("Case ID is required for upload.");
       return uploadCaseDocument(caseId, file);
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       if (!caseId) return;
-      await Promise.all([
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.documents(caseId) }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.sources(caseId) }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
@@ -104,11 +105,16 @@ export function useStartCaseAnalysis(caseId: string | null) {
       if (!caseId) throw new Error("Case ID is required to start analysis.");
       return startCaseAnalysis(caseId, request);
     },
-    onSuccess: async (result: CaseAnalysisResultRead) => {
+    onSuccess: (step: AnalysisStepRead) => {
       if (!caseId) return;
-      // The analysis is finished when this resolves, so its result is the truth.
-      queryClient.setQueryData(caseQueryKeys.analysis(caseId), result);
-      await Promise.all([
+      // A step that paused to ask something carries no result, and writing its
+      // envelope into the analysis cache would show the reader a half-finished
+      // analysis as a finished one. The question it asked arrives with the chat
+      // refetch below.
+      if (step.status === "completed" && step.result) {
+        queryClient.setQueryData(caseQueryKeys.analysis(caseId), step.result);
+      }
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
         queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true }),

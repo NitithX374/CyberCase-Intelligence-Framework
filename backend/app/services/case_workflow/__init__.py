@@ -11,6 +11,7 @@ what it produced in another.
 """
 
 from app.services.case_workflow.analysis import (
+    AnalysisStep,
     analysis_freshness,
     external_context,
     get_latest_case_analysis,
@@ -32,6 +33,7 @@ from app.services.case_workflow.shared import (
 )
 
 __all__ = [
+    "AnalysisStep",
     "CaseUnderAnalysis",
     "CaseWorkflowError",
     "analysis_freshness",

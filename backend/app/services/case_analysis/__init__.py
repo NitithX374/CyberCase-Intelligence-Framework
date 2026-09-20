@@ -5,6 +5,10 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisTrace,
 )
 from app.services.case_analysis.prompts import CASE_ANALYSIS_PROMPT_VERSION
+from app.services.case_analysis.split_analysis import (
+    request_case_judgement,
+    request_case_reading,
+)
 
 __all__ = [
     "CASE_ANALYSIS_PROMPT_VERSION",
@@ -13,4 +17,6 @@ __all__ = [
     "CaseAnalysisTrace",
     "analyze_case",
     "request_case_analysis",
+    "request_case_judgement",
+    "request_case_reading",
 ]

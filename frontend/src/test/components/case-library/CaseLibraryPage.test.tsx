@@ -17,6 +17,15 @@ vi.mock("@/hooks/useCaseQueries", () => ({
   useCases: vi.fn(),
 }));
 
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    user: { id: "u1", name: "Test Analyst", email: "analyst@example.com" },
+    isLoading: false,
+    logout: vi.fn(),
+    isLoggingOut: false,
+  }),
+}));
+
 function caseRecord(overrides: Partial<CaseRead> = {}): CaseRead {
   return {
     id: "case-1",

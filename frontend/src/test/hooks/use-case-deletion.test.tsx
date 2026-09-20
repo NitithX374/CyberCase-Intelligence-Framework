@@ -44,7 +44,7 @@ function renderDeletion(
         deleteCandidate: candidate,
         setDeleteCandidate: setCandidate,
         deletingCaseId: null,
-        activeView: "overview",
+        activeView: "analysis",
         activeCaseId: options.activeCaseId ?? "a",
         cases: options.cases ?? [caseRecord("a"), caseRecord("b")],
         deleteCase: deleteThread,
@@ -67,7 +67,7 @@ it("routes to the remaining case after deleting the active case", async () => {
 
   expect(remove).toHaveBeenCalledWith("a");
   expect(result.current.candidate).toBeNull();
-  expect(router.replace).toHaveBeenCalledWith("/case/b/overview");
+  expect(router.replace).toHaveBeenCalledWith("/case/b/analysis");
 });
 
 it("routes to /case when no remaining cases exist", async () => {

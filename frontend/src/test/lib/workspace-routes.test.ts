@@ -5,28 +5,43 @@ import { casePath, caseRouteState } from "@/lib/workspaceRoutes";
 describe("Case workspace routes", () => {
   it("supports every current Case workspace view", () => {
     expect(caseRouteState("/case/case-1/sources")).toEqual({ caseId: "case-1", view: "sources" });
-    expect(caseRouteState("/case/case-1/overview")).toEqual({ caseId: "case-1", view: "overview" });
-    expect(caseRouteState("/case/case-1/sources")).toEqual({ caseId: "case-1", view: "sources" });
-    expect(caseRouteState("/case/case-1/technical-context")).toEqual({
-      caseId: "case-1",
-      view: "technical-context",
-    });
-    expect(caseRouteState("/case/case-1/report")).toEqual({ caseId: "case-1", view: "report" });
+    expect(caseRouteState("/case/case-1/analysis")).toEqual({ caseId: "case-1", view: "analysis" });
   });
 
-  it("does not expose deleted extraction or relationship routes", () => {
-    expect(caseRouteState("/case/caseChat-1/extraction")).toEqual({
-      caseId: "caseChat-1",
-      view: "overview",
+  it("sends the views that were folded into Analysis there", () => {
+    // Findings, ATT&CK context and the report were three routes. A link kept
+    // from then should land on the page that now holds all three, not on a
+    // blank workspace.
+    for (const retired of ["overview", "technical-context", "report"]) {
+      expect(caseRouteState(`/case/case-1/${retired}`)).toEqual({
+        caseId: "case-1",
+        view: "analysis",
+      });
+    }
+  });
+
+  it("defaults unrecognised or missing view segments to analysis", () => {
+    expect(caseRouteState("/case/case-1")).toEqual({
+      caseId: "case-1",
+      view: "analysis",
     });
-    expect(caseRouteState("/case/caseChat-1/relationships")).toEqual({
-      caseId: "caseChat-1",
-      view: "overview",
+    expect(caseRouteState("/case/case-1/unknown")).toEqual({
+      caseId: "case-1",
+      view: "analysis",
     });
-    expect(casePath("caseChat-1", "overview")).toBe("/case/caseChat-1/overview");
+    expect(casePath("case-1", "analysis")).toBe("/case/case-1/analysis");
   });
 
   it("treats non-Case paths as an unselected Case workspace", () => {
-    expect(caseRouteState("/unknown/case-1/materials")).toEqual({ caseId: null, view: "overview" });
+    expect(caseRouteState("/unknown/path")).toEqual({ caseId: null, view: "analysis" });
+    expect(caseRouteState("/")).toEqual({ caseId: null, view: "analysis" });
+  });
+
+  it("encodes case identifiers properly in casePath", () => {
+    expect(casePath("case #1", "sources")).toBe("/case/case%20%231/sources");
+    expect(caseRouteState("/case/case%20%231/sources")).toEqual({
+      caseId: "case #1",
+      view: "sources",
+    });
   });
 });

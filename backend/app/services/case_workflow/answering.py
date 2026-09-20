@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
-from app.schemas.message_metadata import serialize_message_metadata
+from app.schemas.message_metadata import message_trace, serialize_message_metadata
 from app.services.case_workflow.shared import (
     CaseWorkflowError,
     next_ordinal,
@@ -101,7 +101,11 @@ async def answer_case_question(
             message_kind="conversation",
             analysis_result_id=analysis_id,
             in_reply_to_message_id=question_id,
-            metadata_json=serialize_message_metadata({"action": "conversation"}),
+            metadata_json=serialize_message_metadata(
+                {"action": "conversation", "analysis_trace": message_trace(output.trace)}
+                if output.trace
+                else {"action": "conversation"}
+            ),
         )
         db.add(answer)
         await db.flush()

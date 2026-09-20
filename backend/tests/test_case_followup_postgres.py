@@ -1,8 +1,9 @@
 """The follow-up loop, against a real database.
 
-The analysis asks about one gap at a time. Each reply becomes case material
-bound to the gap it answers, and only the last reply of a round costs another
-analysis — which is what makes asking three things affordable.
+The analysis asks about one gap at a time. Each reply stays a chat message the
+next analysis reads as follow-up history — it is not case material and does not
+revise ``source_revision`` — and only the last reply of a round costs another
+analysis, which is what makes asking three things affordable.
 """
 
 from __future__ import annotations
@@ -13,15 +14,16 @@ import pytest
 from isolated_database import isolated_database
 from sqlalchemy import select
 
+from app.config import settings
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.models.user import User
 from app.schemas.chat import ChatMessageCreate
+from app.services.case_analysis.clarification import Proceed, decide_followup
 from app.services.case_analysis.contracts import CaseAnalysisTrace
 from app.services.chat.case_chat import post_case_message
-from app.services.chat.followup import next_gap
 
 GAP = {
     "gap_id": "G-01",
@@ -114,31 +116,71 @@ def three_gaps() -> CaseAnalysisTrace:
     )
 
 
+def decide(trace: CaseAnalysisTrace, *, asked=(), this_round=0, rounds=1):
+    """The policy at the settings the product ships, so the defaults are tested."""
+
+    return decide_followup(
+        gaps=trace.gaps,
+        asked_gap_keys=asked,
+        asked_this_round=this_round,
+        rounds_spent=rounds,
+        max_rounds=settings.chat_followup_max_rounds,
+        gaps_per_round=settings.chat_followup_gaps_per_round,
+    )
+
+
 def test_a_round_walks_the_gaps_one_at_a_time():
     trace = three_gaps()
-    assert next_gap(trace, asked=set(), rounds=1).gap_key == "topic:1"
-    assert next_gap(trace, asked={"topic:1"}, rounds=1).gap_key == "topic:2"
-    assert next_gap(trace, asked={"topic:1", "topic:2"}, rounds=1).gap_key == "topic:3"
+    assert decide(trace).gap.gap_key == "topic:1"
+    assert decide(trace, asked={"topic:1"}, this_round=1).gap.gap_key == "topic:2"
+    assert decide(trace, asked={"topic:1", "topic:2"}, this_round=2).gap.gap_key == "topic:3"
 
 
 def test_a_round_stops_at_three_even_with_more_gaps():
-    assert next_gap(three_gaps(), asked={"topic:1", "topic:2", "topic:3"}, rounds=1) is None
+    spent = decide(three_gaps(), asked={"topic:1", "topic:2", "topic:3"}, this_round=3)
+    assert spent == Proceed("round_budget_spent")
+    # Not terminal: the caller analyses again rather than finishing here.
+    assert not spent.is_terminal
 
 
 def test_the_rounds_run_out():
-    assert next_gap(three_gaps(), asked=set(), rounds=3) is None
+    exhausted = decide(three_gaps(), rounds=settings.chat_followup_max_rounds + 1)
+    assert exhausted == Proceed("max_rounds_reached")
+    assert exhausted.is_terminal
+
+
+def test_a_gap_already_asked_is_not_asked_again_in_a_later_round():
+    """The keys come from the whole case, so a new analysis cannot re-ask one."""
+
+    trace = CaseAnalysisTrace.model_validate({**TRACE, "gaps": [GAP]})
+    assert decide(trace, asked={GAP["gap_key"]}, rounds=2) == Proceed("gaps_exhausted")
 
 
 def test_a_gap_with_no_question_is_never_asked():
     trace = CaseAnalysisTrace.model_validate(
         {**TRACE, "gaps": [{**GAP, "clarification_question": None}]}
     )
-    assert next_gap(trace, asked=set(), rounds=1) is None
+    assert decide(trace) == Proceed("no_eligible_gap")
+
+
+def test_nothing_to_ask_and_everything_asked_are_told_apart():
+    """A settled case and an exhausted one stop for different reasons."""
+
+    settled = CaseAnalysisTrace.model_validate({**TRACE, "gaps": []})
+    assert decide(settled) == Proceed("no_eligible_gap")
+    assert decide(three_gaps(), asked={f"topic:{n}" for n in (1, 2, 3, 4)}) == Proceed(
+        "gaps_exhausted"
+    )
 
 
 @pytest.mark.asyncio
-async def test_replying_to_the_question_becomes_case_material():
-    """The reply is admitted and the case is analysed again, without being marked."""
+async def test_replying_to_the_question_stays_conversation():
+    """The reply is admitted and the case analysed again, without being marked.
+
+    It does not become a case source, and it does not move source_revision:
+    answering a question is not a revision of the material the case was filed
+    with, and treating it as one would invalidate any analysis already running.
+    """
 
     async with isolated_database() as session_factory:
         case_id, user_id, question_id = await case_with_a_question(session_factory)
@@ -174,9 +216,9 @@ async def test_replying_to_the_question_becomes_case_material():
             case = await db.get(Case, case_id)
         assert answer.role == "user"
         assert answer.content == "Around two in the morning."
-        assert source.exact_text == "Around two in the morning."
-        assert source.origin_message_id == answer.id
-        assert case.source_revision == 2
+        assert answer.message_kind == "followup_answer"
+        assert source is None, "a reply is conversation, not case material"
+        assert case.source_revision == 1, "answering does not revise the case"
 
 
 @pytest.mark.asyncio
@@ -258,12 +300,12 @@ async def test_a_retried_send_gets_what_it_already_produced():
             stored = await db.scalars(select(ChatMessage).where(ChatMessage.case_id == case_id))
             case = await db.get(Case, case_id)
         assert len(list(stored)) == 3, "the retry must not add a second answer"
-        assert case.source_revision == 2, "nor a second source"
+        assert case.source_revision == 1, "and no reply revises the case"
 
 
 @pytest.mark.asyncio
 async def test_a_spent_budget_does_not_silence_the_case_for_good():
-    """Two rounds spent. A reply gets nothing more; the reader's own analysis asks.
+    """The budget spent. A reply gets nothing more; the reader's own analysis asks.
 
     The budget bounds the chain a reply keeps going, not the case. Counted over
     the case's whole life it would turn the questions off permanently, however
@@ -279,28 +321,30 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
         trace_json = three_gaps().model_dump(mode="json")
         case_id, user_id, _ = await case_with_a_question(session_factory, trace_json)
         async with session_factory() as db, db.begin():
-            # A second asking analysis, which spends the budget of two rounds.
-            other = CaseAnalysisResult(
-                case_id=case_id,
-                source_revision=1,
-                answer="Earlier.",
-                summary="Earlier.",
-                trace_json=trace_json,
-                pipeline_config={},
-                external_context_json={},
-            )
-            db.add(other)
-            await db.flush()
-            db.add(
-                ChatMessage(
+            # Enough further asking analyses to spend the whole budget. The
+            # fixture already contributed one.
+            for extra in range(settings.chat_followup_max_rounds):
+                other = CaseAnalysisResult(
                     case_id=case_id,
-                    ordinal=9,
-                    role="assistant",
-                    content="An earlier question.",
-                    gap_key="topic:spent",
-                    analysis_result_id=other.id,
+                    source_revision=1,
+                    answer="Earlier.",
+                    summary="Earlier.",
+                    trace_json=trace_json,
+                    pipeline_config={},
+                    external_context_json={},
                 )
-            )
+                db.add(other)
+                await db.flush()
+                db.add(
+                    ChatMessage(
+                        case_id=case_id,
+                        ordinal=9 + extra,
+                        role="assistant",
+                        content="An earlier question.",
+                        gap_key=f"topic:spent-{extra}",
+                        analysis_result_id=other.id,
+                    )
+                )
 
         async def questions() -> int:
             async with session_factory() as db:
@@ -311,11 +355,11 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
                 )
                 return len(list(rows))
 
-        async def store(*, continuing: bool) -> int:
+        async def store(*, continuing: bool):
             async with session_factory() as db:
                 bundle = await load_case_source_bundle(db, case_id=case_id, user_id=user_id)
             before = await questions()
-            await store_analysis(
+            step = await store_analysis(
                 session_factory,
                 CaseUnderAnalysis(case_id=case_id, source_bundle=bundle),
                 AnalysisArtifacts(
@@ -323,7 +367,16 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
                 ),
                 continuing_followup=continuing,
             )
-            return await questions() - before
+            return await questions() - before, step
 
-        assert await store(continuing=True) == 0, "a reply must respect the spent budget"
-        assert await store(continuing=False) == 1, "the reader's own analysis may ask again"
+        asked, step = await store(continuing=True)
+        assert asked == 0, "a reply must respect the spent budget"
+        assert step.stop_reason == "max_rounds_reached"
+        assert step.result.trace_json["stop_reason"] == "max_rounds_reached", (
+            "the stored analysis has to say why it stopped asking"
+        )
+
+        asked, step = await store(continuing=False)
+        assert asked == 1, "the reader's own analysis may ask again"
+        assert step.stop_reason is None
+        assert step.question is not None

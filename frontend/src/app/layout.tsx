@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import "boxicons/css/boxicons.min.css";
 import Providers from "./providers";
 
 const manrope = Manrope({

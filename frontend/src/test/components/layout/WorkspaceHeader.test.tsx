@@ -23,14 +23,14 @@ const sampleCase: CaseRead = {
 };
 
 describe("WorkspaceHeader", () => {
-  it("keeps the four route meanings and runs the analysis from here", () => {
+  it("keeps both route meanings and runs the analysis from here", () => {
     const onViewChange = vi.fn();
     const onAnalyze = vi.fn();
 
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="overview"
+        activeView="analysis"
         creatingCase={false}
         hasAnalysis
         canAnalyze
@@ -45,12 +45,12 @@ describe("WorkspaceHeader", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Payment Review" })).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(4);
-    expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getByRole("tab", { name: "Analysis" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: "Open Ask" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Report" }));
-    expect(onViewChange).toHaveBeenCalledWith("report");
+    fireEvent.click(screen.getByRole("tab", { name: "Sources" }));
+    expect(onViewChange).toHaveBeenCalledWith("sources");
 
     // The analysis moved here from the sources rail, so every view can start it.
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
@@ -61,7 +61,7 @@ describe("WorkspaceHeader", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="overview"
+        activeView="analysis"
         creatingCase={false}
         hasAnalysis={false}
         canAnalyze={false}
@@ -79,7 +79,7 @@ describe("WorkspaceHeader", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="overview"
+        activeView="analysis"
         creatingCase={false}
         hasAnalysis
         canAnalyze
@@ -97,7 +97,7 @@ describe("WorkspaceHeader", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="overview"
+        activeView="analysis"
         creatingCase={false}
         hasAnalysis
         canAnalyze
@@ -119,7 +119,7 @@ describe("renaming a case from the header", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="overview"
+        activeView="analysis"
         creatingCase={false}
         hasAnalysis
         canAnalyze
@@ -182,7 +182,7 @@ describe("renaming a case from the header", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="overview"
+        activeView="analysis"
         creatingCase={false}
         hasAnalysis
         canAnalyze

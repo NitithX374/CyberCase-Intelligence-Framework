@@ -103,8 +103,14 @@ function responseFor(body) {
     contradicting_citations: [],
   }));
 
+  // A reply is conversation now, not a case source, so it arrives as
+  // follow-up history. The legacy source check stays for cases filed before
+  // that, whose replies are still rows in the bundle.
+  const followupHistory = Array.isArray(request?.followup_history) ? request.followup_history : [];
   const hasClarificationAnswer =
-    caseSources.some((source) => source.source_kind === "followup_answer") || sections.length > 1;
+    followupHistory.some((item) => item && typeof item.answer === "string" && item.answer.trim()) ||
+    caseSources.some((source) => source.source_kind === "followup_answer") ||
+    sections.length > 1;
 
   const gaps =
     sourceText.includes("needs-clarification") && !hasClarificationAnswer

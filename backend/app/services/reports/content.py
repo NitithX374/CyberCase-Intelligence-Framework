@@ -108,15 +108,43 @@ def build_case_report_sections(
         ReportSection(
             section_id="system_limitations",
             heading=PRELIMINARY_REPORT_SECTION_HEADINGS["system_limitations"],
-            items=build_case_report_limitations(report_input),
+            items=build_case_report_limitations(report_input, trace),
         ),
     ]
 
 
-def build_case_report_limitations(report_input: CaseReportInput) -> list[str]:
+CLARIFICATION_LIMITATIONS = {
+    "max_rounds_reached": (
+        "ระบบใช้สิทธิ์ถามข้อมูลเพิ่มเติมจนครบจำนวนรอบที่กำหนดแล้ว "
+        "ประเด็นที่ยังค้างอยู่ในหัวข้อข้อมูลที่ยังขาด จึงยังไม่ได้ถาม ไม่ใช่ว่าไม่จำเป็นต้องถาม"
+    ),
+    "gaps_exhausted": ("ระบบถามทุกประเด็นที่ถามได้แล้ว ประเด็นที่ยังค้างอยู่คือสิ่งที่ผู้ใช้ตอบไม่ได้ หรือหลักฐานที่มีตอบไม่ได้"),
+    "no_eligible_gap": (
+        "ประเด็นที่ยังค้างอยู่ไม่มีข้อใดที่การถามผู้ใช้จะช่วยได้ "
+        "เพราะเป็นเรื่องที่ผู้ใช้ระบุว่าไม่ทราบ หรือต้องยืนยันจากหลักฐานเพิ่มเติมแทนการสอบถาม"
+    ),
+}
+
+
+def clarification_limitation(trace: CaseAnalysisTrace) -> str | None:
+    """Why the system stopped asking, in the reader's terms.
+
+    A report that simply lists what is missing reads the same whether nobody
+    thought it worth asking or the budget ran out before it could be. Those
+    mean different things to whoever reads the case next.
+    """
+
+    return CLARIFICATION_LIMITATIONS.get(trace.stop_reason or "")
+
+
+def build_case_report_limitations(
+    report_input: CaseReportInput, trace: CaseAnalysisTrace
+) -> list[str]:
     limitations = [
         "รายงานนี้เป็นการวิเคราะห์เบื้องต้นจากหลักฐานที่ถูกนำเข้าสู่ Case และยังต้องตรวจสอบโดยผู้ปฏิบัติงาน",
-        "ข้อเท็จจริงและตัวบ่งชี้อ้างอิงเฉพาะหลักฐานของคดี ไม่รวมคำตอบจาก Chat หรือข้อมูลภายนอก",
+        "ข้อเท็จจริงและตัวบ่งชี้อ้างอิงได้เฉพาะหลักฐานของคดีและคำตอบที่ผู้ใช้ให้ไว้ในคำถามติดตามผล "
+        "คำตอบเหล่านั้นเป็นคำบอกเล่าของผู้ใช้ ยังไม่ได้ผ่านการตรวจสอบกับหลักฐาน "
+        "และไม่รวมข้อมูลภายนอกอื่นใด",
         "ระบบไม่ใช่ผู้วินิจฉัยข้อเท็จจริงหรือข้อกฎหมาย และไม่ควรใช้รายงานนี้แทนการใช้ดุลยพินิจของพนักงานสอบสวนหรืออัยการ",
         "หากเอกสารต้นฉบับไม่ครบ อ่านไม่ชัด หรือมีข้อมูลขัดแย้ง รายงานอาจสะท้อนข้อจำกัดดังกล่าว",
     ]
@@ -137,6 +165,10 @@ def build_case_report_limitations(report_input: CaseReportInput) -> list[str]:
         limitations.append("การเสริมข้อมูล MITRE ขัดข้อง จึงไม่ควรใช้ส่วน mapping เป็นข้อสรุปของคดี")
     else:
         limitations.append("MITRE ATT&CK ในรายงานเป็นบริบทภายนอกเพื่อช่วยจัดหมวดพฤติกรรม ไม่ใช่หลักฐานของคดี")
+
+    clarification = clarification_limitation(trace)
+    if clarification is not None:
+        limitations.append(clarification)
     return limitations
 
 
@@ -187,10 +219,20 @@ def claim_references(
 
 
 def source_labels_for_report(report_input: CaseReportInput) -> dict[str, str]:
-    return {
+    """E-nn for case material, Q-nn for something the reader told us.
+
+    Labelled apart on purpose: a reader checking a finding should be able to
+    see at a glance that it rests on their own answer rather than on a
+    document, because only one of those has been verified against anything.
+    """
+
+    labels = {
         source.source_id: f"E-{index:02d}"
         for index, source in enumerate(report_input.source_bundle.sources, 1)
     }
+    answered = [item for item in report_input.followup_history if item.is_answered]
+    labels.update({item.qa_id: f"Q-{index:02d}" for index, item in enumerate(answered, 1)})
+    return labels
 
 
 def support_type(claim_type: str) -> str:
@@ -287,8 +329,11 @@ def technical_rationale(
 def gap_items(trace: CaseAnalysisTrace) -> list[str]:
     if not trace.gaps:
         return ["ไม่พบช่องว่างสำคัญที่ต้องตรวจสอบเพิ่มเติมจากผลวิเคราะห์นี้"]
+    # No gap_id. It is how the analysis and the follow-up policy refer to a
+    # gap to each other; to the reader it is a code with nothing behind it,
+    # and the topic already names the thing.
     return [
-        f"{gap.gap_id} · {gap.topic} · ระดับความสำคัญ: {PRIORITY_LABELS[gap.priority]} · สถานะ: {GAP_STATUS_LABELS[gap.status]} · {gap.description} เหตุผล: {gap.reason}"
+        f"{gap.topic} · ระดับความสำคัญ: {PRIORITY_LABELS[gap.priority]} · สถานะ: {GAP_STATUS_LABELS[gap.status]} · {gap.description} เหตุผล: {gap.reason}"
         for gap in trace.gaps
     ]
 
@@ -315,5 +360,6 @@ __all__ = [
     "SUPPORT_TYPE_LABELS",
     "build_case_report_claims",
     "build_case_report_limitations",
+    "clarification_limitation",
     "build_case_report_sections",
 ]

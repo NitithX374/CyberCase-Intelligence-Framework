@@ -37,7 +37,7 @@ def build_case_template_report(
     trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
     claims = build_case_report_claims(report_input, trace)
     sections = build_case_report_sections(report_input, trace)
-    limitations = build_case_report_limitations(report_input)
+    limitations = build_case_report_limitations(report_input, trace)
     return StructuredReport(
         report_version="preliminary_analysis_report_v1",
         status="provisional_unverified",

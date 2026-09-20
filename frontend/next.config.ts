@@ -9,8 +9,13 @@ const nextConfig: NextConfig = {
   // to bounce a signed-out reader to /login and back afterwards. Temporary
   // (307) rather than permanent, so a browser never caches it past a rethink.
   async redirects() {
-    return [{ source: "/", destination: "/case", permanent: false }];
+    return [
+      { source: "/", destination: "/case", permanent: false },
+      { source: "/case/:caseId/intake", destination: "/case/:caseId/sources", permanent: false },
+      { source: "/case/:caseId/materials", destination: "/case/:caseId/sources", permanent: false },
+    ];
   },
+
 };
 
 export default nextConfig;

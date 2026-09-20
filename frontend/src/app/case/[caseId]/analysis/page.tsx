@@ -1,0 +1,52 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
+import { TechnicalContextView } from "@/components/technical-context/TechnicalContextView";
+import { CaseReportView } from "@/components/report/CaseReportView";
+import { useCase, useCaseAnalysis, useCaseSources } from "@/hooks/useCaseQueries";
+import { casePath } from "@/lib/workspaceRoutes";
+
+/**
+ * Everything the case analysis produced, on one page.
+ *
+ * Findings, the ATT&CK context they were read against, and the report built
+ * from them used to be three routes. They are three readings of one analysis,
+ * and splitting them meant the reader had to know which tab held the part they
+ * wanted before they could look for it.
+ */
+export default function CaseAnalysisPage() {
+  const params = useParams();
+  const router = useRouter();
+  const caseId = (params?.caseId as string) ?? null;
+
+  const caseQuery = useCase(caseId);
+  const analysisQuery = useCaseAnalysis(caseId);
+  const sourcesQuery = useCaseSources(caseId);
+
+  const activeCase = caseQuery.data ?? null;
+  const analysisResult = analysisQuery.data ?? null;
+  const openSources = () => {
+    if (caseId) router.push(casePath(caseId, "sources"));
+  };
+
+  return (
+    <>
+      <CaseOverviewView caseId={caseId} />
+      <TechnicalContextView
+        analysisResult={analysisResult}
+        sources={sourcesQuery.data ?? null}
+        onOpenSources={openSources}
+        onNavigateToSource={openSources}
+      />
+      {caseId && (
+        <CaseReportView
+          key={`${caseId}:${analysisResult?.id ?? "empty"}`}
+          caseId={caseId}
+          caseTitle={activeCase?.title || "New case"}
+          analysisResult={analysisResult}
+        />
+      )}
+    </>
+  );
+}

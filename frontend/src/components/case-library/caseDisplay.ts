@@ -18,7 +18,7 @@ export const toneDotClass: Record<CaseStatusTone, string> = {
 
 /** A case with an analysis opens on it; one without opens where you add sources. */
 export function caseDestination(caseRecord: CaseRead): string {
-  return casePath(caseRecord.id, caseRecord.latest_analysis_result_id ? "overview" : "sources");
+  return casePath(caseRecord.id, caseRecord.latest_analysis_result_id ? "analysis" : "sources");
 }
 
 export function caseStatusLabel(caseRecord: CaseRead): string {

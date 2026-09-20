@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.case import Case
 from app.models.chat import ChatMessage
+from app.services.case_analysis.contracts import CaseFollowupExchange
 from app.services.sources import CaseSourceBundle
 
 
@@ -35,6 +36,9 @@ class CaseUnderAnalysis:
 
     case_id: UUID
     source_bundle: CaseSourceBundle
+    # Conversation, not sources: carried beside the bundle and versioned by
+    # nothing, because answering a question does not revise the case material.
+    followup_history: tuple[CaseFollowupExchange, ...] = ()
 
     @property
     def source_revision(self) -> int:

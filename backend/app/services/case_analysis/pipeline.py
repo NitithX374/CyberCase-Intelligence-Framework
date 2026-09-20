@@ -17,10 +17,19 @@ from typing import Protocol
 
 from app.config import settings
 from app.services.case_analysis import request_case_analysis
-from app.services.case_analysis.contracts import CaseAnalysisFailure, CaseAnalysisTrace
+from app.services.case_analysis.contracts import (
+    CaseAnalysisFailure,
+    CaseAnalysisTrace,
+    CaseFollowupExchange,
+    CaseProviderReading,
+)
 from app.services.case_analysis.mitre_gate import mitre_gate
 from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig, configured_pipeline
 from app.services.case_analysis.prompts import CASE_TRACE_REVISION_PROMPT
+from app.services.case_analysis.split_analysis import (
+    request_case_judgement,
+    request_case_reading,
+)
 from app.services.case_analysis.validation import resolve_case_trace
 from app.services.clients.rag_client import request_rag
 from app.services.sources import CaseSourceBundle
@@ -35,6 +44,9 @@ class AnalysisInput:
     response_language: str = "english"
     mode: str = "case_overview"
     question: str | None = None
+    # What the reader has already been asked and answered. Conversation, not
+    # case sources, so it is versioned by nothing and carried separately.
+    followup_history: tuple[CaseFollowupExchange, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -43,6 +55,9 @@ class AnalysisArtifacts:
 
     answer: str = ""
     trace: CaseAnalysisTrace | None = None
+    # Only the split arm fills this: what the reading call wrote, on its way to
+    # the judgement call. The single call has no halfway point to hold.
+    reading: CaseProviderReading | None = None
     technical_context: dict[str, object] | None = None
     retrieval_context_id: str | None = None
     receipt: dict[str, object] = field(default_factory=dict)
@@ -106,6 +121,7 @@ class AnalysisStage:
             mode=data.mode,
             technical_context=so_far.technical_context,
             retrieval_context_id=so_far.retrieval_context_id,
+            followup_history=data.followup_history,
         )
         if not isinstance(output.trace, CaseAnalysisTrace):
             raise CaseAnalysisFailure(
@@ -117,6 +133,92 @@ class AnalysisStage:
             trace=output.trace,
             receipt={**so_far.receipt, **(output.execution_receipt or {})},
         )
+
+
+@dataclass(frozen=True)
+class ReadingStage:
+    """The first call of the split arm: read the sources, write the claims.
+
+    It is handed no technical context even when the stage before it retrieved
+    some. A claim that named an ATT&CK technique because the retrieval
+    mentioned it would be grounded in the retrieval rather than in the case.
+    """
+
+    name: str = "reading"
+    reading_request: Callable = request_case_reading
+    config: Callable[[], AnalysisPipelineConfig] = configured_pipeline
+
+    async def run(self, data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
+        output = await self.reading_request(
+            source_bundle=data.sources,
+            pipeline_config=self.config().model_dump(mode="json"),
+            question=data.question,
+            user_message=analysis_instruction(data.response_language),
+            mode=data.mode,
+            followup_history=data.followup_history,
+        )
+        return replace(
+            so_far,
+            reading=output.reading,
+            receipt=merged_receipt(so_far.receipt, output.execution_receipt),
+        )
+
+
+@dataclass(frozen=True)
+class JudgementStage:
+    """The second call: what the claims add up to, and what ATT&CK says of them."""
+
+    name: str = "judgement"
+    judgement_request: Callable = request_case_judgement
+    config: Callable[[], AnalysisPipelineConfig] = configured_pipeline
+
+    async def run(self, data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
+        if so_far.reading is None:
+            raise CaseAnalysisFailure(
+                "analysis_reading_missing", "Judgement needs a reading to judge"
+            )
+        output = await self.judgement_request(
+            source_bundle=data.sources,
+            pipeline_config=self.config().model_dump(mode="json"),
+            question=data.question,
+            user_message=analysis_instruction(data.response_language),
+            mode=data.mode,
+            reading=so_far.reading,
+            technical_context=so_far.technical_context,
+            retrieval_context_id=so_far.retrieval_context_id,
+            followup_history=data.followup_history,
+        )
+        if not isinstance(output.trace, CaseAnalysisTrace):
+            raise CaseAnalysisFailure(
+                "analysis_trace_missing", "Case analysis did not produce a validated trace"
+            )
+        return replace(
+            so_far,
+            answer=output.answer.strip(),
+            trace=output.trace,
+            receipt=merged_receipt(so_far.receipt, output.execution_receipt),
+        )
+
+
+def merged_receipt(
+    so_far: dict[str, object], produced: dict[str, object] | None
+) -> dict[str, object]:
+    """Two model stages, one receipt, and every call still in it.
+
+    A plain merge would let the second stage's ``calls`` list replace the
+    first's, which is how an arm that costs two calls comes to look like it
+    cost one.
+    """
+
+    produced = produced or {}
+    merged = {**so_far, **produced}
+    calls = [
+        *(so_far.get("calls") or []),
+        *(produced.get("calls") or []),
+    ]
+    if calls:
+        merged["calls"] = calls
+    return merged
 
 
 @dataclass(frozen=True)
@@ -143,7 +245,12 @@ class VerifyStage:
                 "analysis_trace_missing", "Verification needs an analysis to check"
             )
         table = (so_far.technical_context or {}).get("mitre_table") or []
-        trace = resolve_case_trace(so_far.trace, data.sources, mitre_table=list(table))
+        trace = resolve_case_trace(
+            so_far.trace,
+            data.sources,
+            mitre_table=list(table),
+            followup_history=data.followup_history,
+        )
         rounds: list[dict[str, object]] = [grounding_record(0, trace)]
 
         for attempt in range(1, self.max_revisions + 1):
@@ -159,10 +266,16 @@ class VerifyStage:
                 technical_context=so_far.technical_context,
                 retrieval_context_id=so_far.retrieval_context_id,
                 revision=revision_note(unbound),
+                followup_history=data.followup_history,
             )
             if not isinstance(output.trace, CaseAnalysisTrace):
                 break
-            trace = resolve_case_trace(output.trace, data.sources, mitre_table=list(table))
+            trace = resolve_case_trace(
+                output.trace,
+                data.sources,
+                mitre_table=list(table),
+                followup_history=data.followup_history,
+            )
             rounds.append(grounding_record(attempt, trace))
 
         return replace(
@@ -221,6 +334,8 @@ def analysis_stages(arm: str | None = None) -> tuple[Stage, ...]:
     chosen = arm or settings.case_analysis_arm
     if chosen == "direct":
         return (TechnicalContextStage(), AnalysisStage())
+    if chosen == "split":
+        return (TechnicalContextStage(), ReadingStage(), JudgementStage(), VerifyStage())
     if chosen == "revise":
         return (
             TechnicalContextStage(),
@@ -262,11 +377,14 @@ __all__ = [
     "AnalysisArtifacts",
     "AnalysisInput",
     "AnalysisStage",
+    "JudgementStage",
+    "ReadingStage",
     "VerifyStage",
     "analysis_stages",
     "Stage",
     "TechnicalContextStage",
     "analysis_instruction",
+    "merged_receipt",
     "run_pipeline",
     "without",
 ]

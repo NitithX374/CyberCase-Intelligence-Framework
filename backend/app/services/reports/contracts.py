@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, StructuredReport
+from app.services.case_analysis.contracts import CaseFollowupExchange
 from app.services.case_analysis.mitre_gate.llm import MitreApplicabilityRecord
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
@@ -44,10 +45,23 @@ class CaseReportInput(BaseModel):
     analysis_trace: dict[str, object]
     technical_augmentation: CaseReportTechnicalAugmentation | None = None
     unresolved_issues: list[str] = Field(default_factory=list, max_length=64)
+    # What the reader was asked and answered. Not case sources, but a claim may
+    # rest on one, so the report has to recognise the ids.
+    followup_history: tuple[CaseFollowupExchange, ...] = ()
 
 
 def case_source_ids(report_input: CaseReportInput) -> set[str]:
-    return {source.source_id for source in report_input.source_bundle.sources}
+    """Everything a report claim is allowed to cite.
+
+    The bundle, plus the follow-up answers. An answer is not a case source and
+    the report says so in its limitations — but a claim that rests on one cited
+    it during analysis, and refusing the id here would fail the whole report
+    over a citation that was checked and found good.
+    """
+
+    return {source.source_id for source in report_input.source_bundle.sources} | {
+        item.qa_id for item in report_input.followup_history if item.is_answered
+    }
 
 
 class ReportServiceError(Exception):

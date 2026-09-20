@@ -61,6 +61,21 @@ describe("whether a send is in flight", () => {
     expect(result.current.input).toBe("");
   });
 
+  it("stops when workspace refresh is still waiting", async () => {
+    createCaseChatMessage.mockResolvedValue(
+      chatResponse(message("a", 2, "assistant", "ตอบแล้ว")),
+    );
+    const { result, queryClient } = render();
+    const refresh = deferred<void>();
+    vi.spyOn(queryClient, "invalidateQueries").mockReturnValue(refresh.promise);
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+
+    act(() => result.current.submitContent("ตอบหน่อย"));
+    await waitFor(() => expect(result.current.isSending).toBe(false));
+
+    refresh.resolve();
+  });
+
   it("stops when the send fails — the bug that left it on forever", async () => {
     createCaseChatMessage.mockRejectedValue(new Error("the backend never replied"));
     const { result } = render();

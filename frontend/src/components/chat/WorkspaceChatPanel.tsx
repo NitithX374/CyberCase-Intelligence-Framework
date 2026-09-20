@@ -2,42 +2,65 @@
 
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { Icon } from "@/components/common/icons";
-import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
 import type { WorkspaceView } from "@/components/common/types";
+import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
+import { useCaseChat } from "@/hooks/useCaseChat";
+import { useCaseAnalysis, useCaseSources } from "@/hooks/useCaseQueries";
+import { toUserFacingError } from "@/lib/userFacingError";
 import { ChatTranscript } from "./ChatTranscript";
 
 interface WorkspaceChatPanelProps {
+  caseId: string | null;
   isOpen: boolean;
-  isSending: boolean;
-  messages: ChatMessageRead[];
-  isAnsweringQuestion?: boolean;
-  input: string;
-  hasAnalysisContext: boolean;
-  leadResult?: CaseAnalysisResultRead | null;
-  sources?: CaseSourceRead[] | null;
+  onOpenChat: () => void;
+  onCloseChat: () => void;
   onViewChange: (view: WorkspaceView) => void;
-  onNavigateToSource?: (messageId: string) => void;
-  onInputChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onToggleChat?: () => void;
+  /** The panel is where a follow-up answer is sent, so it is where the
+   *  workspace learns that an analysis is running because of one. */
+  onActivityChange: (isAnsweringQuestion: boolean) => void;
 }
 
+/**
+ * The Ask panel, and everything the conversation needs.
+ *
+ * The chat used to be read in the layout and handed down thirteen props, six
+ * of which were forwarded again to the transcript. The layout only ever needed
+ * two facts out of it — whether a follow-up is in flight, and whether a new
+ * question arrived — so those are what it gets now, as callbacks.
+ */
 export function WorkspaceChatPanel({
+  caseId,
   isOpen,
-  isSending,
-  messages,
-  isAnsweringQuestion = false,
-  input,
-  hasAnalysisContext,
-  leadResult,
-  sources,
+  onOpenChat,
+  onCloseChat,
   onViewChange,
-  onNavigateToSource,
-  onInputChange,
-  onSubmit,
-  onToggleChat,
+  onActivityChange,
 }: WorkspaceChatPanelProps) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const chat = useCaseChat({ caseId });
+  const analysisQuery = useCaseAnalysis(caseId);
+  const sourcesQuery = useCaseSources(caseId);
+
+  const leadResult = analysisQuery.data ?? null;
+  const sources = sourcesQuery.data ?? [];
+  const messages = chat.messages;
+  const isSending = chat.isSending;
+  const isAnsweringQuestion = chat.isAnsweringQuestion;
+  const hasAnalysisContext = Boolean(leadResult);
+
+  useEffect(() => {
+    onActivityChange(isAnsweringQuestion);
+  }, [isAnsweringQuestion, onActivityChange]);
+
+  // A question the analysis left waiting is worth interrupting for, once. If
+  // the reader closes the panel it stays closed until a different one arrives.
+  const pendingQuestionId = chat.pendingQuestionId;
+  const announcedQuestionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingQuestionId || announcedQuestionRef.current === pendingQuestionId) return;
+    announcedQuestionRef.current = pendingQuestionId;
+    onOpenChat();
+  }, [pendingQuestionId, onOpenChat]);
 
   if (!isOpen) return null;
 
@@ -55,7 +78,7 @@ export function WorkspaceChatPanel({
     : "Ask becomes available after Case analysis";
 
   const handleClose = () => {
-    onToggleChat?.();
+    onCloseChat();
     window.requestAnimationFrame(() => {
       document.querySelector<HTMLButtonElement>('[aria-label="Open Ask"]')?.focus();
     });
@@ -82,23 +105,21 @@ export function WorkspaceChatPanel({
             }`}
             title={isSending ? "Answering" : "Ready"}
           />
-          {onToggleChat && (
-            <button
-              type="button"
-              ref={closeButtonRef}
-              onClick={handleClose}
-              aria-label="Close Ask"
-              title="Close Ask"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <Icon name="close" className="h-4 w-4" />
-            </button>
-          )}
+          <button
+            type="button"
+            ref={closeButtonRef}
+            onClick={handleClose}
+            aria-label="Close Ask"
+            title="Close Ask"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <Icon name="close" className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {messages.length === 0 && (
+        {messages.length === 0 && (!sources || sources.length === 0) && (
           <div className="p-3">
             <EmptyChatSourcesNotice onOpenSources={() => onViewChange("sources")} />
           </div>
@@ -111,24 +132,17 @@ export function WorkspaceChatPanel({
               isAnsweringQuestion={isAnsweringQuestion}
               leadResult={leadResult}
               sources={sources}
-              onNavigateToSource={onNavigateToSource}
+              onNavigateToSource={() => onViewChange("sources")}
             />
           </div>
 
           <div className="shrink-0 border-t border-line bg-surface px-3.5 pb-3.5 pt-3 md:px-4 md:pb-4">
             <div className="mx-auto w-full max-w-4xl">
-              {!hasAnalysisContext && (
-                <ChatBoundaryNotice
-                  message="Run the Case analysis from the sources page before using Chat. Chat will not start analysis."
-                  actionLabel="Open case sources"
-                  onAction={() => onViewChange("sources")}
-                />
-              )}
               <ChatComposer
-                input={input}
+                input={chat.input}
                 isSubmitting={isSending || !hasAnalysisContext}
-                onInputChange={onInputChange}
-                onSubmit={onSubmit}
+                onInputChange={chat.changeInput}
+                onSubmit={chat.submitMessage}
               />
               <p className="mt-2 text-center text-[10px] leading-relaxed text-ink-muted">
                 Ctrl+Enter to send.
@@ -137,6 +151,15 @@ export function WorkspaceChatPanel({
           </div>
         </div>
       </div>
+
+      <MeaningfulErrorModal
+        isOpen={Boolean(chat.queryError)}
+        error={
+          chat.queryError ? toUserFacingError(chat.queryError, { isUncertain: isSending }) : null
+        }
+        onClose={chat.clearQueryError}
+        onRetry={chat.retryQuery}
+      />
     </aside>
   );
 }
@@ -154,31 +177,6 @@ function EmptyChatSourcesNotice({ onOpenSources }: { onOpenSources: () => void }
       >
         เปิดหน้า Sources →
       </button>
-    </div>
-  );
-}
-
-function ChatBoundaryNotice({
-  message,
-  actionLabel,
-  onAction,
-}: {
-  message: string;
-  actionLabel: string;
-  onAction?: () => void;
-}) {
-  return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-ink-secondary">
-      <span>{message}</span>
-      {onAction && (
-        <button
-          type="button"
-          onClick={onAction}
-          className="font-bold text-ink underline decoration-line underline-offset-2 hover:text-accent"
-        >
-          {actionLabel}
-        </button>
-      )}
     </div>
   );
 }
@@ -227,7 +225,7 @@ function ChatComposer({
           disabled={isSubmitting}
           onKeyDown={handleKeyDown}
           onChange={(event) => onInputChange(event.target.value)}
-          placeholder={placeholder ?? "Ask a question about the completed Case analysis…"}
+          placeholder={placeholder ?? "Ask a question about the Case analysis…"}
           className="max-h-[160px] min-h-6 flex-1 resize-none border-none bg-transparent py-0.5 text-xs leading-snug text-ink outline-none shadow-none placeholder:text-ink-muted focus:border-none focus:outline-none focus:ring-0 focus-visible:border-none focus-visible:outline-none focus-visible:ring-0 disabled:text-ink-disabled sm:text-sm"
         />
         <button

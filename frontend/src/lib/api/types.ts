@@ -15,6 +15,7 @@ export type CaseChatStatus = CaseChatRead["status"];
 
 export type { CaseChatRead } from "./generated/chatTypes";
 export type {
+  AnalysisStepRead,
   CaseAnalysisClaim,
   CaseAnalysisCreate,
   CaseAnalysisGap,
@@ -27,6 +28,7 @@ export type {
   CaseMitreAssociation,
   CaseSourceCitation,
   CaseTimelineItem,
+  FollowupQuestionRead,
 } from "./generated/analysisTypes";
 export type { CaseDocumentRead, DocumentExtractionRead } from "./generated/caseTypes";
 export type { CaseSourceCreate, CaseSourceRead } from "./generated/sourceTypes";

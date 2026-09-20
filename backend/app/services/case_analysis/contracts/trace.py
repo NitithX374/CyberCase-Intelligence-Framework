@@ -180,6 +180,11 @@ class CaseAnalysisTrace(BaseModel):
     # Written by validation, not by the model. Absent on traces stored
     # before it was counted.
     grounding: CaseGroundingReport | None = None
+    # Why the analysis stopped asking the reader for more, written by the
+    # clarification policy rather than the model. None while the case is still
+    # being clarified, and on traces stored before it was recorded. Never
+    # "sufficient": see clarification.ProceedReason.
+    stop_reason: str | None = Field(default=None, max_length=40)
 
 
 class CaseProviderAnalysis(BaseModel):
@@ -191,6 +196,41 @@ class CaseProviderAnalysis(BaseModel):
     timeline: list[CaseTimelineItem] = Field(max_length=64)
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
     impacts: list[CaseImpactItem] = Field(max_length=64)
+    gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
+    mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
+
+
+class CaseProviderReading(BaseModel):
+    """What the first call of the split pipeline returns: the case as read.
+
+    Everything here is drawn from the sources and nothing in it judges the
+    case, which is why it carries no summary, no gaps and no ATT&CK. The call
+    that produces it is never shown the technical context either, so a claim
+    cannot pick up wording from a technique that was merely retrieved.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal["case_analysis_trace_v1"]
+    claims: list[CaseAnalysisClaim] = Field(max_length=64)
+    involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
+    timeline: list[CaseTimelineItem] = Field(max_length=64)
+    impacts: list[CaseImpactItem] = Field(max_length=64)
+
+
+class CaseProviderJudgement(BaseModel):
+    """What the second call returns: what the claims already written add up to.
+
+    It writes no claims and copies no quotation. Every claim id it carries
+    points at a claim the reading call wrote, which is the reason the split is
+    worth a second call: this one never has to invent an identifier and then
+    remember it.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal["case_analysis_trace_v1"]
+    summary: str = Field(min_length=1, max_length=24_000)
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
 
@@ -210,5 +250,7 @@ __all__ = [
     "CaseImpactItem",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
+    "CaseProviderJudgement",
+    "CaseProviderReading",
     "CaseTimelineItem",
 ]

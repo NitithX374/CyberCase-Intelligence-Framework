@@ -1,5 +1,14 @@
 import type { ChatMessageRead } from "./chatTypes";
 
+export type AnalysisStepRead = {
+    status: "need_followup" | "completed";
+    round: number;
+    max_rounds: number;
+    stop_reason?: string | null;
+    question?: FollowupQuestionRead | null;
+    result?: CaseAnalysisResultRead | null;
+};
+
 export type CaseAnalysisClaim = {
     claim_id: string;
     claim_type: "reported" | "analytical_inference" | "unknown";
@@ -62,6 +71,7 @@ export type CaseAnalysisTrace = {
     mitre_associations?: CaseMitreAssociation[];
     retrieval_context_id?: string | null;
     grounding?: CaseGroundingReport | null;
+    stop_reason?: string | null;
 };
 
 export type CaseChatResponse = {
@@ -76,6 +86,10 @@ export type CaseGroundingReport = {
     citations_paraphrased: number;
     citations_unfound: number;
     claims_without_citation: number;
+    claims_duplicated: number;
+    associations_outside_context: number;
+    sources_cited: number;
+    sources_total: number;
 };
 
 export type CaseImpactItem = {
@@ -111,4 +125,11 @@ export type CaseTimelineItem = {
     time: string;
     event: string;
     claim_ids?: string[];
+};
+
+export type FollowupQuestionRead = {
+    message_id: string;
+    gap_id: string;
+    gap_key: string;
+    question: string;
 };

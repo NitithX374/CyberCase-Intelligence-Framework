@@ -273,11 +273,10 @@ export function TechnicalContextView({
   };
 
   return (
-    <div
+    <section
       id="workspace-technical-context-panel"
-      role="tabpanel"
       aria-label="Technical Context"
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface"
+      className="flex shrink-0 flex-col bg-surface"
     >
       <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
@@ -377,6 +376,6 @@ export function TechnicalContextView({
           onNavigateToSource={onNavigateToSource}
         />
       )}
-    </div>
+    </section>
   );
 }

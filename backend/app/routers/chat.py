@@ -53,21 +53,22 @@ async def create_case_chat_message(
 
     await commit_dependency_transaction(db)
     try:
-        messages, analysis = await post_case_message(
-            case_id=case_id, user_id=user.id, request=request
-        )
+        messages, step = await post_case_message(case_id=case_id, user_id=user.id, request=request)
     except CaseChatError as error:
         raise HTTPException(
             status_code=error.status_code,
             detail={"code": error.code, "message": error.message},
         ) from error
+    # An analysis that paused to ask something is not the case's answer, so it
+    # is not handed back as one. The question it asked is in ``messages``.
+    finished = step.result if step is not None and not step.needs_followup else None
     return CaseChatResponse(
         messages=[ChatMessageRead.model_validate(message) for message in messages],
         analysis=(
-            CaseAnalysisResultRead.model_validate(analysis).model_copy(
+            CaseAnalysisResultRead.model_validate(finished).model_copy(
                 update={"freshness": "current"}
             )
-            if analysis is not None
+            if finished is not None
             else None
         ),
     )

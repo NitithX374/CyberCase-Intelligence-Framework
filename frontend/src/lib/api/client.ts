@@ -2,6 +2,7 @@ import axios from "axios";
 import type {
   AuthTokenResponse,
   CaseAnalysisCreate,
+  AnalysisStepRead,
   CaseAnalysisResultRead,
   CaseChatResponse,
   CaseChatDetail,
@@ -17,11 +18,13 @@ import type {
 } from "./types";
 import type { CaseReportRead } from "./generated/reportTypes";
 
-axios.defaults.withCredentials = true;
-
 const CHAT_REQUEST_TIMEOUT_MS = 15_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 // An analysis is a model call the caller waits for.
 const ANALYSIS_REQUEST_TIMEOUT_MS = 300_000;
+
+axios.defaults.withCredentials = true;
+axios.defaults.timeout = DEFAULT_REQUEST_TIMEOUT_MS;
 
 export type ResponseLanguage = "thai" | "english";
 
@@ -239,12 +242,14 @@ export const uploadCaseDocument = async (
   return response.data;
 };
 
+// One step of the analysis, not necessarily the whole of it: a step that ended
+// with a question for the reader returns the question instead of a result.
 export const startCaseAnalysis = async (
   caseId: string,
   request: CaseAnalysisCreate,
   signal?: AbortSignal,
-): Promise<CaseAnalysisResultRead> => {
-  const response = await axios.post<CaseAnalysisResultRead>(
+): Promise<AnalysisStepRead> => {
+  const response = await axios.post<AnalysisStepRead>(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/analysis`,
     request,
     { signal, timeout: ANALYSIS_REQUEST_TIMEOUT_MS },

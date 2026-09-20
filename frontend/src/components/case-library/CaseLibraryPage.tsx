@@ -22,6 +22,10 @@ import {
   type CaseLibraryViewMode,
 } from "./caseDisplay";
 
+import { UserProfileMenu } from "@/components/common/UserProfileMenu";
+import { Icon } from "@/components/common/icons";
+import { useAuth } from "@/hooks/useAuth";
+
 export function CaseLibraryPage() {
   const router = useRouter();
   const casesQuery = useCases();
@@ -45,8 +49,7 @@ export function CaseLibraryPage() {
     }
   };
 
-  // Deleting a case belongs where the cases are listed: the one place it is
-  // not the thing you are looking at.
+
   const confirmDelete = async () => {
     if (!deleteCandidate) return;
     try {
@@ -170,8 +173,11 @@ export function CaseLibraryPage() {
 }
 
 function CaseLibraryHeader() {
+  const auth = useAuth();
+
   return (
     <header className="border-b border-line bg-surface">
+
       <div className="mx-auto flex min-h-16 w-full max-w-[1440px] items-center gap-6 px-5 sm:px-8 lg:px-12">
         <span className="flex shrink-0 items-center gap-2.5 text-sm font-bold tracking-[-0.015em] text-ink">
           <CyberCaseLogo size={28} />
@@ -180,7 +186,7 @@ function CaseLibraryHeader() {
 
         <nav
           aria-label="Case library navigation"
-          className="flex h-16 items-center gap-5 text-xs font-semibold"
+          className="flex h-16 items-center gap-5 text-xs font-semibold flex-1"
         >
           <span
             className="flex h-full items-center border-b-2 border-accent text-accent"
@@ -188,6 +194,17 @@ function CaseLibraryHeader() {
           >
             All cases
           </span>
+          <div className="ml-auto">
+            <details className="relative shrink-0">
+              <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-xs font-medium text-ink hover:bg-surface-hover">
+                <Icon name="account" className="h-4 w-4 text-ink-secondary" />
+                <span>{auth.user?.name ?? "Account"}</span>
+              </summary>
+              <div className="absolute right-0 top-10 z-50 w-64 rounded-md border border-line bg-surface p-3 shadow-lg">
+                <UserProfileMenu />
+              </div>
+            </details>
+          </div>
         </nav>
       </div>
     </header>
