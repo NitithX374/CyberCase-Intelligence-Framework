@@ -16,6 +16,13 @@ neighbors. Two filters are combined:
 2. **Rerank score threshold** — uncited vector hits below
    ``MITRE_TABLE_SCORE_THRESHOLD`` are dropped; uncited graph-only entities
    (expansion neighbors) are always dropped.
+
+Both channels must describe an entity identically. The Qdrant payload is the
+*embedding* text, not a description: ingestion prepends ``"{label}: {name}. "``
+to it (``ingestion/vector_loader.py``), while Neo4j stores the raw description
+(``ingestion/graph_loader.py``). ``_normalise_description`` drops that prefix so
+a vector-sourced row and a graph-sourced row for the same technique carry the
+same text, then strips MITRE markdown noise and marks any truncation.
 """
 
 from __future__ import annotations
@@ -30,6 +37,27 @@ from ..config import MITRE_TABLE_SCORE_THRESHOLD
 # Rows the table is capped at — cited rows are never truncated in practice
 # (an answer cites a handful of techniques), this guards payload size.
 _MAX_ROWS = 25
+
+# Characters a row description is capped at. The value is a payload-size guard
+# shared by three consumers: the UI definition panel, the case-analysis prompt,
+# and the report/PDF bullets. 1200 leaves ~60% of ATT&CK descriptions complete
+# (median is ~1050 once citations are stripped) and bounds a full 25-row table
+# at ~30k characters.
+_MAX_DESCRIPTION_CHARS = 1200
+# Appended when the cap bites, so a consumer can tell a shortened description
+# from a complete one.
+_TRUNCATION_MARKER = "…"
+
+# MITRE descriptions carry reference markup that means nothing outside
+# attack.mitre.org: "(Citation: TechNet PowerShell)" and "[ftp](url)" links.
+# Provenance is already on the row as `mitre_url`.
+_CITATION_RE = re.compile(r"\(Citation:[^)]*\)")
+_MD_LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
+_EMPTY_PARENS_RE = re.compile(r"\(\s*\)")
+# Only real sentence punctuation — the lookahead keeps ".NET" and "3.5"
+# intact after a markdown link is unwrapped to " .NET framework".
+_SPACE_BEFORE_PUNCT_RE = re.compile(r"\s+([,.;:!?])(?=\s|$)")
+_WS_RE = re.compile(r"\s+")
 
 # ATT&CK IDs as they appear in answers: T1566, T1566.001, TA0001, G0016,
 # S0002, M1032, DS0026, C0011.
@@ -142,7 +170,10 @@ def _collect_candidates(rag_result) -> dict[str, dict]:
                 "entity_type": md.get("node_label", "") or "",
                 "score": float(vr.score),
                 "source": "vector",
-                "description": (vr.document or "")[:300],
+                "description": _normalise_description(
+                    vr.document,
+                    embedding_prefix_of=(md.get("node_label", "") or "", name),
+                ),
             }
 
     for sg in rag_result.graph_results:
@@ -163,10 +194,68 @@ def _collect_candidates(rag_result) -> dict[str, dict]:
                     "entity_type": node.label or "",
                     "score": None,
                     "source": "graph",
-                    "description": (node.description or "")[:300],
+                    # Neo4j already stores the raw description — no prefix to drop.
+                    "description": _normalise_description(node.description),
                 }
 
     return candidates
+
+
+def _normalise_description(
+    text: Optional[str],
+    embedding_prefix_of: Optional[tuple[str, str]] = None,
+) -> str:
+    """Turn a stored description into the text a consumer can show as-is.
+
+    Args:
+        text: Raw stored text — a Neo4j ``description``, or a Qdrant
+            ``document`` (the embedding text, which carries a header).
+        embedding_prefix_of: ``(node_label, name)`` of the entity the text
+            belongs to, for a Qdrant document. The ``"{label}: {name}. "``
+            header ingestion prepended is derived from these and dropped;
+            anything that does not match is left alone. None for Neo4j text.
+
+    Returns:
+        Citation- and link-free text, capped at ``_MAX_DESCRIPTION_CHARS`` on a
+        word boundary with ``_TRUNCATION_MARKER`` appended when it was cut.
+    """
+    if not text:
+        return ""
+
+    if embedding_prefix_of is not None:
+        text = _strip_embedding_prefix(text, *embedding_prefix_of)
+
+    text = _CITATION_RE.sub("", text)
+    text = _MD_LINK_RE.sub(r"\1", text)  # [ftp](url) -> ftp
+    text = text.replace("<code>", "`").replace("</code>", "`")
+    text = _EMPTY_PARENS_RE.sub("", text)
+    text = _SPACE_BEFORE_PUNCT_RE.sub(r"\1", text)
+    text = _WS_RE.sub(" ", text).strip()
+
+    if len(text) <= _MAX_DESCRIPTION_CHARS:
+        return text
+
+    cut = text[:_MAX_DESCRIPTION_CHARS]
+    space = cut.rfind(" ")
+    if space > 0:
+        cut = cut[:space]  # never leave a half word
+    return cut.rstrip(" ,;:.") + _TRUNCATION_MARKER
+
+
+def _strip_embedding_prefix(document: str, node_label: str, name: str) -> str:
+    """Drop the ``"{label}: {name}. "`` header ``vector_loader`` embeds with.
+
+    The header is rebuilt from the entity's own label and name rather than
+    matched literally, and whitespace around the separators is tolerated. A
+    document that does not start with it — a re-ingest under a different
+    format, or a description stored directly — is returned untouched, so a
+    description that legitimately opens with a colon survives intact.
+    """
+    if not name:
+        return document
+    head = rf"{re.escape(node_label)}\s*:\s*" if node_label else ""
+    match = re.match(rf"{head}{re.escape(name)}\s*\.\s*", document, re.IGNORECASE)
+    return document[match.end() :] if match else document
 
 
 def _tactic_map(rag_result) -> dict[str, str]:
