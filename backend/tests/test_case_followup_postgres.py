@@ -21,8 +21,8 @@ from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.models.user import User
 from app.schemas.chat import ChatMessageCreate
-from app.services.case_analysis.clarification import Proceed, decide_followup
-from app.services.case_analysis.contracts import CaseAnalysisTrace
+from app.services.analysis.clarification import Proceed, decide_followup
+from app.services.analysis.contracts import CaseAnalysisTrace
 from app.services.chat.case_chat import post_case_message
 
 GAP = {
@@ -312,10 +312,10 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
     much new material arrived afterwards.
     """
 
-    from app.services.case_analysis.contracts import CaseAnalysisTrace
-    from app.services.case_analysis.pipeline import AnalysisArtifacts
-    from app.services.case_workflow import CaseUnderAnalysis, store_analysis
+    from app.services.analysis.contracts import CaseAnalysisTrace
+    from app.services.analysis.pipeline import AnalysisArtifacts
     from app.services.sources import load_case_source_bundle
+    from app.services.workflow import CaseUnderAnalysis, store_analysis
 
     async with isolated_database() as session_factory:
         trace_json = three_gaps().model_dump(mode="json")

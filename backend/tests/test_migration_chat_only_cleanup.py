@@ -17,6 +17,7 @@ def test_migration_chain_is_clean_and_linear() -> None:
         "0008_chat_client_request_id.py",
         "0009_followup_gap_key.py",
         "0010_foreign_key_indexes.py",
+        "0011_retrieval_context_reuse.py",
     ]
     baseline_source = migrations[0].read_text(encoding="utf-8")
     assert 'revision = "0001_canonical_case_system"' in baseline_source

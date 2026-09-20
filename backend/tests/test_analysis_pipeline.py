@@ -1,10 +1,11 @@
-"""The analysis pipeline is a list of stages, so an ablation can leave one out.
+"""The production analysis runs three steps, and the arms compose those same three.
 
-The technical-context stage used to be unreachable. The workflow took the
+The technical-context step used to be unreachable. The workflow took the
 applicability gate and the RAG client as arguments, and every caller left both
 at None, so six hundred lines of MITRE retrieval never ran against a real
-analysis. A stage list makes that impossible to miss: a stage either appears in
-the list or it does not.
+analysis. `analyse_case` makes that impossible to miss: the steps are named in
+one function, in order, with no switch between them — and these tests hold
+that shape rather than trusting it.
 """
 
 from __future__ import annotations
@@ -12,22 +13,22 @@ from __future__ import annotations
 import asyncio
 from uuid import uuid4
 
-from app.services.case_analysis.contracts import (
+from app.services.analysis import pipeline as pipeline_module
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseSourceCitation,
 )
-from app.services.case_analysis.pipeline import (
-    CASE_ANALYSIS_STAGES,
+from app.services.analysis.pipeline import (
+    AnalysisArtifacts,
     AnalysisInput,
-    AnalysisStage,
-    TechnicalContextStage,
-    analysis_stages,
-    run_pipeline,
-    without,
+    analyse_case,
+    bind_to_case,
+    write_analysis,
 )
 from app.services.sources import CaseSourceBundle, CaseSourceItem
+from experiments import analysis_arms
 
 
 def case_with_one_narrative() -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
@@ -50,34 +51,52 @@ def case_with_one_narrative() -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
     )
 
 
-def test_the_deployed_pipeline_runs_every_stage():
-    assert [stage.name for stage in CASE_ANALYSIS_STAGES] == [
-        "technical_context",
-        "analysis",
-        "verify",
+def steps_run_by(monkeypatch, run) -> list[str]:
+    """Which steps a composition actually called, in order."""
+
+    called: list[str] = []
+
+    def record(name):
+        async def step(data, so_far, **_kwargs):
+            called.append(name)
+            return so_far
+
+        return step
+
+    for name in ("retrieve_technical_context", "write_analysis", "bind_to_case"):
+        monkeypatch.setattr(pipeline_module, name, record(name))
+    monkeypatch.setattr(
+        analysis_arms, "retrieve_technical_context", record("retrieve_technical_context")
+    )
+    monkeypatch.setattr(analysis_arms, "write_analysis", record("write_analysis"))
+    monkeypatch.setattr(analysis_arms, "bind_to_case", record("bind_to_case"))
+
+    bundle, _ = case_with_one_narrative()
+    asyncio.run(run(AnalysisInput(sources=bundle)))
+    return called
+
+
+def test_the_shipped_analysis_runs_every_step(monkeypatch):
+    assert steps_run_by(monkeypatch, analyse_case) == [
+        "retrieve_technical_context",
+        "write_analysis",
+        "bind_to_case",
     ]
 
 
-def test_an_ablation_drops_a_stage_by_name():
-    assert [stage.name for stage in without("technical_context")] == ["analysis", "verify"]
+def test_the_baseline_arm_is_the_shipped_one_minus_binding(monkeypatch):
+    """direct and verify differ by one step, which is what the comparison measures."""
+
+    direct = steps_run_by(monkeypatch, analysis_arms.direct)
+    verify = steps_run_by(monkeypatch, analysis_arms.verify)
+
+    assert direct == ["retrieve_technical_context", "write_analysis"]
+    assert verify == direct + ["bind_to_case"]
 
 
-def test_the_two_arms_differ_by_one_stage():
-    """A is the baseline; B adds the step whose worth the experiment measures."""
+def test_a_step_left_out_means_the_model_is_given_no_technical_context():
+    """The ablation is a composition that omits the step, not a flag it reads."""
 
-    direct = [stage.name for stage in analysis_stages("direct")]
-    verify = [stage.name for stage in analysis_stages("verify")]
-    revise = [stage.name for stage in analysis_stages("revise")]
-
-    assert direct == ["technical_context", "analysis"]
-    assert verify == direct + ["verify"]
-    assert revise == verify
-    # The arms that verify differ only in whether they ask for a second try.
-    assert analysis_stages("verify")[-1].max_revisions == 0
-    assert analysis_stages("revise")[-1].max_revisions >= 1
-
-
-def test_without_the_retrieval_stage_the_model_is_given_no_technical_context():
     bundle, trace = case_with_one_narrative()
     seen = []
 
@@ -85,17 +104,9 @@ def test_without_the_retrieval_stage_the_model_is_given_no_technical_context():
         seen.append(kwargs)
         return CaseAnalysisOutput(answer="Answered.", trace=trace, execution_receipt={})
 
-    async def unreachable_gate(**_kwargs):
-        raise AssertionError("an ablated stage must not run")
-
-    stages = without(
-        "technical_context",
-        stages=(
-            TechnicalContextStage(applicability_gate=unreachable_gate),
-            AnalysisStage(analysis_request=fake_analysis),
-        ),
+    artifacts = asyncio.run(
+        write_analysis(AnalysisInput(sources=bundle), AnalysisArtifacts(), request=fake_analysis)
     )
-    artifacts = asyncio.run(run_pipeline(AnalysisInput(sources=bundle), stages))
 
     assert len(seen) == 1
     assert seen[0]["technical_context"] is None
@@ -104,7 +115,21 @@ def test_without_the_retrieval_stage_the_model_is_given_no_technical_context():
     assert "technical_augmentation" not in artifacts.receipt
 
 
-def test_the_pipeline_needs_no_case_row_to_run():
+def test_binding_is_what_writes_the_grounding_report():
+    """Which is why the arm that skips it reports none — deliberately."""
+
+    bundle, trace = case_with_one_narrative()
+    data = AnalysisInput(sources=bundle)
+
+    unbound = AnalysisArtifacts(trace=trace)
+    bound = asyncio.run(bind_to_case(data, unbound))
+
+    assert unbound.trace.grounding is None
+    assert bound.trace.grounding is not None
+    assert bound.receipt["verification"]["rounds"][0]["citations_verified"] == 1
+
+
+def test_the_analysis_needs_no_case_row_to_run():
     """What the experiment depends on: sources in, artifacts out, no database."""
 
     bundle, trace = case_with_one_narrative()
@@ -114,9 +139,10 @@ def test_the_pipeline_needs_no_case_row_to_run():
         return CaseAnalysisOutput(answer="Answered.", trace=trace, execution_receipt={})
 
     artifacts = asyncio.run(
-        run_pipeline(
+        write_analysis(
             AnalysisInput(sources=bundle, response_language="thai"),
-            (AnalysisStage(analysis_request=fake_analysis),),
+            AnalysisArtifacts(),
+            request=fake_analysis,
         )
     )
     assert artifacts.trace is trace

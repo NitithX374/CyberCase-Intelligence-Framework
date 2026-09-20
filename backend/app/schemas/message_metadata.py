@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import ConfigDict, TypeAdapter
 from typing_extensions import TypedDict
 
-from app.services.case_analysis.contracts import CaseAnalysisTrace
+from app.services.analysis.contracts import CaseAnalysisTrace
 
 
 class MessageMetadata(TypedDict, total=False):

@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import httpx
 
-from app.services.case_analysis.mitre_gate.llm import (
+from app.services.analysis.mitre_gate.llm import (
     MITRE_APPLICABILITY_GATE_VERSION,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
     MitreApplicabilityGate,
@@ -44,7 +44,7 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
         return httpx.Response(200, json={"output_text": json.dumps(output)})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_gate.llm.resolve_core_llm_target",
+        "app.services.analysis.mitre_gate.llm.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -77,7 +77,7 @@ def test_malformed_provider_output_fails_closed(monkeypatch) -> None:
         return httpx.Response(200, json={"output_text": "```json\n{}\n```"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_gate.llm.resolve_core_llm_target",
+        "app.services.analysis.mitre_gate.llm.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -104,7 +104,7 @@ def test_provider_error_fails_closed(monkeypatch) -> None:
         return httpx.Response(503, json={"error": "unavailable"})
 
     monkeypatch.setattr(
-        "app.services.case_analysis.mitre_gate.llm.resolve_core_llm_target",
+        "app.services.analysis.mitre_gate.llm.resolve_core_llm_target",
         lambda model: target(),
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))

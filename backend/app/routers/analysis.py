@@ -17,7 +17,7 @@ from app.schemas.analysis import (
     FollowupQuestionRead,
 )
 from app.services.auth.dependencies import get_current_user
-from app.services.case_workflow import (
+from app.services.workflow import (
     AnalysisStep,
     CaseWorkflowError,
     analysis_freshness,

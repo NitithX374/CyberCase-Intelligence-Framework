@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.schemas.reports import ReportClaim, StructuredReport
-from app.services.case_analysis.contracts import CaseAnalysisClaim, CaseAnalysisTrace
+from app.services.analysis.contracts import CaseAnalysisClaim, CaseAnalysisTrace
 from app.services.reports.content import (
     EPISTEMIC_STATUS_LABELS,
     SUPPORT_TYPE_LABELS,

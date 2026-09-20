@@ -7,8 +7,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, StructuredReport
-from app.services.case_analysis.contracts import CaseFollowupExchange
-from app.services.case_analysis.mitre_gate.llm import MitreApplicabilityRecord
+from app.services.analysis.contracts import CaseFollowupExchange
+from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
 CaseTechnicalAugmentationStatus = Literal[

@@ -1,6 +1,6 @@
 from datetime import UTC
 
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisTrace,
@@ -8,11 +8,11 @@ from app.services.case_analysis.contracts import (
     CaseProviderAnalysis,
     CaseSourceCitation,
 )
-from app.services.case_analysis.source_quote_resolver import (
+from app.services.analysis.steps.bind import resolve_case_trace
+from app.services.analysis.steps.quotes import (
     find_aligned_quote,
     resolve_document_locator,
 )
-from app.services.case_analysis.validation import resolve_case_trace
 from app.services.document_ingestion.provenance import bind_exact_page_spans
 from app.services.sources import CaseSourceBundle, CaseSourceItem
 

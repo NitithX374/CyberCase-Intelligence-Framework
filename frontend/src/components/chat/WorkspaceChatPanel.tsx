@@ -75,7 +75,9 @@ export function WorkspaceChatPanel({
       : leadResult.freshness === "current"
         ? `Using current analysis${sourceRevisionLabel}`
         : "Analysis freshness unavailable"
-    : "Ask becomes available after Case analysis";
+    : sources && sources.length > 0
+      ? `Pre-analysis · ${sources.length} sources`
+      : "Pre-analysis general chat";
 
   const handleClose = () => {
     onCloseChat();
@@ -98,11 +100,10 @@ export function WorkspaceChatPanel({
             <p className="mt-1 text-[11px] leading-4 text-ink-muted">{contextLabel}</p>
           </div>
           <span
-            className={`mt-2 h-2 w-2 shrink-0 rounded-full ${
-              isSending
+            className={`mt-2 h-2 w-2 shrink-0 rounded-full ${isSending
                 ? "bg-accent motion-safe:animate-pulse motion-reduce:animate-none"
                 : "bg-established"
-            }`}
+              }`}
             title={isSending ? "Answering" : "Ready"}
           />
           <button
@@ -140,7 +141,7 @@ export function WorkspaceChatPanel({
             <div className="mx-auto w-full max-w-4xl">
               <ChatComposer
                 input={chat.input}
-                isSubmitting={isSending || !hasAnalysisContext}
+                isSubmitting={isSending}
                 onInputChange={chat.changeInput}
                 onSubmit={chat.submitMessage}
               />

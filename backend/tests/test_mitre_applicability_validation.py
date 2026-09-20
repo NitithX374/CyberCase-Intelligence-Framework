@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.case_analysis.mitre_gate.llm import (
+from app.services.analysis.mitre_gate.llm import (
     validate_mitre_applicability,
 )
 from app.services.sources import CaseSourceItem

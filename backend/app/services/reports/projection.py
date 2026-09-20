@@ -4,7 +4,7 @@ from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportRead, StructuredReport
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisTrace,
 )
 from app.services.chat.followup import followup_history_from

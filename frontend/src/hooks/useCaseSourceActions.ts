@@ -10,6 +10,7 @@ import {
 import {
   caseQueryKeys,
   useCaseMutations,
+  useIsCaseAnalysisRunning,
   useStartCaseAnalysis,
   useUploadCaseDocument,
 } from "./useCaseQueries";
@@ -28,9 +29,11 @@ export function useCaseSourceActions({ caseId, sources, router }: UseCaseSourceA
   const { upsertCase, updateMutation } = useCaseMutations();
   const uploadMutation = useUploadCaseDocument(caseId);
   const analysisMutation = useStartCaseAnalysis(caseId);
+  // Read from the mutation cache, not from local state: the run belongs to the
+  // case, and the reader may start it here and watch it from the header.
+  const isAnalyzing = useIsCaseAnalysisRunning(caseId);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isAddingNarrative, setIsAddingNarrative] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const uploadDocument = useCallback(
     async (file: File) => {
@@ -76,7 +79,6 @@ export function useCaseSourceActions({ caseId, sources, router }: UseCaseSourceA
   const analyze = useCallback(async () => {
     if (!caseId || isAnalyzing) return;
     setActionError(null);
-    setIsAnalyzing(true);
     try {
       const step = await analysisMutation.mutateAsync({
         response_language: detectResponseLanguage(
@@ -89,8 +91,6 @@ export function useCaseSourceActions({ caseId, sources, router }: UseCaseSourceA
       router.push(casePath(caseId, "analysis"));
     } catch (error) {
       setActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
-    } finally {
-      setIsAnalyzing(false);
     }
   }, [analysisMutation, caseId, isAnalyzing, router, sources]);
 

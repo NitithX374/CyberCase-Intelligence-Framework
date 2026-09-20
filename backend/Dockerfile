@@ -4,11 +4,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Embed Unicode fonts used by the formal export, including Thai glyphs.
+# Thai fonts for the formal export, and the Pango/Cairo stack WeasyPrint
+# lays text out with. fontconfig finds the fonts on its own from here.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         fonts-noto-core \
         fonts-tlwg-garuda-ttf \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libharfbuzz0b \
+        libharfbuzz-subset0 \
+        libcairo2 \
+        libgdk-pixbuf-2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install

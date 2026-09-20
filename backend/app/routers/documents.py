@@ -73,6 +73,7 @@ async def add_case_document(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    await commit_dependency_transaction(db)
     service = build_document_ingestion_service()
     try:
         content = await read_limited(file)
@@ -95,7 +96,6 @@ async def add_case_document(
         "warnings_json": list(ingested.warnings),
     }
     try:
-        await commit_dependency_transaction(db)
         async with db.begin():
             return await SourceService(db).add_document(
                 case_id=case_id,

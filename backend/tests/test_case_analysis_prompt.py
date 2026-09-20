@@ -4,17 +4,17 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from app.services.case_analysis.analysis import execute_analysis_pipeline
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseProviderAnalysis,
     CaseSourceCitation,
 )
-from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
-from app.services.case_analysis.prompts import case_system_prompt
-from app.services.case_analysis.response_parser import validate_response_payload
-from app.services.case_analysis.source_quote_resolver import find_aligned_quote
+from app.services.analysis.prompts import case_system_prompt
+from app.services.analysis.provider import validate_response_payload
+from app.services.analysis.settings import AnalysisPipelineConfig
+from app.services.analysis.steps.quotes import find_aligned_quote
+from app.services.analysis.steps.write import execute_analysis_pipeline
 from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 
@@ -93,7 +93,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             return provider_result(contradicting=False)
 
         with patch(
-            "app.services.case_analysis.analysis.request_analysis_stage",
+            "app.services.analysis.steps.write.request_analysis_stage",
             new=request_stage,
         ):
             await execute_analysis_pipeline(
@@ -161,7 +161,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             return provider_result(contradicting=len(calls) == 1)
 
         with patch(
-            "app.services.case_analysis.analysis.request_analysis_stage",
+            "app.services.analysis.steps.write.request_analysis_stage",
             new=request_stage,
         ):
             result = await execute_analysis_pipeline(

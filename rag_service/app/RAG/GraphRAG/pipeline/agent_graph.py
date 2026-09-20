@@ -38,6 +38,12 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 
 from ..config import (
+    AGENT_MAX_CONTEXT_CHARS,
+    AGENT_MAX_GRAPH,
+    AGENT_MAX_VECTOR,
+    BROADEN_CONTEXT_CHARS_STEP,
+    BROADEN_GRAPH_STEP,
+    BROADEN_VECTOR_STEP,
     EMBED_MODEL,
     LLM_MAX_TOKENS,
     LLM_MODEL,
@@ -55,7 +61,7 @@ from ..llm_provider import (
     create_core_chat_model,
     resolve_core_llm_target,
 )
-from ..retrieval.hybrid_retriever import HybridRetriever
+from ..retrieval.hybrid_retriever import HybridRetriever, merge_results
 from .context_builder import build_context, build_generation_prompt
 from .cross_lingual import CrossLingualLayer
 from .query_decomposer import QueryDecomposer
@@ -223,9 +229,12 @@ class GraphRAGAgent:
         sub_queries = self.decomposer.decompose(incident=user_query, verbose=False)
         all_queries = [user_query] + [q for q in sub_queries if q and q != user_query]
         rag_result = self.retriever.retrieve_multi_quota(
-            all_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
+            all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
+            max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH,
         )
-        return build_context(rag_result, max_vector=15, max_graph=8)
+        return build_context(
+            rag_result, max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH
+        )
 
     def query_fast(self, user_query: str, verbose: bool = True) -> AgentResponse:
         """Minimal-latency path — single retrieve → one combined reason+answer call.
@@ -373,7 +382,23 @@ class GraphRAGAgent:
         Returns:
             ``AgentResponse`` with ``status="completed"``.
         """
-        initial_state: AgentState = {
+        result = self.graph.invoke(self.initial_state(user_query, verbose))
+
+        return AgentResponse(
+            status="completed",
+            answer=result.get("answer", ""),
+            context=result.get("context", ""),
+            graphrag_result=result.get("graphrag_result"),
+        )
+
+    @staticmethod
+    def initial_state(user_query: str, verbose: bool = True) -> AgentState:
+        """The state ``query()`` starts the graph from.
+
+        Public so evaluation can ``graph.stream()`` the served graph node by
+        node from exactly the state production uses.
+        """
+        return {
             "original_query": user_query,
             "verbose": verbose,
             "broaden_count": 0,
@@ -382,15 +407,6 @@ class GraphRAGAgent:
             "gap_warning": "",
             "acknowledgement_message": "",
         }
-
-        result = self.graph.invoke(initial_state)
-
-        return AgentResponse(
-            status="completed",
-            answer=result.get("answer", ""),
-            context=result.get("context", ""),
-            graphrag_result=result.get("graphrag_result"),
-        )
 
     # ------------------------------------------------------------------
     # Graph construction
@@ -547,6 +563,7 @@ class GraphRAGAgent:
         original_query = state.get("original_query", "")
         rewritten_queries: list = list(state.get("rewritten_queries") or [])
         verbose = state.get("verbose", True)
+        broaden_round = state.get("broaden_count", 0)
 
         # Full original query goes FIRST as a holistic channel — it preserves the
         # incident's full context (the report path proved this gives better
@@ -562,10 +579,25 @@ class GraphRAGAgent:
             for i, q in enumerate(all_queries, 1):
                 print(f"  [{i}] {q[:100]}")
 
+        # A broaden round extends the context rather than competing for its
+        # space: the rewrite exists to add the phase the first pass missed, and
+        # the first pass already fills the character budget, so displacing it
+        # was measured as a wash (see BROADEN_* in config.py).
+        max_vector = AGENT_MAX_VECTOR + BROADEN_VECTOR_STEP * broaden_round
+        max_graph = AGENT_MAX_GRAPH + BROADEN_GRAPH_STEP * broaden_round
+        max_chars = AGENT_MAX_CONTEXT_CHARS + BROADEN_CONTEXT_CHARS_STEP * broaden_round
+
         graphrag_result = self.retriever.retrieve_multi_quota(
-            all_queries, per_query_k=3, top_k=VECTOR_TOP_K, max_vector=15, max_graph=8
+            all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
+            max_vector=max_vector, max_graph=max_graph,
         )
-        context = build_context(graphrag_result, max_vector=15, max_graph=8)
+        if broaden_round and state.get("graphrag_result") is not None:
+            graphrag_result = merge_results(state["graphrag_result"], graphrag_result)
+
+        context = build_context(
+            graphrag_result, max_context_length=max_chars,
+            max_vector=max_vector, max_graph=max_graph,
+        )
 
         if verbose:
             sep("CONTEXT PREVIEW")
@@ -639,13 +671,26 @@ class GraphRAGAgent:
         # ── Fast path for ACKNOWLEDGE_LIMIT ───────────────────────────────
         # Honour it only alongside an INSUFFICIENT verdict — guard against
         # local LLMs that output strategy=ACKNOWLEDGE_LIMIT while simultaneously
-        # returning verdict=SUFFICIENT. Reaching reasoning WITH an INSUFFICIENT
-        # verdict already means broaden is spent or unavailable
-        # (see _edge_after_evaluation), so no separate budget check is needed —
-        # and the answerability gate can legitimately fire on the first pass.
+        # returning verdict=SUFFICIENT.
+        #
+        # And only on the first pass. That is the answerability gate: it is
+        # checked before the context is judged and means the incident text
+        # itself describes no attacker action, so there is nothing to analyse.
+        # After a broaden round the message means "the knowledge base did not
+        # cover every phase I looked for", which is not a reason to throw the
+        # analysis away: on 100 real-CTI incidents that replaced 10 answers and
+        # cost 0.704 F1 each, half of them with every gold technique already in
+        # the retrieved context (evaluation/results/agentic_ablation.md). Those
+        # cases now answer from the context and carry the limitation as a
+        # caveat instead.
         evaluation = state.get("evaluation")
         verdict = getattr(evaluation, "verdict", "") if evaluation else ""
-        if strategy == "ACKNOWLEDGE_LIMIT" and ack_message and verdict == VERDICT_INSUFFICIENT:
+        acknowledged = (
+            strategy == "ACKNOWLEDGE_LIMIT"
+            and bool(ack_message)
+            and verdict == VERDICT_INSUFFICIENT
+        )
+        if acknowledged and state.get("broaden_count", 0) == 0:
             if verbose:
                 sep("AGENT — REASONING LLM (ACKNOWLEDGE_LIMIT)")
                 print(ack_message)
@@ -684,6 +729,12 @@ class GraphRAGAgent:
             ]
         )
         answer = require_message_text(response, operation="grounded answer generation")
+
+        # The evaluator's limitation note rides along instead of replacing the
+        # analysis. It is written in the query's language, so it needs no
+        # translation stage of its own.
+        if acknowledged:
+            answer = f"{answer}\n\n{ack_message}"
 
         if verbose:
             sep("ANSWER (Thai, single-call)" if single_call else "ENGLISH ANSWER")

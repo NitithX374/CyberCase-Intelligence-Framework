@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import ChatMessage
 from app.schemas.message_metadata import message_trace, serialize_message_metadata
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisGap,
     CaseAnalysisTrace,
     CaseFollowupExchange,

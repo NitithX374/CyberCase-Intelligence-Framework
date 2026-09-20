@@ -6,7 +6,7 @@ import pytest
 from pypdf import PdfReader
 
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_HEADINGS
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisTrace,
@@ -17,7 +17,7 @@ from app.services.case_analysis.contracts import (
     CaseSourceCitation,
     CaseTimelineItem,
 )
-from app.services.case_analysis.mitre_gate.llm import MitreApplicabilityRecord
+from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
 from app.services.reports.assembly import build_case_report, build_case_template_report
 from app.services.reports.contracts import (
     CaseReportInput,

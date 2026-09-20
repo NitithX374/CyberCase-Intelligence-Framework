@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.schemas.reports import StructuredReport
-from app.services.case_analysis.contracts import CaseAnalysisTrace
+from app.services.analysis.contracts import CaseAnalysisTrace
 from app.services.reports.content import (
     build_case_report_claims,
     build_case_report_limitations,

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.services.case_analysis.pipeline_config import (
+from app.services.analysis.settings import (
     AnalysisPipelineConfig,
     configured_pipeline,
     read_pipeline,
@@ -47,7 +47,7 @@ def test_historical_version_cannot_select_claim_anchored():
 
 
 def test_raw_direct_pipeline_matches_current_prompt_version():
-    from app.services.case_analysis.prompts import (
+    from app.services.analysis.prompts import (
         CASE_ANALYSIS_PROMPT_VERSION,
     )
 

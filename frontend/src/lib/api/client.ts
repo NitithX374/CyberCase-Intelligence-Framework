@@ -135,8 +135,6 @@ export const createCaseChatMessage = async (
       client_request_id: idempotencyKey,
       response_language: detectResponseLanguage(content),
     },
-    // Answering can re-analyse the case, which is a model call. Without a
-    // bound, a backend that never replies leaves the panel sending forever.
     { timeout: ANALYSIS_REQUEST_TIMEOUT_MS },
   );
   return response.data;

@@ -149,6 +149,12 @@ def _collect_candidates(rag_result) -> dict[str, dict]:
         for node in filter(None, [sg.center_node, *sg.neighbors]):
             if not node.name:
                 continue
+            # A tactic neighbour is what the `tactic` column is for. As a row it
+            # only ever enters by name match, and a one-word tactic name
+            # ("Discovery") matches inside any "… Discovery" technique the
+            # answer cites.
+            if node.label == "Tactic":
+                continue
             key = node.stix_id or f"{node.label}:{node.name}"
             if key not in candidates:
                 candidates[key] = {

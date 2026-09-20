@@ -17,19 +17,19 @@ from __future__ import annotations
 import asyncio
 from uuid import uuid4
 
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseSourceCitation,
 )
-from app.services.case_analysis.pipeline import (
+from app.services.analysis.pipeline import (
+    AnalysisArtifacts,
     AnalysisInput,
-    AnalysisStage,
-    VerifyStage,
-    run_pipeline,
+    write_analysis,
 )
 from app.services.sources import CaseSourceBundle, CaseSourceItem
+from experiments.analysis_arms import revise
 
 TEXT = "The finance share was encrypted overnight and a note demanded contact."
 SOURCE_ID = str(uuid4())
@@ -74,7 +74,7 @@ def test_arm_a_leaves_an_invented_quotation_in_place():
 
     request, seen = analysis_returning(trace_of(claim("A-01", "There was no incident.")))
     artifacts = asyncio.run(
-        run_pipeline(AnalysisInput(sources=BUNDLE), (AnalysisStage(analysis_request=request),))
+        write_analysis(AnalysisInput(sources=BUNDLE), AnalysisArtifacts(), request=request)
     )
 
     assert seen == [None]
@@ -84,15 +84,7 @@ def test_arm_a_leaves_an_invented_quotation_in_place():
 
 def test_arm_b_verifies_without_revising_when_nothing_missed():
     request, seen = analysis_returning(trace_of(claim("A-01", TEXT)))
-    artifacts = asyncio.run(
-        run_pipeline(
-            AnalysisInput(sources=BUNDLE),
-            (
-                AnalysisStage(analysis_request=request),
-                VerifyStage(max_revisions=1, analysis_request=request),
-            ),
-        )
-    )
+    artifacts = asyncio.run(revise(AnalysisInput(sources=BUNDLE), max_revisions=1, request=request))
 
     assert seen == [None], "a sound analysis costs no second call"
     assert artifacts.trace.grounding.citations_verified == 1
@@ -112,15 +104,7 @@ def test_arm_b_hands_back_the_quotations_that_missed():
     corrected = trace_of(claim("A-01", TEXT))
     request, seen = analysis_returning(invented, corrected)
 
-    artifacts = asyncio.run(
-        run_pipeline(
-            AnalysisInput(sources=BUNDLE),
-            (
-                AnalysisStage(analysis_request=request),
-                VerifyStage(max_revisions=1, analysis_request=request),
-            ),
-        )
-    )
+    artifacts = asyncio.run(revise(AnalysisInput(sources=BUNDLE), max_revisions=1, request=request))
 
     assert len(seen) == 2, "the second call is the revision"
     assert "A-01" in seen[1] and "There was no incident." in seen[1]
@@ -140,15 +124,7 @@ def test_the_receipt_shows_whether_revising_fixed_or_deleted():
     gutted = trace_of(claim("A-01", TEXT))
     request, _ = analysis_returning(invented, gutted)
 
-    artifacts = asyncio.run(
-        run_pipeline(
-            AnalysisInput(sources=BUNDLE),
-            (
-                AnalysisStage(analysis_request=request),
-                VerifyStage(max_revisions=1, analysis_request=request),
-            ),
-        )
-    )
+    artifacts = asyncio.run(revise(AnalysisInput(sources=BUNDLE), max_revisions=1, request=request))
 
     rounds = artifacts.receipt["verification"]["rounds"]
     assert [r["citations_unfound"] for r in rounds] == [1, 0], "grounding looks perfect after"
@@ -159,15 +135,7 @@ def test_a_model_that_keeps_missing_stops_at_the_bound():
     invented = trace_of(claim("A-01", "There was no incident."))
     request, seen = analysis_returning(invented)
 
-    artifacts = asyncio.run(
-        run_pipeline(
-            AnalysisInput(sources=BUNDLE),
-            (
-                AnalysisStage(analysis_request=request),
-                VerifyStage(max_revisions=2, analysis_request=request),
-            ),
-        )
-    )
+    artifacts = asyncio.run(revise(AnalysisInput(sources=BUNDLE), max_revisions=2, request=request))
 
     assert len(seen) == 3, "one analysis and two revisions, then it stops"
     assert artifacts.trace.grounding.citations_unfound == 1

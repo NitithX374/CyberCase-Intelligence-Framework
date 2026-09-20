@@ -1,5 +1,5 @@
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, ReportClaim, StructuredReport
-from app.services.case_analysis.contracts import CaseProviderAnalysis
+from app.services.analysis.contracts import CaseProviderAnalysis
 from app.services.llm.structured_output import structured_output_schema
 
 

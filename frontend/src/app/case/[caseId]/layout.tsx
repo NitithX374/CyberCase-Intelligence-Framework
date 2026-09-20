@@ -9,6 +9,7 @@ import {
   useCaseSources,
   useCaseMutations,
   useCases,
+  useIsCaseAnalysisRunning,
   useStartCaseAnalysis,
 } from "@/hooks/useCaseQueries";
 import { casePath, caseRouteState } from "@/lib/workspaceRoutes";
@@ -58,6 +59,9 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
 
   const sources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
   const startAnalysis = useStartCaseAnalysis(caseId ?? null);
+  // Not startAnalysis.isPending: that is this component's view of the run,
+  // and it is false again the moment the reader comes back from another case.
+  const isAnalysisRunning = useIsCaseAnalysisRunning(caseId ?? null);
 
   // Whether the panel is open is the layout's business — it owns the shell
   // width. Everything inside it is the panel's.
@@ -76,7 +80,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   // The analysis belongs to the case, not to one of its pages, so the header
   // runs it and every view can see it running.
   const runAnalysis = useCallback(async () => {
-    if (!caseId || startAnalysis.isPending) return;
+    if (!caseId || isAnalysisRunning) return;
     try {
       const step = await startAnalysis.mutateAsync({
         response_language: detectResponseLanguage(
@@ -94,7 +98,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     } catch (error) {
       setChatActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
     }
-  }, [caseId, openChat, router, sources, startAnalysis]);
+  }, [caseId, isAnalysisRunning, openChat, router, sources, startAnalysis]);
 
   const renameCase = useCallback(
     async (title: string) => {
@@ -146,7 +150,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
           creatingCase={createMutation.isPending}
           hasAnalysis={Boolean(activeCase?.latest_analysis_result_id)}
           canAnalyze={sources.length > 0}
-          isAnalyzing={startAnalysis.isPending || isFollowupPending}
+          isAnalyzing={isAnalysisRunning || isFollowupPending}
           isStale={activeCase?.analysis_freshness === "stale"}
           onAnalyze={() => void runAnalysis()}
           onViewChange={handleViewChange}

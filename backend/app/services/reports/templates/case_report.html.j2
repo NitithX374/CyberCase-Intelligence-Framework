@@ -5,7 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ report.title }}</title>
   <style>
-    @page { size: A4; margin: 18mm 16mm 16mm; }
+    @page {
+      size: A4;
+      margin: 18mm 16mm 16mm;
+      /* What render_pdf.py used to draw on the reportlab canvas by hand. */
+      @bottom-left {
+        content: "CyberCase · Preliminary analysis";
+        font-family: "Noto Sans Thai", "Garuda", "Tahoma", sans-serif;
+        font-size: 7pt; color: #4b5563;
+        border-top: 0.5pt solid #1e293b; padding-top: 4pt;
+        vertical-align: top;
+      }
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: "Noto Sans Thai", "Garuda", "Tahoma", sans-serif;
+        font-size: 7pt; color: #4b5563;
+        border-top: 0.5pt solid #1e293b; padding-top: 4pt;
+        vertical-align: top; text-align: right;
+      }
+    }
     :root { color-scheme: light; font-family: "Noto Sans Thai", "Garuda", "Tahoma", sans-serif; color: #111827; background: #f9fafb; }
     * { box-sizing: border-box; }
     body { margin: 0; background: #f9fafb; color: #111827; font-size: 13.5px; line-height: 1.75; }
@@ -24,7 +42,8 @@
     .summary-subhead { margin: 14px 0 6px; font-size: 13.5px; font-weight: 700; color: #1e293b; }
     .formal-bullet { margin: 4px 0 4px 12px; line-height: 1.65; }
     .purpose-block { margin: 0 0 12px; padding: 8px 12px; border: 1px solid #d1d5db; background: #f9fafb; font-size: 13px; line-height: 1.6; }
-    .indicator-list { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+    .indicator-list { margin-top: 10px; }
+    .indicator-list > * + * { margin-top: 14px; }
     .indicator-formal { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; background: #ffffff; break-inside: avoid; }
     .indicator-title { color: #1e293b; font-size: 14px; margin-bottom: 4px; }
     .epistemic-tag { color: #4b5563; font-style: italic; font-size: 12px; font-weight: normal; margin-left: 6px; }

@@ -5,7 +5,7 @@ from app.schemas.reports import (
     ReportClaim,
     ReportSection,
 )
-from app.services.case_analysis.contracts import CaseAnalysisClaim, CaseAnalysisTrace
+from app.services.analysis.contracts import CaseAnalysisClaim, CaseAnalysisTrace
 from app.services.reports.contracts import CaseReportInput
 
 SUPPORT_TYPE_LABELS = {

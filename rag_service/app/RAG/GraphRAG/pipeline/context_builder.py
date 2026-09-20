@@ -61,23 +61,49 @@ def build_context(
         sections.append(f"  {doc_text}")
 
     # ── Section 2: Graph Context ──────────────────────────────────────────
-    if result.graph_results:
-        sections.append("\n\n--- Graph Context (Structured Relationships) ---")
-
-        for sg in result.graph_results[:max_graph]:
-            text = sg.to_text()
-            if text:
-                sections.append(f"\n{text}")
-
-    # ── Combine ───────────────────────────────────────────────────────────
+    # Whole subgraphs or nothing. Slicing the joined text at the budget cut
+    # the first oversized subgraph mid-line and silently dropped every one
+    # after it; skipping a subgraph that does not fit lets the smaller,
+    # lower-priority ones behind it still land.
     context = "\n".join(sections)
+    graph_blocks: list[str] = []
+    retrieved_names = _retrieved_names(result)
+    header = "\n\n--- Graph Context (Structured Relationships) ---"
+    used = len(context) + 1 + len(header)
 
+    for sg in result.graph_results[:max_graph]:
+        text = sg.to_text(priority_names=retrieved_names)
+        if not text:
+            continue
+        block = f"\n{text}"
+        if used + 1 + len(block) > max_context_length:
+            continue
+        graph_blocks.append(block)
+        used += 1 + len(block)
+
+    if graph_blocks:
+        context = "\n".join([context, header, *graph_blocks])
+
+    # ── Safety net: the semantic section alone can exceed the budget ─────
     if len(context) > max_context_length:
         context = (
             context[:max_context_length] + "\n\n... [context truncated for length]"
         )
 
     return context
+
+
+def _retrieved_names(result: GraphRAGResult) -> set[str]:
+    """Entity names already present in the retrieval, used to order neighbour
+    lists so a capped list keeps the neighbours that connect to the incident."""
+    names: set[str] = set()
+    for vr in result.vector_results:
+        md = vr.metadata or {}
+        names.update(filter(None, (md.get("name"), md.get("source_name"), md.get("target_name"))))
+    for sg in result.graph_results:
+        if sg.center_node and sg.center_node.name:
+            names.add(sg.center_node.name)
+    return names
 
 
 

@@ -14,7 +14,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
     CaseGeneratedUnit,
