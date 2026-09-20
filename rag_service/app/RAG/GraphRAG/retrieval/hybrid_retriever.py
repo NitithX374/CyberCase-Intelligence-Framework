@@ -20,6 +20,28 @@ from .reranker import Reranker
 from .vector_retriever import VectorResult, VectorRetriever
 
 
+def merge_results(previous: "GraphRAGResult", new: "GraphRAGResult") -> "GraphRAGResult":
+    """Union of two retrievals, everything the earlier one found kept first.
+
+    Used by the broaden round: the rewrite is meant to ADD the phase the first
+    pass missed, so the second retrieval extends the context instead of
+    replacing it. Dedup is by stix_id for vector hits and by centre node for
+    subgraphs.
+    """
+    vector_results = list(previous.vector_results)
+    seen = {vr.stix_id for vr in vector_results}
+    vector_results += [vr for vr in new.vector_results
+                       if vr.stix_id not in seen and not seen.add(vr.stix_id)]
+
+    graph_results = list(previous.graph_results)
+    centres = {sg.center_node.stix_id for sg in graph_results if sg.center_node}
+    graph_results += [sg for sg in new.graph_results
+                      if sg.center_node and sg.center_node.stix_id not in centres
+                      and not centres.add(sg.center_node.stix_id)]
+
+    return GraphRAGResult(vector_results=vector_results, graph_results=graph_results)
+
+
 @dataclass
 class GraphRAGResult:
     """Combined result from vector search + graph expansion."""
