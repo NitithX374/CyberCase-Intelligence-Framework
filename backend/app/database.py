@@ -25,6 +25,7 @@ else:
             "user": settings.postgres_user,
             "password": settings.postgres_password,
             "database": settings.postgres_db,
+            "server_settings": {"application_name": "cybercase_backend"},
         },
         echo=False,
         pool_pre_ping=True,

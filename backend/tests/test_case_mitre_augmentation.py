@@ -2,8 +2,7 @@ import asyncio
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.services.case_analysis.analysis import validate_direct_trace
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
@@ -11,22 +10,23 @@ from app.services.case_analysis.contracts import (
     CaseProviderAnalysis,
     CaseSourceCitation,
 )
-from app.services.case_analysis.mitre_gate.llm import (
+from app.services.analysis.mitre_gate.llm import (
     MitreApplicabilityRecord,
 )
-from app.services.case_analysis.pipeline import (
+from app.services.analysis.pipeline import (
+    AnalysisArtifacts,
     AnalysisInput,
-    AnalysisStage,
-    TechnicalContextStage,
-    run_pipeline,
+    retrieve_technical_context,
+    write_analysis,
 )
-from app.services.case_workflow import external_context
-from app.services.clients.rag_client import RagCallFailure
-from app.services.sources import CaseSourceBundle, CaseSourceItem
-from app.services.technical_context.mitre_augmentation import (
+from app.services.analysis.steps.technical_context import (
     CaseRagContextPayload,
     run_case_mitre_augmentation,
 )
+from app.services.analysis.steps.write import validate_direct_trace
+from app.services.clients.rag_client import RagCallFailure
+from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.workflow import external_context
 
 
 def _fixtures():
@@ -201,18 +201,14 @@ def test_workflow_scenario_a_non_cyber_case_gate_skip():
                 execution_receipt={"calls": []},
             )
 
-        artifacts = await run_pipeline(
-            AnalysisInput(sources=source_bundle, response_language="english"),
-            stages=(
-                TechnicalContextStage(
-                    applicability_gate=_gate(
-                        {"decision": "SKIP", "source_message_ids": [], "trigger_text": []}
-                    ),
-                    rag_request=fake_rag,
-                ),
-                AnalysisStage(analysis_request=fake_analysis),
-            ),
+        data = AnalysisInput(sources=source_bundle, response_language="english")
+        artifacts = await retrieve_technical_context(
+            data,
+            AnalysisArtifacts(),
+            gate=_gate({"decision": "SKIP", "source_message_ids": [], "trigger_text": []}),
+            rag=fake_rag,
         )
+        artifacts = await write_analysis(data, artifacts, request=fake_analysis)
 
         assert rag_calls == []
         assert len(analysis_calls) == 1
@@ -265,13 +261,11 @@ def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
                 execution_receipt={"calls": []},
             )
 
-        artifacts = await run_pipeline(
-            AnalysisInput(sources=source_bundle, response_language="english"),
-            stages=(
-                TechnicalContextStage(applicability_gate=fake_gate, rag_request=fake_rag),
-                AnalysisStage(analysis_request=fake_analysis),
-            ),
+        data = AnalysisInput(sources=source_bundle, response_language="english")
+        artifacts = await retrieve_technical_context(
+            data, AnalysisArtifacts(), gate=fake_gate, rag=fake_rag
         )
+        artifacts = await write_analysis(data, artifacts, request=fake_analysis)
 
         assert call_order == ["gate", "rag", "analysis"]
         assert len(artifacts.trace.mitre_associations) == 1
@@ -335,15 +329,11 @@ def test_workflow_scenario_d_rag_failure_falls_back_to_case_sources():
                 execution_receipt={"calls": []},
             )
 
-        artifacts = await run_pipeline(
-            AnalysisInput(sources=source_bundle, response_language="english"),
-            stages=(
-                TechnicalContextStage(
-                    applicability_gate=_gate(applicability), rag_request=fake_rag
-                ),
-                AnalysisStage(analysis_request=fake_analysis),
-            ),
+        data = AnalysisInput(sources=source_bundle, response_language="english")
+        artifacts = await retrieve_technical_context(
+            data, AnalysisArtifacts(), gate=_gate(applicability), rag=fake_rag
         )
+        artifacts = await write_analysis(data, artifacts, request=fake_analysis)
 
         assert len(analysis_kwargs) == 1
         assert analysis_kwargs[0]["technical_context"] is None

@@ -9,16 +9,20 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseGeneratedUnit,
     resolve_response_language,
 )
-from app.services.case_analysis.pipeline_config import read_pipeline
-from app.services.case_analysis.provider_stage import request_stage, resolve_target
-from app.services.case_analysis.validation import resolve_case_trace
+from app.services.analysis.provider import request_stage, resolve_target
+from app.services.analysis.settings import (
+    AnalysisPipelineConfig,
+    configured_pipeline,
+    read_pipeline,
+)
+from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.sources import CaseSourceBundle
 
 ANSWER_VERSION = "case_chat_answer_v1"
@@ -77,17 +81,55 @@ class CaseAnswerResponse(BaseModel):
         return self
 
 
+class GeneralCaseAnswerResponse(BaseModel):
+    """Fallback plain-text answer when the case has no completed analysis yet."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    answer: str = Field(
+        description="Direct response to user question in response_language", max_length=4_000
+    )
+
+
+PRE_ANALYSIS_ANSWER_PROMPT = """You are CyberCase Intelligence Framework, an AI assistant for investigative cases.
+The user is asking a question about a case that has not yet undergone full structured Case Analysis.
+You are given the available raw case sources (documents, narratives, if any) and previous conversation history.
+
+Rules:
+1. Answer the question directly, concisely, and helpfully in response_language.
+2. If the user asks about facts or details of the case:
+   - Check the provided case sources. If the sources mention the information, answer from them clearly.
+   - If the sources do not mention the information or no sources exist yet, state clearly that this information is not present in the current sources, and recommend adding more sources or running 'Analyze Case'.
+3. If the user asks a general question, greeting, or question about how the system works, answer plainly and accurately.
+4. Never invent or speculate on incident facts that are not present in the sources.
+"""
+
+
 def build_answer_context(
     *,
-    result: CaseAnalysisResult,
+    result: CaseAnalysisResult | None,
     question: str,
     history: list[ChatMessage],
     source_bundle: CaseSourceBundle,
 ) -> dict[str, object]:
     """What the answer call needs, taken from rows this request just read.
 
-    The analysis was validated when it was stored, so nothing here re-checks it.
+    When result is None, the case has not been analysed yet; a pre-analysis
+    fallback answer will be generated.
     """
+
+    if result is None:
+        return {
+            "analysis_result_id": None,
+            "source_revision": source_bundle.revision,
+            "pipeline_config": configured_pipeline().model_dump(mode="json"),
+            "analysis_summary": None,
+            "trace": None,
+            "question": question,
+            "history": [
+                {"id": str(item.id), "role": item.role, "content": item.content} for item in history
+            ],
+        }
 
     return {
         "analysis_result_id": str(result.id),
@@ -100,6 +142,62 @@ def build_answer_context(
             {"id": str(item.id), "role": item.role, "content": item.content} for item in history
         ],
     }
+
+
+async def generate_pre_analysis_answer(
+    *,
+    config: AnalysisPipelineConfig,
+    question: str,
+    history: list[dict[str, str]],
+    source_bundle: CaseSourceBundle,
+    language: str,
+    client: httpx.AsyncClient | None = None,
+) -> CaseAnalysisOutput:
+    calls: list[dict[str, object]] = []
+    sources_data = [
+        {
+            "source_id": s.source_id,
+            "source_kind": s.source_kind,
+            "filename": s.filename,
+            "text": s.text[:6000],
+        }
+        for s in source_bundle.sources
+    ]
+    content = {
+        "response_language": language,
+        "question": question,
+        "case_sources": sources_data,
+        "conversation_history": history,
+    }
+    receipt: dict[str, object] = {
+        "prompt_version": "case_chat_pre_analysis_v1",
+        "outcome": "general",
+        "calls": calls,
+    }
+
+    async def generate(active_client: httpx.AsyncClient) -> GeneralCaseAnswerResponse:
+        return await request_stage(
+            client=active_client,
+            target=resolve_target(config),
+            config=config,
+            stage="chat_general_answer",
+            system=PRE_ANALYSIS_ANSWER_PROMPT,
+            content=content,
+            schema=GeneralCaseAnswerResponse,
+            calls=calls,
+        )
+
+    if client is not None:
+        response = await generate(client)
+    else:
+        async with httpx.AsyncClient() as owned_client:
+            response = await generate(owned_client)
+
+    return CaseAnalysisOutput(
+        answer=response.answer.strip(),
+        trace=None,
+        execution_receipt=receipt,
+    )
 
 
 async def generate_case_answer(
@@ -120,21 +218,29 @@ async def generate_case_answer(
         raise CaseAnalysisFailure(
             "case_ask_context_invalid", "Chat analysis configuration is invalid"
         ) from error
-    trace = parse_trace(context.get("trace"), "Chat analysis trace is invalid")
+
     question = context.get("question")
-    summary = context.get("analysis_summary")
     analysis_result_id = context.get("analysis_result_id")
     history = context.get("history")
-    if (
-        not isinstance(question, str)
-        or not question.strip()
-        or not isinstance(summary, str)
-        or not isinstance(analysis_result_id, str)
-        or not isinstance(history, list)
-    ):
+    if not isinstance(question, str) or not question.strip() or not isinstance(history, list):
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is incomplete")
     normalized_history = validate_history(history)
     language = resolve_response_language(user_message)
+
+    if analysis_result_id is None:
+        return await generate_pre_analysis_answer(
+            config=config,
+            question=question,
+            history=normalized_history,
+            source_bundle=source_bundle,
+            language=language,
+            client=client,
+        )
+
+    summary = context.get("analysis_summary")
+    if not isinstance(summary, str) or not isinstance(analysis_result_id, str):
+        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is incomplete")
+    trace = parse_trace(context.get("trace"), "Chat analysis trace is invalid")
     calls: list[dict[str, object]] = []
     # The whole analysis, not just its claims. Everything but the gaps carries
     # the claim_ids it rests on, so answering from it cites the same claims a
@@ -234,4 +340,9 @@ def parse_trace(value: object, message: str) -> CaseAnalysisTrace:
         raise CaseAnalysisFailure("case_ask_context_invalid", message) from error
 
 
-__all__ = ["CaseAnswerResponse", "build_answer_context", "generate_case_answer"]
+__all__ = [
+    "CaseAnswerResponse",
+    "GeneralCaseAnswerResponse",
+    "build_answer_context",
+    "generate_case_answer",
+]

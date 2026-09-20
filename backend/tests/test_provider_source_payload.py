@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.services.case_analysis.analysis import provider_source_payload
+from app.services.analysis.steps.write import provider_source_payload
 from app.services.sources import CaseSourceItem
 
 

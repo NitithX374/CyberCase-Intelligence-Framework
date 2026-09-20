@@ -24,16 +24,8 @@ from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.schemas.chat import CaseChatRead, ChatMessageCreate, ChatMessageRead
-from app.services.case_analysis.clarification import Ask, decide_followup
-from app.services.case_analysis.contracts import CaseAnalysisTrace
-from app.services.case_workflow import (
-    AnalysisStep,
-    CaseWorkflowError,
-    answer_case_question,
-    next_ordinal,
-    owned_case,
-    run_case_analysis,
-)
+from app.services.analysis.clarification import Ask, decide_followup
+from app.services.analysis.contracts import CaseAnalysisTrace
 from app.services.chat.followup import (
     answer_message,
     asked_gap_keys,
@@ -41,6 +33,14 @@ from app.services.chat.followup import (
     pending_question,
     question_message,
     rounds_asked,
+)
+from app.services.workflow import (
+    AnalysisStep,
+    CaseWorkflowError,
+    answer_case_question,
+    next_ordinal,
+    owned_case,
+    run_case_analysis,
 )
 
 

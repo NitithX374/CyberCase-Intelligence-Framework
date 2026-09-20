@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisGap,
@@ -23,22 +23,20 @@ from app.services.case_analysis.contracts import (
     CaseProviderReading,
     CaseSourceCitation,
 )
-from app.services.case_analysis.pipeline import (
+from app.services.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
-    JudgementStage,
-    ReadingStage,
-    analysis_stages,
     merged_receipt,
-    run_pipeline,
 )
-from app.services.case_analysis.split_analysis import (
+from app.services.analysis.steps.bind import resolve_case_trace
+from app.services.sources import CaseSourceBundle, CaseSourceItem
+from experiments import analysis_arms
+from experiments.analysis_arms import judge_reading, split
+from experiments.split_analysis import (
     CaseReadingOutput,
     reading_payload,
     split_trace,
 )
-from app.services.case_analysis.validation import resolve_case_trace
-from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 SOURCE_TEXT = "The finance share was encrypted overnight."
 
@@ -107,21 +105,25 @@ def split_stages(*, seen: list[dict], reading: CaseProviderReading, technical_co
             execution_receipt={"calls": [{"stage": "case_judgement"}]},
         )
 
-    return (
-        ReadingStage(reading_request=fake_reading),
-        JudgementStage(judgement_request=fake_judgement),
-    )
+    return {"reading_request": fake_reading, "judgement_request": fake_judgement}
 
 
-def test_the_split_arm_is_two_calls_where_the_direct_arm_is_one():
-    assert [stage.name for stage in analysis_stages("split")] == [
-        "technical_context",
-        "reading",
-        "judgement",
-        "verify",
-    ]
+def test_the_split_arm_is_two_calls_where_the_direct_arm_is_one(monkeypatch):
+    called: list[str] = []
+
+    def record(name):
+        async def step(data, so_far, **_kwargs):
+            called.append(name)
+            return so_far
+
+        return step
+
+    for name in ("retrieve_technical_context", "read_sources", "judge_reading", "bind_to_case"):
+        monkeypatch.setattr(analysis_arms, name, record(name))
+    asyncio.run(split(AnalysisInput(sources=case_with_one_narrative())))
+
     # The split still binds its trace to the case, exactly as the shipped arm does.
-    assert analysis_stages("split")[-1].max_revisions == 0
+    assert called == ["retrieve_technical_context", "read_sources", "judge_reading", "bind_to_case"]
 
 
 def test_the_reading_call_is_never_shown_the_technical_context():
@@ -133,9 +135,9 @@ def test_the_reading_call_is_never_shown_the_technical_context():
     context = {"context": "T1486 encrypts data.", "mitre_table": [{"technique_id": "T1486"}]}
 
     asyncio.run(
-        run_pipeline(
+        split(
             AnalysisInput(sources=bundle),
-            split_stages(seen=seen, reading=reading_of(bundle), technical_context=context),
+            **split_stages(seen=seen, reading=reading_of(bundle), technical_context=context),
         )
     )
 
@@ -152,12 +154,7 @@ def test_the_judgement_call_receives_the_claims_the_reading_wrote():
     seen: list[dict] = []
     reading = reading_of(bundle)
 
-    asyncio.run(
-        run_pipeline(
-            AnalysisInput(sources=bundle),
-            split_stages(seen=seen, reading=reading),
-        )
-    )
+    asyncio.run(split(AnalysisInput(sources=bundle), **split_stages(seen=seen, reading=reading)))
 
     judgement_call = next(call for call in seen if call["stage"] == "judgement")
     assert judgement_call["reading"] is reading
@@ -167,10 +164,7 @@ def test_the_judgement_call_receives_the_claims_the_reading_wrote():
 def test_an_arm_that_costs_two_calls_does_not_come_back_looking_like_one():
     bundle = case_with_one_narrative()
     artifacts = asyncio.run(
-        run_pipeline(
-            AnalysisInput(sources=bundle),
-            split_stages(seen=[], reading=reading_of(bundle)),
-        )
+        split(AnalysisInput(sources=bundle), **split_stages(seen=[], reading=reading_of(bundle)))
     )
     assert [call["stage"] for call in artifacts.receipt["calls"]] == [
         "case_reading",
@@ -196,9 +190,7 @@ def test_judging_needs_something_to_judge():
 
     with pytest.raises(CaseAnalysisFailure) as failure:
         asyncio.run(
-            JudgementStage(judgement_request=unreachable).run(
-                AnalysisInput(sources=bundle), AnalysisArtifacts()
-            )
+            judge_reading(AnalysisInput(sources=bundle), AnalysisArtifacts(), request=unreachable)
         )
     assert failure.value.code == "analysis_reading_missing"
 

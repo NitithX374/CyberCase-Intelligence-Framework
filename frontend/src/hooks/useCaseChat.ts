@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createCaseChatMessage,
   getApiErrorMessage,
@@ -11,6 +11,7 @@ import {
   type ChatMessageRead,
 } from "@/lib/api";
 import { caseQueryKeys } from "@/hooks/useCaseQueries";
+import { CaseAnalysisResultRead } from "@/lib/api";
 
 interface Submission {
   content: string;
@@ -25,6 +26,8 @@ export function openQuestionId(messages: ChatMessageRead[]): string | null {
     null
   );
 }
+
+
 
 export function useCaseChat({ caseId }: { caseId: string | null }) {
   const queryClient = useQueryClient();
@@ -61,18 +64,17 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
         queryClient.setQueryData<CaseRead>(caseQueryKeys.case(caseId!), (current) =>
           current
             ? {
-                ...current,
-                source_revision: result.analysis!.source_revision,
-                latest_analysis_result_id: result.analysis!.id,
-                analysis_freshness: result.analysis!.freshness,
-                status: "answered",
-              }
+              ...current,
+              source_revision: result.analysis!.source_revision,
+              latest_analysis_result_id: result.analysis!.id,
+              analysis_freshness: result.analysis!.freshness,
+              status: "answered",
+            }
             : current,
         );
       }
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId!), exact: true }),
-        queryClient.invalidateQueries({ queryKey: caseQueryKeys.analysis(caseId!) }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
       ]);
     },
@@ -80,11 +82,12 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
 
   const messages = useMemo(() => {
     const loaded = chatQuery.data?.messages ?? [];
-    if (!send.isPending || !send.variables || !caseId) return loaded;
+    if (!send.isPending || !send.variables || !caseId)
+      return loaded;
     return [...loaded, beingSent(caseId, send.variables, loaded)];
   }, [caseId, chatQuery.data?.messages, send.isPending, send.variables]);
-  const pendingQuestionId = useMemo(() => openQuestionId(messages), [messages]);
 
+  const pendingQuestionId = useMemo(() => openQuestionId(messages), [messages]);
   const failure = send.error
     ? getApiErrorMessage(send.error, "The message could not be submitted.")
     : chatQuery.error

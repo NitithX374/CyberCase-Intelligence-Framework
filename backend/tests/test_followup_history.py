@@ -16,12 +16,12 @@ from isolated_database import isolated_database
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.user import User
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisTrace,
     CaseFollowupExchange,
     followup_payload,
 )
-from app.services.case_analysis.validation import followup_registry_items, resolve_case_trace
+from app.services.analysis.steps.bind import followup_registry_items, resolve_case_trace
 from app.services.chat.followup import load_followup_history
 from app.services.sources import CaseSourceBundle, CaseSourceItem
 

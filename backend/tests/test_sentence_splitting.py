@@ -7,7 +7,7 @@ piece of its source cannot pass that check, however good the gate's judgement.
 
 from __future__ import annotations
 
-from app.services.case_analysis.mitre_gate.sentences import split_sources, split_text
+from app.services.analysis.mitre_gate.sentences import split_sources, split_text
 from app.services.sources import CaseSourceItem
 
 THAI_REPORT = """เมื่อวันที่ 4 พฤศจิกายน 2563 ผู้เสียหายเข้าแจ้งความ

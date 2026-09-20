@@ -19,8 +19,8 @@ from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.models.user import User
-from app.services.case_analysis.contracts import CaseAnalysisOutput
-from app.services.case_workflow import answer_case_question
+from app.services.analysis.contracts import CaseAnalysisOutput
+from app.services.workflow import answer_case_question
 
 pytestmark = pytest.mark.asyncio
 
@@ -108,6 +108,48 @@ async def test_asking_a_question_stores_both_messages():
                 ).all()
             )
         assert [message.role for message in stored] == ["user", "assistant"]
+
+
+async def test_asking_question_without_analysis_stores_messages():
+    """Asking a question when the case has no analysis result succeeds and stores both messages."""
+
+    async with isolated_database() as session_factory:
+        async with session_factory() as db, db.begin():
+            user = User(
+                email="no-analysis@example.com",
+                name="Analyst",
+                password_hash="x",
+                oauth_provider="password",
+                oauth_subject_id="no-analysis@example.com",
+            )
+            db.add(user)
+            await db.flush()
+            case = Case(user_id=user.id, title="Unanalysed case", source_revision=1)
+            db.add(case)
+            await db.flush()
+            case_id, user_id = case.id, user.id
+
+        async def fake_answer(**kwargs):
+            context = kwargs.get("context", {})
+            assert context.get("analysis_result_id") is None
+            return CaseAnalysisOutput(answer="Here is general information about the case.", trace=None)
+
+        question, answer = await answer_case_question(
+            case_id=case_id,
+            user_id=user_id,
+            content="Can I ask before analyzing?",
+            response_language="english",
+            client_request_id="send-no-analysis",
+            session_factory=session_factory,
+            answer_request=fake_answer,
+        )
+
+        assert question.role == "user"
+        assert question.analysis_result_id is None
+        assert answer.role == "assistant"
+        assert answer.content == "Here is general information about the case."
+        assert answer.analysis_result_id is None
+        assert answer.in_reply_to_message_id == question.id
 
 
 async def test_retrying_the_same_send_returns_the_first_exchange():

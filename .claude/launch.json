@@ -2,12 +2,34 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "backend",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "--app-dir",
+        "backend",
+        "app.main:app",
+        "--port",
+        "8000",
+        "--reload"
+      ],
+      "port": 8000
+    },
+    {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": true,
-      "env": { "NEXT_PUBLIC_API_URL": "http://localhost:8000/api/v1" }
+      "env": {
+        "NEXT_PUBLIC_API_URL": "http://localhost:8000/api/v1"
+      }
     }
   ]
 }

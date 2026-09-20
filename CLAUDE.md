@@ -119,7 +119,8 @@ User Input (Thai/English)
 [HYBRID RETRIEVAL] retrieve_multi_quota — per-query quota, round-robin
     interleaved so every sub-query's technique survives the trim
     ├── Dense vector search (Qdrant + BGE-M3) + rerank
-    └── Graph expansion (Neo4j, 2 hops)
+    └── Graph expansion (Neo4j, 1 hop in+out from each seed; seeds come
+        only from the hits that survive the per-query quota)
     ↓
 [EVALUATOR] Context sufficiency check (evaluator.py)
     ├── SUFFICIENT → proceed
@@ -161,26 +162,52 @@ routers/                one file per resource; errors.py turns service errors in
 schemas/                request/response contracts
 models/                 SQLAlchemy tables
 services/
+  __init__.py           deliberately empty — see below
   auth/                 sessions, passwords, the guard every browser request passes
   cases/                case CRUD
   document_ingestion/   upload to text: parsers, OCR recognition, provenance
   sources/              documents and the one bundle an analysis reads from
-  case_analysis/        the analysis itself: prompts, provider call, validation
-    contracts/          what a trace, a claim and a source citation are
+  analysis/             producing an analysis of a case
+    pipeline.py         analyse_case(): the steps, in order, with no switch
+    steps/              one file per step, in the order they run
+      technical_context.py  ask the RAG service, when the gate says to
+      write.py              the one model call that writes the trace
+      bind.py               bind the trace to the case; count what did not bind
+      quotes.py             finding a quotation in a source (bind.py's helper)
+    clarification.py    pure policy: ask the reader, or proceed
+    contracts/          trace.py, claims.py (claims, citations, gaps),
+                        exchange.py (a follow-up question and its answer)
     mitre_gate/         whether this case needs ATT&CK at all (__init__ picks
                         the gate, llm.py and encoder.py are the gates,
                         sentences.py cuts the case up for the encoder)
-    pipeline.py         the stages one analysis runs through
-  technical_context/    the MITRE retrieval a stage asks the RAG service for
-  case_workflow/        running an analysis (analysis.py) and answering a
-                        question about one (answering.py), with what both
-                        need in shared.py
+    provider.py         call the model for one step, and read what came back
+    prompts.py          settings.py  (model, token budget)
+  workflow/             the request lifecycle around an analysis
+    run_analysis.py     one step of the bounded loop: analyse, then ask or stop
+    answer_question.py  answering a question about an analysis that exists
+    shared.py           what both need
   chat/                 the case conversation, and the follow-up it carries
   reports/              contracts, content, assembly, display, render_html,
                         render_pdf
   llm/                  provider routing and the model registry
   clients/              the RAG service client
+experiments/            ablations — imports app/, never imported by it
+  analysis_arms.py      direct / verify / revise / split, built from the same
+                        steps analyse_case runs
+  split_analysis.py     the two model calls the split arm needs
 ```
+
+Two rules this layout exists to keep:
+
+**`services/__init__.py` stays empty.** Python runs it on any `app.services.*`
+import, so re-exporting the subpackages there made every import pull all of
+them — a router wanting a JWT helper loaded reportlab and the whole pipeline,
+and one bad leaf broke the application.
+
+**Production runs one path, and the arms are arguments.** `analyse_case` has no
+arm switch and reads top to bottom; `experiments/analysis_arms.py` composes the
+same step functions differently. `run_case_analysis(pipeline=...)` is how an
+experiment substitutes one. There is no `CASE_ANALYSIS_ARM` setting.
 
 ### Key Modules (under `rag_service/app/RAG/GraphRAG/`)
 | Module | Path | Purpose |
@@ -196,7 +223,7 @@ services/
 
 Before a case is analysed the backend decides whether ATT&CK is relevant at
 all. `MITRE_GATE_MODE` picks between three gates, which live together in
-`backend/app/services/case_analysis/mitre_gate/`:
+`backend/app/services/analysis/mitre_gate/`:
 
 | Mode | What decides | Notes |
 |------|--------------|-------|
@@ -224,7 +251,12 @@ The frontend loads and generates reports through the case-scoped report endpoint
 - **`DUAL_QUERY_RETRIEVAL`**: read only by `pipeline/chain.py`, which is evaluation-only. The served agent does no input translation
 - **RAGAS eval LLM**: `qwen/qwen-2.5-72b-instruct` via OpenRouter
 - **Local models (`evaluation/` only)**: Ollama `qwen2.5:7b` + `gemma3:4b`, `OLLAMA_BASE_URL` (default `http://localhost:11434`). Not reachable from the service
-- **Vector top-K**: 10, **Graph depth**: 2 hops, **Final top-K**: 5
+- **Vector top-K**: 10, **Final top-K**: 5 (`FINAL_TOP_K` — graph seeds on the
+  single-query path), **Graph expansion**: 1 hop, incoming + outgoing, batched
+  into 3 Cypher statements per retrieval. There is no `GRAPH_DEPTH` setting;
+  `get_multi_hop_path()` (4 hops) is a standalone utility the pipeline never calls.
+  Under `retrieve_multi_quota` the graph seed count is the per-query quota (3),
+  not `FINAL_TOP_K`, so a hit the quota drops cannot return as a subgraph
 - **Qdrant collections**: `mitre_entities`, `mitre_relationships`
 
 ## Secrets & Environment

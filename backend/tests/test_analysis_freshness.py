@@ -2,8 +2,8 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.services.case_workflow import analysis_freshness
 from app.services.cases.case_service import serialize_case
+from app.services.workflow import analysis_freshness
 
 
 def test_analysis_freshness_compares_case_and_result_revision() -> None:

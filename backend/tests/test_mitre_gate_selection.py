@@ -13,8 +13,8 @@ import asyncio
 import pytest
 
 from app.config import settings
-from app.services.case_analysis.mitre_gate import chosen_gate, mitre_gate, never_applicable
-from app.services.case_analysis.mitre_gate.llm import (
+from app.services.analysis.mitre_gate import chosen_gate, mitre_gate, never_applicable
+from app.services.analysis.mitre_gate.llm import (
     evaluate_mitre_applicability,
     validate_mitre_applicability,
 )
@@ -56,7 +56,7 @@ def test_never_skips_without_asking_anything(mode, sources):
 def test_the_encoder_gate_quotes_the_sentence_it_fired_on(mode, monkeypatch, sources):
     """The classifier's answer is a sentence, so the trigger is that sentence."""
 
-    from app.services.case_analysis.mitre_gate import encoder
+    from app.services.analysis.mitre_gate import encoder
 
     mode("encoder")
     monkeypatch.setattr(
@@ -77,7 +77,7 @@ def test_the_encoder_gate_quotes_the_sentence_it_fired_on(mode, monkeypatch, sou
 def test_what_the_encoder_returns_passes_the_grounding_check(mode, monkeypatch, sources):
     """The same check the LLM gate's output has to pass."""
 
-    from app.services.case_analysis.mitre_gate import encoder
+    from app.services.analysis.mitre_gate import encoder
 
     mode("encoder")
     monkeypatch.setattr(
@@ -100,7 +100,7 @@ def test_what_the_encoder_returns_passes_the_grounding_check(mode, monkeypatch, 
 
 
 def test_nothing_above_the_threshold_is_a_skip(mode, monkeypatch, sources):
-    from app.services.case_analysis.mitre_gate import encoder
+    from app.services.analysis.mitre_gate import encoder
 
     mode("encoder")
     monkeypatch.setattr(
@@ -122,7 +122,7 @@ def test_a_case_with_no_readable_text_is_a_skip(mode):
 def test_only_the_sources_actually_quoted_are_cited(mode, monkeypatch):
     """A source whose sentences all scored low is not named as a trigger."""
 
-    from app.services.case_analysis.mitre_gate import encoder
+    from app.services.analysis.mitre_gate import encoder
 
     mode("encoder")
     sources = [

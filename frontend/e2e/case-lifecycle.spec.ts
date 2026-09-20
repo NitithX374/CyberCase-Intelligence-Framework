@@ -25,8 +25,13 @@ test.describe("case lifecycle", () => {
     await page.goto("/register");
     await page.getByLabel("Name").fill("Playwright E2E Analyst");
     await page.getByLabel("Email").fill(`playwright-${unique}@gmail.com`);
-    await page.getByLabel("Password").fill("E2E-Playwright-Password-123!");
-    await page.getByRole("button", { name: "Create account" }).click();
+    // Two password fields and two show/hide buttons all answer to "Password",
+    // so both of these have to be exact.
+    await page.getByLabel("Password", { exact: true }).fill("E2E-Playwright-Password-123!");
+    await page
+      .getByLabel("Confirm password", { exact: true })
+      .fill("E2E-Playwright-Password-123!");
+    await page.getByRole("button", { name: "Create workspace" }).click();
     await expect(page).toHaveURL(/\/case$/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "No saved cases yet" })).toBeVisible();
 

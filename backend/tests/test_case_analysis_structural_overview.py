@@ -3,8 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.case_analysis.analysis import execute_analysis_pipeline
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
     CaseImpactItem,
@@ -13,8 +12,9 @@ from app.services.case_analysis.contracts import (
     CaseSourceCitation,
     CaseTimelineItem,
 )
-from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig
-from app.services.case_analysis.validation import resolve_case_trace
+from app.services.analysis.settings import AnalysisPipelineConfig
+from app.services.analysis.steps.bind import resolve_case_trace
+from app.services.analysis.steps.write import execute_analysis_pipeline
 from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 
@@ -200,7 +200,7 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             return provider_output
 
         with patch(
-            "app.services.case_analysis.analysis.request_analysis_stage",
+            "app.services.analysis.steps.write.request_analysis_stage",
             new=fake_request_stage,
         ):
             result = await execute_analysis_pipeline(

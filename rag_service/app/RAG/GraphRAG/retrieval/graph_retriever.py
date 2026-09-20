@@ -19,7 +19,7 @@ from typing import Any, Optional, cast
 
 from neo4j import GraphDatabase, Query
 
-from ..config import NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
+from ..config import GRAPH_CONTEXT_MAX_NAMES, NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
 
 
 @dataclass
@@ -51,50 +51,68 @@ class SubgraphResult:
     neighbors: list[GraphNode] = field(default_factory=list)
     edges: list[GraphEdge] = field(default_factory=list)
 
-    def to_text(self) -> str:
-        """Format the subgraph as readable text for LLM context."""
+    def to_text(
+        self,
+        max_names: int = GRAPH_CONTEXT_MAX_NAMES,
+        priority_names: Optional[set[str]] = None,
+    ) -> str:
+        """Format the subgraph as readable text for LLM context.
+
+        Names only, capped per relation. Edge descriptions (the per-procedure
+        "X has used Y to …" text) are deliberately not rendered: they were ~90%
+        of the output, a single well-known group ran to 16K characters, and the
+        first subgraph alone used up the whole context budget. The procedure
+        text the incident actually matches already reaches the LLM as
+        relationship documents in the semantic section.
+
+        Args:
+            max_names: Neighbour names listed per relation before "(+N more)".
+                A technique can have hundreds of USES neighbours; the structure
+                worth keeping (tactic, parent, mitigations) is short.
+            priority_names: Names that are also in the retrieved context. They
+                are listed first, so the cap drops unrelated neighbours rather
+                than an arbitrary slice of Neo4j's row order.
+        """
         if not self.center_node:
             return ""
 
-        lines = [
-            f"## {self.center_node.label}: {self.center_node.name} ({self.center_node.attack_id})"
-        ]
+        center = self.center_node.name
+        priority = priority_names or set()
+        lines = [f"## {self.center_node.label}: {center} ({self.center_node.attack_id})"]
 
-        # Group edges by type
-        edge_groups: dict[str, list[GraphEdge]] = {}
-        for edge in self.edges:
-            edge_groups.setdefault(edge.edge_label, []).append(edge)
+        # Group by relation AND direction: "FIN7 USES X" and "Y USES FIN7" read
+        # differently, and labelling both "Used by" inverted what a group does.
+        groups: dict[tuple[str, bool], list[str]] = {}
+        for e in self.edges:
+            outgoing = e.source_name == center
+            name = e.target_name if outgoing else e.source_name
+            names = groups.setdefault((e.edge_label, outgoing), [])
+            if name and name not in names:
+                names.append(name)
 
-        EDGE_DISPLAY = {
-            "USES": "Used by",
-            "MITIGATES": "Mitigated by",
-            "IN_TACTIC": "Belongs to tactic",
-            "SUBTECHNIQUE_OF": "Parent technique",
-            "DETECTS": "Detected by",
-            "HAS_COMPONENT": "Has component",
-            "ATTRIBUTED_TO": "Attributed to",
-        }
-
-        for edge_label, edges in edge_groups.items():
-            display = EDGE_DISPLAY.get(edge_label, edge_label)
-
-            # For USES edges, the center might be the target (technique used BY groups)
-            names = []
-            for e in edges:
-                if e.source_name == self.center_node.name:
-                    names.append(e.target_name)
-                else:
-                    names.append(e.source_name)
-
-            lines.append(f"  ├── {display}: {', '.join(names)}")
-
-            # Add detailed descriptions for key relationships
-            for e in edges:
-                if e.description:
-                    desc_preview = e.description[:200].replace("\n", " ")
-                    lines.append(f"  │   └── {desc_preview}...")
+        for (edge_label, outgoing), names in groups.items():
+            out_display, in_display = _EDGE_DISPLAY.get(edge_label, (edge_label, edge_label))
+            display = out_display if outgoing else in_display
+            ordered = [n for n in names if n in priority] + [n for n in names if n not in priority]
+            shown = ", ".join(ordered[:max_names])
+            hidden = len(ordered) - max_names
+            if hidden > 0:
+                shown += f" (+{hidden} more)"
+            lines.append(f"  ├── {display}: {shown}")
 
         return "\n".join(lines)
+
+
+# Edge label → (display when the centre is the source, when it is the target).
+_EDGE_DISPLAY = {
+    "USES": ("Uses", "Used by"),
+    "MITIGATES": ("Mitigates", "Mitigated by"),
+    "IN_TACTIC": ("Belongs to tactic", "Techniques in tactic"),
+    "SUBTECHNIQUE_OF": ("Parent technique", "Subtechniques"),
+    "DETECTS": ("Detects", "Detected by"),
+    "HAS_COMPONENT": ("Has component", "Component of"),
+    "ATTRIBUTED_TO": ("Attributed to", "Attributed from"),
+}
 
 
 class GraphRetriever:

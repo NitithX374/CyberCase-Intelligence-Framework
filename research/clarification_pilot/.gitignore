@@ -1,0 +1,4 @@
+# Run outputs are regenerated; the dataset is committed so a run is reproducible.
+results/
+__pycache__/
+*.pyc

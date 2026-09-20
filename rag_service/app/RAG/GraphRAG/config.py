@@ -232,6 +232,25 @@ MAX_CONCURRENT_QUERIES = max(1, int(os.getenv("RAG_MAX_CONCURRENT_QUERIES", "4")
 VECTOR_TOP_K = 10  # Initial vector retrieval count
 FINAL_TOP_K = 5  # After reranking
 
+# Rendered-context budget on the agent path (quota retrieval).
+AGENT_MAX_VECTOR = 15
+AGENT_MAX_GRAPH = 8
+AGENT_MAX_CONTEXT_CHARS = 10000
+
+# Each broaden round adds this much budget instead of competing for the same
+# space. The first pass already fills the character budget (mean 9258 of 10000
+# over 100 real-CTI incidents), so under a fixed budget a second retrieval can
+# only displace what the first found: measured over the 25 broadened samples it
+# lost gold techniques on 6 and gained on 6, a wash paid for with two LLM calls
+# (evaluation/results/agentic_ablation.md).
+BROADEN_VECTOR_STEP = 10
+BROADEN_GRAPH_STEP = 4
+BROADEN_CONTEXT_CHARS_STEP = 5000
+# Neighbour names listed per relation in a rendered subgraph ("Used by: …").
+# Well-known techniques and groups have 80–400 neighbours; uncapped, one
+# subgraph filled the whole context and every later one was truncated away.
+GRAPH_CONTEXT_MAX_NAMES = 10
+
 # Restrict entity vector search to one ATT&CK domain. The corpus is ingested with
 # mobile + enterprise, but mobile entities (Pegasus, FluBot, mobile-only Phishing
 # variants) pollute enterprise incident analysis. Set to "" / unset to disable.

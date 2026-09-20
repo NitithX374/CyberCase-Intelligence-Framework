@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
 import type { SourceMessageRef } from "@/lib/caseOverview/types";
 import {
@@ -39,6 +39,10 @@ export function ChatTranscript({
 
   const initialMessageIdsRef = useRef<Set<string> | null>(null);
   const leadResultIdRef = useRef<string | null>(leadResult?.id ?? null);
+  const uniqueSources = useMemo(
+    () => [...new Map((sources ?? []).map((source) => [source.id, source])).values()],
+    [sources],
+  );
 
   useEffect(() => {
     if (leadResultIdRef.current !== (leadResult?.id ?? null)) {
@@ -86,8 +90,6 @@ export function ChatTranscript({
       )}
       {messages.map((message) => {
         const isUser = message.role === "user";
-        // A message that names a gap is the analysis asking about it, and the
-        // reply becomes case material — which the reader has to be told.
         const isQuestion = Boolean(message.gap_key);
         return (
           <article
@@ -103,13 +105,12 @@ export function ChatTranscript({
             </header>
 
             <div
-              className={`mt-3 ${
-                isUser
-                  ? "ml-auto max-w-[90%] rounded-md bg-primary px-4 py-3 text-ivory sm:max-w-[82%] sm:px-5"
-                  : isQuestion
-                    ? "border-l-2 border-unresolved bg-unresolved/5 py-3 pl-4 pr-3 sm:pl-5"
-                    : "border-l-2 border-source/50 pl-4 pr-1 sm:pl-5"
-              }`}
+              className={`mt-3 ${isUser
+                ? "ml-auto max-w-[90%] rounded-md bg-primary px-4 py-3 text-ivory sm:max-w-[82%] sm:px-5"
+                : isQuestion
+                  ? "border-l-2 border-unresolved bg-unresolved/5 py-3 pl-4 pr-3 sm:pl-5"
+                  : "border-l-2 border-source/50 pl-4 pr-1 sm:pl-5"
+                }`}
             >
               {isUser ? (
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
@@ -123,7 +124,7 @@ export function ChatTranscript({
                   )}
                   <AnalysisSourceReferences
                     analysisMessage={message}
-                    sources={sources ?? []}
+                    sources={uniqueSources}
                     onNavigateToSource={onNavigateToSource}
                   />
                 </>
@@ -165,10 +166,14 @@ function sourceReferencesForAnalysisMessage(
   analysisMessage: ChatMessageRead,
   rows: CaseSourceRead[],
 ): AnalysisSourceReference[] {
-  if (analysisMessage.role !== "assistant") return [];
+
+  if (analysisMessage.role !== "assistant")
+    return [];
   const trace = asRecord(analysisMessage.metadata_json.analysis_trace);
+
   if (trace?.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated")
     return [];
+
   const sources = parseCaseSources(rows);
   const references = asArray(trace.claims).flatMap((value) => {
     const claim = asRecord(value);
@@ -193,10 +198,11 @@ function sourceReferencesForAnalysisMessage(
     const key = [
       reference.role,
       reference.source.id,
-      reference.source.exactQuote ?? "",
       reference.source.pageNumbers.join(","),
     ].join(":");
-    if (!unique.has(key)) unique.set(key, reference);
+    if (!unique.has(key)) {
+      unique.set(key, reference);
+    }
   }
   return [...unique.values()].slice(0, 12);
 }

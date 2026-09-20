@@ -11,12 +11,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.services.case_analysis.contracts import (
+from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
     CaseSourceCitation,
 )
-from app.services.case_analysis.validation import resolve_case_trace
+from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.sources import CaseSourceBundle, CaseSourceItem
 
 TEXT = "Filenames had been changed and a text file demanded contact by email."

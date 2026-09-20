@@ -17,7 +17,7 @@ from app.models.sources import (
     DocumentExtraction,
 )
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
-from app.services.case_workflow import analysis_freshness
+from app.services.workflow import analysis_freshness
 
 
 def serialize_case(case: Case) -> CaseRead:
