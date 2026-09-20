@@ -498,12 +498,11 @@ def build_report_story(
             for item in section.items:
                 cleaned = strip_reference_text(item)
                 parts = [p.strip() for p in cleaned.split("·")]
-                if len(parts) >= 4:
-                    gid = parts[0]
-                    topic = parts[1]
-                    prio = parts[2].replace("ระดับความสำคัญ:", "").strip()
-                    status_part = parts[3].replace("สถานะ:", "").strip()
-                    rest = " · ".join(parts[4:]) if len(parts) > 4 else ""
+                if len(parts) >= 3:
+                    topic = parts[0]
+                    prio = parts[1].replace("ระดับความสำคัญ:", "").strip()
+                    status_part = parts[2].replace("สถานะ:", "").strip()
+                    rest = " · ".join(parts[3:]) if len(parts) > 3 else ""
 
                     desc = rest
                     reason = ""
@@ -514,7 +513,7 @@ def build_report_story(
 
                     story.append(
                         Paragraph(
-                            f"• <b>[{paragraph_text(gid)}] {paragraph_text(topic)}</b> (ความสำคัญ: {paragraph_text(prio)} | สถานะ: {paragraph_text(status_part)})",
+                            f"• <b>{paragraph_text(topic)}</b> (ความสำคัญ: {paragraph_text(prio)} | สถานะ: {paragraph_text(status_part)})",
                             styles["body"],
                         )
                     )

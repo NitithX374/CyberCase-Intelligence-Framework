@@ -33,10 +33,8 @@ function caseStatus(hasAnalysis: boolean, isAnalyzing: boolean, isStale: boolean
 }
 
 const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
-  { view: "overview", label: "Overview" },
   { view: "sources", label: "Sources" },
-  { view: "technical-context", label: "Technical" },
-  { view: "report", label: "Report" },
+  { view: "analysis", label: "Analysis" },
 ];
 
 export function WorkspaceHeader({

@@ -82,7 +82,8 @@ describe("ChatTranscript source references", () => {
     expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
     expect(screen.queryByText(/p\. 1/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Case narrative #1" }));
-    expect(screen.getByText("seeing a blue vehicle").tagName).toBe("MARK");
+    expect(screen.getByRole("dialog")).toHaveTextContent("seeing a blue vehicle");
+    expect(screen.getByRole("dialog").querySelector("mark")).not.toBeInTheDocument();
   });
 
   it("shows page-first supporting and conflicting references", () => {

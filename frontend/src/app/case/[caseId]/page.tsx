@@ -11,7 +11,7 @@ export default function CaseIndexPage() {
 
   useEffect(() => {
     if (caseId) {
-      router.replace(casePath(caseId, "overview"));
+      router.replace(casePath(caseId, "analysis"));
     }
   }, [caseId, router]);
 

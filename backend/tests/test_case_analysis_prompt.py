@@ -123,13 +123,21 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
                         },
                     }
                 ],
+                "followup_history": [],
                 "technical_context": None,
                 "question": None,
             },
         )
         self.assertEqual(
             set(content),
-            {"response_language", "analysis_mode", "case_sources", "technical_context", "question"},
+            {
+                "response_language",
+                "analysis_mode",
+                "case_sources",
+                "followup_history",
+                "technical_context",
+                "question",
+            },
         )
 
     async def test_a_source_in_both_roles_costs_no_second_provider_call(self) -> None:

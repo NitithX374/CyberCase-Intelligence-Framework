@@ -1,19 +1,17 @@
 "use client";
 
 import { usePathname, useRouter, useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { detectResponseLanguage, getApiErrorMessage, type CaseRead } from "@/lib/api";
 import type { WorkspaceView } from "@/components/common/types";
 import {
   useCase,
-  useCaseAnalysis,
   useCaseSources,
   useCaseMutations,
   useCases,
   useStartCaseAnalysis,
 } from "@/hooks/useCaseQueries";
 import { casePath, caseRouteState } from "@/lib/workspaceRoutes";
-import { useCaseChat } from "@/hooks/useCaseChat";
 import { useCaseDeletion } from "@/hooks/useCaseDeletion";
 import { WorkspaceHeader } from "@/components/layout/WorkspaceHeader";
 import { WorkspaceChatPanel } from "@/components/chat/WorkspaceChatPanel";
@@ -48,35 +46,55 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     }
   });
   const [chatActionError, setChatActionError] = useState<string | null>(null);
+  // Published by the chat panel, which is where a follow-up answer is sent.
+  const [isFollowupPending, setIsFollowupPending] = useState(false);
 
   const casesQuery = useCases();
   const caseQuery = useCase(caseId ?? null);
-  const analysisQuery = useCaseAnalysis(caseId ?? null);
   const sourcesQuery = useCaseSources(caseId ?? null);
   const { createMutation, deleteMutation, updateMutation } = useCaseMutations();
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
   const activeCase = caseQuery.data ?? null;
 
-  const chat = useCaseChat({ caseId: caseId ?? null });
   const sources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
   const startAnalysis = useStartCaseAnalysis(caseId ?? null);
-  const isFollowupPending = chat.isAnsweringQuestion;
+
+  // Whether the panel is open is the layout's business — it owns the shell
+  // width. Everything inside it is the panel's.
+  const setChatOpen = useCallback((next: boolean) => {
+    setIsChatOpen(next);
+    try {
+      localStorage.setItem(CHAT_OPEN_STORAGE_KEY, String(next));
+    } catch {
+      // ignore
+    }
+  }, []);
+  const openChat = useCallback(() => setChatOpen(true), [setChatOpen]);
+  const closeChat = useCallback(() => setChatOpen(false), [setChatOpen]);
+  const toggleChat = useCallback(() => setChatOpen(!isChatOpen), [isChatOpen, setChatOpen]);
 
   // The analysis belongs to the case, not to one of its pages, so the header
   // runs it and every view can see it running.
   const runAnalysis = useCallback(async () => {
     if (!caseId || startAnalysis.isPending) return;
     try {
-      await startAnalysis.mutateAsync({
+      const step = await startAnalysis.mutateAsync({
         response_language: detectResponseLanguage(
           sources.map((source) => source.exact_text).join("\n"),
         ),
       });
-      router.push(casePath(caseId, "overview"));
+      // A step that ended with a question belongs in the chat. The overview
+      // would render the analysis behind it as unavailable, which it is not —
+      // it is simply not the case's answer yet.
+      if (step.status === "need_followup") {
+        openChat();
+        return;
+      }
+      router.push(casePath(caseId, "analysis"));
     } catch (error) {
       setChatActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
     }
-  }, [caseId, router, sources, startAnalysis]);
+  }, [caseId, openChat, router, sources, startAnalysis]);
 
   const renameCase = useCallback(
     async (title: string) => {
@@ -89,28 +107,6 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     },
     [caseId, updateMutation],
   );
-
-  const toggleChat = useCallback(() => {
-    setIsChatOpen((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(CHAT_OPEN_STORAGE_KEY, String(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
-
-  // A question the analysis left waiting is worth interrupting for, once. If
-  // the reader closes the panel it stays closed until a different one arrives.
-  const pendingQuestionId = chat.pendingQuestionId;
-  const announcedQuestionRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!pendingQuestionId || announcedQuestionRef.current === pendingQuestionId) return;
-    announcedQuestionRef.current = pendingQuestionId;
-    setIsChatOpen(true);
-  }, [pendingQuestionId]);
 
   const handleNewCase = useCallback(async () => {
     if (createMutation.isPending) return;
@@ -141,12 +137,6 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     setDeleteCandidate,
   });
 
-  const visibleWorkspaceError = chatActionError ?? chat.queryError;
-  const clearWorkspaceError = useCallback(() => {
-    setChatActionError(null);
-    chat.clearQueryError();
-  }, [chat]);
-
   return (
     <div className="flex h-dvh overflow-hidden bg-surface text-ink">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
@@ -173,19 +163,12 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
       </div>
 
       <WorkspaceChatPanel
+        caseId={caseId ?? null}
         isOpen={isChatOpen}
-        isSending={chat.isSending}
-        messages={chat.messages}
-        isAnsweringQuestion={isFollowupPending}
-        input={chat.input}
-        hasAnalysisContext={Boolean(activeCase?.latest_analysis_result_id)}
-        leadResult={analysisQuery.data ?? null}
-        sources={sourcesQuery.data ?? []}
+        onOpenChat={openChat}
+        onCloseChat={closeChat}
         onViewChange={handleViewChange}
-        onNavigateToSource={() => handleViewChange("sources")}
-        onInputChange={chat.changeInput}
-        onSubmit={chat.submitMessage}
-        onToggleChat={() => void toggleChat()}
+        onActivityChange={setIsFollowupPending}
       />
 
       <DeleteCaseDialog
@@ -195,16 +178,9 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
         onConfirm={() => void confirmDelete()}
       />
       <MeaningfulErrorModal
-        isOpen={Boolean(visibleWorkspaceError)}
-        error={
-          visibleWorkspaceError
-            ? toUserFacingError(visibleWorkspaceError, {
-                isUncertain: chat.isSending,
-              })
-            : null
-        }
-        onClose={clearWorkspaceError}
-        onRetry={chat.retryQuery}
+        isOpen={Boolean(chatActionError)}
+        error={chatActionError ? toUserFacingError(chatActionError) : null}
+        onClose={() => setChatActionError(null)}
       />
     </div>
   );

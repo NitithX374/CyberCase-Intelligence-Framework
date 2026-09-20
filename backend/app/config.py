@@ -93,12 +93,15 @@ class CaseAnalysisConfig(BaseModel):
     #   direct  Case -> Analysis                    the baseline: nothing is checked
     #   verify  Case -> Analysis -> Verify          what the product ships
     #   revise  Case -> Analysis -> Verify -> Revise  one more model call
-    case_analysis_arm: Literal["direct", "verify", "revise"] = "verify"
+    #   split   Case -> Reading -> Judgement -> Verify  the one call, divided:
+    #           reading writes the claims and never sees ATT&CK, judgement
+    #           writes the summary, the gaps and the associations over them
+    case_analysis_arm: Literal["direct", "verify", "revise", "split"] = "verify"
     case_analysis_max_revisions: int = Field(default=1, ge=1, le=3)
     mitre_gate_model_path: str = "research/mitre_gate/model"
-    chat_followup_max_rounds: int = Field(default=2, ge=0)
+    chat_followup_max_rounds: int = Field(default=3, ge=0)
     chat_followup_gaps_per_round: int = Field(default=3, ge=1)
-    chat_ask_model: str = "openai/gpt-5.6-luna"
+    chat_ask_model: str = "deepseek/deepseek-v4.1-flash"
     chat_ask_timeout_seconds: float = 120.0
 
 

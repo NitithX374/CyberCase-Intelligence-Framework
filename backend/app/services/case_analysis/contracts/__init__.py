@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from app.services.case_analysis.contracts.followup import (
+    CaseFollowupExchange,
+    followup_payload,
+    followup_qa_id,
+)
 from app.services.case_analysis.contracts.sources import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
@@ -20,6 +25,8 @@ from app.services.case_analysis.contracts.trace import (
     CaseInvolvedParty,
     CaseMitreAssociation,
     CaseProviderAnalysis,
+    CaseProviderJudgement,
+    CaseProviderReading,
     CaseTimelineItem,
 )
 
@@ -60,6 +67,7 @@ __all__ = [
     "CaseAnalysisMode",
     "CaseAnalysisOutput",
     "CaseAnalysisTrace",
+    "CaseFollowupExchange",
     "CaseGroundingReport",
     "CaseClaimType",
     "CaseEpistemicStatus",
@@ -69,7 +77,11 @@ __all__ = [
     "CaseInvolvedParty",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
+    "CaseProviderJudgement",
+    "CaseProviderReading",
     "CaseTimelineItem",
     "ResponseLanguage",
+    "followup_payload",
+    "followup_qa_id",
     "resolve_response_language",
 ]

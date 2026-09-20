@@ -58,7 +58,7 @@ export function useCaseSourceActions({ caseId, sources, router }: UseCaseSourceA
           provenance_json: { interface: "case_sources" },
           source_metadata_json: { interface: "case_sources" },
         });
-        await Promise.all([
+        void Promise.all([
           queryClient.invalidateQueries({ queryKey: caseQueryKeys.sources(caseId) }),
           queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
         ]);
@@ -78,12 +78,15 @@ export function useCaseSourceActions({ caseId, sources, router }: UseCaseSourceA
     setActionError(null);
     setIsAnalyzing(true);
     try {
-      await analysisMutation.mutateAsync({
+      const step = await analysisMutation.mutateAsync({
         response_language: detectResponseLanguage(
           sources.map((source) => source.exact_text).join("\n"),
         ),
       });
-      router.push(casePath(caseId, "overview"));
+      // The analysis paused to ask something. The question is in the chat,
+      // which the workspace opens itself, so stay where the reader is.
+      if (step.status === "need_followup") return;
+      router.push(casePath(caseId, "analysis"));
     } catch (error) {
       setActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
     } finally {

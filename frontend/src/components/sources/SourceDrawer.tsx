@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { SourceMessageRef } from "@/lib/caseOverview/types";
 import { formatSourceCitationText } from "@/lib/caseOverview/source";
 import { Icon } from "@/components/common/icons";
@@ -19,7 +19,6 @@ export function SourceDrawer({
   onNavigateToSource?: (id: string) => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const citation = formatSourceCitationText(sourceRef);
   const sourceTitle =
@@ -30,14 +29,6 @@ export function SourceDrawer({
     const dialog = dialogRef.current;
     if (!dialog) return;
     dialog.showModal();
-    const passage = dialog.querySelector("mark");
-    const scroller = textRef.current;
-    if (passage && scroller) {
-      scroller.scrollTop +=
-        passage.getBoundingClientRect().top -
-        scroller.getBoundingClientRect().top -
-        scroller.clientHeight / 2;
-    }
     return () => {
       dialog.close();
       if (anchorElement.isConnected) anchorElement.focus();
@@ -87,7 +78,6 @@ export function SourceDrawer({
           </button>
         </header>
         <div
-          ref={textRef}
           className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6"
           tabIndex={0}
           aria-label="Source text"
@@ -116,10 +106,6 @@ export function SourceDrawer({
 function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
   const pages = sourceRef.sourcePages;
   const content = sourceRef.displayContent || sourceRef.excerpt;
-  const hasHighlight =
-    pages.length > 0
-      ? pages.some((page) => page.exactQuote !== null && page.text.includes(page.exactQuote))
-      : sourceRef.exactQuote !== null && content.includes(sourceRef.exactQuote);
 
   return (
     <div className="space-y-4">
@@ -130,46 +116,15 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
               Page {page.pageNumber}
             </h3>
             <p className="select-text whitespace-pre-wrap text-sm leading-7 text-ink [overflow-wrap:anywhere]">
-              <HighlightedText
-                content={page.text || "(No text content)"}
-                exactQuote={page.exactQuote}
-              />
+              {page.text || "(No text content)"}
             </p>
           </section>
         ))
       ) : (
         <p className="select-text whitespace-pre-wrap text-sm leading-7 text-ink [overflow-wrap:anywhere]">
-          <HighlightedText
-            content={content || "(No text content)"}
-            exactQuote={sourceRef.exactQuote}
-          />
-        </p>
-      )}
-      {sourceRef.exactQuote && !hasHighlight && (
-        <p className="text-xs leading-relaxed text-ink-muted">
-          The cited passage could not be highlighted in the available source text.
+          {content || "(No text content)"}
         </p>
       )}
     </div>
-  );
-}
-
-function HighlightedText({ content, exactQuote }: { content: string; exactQuote: string | null }) {
-  if (!exactQuote) return <>{content}</>;
-  const segments = content.split(exactQuote);
-  if (segments.length === 1) return <>{content}</>;
-  return (
-    <>
-      {segments.map((segment, index) => (
-        <Fragment key={index}>
-          {segment}
-          {index < segments.length - 1 && (
-            <mark className="rounded-sm bg-[#F4D58D]/75 px-0.5 text-inherit ring-1 ring-[#B98218]/20">
-              {exactQuote}
-            </mark>
-          )}
-        </Fragment>
-      ))}
-    </>
   );
 }

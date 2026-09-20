@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import httpx
 from pydantic import ValidationError
 
@@ -8,7 +10,9 @@ from app.services.case_analysis.contracts import (
     CaseAnalysisMode,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
+    CaseFollowupExchange,
     CaseProviderAnalysis,
+    followup_payload,
     resolve_response_language,
 )
 from app.services.case_analysis.pipeline_config import AnalysisPipelineConfig, read_pipeline
@@ -32,6 +36,7 @@ async def analyze_case(
     technical_context: dict[str, object] | None = None,
     retrieval_context_id: str | None = None,
     revision: str | None = None,
+    followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisOutput:
     receipt: dict[str, object] = {
         "configuration": config.model_dump(mode="json"),
@@ -53,6 +58,7 @@ async def analyze_case(
                 technical_context=technical_context,
                 retrieval_context_id=retrieval_context_id,
                 revision=revision,
+                followup_history=followup_history,
             )
         async with httpx.AsyncClient() as owned_client:
             return await execute_analysis_pipeline(
@@ -66,6 +72,7 @@ async def analyze_case(
                 technical_context=technical_context,
                 retrieval_context_id=retrieval_context_id,
                 revision=revision,
+                followup_history=followup_history,
             )
     except CaseAnalysisFailure as error:
         receipt["failure_code"] = error.code
@@ -90,24 +97,16 @@ async def execute_analysis_pipeline(
     technical_context: dict[str, object] | None = None,
     retrieval_context_id: str | None = None,
     revision: str | None = None,
+    followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisOutput:
     validate_source_bundle(source_bundle)
-    cleaned_technical_context = None
-    if (
-        isinstance(technical_context, dict)
-        and isinstance(technical_context.get("context"), str)
-        and isinstance(technical_context.get("mitre_table"), (list, tuple))
-        and technical_context.get("mitre_table")
-    ):
-        cleaned_technical_context = {
-            "context": technical_context["context"],
-            "mitre_table": list(technical_context["mitre_table"]),
-        }
+    cleaned_technical_context = usable_technical_context(technical_context)
 
     request_content = {
         "response_language": language,
         "analysis_mode": mode,
         "case_sources": [provider_source_payload(source) for source in source_bundle.sources],
+        "followup_history": followup_payload(followup_history),
         "technical_context": cleaned_technical_context,
         "question": question,
     }
@@ -130,6 +129,27 @@ async def execute_analysis_pipeline(
     )
 
 
+def usable_technical_context(value: object) -> dict[str, object] | None:
+    """The retrieved context, or nothing if there is not enough of it to use.
+
+    A context string without a MITRE table is a paragraph the model cannot map
+    anything to, so it is treated as no context at all rather than passed along
+    to be mentioned.
+    """
+
+    if (
+        isinstance(value, dict)
+        and isinstance(value.get("context"), str)
+        and isinstance(value.get("mitre_table"), (list, tuple))
+        and value.get("mitre_table")
+    ):
+        return {
+            "context": value["context"],
+            "mitre_table": list(value["mitre_table"]),
+        }
+    return None
+
+
 def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
     payload: dict[str, object] = {
         "source_id": source.source_id,
@@ -138,6 +158,8 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
     }
     # A reply reads as nothing on its own. "No information" answers one question
     # out of several the case has open, and which one changes what it means.
+    # Replies arrive as followup_history now, not as sources — this is here for
+    # cases analysed before that, whose rows are still in the bundle.
     question = source.provenance.get("question")
     if source.source_kind == "followup_answer" and isinstance(question, str) and question.strip():
         payload["answers_question"] = question.strip()
@@ -207,6 +229,7 @@ def validate_direct_trace(
     source_bundle: CaseSourceBundle,
     retrieval_context_id: str | None = None,
     mitre_table: list[dict[str, object]] | tuple[dict[str, object], ...] | None = None,
+    followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisTrace:
     """Build the trace and bind it, in one call, for callers outside the pipeline."""
 
@@ -214,6 +237,7 @@ def validate_direct_trace(
         direct_trace(parsed, mode=mode, retrieval_context_id=retrieval_context_id),
         source_bundle,
         mitre_table=list(mitre_table) if mitre_table else [],
+        followup_history=followup_history,
     )
 
 
@@ -252,6 +276,7 @@ async def request_case_analysis(
     technical_context: dict[str, object] | None = None,
     retrieval_context_id: str | None = None,
     revision: str | None = None,
+    followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisOutput:
     validated_mode, validated_question = validate_analysis_request(mode, question)
     return await analyze_case(
@@ -264,11 +289,15 @@ async def request_case_analysis(
         technical_context=technical_context,
         retrieval_context_id=retrieval_context_id,
         revision=revision,
+        followup_history=followup_history,
     )
 
 
 __all__ = [
     "analyze_case",
+    "provider_source_payload",
+    "usable_technical_context",
+    "validate_source_bundle",
     "execute_analysis_pipeline",
     "request_analysis_stage",
     "direct_trace",

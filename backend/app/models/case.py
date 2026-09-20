@@ -40,6 +40,7 @@ class Case(Base):
         CheckConstraint("source_revision >= 0", name="ck_cases_source_revision_nonnegative"),
         Index("ix_cases_user_id", "user_id"),
         Index("ix_cases_updated_at", "updated_at"),
+        Index("ix_cases_latest_analysis_result_id", "latest_analysis_result_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

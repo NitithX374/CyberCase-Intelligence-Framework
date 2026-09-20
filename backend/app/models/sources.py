@@ -46,7 +46,10 @@ class CaseDocument(Base):
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     mime_type: Mapped[str] = mapped_column(String(160), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
-    content_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    # Deferred: every query that reaches a document through CaseSource wants its
+    # filename, and loading the row dragged the whole upload along with it. The
+    # download route is the only reader, and it undefers the column by name.
+    content_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False, deferred=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -103,6 +106,8 @@ class CaseSource(Base):
             name="ck_case_sources_kind",
         ),
         Index("ix_case_sources_case_id_created_at", "case_id", "created_at"),
+        Index("ix_case_sources_document_id", "document_id"),
+        Index("ix_case_sources_origin_message_id", "origin_message_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

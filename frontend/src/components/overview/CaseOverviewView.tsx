@@ -36,7 +36,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
 
   const analysisResult = analysisQuery.data ?? null;
   const { isFollowupPending } = useWorkspaceActivity();
-  // A fresh [] on every render would rebuild the overview on every render.
   const sources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
   const caseTitle = activeCase?.title || "New case";
 
@@ -55,8 +54,10 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const navigateToSources = () => {
     if (caseId) router.push(casePath(caseId, "sources"));
   };
-  const navigateToReport = () => {
-    if (caseId) router.push(casePath(caseId, "report"));
+  const scrollToReport = () => {
+    document
+      .getElementById("workspace-report-panel")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleRunAnalysis = async () => {
@@ -157,17 +158,16 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const analysisKey = analysisResult?.id ?? "case-analysis";
 
   return (
-    <div
+    <section
       id="workspace-overview-panel"
-      role="tabpanel"
       aria-label="Case Overview"
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface"
+      className="flex shrink-0 flex-col bg-surface"
     >
       <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
         <CaseOverviewHeader
           key={caseId}
           caseTitle={caseTitle}
-          onOpenReport={navigateToReport}
+          onOpenReport={scrollToReport}
           onOpenSources={navigateToSources}
         />
 
@@ -226,19 +226,17 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
               aria-controls="panel-findings"
               aria-selected={overviewTab === "findings"}
               onClick={() => setOverviewTab("findings")}
-              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                overviewTab === "findings"
+              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${overviewTab === "findings"
                   ? "border-accent text-accent"
                   : "border-transparent text-ink-muted hover:text-ink"
-              }`}
+                }`}
             >
               <span>Case Findings</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  overviewTab === "findings"
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${overviewTab === "findings"
                     ? "bg-accent text-ivory"
                     : "bg-surface-nested text-ink-secondary"
-                }`}
+                  }`}
               >
                 {overview.findings.length}
               </span>
@@ -251,19 +249,17 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
               aria-controls="panel-questions"
               aria-selected={overviewTab === "questions"}
               onClick={() => setOverviewTab("questions")}
-              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                overviewTab === "questions"
+              className={`inline-flex items-center gap-2 border-b-2 pb-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${overviewTab === "questions"
                   ? "border-accent text-accent"
                   : "border-transparent text-ink-muted hover:text-ink"
-              }`}
+                }`}
             >
               <span>Open Questions</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  overviewTab === "questions"
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${overviewTab === "questions"
                     ? "bg-unresolved text-ivory"
                     : "bg-surface-nested text-ink-secondary"
-                }`}
+                  }`}
               >
                 {overview.gaps.length}
               </span>
@@ -305,7 +301,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
           citationRole={activeSource.citationRole}
         />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -345,7 +341,7 @@ function CaseOverviewHeader({
           className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-xs font-semibold text-ivory hover:bg-charcoal-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           <Icon name="report" className="h-3.5 w-3.5" />
-          View report
+          Go to report
         </button>
       </div>
     </header>

@@ -50,6 +50,11 @@ class ChatMessage(Base):
             name="ck_chat_messages_message_kind",
         ),
         Index("ix_chat_messages_case_id_ordinal", "case_id", "ordinal"),
+        Index("ix_chat_messages_analysis_result_id", "analysis_result_id"),
+        Index(
+            "ix_chat_messages_in_reply_to_message_id",
+            "in_reply_to_message_id",
+        ),
         Index(
             "ux_chat_messages_case_id_client_request_id",
             "case_id",

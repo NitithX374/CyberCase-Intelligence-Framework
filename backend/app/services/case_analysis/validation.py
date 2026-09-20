@@ -13,11 +13,12 @@ for the same kind of mistake. This file now has one.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from app.services.case_analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
+    CaseFollowupExchange,
     CaseGroundingReport,
     CaseSourceCitation,
 )
@@ -30,12 +31,44 @@ from app.services.case_analysis.source_quote_resolver import (
 from app.services.sources import CaseSourceBundle, CaseSourceItem, build_document_source_context
 
 
+def followup_registry_items(
+    history: Sequence[CaseFollowupExchange],
+) -> tuple[CaseSourceItem, ...]:
+    """Answered exchanges, shaped so the citation machinery can read them.
+
+    Quote alignment, paraphrase detection and deduplication all want something
+    with a ``source_id`` and a ``text``. A reply has both, so it is handed over
+    as one rather than teaching every one of those functions about a second
+    kind of thing. Nothing is written to the database by doing this.
+    """
+
+    return tuple(
+        CaseSourceItem(
+            source_id=item.qa_id,
+            source_kind="followup_answer",
+            text=item.answer or "",
+            provenance={"origin": "case_followup", "gap_key": item.gap_key},
+        )
+        for item in history
+        if item.is_answered
+    )
+
+
 def resolve_case_trace(
     trace: CaseAnalysisTrace,
     source_bundle: CaseSourceBundle,
     mitre_table: object = None,
+    followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisTrace:
+    """Bind the analysis to what the case actually holds.
+
+    ``sources_total`` counts the follow-up answers too. They are things the
+    case knows and the analysis was allowed to draw on, so leaving them out
+    would flatter the coverage of an analysis that ignored them.
+    """
+
     registry = {source.source_id: source for source in source_bundle.sources}
+    registry.update({item.source_id: item for item in followup_registry_items(followup_history)})
     document_context = build_document_source_context(source_bundle)
 
     claims = deduplicated_claims(trace.claims)
@@ -279,6 +312,7 @@ def context_technique_ids(value: object) -> set[str]:
 
 __all__ = [
     "context_technique_ids",
+    "followup_registry_items",
     "grounding_report",
     "resolve_case_trace",
     "resolve_claim",

@@ -7,6 +7,7 @@ from app.schemas.reports import CaseReportRead, StructuredReport
 from app.services.case_analysis.contracts import (
     CaseAnalysisTrace,
 )
+from app.services.chat.followup import followup_history_from
 from app.services.reports.contracts import (
     CaseReportInput,
     CaseReportTechnicalAugmentation,
@@ -55,6 +56,7 @@ def build_case_report_input(
         analysis_trace=trace.model_dump(mode="json"),
         technical_augmentation=technical_augmentation_input(result, trace),
         unresolved_issues=[gap.description for gap in trace.gaps],
+        followup_history=followup_history_from(case.chat_messages),
     )
 
 

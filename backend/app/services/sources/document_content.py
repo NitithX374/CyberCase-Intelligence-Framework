@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import undefer
 
 from app.models.case import Case
 from app.models.sources import CaseDocument
@@ -19,6 +20,8 @@ async def get_owned_document_content(
 ) -> CaseDocument:
     result = await db.execute(
         select(CaseDocument)
+        # The bytes are deferred on the model; this is the one route that wants them.
+        .options(undefer(CaseDocument.content_bytes))
         .join(Case, Case.id == CaseDocument.case_id)
         .where(
             CaseDocument.id == document_id,

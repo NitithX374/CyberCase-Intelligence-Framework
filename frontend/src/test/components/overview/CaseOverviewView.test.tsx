@@ -227,9 +227,7 @@ describe("CaseOverviewView", () => {
     expect(screen.getByRole("heading", { name: /Open Questions/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
-    expect(screen.getByRole("dialog").querySelector("mark")).toHaveTextContent(
-      "received 52,000 baht",
-    );
+    expect(screen.getByRole("dialog").querySelector("mark")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /View in Materials/i }));
     expect(routerPush).toHaveBeenCalled();
   });

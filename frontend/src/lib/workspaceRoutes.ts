@@ -5,6 +5,8 @@ export interface CaseRouteState {
   view: WorkspaceView;
 }
 
+const VALID_WORKSPACE_VIEWS: ReadonlySet<WorkspaceView> = new Set(["sources", "analysis"]);
+
 function decodeCaseId(segment: string): string {
   try {
     return decodeURIComponent(segment);
@@ -16,7 +18,7 @@ function decodeCaseId(segment: string): string {
 export function caseRouteState(pathname: string): CaseRouteState {
   const segments = pathname.split("/").filter(Boolean);
   const isCaseRoute = segments[0] === "case";
-  if (!isCaseRoute) return { caseId: null, view: "overview" };
+  if (!isCaseRoute) return { caseId: null, view: "analysis" };
   const caseId = segments[1] ? decodeCaseId(segments[1]) : null;
   return { caseId, view: viewForSegment(segments[2]) };
 }
@@ -27,11 +29,9 @@ export function casePath(caseId: string, view: WorkspaceView): string {
 }
 
 function viewForSegment(segment: string | undefined): WorkspaceView {
-  return segment === "sources"
-    ? "sources"
-    : segment === "technical-context"
-      ? "technical-context"
-      : segment === "report"
-        ? "report"
-        : "overview";
+  if (segment && VALID_WORKSPACE_VIEWS.has(segment as WorkspaceView)) {
+    return segment as WorkspaceView;
+  }
+  return "analysis";
 }
+
