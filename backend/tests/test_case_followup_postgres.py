@@ -21,9 +21,11 @@ from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.models.user import User
 from app.schemas.chat import ChatMessageCreate
-from app.services.analysis.clarification import Proceed, decide_followup
-from app.services.analysis.contracts import CaseAnalysisTrace
+from app.services.analysis.clarification import Ask, Proceed, decide_followup
+from app.services.analysis.contracts import CaseAnalysisTrace, CaseAssessmentTrace
+from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.services.chat.case_chat import post_case_message
+from app.services.workflow.run_analysis import get_latest_case_analysis, run_case_analysis
 
 GAP = {
     "gap_id": "G-01",
@@ -377,6 +379,131 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
         )
 
         asked, step = await store(continuing=False)
-        assert asked == 1, "the reader's own analysis may ask again"
+        # Still asking -- that is what "not silenced" means. It does not have
+        # to be a *new* question: this case already has one standing, and
+        # writing a rival beside it would strand whichever is older, since a
+        # reply is only ever matched to the latest.
         assert step.stop_reason is None
+        assert step.question is not None, "the reader's own analysis may ask again"
+        assert asked == 0, "and it re-offers the standing question rather than adding one"
+
+
+@pytest.mark.asyncio
+async def test_a_second_analysis_does_not_strand_the_standing_question():
+    """Analysing again while a question is open keeps that question, not a rival.
+
+    Two outstanding questions cannot both be answered: a reply is matched to
+    the latest one, so the older is stranded with no way to close it. The
+    composer then read it as an open question on every send, for good.
+    """
+
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await case_with_a_question(session_factory)
+
+        async def pipeline(data):
+            return AnalysisArtifacts(
+                answer="Files were encrypted.",
+                trace=CaseAnalysisTrace.model_validate(TRACE),
+            )
+
+        step = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language="english",
+            session_factory=session_factory,
+            pipeline=pipeline,
+        )
+
         assert step.question is not None
+        assert step.question.id == question_id, "asked a new question over the standing one"
+        assert step.gap is not None and step.gap.gap_key == GAP["gap_key"]
+
+        async with session_factory() as db:
+            asked = list(
+                await db.scalars(
+                    select(ChatMessage).where(
+                        ChatMessage.case_id == case_id,
+                        ChatMessage.gap_key.is_not(None),
+                    )
+                )
+            )
+        assert len(asked) == 1, f"{len(asked)} questions outstanding, expected 1"
+
+
+@pytest.mark.asyncio
+async def test_assessment_row_asks_without_becoming_the_latest_analysis():
+    async with isolated_database() as session_factory:
+        async with session_factory() as db, db.begin():
+            user = User(
+                email="assessment@example.com",
+                name="Analyst",
+                password_hash="x",
+                oauth_provider="password",
+                oauth_subject_id="assessment@example.com",
+            )
+            db.add(user)
+            await db.flush()
+            case = Case(user_id=user.id, title="Assessment case", source_revision=1)
+            db.add(case)
+            await db.flush()
+            db.add(
+                CaseSource(
+                    case_id=case.id,
+                    source_kind="narrative",
+                    exact_text="Files were reported encrypted.",
+                )
+            )
+            case_id = case.id
+            user_id = user.id
+
+        assessment = CaseAssessmentTrace.model_validate({"gaps": [GAP]})
+
+        async def pipeline(_data):
+            return AnalysisAdvance(
+                assessment=assessment,
+                decision=Ask(assessment.gaps[0]),
+            )
+
+        step = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language="english",
+            session_factory=session_factory,
+            pipeline=pipeline,
+        )
+
+        assert step.needs_followup
+        assert step.result.status == "assessment"
+        assert step.question.analysis_result_id == step.result.id
+        async with session_factory() as db:
+            case, latest = await get_latest_case_analysis(db, case_id=case_id, user_id=user_id)
+            stored = await db.get(CaseAnalysisResult, step.result.id)
+        assert stored is not None
+        assert case.latest_analysis_result_id is None
+        assert latest is None
+
+
+@pytest.mark.asyncio
+async def test_assessment_round_keeps_serving_its_remaining_gaps():
+    async with isolated_database() as session_factory:
+        trace = CaseAssessmentTrace(gaps=three_gaps().gaps).model_dump(mode="json")
+        case_id, user_id, first_id = await case_with_a_question(session_factory, trace)
+        async with session_factory() as db, db.begin():
+            result = await db.scalar(
+                select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_id)
+            )
+            result.status = "assessment"
+            result.schema_version = "case_assessment_v1"
+            case = await db.get(Case, case_id)
+            case.latest_analysis_result_id = None
+
+        produced, analysis = await post_case_message(
+            case_id=case_id,
+            user_id=user_id,
+            request=ChatMessageCreate(content="Around two in the morning."),
+            session_factory=session_factory,
+        )
+
+        assert analysis is None
+        assert produced[0].in_reply_to_message_id == first_id
+        assert produced[1].gap_key == "topic:2"

@@ -16,14 +16,21 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 
+from app.services.analysis.clarification import (
+    FollowupDecision,
+    Proceed,
+    decide_followup,
+)
 from app.services.analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisTrace,
+    CaseAssessmentTrace,
     CaseFollowupExchange,
     CaseProviderReading,
 )
 from app.services.analysis.mitre_gate import mitre_gate
 from app.services.analysis.settings import AnalysisPipelineConfig, configured_pipeline
+from app.services.analysis.steps.assess import assess_case
 from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.analysis.steps.technical_context import (
     CaseRagContextPayload,
@@ -49,6 +56,10 @@ class AnalysisInput:
     # The caller decides whether it still applies -- the steps hold no history
     # and read no rows, so they cannot know. None means retrieve.
     reused_context: CaseRagContextPayload | None = None
+    asked_gap_keys: frozenset[str] = frozenset()
+    rounds_spent: int = 1
+    max_rounds: int = 3
+    gaps_per_round: int = 3
 
 
 @dataclass(frozen=True)
@@ -65,6 +76,37 @@ class AnalysisArtifacts:
     receipt: dict[str, object] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class AnalysisAdvance:
+    assessment: CaseAssessmentTrace
+    decision: FollowupDecision
+    artifacts: AnalysisArtifacts | None = None
+
+
+async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
+    assessment = await assess_gaps(data)
+    decision = decide_followup(
+        gaps=assessment.gaps,
+        asked_gap_keys=data.asked_gap_keys,
+        asked_this_round=0,
+        rounds_spent=data.rounds_spent,
+        max_rounds=data.max_rounds,
+        gaps_per_round=data.gaps_per_round,
+    )
+    if not isinstance(decision, Proceed):
+        return AnalysisAdvance(assessment=assessment, decision=decision)
+
+    artifacts = AnalysisArtifacts()
+    artifacts = await retrieve_technical_context(data, artifacts)
+    artifacts = await write_analysis(data, artifacts)
+    artifacts = await bind_to_case(data, artifacts)
+    return AnalysisAdvance(
+        assessment=assessment,
+        decision=decision,
+        artifacts=artifacts,
+    )
+
+
 async def analyse_case(data: AnalysisInput) -> AnalysisArtifacts:
     """One analysis, start to finish."""
 
@@ -78,6 +120,20 @@ async def analyse_case(data: AnalysisInput) -> AnalysisArtifacts:
 
 
 # -- the steps ----------------------------------------------------------------
+
+
+async def assess_gaps(
+    data: AnalysisInput,
+    *,
+    request: Callable = assess_case,
+    config: Callable[[], AnalysisPipelineConfig] = configured_pipeline,
+) -> CaseAssessmentTrace:
+    return await request(
+        source_bundle=data.sources,
+        followup_history=data.followup_history,
+        response_language=data.response_language,
+        config=config(),
+    )
 
 
 async def retrieve_technical_context(
@@ -112,7 +168,7 @@ async def retrieve_technical_context(
         so_far,
         technical_context={
             "context": augmentation.context.context,
-            "mitre_table": augmentation.mitre_table,
+            "mitre_table": list(augmentation.context.mitre_table),
         },
         retrieval_context_id=augmentation.retrieval_context_id,
         receipt=receipt,
@@ -223,9 +279,12 @@ def analysis_instruction(response_language: str) -> str:
 
 
 __all__ = [
+    "AnalysisAdvance",
     "AnalysisArtifacts",
     "AnalysisInput",
+    "advance_case",
     "analyse_case",
+    "assess_gaps",
     "analysis_instruction",
     "bind_to_case",
     "bound_trace",

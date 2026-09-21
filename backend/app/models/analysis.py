@@ -36,7 +36,10 @@ class CaseAnalysisResult(Base):
     __tablename__ = "case_analysis_results"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_case_analysis_results"),
-        CheckConstraint("status IN ('validated')", name="ck_case_analysis_results_status"),
+        CheckConstraint(
+            "status IN ('assessment', 'validated')",
+            name="ck_case_analysis_results_status",
+        ),
         Index("ix_case_analysis_results_case_id_created_at", "case_id", "created_at"),
     )
 

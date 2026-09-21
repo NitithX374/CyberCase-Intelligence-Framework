@@ -18,11 +18,13 @@ from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
+    CaseAssessmentTrace,
     CaseSourceCitation,
 )
 from app.services.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
+    advance_case,
     analyse_case,
     bind_to_case,
     write_analysis,
@@ -82,6 +84,81 @@ def test_the_shipped_analysis_runs_every_step(monkeypatch):
         "write_analysis",
         "bind_to_case",
     ]
+
+
+def test_assessment_question_short_circuits_every_expensive_step(monkeypatch):
+    calls: list[str] = []
+
+    async def assessment(_data):
+        return CaseAssessmentTrace.model_validate(
+            {
+                "gaps": [
+                    {
+                        "gap_id": "G-01",
+                        "gap_key": "incident:time",
+                        "topic": "Incident time",
+                        "status": "NOT_PROVIDED",
+                        "description": "The incident time is missing.",
+                        "reason": "Timing affects the chronology.",
+                        "priority": "high",
+                        "askable": True,
+                        "clarification_question": "When did the incident happen?",
+                    }
+                ]
+            }
+        )
+
+    async def expensive(name):
+        calls.append(name)
+        raise AssertionError(f"{name} ran after assessment decided to ask")
+
+    monkeypatch.setattr(pipeline_module, "assess_gaps", assessment)
+    monkeypatch.setattr(
+        pipeline_module,
+        "retrieve_technical_context",
+        lambda *_args, **_kwargs: expensive("mitre_gate_or_rag"),
+    )
+    monkeypatch.setattr(
+        pipeline_module,
+        "write_analysis",
+        lambda *_args, **_kwargs: expensive("main_analysis_model"),
+    )
+    monkeypatch.setattr(
+        pipeline_module,
+        "bind_to_case",
+        lambda *_args, **_kwargs: expensive("binding"),
+    )
+
+    bundle, _ = case_with_one_narrative()
+    outcome = asyncio.run(advance_case(AnalysisInput(sources=bundle)))
+
+    assert outcome.artifacts is None
+    assert outcome.decision.gap.gap_key == "incident:time"
+    assert calls == []
+
+
+def test_assessment_with_no_question_runs_the_full_analysis(monkeypatch):
+    called: list[str] = []
+
+    async def assessment(_data):
+        return CaseAssessmentTrace(gaps=[])
+
+    def record(name):
+        async def step(_data, artifacts):
+            called.append(name)
+            return artifacts
+
+        return step
+
+    monkeypatch.setattr(pipeline_module, "assess_gaps", assessment)
+    for name in ("retrieve_technical_context", "write_analysis", "bind_to_case"):
+        monkeypatch.setattr(pipeline_module, name, record(name))
+
+    bundle, _ = case_with_one_narrative()
+    outcome = asyncio.run(advance_case(AnalysisInput(sources=bundle)))
+
+    assert outcome.artifacts is not None
+    assert called == ["retrieve_technical_context", "write_analysis", "bind_to_case"]
 
 
 def test_the_baseline_arm_is_the_shipped_one_minus_binding(monkeypatch):

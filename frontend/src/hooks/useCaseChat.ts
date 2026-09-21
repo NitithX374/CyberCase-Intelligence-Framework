@@ -21,10 +21,8 @@ interface Submission {
 
 export function openQuestionId(messages: ChatMessageRead[]): string | null {
   const answered = new Set(messages.map((message) => message.in_reply_to_message_id));
-  return (
-    [...messages].reverse().find((message) => message.gap_key && !answered.has(message.id))?.id ??
-    null
-  );
+  const latest = [...messages].reverse().find((m) => m.gap_key);
+  return latest && !answered.has(latest.id) ? latest.id : null;
 }
 
 

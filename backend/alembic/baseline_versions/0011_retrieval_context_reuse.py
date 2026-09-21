@@ -29,8 +29,7 @@ depends_on = None
 
 def upgrade() -> None:
     op.execute(
-        "ALTER TABLE case_analysis_results "
-        "ADD COLUMN IF NOT EXISTS retrieval_context_json JSONB"
+        "ALTER TABLE case_analysis_results ADD COLUMN IF NOT EXISTS retrieval_context_json JSONB"
     )
 
 

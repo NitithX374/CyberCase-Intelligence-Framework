@@ -37,7 +37,7 @@ steps over a dataset file instead of a case row.
 
 | # | File | What you learn |
 |---|------|----------------|
-| 1 | `app/services/analysis/pipeline.py` | What an analysis *is* — three named steps, top to bottom |
+| 1 | `app/services/analysis/pipeline.py` | How a request assesses first, then either asks or runs the three full-analysis steps |
 | 2 | `app/services/workflow/run_analysis.py` | The read/think/write split, and the follow-up loop |
 | 3 | `app/services/analysis/contracts/trace.py` | `CaseAnalysisTrace` — the object everything downstream reads |
 | 4 | `app/services/analysis/clarification.py` | Whether to ask the reader another question. Pure policy, no I/O |
@@ -47,9 +47,21 @@ After those five, the rest is plumbing you can read on demand.
 
 ---
 
-## 3. The production analysis, in full
+## 3. The production advance and full analysis
 
 ```python
+async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
+    assessment = await assess_gaps(data)                         # one small model call
+    decision = decide_followup(gaps=assessment.gaps, ...)
+    if isinstance(decision, Ask):
+        return AnalysisAdvance(assessment=assessment, decision=decision)
+
+    artifacts = AnalysisArtifacts()
+    artifacts = await retrieve_technical_context(data, artifacts)
+    artifacts = await write_analysis(data, artifacts)
+    artifacts = await bind_to_case(data, artifacts)
+    return AnalysisAdvance(assessment, decision, artifacts)
+
 async def analyse_case(data: AnalysisInput) -> AnalysisArtifacts:
     artifacts = AnalysisArtifacts()
     artifacts = await retrieve_technical_context(data, artifacts)  # MITRE, if the gate says so
@@ -58,10 +70,15 @@ async def analyse_case(data: AnalysisInput) -> AnalysisArtifacts:
     return artifacts
 ```
 
-That is the whole production path. There is no arm switch, no stage list, no
-config value that changes the shape. The alternative compositions the thesis
-measures live in `backend/experiments/analysis_arms.py` and call these same
-functions.
+`advance_case` is the production request path. An askable gap stops it before
+the MITRE gate, RAG retrieval, full analysis model, and claim binding. The
+assessment row is stored with `status="assessment"` so its questions retain an
+`analysis_result_id`, but it never moves `Case.latest_analysis_result_id`.
+
+`analyse_case` remains the complete three-step composition used by experiments.
+There is no arm switch or config value that changes either composition. The
+alternative compositions the thesis measures live in
+`backend/experiments/analysis_arms.py` and call these same functions.
 
 **`experiments/` imports `app/`. `app/` never imports `experiments/`.** If that
 ever reverses, an ablation has become production.
@@ -80,6 +97,11 @@ re-derived from rows that already exist:
 | Which gaps were already asked? | every `gap_key` on the case's messages, as a set |
 | What did the reader answer? | The message following each question |
 | Why did it stop? | `trace_json.stop_reason` on the analysis row |
+
+`post_case_message` makes the four message paths explicit: a retried send returns
+its existing messages, ordinary chat goes through `answer_case_question`, a
+follow-up answer writes the next gap in the same transaction, and a reply that
+spends the round closes that transaction before calling `run_case_analysis`.
 
 This is why the loop was **not** built with a state machine library. There is no
 state to machine — each step reads the world, decides once, and writes.
@@ -104,10 +126,11 @@ asked for it.
 
 ## 5. Where a model is actually called
 
-Four places, and they do not share a path:
+Five places, and they do not share a path:
 
 | Call | File | Goes through |
 |---|---|---|
+| The gap-only assessment | `analysis/steps/assess.py` | `request_stage` |
 | The analysis | `analysis/steps/write.py` | `request_stage` |
 | A chat answer about an analysis | `chat/case_answer.py` | `request_stage` |
 | A chat answer before any analysis | `chat/case_answer.py` | `request_stage` |

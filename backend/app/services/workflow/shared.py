@@ -43,6 +43,8 @@ class CaseUnderAnalysis:
     # A retrieval an earlier analysis of this same input already paid for.
     # Read here, where there is a connection, because the pipeline has none.
     reused_context: CaseRagContextPayload | None = None
+    asked_gap_keys: frozenset[str] = frozenset()
+    rounds_spent: int = 1
 
     @property
     def source_revision(self) -> int:

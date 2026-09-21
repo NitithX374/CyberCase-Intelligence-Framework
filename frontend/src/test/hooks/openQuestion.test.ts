@@ -47,6 +47,22 @@ describe("openQuestionId", () => {
     expect(openQuestionId(messages)).toBe("m3");
   });
 
+  it("is not fooled by a question the case moved on from", () => {
+    // One case in the database looks exactly like this: a question was asked,
+    // an analysis ran before anyone answered it, and that analysis asked a
+    // different one. Scanning every message for an unanswered question found
+    // the skipped one and never stopped finding it -- so the composer believed
+    // the reader was answering a question on every send, for good, and the
+    // header said the case was being analysed while it sat idle. The backend
+    // reads the latest question only; this has to agree with it.
+    const messages = [
+      message(1, "assistant", { gap_key: "topic:exfiltrated-data" }),
+      message(2, "assistant", { gap_key: "topic:server-count" }),
+      message(3, "user", { in_reply_to_message_id: "m2" }),
+    ];
+    expect(openQuestionId(messages)).toBeNull();
+  });
+
   it("is blind to ordinary conversation", () => {
     const messages = [
       message(1, "user"),
