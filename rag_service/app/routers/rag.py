@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, HTTPException, Request
 
 from RAG.GraphRAG.config import MAX_CONCURRENT_QUERIES
-from RAG.GraphRAG.pipeline.mitre_table import build_mitre_table
+from RAG.GraphRAG.pipeline.mitre_table import EntityDetailsLookup, build_mitre_table
 from RAG.legal_reference import LegalReferenceResult
 from routers.context_store import (
     export_retrieval_context,
@@ -49,8 +49,30 @@ def _run_pipeline(rag_agent: Any, query: str) -> tuple[Any, list[Any]]:
     mitre_table = build_mitre_table(
         agent_response.graphrag_result,
         agent_response.answer,
+        entity_details=_entity_details_lookup(rag_agent),
     )
     return agent_response, mitre_table
+
+
+def _entity_details_lookup(rag_agent: Any) -> Optional[EntityDetailsLookup]:
+    """The MITRE table's Neo4j lookup, unable to fail the request.
+
+    It fills in each row's own description and tactics after the answer is
+    already paid for. When Neo4j errors, the rows keep what retrieval carried
+    rather than the whole response being lost.
+    """
+    graph = getattr(getattr(rag_agent, "retriever", None), "graph_retriever", None)
+    if graph is None:
+        return None
+
+    def lookup(stix_ids: list[str]) -> dict[str, dict]:
+        try:
+            return graph.entity_details(stix_ids)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("MITRE table entity lookup failed: %s", exc)
+            return {}
+
+    return lookup
 
 
 @router.get("/health")

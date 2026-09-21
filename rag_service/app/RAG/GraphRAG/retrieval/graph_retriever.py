@@ -338,6 +338,43 @@ class GraphRetriever:
 
         return result
 
+    def entity_details(self, stix_ids: list[str]) -> dict[str, dict]:
+        """Description and tactics of each entity, straight from its own node.
+
+        ``expand`` cannot serve the MITRE table here: neighbour nodes come back
+        with names only (a technique has hundreds of USES neighbours, so their
+        descriptions would dwarf the rest of the payload), and a technique's
+        tactic reaches it only when its own subgraph survived the graph cap.
+        The table asks once, for the few rows it actually shows.
+
+        Returns:
+            ``{stix_id: {"description": str, "tactics": [tactic name, …]}}``
+            for the ids that matched a node. ``tactics`` is empty for anything
+            that is not a technique.
+        """
+        ids = list(dict.fromkeys(filter(None, stix_ids)))
+        if not ids:
+            return {}
+
+        with self.driver.session() as session:
+            records = session.run(
+                Query("""
+                UNWIND $ids AS sid
+                MATCH (n {stix_id: sid})
+                OPTIONAL MATCH (n)-[:IN_TACTIC]->(t)
+                RETURN sid AS sid, n.description AS description,
+                       collect(DISTINCT t.name) AS tactics
+                """),
+                ids=ids,
+            )
+            return {
+                rec["sid"]: {
+                    "description": rec["description"] or "",
+                    "tactics": sorted(filter(None, rec["tactics"])),
+                }
+                for rec in records
+            }
+
     def query_cypher(self, cypher: str, params: Optional[dict] = None) -> list[dict]:
         """Execute an arbitrary Cypher query and return results as dicts."""
         with self.driver.session() as session:

@@ -37,7 +37,7 @@ def test_query_runs_full_agent_pipeline_without_exposing_generated_answer(
     app.include_router(rag_router.router)
     builder_calls: list[tuple[object, str]] = []
 
-    def build_table(result: object, answer: str) -> list[object]:
+    def build_table(result: object, answer: str, **_: object) -> list[object]:
         builder_calls.append((result, answer))
         return []
 
@@ -70,3 +70,19 @@ def test_query_runs_full_agent_pipeline_without_exposing_generated_answer(
     assert cached["rag_result"] == {"sentinel": "raw retrieval"}
     assert cached["mitre_table"] == []
     assert "answer" not in cached
+
+
+def test_entity_lookup_is_skipped_for_an_agent_without_a_graph() -> None:
+    assert rag_router._entity_details_lookup(FakeRagAgent()) is None
+
+
+def test_entity_lookup_failure_costs_the_enrichment_not_the_request() -> None:
+    class BrokenGraph:
+        def entity_details(self, stix_ids: list[str]) -> dict:
+            raise ConnectionError("neo4j unreachable")
+
+    agent = SimpleNamespace(retriever=SimpleNamespace(graph_retriever=BrokenGraph()))
+    lookup = rag_router._entity_details_lookup(agent)
+
+    assert lookup is not None
+    assert lookup(["attack-pattern--1"]) == {}

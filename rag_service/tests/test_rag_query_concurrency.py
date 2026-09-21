@@ -63,7 +63,7 @@ def _client(app: FastAPI) -> httpx.AsyncClient:
 
 @pytest.fixture(autouse=True)
 def stub_mitre_table(monkeypatch) -> None:
-    monkeypatch.setattr(rag_router, "build_mitre_table", lambda result, answer: [])
+    monkeypatch.setattr(rag_router, "build_mitre_table", lambda result, answer, **_: [])
 
 
 @pytest.mark.anyio
