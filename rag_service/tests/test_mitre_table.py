@@ -5,6 +5,9 @@ Graph-sourced candidates: tactic neighbours feed the `tactic` column, not rows.
 Row descriptions: the two channels store the same entity differently — Qdrant
 keeps the embedding text (``"{label}: {name}. " + description``), Neo4j keeps
 the raw description — and must still produce one identical row description.
+Entity lookup: in production a graph neighbour carries no description and a
+tactic arrives only with its technique's own subgraph, so the table asks each
+kept entity's node for both.
 """
 
 import sys
@@ -74,7 +77,11 @@ def test_tactic_neighbour_is_a_column_not_a_row():
 
 
 def test_both_channels_describe_an_entity_identically():
-    """A row must not read differently depending on which channel surfaced it."""
+    """Prefix aside, both channels normalise the same stored text identically.
+
+    A graph *centre* carries its description; a neighbour does not — that
+    production path is covered by the lookup tests below.
+    """
     answer = "คนร้ายใช้ PowerShell (T1059.001)"
     args = ("PowerShell", "Subtechnique", "T1059.001", _POWERSHELL_DESC)
 
@@ -176,3 +183,138 @@ def test_short_description_carries_no_truncation_marker():
     rows = build_mitre_table(result, "คนร้ายใช้ PowerShell (T1059.001)")
 
     assert not rows[0].description.endswith(_TRUNCATION_MARKER)
+
+
+def _neighbour_hit(name, label, attack_id, stix_id):
+    """A neighbour as `GraphRetriever.expand` returns it: no description."""
+    centre = GraphNode("sid-centre", "Remote Services", "Technique", "T1021", "")
+    return SubgraphResult(
+        center_node=centre,
+        neighbors=[GraphNode(stix_id, name, label, attack_id)],
+        edges=[],
+    )
+
+
+class _Lookup:
+    """Stands in for `GraphRetriever.entity_details`, recording each call."""
+
+    def __init__(self, nodes):
+        self.nodes = nodes
+        self.calls = []
+
+    def __call__(self, stix_ids):
+        self.calls.append(list(stix_ids))
+        return {sid: self.nodes[sid] for sid in stix_ids if sid in self.nodes}
+
+
+def test_graph_neighbour_row_takes_its_description_from_the_lookup():
+    """The Valid Accounts row reached the UI empty: neighbours carry no text."""
+    lookup = _Lookup({"sid-va": {"description": _POWERSHELL_DESC, "tactics": []}})
+    result = GraphRAGResult(
+        vector_results=[],
+        graph_results=[_neighbour_hit("Valid Accounts", "Technique", "T1078", "sid-va")],
+    )
+
+    rows = build_mitre_table(result, "คนร้ายใช้ Valid Accounts (T1078)", entity_details=lookup)
+
+    assert [(r.source, r.description) for r in rows] == [("graph", _POWERSHELL_DESC)]
+
+
+def test_both_channels_agree_once_the_lookup_answers():
+    """The production form of the parity check: a neighbour arrives empty."""
+    lookup = _Lookup({"sid-1": {"description": _POWERSHELL_DESC, "tactics": []}})
+    answer = "คนร้ายใช้ PowerShell (T1059.001)"
+
+    from_vector = build_mitre_table(
+        GraphRAGResult(
+            vector_results=[
+                _vector_hit("PowerShell", "Subtechnique", "T1059.001", _POWERSHELL_DESC)
+            ],
+            graph_results=[],
+        ),
+        answer,
+        entity_details=lookup,
+    )
+    from_graph = build_mitre_table(
+        GraphRAGResult(
+            vector_results=[],
+            graph_results=[_neighbour_hit("PowerShell", "Subtechnique", "T1059.001", "sid-1")],
+        ),
+        answer,
+        entity_details=lookup,
+    )
+
+    assert from_vector[0].description == from_graph[0].description == _POWERSHELL_DESC
+
+
+def test_every_tactic_of_a_technique_is_listed():
+    """Without its own subgraph a technique had no tactic; with it, only one."""
+    lookup = _Lookup({
+        "sid-1": {
+            "description": _POWERSHELL_DESC,
+            "tactics": ["Initial Access", "Persistence", "Privilege Escalation", "Stealth"],
+        }
+    })
+    result = GraphRAGResult(
+        vector_results=[_vector_hit("Valid Accounts", "Technique", "T1078", _POWERSHELL_DESC)],
+        graph_results=[],
+    )
+
+    rows = build_mitre_table(result, "คนร้ายใช้ Valid Accounts (T1078)", entity_details=lookup)
+
+    assert rows[0].tactic == "Initial Access, Persistence, Privilege Escalation, Stealth"
+
+
+def test_node_without_tactics_does_not_borrow_one_by_name():
+    """The edge map is keyed by name; the node's own answer overrides it."""
+    lookup = _Lookup({"sid-1": {"description": "A tool.", "tactics": []}})
+    result = GraphRAGResult(
+        vector_results=[_vector_hit("Discovery Tool", "Software", "S9999", "A tool.")],
+        graph_results=[
+            SubgraphResult(
+                center_node=GraphNode("sid-t", "Other", "Technique", "T9999"),
+                neighbors=[],
+                edges=[GraphEdge("IN_TACTIC", "Discovery Tool", "Discovery")],
+            )
+        ],
+    )
+
+    rows = build_mitre_table(result, "คนร้ายใช้ Discovery Tool (S9999)", entity_details=lookup)
+
+    assert rows[0].tactic is None
+
+
+def test_lookup_is_asked_once_and_only_for_rows_that_are_shown():
+    """An uncited neighbour is dropped, so Neo4j is never asked about it."""
+    lookup = _Lookup({})
+    result = GraphRAGResult(
+        vector_results=[
+            _vector_hit("PowerShell", "Subtechnique", "T1059.001", _POWERSHELL_DESC)
+        ],
+        graph_results=[_neighbour_hit("Unrelated Group", "Group", "G9999", "sid-dropped")],
+    )
+
+    build_mitre_table(result, "คนร้ายใช้ PowerShell (T1059.001)", entity_details=lookup)
+
+    assert lookup.calls == [["sid-1"]]
+
+
+def test_entity_the_lookup_misses_keeps_what_retrieval_carried():
+    """A failed or empty lookup must leave the table as it was without one."""
+    rsd = GraphNode("t1", "Remote System Discovery", "Technique", "T1018", _POWERSHELL_DESC)
+    result = GraphRAGResult(
+        vector_results=[],
+        graph_results=[
+            SubgraphResult(
+                center_node=rsd,
+                neighbors=[],
+                edges=[GraphEdge("IN_TACTIC", "Remote System Discovery", "Discovery")],
+            )
+        ],
+    )
+
+    rows = build_mitre_table(
+        result, "คนร้ายค้นหาเครื่องอื่น (T1018)", entity_details=_Lookup({})
+    )
+
+    assert [(r.tactic, r.description) for r in rows] == [("Discovery", _POWERSHELL_DESC)]
