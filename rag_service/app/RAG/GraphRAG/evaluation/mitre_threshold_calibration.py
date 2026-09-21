@@ -54,8 +54,12 @@ cited neighbour row is missing in both modes. An ablation, not a headline
 benchmark.
 
 Usage (from rag_service/app):
-    python -m RAG.GraphRAG.evaluation.mitre_threshold_calibration --phase rerank
-    python -m RAG.GraphRAG.evaluation.mitre_threshold_calibration --phase score [--variant C]
+    python -m RAG.GraphRAG.evaluation.mitre_threshold_calibration --phase rerank [--dataset real_cti]
+    python -m RAG.GraphRAG.evaluation.mitre_threshold_calibration --phase score [--dataset real_cti] [--variant C|M]
+
+``--dataset real_cti`` uses the 100 real-CTI incidents with the served agent's
+own sub-queries, broaden rewrites and answers, cached by ``agentic_ablation``
+(arm A's trace for the queries, arm M's answers by default) — still no LLM call.
 """
 
 from __future__ import annotations
@@ -69,10 +73,16 @@ import math
 from collections import Counter
 from pathlib import Path
 
-from ..config import VECTOR_TOP_K
+from ..config import (
+    AGENT_MAX_GRAPH,
+    AGENT_MAX_VECTOR,
+    BROADEN_GRAPH_STEP,
+    BROADEN_VECTOR_STEP,
+    VECTOR_TOP_K,
+)
 from ..pipeline.mitre_table import build_mitre_table
 from ..retrieval.graph_retriever import GraphNode, SubgraphResult
-from ..retrieval.hybrid_retriever import GraphRAGResult, HybridRetriever
+from ..retrieval.hybrid_retriever import GraphRAGResult, HybridRetriever, merge_results
 from ..retrieval.vector_retriever import VectorResult
 from .attack_id_metrics import technique_set_score
 from .crosslingual_generation_benchmark import (
@@ -84,8 +94,18 @@ from .crosslingual_generation_benchmark import (
 )
 
 DATASET_PATH = BENCH_DIR.parent / "incident_draft.json"
-CACHE_PATH = BENCH_DIR.parent / "threshold_calib" / "rerank.json"
-REPORT_STEM = "mitre_threshold_calibration"  # one report per answer variant
+REAL_CTI_PATH = BENCH_DIR.parent.parent / "real_cti" / "data" / "CTI_dataset.json"
+ABLATION_PATH = RESULTS_DIR / "agentic_ablation.jsonl"
+CACHE_PATHS = {
+    "gen_bench": BENCH_DIR.parent / "threshold_calib" / "rerank.json",
+    "real_cti": BENCH_DIR.parent / "threshold_calib" / "rerank_real_cti.json",
+}
+CACHE_PATH = CACHE_PATHS["gen_bench"]
+# Where each dataset's answers come from, and which set to use by default:
+# gen_bench variant C is the served single-call path; agentic_ablation arm M is
+# the served agent with the ACK fix and the merged broaden round, as on main.
+DEFAULT_ANSWERS = {"gen_bench": "C", "real_cti": "M"}
+REPORT_STEM = "mitre_threshold_calibration"  # one report per dataset and answer set
 
 PER_QUERY_K = 3  # retrieve_multi_quota's quota, as the agent calls it
 
@@ -104,13 +124,70 @@ GRIDS = {
 _TECHNIQUE_LABELS = {"Technique", "Subtechnique"}
 
 
-def _all_queries(ctx: dict) -> list[str]:
-    """The production query list: the whole incident, then its sub-queries."""
+def _query_list(incident: str, *extra: list[str]) -> list[str]:
+    """A production query list: the whole incident first, then the rest, deduped."""
     queries: list[str] = []
-    for q in [ctx["query"], *ctx.get("sub_queries", [])]:
+    for q in [incident, *(q for group in extra for q in group)]:
         if q and q.strip() and q not in queries:
             queries.append(q)
     return queries
+
+
+def _load_cases(dataset: str, answers_from: str | None) -> list[dict]:
+    """Each incident's query sets, broaden rounds, gold IDs and answer.
+
+    ``query_sets`` holds one list per retrieval the agent ran: the first pass,
+    and for real-CTI incidents that broadened, the round replayed the way arm M
+    replays it (sub-queries plus rewrites, merged into the first pass).
+    """
+    if dataset == "gen_bench":
+        gold = {
+            s["id"]: set(s["gold_attack_ids"])
+            for s in json.loads(DATASET_PATH.read_text(encoding="utf-8"))
+            if s.get("gold_attack_ids")
+        }
+        answers = {}
+        with open(GENERATIONS_PATH, encoding="utf-8") as f:
+            for line in f:
+                g = json.loads(line) if line.strip() else None
+                if g and g["variant"] == answers_from and g.get("answer"):
+                    answers[g["sample_id"]] = g["answer"]
+        with open(CONTEXTS_PATH, encoding="utf-8") as f:
+            contexts = json.load(f)
+        return [
+            {
+                "id": c["id"],
+                "query_sets": [_query_list(c["query"], c.get("sub_queries", []))],
+                "broaden_rounds": 0,
+                "gold": gold.get(c["id"], set()),
+                "answer": answers.get(c["id"], ""),
+            }
+            for c in contexts
+        ]
+
+    samples = {
+        s["id"]: s
+        for s in json.loads(REAL_CTI_PATH.read_text(encoding="utf-8"))["samples"]
+    }
+    rows = [json.loads(line) for line in open(ABLATION_PATH, encoding="utf-8") if line.strip()]
+    answers = {r["sample_id"]: r.get("answer") or "" for r in rows if r["arm"] == answers_from}
+    cases = []
+    for a_row in (r for r in rows if r["arm"] == "A"):
+        sample = samples.get(a_row["sample_id"])
+        retrieves = [t for t in a_row.get("trace") or [] if t["node"] == "retrieve"][:2]
+        if sample is None or not retrieves:
+            continue
+        cases.append({
+            "id": sample["id"],
+            "query_sets": [
+                _query_list(sample["query"], t["sub_queries"], t["rewrites"])
+                for t in retrieves
+            ],
+            "broaden_rounds": a_row.get("broaden_rounds") or 0,
+            "gold": set(sample["gold_attack_ids"]),
+            "answer": answers.get(sample["id"], ""),
+        })
+    return cases
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -118,28 +195,27 @@ def _all_queries(ctx: dict) -> list[str]:
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def phase_rerank() -> None:
+def phase_rerank(dataset: str) -> None:
     from ..retrieval.reranker import Reranker
     from ..retrieval.vector_retriever import VectorRetriever
 
-    with open(CONTEXTS_PATH, encoding="utf-8") as f:
-        contexts = json.load(f)
-
+    cache_path = CACHE_PATHS[dataset]
+    cases = _load_cases(dataset, None)
     cache: dict = {}
-    if CACHE_PATH.exists():
-        cache = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-    todo = [c for c in contexts if c["id"] not in cache]
-    print(f"[RERANK] {len(contexts)} cases, {len(todo)} to do")
+    if cache_path.exists():
+        cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    todo = [c for c in cases if c["id"] not in cache]
+    print(f"[RERANK] {dataset}: {len(cases)} cases, {len(todo)} to do")
     if not todo:
         return
 
     vector = VectorRetriever()
     reranker = Reranker()
-    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
 
-    for i, ctx in enumerate(todo, 1):
+    for i, case in enumerate(todo, 1):
         per_query = []
-        for q in _all_queries(ctx):
+        for q in _query_list(case["query_sets"][0][0], *case["query_sets"]):
             with contextlib.redirect_stdout(io.StringIO()):
                 hits = reranker.rerank(q, vector.search_all(q, top_k=VECTOR_TOP_K))
             per_query.append({
@@ -157,9 +233,9 @@ def phase_rerank() -> None:
                     for h in hits
                 ],
             })
-        cache[ctx["id"]] = per_query
-        CACHE_PATH.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
-        print(f"  [{i}/{len(todo)}] {ctx['id']}: {len(per_query)} queries")
+        cache[case["id"]] = per_query
+        cache_path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        print(f"  [{i}/{len(todo)}] {case['id']}: {len(per_query)} queries", flush=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -171,7 +247,9 @@ def _sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
-def _merge(per_query: list[dict], mode: str, entities: dict) -> tuple[GraphRAGResult, dict]:
+def _merge(
+    per_query: list[dict], case: dict, mode: str, entities: dict
+) -> tuple[GraphRAGResult, dict]:
     """Reweight each sub-query's hits and merge them the way production does.
 
     Returns the merged result — vector hits with the weighted score in
@@ -206,10 +284,20 @@ def _merge(per_query: list[dict], mode: str, entities: dict) -> tuple[GraphRAGRe
     retriever.retrieve = lambda query, **_: GraphRAGResult(
         vector_results=ranked[query], graph_results=centres(ranked[query])
     )
+    # A broaden round is merged into the first pass with a wider budget, as the
+    # agent (and arm M, whose answers are used) does.
+    rounds = case["broaden_rounds"]
+    budgets = [(AGENT_MAX_VECTOR, AGENT_MAX_GRAPH),
+               (AGENT_MAX_VECTOR + BROADEN_VECTOR_STEP * rounds,
+                AGENT_MAX_GRAPH + BROADEN_GRAPH_STEP * rounds)]
+    result = None
     with contextlib.redirect_stdout(io.StringIO()):
-        result = retriever.retrieve_multi_quota(
-            [e["query"] for e in per_query], per_query_k=PER_QUERY_K, top_k=VECTOR_TOP_K
-        )
+        for queries, (max_vector, max_graph) in zip(case["query_sets"], budgets):
+            one = retriever.retrieve_multi_quota(
+                queries, per_query_k=PER_QUERY_K, top_k=VECTOR_TOP_K,
+                max_vector=max_vector, max_graph=max_graph,
+            )
+            result = one if result is None else merge_results(result, one)
     merged = result.vector_results
 
     origin: dict[str, dict] = {}
@@ -333,44 +421,33 @@ def _retrieval_stats(merged: list[VectorResult], gold: set[str], by_stix: dict) 
     }
 
 
-def phase_score(variant: str) -> None:
-    cache = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-    gold = {
-        s["id"]: set(s["gold_attack_ids"])
-        for s in json.loads(DATASET_PATH.read_text(encoding="utf-8"))
-        if s.get("gold_attack_ids")
-    }
-    answers = {}
-    with open(GENERATIONS_PATH, encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                g = json.loads(line)
-                if g["variant"] == variant and g.get("answer"):
-                    answers[g["sample_id"]] = g["answer"]
-
-    cases = [cid for cid in cache if cid in gold and cid in answers]
-    print(f"[SCORE] variant {variant}: {len(cases)} cases "
-          f"(of {len(cache)} reranked, {len(answers)} with an answer)")
+def phase_score(dataset: str, answers_from: str) -> None:
+    cache = json.loads(CACHE_PATHS[dataset].read_text(encoding="utf-8"))
+    all_cases = _load_cases(dataset, answers_from)
+    cases = [c for c in all_cases if c["id"] in cache and c["gold"] and c["answer"]]
+    print(f"[SCORE] {dataset}, answers {answers_from}: {len(cases)} cases "
+          f"(of {len(all_cases)}, {len(cache)} reranked)")
 
     entities = _entities_by_stix()
     results: dict = {}
     for mode in ("single", "double"):
         retrieval, tables = [], {}
-        for cid in cases:
-            merged, origin = _merge(cache[cid], mode, entities)
-            retrieval.append(_retrieval_stats(merged.vector_results, gold[cid], entities))
+        for case in cases:
+            merged, origin = _merge(cache[case["id"]], case, mode, entities)
+            retrieval.append(_retrieval_stats(merged.vector_results, case["gold"], entities))
             configs = [("cited_only", math.inf), ("keep_all", -math.inf)]
             for rule in ("absolute", "relative", "rank"):
                 configs += [(rule, t) for t in GRIDS[(rule, mode)]]
             for rule, t in configs:
                 real_rule = "absolute" if rule in ("cited_only", "keep_all") else rule
                 tables.setdefault((rule, t), []).append(
-                    _table_stats(merged, origin, real_rule, t, answers[cid], gold[cid])
+                    _table_stats(merged, origin, real_rule, t, case["answer"], case["gold"])
                 )
         results[mode] = {"retrieval": retrieval, "tables": tables}
 
-    report = _render(results, variant, len(cases))
-    path = RESULTS_DIR / f"{REPORT_STEM}_{variant}.md"
+    report = _render(results, dataset, answers_from, len(cases))
+    suffix = answers_from if dataset == "gen_bench" else f"{dataset}_{answers_from}"
+    path = RESULTS_DIR / f"{REPORT_STEM}_{suffix}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(report, encoding="utf-8")
     print(report)
@@ -382,20 +459,39 @@ def _mean(xs) -> float:
     return sum(xs) / len(xs) if xs else 0.0
 
 
-def _render(results: dict, variant: str, n: int) -> str:
-    out = [
-        "# MITRE table threshold calibration",
-        "",
-        f"{n} incidents from `data/incident_draft.json` (LLM-drafted), answers from "
-        f"gen_bench variant {variant}. Scores recomputed with today's reranker; "
-        "`double` replays the pre-2026-08-15 double sigmoid on the same logits. "
-        "Macro-averaged soft technique P/R/F1 (exact 1.0, same base 0.5). "
-        "An ablation for choosing a rule, not a headline benchmark.",
-        "",
+_SOURCES = {
+    "gen_bench": (
+        "{n} incidents from `data/incident_draft.json` (LLM-drafted), answers from "
+        "gen_bench variant {answers}.",
         "Caveats: the incidents are LLM-drafted, not real CTI. The answers were "
         "generated in July from contexts retrieved under the double sigmoid, so any "
         "comparison of the two modes' tables favours `double`; compare rules within a "
-        "mode. Graph centres are rebuilt from the seeds, but neighbours are not "
+        "mode.",
+    ),
+    "real_cti": (
+        "{n} real-CTI incidents (`real_cti/data/CTI_dataset.json`: CISA advisories and "
+        "CTID emulation plans, drafted in Thai), with the served agent's own sub-queries "
+        "and broaden rewrites and the answers of `agentic_ablation` arm {answers} "
+        "(openai/gpt-5.6-luna, 2026-09-18/19).",
+        "Caveats: the answers were generated on the single-sigmoid scale, so any "
+        "comparison of the two modes' tables favours `single`; compare rules within a "
+        "mode. Retrieval is replayed with today's index, which the agent's own run "
+        "may not have matched exactly.",
+    ),
+}
+
+
+def _render(results: dict, dataset: str, answers: str, n: int) -> str:
+    source, caveat = _SOURCES[dataset]
+    out = [
+        "# MITRE table threshold calibration",
+        "",
+        source.format(n=n, answers=answers) + " Scores recomputed with today's "
+        "reranker; `double` replays the pre-2026-08-15 double sigmoid on the same "
+        "logits. Macro-averaged soft technique P/R/F1 (exact 1.0, same base 0.5). "
+        "An ablation for choosing a rule, not a headline benchmark.",
+        "",
+        caveat + " Graph centres are rebuilt from the seeds, but neighbours are not "
         "fetched, so a cited neighbour row is missing in both modes.",
         "",
         "## Retrieval: which hits win the per-sub-query quota",
@@ -455,13 +551,15 @@ def _render(results: dict, variant: str, n: int) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--phase", choices=["rerank", "score"], required=True)
-    parser.add_argument("--variant", default="C",
-                        help="gen_bench answer variant for cited_in_answer (C = served path)")
+    parser.add_argument("--dataset", choices=sorted(CACHE_PATHS), default="gen_bench")
+    parser.add_argument("--variant", default=None,
+                        help="answers for cited_in_answer: a gen_bench variant (default C) "
+                             "or an agentic_ablation arm (default M)")
     args = parser.parse_args()
     if args.phase == "rerank":
-        phase_rerank()
+        phase_rerank(args.dataset)
     else:
-        phase_score(args.variant)
+        phase_score(args.dataset, args.variant or DEFAULT_ANSWERS[args.dataset])
 
 
 if __name__ == "__main__":
