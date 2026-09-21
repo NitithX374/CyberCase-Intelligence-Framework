@@ -101,6 +101,9 @@ class CaseMitreAugmentation:
             "applicability": self.applicability.model_dump(mode="json"),
             "retrieval_context_id": self.retrieval_context_id,
             "retrieval_context_reused": self.reused,
+            # The table belongs in here, not beside it. reports/projection.py
+            # and the frontend both read technical_augmentation; nothing reads
+            # a copy hoisted to the top of external_context_json.
             "mitre_table": self.mitre_table,
             "association_ids": [item.association_id for item in self.associations],
         }

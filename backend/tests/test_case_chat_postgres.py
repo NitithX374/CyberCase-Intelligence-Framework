@@ -132,7 +132,9 @@ async def test_asking_question_without_analysis_stores_messages():
         async def fake_answer(**kwargs):
             context = kwargs.get("context", {})
             assert context.get("analysis_result_id") is None
-            return CaseAnalysisOutput(answer="Here is general information about the case.", trace=None)
+            return CaseAnalysisOutput(
+                answer="Here is general information about the case.", trace=None
+            )
 
         question, answer = await answer_case_question(
             case_id=case_id,

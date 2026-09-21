@@ -55,10 +55,9 @@ class FollowupQuestionRead(BaseModel):
 class AnalysisStepRead(BaseModel):
     """What one analysis step produced.
 
-    ``need_followup`` carries the question and no result: the analysis behind
-    it is stored and readable from ``GET /analysis``, but it is not the case's
-    answer yet, and handing it over as one invites a client to render a partial
-    analysis as a finished one.
+    ``need_followup`` carries the question and no result. Its gap-only
+    assessment is stored for round continuity but is never exposed as the
+    case's latest complete analysis.
     """
 
     status: Literal["need_followup", "completed"]

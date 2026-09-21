@@ -11,6 +11,7 @@ after every reply.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from fastapi import status
@@ -25,7 +26,7 @@ from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.schemas.chat import CaseChatRead, ChatMessageCreate, ChatMessageRead
 from app.services.analysis.clarification import Ask, decide_followup
-from app.services.analysis.contracts import CaseAnalysisTrace
+from app.services.analysis.contracts import CaseAnalysisTrace, CaseAssessmentTrace
 from app.services.chat.followup import (
     answer_message,
     asked_gap_keys,
@@ -52,6 +53,13 @@ class CaseChatError(Exception):
         self.code = code
         self.message = message
         self.status_code = status_code
+
+
+@dataclass(frozen=True)
+class RecordedFollowup:
+    messages: list[ChatMessage]
+    first_new_ordinal: int
+    next_question: ChatMessage | None
 
 
 async def get_case_chat(
@@ -84,27 +92,53 @@ async def post_case_message(
     request: ChatMessageCreate,
     session_factory: Callable = async_session,
 ) -> tuple[list[ChatMessage], AnalysisStep | None]:
-    """Handle one sent message. Returns the messages it produced.
+    """Handle one sent message through one of the four chat paths."""
 
-    A send that follows an unanswered question is that question's answer. The
-    reader does not say so and the client does not mark it: the open question
-    is the one the case is waiting on, and there is only ever one.
-
-    A send that answers a question may then run an analysis, which takes long
-    enough that a client can give up and retry. The retry finds the message its
-    id already created and is given what that send produced.
-    """
-
-    already = await messages_of_send(session_factory, case_id, request.client_request_id)
-    if already is not None:
+    if (
+        already := await messages_of_send(session_factory, case_id, request.client_request_id)
+    ) is not None:
         return already, None
 
-    answered = await answer_pending_question(
+    try:
+        standing = await standing_question(session_factory, case_id, user_id)
+    except CaseWorkflowError as error:
+        raise CaseChatError(error.code, error.message, error.status_code) from error
+    if standing is None:
+        return await reply_in_conversation(
+            case_id=case_id,
+            user_id=user_id,
+            request=request,
+            session_factory=session_factory,
+        )
+
+    recorded = await record_answer_and_ask_next(
         case_id=case_id, user_id=user_id, request=request, session_factory=session_factory
     )
-    if answered is not None:
-        return answered
+    if recorded is None:
+        return await reply_in_conversation(
+            case_id=case_id,
+            user_id=user_id,
+            request=request,
+            session_factory=session_factory,
+        )
+    if recorded.next_question is not None:
+        return recorded.messages, None
+    return await analyse_after_round(
+        case_id=case_id,
+        user_id=user_id,
+        request=request,
+        recorded=recorded,
+        session_factory=session_factory,
+    )
 
+
+async def reply_in_conversation(
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+    request: ChatMessageCreate,
+    session_factory: Callable,
+) -> tuple[list[ChatMessage], AnalysisStep | None]:
     try:
         question, answer = await answer_case_question(
             case_id=case_id,
@@ -117,6 +151,75 @@ async def post_case_message(
     except CaseWorkflowError as error:
         raise CaseChatError(error.code, error.message, error.status_code) from error
     return [question, answer], None
+
+
+async def standing_question(
+    session_factory: Callable, case_id: UUID, user_id: UUID | None
+) -> ChatMessage | None:
+    async with session_factory() as db:
+        case = await db.scalar(select(Case).where(Case.id == case_id, Case.user_id == user_id))
+        if case is None:
+            raise CaseWorkflowError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
+        return await pending_question(db, case.id)
+
+
+async def record_answer_and_ask_next(
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+    request: ChatMessageCreate,
+    session_factory: Callable,
+) -> RecordedFollowup | None:
+    async with session_factory() as db, db.begin():
+        try:
+            case = await owned_case(db, case_id, user_id)
+        except CaseWorkflowError as error:
+            raise CaseChatError(error.code, error.message, error.status_code) from error
+        question = await pending_question(db, case.id)
+        if question is None:
+            # The lock re-check closes the race between dispatch and this write.
+            return None
+        answer = answer_message(
+            case_id=case.id,
+            ordinal=await next_ordinal(db, case.id),
+            content=request.content.strip(),
+            question=question,
+            client_request_id=request.client_request_id,
+        )
+        db.add(answer)
+        await db.flush()
+        first_new_ordinal = answer.ordinal
+        following = await next_question_of_round(db, case_id=case.id, question=question)
+        if following is not None:
+            db.add(following)
+
+    return RecordedFollowup(
+        messages=await messages_from(session_factory, case_id, first_new_ordinal),
+        first_new_ordinal=first_new_ordinal,
+        next_question=following,
+    )
+
+
+async def analyse_after_round(
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+    request: ChatMessageCreate,
+    recorded: RecordedFollowup,
+    session_factory: Callable,
+) -> tuple[list[ChatMessage], AnalysisStep | None]:
+
+    try:
+        step = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language=request.response_language,
+            session_factory=session_factory,
+            continuing_followup=True,
+        )
+    except CaseWorkflowError as error:
+        raise CaseChatError(error.code, error.message, error.status_code) from error
+    return await messages_from(session_factory, case_id, recorded.first_new_ordinal), step
 
 
 async def messages_of_send(
@@ -138,61 +241,6 @@ async def messages_of_send(
     return await messages_from(session_factory, case_id, sent.ordinal)
 
 
-async def answer_pending_question(
-    *,
-    case_id: UUID,
-    user_id: UUID | None,
-    request: ChatMessageCreate,
-    session_factory: Callable,
-) -> tuple[list[ChatMessage], AnalysisStep | None] | None:
-    """Record the reply. None if nothing was asked.
-
-    The round's remaining questions are asked first, one at a time, so each
-    reply answers a named gap. Only when the round is spent does the case cost
-    another analysis.
-    """
-
-    async with session_factory() as db, db.begin():
-        try:
-            case = await owned_case(db, case_id, user_id)
-        except CaseWorkflowError as error:
-            raise CaseChatError(error.code, error.message, error.status_code) from error
-        question = await pending_question(db, case.id)
-        if question is None:
-            return None
-        answer = answer_message(
-            case_id=case.id,
-            ordinal=await next_ordinal(db, case.id),
-            content=request.content.strip(),
-            question=question,
-            client_request_id=request.client_request_id,
-        )
-        db.add(answer)
-        await db.flush()
-        # The reply is conversation. It does not revise the case material, so
-        # source_revision does not move and the analysis already running over
-        # this case is not invalidated by someone answering a question.
-        first_new_ordinal = answer.ordinal
-        following = await next_question_of_round(db, case_id=case.id, question=question)
-        if following is not None:
-            db.add(following)
-
-    if following is not None:
-        return await messages_from(session_factory, case_id, first_new_ordinal), None
-
-    try:
-        step = await run_case_analysis(
-            case_id=case_id,
-            user_id=user_id,
-            response_language=request.response_language,
-            session_factory=session_factory,
-            continuing_followup=True,
-        )
-    except CaseWorkflowError as error:
-        raise CaseChatError(error.code, error.message, error.status_code) from error
-    return await messages_from(session_factory, case_id, first_new_ordinal), step
-
-
 async def next_question_of_round(
     db: AsyncSession, *, case_id: UUID, question: ChatMessage
 ) -> ChatMessage | None:
@@ -206,9 +254,12 @@ async def next_question_of_round(
     result = await db.get(CaseAnalysisResult, analysis_result_id)
     if result is None:
         return None
-    trace = CaseAnalysisTrace.model_validate(result.trace_json)
+    if result.status == "assessment":
+        gaps = CaseAssessmentTrace.model_validate(result.trace_json).gaps
+    else:
+        gaps = CaseAnalysisTrace.model_validate(result.trace_json).gaps
     decision = decide_followup(
-        gaps=trace.gaps,
+        gaps=gaps,
         asked_gap_keys=await asked_gap_keys(db, case_id),
         asked_this_round=len(await asked_this_round(db, analysis_result_id)),
         rounds_spent=await rounds_asked(db, case_id),

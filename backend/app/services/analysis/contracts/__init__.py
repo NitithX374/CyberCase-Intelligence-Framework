@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from app.services.analysis.contracts.assessment import CaseAssessmentTrace
 from app.services.analysis.contracts.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
@@ -67,6 +68,7 @@ __all__ = [
     "CaseAnalysisMode",
     "CaseAnalysisOutput",
     "CaseAnalysisTrace",
+    "CaseAssessmentTrace",
     "CaseFollowupExchange",
     "CaseGroundingReport",
     "CaseClaimType",

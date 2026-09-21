@@ -137,7 +137,7 @@ def test_technical_case_accepts_all_rag_rows_without_mapping_call():
         )
         assert result.status == "retrieved_from_rag"
         assert result.retrieval_context_id == "retrieval-case-1"
-        assert result.mitre_table == list(context.mitre_table)
+        assert list(result.context.mitre_table) == list(context.mitre_table)
         assert result.associations == ()
         assert [item[0] for item in observed] == ["gate", "rag"]
 

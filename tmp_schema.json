@@ -1,0 +1,784 @@
+{
+ "case_analysis_results": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "case_id",
+    "type": "UUID",
+    "pk": false,
+    "null": false,
+    "fk": [
+     {
+      "to": "cases.id",
+      "ondelete": "CASCADE"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "source_revision",
+    "type": "INTEGER",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "schema_version",
+    "type": "VARCHAR(80)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "case_analysis_trace_v1"
+   },
+   {
+    "name": "status",
+    "type": "VARCHAR(24)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "validated"
+   },
+   {
+    "name": "answer",
+    "type": "TEXT",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "summary",
+    "type": "TEXT",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "trace_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "retrieval_context_id",
+    "type": "VARCHAR(160)",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "retrieval_context_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "pipeline_config",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "external_context_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   }
+  ],
+  "checks": [
+   "ck_case_analysis_results_status: status IN ('assessment', 'validated')"
+  ],
+  "uniques": [],
+  "idx": [
+   "ix_case_analysis_results_case_id_created_at: ['case_id', 'created_at']"
+  ]
+ },
+ "cases": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "user_id",
+    "type": "UUID",
+    "pk": false,
+    "null": true,
+    "fk": [
+     {
+      "to": "users.id",
+      "ondelete": "SET NULL"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "title",
+    "type": "VARCHAR(255)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "New case"
+   },
+   {
+    "name": "source_revision",
+    "type": "INTEGER",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "0"
+   },
+   {
+    "name": "latest_analysis_result_id",
+    "type": "UUID",
+    "pk": false,
+    "null": true,
+    "fk": [
+     {
+      "to": "case_analysis_results.id",
+      "ondelete": "SET NULL"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "updated_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   }
+  ],
+  "checks": [
+   "ck_cases_source_revision_nonnegative: source_revision >= 0"
+  ],
+  "uniques": [],
+  "idx": [
+   "ix_cases_latest_analysis_result_id: ['latest_analysis_result_id']",
+   "ix_cases_user_id: ['user_id']",
+   "ix_cases_updated_at: ['updated_at']"
+  ]
+ },
+ "chat_messages": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "case_id",
+    "type": "UUID",
+    "pk": false,
+    "null": false,
+    "fk": [
+     {
+      "to": "cases.id",
+      "ondelete": "CASCADE"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "client_request_id",
+    "type": "VARCHAR(255)",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "ordinal",
+    "type": "INTEGER",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "role",
+    "type": "VARCHAR(16)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "content",
+    "type": "TEXT",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "retrieval_context_id",
+    "type": "VARCHAR(160)",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "message_kind",
+    "type": "VARCHAR(32)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "conversation"
+   },
+   {
+    "name": "gap_key",
+    "type": "VARCHAR(160)",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "analysis_result_id",
+    "type": "UUID",
+    "pk": false,
+    "null": true,
+    "fk": [
+     {
+      "to": "case_analysis_results.id",
+      "ondelete": "SET NULL"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "in_reply_to_message_id",
+    "type": "UUID",
+    "pk": false,
+    "null": true,
+    "fk": [
+     {
+      "to": "chat_messages.id",
+      "ondelete": "SET NULL"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "metadata_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   }
+  ],
+  "checks": [
+   "ck_chat_messages_message_kind: message_kind IN ('conversation', 'followup_question', 'followup_answer')",
+   "ck_chat_messages_role: role IN ('user', 'assistant')",
+   "ck_chat_messages_ordinal_positive: ordinal > 0"
+  ],
+  "uniques": [
+   "uq_chat_messages_case_id_ordinal: ['case_id', 'ordinal']"
+  ],
+  "idx": [
+   "ix_chat_messages_in_reply_to_message_id: ['in_reply_to_message_id']",
+   "ux_chat_messages_case_id_client_request_id: ['case_id', 'client_request_id'] UNIQUE",
+   "ix_chat_messages_analysis_result_id: ['analysis_result_id']",
+   "ix_chat_messages_case_id_ordinal: ['case_id', 'ordinal']"
+  ]
+ },
+ "case_reports": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "case_id",
+    "type": "UUID",
+    "pk": false,
+    "null": false,
+    "fk": [
+     {
+      "to": "cases.id",
+      "ondelete": "CASCADE"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "analysis_result_id",
+    "type": "UUID",
+    "pk": false,
+    "null": false,
+    "fk": [
+     {
+      "to": "case_analysis_results.id",
+      "ondelete": "RESTRICT"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "version_number",
+    "type": "INTEGER",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "structured_report",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   }
+  ],
+  "checks": [
+   "ck_case_reports_version_number_positive: version_number > 0"
+  ],
+  "uniques": [
+   "uq_case_reports_analysis_result_id: ['analysis_result_id']",
+   "uq_case_reports_case_id_version_number: ['case_id', 'version_number']"
+  ],
+  "idx": [
+   "ix_case_reports_case_id_created_at: ['case_id', 'created_at']"
+  ]
+ },
+ "case_documents": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "case_id",
+    "type": "UUID",
+    "pk": false,
+    "null": false,
+    "fk": [
+     {
+      "to": "cases.id",
+      "ondelete": "CASCADE"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "filename",
+    "type": "VARCHAR(255)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "mime_type",
+    "type": "VARCHAR(160)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "size_bytes",
+    "type": "INTEGER",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "content_bytes",
+    "type": "BLOB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "archived_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   }
+  ],
+  "checks": [
+   "ck_case_documents_size_nonnegative: size_bytes >= 0"
+  ],
+  "uniques": [],
+  "idx": [
+   "ix_case_documents_case_id_created_at: ['case_id', 'created_at']"
+  ]
+ },
+ "document_extractions": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "document_id",
+    "type": "UUID",
+    "pk": false,
+    "null": false,
+    "fk": [
+     {
+      "to": "case_documents.id",
+      "ondelete": "CASCADE"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "provider",
+    "type": "VARCHAR(120)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "config_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "extracted_text",
+    "type": "TEXT",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "provenance_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "warnings_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   }
+  ],
+  "checks": [],
+  "uniques": [],
+  "idx": [
+   "ix_document_extractions_document_id_created_at: ['document_id', 'created_at']"
+  ]
+ },
+ "case_sources": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "case_id",
+    "type": "UUID",
+    "pk": false,
+    "null": false,
+    "fk": [
+     {
+      "to": "cases.id",
+      "ondelete": "CASCADE"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "source_kind",
+    "type": "VARCHAR(40)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "document_id",
+    "type": "UUID",
+    "pk": false,
+    "null": true,
+    "fk": [
+     {
+      "to": "case_documents.id",
+      "ondelete": "SET NULL"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "origin_message_id",
+    "type": "UUID",
+    "pk": false,
+    "null": true,
+    "fk": [
+     {
+      "to": "chat_messages.id",
+      "ondelete": "SET NULL"
+     }
+    ],
+    "default": null
+   },
+   {
+    "name": "exact_text",
+    "type": "TEXT",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "provenance_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "source_metadata_json",
+    "type": "JSONB",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "archived_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   }
+  ],
+  "checks": [
+   "ck_case_sources_kind: source_kind IN ('document', 'narrative', 'followup_answer')"
+  ],
+  "uniques": [],
+  "idx": [
+   "ix_case_sources_document_id: ['document_id']",
+   "ix_case_sources_case_id_created_at: ['case_id', 'created_at']",
+   "ix_case_sources_origin_message_id: ['origin_message_id']"
+  ]
+ },
+ "users": {
+  "cols": [
+   {
+    "name": "id",
+    "type": "UUID",
+    "pk": true,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "email",
+    "type": "VARCHAR(255)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "email_verified_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "verification_hash",
+    "type": "VARCHAR(64)",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "verification_expires_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "password_hash",
+    "type": "VARCHAR(512)",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "name",
+    "type": "VARCHAR(255)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "avatar_url",
+    "type": "VARCHAR(1024)",
+    "pk": false,
+    "null": true,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "oauth_provider",
+    "type": "VARCHAR(32)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "google"
+   },
+   {
+    "name": "oauth_subject_id",
+    "type": "VARCHAR(255)",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": null
+   },
+   {
+    "name": "created_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "now()"
+   },
+   {
+    "name": "updated_at",
+    "type": "DATETIME",
+    "pk": false,
+    "null": false,
+    "fk": [],
+    "default": "now()"
+   }
+  ],
+  "checks": [],
+  "uniques": [
+   "uq_users_provider_subject: ['oauth_provider', 'oauth_subject_id']",
+   "uq_users_email: ['email']"
+  ],
+  "idx": [
+   "ix_users_email: ['email']"
+  ]
+ }
+}
