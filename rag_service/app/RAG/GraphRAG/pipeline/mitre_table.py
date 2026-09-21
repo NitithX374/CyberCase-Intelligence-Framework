@@ -17,18 +17,27 @@ neighbors. Two filters are combined:
    ``MITRE_TABLE_SCORE_THRESHOLD`` are dropped; uncited graph-only entities
    (expansion neighbors) are always dropped.
 
-Both channels must describe an entity identically. The Qdrant payload is the
-*embedding* text, not a description: ingestion prepends ``"{label}: {name}. "``
-to it (``ingestion/vector_loader.py``), while Neo4j stores the raw description
-(``ingestion/graph_loader.py``). ``_normalise_description`` drops that prefix so
-a vector-sourced row and a graph-sourced row for the same technique carry the
-same text, then strips MITRE markdown noise and marks any truncation.
+Retrieval carries an entity's description and tactic unevenly, so a row must
+not take them from whichever channel happened to surface it:
+
+- The Qdrant payload is the *embedding* text, not a description: ingestion
+  prepends ``"{label}: {name}. "`` to it (``ingestion/vector_loader.py``).
+- A graph neighbour arrives with no description at all, and a graph centre
+  with one cut to 300 characters (``retrieval/graph_retriever.py``).
+- A tactic is known only when the technique's own subgraph survived the graph
+  cap, as an ``IN_TACTIC`` edge.
+
+Given an ``entity_details`` lookup, the table therefore asks Neo4j once for the
+rows it keeps and takes both fields from each entity's own node. Without one
+(offline evaluation), it falls back to what retrieval carried, with the Qdrant
+prefix dropped. Either way ``_normalise_description`` strips MITRE markdown
+noise and marks any truncation.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import Callable, Optional
 
 from pydantic import BaseModel
 
@@ -83,7 +92,7 @@ class MitreTableRow(BaseModel):
     technique_id: str = ""  # ATT&CK ID (T1566, TA0001, G0016, …); may be empty
     name: str
     entity_type: str = ""  # Technique | Subtechnique | Tactic | Group | Software | …
-    tactic: Optional[str] = None  # From IN_TACTIC graph edges, when available
+    tactic: Optional[str] = None  # Tactic names, comma-joined when several; None if unknown
     score: Optional[float] = None  # Rerank score; None for graph-only rows
     source: str = "vector"  # "vector" | "graph"
     relevance: str = "retrieved_only"  # "cited_in_answer" | "retrieved_only"
@@ -91,10 +100,16 @@ class MitreTableRow(BaseModel):
     mitre_url: Optional[str] = None
 
 
+# stix_ids → {stix_id: {"description": str, "tactics": [name, …]}}, the shape of
+# ``GraphRetriever.entity_details``. An id with no node is simply absent.
+EntityDetailsLookup = Callable[[list[str]], dict[str, dict]]
+
+
 def build_mitre_table(
     rag_result,
     answer: str,
     score_threshold: Optional[float] = None,
+    entity_details: Optional[EntityDetailsLookup] = None,
 ) -> list[MitreTableRow]:
     """Build the filtered MITRE mapping table from raw retrieval results.
 
@@ -104,6 +119,9 @@ def build_mitre_table(
             answers keep ATT&CK IDs and English technique names, so matching
             works cross-lingually.
         score_threshold: Override for ``MITRE_TABLE_SCORE_THRESHOLD``.
+        entity_details: Lookup for each kept row's own description and
+            tactics. Called once, only with the ids of rows that survive
+            filtering and the row cap. None keeps what retrieval carried.
 
     Returns:
         Rows sorted cited-first then by score descending. Empty when there is
@@ -122,7 +140,7 @@ def build_mitre_table(
     cited_ids = {m.upper() for m in _ATTACK_ID_PATTERN.findall(answer)}
     answer_lower = answer.lower()
 
-    rows: list[MitreTableRow] = []
+    kept: list[tuple[dict, str]] = []
     for cand in candidates.values():
         cited = _is_cited(cand["technique_id"], cand["name"], cited_ids, answer_lower)
         if cited:
@@ -131,23 +149,44 @@ def build_mitre_table(
             relevance = "retrieved_only"
         else:
             continue
+        kept.append((cand, relevance))
+
+    kept.sort(key=lambda k: (k[1] != "cited_in_answer", -(k[0]["score"] or 0.0)))
+    kept = kept[:_MAX_ROWS]
+
+    details: dict[str, dict] = {}
+    if entity_details is not None and kept:
+        details = entity_details([cand["stix_id"] for cand, _ in kept if cand["stix_id"]])
+
+    rows: list[MitreTableRow] = []
+    for cand, relevance in kept:
+        node = details.get(cand["stix_id"]) if cand["stix_id"] else None
+        if node is not None:
+            # The node answered for itself: its tactics are the truth, even
+            # when there are none. The edge map is keyed by name, so a
+            # Software sharing a technique's name would borrow its tactic.
+            tactic = ", ".join(node.get("tactics") or []) or None
+            description = (
+                _normalise_description(node.get("description")) or cand["description"]
+            )
+        else:
+            tactic = tactic_by_technique.get(cand["name"])
+            description = cand["description"]
 
         rows.append(
             MitreTableRow(
                 technique_id=cand["technique_id"],
                 name=cand["name"],
                 entity_type=cand["entity_type"],
-                tactic=tactic_by_technique.get(cand["name"]),
+                tactic=tactic,
                 score=cand["score"],
                 source=cand["source"],
                 relevance=relevance,
-                description=cand["description"],
+                description=description,
                 mitre_url=_mitre_url(cand["technique_id"]),
             )
         )
-
-    rows.sort(key=lambda r: (r.relevance != "cited_in_answer", -(r.score or 0.0)))
-    return rows[:_MAX_ROWS]
+    return rows
 
 
 def _collect_candidates(rag_result) -> dict[str, dict]:
@@ -165,6 +204,7 @@ def _collect_candidates(rag_result) -> dict[str, dict]:
         existing = candidates.get(key)
         if existing is None or (existing["score"] or 0.0) < vr.score:
             candidates[key] = {
+                "stix_id": vr.stix_id or "",
                 "technique_id": md.get("attack_id", "") or "",
                 "name": name,
                 "entity_type": md.get("node_label", "") or "",
@@ -189,12 +229,14 @@ def _collect_candidates(rag_result) -> dict[str, dict]:
             key = node.stix_id or f"{node.label}:{node.name}"
             if key not in candidates:
                 candidates[key] = {
+                    "stix_id": node.stix_id or "",
                     "technique_id": node.attack_id or "",
                     "name": node.name,
                     "entity_type": node.label or "",
                     "score": None,
                     "source": "graph",
-                    # Neo4j already stores the raw description — no prefix to drop.
+                    # No prefix to drop here, but a neighbour's description is
+                    # empty and a centre's is cut to 300 — the lookup fills it.
                     "description": _normalise_description(node.description),
                 }
 
