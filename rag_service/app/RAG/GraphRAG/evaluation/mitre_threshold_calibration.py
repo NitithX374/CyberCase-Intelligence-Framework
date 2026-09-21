@@ -89,7 +89,7 @@ REPORT_STEM = "mitre_threshold_calibration"  # one report per answer variant
 
 PER_QUERY_K = 3  # retrieve_multi_quota's quota, as the agent calls it
 
-# The value each mode actually shipped with.
+# The value each mode shipped with when this was measured; single moved to 0.5 after.
 SHIPPED = {"single": 0.05, "double": 0.62}
 
 GRIDS = {
