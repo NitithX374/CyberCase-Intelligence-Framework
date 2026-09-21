@@ -38,9 +38,14 @@ class Reranker:
 
         The double application is where the "reranker saturates at 0.500" note
         in config.py came from: 0.500 was an untouched non-match and 0.731 a
-        perfect one. Ordering was never affected — sigmoid is monotonic — but
-        MITRE_TABLE_SCORE_THRESHOLD was calibrated against that compressed
-        scale and still needs recalibrating.
+        perfect one. This method's own ordering was unaffected, because sigmoid
+        is monotonic. Downstream ordering was not: ``_reweight_by_type``
+        multiplies after it, and on the compressed scale its x1.2 let almost any
+        technique outrank any relationship hit. Removing the double sigmoid
+        moved quota slots from technique nodes to relationship documents
+        (evaluation/mitre_threshold_calibration.py).
+        MITRE_TABLE_SCORE_THRESHOLD has since been recalibrated on the [0, 1]
+        scale.
         """
         if not results:
             return results

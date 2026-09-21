@@ -264,42 +264,47 @@ ATTACK_DOMAIN_FILTER = os.getenv("ATTACK_DOMAIN_FILTER", "enterprise").strip() o
 # (mmarco-mMiniLMv2 was trained on 14 mMARCO languages, Thai not included)
 RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 
-# MITRE mapping table sent to the backend: vector hits below this rerank score
-# (sigmoid [0,1] × type weight) are dropped unless the answer cites them.
+# MITRE mapping table sent to the backend: an UNCITED vector hit becomes a
+# "retrieved_only" row only if its rerank score (sigmoid [0,1] x type weight)
+# reaches this. Rows the answer cites are kept whatever they score.
 #
-# History: the 2026-07-03 calibration (threshold 0.62, "noise floor 0.600-0.607,
-# relevant 0.65-0.87") was measured while reranker.py applied sigmoid a second
-# time on top of CrossEncoder.predict()'s own sigmoid, which compressed every
-# score into [0.5, 0.731]. That double sigmoid is now removed, so those numbers
-# no longer apply. Translating the same observations back through the double
-# sigmoid puts the noise floor at ~0.03 and real signal at ~0.20 and up (both
-# after the ×1.2 Technique weight), so the cut belongs somewhere in 0.05-0.15.
-# 0.05 is the conservative end of that range: this is only the secondary noise
-# filter (answer-grounded citation is the primary one), so a false keep shows up
-# as a visible "retrieved_only" row while a false drop silently loses a real
-# technique. NOTE: reranking a Thai query directly scores near-zero across the
-# board (the DUAL_QUERY_RETRIEVAL Thai channel) — entities found only via that
-# channel will not clear any threshold.
+# 0.50 was measured by evaluation/mitre_threshold_calibration.py on the 45
+# gen_bench incidents (LLM-drafted). Cited rows bypass the cut exactly as
+# build_mitre_table lets them. Answer variant C is shown; variant A agrees.
 #
-# The sweep has since been run directly on the corrected scale: 30 real-CTI
-# cases through the served path, 201 candidates after build_mitre_table's
-# entity-only filter, scored with the same ×1.2 Technique weight.
+#   thr         uncited rows kept         P      R      F1
+#               (technique good/noise, other)
+#   0.00        11 / 75, 41              .469   .651   .529
+#   0.05        10 / 42, 19              .527   .651   .563
+#   0.50         7 /  7,  7              .610   .645   .606
+#   cited only   0 /  0,  0              .641   .637   .621
 #
-#   thr    kept   precision   recall    F1
-#   0.00    201       .299     .583    .395
-#   0.05    132       .409     .524    .460   <- current
-#   0.20     83       .530     .427    .473
-#   0.50     56       .679     .369    .478   <- best F1
-#   0.62     44       .705     .301    .422
+# Going from 0.05 to 0.50 keeps 3 fewer correct technique rows (7 of 10) and
+# drops 35 of 42 noise technique rows and 12 of 19 Software/Group/Mitigation
+# rows. It costs 1% of recall. Two alternative rules did no better at
+# separating correct rows from noise: the score divided by the sub-query's top
+# score, and the rank within the sub-query. Full tables:
+# evaluation/results/mitre_threshold_calibration_{C,A}.md.
 #
-# 0.05 is kept. F1 peaks at 0.50 but by .018 on 30 cases, which is not a real
-# difference, and buying it costs 30% of recall — 16 of the 60 correct
-# techniques that were retrieved at all. The asymmetry above still holds: an
-# extra row is visible and dismissable, a dropped one is not. Note also that
-# recall is capped at .583 here because only 60 of 103 gold ids reach the
-# candidate list in the first place; that ceiling is a retrieval problem and
-# no threshold can move it.
-MITRE_TABLE_SCORE_THRESHOLD = float(os.getenv("MITRE_TABLE_SCORE_THRESHOLD", "0.05"))
+# History:
+# - 0.62 (2026-07-03) was set while reranker.py applied sigmoid twice, which
+#   compressed scores into [0.5, 0.731].
+# - 0.05 (2026-08-15) was that value translated by hand when the double
+#   sigmoid was removed.
+# - A 2026-08-17 sweep on 30 real-CTI cases kept 0.05 because 0.50 cost 30% of
+#   recall:
+#
+#     thr    kept   precision   recall    F1
+#     0.05    132       .409     .524    .460
+#     0.50     56       .679     .369    .478
+#
+# Its commit notes that no answers had been generated yet, so it appears to
+# have filtered every row, cited ones included. Replayed that way, the gen_bench
+# incidents also lose 38% of recall between the same two values. As served,
+# they lose 1%. That sweep remains the only measurement on real CTI, and its
+# retrieval ceiling still stands: only 60 of its 103 gold ids reached the
+# candidate list, and no threshold can move that.
+MITRE_TABLE_SCORE_THRESHOLD = float(os.getenv("MITRE_TABLE_SCORE_THRESHOLD", "0.5"))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LEGACY — mmarco reranker (kept for reference / rollback)
