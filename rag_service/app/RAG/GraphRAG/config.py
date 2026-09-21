@@ -268,23 +268,26 @@ RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 # "retrieved_only" row only if its rerank score (sigmoid [0,1] x type weight)
 # reaches this. Rows the answer cites are kept whatever they score.
 #
-# 0.50 was measured by evaluation/mitre_threshold_calibration.py on the 45
-# gen_bench incidents (LLM-drafted). Cited rows bypass the cut exactly as
-# build_mitre_table lets them. Answer variant C is shown; variant A agrees.
+# 0.50 was measured by evaluation/mitre_threshold_calibration.py. Cited rows
+# bypass the cut exactly as build_mitre_table lets them.
 #
-#   thr         uncited rows kept         P      R      F1
-#               (technique good/noise, other)
-#   0.00        11 / 75, 41              .469   .651   .529
-#   0.05        10 / 42, 19              .527   .651   .563
-#   0.50         7 /  7,  7              .610   .645   .606
-#   cited only   0 /  0,  0              .641   .637   .621
+#                real CTI (100 incidents,     gen_bench (45 incidents,
+#                 answers: ablation arm M)     answers: variant C)
+#   thr           P     R     F1               P     R     F1
+#   0.05         .394  .676  .487             .527  .651  .563
+#   0.50         .439  .664  .518             .610  .645  .606
+#   cited only   .464  .661  .536             .641  .637  .621
 #
-# Going from 0.05 to 0.50 keeps 3 fewer correct technique rows (7 of 10) and
-# drops 35 of 42 noise technique rows and 12 of 19 Software/Group/Mitigation
-# rows. It costs 1% of recall. Two alternative rules did no better at
-# separating correct rows from noise: the score divided by the sub-query's top
-# score, and the rank within the sub-query. Full tables:
-# evaluation/results/mitre_threshold_calibration_{C,A}.md.
+# On both sets 0.50 beats 0.05 on F1 and costs 1-2% of recall. Two alternative
+# rules did no better: the score divided by the sub-query's top score, and the
+# rank within the sub-query.
+#
+# On real CTI the score barely tells correct uncited rows from noise: 16-25%
+# of them are correct at every cut. The threshold therefore mostly sets how
+# many retrieved_only rows appear. Over the 100 incidents:
+#   0.05 keeps 25 correct technique rows, 98 noise rows and 95 non-technique rows
+#   0.50 keeps 9, 32 and 19
+# Reports: evaluation/results/mitre_threshold_calibration_*.md.
 #
 # History:
 # - 0.62 (2026-07-03) was set while reranker.py applied sigmoid twice, which
@@ -298,12 +301,12 @@ RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 #     0.05    132       .409     .524    .460
 #     0.50     56       .679     .369    .478
 #
-# Its commit notes that no answers had been generated yet, so it appears to
-# have filtered every row, cited ones included. Replayed that way, the gen_bench
-# incidents also lose 38% of recall between the same two values. As served,
-# they lose 1%. That sweep remains the only measurement on real CTI, and its
-# retrieval ceiling still stands: only 60 of its 103 gold ids reached the
-# candidate list, and no threshold can move that.
+# That sweep ran before any answers existed, so it filtered cited rows too.
+# Replaying it that way on the 100 real-CTI incidents reproduces it: recall is
+# .560 with no cut and .508 at 0.05 (the sweep had .583 and .524). As served,
+# recall moves only from .676 to .664. Its retrieval ceiling still stands: only
+# 60 of its 103 gold ids reached the candidate list, and no threshold can move
+# that.
 MITRE_TABLE_SCORE_THRESHOLD = float(os.getenv("MITRE_TABLE_SCORE_THRESHOLD", "0.5"))
 
 # ──────────────────────────────────────────────────────────────────────────────
