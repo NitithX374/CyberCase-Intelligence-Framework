@@ -75,6 +75,7 @@ def map_rag_response(response: QueryResponse) -> dict[str, object]:
         "retrieved_context": response.context,
         "retrieval_context_id": response.retrieval_context_id,
         "mitre_table": [row.model_dump(mode="json") for row in response.mitre_table],
+        "legal_reference": response.legal_reference.model_dump(mode="json"),
         "previous_analysis": None,
     }
 

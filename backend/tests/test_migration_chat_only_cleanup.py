@@ -19,10 +19,27 @@ def test_migration_chain_is_clean_and_linear() -> None:
         "0010_foreign_key_indexes.py",
         "0011_retrieval_context_reuse.py",
         "0012_analysis_assessment_status.py",
+        "0013_retrieval_context_contract.py",
+        "0014_archive_legacy_followup_sources.py",
     ]
     baseline_source = migrations[0].read_text(encoding="utf-8")
     assert 'revision = "0001_canonical_case_system"' in baseline_source
     assert "down_revision = None" in baseline_source
+    for path in migrations:
+        source = path.read_text(encoding="utf-8")
+        revision = re.search(r'^revision = "([^"]+)"$', source, re.MULTILINE)
+        assert revision is not None
+        assert len(revision.group(1)) <= 32
+
+
+def test_retrieval_context_contract_migration_preserves_nested_mitre_data() -> None:
+    source = (BASELINE / "0013_retrieval_context_contract.py").read_text(encoding="utf-8")
+    assert 'down_revision = "0012_analysis_assessment_status"' in source
+    assert 'op.drop_column("chat_messages", "retrieval_context_id")' in source
+    assert "external_context_json = external_context_json - 'mitre_table'" in source
+    assert "external_context_json #> '{technical_augmentation,mitre_table}'" in source
+    assert "retrieval_context_json" not in source
+    assert "archived_at" not in source
 
 
 def test_baseline_declares_only_canonical_tables() -> None:

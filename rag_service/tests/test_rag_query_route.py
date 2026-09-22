@@ -1,10 +1,10 @@
 from types import SimpleNamespace
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-import pytest
-
+from RAG.legal_reference import LegalProvision, LegalReferenceResult
 from routers import rag as rag_router
 from schemas.rag import QueryResponse
 
@@ -34,6 +34,11 @@ def test_query_runs_full_agent_pipeline_without_exposing_generated_answer(
     agent = FakeRagAgent()
     app.state.rag_agent = agent
     app.state.retrieval_contexts = {}
+    legal_result = LegalReferenceResult(
+        provisions=[LegalProvision(citation="Section 1", title="Example law")],
+        provider="thanoy",
+        query_sent="incident summary",
+    )
     app.include_router(rag_router.router)
     builder_calls: list[tuple[object, str]] = []
 
@@ -43,14 +48,17 @@ def test_query_runs_full_agent_pipeline_without_exposing_generated_answer(
 
     monkeypatch.setattr(rag_router, "build_mitre_table", build_table)
 
+    async def _legal_result(_req, _query):
+        return legal_result
+
+    monkeypatch.setattr(rag_router, "_legal_reference", _legal_result)
+
     response = TestClient(app).post("/query", json={"query": "incident summary"})
 
     assert response.status_code == 200
     assert agent.query_calls == [("incident summary", False)]
     assert agent.retrieve_with_details_calls == 0
-    assert builder_calls == [
-        ({"sentinel": "raw retrieval"}, "SENTINEL_THROWAWAY_ANSWER")
-    ]
+    assert builder_calls == [({"sentinel": "raw retrieval"}, "SENTINEL_THROWAWAY_ANSWER")]
 
     payload = response.json()
     assert payload == {
@@ -58,6 +66,7 @@ def test_query_runs_full_agent_pipeline_without_exposing_generated_answer(
         "retrieval_context_id": payload["retrieval_context_id"],
         "context": "retrieved MITRE context",
         "mitre_table": [],
+        "legal_reference": legal_result.model_dump(mode="json"),
     }
     assert payload["retrieval_context_id"]
     assert "SENTINEL_THROWAWAY_ANSWER" not in response.text
@@ -69,11 +78,32 @@ def test_query_runs_full_agent_pipeline_without_exposing_generated_answer(
     assert cached["context"] == "retrieved MITRE context"
     assert cached["rag_result"] == {"sentinel": "raw retrieval"}
     assert cached["mitre_table"] == []
+    assert cached["legal_reference"] == legal_result
     assert "answer" not in cached
+
+    snapshot = TestClient(app).get(f"/retrieval-contexts/{payload['retrieval_context_id']}")
+    assert snapshot.status_code == 200
+    assert snapshot.json()["legal_reference"] == legal_result.model_dump(mode="json")
 
 
 def test_entity_lookup_is_skipped_for_an_agent_without_a_graph() -> None:
     assert rag_router._entity_details_lookup(FakeRagAgent()) is None
+
+
+def test_degraded_legal_lookup_is_saved_with_retrieved_context(monkeypatch) -> None:
+    app = FastAPI()
+    app.state.rag_agent = FakeRagAgent()
+    app.state.retrieval_contexts = {}
+    app.include_router(rag_router.router)
+    monkeypatch.setattr(rag_router, "build_mitre_table", lambda *_args, **_kwargs: [])
+
+    response = TestClient(app).post("/query", json={"query": "incident summary"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["legal_reference"]["degraded"]
+    snapshot = app.state.retrieval_contexts[payload["retrieval_context_id"]]
+    assert snapshot["legal_reference"].degraded == payload["legal_reference"]["degraded"]
 
 
 def test_entity_lookup_failure_costs_the_enrichment_not_the_request() -> None:

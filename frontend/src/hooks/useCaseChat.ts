@@ -147,7 +147,6 @@ function beingSent(
     ordinal: loaded.reduce((highest, message) => Math.max(highest, message.ordinal), 0) + 1,
     role: "user",
     content: submission.content,
-    retrieval_context_id: null,
     message_kind: "conversation",
     analysis_result_id: null,
     in_reply_to_message_id: null,

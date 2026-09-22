@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 from RAG import MitreTableRow
 from RAG.legal_reference import LegalReferenceResult
 
@@ -38,7 +37,7 @@ class QueryResponse(BaseModel):
     # service reports what may be relevant, and whether it applies is the
     # reader's judgement. Arrives empty with `degraded` set when the provider
     # is unset or unreachable, so a lookup failure cannot cost the MITRE table.
-    legal_reference: LegalReferenceResult = Field(default_factory=LegalReferenceResult)
+    legal_reference: LegalReferenceResult
 
     @field_validator("retrieval_context_id", mode="before")
     @classmethod
@@ -54,3 +53,4 @@ class RetrievalContextSnapshot(BaseModel):
     context: str
     rag_result: dict[str, Any] = Field(default_factory=dict)
     mitre_table: list[MitreTableRow] = Field(default_factory=list)
+    legal_reference: LegalReferenceResult

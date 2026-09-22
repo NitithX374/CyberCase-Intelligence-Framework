@@ -6,16 +6,16 @@ from typing import Any, Optional
 
 from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, HTTPException, Request
-
 from RAG.GraphRAG.config import MAX_CONCURRENT_QUERIES
 from RAG.GraphRAG.pipeline.mitre_table import EntityDetailsLookup, build_mitre_table
 from RAG.legal_reference import LegalReferenceResult
+from schemas.rag import QueryRequest, QueryResponse, RetrievalContextSnapshot
+
 from routers.context_store import (
     export_retrieval_context,
     load_retrieval_context,
     store_retrieval_context,
 )
-from schemas.rag import QueryRequest, QueryResponse, RetrievalContextSnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -99,14 +99,15 @@ async def query_rag(request: QueryRequest, req: Request):
             request.query,
             limiter=_get_query_limiter(req),
         )
+        legal_reference = await _legal_reference(req, request.query)
         retrieval_context_id = store_retrieval_context(
             req,
             query=request.query,
             context=agent_response.context,
             rag_result=agent_response.graphrag_result,
             mitre_table=mitre_table,
+            legal_reference=legal_reference,
         )
-        legal_reference = await _legal_reference(req, request.query)
         return QueryResponse(
             status="completed",
             retrieval_context_id=retrieval_context_id or None,

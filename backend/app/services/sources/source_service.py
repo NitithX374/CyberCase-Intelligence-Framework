@@ -111,7 +111,6 @@ class SourceService:
         text: str,
         provenance_json: dict[str, object],
         source_metadata_json: dict[str, object] | None = None,
-        origin_message_id: UUID | None = None,
     ) -> CaseSource:
         if source_kind != "narrative":
             raise SourceError("source_kind_invalid", "Unsupported native source kind")
@@ -122,7 +121,6 @@ class SourceService:
         source = CaseSource(
             case_id=case.id,
             source_kind=source_kind,
-            origin_message_id=origin_message_id,
             exact_text=normalized_text,
             provenance_json=deepcopy(provenance_json),
             source_metadata_json=source_metadata_json or {},
@@ -138,7 +136,7 @@ class SourceService:
         result = await self.db.execute(
             select(CaseSource)
             .options(selectinload(CaseSource.document))
-            .where(CaseSource.case_id == case_id)
+            .where(CaseSource.case_id == case_id, CaseSource.archived_at.is_(None))
             .order_by(CaseSource.created_at, CaseSource.id)
         )
         return list(result.scalars().unique().all())
