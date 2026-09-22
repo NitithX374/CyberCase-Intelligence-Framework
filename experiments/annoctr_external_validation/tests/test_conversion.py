@@ -1,3 +1,5 @@
+import json
+
 from experiments.annoctr_external_validation.conversion import (
     convert_annotations,
     reconstruct_sentence,
@@ -46,7 +48,7 @@ def test_aggregate_technique_and_explicit_negative_rows(tmp_path) -> None:
             "document": "doc-a",
         },
     ]
-    source.write_text("\n".join(__import__("json").dumps(row) for row in rows), encoding="utf-8")
+    source.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
     result = convert_annotations(source)
     labels = {(sample.text, sample.gold_label) for sample in result.samples}
     assert ("ReconHellcat used DNS over HTTPS for command traffic.", 1) in labels
