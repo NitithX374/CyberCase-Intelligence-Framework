@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from experiments.annoctr_external_validation.conversion import (
     BinarySample,
     ConversionResult,
@@ -11,10 +9,10 @@ from experiments.annoctr_external_validation.validation import validate_dataset
 
 def _sources() -> DatasetSources:
     return DatasetSources(
-        root=Path("."),
-        corpus_root=Path("."),
-        linking_path=Path("rows.jsonl"),
-        text_root=Path("."),
+        root=__import__("pathlib").Path("."),
+        corpus_root=__import__("pathlib").Path("."),
+        linking_path=__import__("pathlib").Path("rows.jsonl"),
+        text_root=__import__("pathlib").Path("."),
         split_documents={"train": ("train-doc",), "dev": ("dev-doc",), "test": ("test-doc",)},
         native_candidates=(),
     )
