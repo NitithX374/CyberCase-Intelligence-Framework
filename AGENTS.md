@@ -16,8 +16,10 @@ This file provides system architecture, rules, guidelines, and commands for AI c
   CASE SOURCES → MAIN ANALYSIS → DETERMINISTIC FOLLOW-UP POLICY → PRELIMINARY REPORT
                              ↘ CONDITIONAL MITRE AUGMENTATION ↗
   ```
-* **Vocabulary**: a thing the case knows is a **source** — a narrative, an extracted
-  document, or an answer to a clarification question. Do not name identifiers
+* **Vocabulary**: a persisted **Case source** is a narrative or an extracted
+  document. A clarification answer remains a user chat message; analysis can
+  reference it through follow-up history with a synthetic QA identifier. Do not
+  name identifiers
   `evidence` or `material`; "evidence" belongs in prose, not in code. The table is
   `case_sources`, the revision coordinate is `Case.source_revision`, the route is
   `/cases/{case_id}/sources`.
@@ -157,6 +159,10 @@ doppler run -- docker compose up --build
 
 ## 📝 Coding Guidelines & Standards
 
+### Modularization
+- Organize code around cohesive responsibilities and stable interfaces.
+- There is no hard source-file line-count limit. Do not split files merely to meet a 300-line target; split when it materially improves readability, testing, or ownership.
+
 ### Python & FastAPI
 1. **Async Everywhere**: Use `async def` and await async DB operations (`SQLAlchemy` or `Motor`/`Redis` calls). Never block the main FastAPI thread.
 2. **Type-Safety & Pydantic**: Ensure all incoming requests and response payloads are strictly typed using Pydantic models.
@@ -190,7 +196,7 @@ When admitted case findings describe cyber threat activity, the backend conditio
 4. **Source-Role Isolation**: The retrieved technical context is rendered strictly as an analytical appendix, never as an admitted case fact.
 
 ### Clarification Gating
-The Main Analysis emits material unresolved gaps. The backend deterministically selects at most one eligible gap and persists a focused clarification question. The reply becomes a Case source bound to that gap, and the Case is analysed again only once the round's questions are spent — a round of three costs one analysis, not three. The retired separate Gap Analysis LLM is not part of the production Case path.
+The Main Analysis emits material unresolved gaps. The backend deterministically selects at most one eligible gap and persists a focused clarification question. The reply remains a chat message bound to that gap and enters the next analysis through follow-up history; it does not move `Case.source_revision`. The Case is analysed again only once the round's questions are spent — a round of three costs one analysis, not three. The retired separate Gap Analysis LLM is not part of the production Case path.
 
 ### Backend Route Boundary
 
