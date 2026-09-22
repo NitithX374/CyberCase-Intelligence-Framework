@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from pydantic import ValidationError
 
-from app.schemas.rag import QueryResponse
+from app.schemas.rag import LegalReferenceResult, QueryResponse
 from app.services.analysis.contracts import CaseFollowupExchange, CaseMitreAssociation
 from app.services.analysis.mitre_gate import mitre_gate
 from app.services.analysis.mitre_gate.llm import (
@@ -75,6 +75,7 @@ class CaseRagContextPayload:
     retrieval_context_id: str
     context: str
     mitre_table: tuple[dict[str, object], ...]
+    legal_relevance: LegalReferenceResult
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,8 @@ class CaseMitreAugmentation:
         }
         if self.failure_code is not None:
             metadata["failure_code"] = self.failure_code
+        if self.status == "retrieved_from_rag" and self.context is not None:
+            metadata["legal_relevance"] = self.context.legal_relevance.model_dump(mode="json")
         return metadata
 
 
@@ -205,6 +208,7 @@ def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload
         retrieval_context_id=retrieval_id.strip(),
         context=context,
         mitre_table=tuple(deepcopy(normalized_rows)),
+        legal_relevance=response.legal_reference,
     )
 
 

@@ -15,7 +15,6 @@ export function message(
     message_kind: "conversation",
     analysis_result_id: null,
     metadata_json: {},
-    retrieval_context_id: null,
     created_at: "2026-09-05T00:00:00Z",
   };
 }

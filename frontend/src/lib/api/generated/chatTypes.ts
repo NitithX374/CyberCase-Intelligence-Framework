@@ -16,7 +16,6 @@ export type ChatMessageRead = {
     ordinal: number;
     role: "user" | "assistant";
     content: string;
-    retrieval_context_id: string | null;
     message_kind: "conversation" | "followup_question" | "followup_answer";
     gap_key?: string | null;
     analysis_result_id: string | null;

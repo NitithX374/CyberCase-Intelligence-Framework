@@ -83,10 +83,6 @@ class ChatMessage(Base):
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    retrieval_context_id: Mapped[str | None] = mapped_column(
-        String(160),
-        nullable=True,
-    )
     message_kind: Mapped[str] = mapped_column(
         String(32),
         nullable=False,

@@ -62,7 +62,7 @@ class QueryResponse(BaseModel):
     # Must stay in step with rag_service/app/schemas/rag.py: both models set
     # extra="forbid", so a field renamed on one side alone turns every chat
     # request into a 422 here.
-    legal_reference: LegalReferenceResult = Field(default_factory=LegalReferenceResult)
+    legal_reference: LegalReferenceResult
 
     @field_validator("retrieval_context_id", mode="before")
     @classmethod

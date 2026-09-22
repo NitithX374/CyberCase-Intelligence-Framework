@@ -31,7 +31,6 @@ class ChatMessageRead(BaseModel):
     ordinal: int
     role: MessageRole
     content: str
-    retrieval_context_id: str | None
     message_kind: MessageKind
     # Set when this message asks about one gap the analysis left open.
     gap_key: str | None = None

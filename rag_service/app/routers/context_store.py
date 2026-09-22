@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
+from RAG.legal_reference import LegalReferenceResult
 
 RETRIEVAL_CONTEXT_TTL_SECONDS = 60 * 60
 
@@ -22,9 +23,7 @@ def prune_retrieval_contexts(req: Request) -> None:
     contexts = get_retrieval_contexts(req)
     now = time.time()
     expired_ids = [
-        context_id
-        for context_id, cached in contexts.items()
-        if cached.get("expires_at", 0) <= now
+        context_id for context_id, cached in contexts.items() if cached.get("expires_at", 0) <= now
     ]
     for context_id in expired_ids:
         contexts.pop(context_id, None)
@@ -36,6 +35,7 @@ def store_retrieval_context(
     query: str,
     context: str,
     rag_result: Any,
+    legal_reference: LegalReferenceResult,
     mitre_table: list[Any] | None = None,
 ) -> str:
     if not context or rag_result is None:
@@ -49,6 +49,7 @@ def store_retrieval_context(
         "context": context,
         "rag_result": rag_result,
         "mitre_table": list(mitre_table or []),
+        "legal_reference": legal_reference,
         "created_at": now,
         "expires_at": now + RETRIEVAL_CONTEXT_TTL_SECONDS,
     }
@@ -77,4 +78,5 @@ def export_retrieval_context(req: Request, context_id: str) -> dict[str, Any] | 
         "context": cached.get("context", ""),
         "rag_result": jsonable_encoder(cached.get("rag_result") or {}),
         "mitre_table": jsonable_encoder(cached.get("mitre_table") or []),
+        "legal_reference": jsonable_encoder(cached["legal_reference"]),
     }

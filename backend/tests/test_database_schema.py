@@ -1,5 +1,6 @@
 import app.models  # noqa: F401
 from app.database import Base
+from app.schemas.chat import ChatMessageRead
 
 
 def test_schema_contains_only_product_runtime_tables() -> None:
@@ -56,6 +57,7 @@ def test_case_owns_its_analysis() -> None:
     assert messages.c["message_kind"].nullable is False
     assert "in_reply_to_message_id" in messages.c
     assert messages.c["in_reply_to_message_id"].nullable
+    assert "retrieval_context_id" not in messages.c
 
 
 def test_report_stores_content_and_nothing_else() -> None:
@@ -84,3 +86,8 @@ def test_retrieval_context_id_points_at_no_table() -> None:
 
     table = Base.metadata.tables["case_analysis_results"]
     assert table.c["retrieval_context_id"].foreign_keys == set()
+
+
+def test_chat_message_does_not_own_retrieval_identity() -> None:
+    assert "retrieval_context_id" not in Base.metadata.tables["chat_messages"].c
+    assert "retrieval_context_id" not in ChatMessageRead.model_fields
