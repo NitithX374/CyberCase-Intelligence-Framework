@@ -1,1 +1,0 @@
-"""AnnoCTR external validation experiment."""
