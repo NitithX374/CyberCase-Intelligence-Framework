@@ -1,6 +1,0 @@
-torch==2.6.0
-transformers==5.15.1
-accelerate==1.14.0
-numpy==2.3.5
-scikit-learn==1.9.0
-safetensors==0.8.0
