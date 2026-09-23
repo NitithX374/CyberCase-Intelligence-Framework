@@ -54,47 +54,48 @@ export function SourceDrawer({
         )
           onClose();
       }}
-      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-full max-w-full overflow-hidden border-l border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-ink/20 sm:w-[360px]"
+      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh w-full max-w-full overflow-hidden border-l border-line bg-surface p-0 text-ink shadow-2xl shadow-black/10 backdrop:bg-ink/20 sm:w-[400px]"
     >
       <div className="flex h-full min-h-0 flex-col">
-        <header className="flex items-start justify-between gap-4 border-b border-line p-5 sm:p-6">
-          <div className="min-w-0 space-y-2">
-            <p className="text-[11px] font-semibold tracking-[0.04em] text-ink-secondary">
-              {citationRole === "conflicting" ? "Conflicting source" : "Supporting source"}
-            </p>
-            <h2 id={titleId} className="text-base font-semibold [overflow-wrap:anywhere]">
+        <header className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 sm:px-6">
+          <div className="min-w-0 space-y-1">
+            {citationRole === "conflicting" && (
+              <span className="tag bg-critical/[0.07] text-critical">Conflicting source</span>
+            )}
+            <h2
+              id={titleId}
+              className="text-[15px] font-semibold leading-6 [overflow-wrap:anywhere]"
+            >
               <span className="sr-only">Source: </span>
               {sourceTitle}
             </h2>
-            {sourceRef.filename && <p className="text-xs text-ink-muted">{citation}</p>}
+            {sourceRef.filename && citation !== sourceTitle && (
+              <p className="text-[13px] text-ink-muted">{citation}</p>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close source"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <Icon name="close" className="h-4 w-4" />
+          <button type="button" onClick={onClose} aria-label="Close source" className="icon-btn">
+            <Icon name="close" className="h-5 w-5" />
           </button>
         </header>
         <div
-          className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6"
+          className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 sm:px-6"
           tabIndex={0}
           aria-label="Source text"
         >
           <SourceContent sourceRef={sourceRef} />
         </div>
         {onNavigateToSource && (
-          <footer className="border-t border-line px-5 py-3 sm:px-6">
+          <footer className="border-t border-line px-3 py-2.5 sm:px-4">
             <button
               type="button"
               onClick={() => {
                 onClose();
                 onNavigateToSource(sourceRef.id);
               }}
-              className="min-h-9 text-xs font-semibold text-source underline underline-offset-4 hover:text-accent-strong focus-visible:ring-2 focus-visible:ring-primary"
+              className="btn-ghost h-8 px-2.5"
             >
-              View in Materials <span aria-hidden="true">↗</span>
+              Open in Sources
+              <Icon name="chevron-right" className="h-4 w-4" />
             </button>
           </footer>
         )}
@@ -108,20 +109,18 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
   const content = sourceRef.displayContent || sourceRef.excerpt;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {pages.length > 0 ? (
         pages.map((page) => (
-          <section key={page.pageNumber} className="space-y-3">
-            <h3 className="border-b border-line pb-2 text-xs font-semibold text-ink-secondary">
-              Page {page.pageNumber}
-            </h3>
-            <p className="select-text whitespace-pre-wrap text-sm leading-7 text-ink [overflow-wrap:anywhere]">
+          <section key={page.pageNumber}>
+            <h3 className="mb-2 text-xs font-medium text-ink-muted">Page {page.pageNumber}</h3>
+            <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
               {page.text || "(No text content)"}
             </p>
           </section>
         ))
       ) : (
-        <p className="select-text whitespace-pre-wrap text-sm leading-7 text-ink [overflow-wrap:anywhere]">
+        <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
           {content || "(No text content)"}
         </p>
       )}

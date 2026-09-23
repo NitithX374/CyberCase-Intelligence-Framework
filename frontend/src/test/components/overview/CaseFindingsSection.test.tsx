@@ -73,10 +73,9 @@ describe("Grouped case findings", () => {
         ]}
       />,
     );
+    // The status is the group; the claim type is tagged on the row.
     const inference = screen.getByRole("region", { name: "Not established 1" });
-    expect(within(inference).getByRole("article")).toHaveTextContent(
-      "Not established · Analytical inference",
-    );
+    expect(within(inference).getByRole("article")).toHaveTextContent("Inference");
     expect(screen.getByRole("region", { name: "Unknown 1" })).toHaveTextContent(
       "Original finding missing",
     );

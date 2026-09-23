@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, JetBrains_Mono } from "next/font/google";
+import { Manrope, JetBrains_Mono, Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import "boxicons/css/boxicons.min.css";
 import Providers from "./providers";
@@ -10,6 +10,14 @@ const manrope = Manrope({
   display: "swap",
 });
 
+// Case material is mostly Thai. Without a Thai face it renders in whatever the
+// operating system has, which never matches Manrope's size or weight.
+const notoSansThai = Noto_Sans_Thai({
+  variable: "--font-thai",
+  subsets: ["thai"],
+  display: "swap",
+});
+
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
@@ -17,12 +25,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CyberCase Framework - Chat Workspace",
+  title: "CyberCase",
   icons: {
     icon: "/cybercase-mark.png",
     apple: "/cybercase-mark.png",
   },
-  description: "An source-bound workspace for case summarization, analysis, and guided follow-up.",
+  description: "A source-bound workspace for case summarization, analysis, and guided follow-up.",
 };
 
 export default function RootLayout({
@@ -34,7 +42,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${manrope.variable} ${jetbrainsMono.variable}`}
+      className={`${manrope.variable} ${notoSansThai.variable} ${jetbrainsMono.variable}`}
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>

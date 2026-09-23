@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { groupCaseFindings, claimTypeLabels, epistemicStatusLabels } from "@/lib/caseOverview";
+import { groupCaseFindings, claimTypeLabels } from "@/lib/caseOverview";
 import type { CaseFinding, SourceMessageRef } from "@/lib/caseOverview/types";
-import { WorkspaceSectionHeader } from "@/components/common/WorkspaceSectionHeader";
 import { SourceCitationChip } from "@/components/sources/SourceCitationChip";
 import { Icon } from "@/components/common/icons";
+import { DisclosurePanel, DisclosureToggle } from "@/components/common/Disclosure";
 
 const INITIAL_FINDINGS = 5;
 
@@ -20,71 +20,37 @@ export interface FindingSourceActions {
   activeSourceKey?: string | null;
 }
 
+/** The dot beside a group heading. Colour is reserved for what needs a look. */
+const groupDotClass: Record<string, string> = {
+  not_established: "bg-critical",
+  contradicted: "bg-critical",
+  not_confirmed: "bg-unresolved",
+  suspected: "bg-unresolved",
+  unknown: "bg-ink-disabled",
+  unknown_claim: "bg-ink-disabled",
+  reported: "bg-line-strong",
+  analytical_inference: "bg-line-strong",
+};
+
 export function FindingRow({
   finding,
+  showClaimType = false,
   ...sourceActions
-}: FindingSourceActions & { finding: CaseFinding }) {
-  const isReportedDefault =
-    finding.claimType === "reported" && finding.epistemicStatus === "reported";
-
-  const getStatusTextStyle = (status: string) => {
-    switch (status) {
-      case "not_established":
-        return "text-danger";
-      case "not_confirmed":
-      case "suspected":
-        return "text-unresolved";
-      case "contradicted":
-        return "text-critical";
-      case "reported":
-      default:
-        return "text-ink-secondary";
-    }
-  };
+}: FindingSourceActions & { finding: CaseFinding; showClaimType?: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const detailsId = `finding-${finding.id}-details`;
 
   return (
-    <article className="grid min-w-[640px] grid-cols-[10rem_minmax(0,1fr)_minmax(12rem,0.7fr)] gap-4 px-4 py-3.5 items-start hover:bg-surface-hover/30 transition-colors">
-      <div className="min-w-0 space-y-1">
-        <p className="flex flex-wrap items-baseline gap-x-1 text-[11px] leading-tight">
-          <span className={`font-semibold ${getStatusTextStyle(finding.epistemicStatus)}`}>
-            {epistemicStatusLabels[finding.epistemicStatus]}
+    <article className="py-4">
+      <p className="break-words text-[15px] leading-7 text-ink">{finding.text}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {showClaimType && finding.claimType !== "reported" && (
+          <span className="tag border border-line-strong text-ink-secondary">
+            {finding.claimType === "analytical_inference"
+              ? "Inference"
+              : claimTypeLabels[finding.claimType]}
           </span>
-          {!isReportedDefault && (
-            <>
-              <span className="text-ink-muted">{" · "}</span>
-              <span className="text-ink-muted">{claimTypeLabels[finding.claimType]}</span>
-            </>
-          )}
-        </p>
-      </div>
-      <div className="min-w-0 space-y-2">
-        <p className="break-words text-xs sm:text-sm leading-relaxed text-ink">{finding.text}</p>
-        {(finding.reasoningSummary || finding.mitreTechniques.length > 0) && (
-          <details className="group text-xs">
-            <summary className="flex min-h-6 w-fit cursor-pointer list-none items-center gap-1.5 font-medium text-ink-secondary outline-none marker:hidden hover:text-ink focus-visible:ring-1 focus-visible:ring-primary">
-              <Icon
-                name="chevron"
-                className="h-3 w-3 transition-transform duration-150 group-open:rotate-180"
-              />
-              <span>Analysis details</span>
-            </summary>
-            <div className="mt-1.5 space-y-1.5 pl-[18px]">
-              {finding.reasoningSummary && (
-                <p className="leading-relaxed text-ink-secondary">{finding.reasoningSummary}</p>
-              )}
-              {finding.mitreTechniques.length > 0 && (
-                <p className="text-[11px] leading-relaxed text-ink-muted">
-                  <span className="font-semibold text-mitre">External cyber reference: </span>
-                  {finding.mitreTechniques
-                    .map((technique) => `${technique.techniqueId} · ${technique.techniqueName}`)
-                    .join("; ")}
-                </p>
-              )}
-            </div>
-          </details>
         )}
-      </div>
-      <div className="min-w-0 space-y-1.5">
         <SourceGroup
           sources={finding.supportingSources}
           findingId={finding.id}
@@ -97,7 +63,31 @@ export function FindingRow({
           role="conflicting"
           {...sourceActions}
         />
+        {finding.mitreTechniques.map((technique) => (
+          <a
+            key={technique.techniqueId}
+            href={`#mitre-${technique.techniqueId}`}
+            title={`ATT&CK ${technique.techniqueId}`}
+            className="inline-flex h-6 items-center rounded-md px-1.5 font-mono text-xs text-mitre transition-colors hover:bg-mitre/[0.07]"
+          >
+            {technique.techniqueId}
+          </a>
+        ))}
+        {finding.reasoningSummary && (
+          <DisclosureToggle
+            label="Reasoning"
+            isOpen={isOpen}
+            onToggle={() => setIsOpen((open) => !open)}
+            controls={detailsId}
+            className="ml-auto"
+          />
+        )}
       </div>
+      {finding.reasoningSummary && isOpen && (
+        <DisclosurePanel id={detailsId} className="mt-3">
+          {finding.reasoningSummary}
+        </DisclosurePanel>
+      )}
     </article>
   );
 }
@@ -116,7 +106,7 @@ function SourceGroup({
 }) {
   if (!sources.length) return null;
   return (
-    <div className="flex flex-col items-start gap-1">
+    <>
       {sources.map((source, index) => {
         const key = `${role}-${findingId}-${source.id}-${index}`;
         return (
@@ -131,7 +121,7 @@ function SourceGroup({
           />
         );
       })}
-    </div>
+    </>
   );
 }
 
@@ -144,70 +134,69 @@ export function CaseFindingsSection({
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const groups = groupCaseFindings(findings);
 
+  if (groups.length === 0) {
+    return <p className="py-6 text-sm text-ink-muted">No findings in this analysis.</p>;
+  }
+
   return (
-    <section aria-labelledby="overview-findings-heading" className="space-y-4">
-      <WorkspaceSectionHeader
-        headingId="overview-findings-heading"
-        title="Case Findings"
-        aside={<span className="text-xs text-ink-muted">{findings.length} total</span>}
-      />
-      {groups.length === 0 ? (
-        <p className="text-sm text-ink-muted">No structured findings are available.</p>
-      ) : (
-        <div className="space-y-6">
-          {groups.map((group) => {
-            const expanded = expandedGroups.includes(group.id);
-            const canCollapse = group.collapsible && group.findings.length > INITIAL_FINDINGS;
-            const visible =
-              canCollapse && !expanded ? group.findings.slice(0, INITIAL_FINDINGS) : group.findings;
-            return (
-              <section
-                key={group.id}
-                aria-labelledby={`findings-${group.id}-heading`}
-                className="scroll-mt-5 space-y-2"
+    <div className="space-y-7 pt-6">
+      {groups.map((group) => {
+        const expanded = expandedGroups.includes(group.id);
+        const canCollapse = group.collapsible && group.findings.length > INITIAL_FINDINGS;
+        const visible =
+          canCollapse && !expanded ? group.findings.slice(0, INITIAL_FINDINGS) : group.findings;
+        // A claim's type only needs saying where the group does not already say it.
+        const showClaimType = group.id !== "reported" && group.id !== "analytical_inference";
+        return (
+          <section
+            key={group.id}
+            aria-labelledby={`findings-${group.id}-heading`}
+            className="scroll-mt-5"
+          >
+            <h3
+              id={`findings-${group.id}-heading`}
+              className="flex items-center gap-2 text-[13px] font-semibold text-ink-secondary"
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${groupDotClass[group.id] ?? "bg-line-strong"}`}
+                aria-hidden="true"
+              />
+              {group.title}{" "}
+              <span className="font-medium text-ink-muted">{group.findings.length}</span>
+            </h3>
+            <div id={`findings-${group.id}`} className="mt-1 divide-y divide-line">
+              {visible.map((finding) => (
+                <FindingRow
+                  key={finding.id}
+                  finding={finding}
+                  showClaimType={showClaimType}
+                  {...sourceActions}
+                />
+              ))}
+            </div>
+            {canCollapse && (
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={`findings-${group.id}`}
+                onClick={() =>
+                  setExpandedGroups((current) =>
+                    expanded ? current.filter((id) => id !== group.id) : [...current, group.id],
+                  )
+                }
+                className="btn-ghost -ml-3 h-8"
               >
-                <h3
-                  id={`findings-${group.id}-heading`}
-                  className={`flex items-baseline gap-2 text-sm font-semibold ${group.collapsible ? "text-ink-secondary" : "text-ink"}`}
-                >
-                  {group.title}{" "}
-                  <span className="text-xs font-normal text-ink-muted">
-                    {group.findings.length}
-                  </span>
-                </h3>
-                <div className="overflow-x-auto">
-                  <div className="grid min-w-[640px] grid-cols-[10rem_minmax(0,1fr)_minmax(12rem,0.7fr)] gap-4 border-b border-line px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-                    <span>Assessment</span>
-                    <span>Finding &amp; Details</span>
-                    <span>Source</span>
-                  </div>
-                  <div id={`findings-${group.id}`} className="divide-y divide-line/60">
-                    {visible.map((finding) => (
-                      <FindingRow key={finding.id} finding={finding} {...sourceActions} />
-                    ))}
-                  </div>
-                </div>
-                {canCollapse && (
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    aria-controls={`findings-${group.id}`}
-                    onClick={() =>
-                      setExpandedGroups((current) =>
-                        expanded ? current.filter((id) => id !== group.id) : [...current, group.id],
-                      )
-                    }
-                    className="min-h-8 text-xs font-semibold underline decoration-line-strong underline-offset-4 hover:decoration-ink focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    {expanded ? "Show fewer" : `Show all ${group.findings.length}`}{" "}
-                    {group.title.toLowerCase()}
-                  </button>
-                )}
-              </section>
-            );
-          })}
-        </div>
-      )}
-    </section>
+                {expanded ? "Show fewer" : `Show all ${group.findings.length}`}{" "}
+                <span className="sr-only">{group.title.toLowerCase()}</span>
+                <Icon
+                  name="chevron"
+                  className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                />
+              </button>
+            )}
+          </section>
+        );
+      })}
+    </div>
   );
 }

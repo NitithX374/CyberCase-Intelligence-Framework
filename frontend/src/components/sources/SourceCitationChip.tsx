@@ -2,6 +2,7 @@
 
 import type { SourceMessageRef } from "@/lib/caseOverview/types";
 import { formatSourceCitationText } from "@/lib/caseOverview/source";
+import { Icon } from "@/components/common/icons";
 
 interface SourceCitationChipProps {
   sourceRef: SourceMessageRef;
@@ -17,6 +18,7 @@ interface SourceCitationChipProps {
   onNavigateToSource?: (messageId: string) => void;
 }
 
+/** A citation, as a small chip that opens the passage it points at. */
 export function SourceCitationChip({
   sourceRef,
   sourceKey,
@@ -28,7 +30,13 @@ export function SourceCitationChip({
   // The citation text already names the file, or where the source sits in the
   // case, and the page when there is one. Nothing here needs to add to it.
   const citationText = formatSourceCitationText(sourceRef);
-  const label = citationRole === "conflicting" ? `Conflicts with ${citationText}` : citationText;
+  const isConflicting = citationRole === "conflicting";
+  const label = isConflicting ? `Conflicts with ${citationText}` : citationText;
+  const icon = sourceRef.filename
+    ? "sources"
+    : sourceRef.sourceType === "followup_response"
+      ? "reply"
+      : "narrative";
 
   return (
     <button
@@ -36,7 +44,7 @@ export function SourceCitationChip({
       aria-label={label}
       aria-expanded={isActive}
       aria-haspopup="dialog"
-      title={citationText}
+      title={label}
       onClick={(event) => {
         if (onSelect) {
           onSelect(sourceRef, event.currentTarget, sourceKey, citationRole);
@@ -44,16 +52,19 @@ export function SourceCitationChip({
           onNavigateToSource?.(sourceRef.id);
         }
       }}
-      className={`inline-flex max-w-full items-center gap-1 rounded-sm py-1 text-[11px] font-medium underline decoration-current/40 underline-offset-4 transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
-        isActive
-          ? "text-ink decoration-current"
-          : citationRole === "conflicting"
-            ? "text-unresolved hover:decoration-current"
-            : "text-ink-secondary hover:text-ink hover:decoration-current"
+      className={`inline-flex h-6 max-w-full items-center gap-1 rounded-md px-1.5 text-xs font-medium transition-colors ${
+        isConflicting
+          ? isActive
+            ? "bg-critical/15 text-critical"
+            : "bg-critical/[0.07] text-critical hover:bg-critical/15"
+          : isActive
+            ? "bg-ink text-ivory"
+            : "bg-surface-nested text-ink-secondary hover:bg-line hover:text-ink"
       }`}
     >
-      <span className="min-w-0 text-left [overflow-wrap:anywhere]">{label}</span>
-      <span aria-hidden="true">↗</span>
+      <Icon name={isConflicting ? "error" : icon} className="h-3.5 w-3.5 shrink-0 opacity-80" />
+      {isConflicting && <span className="shrink-0">Conflicts</span>}
+      <span className="min-w-0 truncate">{citationText}</span>
     </button>
   );
 }

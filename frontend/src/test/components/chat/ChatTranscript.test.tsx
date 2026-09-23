@@ -72,6 +72,7 @@ describe("ChatTranscript", () => {
     );
     expect(screen.getByText("When did the incident happen?")).toBeInTheDocument();
     expect(screen.getByText("Around two in the morning.")).toBeInTheDocument();
-    expect(screen.getByText("CyberCase · One more detail")).toBeInTheDocument();
+    // The question is marked as one, so it reads apart from the conversation.
+    expect(screen.getByText("Question")).toBeInTheDocument();
   });
 });

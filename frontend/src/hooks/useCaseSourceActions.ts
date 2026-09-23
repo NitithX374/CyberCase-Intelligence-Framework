@@ -1,37 +1,22 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import {
-  addCaseSource,
-  detectResponseLanguage,
-  getApiErrorMessage,
-  type CaseSourceRead,
-} from "@/lib/api";
-import {
-  caseQueryKeys,
-  useCaseMutations,
-  useIsCaseAnalysisRunning,
-  useStartCaseAnalysis,
-  useUploadCaseDocument,
-} from "./useCaseQueries";
+import { addCaseSource, getApiErrorMessage } from "@/lib/api";
+import { caseQueryKeys, useCaseMutations, useUploadCaseDocument } from "./useCaseQueries";
 import { useQueryClient } from "@tanstack/react-query";
-import { casePath } from "@/lib/workspaceRoutes";
 
 interface UseCaseSourceActionsOptions {
   caseId: string | null;
-  sources: CaseSourceRead[];
-  router: { push(path: string): void };
 }
 
-/** Adding case material and running the analysis over it, from the sources page. */
-export function useCaseSourceActions({ caseId, sources, router }: UseCaseSourceActionsOptions) {
+/**
+ * Adding case material from the sources page. Analyzing it is the workspace's
+ * `runAnalysis`, the same one the Analysis page uses.
+ */
+export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
   const queryClient = useQueryClient();
   const { upsertCase, updateMutation } = useCaseMutations();
   const uploadMutation = useUploadCaseDocument(caseId);
-  const analysisMutation = useStartCaseAnalysis(caseId);
-  // Read from the mutation cache, not from local state: the run belongs to the
-  // case, and the reader may start it here and watch it from the header.
-  const isAnalyzing = useIsCaseAnalysisRunning(caseId);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isAddingNarrative, setIsAddingNarrative] = useState(false);
 
@@ -76,33 +61,13 @@ export function useCaseSourceActions({ caseId, sources, router }: UseCaseSourceA
     [caseId, isAddingNarrative, queryClient, updateMutation, upsertCase],
   );
 
-  const analyze = useCallback(async () => {
-    if (!caseId || isAnalyzing) return;
-    setActionError(null);
-    try {
-      const step = await analysisMutation.mutateAsync({
-        response_language: detectResponseLanguage(
-          sources.map((source) => source.exact_text).join("\n"),
-        ),
-      });
-      // The analysis paused to ask something. The question is in the chat,
-      // which the workspace opens itself, so stay where the reader is.
-      if (step.status === "need_followup") return;
-      router.push(casePath(caseId, "analysis"));
-    } catch (error) {
-      setActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
-    }
-  }, [analysisMutation, caseId, isAnalyzing, router, sources]);
-
   return {
     actionError,
     clearActionError: () => setActionError(null),
     isUploadingDocument: uploadMutation.isPending,
     uploadingFilename: uploadMutation.isPending ? (uploadMutation.variables?.name ?? null) : null,
     isAddingNarrative,
-    isAnalyzing,
     uploadDocument,
     addNarrative,
-    analyze,
   };
 }

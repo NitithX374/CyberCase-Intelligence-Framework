@@ -6,10 +6,13 @@ import type { CaseRead } from "@/lib/api";
 export interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
-  description: string;
+  description?: string;
   confirmLabel: string;
   confirmLoadingLabel?: string;
+  cancelLabel?: string;
   isProcessing?: boolean;
+  /** A destructive action gets a red confirm button. */
+  tone?: "danger" | "neutral";
   onCancel: () => void;
   onConfirm: () => void;
   titleId?: string;
@@ -22,7 +25,9 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   confirmLoadingLabel,
+  cancelLabel = "Cancel",
   isProcessing = false,
+  tone = "neutral",
   onCancel,
   onConfirm,
   titleId = "confirm-dialog-title",
@@ -55,34 +60,38 @@ export function ConfirmDialog({
     <dialog
       ref={dialogRef}
       aria-labelledby={titleId}
-      aria-describedby={descriptionId}
+      aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
         event.preventDefault();
         if (!isProcessing) onCancel();
       }}
-      className="m-auto max-w-md rounded-lg border border-line bg-surface p-6 text-ink shadow-xl shadow-black/10 backdrop:bg-primary/35 backdrop:backdrop-blur-[1px]"
+      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-line bg-surface p-6 text-ink shadow-2xl shadow-black/10 backdrop:bg-ink/30"
     >
-      <h2 id={titleId} className="text-base font-bold tracking-tight">
+      <h2 id={titleId} className="text-base font-semibold tracking-tight">
         {title}
       </h2>
-      <p id={descriptionId} className="mt-2 text-xs leading-relaxed text-ink-secondary">
-        {description}
-      </p>
-      <div className="mt-5 flex flex-wrap justify-end gap-2.5">
+      {description && (
+        <p id={descriptionId} className="mt-1.5 text-sm leading-6 text-ink-secondary">
+          {description}
+        </p>
+      )}
+      <div className="mt-6 flex flex-wrap justify-end gap-2">
         <button
           ref={cancelButtonRef}
           type="button"
           disabled={isProcessing}
           onClick={onCancel}
-          className="inline-flex min-h-8.5 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-xs font-bold text-ink outline-none transition-colors hover:border-ink hover:bg-surface-hover active:bg-control-disabled focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+          className="btn-ghost"
         >
-          Cancel
+          {cancelLabel}
         </button>
         <button
           type="button"
           disabled={isProcessing}
           onClick={onConfirm}
-          className="inline-flex min-h-8.5 items-center justify-center rounded-lg bg-accent px-3.5 text-xs font-bold text-ivory outline-none transition-colors hover:bg-accent-strong focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:bg-stone disabled:text-ink-disabled"
+          className={`btn-primary disabled:cursor-wait ${
+            tone === "danger" ? "bg-critical hover:bg-critical/90 active:bg-critical" : ""
+          }`}
         >
           {isProcessing ? (confirmLoadingLabel ?? confirmLabel) : confirmLabel}
         </button>
@@ -108,10 +117,11 @@ export function DeleteCaseDialog({
     <ConfirmDialog
       isOpen={Boolean(caseRecord)}
       title="Delete this case?"
-      description={`This will permanently remove ${caseRecord?.title ?? "this case"}, its message history, retrieval contexts, and reports. This action cannot be undone.`}
+      description={`“${caseRecord?.title ?? "This case"}” and its sources, chat and reports will be permanently deleted.`}
       confirmLabel="Delete case"
-      confirmLoadingLabel="Deleting..."
+      confirmLoadingLabel="Deleting…"
       isProcessing={isDeleting}
+      tone="danger"
       onCancel={onCancel}
       onConfirm={onConfirm}
       titleId="delete-chat-title"
@@ -137,7 +147,6 @@ export function SignOutDialog({
     <ConfirmDialog
       isOpen={isOpen}
       title="Sign out of CyberCase?"
-      description="Are you sure you want to sign out? You will need to sign in again to access your cases, saved drafts, and analytical context."
       confirmLabel="Sign out"
       confirmLoadingLabel="Signing out…"
       isProcessing={isSigningOut}

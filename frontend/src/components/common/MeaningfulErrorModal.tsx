@@ -98,17 +98,16 @@ export function MeaningfulErrorModal({
         aria-modal="true"
         aria-labelledby="meaningful-error-title"
         aria-describedby="meaningful-error-message"
-        className="relative w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl shadow-black/10"
       >
-        {/* Header with small oxblood icon */}
         <div className="flex items-start gap-3.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-critical/[0.08] text-critical">
             <Icon name="error" className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1 pt-0.5">
             <h2
               id="meaningful-error-title"
-              className="text-base font-bold tracking-tight text-ink sm:text-lg"
+              className="text-base font-semibold tracking-tight text-ink"
             >
               {error.title}
             </h2>
@@ -123,48 +122,33 @@ export function MeaningfulErrorModal({
           </button>
         </div>
 
-        {/* Plain Language Message */}
         <div className="mt-3.5 pl-12.5">
-          <p
-            id="meaningful-error-message"
-            className="text-xs leading-relaxed text-ink-secondary sm:text-sm"
-          >
+          <p id="meaningful-error-message" className="text-sm leading-6 text-ink-secondary">
             {error.message}
           </p>
 
-          {/* Collapsible Technical Details (Debug/Support) */}
           {error.technicalDetail && (
             <div className="mt-4">
-              <details className="group rounded border border-line/60 bg-surface-nested/30 px-3 py-2 text-xs">
+              <details className="group rounded-lg bg-surface-nested px-3 py-2 text-xs">
                 <summary className="cursor-pointer font-medium text-ink-muted transition-colors hover:text-ink select-none flex items-center justify-between">
                   <span>Technical details</span>
                   <span className="text-[10px] transition-transform duration-200 group-open:rotate-180">
                     ▾
                   </span>
                 </summary>
-                <div className="mt-2 pt-2 border-t border-line/40 font-mono text-[11px] text-ink-secondary break-all select-text whitespace-pre-wrap">
+                <div className="mt-2 border-t border-line pt-2 font-mono text-xs text-ink-secondary break-all select-text whitespace-pre-wrap">
                   {error.technicalDetail}
                 </div>
               </details>
             </div>
           )}
 
-          {/* Footer Actions */}
           <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded border border-line bg-surface px-4 py-2 text-xs font-semibold text-ink transition-colors hover:bg-surface-hover active:bg-surface-nested focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
+            <button type="button" onClick={onClose} className="btn-ghost">
               ปิด
             </button>
             {error.retryable && onRetry && (
-              <button
-                type="button"
-                data-autofocus="true"
-                onClick={onRetry}
-                className="rounded bg-primary px-4 py-2 text-xs font-bold text-ivory transition-colors hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
+              <button type="button" data-autofocus="true" onClick={onRetry} className="btn-primary">
                 {error.actionLabel ?? "ลองอีกครั้ง"}
               </button>
             )}

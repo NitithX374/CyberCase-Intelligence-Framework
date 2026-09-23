@@ -22,21 +22,22 @@ const sampleCase: CaseRead = {
   updated_at: "2026-09-14T08:10:00Z",
 };
 
+/** The decorative dot on the Analysis tab, if there is one. */
+function analysisDot() {
+  return screen.getByRole("tab", { name: "Analysis" }).querySelector('[aria-hidden="true"]');
+}
+
 describe("WorkspaceHeader", () => {
-  it("keeps both route meanings and runs the analysis from here", () => {
+  it("keeps every route meaning, and leaves Analyze to the pages", () => {
     const onViewChange = vi.fn();
-    const onAnalyze = vi.fn();
 
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
         activeView="analysis"
         creatingCase={false}
-        hasAnalysis
-        canAnalyze
         isAnalyzing={false}
         isStale={false}
-        onAnalyze={onAnalyze}
         onViewChange={onViewChange}
         onNewCase={vi.fn()}
         isChatOpen={false}
@@ -45,72 +46,73 @@ describe("WorkspaceHeader", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Payment Review" })).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
     expect(screen.getByRole("tab", { name: "Analysis" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: "Open Ask" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Sources" }));
     expect(onViewChange).toHaveBeenCalledWith("sources");
+    fireEvent.click(screen.getByRole("tab", { name: "Legal" }));
+    expect(onViewChange).toHaveBeenCalledWith("legal");
 
-    // The analysis moved here from the sources rail, so every view can start it.
-    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
-    expect(onAnalyze).toHaveBeenCalledOnce();
+    // Analyze sits under the sources and beside the result, where it is the
+    // next step; an up-to-date analysis puts no dot on its tab.
+    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
+    expect(analysisDot()).toBeNull();
   });
 
-  it("will not analyse a case with nothing to analyse", () => {
+  it("marks the Analysis tab when the analysis is behind the sources", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="analysis"
+        activeView="sources"
         creatingCase={false}
-        hasAnalysis={false}
-        canAnalyze={false}
-        isAnalyzing={false}
-        isStale={false}
-        onAnalyze={vi.fn()}
-        onViewChange={vi.fn()}
-        onNewCase={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
-  });
-
-  it("says so when the analysis is behind the material", () => {
-    render(
-      <WorkspaceHeader
-        activeCase={sampleCase}
-        activeView="analysis"
-        creatingCase={false}
-        hasAnalysis
-        canAnalyze
         isAnalyzing={false}
         isStale
-        onAnalyze={vi.fn()}
         onViewChange={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: "Analyze latest" })).toBeInTheDocument();
+    expect(analysisDot()).toHaveClass("bg-unresolved");
   });
 
-  it("shows the running state while follow-up analysis is in flight", () => {
+  it("marks the Analysis tab while an analysis runs, without renaming it", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
-        activeView="analysis"
+        activeView="sources"
         creatingCase={false}
-        hasAnalysis
-        canAnalyze
         isAnalyzing
         isStale
-        onAnalyze={vi.fn()}
         onViewChange={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );
+    expect(analysisDot()).toHaveClass("bg-accent");
+  });
 
-    expect(screen.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
-    expect(screen.getAllByText("Analysing")).toHaveLength(2);
+  it("keeps the case library and a new case behind the account menu", () => {
+    const onNewCase = vi.fn();
+    render(
+      <WorkspaceHeader
+        activeCase={sampleCase}
+        activeView="analysis"
+        creatingCase={false}
+        isAnalyzing={false}
+        isStale={false}
+        onViewChange={vi.fn()}
+        onNewCase={onNewCase}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "New case" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open account menu" }));
+    // The logo and the menu item both lead back to the library.
+    const libraryLinks = screen.getAllByRole("link", { name: "All cases" });
+    expect(libraryLinks).toHaveLength(2);
+    libraryLinks.forEach((link) => expect(link).toHaveAttribute("href", "/case"));
+    fireEvent.click(screen.getByRole("button", { name: "New case" }));
+    expect(onNewCase).toHaveBeenCalledOnce();
   });
 });
 
@@ -121,11 +123,8 @@ describe("renaming a case from the header", () => {
         activeCase={sampleCase}
         activeView="analysis"
         creatingCase={false}
-        hasAnalysis
-        canAnalyze
         isAnalyzing={false}
         isStale={false}
-        onAnalyze={vi.fn()}
         onViewChange={vi.fn()}
         onNewCase={vi.fn()}
         onRenameCase={onRenameCase}
@@ -184,11 +183,8 @@ describe("renaming a case from the header", () => {
         activeCase={sampleCase}
         activeView="analysis"
         creatingCase={false}
-        hasAnalysis
-        canAnalyze
         isAnalyzing={false}
         isStale={false}
-        onAnalyze={vi.fn()}
         onViewChange={vi.fn()}
         onNewCase={vi.fn()}
       />,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import {
   createCaseChatMessage,
   getApiErrorMessage,
@@ -11,7 +11,6 @@ import {
   type ChatMessageRead,
 } from "@/lib/api";
 import { caseQueryKeys } from "@/hooks/useCaseQueries";
-import { CaseAnalysisResultRead } from "@/lib/api";
 
 interface Submission {
   content: string;
@@ -25,6 +24,18 @@ export function openQuestionId(messages: ChatMessageRead[]): string | null {
   return latest && !answered.has(latest.id) ? latest.id : null;
 }
 
+export function useCaseChatMessages({ caseId }: { caseId: string | null }) {
+  return useQuery<CaseChatDetail>({
+    queryKey: caseQueryKeys.chat(caseId ?? "none"),
+    queryFn: async ({ signal }) => {
+      const response = await getCaseChat(caseId!, signal);
+      return { ...response, messages: inOrder(response.messages) };
+    },
+    enabled: Boolean(caseId),
+    retry: false,
+    staleTime: 0,
+  });
+}
 
 
 export function useCaseChat({ caseId }: { caseId: string | null }) {
@@ -38,16 +49,7 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
     setInput("");
   }
 
-  const chatQuery = useQuery<CaseChatDetail>({
-    queryKey: caseQueryKeys.chat(caseId ?? "none"),
-    queryFn: async ({ signal }) => {
-      const response = await getCaseChat(caseId!, signal);
-      return { ...response, messages: inOrder(response.messages) };
-    },
-    enabled: Boolean(caseId),
-    retry: false,
-    staleTime: 0,
-  });
+  const chatQuery = useCaseChatMessages({ caseId });
   const send = useMutation({
     mutationFn: ({ content, key }: Submission) => createCaseChatMessage(caseId!, content, key),
     onSuccess: (result) => {

@@ -62,19 +62,13 @@ describe("PersistedReportCard with Jinja2 HTML Viewer", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <PersistedReportCard
-          report={sampleReport()}
-          caseId="case-1"
-          caseTitle="Investigation"
-          isDownloading={false}
-          onDownloadPdf={vi.fn()}
-        />
+        <PersistedReportCard report={sampleReport()} caseId="case-1" caseTitle="Investigation" />
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Version 1 · Saved")).toBeInTheDocument();
-    expect(screen.getByText("Traceable report")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Download PDF" })).toBeInTheDocument();
+    // The version, its status and the download live in the report header now;
+    // the card is the document itself.
+    expect(screen.getByRole("article", { name: "Persisted report" })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByLabelText("HTML Report Viewer")).toBeInTheDocument();
@@ -94,13 +88,7 @@ describe("PersistedReportCard with Jinja2 HTML Viewer", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <PersistedReportCard
-          report={sampleReport()}
-          caseId="case-1"
-          caseTitle="Investigation"
-          isDownloading={false}
-          onDownloadPdf={vi.fn()}
-        />
+        <PersistedReportCard report={sampleReport()} caseId="case-1" caseTitle="Investigation" />
       </QueryClientProvider>,
     );
 

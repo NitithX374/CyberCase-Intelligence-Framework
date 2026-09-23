@@ -5,7 +5,7 @@ export interface CaseRouteState {
   view: WorkspaceView;
 }
 
-const VALID_WORKSPACE_VIEWS: ReadonlySet<WorkspaceView> = new Set(["sources", "analysis"]);
+const VALID_WORKSPACE_VIEWS: ReadonlySet<WorkspaceView> = new Set(["sources", "analysis", "legal"]);
 
 function decodeCaseId(segment: string): string {
   try {

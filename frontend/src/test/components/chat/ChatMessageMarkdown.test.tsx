@@ -123,13 +123,13 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
 
     // Assistant message renders Markdown (formatted bold text element)
     const boldElement = screen.getByText("assistant response");
-    expect(boldElement).toHaveClass("font-extrabold");
+    expect(boldElement).toHaveClass("font-semibold");
     expect(boldElement.tagName).toBe("STRONG");
 
-    expect(screen.getByText("Check this **user message** with `code`.").parentElement).toHaveClass(
-      "bg-primary",
-      "text-ivory",
-    );
-    expect(boldElement.closest("article")).toHaveClass("border-b", "border-line");
+    // The reader's own words sit in a bubble; the answer is plain text.
+    const userMessage = screen.getByText("Check this **user message** with `code`.");
+    expect(userMessage).toHaveClass("bg-surface-nested", "whitespace-pre-wrap");
+    expect(userMessage.querySelector("strong")).toBeNull();
+    expect(boldElement.closest("article")).not.toHaveClass("bg-surface-nested");
   });
 });

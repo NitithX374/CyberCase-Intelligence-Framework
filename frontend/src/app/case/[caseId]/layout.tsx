@@ -77,8 +77,9 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
   const closeChat = useCallback(() => setChatOpen(false), [setChatOpen]);
   const toggleChat = useCallback(() => setChatOpen(!isChatOpen), [isChatOpen, setChatOpen]);
 
-  // The analysis belongs to the case, not to one of its pages, so the header
-  // runs it and every view can see it running.
+  // The analysis belongs to the case, not to one of its pages, so the layout
+  // runs it. The pages that offer the button call it through the workspace
+  // context, and the Analysis tab shows it running from every view.
   const runAnalysis = useCallback(async () => {
     if (!caseId || isAnalysisRunning) return;
     try {
@@ -99,6 +100,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
       setChatActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
     }
   }, [caseId, isAnalysisRunning, openChat, router, sources, startAnalysis]);
+  const requestAnalysis = useCallback(() => void runAnalysis(), [runAnalysis]);
 
   const renameCase = useCallback(
     async (title: string) => {
@@ -148,11 +150,8 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
           activeCase={activeCase}
           activeView={activeView}
           creatingCase={createMutation.isPending}
-          hasAnalysis={Boolean(activeCase?.latest_analysis_result_id)}
-          canAnalyze={sources.length > 0}
           isAnalyzing={isAnalysisRunning || isFollowupPending}
           isStale={activeCase?.analysis_freshness === "stale"}
-          onAnalyze={() => void runAnalysis()}
           onViewChange={handleViewChange}
           onNewCase={handleNewCase}
           onRenameCase={(title) => void renameCase(title)}
@@ -160,7 +159,10 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
           onToggleChat={() => void toggleChat()}
         />
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
-          <WorkspaceActivityProvider isFollowupPending={isFollowupPending}>
+          <WorkspaceActivityProvider
+            isFollowupPending={isFollowupPending}
+            runAnalysis={requestAnalysis}
+          >
             {children}
           </WorkspaceActivityProvider>
         </main>

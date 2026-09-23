@@ -6,14 +6,16 @@ import {
   useCase,
   useCaseAnalysis,
   useCaseSources,
-  useStartCaseAnalysis,
+  useIsCaseAnalysisRunning,
 } from "@/hooks/useCaseQueries";
+import { useCaseChatMessages } from "@/hooks/useCaseChat";
 import { mockNativeDialog } from "./mock-native-dialog";
 import { WorkspaceActivityProvider } from "@/components/layout/WorkspaceActivityContext";
 
 mockNativeDialog();
 
 const routerPush = vi.fn();
+const runAnalysis = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPush }),
 }));
@@ -22,7 +24,11 @@ vi.mock("@/hooks/useCaseQueries", () => ({
   useCase: vi.fn(),
   useCaseAnalysis: vi.fn(),
   useCaseSources: vi.fn(),
-  useStartCaseAnalysis: vi.fn(),
+  useIsCaseAnalysisRunning: vi.fn(),
+}));
+
+vi.mock("@/hooks/useCaseChat", () => ({
+  useCaseChatMessages: vi.fn(),
 }));
 
 const caseId = "22222222-2222-4222-8222-222222222222";
@@ -159,6 +165,7 @@ interface MockOverrides {
   analysisLoading?: boolean;
   sourcesLoading?: boolean;
   followupPending?: boolean;
+  analysisRunning?: boolean;
 }
 
 function configureAndRender(overrides: MockOverrides = {}) {
@@ -196,13 +203,18 @@ function configureAndRender(overrides: MockOverrides = {}) {
     isLoading: overrides.sourcesLoading ?? false,
   } as never);
 
-  vi.mocked(useStartCaseAnalysis).mockReturnValue({
-    isPending: false,
-    mutateAsync: vi.fn(),
+  vi.mocked(useCaseChatMessages).mockReturnValue({
+    data: { case_id: id ?? "none", status: "answered", messages: [] },
+    isLoading: false,
   } as never);
 
+  vi.mocked(useIsCaseAnalysisRunning).mockReturnValue(overrides.analysisRunning ?? false);
+
   render(
-    <WorkspaceActivityProvider isFollowupPending={overrides.followupPending ?? false}>
+    <WorkspaceActivityProvider
+      isFollowupPending={overrides.followupPending ?? false}
+      runAnalysis={runAnalysis}
+    >
       <CaseOverviewView caseId={id} />
     </WorkspaceActivityProvider>,
   );
@@ -210,25 +222,26 @@ function configureAndRender(overrides: MockOverrides = {}) {
 
 beforeEach(() => {
   routerPush.mockClear();
+  runAnalysis.mockClear();
 });
 
 describe("CaseOverviewView", () => {
   it("renders the empty Case state without a selected Case", () => {
     configureAndRender({ caseId: null, analysisResult: null, sources: [] });
-    expect(screen.getByText("No Case Material Yet")).toBeInTheDocument();
+    expect(screen.getByText("No case material yet")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open sources" })).not.toBeInTheDocument();
   });
 
   it("renders the canonical Case projection and opens the exact page", () => {
     const projection = caseProjection({ page: true });
     configureAndRender({ analysisResult: projection.result, sources: projection.sources });
-    expect(screen.getByRole("heading", { name: /Executive Summary/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Case Findings/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Open Questions/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Summary" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Findings/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Open questions/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
     expect(screen.getByRole("dialog").querySelector("mark")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /View in Materials/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Open in Sources/i }));
     expect(routerPush).toHaveBeenCalled();
   });
 
@@ -245,7 +258,29 @@ describe("CaseOverviewView", () => {
     const projection = caseProjection({ stale: true });
     configureAndRender({ analysisResult: projection.result, sources: projection.sources });
     expect(screen.getByText(/Analysis is based on older sources/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Analyze latest sources/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Analyze again" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Analyze latest sources/i }));
+    expect(runAnalysis).toHaveBeenCalledOnce();
+  });
+
+  it("offers to run an up-to-date analysis again beside its status", () => {
+    const projection = caseProjection();
+    configureAndRender({ analysisResult: projection.result, sources: projection.sources });
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze again" }));
+    expect(runAnalysis).toHaveBeenCalledOnce();
+  });
+
+  it("says the analysis is being updated while a run is in flight", () => {
+    const projection = caseProjection();
+    configureAndRender({
+      analysisResult: projection.result,
+      sources: projection.sources,
+      analysisRunning: true,
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Updating the case analysis…");
+    expect(screen.queryByRole("button", { name: "Analyze again" })).not.toBeInTheDocument();
   });
 
   it("shows progress while Chat applies a follow-up answer", () => {
@@ -262,12 +297,21 @@ describe("CaseOverviewView", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("switches between Case Findings and Open Questions tabs", () => {
+  it("offers to analyze a case that has sources but no analysis yet", () => {
+    const projection = caseProjection();
+    configureAndRender({ analysisResult: null, sources: projection.sources });
+
+    expect(screen.getByRole("heading", { name: "Not analyzed yet" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    expect(runAnalysis).toHaveBeenCalledOnce();
+  });
+
+  it("switches between the Findings and Open questions tabs", () => {
     const projection = caseProjection();
     configureAndRender({ analysisResult: projection.result, sources: projection.sources });
 
-    const findingsTab = screen.getByRole("tab", { name: /Case Findings/i });
-    const questionsTab = screen.getByRole("tab", { name: /Open Questions/i });
+    const findingsTab = screen.getByRole("tab", { name: /Findings/i });
+    const questionsTab = screen.getByRole("tab", { name: /Open questions/i });
 
     expect(findingsTab).toHaveAttribute("aria-selected", "true");
     expect(questionsTab).toHaveAttribute("aria-selected", "false");

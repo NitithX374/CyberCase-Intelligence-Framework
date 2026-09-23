@@ -30,18 +30,22 @@ export default function CaseAnalysisPage() {
     if (caseId) router.push(casePath(caseId, "sources"));
   };
 
+  // Until there is an analysis the overview's own empty state is the whole
+  // page: ATT&CK context and a report are both readings of an analysis.
   return (
     <>
       <CaseOverviewView caseId={caseId} />
-      <TechnicalContextView
-        analysisResult={analysisResult}
-        sources={sourcesQuery.data ?? null}
-        onOpenSources={openSources}
-        onNavigateToSource={openSources}
-      />
-      {caseId && (
+      {analysisResult && (
+        <TechnicalContextView
+          analysisResult={analysisResult}
+          sources={sourcesQuery.data ?? null}
+          onOpenSources={openSources}
+          onNavigateToSource={openSources}
+        />
+      )}
+      {caseId && analysisResult && (
         <CaseReportView
-          key={`${caseId}:${analysisResult?.id ?? "empty"}`}
+          key={`${caseId}:${analysisResult.id}`}
           caseId={caseId}
           caseTitle={activeCase?.title || "New case"}
           analysisResult={analysisResult}
