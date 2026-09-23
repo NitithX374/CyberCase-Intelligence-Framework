@@ -6,7 +6,7 @@ import type {
   CaseSourceRead,
 } from "@/lib/api";
 import { parseCaseCitations, parseCaseSources, sourceRefs } from "@/features/sources/sourceRefs";
-import type { CaseSourceRef } from "@/features/sources/types";
+import type { CaseSourceRef, SourceMessageRef } from "@/features/sources/types";
 import type {
   CaseFinding,
   CaseGap,
@@ -70,11 +70,27 @@ export function buildCaseOverview(
   try {
     const sources = parseCaseSources(rows);
     const trace = parseCaseTrace(result, sources);
+    const findings = trace.claims.map((claim) => toFinding(claim, trace.associations, sources));
+    const backing = claimBacking(findings);
     return {
       hasAnalysis: true,
       incidentSummary: trace.summary,
-      findings: trace.claims.map((claim) => toFinding(claim, trace.associations, sources)),
+      findings,
       gaps: trace.gaps,
+      parties: (result.trace_json?.involved_parties ?? []).map(({ name, role, claim_ids }) => ({
+        name,
+        role,
+        ...backing(claim_ids),
+      })),
+      timeline: (result.trace_json?.timeline ?? []).map(({ time, event, claim_ids }) => ({
+        time,
+        event,
+        ...backing(claim_ids),
+      })),
+      impacts: (result.trace_json?.impacts ?? []).map(({ description, claim_ids }) => ({
+        description,
+        ...backing(claim_ids),
+      })),
     };
   } catch (error) {
     const reason =
@@ -84,7 +100,42 @@ export function buildCaseOverview(
 }
 
 function emptyCaseOverview(): CaseOverviewData {
-  return { hasAnalysis: false, incidentSummary: "", findings: [], gaps: [] };
+  return {
+    hasAnalysis: false,
+    incidentSummary: "",
+    findings: [],
+    gaps: [],
+    parties: [],
+    timeline: [],
+    impacts: [],
+  };
+}
+
+/**
+ * A party, a moment or an impact rests on the claims it cites, so it is shown
+ * with their sources, and marked when every one of them is an inference.
+ */
+function claimBacking(findings: CaseFinding[]) {
+  const byId = new Map(findings.map((finding) => [finding.id, finding]));
+  return (claimIds: string[] = []): { sources: SourceMessageRef[]; inferred: boolean } => {
+    const cited = claimIds.flatMap((id) => byId.get(id) ?? []);
+    const seen = new Set<string>();
+    const sources = cited
+      .flatMap((finding) => finding.supportingSources)
+      .filter((source) => {
+        // One chip per place a reader would open: two quotes from the same
+        // page would otherwise show as two identical chips.
+        const key = JSON.stringify([source.id, source.pageNumbers]);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    return {
+      sources,
+      inferred:
+        cited.length > 0 && cited.every((finding) => finding.claimType === "analytical_inference"),
+    };
+  };
 }
 
 function unavailableCaseOverview(reason: string): CaseOverviewData {

@@ -10,6 +10,7 @@ import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
 import { useSourceDrawer } from "@/features/sources/useSourceDrawer";
 import { casePath } from "@/features/workspace/routes";
 import { CaseFindingsSection } from "./CaseFindingsSection";
+import { CaseDetails } from "./CaseDetails";
 import { SourceDrawer } from "@/features/sources/SourceDrawer";
 import { AnalysisMeta } from "./AnalysisMeta";
 import { ChatMessageMarkdown } from "@/features/chat/ChatMessageMarkdown";
@@ -155,6 +156,14 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
               onReanalyze={isStale || isUpdating ? undefined : runAnalysis}
             />
           }
+        />
+
+        <CaseDetails
+          timeline={overview.timeline}
+          parties={overview.parties}
+          impacts={overview.impacts}
+          onSelectSource={handleSelectSource}
+          activeSourceKey={drawer.openKey}
         />
 
         <div className="mt-12">

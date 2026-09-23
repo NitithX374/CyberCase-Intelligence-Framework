@@ -40,11 +40,35 @@ export interface CaseGap {
   clarificationQuestion: string | null;
 }
 
+/** What a party, a moment or an impact rests on: the sources of the claims it cites. */
+interface ClaimBacked {
+  sources: SourceMessageRef[];
+  /** Every claim it cites is the analysis's own inference, none a reported fact. */
+  inferred: boolean;
+}
+
+export interface CaseParty extends ClaimBacked {
+  name: string;
+  role: string;
+}
+
+export interface CaseTimelineEvent extends ClaimBacked {
+  time: string;
+  event: string;
+}
+
+export interface CaseImpact extends ClaimBacked {
+  description: string;
+}
+
 export interface CaseOverviewData {
   hasAnalysis: boolean;
   incidentSummary: string;
   findings: CaseFinding[];
   gaps: CaseGap[];
+  parties: CaseParty[];
+  timeline: CaseTimelineEvent[];
+  impacts: CaseImpact[];
   unavailableReason?: string;
 }
 
