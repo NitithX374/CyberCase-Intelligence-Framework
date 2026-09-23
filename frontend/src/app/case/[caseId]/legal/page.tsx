@@ -1,9 +1,9 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { LegalReferenceView } from "@/components/legal/LegalReferenceView";
-import { useCaseAnalysis } from "@/hooks/useCaseQueries";
-import { casePath } from "@/lib/workspaceRoutes";
+import { LegalReferenceView } from "@/features/legal/LegalReferenceView";
+import { useCaseAnalysis } from "@/features/analysis/queries";
+import { casePath } from "@/features/workspace/routes";
 
 /**
  * The Thai provisions the RAG service returned with the analysis.

@@ -1,11 +1,13 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
-import { TechnicalContextView } from "@/components/technical-context/TechnicalContextView";
-import { CaseReportView } from "@/components/report/CaseReportView";
-import { useCase, useCaseAnalysis, useCaseSources } from "@/hooks/useCaseQueries";
-import { casePath } from "@/lib/workspaceRoutes";
+import { CaseOverviewView } from "@/features/analysis/CaseOverviewView";
+import { TechnicalContextView } from "@/features/technical-context/TechnicalContextView";
+import { CaseReportView } from "@/features/reports/CaseReportView";
+import { useCase } from "@/features/cases/queries";
+import { useCaseAnalysis } from "@/features/analysis/queries";
+import { useCaseSources } from "@/features/sources/queries";
+import { casePath } from "@/features/workspace/routes";
 
 /**
  * Everything the case analysis produced, on one page.
