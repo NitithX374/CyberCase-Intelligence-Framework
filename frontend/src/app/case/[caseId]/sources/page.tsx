@@ -1,19 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { CaseSourcesView } from "@/components/sources/CaseSourcesView";
-import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
+import { CaseSourcesView } from "@/features/sources/CaseSourcesView";
+import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { toUserFacingError } from "@/lib/userFacingError";
-import {
-  useCase,
-  useCaseDocuments,
-  useCaseSources,
-  useIsCaseAnalysisRunning,
-} from "@/hooks/useCaseQueries";
-import { useCaseChatMessages } from "@/hooks/useCaseChat";
-import { useCaseSourceActions } from "@/hooks/useCaseSourceActions";
-import { mergeCaseSourceRows } from "@/lib/caseOverview/followupSources";
-import { useWorkspaceActivity } from "@/components/layout/WorkspaceActivityContext";
+import { useCase } from "@/features/cases/queries";
+import { useCaseDocuments } from "@/features/sources/queries";
+import { useIsCaseAnalysisRunning } from "@/features/analysis/queries";
+import { useCaseSourceActions } from "@/features/sources/useCaseSourceActions";
+import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
+import { useWorkspaceActivity } from "@/features/workspace/WorkspaceActivityContext";
 
 export default function SourcesPage() {
   const params = useParams();
@@ -21,13 +17,10 @@ export default function SourcesPage() {
 
   const caseQuery = useCase(caseId ?? null);
   const documentsQuery = useCaseDocuments(caseId ?? null);
-  const sourcesQuery = useCaseSources(caseId ?? null);
-  const chatQuery = useCaseChatMessages({ caseId: caseId ?? null });
   const isAnalysisRunning = useIsCaseAnalysisRunning(caseId ?? null);
   const { isFollowupPending, runAnalysis } = useWorkspaceActivity();
 
-  const caseSources = sourcesQuery.data ?? [];
-  const sources = mergeCaseSourceRows(caseSources, chatQuery.data?.messages ?? []);
+  const { rows: sources } = useCaseSourceRows(caseId ?? null);
   const actions = useCaseSourceActions({ caseId: caseId ?? null });
 
   return (

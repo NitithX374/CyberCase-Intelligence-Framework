@@ -3,23 +3,18 @@
 import { usePathname, useRouter, useParams } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { detectResponseLanguage, getApiErrorMessage, type CaseRead } from "@/lib/api";
-import type { WorkspaceView } from "@/components/common/types";
-import {
-  useCase,
-  useCaseSources,
-  useCaseMutations,
-  useCases,
-  useIsCaseAnalysisRunning,
-  useStartCaseAnalysis,
-} from "@/hooks/useCaseQueries";
-import { casePath, caseRouteState } from "@/lib/workspaceRoutes";
-import { useCaseDeletion } from "@/hooks/useCaseDeletion";
-import { WorkspaceHeader } from "@/components/layout/WorkspaceHeader";
-import { WorkspaceChatPanel } from "@/components/chat/WorkspaceChatPanel";
-import { DeleteCaseDialog } from "@/components/common/DeleteDialog";
-import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
+import type { WorkspaceView } from "@/features/workspace/views";
+import { useCase, useCaseMutations, useCases } from "@/features/cases/queries";
+import { useCaseSources } from "@/features/sources/queries";
+import { useIsCaseAnalysisRunning, useStartCaseAnalysis } from "@/features/analysis/queries";
+import { casePath, caseRouteState } from "@/features/workspace/routes";
+import { useCaseDeletion } from "@/features/cases/useCaseDeletion";
+import { WorkspaceHeader } from "@/features/workspace/WorkspaceHeader";
+import { WorkspaceChatPanel } from "@/features/chat/WorkspaceChatPanel";
+import { DeleteCaseDialog } from "@/features/cases/DeleteCaseDialog";
+import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { toUserFacingError } from "@/lib/userFacingError";
-import { WorkspaceActivityProvider } from "@/components/layout/WorkspaceActivityContext";
+import { WorkspaceActivityProvider } from "@/features/workspace/WorkspaceActivityContext";
 
 interface CaseShellLayoutProps {
   children: ReactNode;

@@ -1,6 +1,5 @@
 import axios from "axios";
 import type {
-  AuthTokenResponse,
   CaseAnalysisCreate,
   AnalysisStepRead,
   CaseAnalysisResultRead,
@@ -13,7 +12,6 @@ import type {
   CaseReportCreate,
   CaseSourceCreate,
   CaseSourceRead,
-  DevLoginPayload,
   UserProfile,
 } from "./types";
 import type { CaseReportRead } from "./generated/reportTypes";
@@ -99,18 +97,6 @@ export const getSession = async (signal?: AbortSignal): Promise<UserProfile | nu
     signal,
     timeout: CHAT_REQUEST_TIMEOUT_MS,
   });
-  return response.data;
-};
-
-export const devLogin = async (
-  payload: DevLoginPayload,
-  signal?: AbortSignal,
-): Promise<AuthTokenResponse> => {
-  const response = await axios.post<AuthTokenResponse>(
-    `${getApiBaseUrl()}/auth/dev-login`,
-    payload,
-    { signal },
-  );
   return response.data;
 };
 
