@@ -3,9 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { Icon, type IconName } from "@/components/common/icons";
 import { SignOutDialog } from "@/components/common/DeleteDialog";
 
-export function UserProfileMenu() {
+export interface AccountMenuAction {
+  label: string;
+  icon: IconName;
+  href?: string;
+  onSelect?: () => void;
+  disabled?: boolean;
+}
+
+const itemClass =
+  "flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink transition-colors hover:bg-surface-hover disabled:cursor-wait disabled:opacity-50";
+
+export function UserProfileMenu({
+  actions = [],
+  onAction,
+}: {
+  actions?: AccountMenuAction[];
+  onAction?: () => void;
+}) {
   const { user, isLoading, logout, isLoggingOut } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
@@ -23,8 +41,8 @@ export function UserProfileMenu() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 px-1 py-1 text-xs text-ink-muted" role="status">
-        <span className="h-2 w-2 rounded-full bg-ink-muted/40 animate-pulse" />
+      <div className="flex items-center gap-2 px-2.5 py-2 text-[13px] text-ink-muted" role="status">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-ink-muted/40" />
         <span>Loading…</span>
       </div>
     );
@@ -32,43 +50,52 @@ export function UserProfileMenu() {
 
   if (!user) {
     return (
-      <Link
-        href="/login"
-        className="flex w-full items-center justify-between rounded-lg border border-line bg-surface/50 px-2.5 py-2 text-xs font-semibold text-ink transition hover:border-line-strong hover:bg-surface hover:text-accent"
-      >
+      <Link href="/login" className={itemClass}>
+        <Icon name="account" className="h-4 w-4 text-ink-muted" />
         <span>Sign in</span>
-        <span aria-hidden="true" className="text-[10px] text-ink-muted">
-          →
-        </span>
       </Link>
     );
   }
 
-  const initial = user.name
-    ? user.name.trim().charAt(0).toUpperCase()
-    : user.email
-      ? user.email.trim().charAt(0).toUpperCase()
-      : "U";
-
   return (
-    <div className="flex w-full flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <div
-            aria-hidden="true"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-ivory"
-          >
-            {initial}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-ink" title={user.name}>
-              {user.name}
-            </p>
-            <p className="truncate text-[10px] text-ink-muted" title={user.email}>
-              {user.email}
-            </p>
-          </div>
+    <div className="flex w-full flex-col">
+      <div className="min-w-0 px-2.5 pt-1.5 pb-2.5">
+        <p className="truncate text-[13px] font-semibold text-ink" title={user.name}>
+          {user.name}
+        </p>
+        <p className="truncate text-xs text-ink-muted" title={user.email}>
+          {user.email}
+        </p>
+      </div>
+
+      {actions.length > 0 && (
+        <div className="border-t border-line py-1">
+          {actions.map((action) =>
+            action.href ? (
+              <Link key={action.label} href={action.href} onClick={onAction} className={itemClass}>
+                <Icon name={action.icon} className="h-4 w-4 text-ink-muted" />
+                {action.label}
+              </Link>
+            ) : (
+              <button
+                key={action.label}
+                type="button"
+                disabled={action.disabled}
+                onClick={() => {
+                  onAction?.();
+                  action.onSelect?.();
+                }}
+                className={itemClass}
+              >
+                <Icon name={action.icon} className="h-4 w-4 text-ink-muted" />
+                {action.label}
+              </button>
+            ),
+          )}
         </div>
+      )}
+
+      <div className="border-t border-line pt-1">
         <button
           type="button"
           disabled={isLoggingOut}
@@ -76,13 +103,14 @@ export function UserProfileMenu() {
             setError(null);
             setIsSignOutDialogOpen(true);
           }}
-          className="shrink-0 rounded-md border border-line px-2 py-1 text-[10px] font-bold text-ink-secondary outline-none transition hover:border-line-strong hover:bg-surface-hover hover:text-critical focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+          className={itemClass}
         >
+          <Icon name="log-out" className="h-4 w-4 text-ink-muted" />
           {isLoggingOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
       {error && (
-        <span role="alert" className="text-[10px] text-critical">
+        <span role="alert" className="px-2.5 pb-1.5 text-xs text-critical">
           {error}
         </span>
       )}

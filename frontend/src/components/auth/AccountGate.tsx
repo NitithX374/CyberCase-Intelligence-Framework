@@ -41,30 +41,24 @@ export function AccountGate({ children }: { children: ReactNode }) {
 
   if (sessionError) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-canvas p-10 text-center text-ink">
-        <div className="max-w-md rounded-2xl border border-line bg-surface p-8 shadow-sm">
-          <p className="font-semibold text-critical">Unable to check your session.</p>
-          <p className="mt-2 text-sm text-ink-secondary">
-            We could not verify your login status with the server.
-          </p>
-          <button
-            onClick={() => void refetchSession()}
-            className="mt-6 rounded-lg bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-ivory transition hover:bg-charcoal-hover"
-          >
-            Try again
-          </button>
-        </div>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-surface p-10 text-center text-ink">
+        <p className="text-base font-semibold text-ink">Unable to check your session.</p>
+        <p className="mt-1 text-sm text-ink-muted">The server could not be reached.</p>
+        <button type="button" onClick={() => void refetchSession()} className="btn-primary mt-6">
+          Try again
+        </button>
       </main>
     );
   }
 
   if (isLoading || !user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas p-10" role="status">
-        <div className="flex items-center gap-3 text-xs font-mono tracking-widest text-ink-secondary">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          VERIFYING WORKSPACE ACCESS…
-        </div>
+      <main
+        className="flex min-h-screen items-center justify-center bg-surface p-10"
+        role="status"
+        aria-label="Checking your session"
+      >
+        <span className="h-5 w-5 animate-spin rounded-full border-2 border-line-strong border-t-ink" />
       </main>
     );
   }

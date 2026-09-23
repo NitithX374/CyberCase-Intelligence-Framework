@@ -30,7 +30,7 @@ export function formatSourceCitationText(
   if (sourceRef.isNativeSource) return sourceRef.label;
   if (sourceRef.pageNumbers.length > 0) return formatPageReference(sourceRef.pageNumbers);
   if (sourceRef.sourceType === "case_description") return "Case narrative";
-  if (sourceRef.sourceType === "followup_response") return "Follow-up";
+  if (sourceRef.sourceType === "followup_response") return "Follow-up answer";
   return sourceRef.label;
 }
 
@@ -217,7 +217,7 @@ function sourceTypeFor(kind: string): SourceMessageRef["sourceType"] {
 }
 
 function sourceTypeLabel(type: SourceMessageRef["sourceType"]): string {
-  if (type === "followup_response") return "Follow-up response";
+  if (type === "followup_response") return "Follow-up answer";
   return "Case narrative";
 }
 

@@ -2,9 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 const apiBaseUrl = "http://localhost:18000/api/v1";
 
+// A new case has no sources, so it offers the narrative straight away rather
+// than behind the rail's add menu.
 async function addCaseNarrative(page: Page, caseTitle: string, narrative: string) {
-  await page.getByRole("button", { name: "Add source" }).click();
-  await page.getByRole("menuitem", { name: "Case narrative" }).click();
+  await page.getByRole("button", { name: "Write narrative" }).click();
   await page.getByLabel(/Case title/).fill(caseTitle);
   await page.getByLabel("Narrative", { exact: true }).fill(narrative);
   await page.getByRole("button", { name: "Add narrative" }).click();
@@ -31,7 +32,7 @@ test.describe("case lifecycle", () => {
     await page
       .getByLabel("Confirm password", { exact: true })
       .fill("E2E-Playwright-Password-123!");
-    await page.getByRole("button", { name: "Create workspace" }).click();
+    await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(/\/case$/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "No saved cases yet" })).toBeVisible();
 
@@ -58,7 +59,7 @@ test.describe("case lifecycle", () => {
       .toBe("validated");
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Executive Summary" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Summary", exact: true })).toBeVisible();
     await expect(page.getByText(narrative, { exact: true })).toBeVisible();
 
     // MITRE context and the report are sections of the analysis page now.

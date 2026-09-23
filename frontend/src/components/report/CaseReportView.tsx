@@ -14,24 +14,16 @@ import { MeaningfulErrorModal } from "@/components/common/MeaningfulErrorModal";
 import { toUserFacingError, type UserFacingError } from "@/lib/userFacingError";
 import { PersistedReportCard } from "./PersistedReportCard";
 import { Icon } from "@/components/common/icons";
+import { EmptyState } from "@/components/common/EmptyState";
+import { formatDate } from "@/lib/format";
 
 interface CaseReportViewProps {
   caseId: string;
   caseTitle: string;
   analysisResult: CaseAnalysisResultRead | null;
-  /** Defaults to scrolling up to the findings, which share this page. */
-  onOpenOverview?: () => void;
 }
 
-export function CaseReportView({
-  caseId,
-  caseTitle,
-  analysisResult,
-  onOpenOverview = () =>
-    document
-      .getElementById("workspace-overview-panel")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-}: CaseReportViewProps) {
+export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReportViewProps) {
   const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const reportsQuery = useQuery({
@@ -92,74 +84,97 @@ export function CaseReportView({
       aria-label="Case report"
       className="flex shrink-0 flex-col bg-surface"
     >
-      <div className="mx-auto w-full max-w-5xl space-y-8 px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
-        <header className="border-b border-line pb-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
-                Report
-              </h2>
-              <p className="mt-1.5 max-w-2xl text-xs leading-5 text-ink-muted">
-                Each saved version remains bound to its Case Analysis Result and case source
-                revision.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenOverview}
-                className="inline-flex h-9 items-center gap-1.5 px-2 text-xs font-medium text-ink-secondary underline decoration-line-strong underline-offset-4"
-              >
-                <Icon name="overview" className="h-3.5 w-3.5" />
-                Back to findings
-              </button>
+      <div className="mx-auto w-full max-w-[52rem] px-5 pt-16 pb-16 sm:px-8">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+            <h2 className="text-base font-semibold text-ink">Report</h2>
+            {selectedReport && (
+              <>
+                <span
+                  className="tag bg-unresolved/10 text-unresolved"
+                  title="Generated from the analysis. Not yet verified by an analyst."
+                >
+                  Provisional
+                </span>
+                {reports.length > 1 ? (
+                  <label className="relative inline-flex items-center">
+                    <span className="sr-only">Report version</span>
+                    <select
+                      aria-label="Report version"
+                      value={selectedReport.report_id}
+                      onChange={(event) => setSelectedReportId(event.target.value)}
+                      className="h-7 cursor-pointer appearance-none rounded-md bg-surface-nested py-0 pr-6 pl-2 text-[13px] font-medium text-ink outline-none hover:bg-line"
+                    >
+                      {reports.map((report, index) => (
+                        <option key={report.report_id} value={report.report_id}>
+                          Version {report.version_number}
+                          {index === 0 ? " (latest)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <Icon
+                      name="chevron"
+                      className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-ink-muted"
+                    />
+                  </label>
+                ) : (
+                  <span className="text-[13px] text-ink-muted">
+                    Version {selectedReport.version_number} ·{" "}
+                    {formatDate(selectedReport.created_at, "monthDay")}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+          {selectedReport && (
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => void handleGenerate()}
                 disabled={!canGenerate}
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3.5 text-xs font-semibold text-ivory hover:bg-charcoal-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
+                title="Generate a new version from the latest analysis"
+                className="btn-ghost h-8 px-2.5"
               >
-                {generateMutation.isPending && (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ivory/40 border-t-ivory" />
-                )}
-                {generateMutation.isPending
-                  ? "Generating…"
-                  : reports.length
-                    ? "New version"
-                    : "Generate report"}
+                <Icon
+                  name={generateMutation.isPending ? "spinner" : "refresh"}
+                  className="h-4 w-4"
+                />
+                {generateMutation.isPending ? "Generating…" : "New version"}
               </button>
-            </div>
-          </div>
-          {reports.length > 1 && (
-            <div className="mt-3 border-t border-line/60 pt-2">
-              <ReportVersionSelector
-                reports={reports}
-                selectedReportId={selectedReport?.report_id ?? null}
-                onSelect={setSelectedReportId}
-              />
+              <button
+                type="button"
+                onClick={() => downloadMutation.mutate(selectedReport)}
+                disabled={downloadMutation.isPending}
+                className="btn-primary h-8 px-3"
+              >
+                <Icon
+                  name={downloadMutation.isPending ? "spinner" : "download"}
+                  className="h-4 w-4"
+                />
+                {downloadMutation.isPending ? "Preparing PDF…" : "Download PDF"}
+              </button>
             </div>
           )}
         </header>
 
         {reportsQuery.isLoading ? (
-          <div className="flex h-64 items-center justify-center border-y border-line p-6 text-xs text-ink-muted">
-            Loading Case report data…
-          </div>
+          <div
+            role="status"
+            aria-label="Loading reports"
+            className="mt-4 h-[420px] animate-pulse rounded-xl bg-surface-nested"
+          />
         ) : selectedReport ? (
           <PersistedReportCard
             key={selectedReport.report_id}
             report={selectedReport}
             caseId={caseId}
             caseTitle={caseTitle}
-            isDownloading={downloadMutation.isPending}
-            onDownloadPdf={() => downloadMutation.mutate(selectedReport)}
           />
         ) : (
           <NoSavedReport
             canGenerate={canGenerate}
             isGenerating={generateMutation.isPending}
             onGenerate={() => void handleGenerate()}
-            onOpenOverview={onOpenOverview}
           />
         )}
       </div>
@@ -187,92 +202,39 @@ function downloadPdf(blob: Blob, versionNumber: number): void {
   window.URL.revokeObjectURL(blobUrl);
 }
 
-function ReportVersionSelector({
-  reports,
-  selectedReportId,
-  onSelect,
-}: {
-  reports: CaseReport[];
-  selectedReportId: string | null;
-  onSelect: (reportId: string) => void;
-}) {
-  if (reports.length <= 1) return null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5" aria-label="Report version history">
-      <span className="mr-1 text-[10px] font-medium text-ink-muted">Versions</span>
-      {reports.map((report) => {
-        const isSelected = report.report_id === selectedReportId;
-        return (
-          <button
-            key={report.report_id}
-            type="button"
-            onClick={() => onSelect(report.report_id)}
-            className={`border-b-2 px-1 py-1 text-xs font-semibold transition-colors ${isSelected ? "border-accent text-accent" : "border-transparent text-ink-muted hover:border-line-strong hover:text-ink"}`}
-          >
-            <span>v{report.version_number}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function NoSavedReport({
   canGenerate,
   isGenerating,
   onGenerate,
-  onOpenOverview,
 }: {
   canGenerate: boolean;
   isGenerating: boolean;
   onGenerate: () => void;
-  onOpenOverview?: () => void;
 }) {
+  const available = canGenerate || isGenerating;
   return (
-    <div className="mx-auto my-8 max-w-2xl border-y border-line py-8 text-center">
-      <Icon name="report" className="mx-auto h-5 w-5 text-ink-muted" />
-      <div>
-        <h2 className="mt-3 text-base font-semibold tracking-tight text-ink sm:text-lg">
-          {canGenerate
-            ? "No Saved Report for This Case"
-            : "Case Sources Required · ยังไม่มีข้อมูลสำนวนคดี"}
-        </h2>
-        <p className="mx-auto mt-1 max-w-xl text-xs leading-relaxed text-ink-secondary">
-          {canGenerate
-            ? "A preliminary case analysis report can be compiled from submitted case material and optional external technical context when applicable."
-            : "กรุณาเพิ่มรายละเอียดสำนวนคดีในหน้า Sources เพื่อให้ระบบประมวลผลก่อนสร้างรายงานวิเคราะห์คดี"}
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-3 pt-5">
-        {canGenerate ? (
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={isGenerating}
-            className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-md"
-          >
-            {isGenerating ? (
-              <>
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ivory/30 border-t-ivory" />
-                <span>Generating report...</span>
-              </>
-            ) : (
-              <span>Generate report</span>
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpenOverview}
-            className="btn-primary inline-flex min-h-9 items-center gap-2 rounded-md"
-          >
-            <Icon name="sources" className="h-3.5 w-3.5" />
-            <span>Go to case sources · เปิดสำนวนคดี</span>
-          </button>
-        )}
-      </div>
-    </div>
+    <EmptyState
+      icon="report"
+      title="No report yet"
+      titleAs="h3"
+      description={
+        available
+          ? "Turn this analysis into a printable report."
+          : "Analyze the case before generating a report."
+      }
+      className="py-14"
+    >
+      {available && (
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={isGenerating}
+          className="btn-primary mt-5"
+        >
+          {isGenerating && <Icon name="spinner" className="h-4 w-4" />}
+          {isGenerating ? "Generating…" : "Generate report"}
+        </button>
+      )}
+    </EmptyState>
   );
 }

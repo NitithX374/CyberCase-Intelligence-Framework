@@ -1,8 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Icon } from "@/components/common/icons";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { Icon, type IconName } from "@/components/common/icons";
+import { EmptyState } from "@/components/common/EmptyState";
+import { useDismiss } from "@/hooks/useDismiss";
+import { formatBytes, formatDate, plural } from "@/lib/format";
 import {
   fetchCaseDocumentContent,
   type CaseDocumentRead,
@@ -15,6 +26,13 @@ export interface NarrativeSubmission {
   text: string;
 }
 
+/** What the rail needs to offer the analysis as the next step. */
+export interface SourcesAnalysis {
+  freshness: "missing" | "current" | "stale";
+  isRunning: boolean;
+  onAnalyze: () => void;
+}
+
 interface CaseSourcesViewProps {
   caseId: string;
   documents: CaseDocumentRead[];
@@ -24,7 +42,10 @@ interface CaseSourcesViewProps {
   isAddingNarrative: boolean;
   onUploadDocument: (file: File) => void;
   onAddNarrative: (submission: NarrativeSubmission) => Promise<boolean>;
+  analysis?: SourcesAnalysis;
 }
+
+const ACCEPTED_FILES = ".pdf,.docx,.png,.jpg,.jpeg";
 
 export function CaseSourcesView({
   caseId,
@@ -35,19 +56,24 @@ export function CaseSourcesView({
   isAddingNarrative,
   onUploadDocument,
   onAddNarrative,
+  analysis,
 }: CaseSourcesViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("original");
   const [isNarrativeOpen, setIsNarrativeOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const groups = useMemo(() => railGroups(documents, sources), [documents, sources]);
   const items = useMemo(() => groups.flatMap((group) => group.items), [groups]);
   const selected = items.find((item) => item.id === selectedId) ?? items[0] ?? null;
+  const isEmpty = items.length === 0 && !isUploading;
 
   const handleAddNarrative = async (submission: NarrativeSubmission) => {
     const added = await onAddNarrative(submission);
     if (added) setIsNarrativeOpen(false);
   };
+  const openNarrative = () => setIsNarrativeOpen(true);
+  const pickFile = () => fileInputRef.current?.click();
 
   return (
     <div
@@ -56,25 +82,43 @@ export function CaseSourcesView({
       aria-label="Case sources"
       className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface"
     >
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <SourceRail
-          groups={groups}
-          selectedId={selected?.id ?? null}
-          isUploading={isUploading}
-          uploadingFilename={uploadingFilename}
-          onSelect={setSelectedId}
-          onUploadDocument={onUploadDocument}
-          onOpenNarrative={() => setIsNarrativeOpen(true)}
-        />
+      {isEmpty ? (
+        <EmptySources onOpenNarrative={openNarrative} onPickFile={pickFile} />
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          <SourceRail
+            groups={groups}
+            selectedId={selected?.id ?? null}
+            isUploading={isUploading}
+            uploadingFilename={uploadingFilename}
+            onSelect={setSelectedId}
+            onOpenNarrative={openNarrative}
+            onPickFile={pickFile}
+            analysis={analysis}
+          />
 
-        <SourceViewport
-          caseId={caseId}
-          item={selected}
-          mode={previewMode}
-          onModeChange={setPreviewMode}
-          onOpenNarrative={() => setIsNarrativeOpen(true)}
-        />
-      </div>
+          <SourceViewport
+            caseId={caseId}
+            item={selected}
+            mode={previewMode}
+            onModeChange={setPreviewMode}
+          />
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_FILES}
+        aria-label="Add file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onUploadDocument(file);
+          event.currentTarget.value = "";
+        }}
+        className="sr-only"
+        tabIndex={-1}
+      />
 
       <NarrativeDialog
         isOpen={isNarrativeOpen}
@@ -125,9 +169,43 @@ function itemTitle(item: RailItem): string {
   return firstLine(item.source.exact_text);
 }
 
+function itemIcon(item: RailItem): IconName {
+  if (item.kind === "file") return "sources";
+  return item.kind === "followup_answer" ? "reply" : "narrative";
+}
+
 function firstLine(text: string): string {
   const line = text.trim().split("\n")[0] ?? "";
   return line.length > 80 ? `${line.slice(0, 80)}…` : line || "Untitled source";
+}
+
+function EmptySources({
+  onOpenNarrative,
+  onPickFile,
+}: {
+  onOpenNarrative: () => void;
+  onPickFile: () => void;
+}) {
+  return (
+    <EmptyState
+      icon="sources"
+      title="No sources yet"
+      description="Start with what happened, or a document."
+      className="flex-1 justify-center px-6 py-16"
+    >
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <button type="button" onClick={onOpenNarrative} className="btn-primary">
+          <Icon name="edit" className="h-4 w-4" />
+          Write narrative
+        </button>
+        <button type="button" onClick={onPickFile} className="btn-secondary">
+          <Icon name="upload" className="h-4 w-4" />
+          Upload file
+        </button>
+      </div>
+      <p className="mt-3 text-xs text-ink-muted">PDF, DOCX, PNG or JPG</p>
+    </EmptyState>
+  );
 }
 
 interface SourceRailProps {
@@ -136,8 +214,9 @@ interface SourceRailProps {
   isUploading: boolean;
   uploadingFilename?: string | null;
   onSelect: (id: string) => void;
-  onUploadDocument: (file: File) => void;
   onOpenNarrative: () => void;
+  onPickFile: () => void;
+  analysis?: SourcesAnalysis;
 }
 
 function SourceRail({
@@ -146,58 +225,86 @@ function SourceRail({
   isUploading,
   uploadingFilename,
   onSelect,
-  onUploadDocument,
   onOpenNarrative,
+  onPickFile,
+  analysis,
 }: SourceRailProps) {
   const total = groups.reduce((count, group) => count + group.items.length, 0);
   const shown = total + (isUploading ? 1 : 0);
 
   return (
-    <aside className="flex max-h-72 w-full shrink-0 flex-col border-b border-line bg-sidebar md:max-h-none md:w-64 md:border-r md:border-b-0">
-      <header className="flex min-h-12 items-center justify-between border-b border-line px-3">
-        <div>
-          <h2 className="text-xs font-semibold text-ink">Sources</h2>
-          <p className="text-[10px] text-ink-muted">
-            {shown} source{shown === 1 ? "" : "s"}
-          </p>
-        </div>
+    <aside className="flex max-h-72 w-full shrink-0 flex-col border-b border-line bg-sidebar md:max-h-none md:w-72 md:border-r md:border-b-0">
+      <header className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
+        <h2 className="flex items-baseline gap-2 text-[13px] font-semibold text-ink">
+          Sources <span className="font-medium text-ink-muted">{shown}</span>
+        </h2>
         <AddSourceMenu
           isUploading={isUploading}
-          onUploadDocument={onUploadDocument}
           onOpenNarrative={onOpenNarrative}
+          onPickFile={onPickFile}
         />
       </header>
 
-      <div className="min-h-0 flex-1 overflow-auto p-2">
-        {total === 0 && !isUploading ? (
-          <p className="px-2 py-4 text-[11px] leading-5 text-ink-muted">
-            Nothing yet. Add a case narrative or a file.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {isUploading && <UploadingItem filename={uploadingFilename} />}
-            {groups.map((group) => (
-              <section key={group.label}>
-                <h3 className="px-2 pb-1 text-[10px] font-semibold tracking-wide text-ink-muted uppercase">
-                  {group.label}
-                </h3>
-                <ul className="space-y-0.5">
-                  {group.items.map((item) => (
-                    <li key={item.id}>
-                      <RailButton
-                        item={item}
-                        selected={item.id === selectedId}
-                        onSelect={() => onSelect(item.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
+      <div className="min-h-0 flex-1 space-y-5 overflow-auto px-2 pb-4">
+        {isUploading && <UploadingItem filename={uploadingFilename} />}
+        {groups.map((group) => (
+          <section key={group.label}>
+            <h3 className="px-2 pb-1 text-xs font-medium text-ink-muted">{group.label}</h3>
+            <ul className="space-y-0.5">
+              {group.items.map((item) => (
+                <li key={item.id}>
+                  <RailButton
+                    item={item}
+                    selected={item.id === selectedId}
+                    onSelect={() => onSelect(item.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
       </div>
+
+      {analysis && <AnalyzeFooter analysis={analysis} isUploading={isUploading} />}
     </aside>
+  );
+}
+
+/**
+ * The analysis, offered where it is the next step: once the case has sources
+ * the analysis has not read. An up-to-date case has nothing to offer here, so
+ * the rail ends at its last source; running it again is on Analysis.
+ */
+function AnalyzeFooter({
+  analysis,
+  isUploading,
+}: {
+  analysis: SourcesAnalysis;
+  isUploading: boolean;
+}) {
+  const { freshness, isRunning, onAnalyze } = analysis;
+  if (freshness === "current" && !isRunning) return null;
+  const isStale = freshness === "stale";
+
+  return (
+    <div className="shrink-0 border-t border-line p-3">
+      {isStale && !isRunning && (
+        <p className="mb-2.5 flex items-center gap-2 px-1 text-xs text-ink-secondary">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-unresolved" aria-hidden="true" />
+          Sources changed since the last analysis
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={onAnalyze}
+        // An analysis started mid-upload would read the case without the file.
+        disabled={isRunning || isUploading}
+        className="btn-primary w-full"
+      >
+        {isRunning && <Icon name="spinner" className="h-4 w-4" />}
+        {isRunning ? "Analyzing…" : isStale ? "Analyze latest" : "Analyze"}
+      </button>
+    </div>
   );
 }
 
@@ -213,10 +320,10 @@ function RailButton({
   let detail: string;
   if (item.kind === "file") {
     const extraction = latestExtraction(item.document);
-    const state = item.document.archived_at ? "Archived" : extraction ? "Received" : "Pending";
-    detail = `${formatBytes(item.document.size_bytes)} · ${state}`;
+    const state = item.document.archived_at ? "Archived" : extraction ? null : "Pending";
+    detail = [formatBytes(item.document.size_bytes), state].filter(Boolean).join(" · ");
   } else {
-    detail = new Date(item.source.created_at).toLocaleDateString();
+    detail = formatDate(item.source.created_at, "day");
   }
 
   return (
@@ -224,17 +331,16 @@ function RailButton({
       type="button"
       aria-pressed={selected}
       onClick={onSelect}
-      className={`w-full rounded-md px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent ${selected ? "bg-accent-soft text-ink" : "text-ink-secondary hover:bg-surface-hover hover:text-ink"}`}
+      className={`flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
+        selected
+          ? "bg-surface text-ink shadow-xs ring-1 ring-line"
+          : "text-ink-secondary hover:bg-surface-hover hover:text-ink"
+      }`}
     >
-      <span className="flex items-start gap-2">
-        <Icon
-          name={item.kind === "file" ? "sources" : "list"}
-          className="mt-0.5 h-3.5 w-3.5 shrink-0"
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-medium">{itemTitle(item)}</span>
-          <span className="mt-0.5 block text-[10px] text-ink-muted">{detail}</span>
-        </span>
+      <Icon name={itemIcon(item)} className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium">{itemTitle(item)}</span>
+        <span className="mt-0.5 block text-xs text-ink-muted">{detail}</span>
       </span>
     </button>
   );
@@ -244,44 +350,32 @@ function UploadingItem({ filename }: { filename?: string | null }) {
   return (
     <div
       aria-live="polite"
-      className="rounded-md border border-dashed border-accent/60 bg-accent-soft px-2.5 py-2.5"
+      className="mx-0.5 flex items-start gap-2.5 rounded-lg border border-dashed border-line-strong bg-surface px-2.5 py-2"
     >
-      <span className="block truncate text-xs font-medium text-ink">
-        {filename || "Uploading file…"}
+      <Icon name="spinner" className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium text-ink">
+          {filename || "Uploading file…"}
+        </span>
+        <span className="mt-0.5 block text-xs text-ink-muted">Extracting text…</span>
       </span>
-      <span className="mt-0.5 block text-[10px] text-accent">Extracting text…</span>
     </div>
   );
 }
 
 function AddSourceMenu({
   isUploading,
-  onUploadDocument,
   onOpenNarrative,
+  onPickFile,
 }: {
   isUploading: boolean;
-  onUploadDocument: (file: File) => void;
   onOpenNarrative: () => void;
+  onPickFile: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const dismiss = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
-    document.addEventListener("mousedown", dismiss);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("mousedown", dismiss);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [isOpen]);
+  const close = useCallback(() => setIsOpen(false), []);
+  useDismiss(containerRef, isOpen, close);
 
   return (
     <div ref={containerRef} className="relative">
@@ -291,7 +385,8 @@ function AddSourceMenu({
         aria-expanded={isOpen}
         disabled={isUploading}
         onClick={() => setIsOpen((open) => !open)}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-50"
+        title="Add source"
+        className="icon-btn disabled:cursor-wait"
       >
         <Icon name="plus" className="h-4 w-4" />
         <span className="sr-only">Add source</span>
@@ -300,7 +395,7 @@ function AddSourceMenu({
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-9 z-20 w-48 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-lg shadow-black/5"
+          className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5"
         >
           <button
             type="button"
@@ -309,9 +404,9 @@ function AddSourceMenu({
               setIsOpen(false);
               onOpenNarrative();
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-ink hover:bg-surface-hover"
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover"
           >
-            <Icon name="list" className="h-3.5 w-3.5 text-ink-muted" />
+            <Icon name="narrative" className="h-4 w-4 text-ink-muted" />
             Case narrative
           </button>
           <button
@@ -319,28 +414,15 @@ function AddSourceMenu({
             role="menuitem"
             onClick={() => {
               setIsOpen(false);
-              fileInputRef.current?.click();
+              onPickFile();
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-ink hover:bg-surface-hover"
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover"
           >
-            <Icon name="sources" className="h-3.5 w-3.5 text-ink-muted" />
+            <Icon name="upload" className="h-4 w-4 text-ink-muted" />
             File
           </button>
         </div>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.docx,.png,.jpg,.jpeg"
-        aria-label="Add file"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) onUploadDocument(file);
-          event.currentTarget.value = "";
-        }}
-        className="sr-only"
-      />
     </div>
   );
 }
@@ -388,22 +470,18 @@ function NarrativeDialog({
         event.preventDefault();
         if (!isSaving) onCancel();
       }}
-      className="m-auto w-[min(40rem,calc(100vw-2rem))] rounded-lg border border-line bg-surface p-6 text-ink shadow-xl shadow-black/10 backdrop:bg-primary/35"
+      className="m-auto w-[min(38rem,calc(100vw-2rem))] rounded-2xl border border-line bg-surface p-6 text-ink shadow-2xl shadow-black/10 backdrop:bg-ink/30"
     >
       <form onSubmit={handleSubmit}>
-        <h2 id="case-narrative-title" className="text-base font-semibold tracking-tight">
+        <h2 id="case-narrative-title" className="text-lg font-semibold tracking-tight">
           Case narrative
         </h2>
-        <p className="mt-1 text-xs text-ink-secondary">
-          Describe what happened, who was involved, and the dates available. The narrative becomes a
-          case source.
-        </p>
 
         <label
           htmlFor="case-narrative-name"
-          className="mt-5 block text-xs font-medium text-ink-secondary"
+          className="mt-5 block text-[13px] font-medium text-ink"
         >
-          Case title <span className="text-ink-muted">(optional)</span>
+          Case title <span className="font-normal text-ink-muted">(optional)</span>
         </label>
         <input
           id="case-narrative-name"
@@ -411,12 +489,12 @@ function NarrativeDialog({
           onChange={(event) => setTitle(event.target.value)}
           disabled={isSaving}
           placeholder="A short name for this case"
-          className="mt-1 w-full border-b border-line bg-transparent px-0 py-2 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent disabled:text-ink-disabled"
+          className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-[15px] text-ink outline-none placeholder:text-ink-muted focus:border-ink disabled:bg-surface-nested"
         />
 
         <label
           htmlFor="case-narrative-text"
-          className="mt-4 block text-xs font-medium text-ink-secondary"
+          className="mt-4 block text-[13px] font-medium text-ink"
         >
           Narrative
         </label>
@@ -426,24 +504,16 @@ function NarrativeDialog({
           value={text}
           onChange={(event) => setText(event.target.value)}
           disabled={isSaving}
-          placeholder="Describe the incident and the material available."
-          className="mt-1 block min-h-44 w-full resize-y rounded-md border border-line bg-surface p-3 text-sm leading-6 text-ink outline-none placeholder:text-ink-muted focus:border-accent focus:ring-1 focus:ring-accent disabled:bg-surface-nested"
+          placeholder="What happened, who was involved, and when."
+          className="mt-1.5 block min-h-44 w-full resize-y rounded-lg border border-line-strong bg-surface p-3 text-[15px] leading-7 text-ink outline-none placeholder:text-ink-muted focus:border-ink disabled:bg-surface-nested"
         />
 
-        <div className="mt-5 flex justify-end gap-2.5">
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={onCancel}
-            className="h-9 rounded-md border border-line bg-surface px-3.5 text-xs font-semibold text-ink hover:bg-surface-hover disabled:cursor-not-allowed disabled:text-ink-disabled"
-          >
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" disabled={isSaving} onClick={onCancel} className="btn-ghost">
             Cancel
           </button>
-          <button
-            type="submit"
-            disabled={isSaving || !text.trim()}
-            className="h-9 rounded-md bg-primary px-3.5 text-xs font-semibold text-ivory hover:bg-charcoal-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
-          >
+          <button type="submit" disabled={isSaving || !text.trim()} className="btn-primary">
+            {isSaving && <Icon name="spinner" className="h-4 w-4" />}
             {isSaving ? "Saving…" : "Add narrative"}
           </button>
         </div>
@@ -459,52 +529,49 @@ interface SourceViewportProps {
   item: RailItem | null;
   mode: PreviewMode;
   onModeChange: (mode: PreviewMode) => void;
-  onOpenNarrative: () => void;
 }
 
-function SourceViewport({
-  caseId,
-  item,
-  mode,
-  onModeChange,
-  onOpenNarrative,
-}: SourceViewportProps) {
+function SourceViewport({ caseId, item, mode, onModeChange }: SourceViewportProps) {
   const extraction = item?.kind === "file" ? latestExtraction(item.document) : null;
+  const pageCount = extraction ? getExtractionPages(extraction).length : 0;
+
+  const subtitle = !item
+    ? null
+    : item.kind === "file"
+      ? [fileKind(item.document), pageCount > 0 ? plural(pageCount, "page") : null]
+          .filter(Boolean)
+          .join(" · ")
+      : item.kind === "followup_answer"
+        ? "Follow-up answer"
+        : "Case narrative";
 
   return (
     <section
       aria-label="Source preview"
       className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface"
     >
-      <header className="flex min-h-12 flex-wrap items-center gap-3 border-b border-line px-3 sm:px-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xs font-semibold text-ink">
+      <header className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-2 sm:px-5">
+        <div className="flex min-w-0 flex-1 basis-56 items-baseline gap-2.5">
+          <h2 className="truncate text-[14px] font-semibold text-ink">
             {item ? itemTitle(item) : "Select a source"}
           </h2>
-          {item?.kind === "file" && extraction && (
-            <p className="truncate text-[10px] text-ink-muted">{extraction.provider}</p>
-          )}
-          {item && item.kind !== "file" && (
-            <p className="truncate text-[10px] text-ink-muted">
-              {item.kind === "followup_answer" ? "Follow-up answer" : "Case narrative"}
-            </p>
-          )}
+          {subtitle && <p className="shrink-0 text-xs text-ink-muted">{subtitle}</p>}
         </div>
 
         {item?.kind === "file" && (
           <div
             role="tablist"
             aria-label="Source representation"
-            className="flex h-8 items-end gap-4"
+            className="flex h-8 items-center gap-0.5 rounded-lg bg-surface-nested p-0.5"
           >
             <PreviewTab selected={mode === "original"} onClick={() => onModeChange("original")}>
-              Original File
+              Original
             </PreviewTab>
             <PreviewTab selected={mode === "ocr"} onClick={() => onModeChange("ocr")}>
-              System OCR
+              Text
             </PreviewTab>
             <PreviewTab selected={mode === "split"} onClick={() => onModeChange("split")}>
-              Side by Side
+              Side by side
             </PreviewTab>
           </div>
         )}
@@ -512,7 +579,7 @@ function SourceViewport({
 
       <div className="min-h-0 flex-1 bg-canvas">
         {!item ? (
-          <EmptyPreview onOpenNarrative={onOpenNarrative} />
+          <ViewportMessage title="Select a source to read it." />
         ) : item.kind !== "file" ? (
           <TextSourcePreview source={item.source} />
         ) : mode === "original" ? (
@@ -550,24 +617,37 @@ function PreviewTab({
       aria-selected={selected}
       tabIndex={selected ? 0 : -1}
       onClick={onClick}
-      className={`h-full border-b-2 px-0.5 text-[11px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent ${selected ? "border-accent text-accent" : "border-transparent text-ink-muted hover:text-ink"}`}
+      className={`h-7 rounded-md px-2.5 text-[13px] font-medium transition-colors ${
+        selected ? "bg-surface text-ink shadow-xs" : "text-ink-muted hover:text-ink"
+      }`}
     >
       {children}
     </button>
   );
 }
 
+/** A page of text, set like paper on the canvas. */
+function Paper({ label, children }: { label?: string; children: ReactNode }) {
+  return (
+    <section className="scroll-mt-4">
+      {label && <h3 className="mb-2 px-1 text-xs font-medium text-ink-muted">{label}</h3>}
+      <div className="rounded-xl border border-line bg-surface px-6 py-6 shadow-xs sm:px-10 sm:py-9">
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function TextSourcePreview({ source }: { source: CaseSourceRead }) {
   return (
-    <div className="h-full overflow-auto p-4 sm:p-6">
-      <article className="mx-auto max-w-3xl rounded-md border border-line bg-surface px-5 py-6 shadow-sm sm:px-8 sm:py-8">
-        <p className="mb-4 border-b border-line pb-2.5 text-[11px] text-ink-muted">
-          Added {new Date(source.created_at).toLocaleString()}
-        </p>
-        <p className="whitespace-pre-wrap break-words text-sm leading-7 text-ink">
-          {source.exact_text}
-        </p>
-      </article>
+    <div className="h-full overflow-auto p-4 sm:p-8">
+      <div className="mx-auto max-w-3xl">
+        <Paper>
+          <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
+            {source.exact_text}
+          </p>
+        </Paper>
+      </div>
     </div>
   );
 }
@@ -591,14 +671,24 @@ function OriginalFilePreview({ caseId, document }: { caseId: string; document: C
     [objectUrl],
   );
 
-  if (query.isLoading) return <ViewportMessage title="Loading original file…" />;
+  if (query.isLoading) {
+    return (
+      <div
+        role="status"
+        aria-label="Loading original file"
+        className="flex h-full min-h-[24rem] items-center justify-center text-ink-muted"
+      >
+        <Icon name="spinner" className="h-6 w-6" />
+      </div>
+    );
+  }
   if (query.error || !objectUrl) {
     return (
-      <ViewportMessage title="Original file could not be loaded.">
+      <ViewportMessage title="The original file could not be loaded.">
         <button
           type="button"
           onClick={() => void query.refetch()}
-          className="mt-4 text-xs font-semibold text-accent underline underline-offset-4"
+          className="btn-secondary mt-4 h-8 px-3"
         >
           Try again
         </button>
@@ -610,13 +700,10 @@ function OriginalFilePreview({ caseId, document }: { caseId: string; document: C
     document.mime_type === "application/pdf" || document.mime_type.startsWith("image/");
   if (!canEmbed) {
     return (
-      <ViewportMessage title="This file type opens outside the preview.">
-        <a
-          href={objectUrl}
-          download={document.filename}
-          className="mt-4 inline-flex h-9 items-center rounded-md bg-primary px-4 text-xs font-semibold text-ivory"
-        >
-          Open original file
+      <ViewportMessage title="This file type has no preview.">
+        <a href={objectUrl} download={document.filename} className="btn-primary mt-4">
+          <Icon name="download" className="h-4 w-4" />
+          Download file
         </a>
       </ViewportMessage>
     );
@@ -667,116 +754,81 @@ function getExtractionPages(extraction: DocumentExtractionRead): ExtractionPage[
   }));
 }
 
+/** Enough pages that scrolling to one becomes a chore. */
+const PAGE_JUMP_THRESHOLD = 4;
+
 function SystemOcrPreview({ extraction }: { extraction: DocumentExtractionRead | null }) {
   const pages = useMemo(() => (extraction ? getExtractionPages(extraction) : []), [extraction]);
 
-  if (!extraction) return <ViewportMessage title="No system extraction is available." />;
+  if (!extraction) return <ViewportMessage title="No text was extracted from this file." />;
+
+  const warnings = extraction.warnings_json.length;
 
   return (
-    <div role="tabpanel" aria-label="System OCR" className="h-full overflow-auto p-4 sm:p-6">
-      <div className="mx-auto max-w-4xl space-y-4">
-        <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface/95 px-4 py-2.5 backdrop-blur shadow-sm">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-semibold text-ink">System OCR</span>
-            <span className="text-ink-muted">·</span>
-            <span className="text-ink-secondary">{extraction.provider}</span>
-            <span className="rounded bg-canvas px-2 py-0.5 text-[11px] font-medium text-ink-muted">
-              {pages.length} {pages.length === 1 ? "page" : "pages"}
-            </span>
-            {extraction.warnings_json.length > 0 && (
-              <span className="text-unresolved text-xs">
-                {extraction.warnings_json.length} warning
-                {extraction.warnings_json.length === 1 ? "" : "s"}
-              </span>
-            )}
-          </div>
-
-          {pages.length > 1 && (
-            <nav aria-label="Page navigation" className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-[10px] uppercase tracking-wider text-ink-muted">
-                Jump to:
-              </span>
-              {pages.map((p) => (
-                <button
-                  key={p.pageNumber}
-                  type="button"
-                  onClick={() => {
-                    document
-                      .getElementById(`ocr-page-${p.pageNumber}`)
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                  className="rounded border border-line bg-surface px-2 py-0.5 text-xs text-ink-secondary hover:border-accent hover:text-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                >
-                  P.{p.pageNumber}
-                </button>
-              ))}
-            </nav>
-          )}
-        </header>
-
-        {pages.map((page) => (
-          <article
-            key={page.pageNumber}
-            id={`ocr-page-${page.pageNumber}`}
-            className="scroll-mt-14 rounded-md border border-line bg-surface px-5 py-6 shadow-sm sm:px-8 sm:py-8"
-          >
-            <div className="mb-4 flex items-center justify-between border-b border-line pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="rounded bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent">
-                  Page {page.pageNumber}
-                </span>
-                {page.method && (
-                  <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-                    {page.method}
-                  </span>
-                )}
-              </div>
-              <span className="text-[11px] text-ink-muted">
-                {page.text.trim().length.toLocaleString()} chars
-              </span>
-            </div>
-
-            {page.text.trim() ? (
-              <p className="whitespace-pre-wrap break-words text-sm leading-7 text-ink">
-                {page.text}
+    <div role="tabpanel" aria-label="Extracted text" className="h-full overflow-auto p-4 sm:p-8">
+      <div className="mx-auto max-w-3xl space-y-6">
+        {(warnings > 0 || pages.length >= PAGE_JUMP_THRESHOLD) && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {warnings > 0 ? (
+              <p className="flex items-center gap-1.5 text-[13px] text-unresolved">
+                <Icon name="alert" className="h-4 w-4" />
+                {plural(warnings, "extraction warning")}
               </p>
             ) : (
-              <p className="py-4 text-center text-xs italic text-ink-muted">
-                (No text extracted on this page)
-              </p>
+              <span />
             )}
-          </article>
+            {pages.length >= PAGE_JUMP_THRESHOLD && (
+              <nav aria-label="Page navigation" className="flex flex-wrap items-center gap-0.5">
+                {pages.map((page) => (
+                  <button
+                    key={page.pageNumber}
+                    type="button"
+                    aria-label={`Go to page ${page.pageNumber}`}
+                    onClick={() => {
+                      document
+                        .getElementById(`ocr-page-${page.pageNumber}`)
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="h-7 min-w-7 rounded-md px-1.5 text-xs font-medium text-ink-muted transition-colors hover:bg-surface hover:text-ink"
+                  >
+                    {page.pageNumber}
+                  </button>
+                ))}
+              </nav>
+            )}
+          </div>
+        )}
+
+        {pages.map((page) => (
+          <div key={page.pageNumber} id={`ocr-page-${page.pageNumber}`} className="scroll-mt-4">
+            <Paper label={`Page ${page.pageNumber}`}>
+              {page.text.trim() ? (
+                <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
+                  {page.text}
+                </p>
+              ) : (
+                <p className="text-sm text-ink-muted">No text on this page.</p>
+              )}
+            </Paper>
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-function EmptyPreview({ onOpenNarrative }: { onOpenNarrative: () => void }) {
-  return (
-    <ViewportMessage title="This case has no sources yet.">
-      <button
-        type="button"
-        onClick={onOpenNarrative}
-        className="mt-4 text-xs font-semibold text-accent underline underline-offset-4"
-      >
-        Add a case narrative
-      </button>
-    </ViewportMessage>
-  );
-}
-
 function ViewportMessage({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="flex h-full min-h-[24rem] flex-col items-center justify-center p-8 text-center">
-      <p className="text-xs font-medium text-ink-secondary">{title}</p>
+      <p className="text-sm text-ink-muted">{title}</p>
       {children}
     </div>
   );
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function fileKind(document: CaseDocumentRead): string {
+  const extension = document.filename.split(".").pop()?.toUpperCase();
+  if (document.mime_type === "application/pdf") return "PDF";
+  if (document.mime_type.startsWith("image/")) return extension ?? "Image";
+  return extension ?? "File";
 }

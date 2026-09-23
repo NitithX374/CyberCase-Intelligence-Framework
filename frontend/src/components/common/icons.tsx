@@ -26,7 +26,17 @@ export type KnownIconName =
   | "eye"
   | "eye-off"
   | "shield"
-  | "check";
+  | "check"
+  | "log-out"
+  | "folder"
+  | "narrative"
+  | "upload"
+  | "download"
+  | "refresh"
+  | "info"
+  | "chevron-right"
+  | "legal"
+  | "spinner";
 
 export type IconName = KnownIconName | (string & {});
 
@@ -57,6 +67,16 @@ const nameToBoxicon: Record<string, string> = {
   "eye-off": "bx-hide",
   shield: "bx-shield",
   check: "bx-check",
+  "log-out": "bx-log-out",
+  folder: "bx-folder",
+  narrative: "bx-detail",
+  upload: "bx-upload",
+  download: "bx-download",
+  refresh: "bx-refresh",
+  info: "bx-info-circle",
+  "chevron-right": "bx-chevron-right",
+  legal: "bx-book-bookmark",
+  spinner: "bx-loader-alt bx-spin",
 };
 
 export interface IconProps extends HTMLAttributes<HTMLElement> {

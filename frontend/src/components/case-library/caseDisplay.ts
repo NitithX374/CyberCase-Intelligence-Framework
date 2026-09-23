@@ -6,12 +6,12 @@ export type CaseLibraryViewMode = "grid" | "list";
 export type CaseStatusTone = "neutral" | "positive" | "attention";
 
 const statusLabels: Record<CaseRead["status"], string> = {
-  idle: "Ready to begin",
-  answered: "Analysis available",
+  idle: "Not analyzed",
+  answered: "Analyzed",
 };
 
 export const toneDotClass: Record<CaseStatusTone, string> = {
-  neutral: "bg-ink-muted",
+  neutral: "bg-ink-disabled",
   positive: "bg-established",
   attention: "bg-unresolved",
 };
@@ -22,7 +22,7 @@ export function caseDestination(caseRecord: CaseRead): string {
 }
 
 export function caseStatusLabel(caseRecord: CaseRead): string {
-  if (caseRecord.analysis_freshness === "stale") return "Needs re-analysis";
+  if (caseRecord.analysis_freshness === "stale") return "Out of date";
   return statusLabels[caseRecord.status];
 }
 
@@ -30,22 +30,6 @@ export function caseStatusTone(caseRecord: CaseRead): CaseStatusTone {
   if (caseRecord.analysis_freshness === "stale") return "attention";
   if (caseRecord.status === "answered") return "positive";
   return "neutral";
-}
-
-export function analysisFreshnessLabel(caseRecord: CaseRead): string {
-  if (caseRecord.analysis_freshness === "current") return "Current analysis";
-  if (caseRecord.analysis_freshness === "stale") return "Older analysis";
-  return "Analysis unavailable";
-}
-
-export function formatCaseDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Date unavailable";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
 }
 
 export function sortCases(cases: CaseRead[], sort: CaseLibrarySort): CaseRead[] {

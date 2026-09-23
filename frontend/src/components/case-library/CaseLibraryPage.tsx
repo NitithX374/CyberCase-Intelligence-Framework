@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CyberCaseLogo } from "@/components/common/CyberCaseLogo";
 import { DeleteCaseDialog } from "@/components/common/DeleteDialog";
+import { AccountMenu } from "@/components/common/AccountMenu";
+import { Icon } from "@/components/common/icons";
 import { getApiErrorMessage, type CaseRead } from "@/lib/api";
 import { useCaseMutations, useCases } from "@/hooks/useCaseQueries";
-import { CaseCard, FeaturedCaseCard, NewCaseCard } from "./CaseCard";
+import { CaseCard } from "./CaseCard";
 import { CaseLibraryToolbar } from "./CaseLibraryToolbar";
 import {
   CaseLibraryEmpty,
@@ -17,14 +19,9 @@ import {
 import {
   caseDestination,
   matchingCases,
-  sortCases,
   type CaseLibrarySort,
   type CaseLibraryViewMode,
 } from "./caseDisplay";
-
-import { UserProfileMenu } from "@/components/common/UserProfileMenu";
-import { Icon } from "@/components/common/icons";
-import { useAuth } from "@/hooks/useAuth";
 
 export function CaseLibraryPage() {
   const router = useRouter();
@@ -34,11 +31,10 @@ export function CaseLibraryPage() {
   const [deleteCandidate, setDeleteCandidate] = useState<CaseRead | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<CaseLibrarySort>("recent");
-  const [viewMode, setViewMode] = useState<CaseLibraryViewMode>("grid");
+  const [viewMode, setViewMode] = useState<CaseLibraryViewMode>("list");
 
   const cases = useMemo(() => casesQuery.data ?? [], [casesQuery.data]);
   const visibleCases = useMemo(() => matchingCases(cases, query, sort), [cases, query, sort]);
-  const latestCase = sortCases(cases, "recent")[0] ?? null;
 
   const newCase = async () => {
     if (createMutation.isPending) return;
@@ -48,7 +44,6 @@ export function CaseLibraryPage() {
       return;
     }
   };
-
 
   const confirmDelete = async () => {
     if (!deleteCandidate) return;
@@ -60,24 +55,45 @@ export function CaseLibraryPage() {
   };
 
   return (
-    <main className="min-h-dvh bg-canvas text-ink">
-      <CaseLibraryHeader />
-
-      <div className="mx-auto w-full max-w-[1440px] px-5 py-7 sm:px-8 sm:py-9 lg:px-12 lg:py-10">
-        <header className="flex flex-col gap-2 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mono-label">Case library</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-ink sm:text-3xl">
-              All cases
-            </h1>
-            <p className="mt-2 max-w-xl text-xs leading-5 text-ink-secondary sm:text-sm">
-              Return to an investigation, review its latest state, or begin a new source-bound case.
-            </p>
-          </div>
-          <span className="text-[11px] text-ink-muted">
-            {cases.length} saved {cases.length === 1 ? "case" : "cases"}
+    <main className="min-h-dvh bg-surface text-ink">
+      <header className="border-b border-line">
+        <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-5 sm:px-8">
+          <span className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.01em] text-ink">
+            <CyberCaseLogo size={26} />
+            CyberCase
           </span>
-        </header>
+          <AccountMenu />
+        </div>
+      </header>
+
+      <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="flex items-baseline gap-2.5 text-2xl font-semibold tracking-[-0.02em] text-ink">
+            All cases
+            {cases.length > 0 && (
+              <span className="text-base font-medium text-ink-muted" aria-hidden="true">
+                {cases.length}
+              </span>
+            )}
+          </h1>
+          {cases.length > 0 && (
+            <button
+              type="button"
+              onClick={() => void newCase()}
+              disabled={createMutation.isPending}
+              className="btn-primary"
+            >
+              <Icon name={createMutation.isPending ? "spinner" : "plus"} className="h-4 w-4" />
+              {createMutation.isPending ? "Creating…" : "New case"}
+            </button>
+          )}
+        </div>
+
+        {createMutation.error && (
+          <p role="alert" className="mt-3 text-[13px] text-critical">
+            {getApiErrorMessage(createMutation.error, "A new case could not be created.")}
+          </p>
+        )}
 
         {casesQuery.isLoading ? (
           <CaseLibraryLoading />
@@ -89,76 +105,40 @@ export function CaseLibraryPage() {
         ) : cases.length === 0 ? (
           <CaseLibraryEmpty creating={createMutation.isPending} onNewCase={() => void newCase()} />
         ) : (
-          <>
-            {latestCase && !query.trim() && (
-              <section aria-labelledby="latest-case-heading" className="mt-8">
-                <div className="mb-3 flex items-center justify-between gap-4">
-                  <h2
-                    id="latest-case-heading"
-                    className="text-lg font-bold tracking-[-0.02em] text-ink"
-                  >
-                    Continue where you left off
-                  </h2>
-                  <span className="text-[11px] text-ink-muted">Latest activity</span>
-                </div>
-                <FeaturedCaseCard caseRecord={latestCase} />
-              </section>
+          <section aria-label="Your cases" className="mt-8">
+            <CaseLibraryToolbar
+              query={query}
+              sort={sort}
+              viewMode={viewMode}
+              onQueryChange={setQuery}
+              onSortChange={setSort}
+              onViewModeChange={setViewMode}
+            />
+
+            {visibleCases.length === 0 ? (
+              <NoMatchingCases query={query} onClear={() => setQuery("")} />
+            ) : (
+              <ul
+                className={
+                  viewMode === "grid"
+                    ? "mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                    : "-mx-3 mt-4 divide-y divide-line"
+                }
+              >
+                {visibleCases.map((caseRecord) => (
+                  <CaseCard
+                    key={caseRecord.id}
+                    caseRecord={caseRecord}
+                    viewMode={viewMode}
+                    isDeleting={
+                      deleteMutation.isPending && deleteMutation.variables === caseRecord.id
+                    }
+                    onRequestDelete={setDeleteCandidate}
+                  />
+                ))}
+              </ul>
             )}
-
-            <section aria-labelledby="all-cases-heading" className="mt-10">
-              <h2 id="all-cases-heading" className="text-lg font-bold tracking-[-0.02em] text-ink">
-                Your cases
-              </h2>
-              <p className="mt-1 text-xs text-ink-muted">
-                Select a Case to continue its workspace.
-              </p>
-
-              <div className="mt-4">
-                <CaseLibraryToolbar
-                  query={query}
-                  sort={sort}
-                  viewMode={viewMode}
-                  resultCount={visibleCases.length}
-                  creating={createMutation.isPending}
-                  onQueryChange={setQuery}
-                  onSortChange={setSort}
-                  onViewModeChange={setViewMode}
-                  onNewCase={() => void newCase()}
-                />
-              </div>
-
-              {createMutation.error && (
-                <p role="alert" className="mt-3 text-xs text-critical">
-                  {getApiErrorMessage(createMutation.error, "A new Case could not be created.")}
-                </p>
-              )}
-
-              {visibleCases.length === 0 ? (
-                <NoMatchingCases query={query} onClear={() => setQuery("")} />
-              ) : (
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? "mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                      : "mt-5 grid gap-2"
-                  }
-                >
-                  <NewCaseCard onClick={() => void newCase()} disabled={createMutation.isPending} />
-                  {visibleCases.map((caseRecord) => (
-                    <CaseCard
-                      key={caseRecord.id}
-                      caseRecord={caseRecord}
-                      viewMode={viewMode}
-                      isDeleting={
-                        deleteMutation.isPending && deleteMutation.variables === caseRecord.id
-                      }
-                      onRequestDelete={setDeleteCandidate}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
+          </section>
         )}
       </div>
 
@@ -169,44 +149,5 @@ export function CaseLibraryPage() {
         onConfirm={() => void confirmDelete()}
       />
     </main>
-  );
-}
-
-function CaseLibraryHeader() {
-  const auth = useAuth();
-
-  return (
-    <header className="border-b border-line bg-surface">
-
-      <div className="mx-auto flex min-h-16 w-full max-w-[1440px] items-center gap-6 px-5 sm:px-8 lg:px-12">
-        <span className="flex shrink-0 items-center gap-2.5 text-sm font-bold tracking-[-0.015em] text-ink">
-          <CyberCaseLogo size={28} />
-          <span className="hidden sm:inline">CyberCase</span>
-        </span>
-
-        <nav
-          aria-label="Case library navigation"
-          className="flex h-16 items-center gap-5 text-xs font-semibold flex-1"
-        >
-          <span
-            className="flex h-full items-center border-b-2 border-accent text-accent"
-            aria-current="page"
-          >
-            All cases
-          </span>
-          <div className="ml-auto">
-            <details className="relative shrink-0">
-              <summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-xs font-medium text-ink hover:bg-surface-hover">
-                <Icon name="account" className="h-4 w-4 text-ink-secondary" />
-                <span>{auth.user?.name ?? "Account"}</span>
-              </summary>
-              <div className="absolute right-0 top-10 z-50 w-64 rounded-md border border-line bg-surface p-3 shadow-lg">
-                <UserProfileMenu />
-              </div>
-            </details>
-          </div>
-        </nav>
-      </div>
-    </header>
   );
 }

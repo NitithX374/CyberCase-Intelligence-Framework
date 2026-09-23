@@ -6,6 +6,7 @@ describe("Case workspace routes", () => {
   it("supports every current Case workspace view", () => {
     expect(caseRouteState("/case/case-1/sources")).toEqual({ caseId: "case-1", view: "sources" });
     expect(caseRouteState("/case/case-1/analysis")).toEqual({ caseId: "case-1", view: "analysis" });
+    expect(caseRouteState("/case/case-1/legal")).toEqual({ caseId: "case-1", view: "legal" });
   });
 
   it("sends the views that were folded into Analysis there", () => {

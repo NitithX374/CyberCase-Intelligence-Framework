@@ -102,7 +102,9 @@ describe("TechnicalContextView", () => {
     render(
       <TechnicalContextView analysisResult={null} sources={null} onOpenSources={openSources} />,
     );
-    expect(screen.getByText("Technical augmentation outcome is unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText("No ATT&CK context is available for this analysis."),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Go to sources/i }));
     expect(openSources).toHaveBeenCalledOnce();
   });
@@ -117,18 +119,21 @@ describe("TechnicalContextView", () => {
         onNavigateToSource={navigateToSource}
       />,
     );
-    expect(screen.getByText("Validated Case mappings")).toBeInTheDocument();
-    expect(screen.getByText("PowerShell")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "PowerShell" })).toBeInTheDocument();
     // The card quotes the sentence it rests on, and says how firmly.
     expect(screen.getByText(`“${exactQuote}”`)).toBeInTheDocument();
     // The number comes from the retriever, not from the model rating itself.
     expect(screen.getByText("Retrieval match")).toBeInTheDocument();
     expect(screen.getByText("0.93")).toBeInTheDocument();
     expect(screen.getByText("Someone ran commands through PowerShell.")).toBeInTheDocument();
+    // Why the technique fits this case is one step away, not on the card.
+    expect(screen.queryByText("The claim describes PowerShell activity.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Why it applies" }));
+    expect(screen.getByText("The claim describes PowerShell activity.")).toBeInTheDocument();
     const source = screen.getByRole("button", { name: new RegExp(exactQuote.slice(0, 20), "i") });
     fireEvent.click(source);
     expect(screen.getByRole("dialog")).toHaveTextContent(exactQuote);
-    fireEvent.click(screen.getByRole("button", { name: /View in Materials/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Open in Sources/i }));
     expect(navigateToSource).toHaveBeenCalledWith(sourceId);
   });
 
@@ -153,7 +158,9 @@ describe("TechnicalContextView", () => {
     render(
       <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
     );
-    expect(screen.getByText("MITRE augmentation was not applicable")).toBeInTheDocument();
+    expect(
+      screen.getByText("Not applicable — the case has no technical indicators."),
+    ).toBeInTheDocument();
     expect(screen.queryByText("PowerShell")).not.toBeInTheDocument();
   });
 });

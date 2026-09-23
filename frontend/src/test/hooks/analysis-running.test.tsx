@@ -43,9 +43,11 @@ function client() {
 }
 
 function wrapperFor(queryClient: QueryClient) {
-  return ({ children }: { children: ReactNode }) => (
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+  Wrapper.displayName = "QueryWrapper";
+  return Wrapper;
 }
 
 /** A request the test finishes by hand, so the run can be observed mid-flight. */

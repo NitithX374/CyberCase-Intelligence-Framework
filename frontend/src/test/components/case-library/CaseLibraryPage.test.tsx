@@ -82,15 +82,19 @@ describe("CaseLibraryPage", () => {
     ]);
   });
 
-  it("renders the latest case and the complete Case library", () => {
+  it("renders every case once, most recent first", () => {
     render(<CaseLibraryPage />);
 
     expect(screen.getByRole("heading", { name: "All cases" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Continue where you left off" }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("Police Investigation Report")).toHaveLength(2);
-    expect(screen.getByText("SpeedFood System Architecture")).toBeInTheDocument();
+    const titles = screen
+      .getAllByRole("link")
+      .map((link) => link.textContent ?? "")
+      .filter((text) => /Police|SpeedFood/.test(text));
+    expect(titles).toHaveLength(2);
+    expect(titles[0]).toContain("Police Investigation Report");
+    expect(titles[1]).toContain("SpeedFood System Architecture");
+    expect(screen.getByText("Analyzed")).toBeInTheDocument();
+    expect(screen.getByText("Not analyzed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "New case" })).toBeInTheDocument();
   });
 
@@ -105,12 +109,11 @@ describe("CaseLibraryPage", () => {
     expect(screen.queryByText("Police Investigation Report")).not.toBeInTheDocument();
 
     const listButton = screen.getByRole("button", { name: "List view" });
-    fireEvent.click(listButton);
+    const gridButton = screen.getByRole("button", { name: "Grid view" });
     expect(listButton).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Grid view" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    fireEvent.click(gridButton);
+    expect(gridButton).toHaveAttribute("aria-pressed", "true");
+    expect(listButton).toHaveAttribute("aria-pressed", "false");
   });
 
   it("creates a Case and routes to its sources when the new Case has no analysis", async () => {
