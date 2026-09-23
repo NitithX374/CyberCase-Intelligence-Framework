@@ -173,4 +173,39 @@ describe("Case overview projection", () => {
       fullContent: answer.content,
     });
   });
+
+  it("lists parties, timeline and impacts with the sources of the claims they cite", () => {
+    const base = result(quote, { source_id: sourceId, exact_quote: quote });
+    const inference = {
+      ...base.trace_json!.claims[0],
+      claim_id: "A-02",
+      claim_type: "analytical_inference" as const,
+      epistemic_status: "suspected" as const,
+    };
+    const analysis: CaseAnalysisResultRead = {
+      ...base,
+      trace_json: {
+        ...base.trace_json!,
+        claims: [...base.trace_json!.claims, inference],
+        involved_parties: [{ name: "Witness", role: "Saw the vehicle", claim_ids: ["A-01"] }],
+        timeline: [
+          { time: "09:00", event: "A blue vehicle arrived", claim_ids: ["A-01", "A-02"] },
+          { time: "Unknown", event: "Nothing cited", claim_ids: [] },
+        ],
+        impacts: [{ description: "The owner may be exposed", claim_ids: ["A-02"] }],
+      },
+    };
+
+    const overview = buildCaseOverview(analysis, [sourceItem(quote)]);
+
+    expect(overview.parties).toEqual([
+      expect.objectContaining({ name: "Witness", role: "Saw the vehicle", inferred: false }),
+    ]);
+    expect(overview.parties[0].sources.map((source) => source.id)).toEqual([sourceId]);
+    // Two claims citing the same passage are one source, not two chips.
+    expect(overview.timeline[0].sources).toHaveLength(1);
+    expect(overview.timeline[0].inferred).toBe(false);
+    expect(overview.timeline[1]).toMatchObject({ sources: [], inferred: false });
+    expect(overview.impacts[0].inferred).toBe(true);
+  });
 });
