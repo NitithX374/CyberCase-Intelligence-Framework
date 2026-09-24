@@ -13,7 +13,7 @@ class AnalysisPipelineConfig(BaseModel):
     )
     context_tokens: int = Field(default=128_000, ge=1)
     input_tokens: int = Field(default=80_000, ge=1)
-    output_tokens: int = Field(default=16_384, ge=16_384)
+    output_tokens: int = Field(default=16_384, ge=1)
     safety_tokens: int = Field(default=4_000, ge=1)
     timeout_seconds: float = Field(default=120, gt=0)
 

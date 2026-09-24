@@ -18,6 +18,7 @@ from app.models.case import Case
 from app.schemas.rag import LegalReferenceResult
 from app.services.analysis.clarification import Ask
 from app.services.analysis.contracts import CaseAnalysisFailure
+from app.services.analysis.language import case_language
 from app.services.analysis.pipeline import (
     AnalysisAdvance,
     AnalysisArtifacts,
@@ -66,7 +67,6 @@ async def run_case_analysis(
     *,
     case_id: UUID,
     user_id: UUID | None,
-    response_language: str,
     session_factory: Callable = async_session,
     pipeline: Callable = advance_case,
     continuing_followup: bool = False,
@@ -78,18 +78,18 @@ async def run_case_analysis(
             user_id=user_id,
             continuing_followup=continuing_followup,
         )
-        outcome = await think(pipeline, started, response_language)
+        outcome = await think(pipeline, started)
         return await store_outcome(
             session_factory, started, outcome, continuing_followup=started.continuing_followup
         )
 
 
-async def think(pipeline: Callable, started: CaseUnderAnalysis, response_language: str):
+async def think(pipeline: Callable, started: CaseUnderAnalysis):
     try:
         return await pipeline(
             AnalysisInput(
                 sources=started.source_bundle,
-                response_language=response_language,
+                response_language=case_language(started.source_bundle),
                 followup_history=started.followup_history,
                 reused_context=started.reused_context,
                 asked_gap_keys=started.asked_gap_keys,

@@ -7,6 +7,7 @@ from app.config import settings
 from app.schemas.rag import QueryRequest, QueryResponse
 
 RAG_HTTP_TIMEOUT_SECONDS = 300.0
+transport: httpx.AsyncBaseTransport | None = None
 
 
 class RagCallFailure(Exception):
@@ -16,18 +17,11 @@ class RagCallFailure(Exception):
         self.message = message
 
 
-async def request_rag(
-    content: str,
-    *,
-    client: httpx.AsyncClient | None = None,
-) -> QueryResponse:
+async def request_rag(content: str) -> QueryResponse:
     payload = QueryRequest(query=content, use_agent=True).model_dump()
     url = f"{settings.rag_service_url.rstrip('/')}/query"
-    if client is not None:
+    async with httpx.AsyncClient(transport=transport, timeout=RAG_HTTP_TIMEOUT_SECONDS) as client:
         return await post_and_validate(client, url, payload)
-
-    async with httpx.AsyncClient(timeout=RAG_HTTP_TIMEOUT_SECONDS) as owned_client:
-        return await post_and_validate(owned_client, url, payload)
 
 
 async def post_and_validate(

@@ -5,7 +5,17 @@ import httpx
 
 from app.schemas.rag import QueryResponse
 from app.services.analysis.steps.technical_context import validated_case_rag_context
+from app.services.clients import rag_client
 from app.services.clients.rag_client import RagCallFailure, request_rag
+
+
+async def request_rag_through(handler) -> QueryResponse:
+    original = rag_client.transport
+    rag_client.transport = httpx.MockTransport(handler)
+    try:
+        return await request_rag("inspect this")
+    finally:
+        rag_client.transport = original
 
 
 class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
@@ -26,8 +36,7 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                 },
             )
 
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            response = await request_rag("inspect this", client=client)
+        response = await request_rag_through(handler)
 
         self.assertEqual(
             captured_payload,
@@ -56,9 +65,8 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                         },
                     )
 
-                async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-                    with self.assertRaises(RagCallFailure) as raised:
-                        await request_rag("inspect this", client=client)
+                with self.assertRaises(RagCallFailure) as raised:
+                    await request_rag_through(handler)
                 self.assertEqual(raised.exception.code, "rag_invalid_response")
 
     async def test_non_completed_response_is_rejected(self) -> None:
@@ -73,9 +81,8 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                 },
             )
 
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            with self.assertRaises(RagCallFailure) as raised:
-                await request_rag("inspect this", client=client)
+        with self.assertRaises(RagCallFailure) as raised:
+            await request_rag_through(handler)
 
         self.assertEqual(raised.exception.code, "rag_invalid_response")
         self.assertEqual(

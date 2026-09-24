@@ -47,7 +47,6 @@ def test_assessment_uses_its_own_stage_and_only_triage_inputs(monkeypatch):
             followup_history=history,
             response_language="english",
             config=AnalysisPipelineConfig(),
-            client=object(),
         )
     )
 

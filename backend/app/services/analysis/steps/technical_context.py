@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from copy import deepcopy
 from dataclasses import dataclass
 
-from pydantic import ValidationError
-
 from app.schemas.rag import LegalReferenceResult, QueryResponse
-from app.services.analysis.contracts import CaseFollowupExchange, CaseMitreAssociation
+from app.services.analysis.contracts import CaseFollowupExchange
 from app.services.analysis.mitre_gate import mitre_gate
 from app.services.analysis.mitre_gate.llm import (
     MitreApplicabilityRecord,
@@ -64,7 +61,6 @@ class CaseMitreAugmentation:
     status: str
     applicability: MitreApplicabilityRecord
     context: CaseRagContextPayload | None
-    associations: tuple[CaseMitreAssociation, ...]
     failure_code: str | None = None
     reused: bool = False
 
@@ -84,7 +80,6 @@ class CaseMitreAugmentation:
             "retrieval_context_id": self.retrieval_context_id,
             "retrieval_context_reused": self.reused,
             "mitre_table": self.mitre_table,
-            "association_ids": [item.association_id for item in self.associations],
         }
         if self.failure_code is not None:
             metadata["failure_code"] = self.failure_code
@@ -105,7 +100,7 @@ async def run_case_mitre_augmentation(
     if applicability.failure_code is not None:
         return failed_augmentation(applicability.failure_code, applicability)
     if applicability.decision == "SKIP":
-        return CaseMitreAugmentation("not_applicable", applicability, None, ())
+        return CaseMitreAugmentation("not_applicable", applicability, None)
 
     is_reused = False
     if reused_context is not None:
@@ -118,23 +113,15 @@ async def run_case_mitre_augmentation(
             context = validated_case_rag_context(response)
         except RagCallFailure as error:
             return failed_augmentation(error.code, applicability)
-        except (ValueError, ValidationError):
-            return failed_augmentation("rag_invalid_response", applicability)
         except Exception:
             logger.exception("Case MITRE retrieval failed")
             return failed_augmentation("rag_service_error", applicability)
 
     if not context.retrieval_context_id or not context.mitre_table:
         return CaseMitreAugmentation(
-            "insufficient_context", applicability, context, (), reused=is_reused
+            "insufficient_context", applicability, context, reused=is_reused
         )
-    return CaseMitreAugmentation(
-        "retrieved_from_rag",
-        applicability,
-        context,
-        (),
-        reused=is_reused,
-    )
+    return CaseMitreAugmentation("retrieved_from_rag", applicability, context, reused=is_reused)
 
 
 async def evaluate_gate(case_sources, gate):
@@ -149,24 +136,14 @@ async def evaluate_gate(case_sources, gate):
 def failed_augmentation(
     code: str, applicability: MitreApplicabilityRecord
 ) -> CaseMitreAugmentation:
-    return CaseMitreAugmentation("failed", applicability, None, (), code)
+    return CaseMitreAugmentation("failed", applicability, None, code)
 
 
 def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload:
-    retrieval_id = response.retrieval_context_id
-    context = response.context
-    mitre_table = response.mitre_table
-    if not isinstance(context, str):
-        raise ValueError("RAG response context is invalid")
-    if not isinstance(mitre_table, list):
-        raise ValueError("RAG response MITRE table is invalid")
-    normalized_rows = [
-        row if isinstance(row, dict) else row.model_dump(mode="json") for row in mitre_table
-    ]
     return CaseRagContextPayload(
-        retrieval_context_id=(retrieval_id or "").strip() or None,
-        context=context,
-        mitre_table=tuple(deepcopy(normalized_rows)),
+        retrieval_context_id=(response.retrieval_context_id or "").strip() or None,
+        context=response.context,
+        mitre_table=tuple(row.model_dump(mode="json") for row in response.mitre_table),
         legal_relevance=response.legal_reference,
     )
 

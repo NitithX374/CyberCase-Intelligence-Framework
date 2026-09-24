@@ -76,7 +76,6 @@ async def test_asking_a_question_stores_both_messages():
             case_id=case_id,
             user_id=user_id,
             content="What do we know so far?",
-            response_language="english",
             client_request_id="send-1",
             session_factory=session_factory,
             answer_request=fake_answer,
@@ -119,8 +118,8 @@ async def test_asking_question_without_analysis_stores_messages():
             case_id, user_id = case.id, user.id
 
         async def fake_answer(**kwargs):
-            context = kwargs.get("context", {})
-            assert context.get("analysis_result_id") is None
+            assert kwargs["result"] is None
+            assert kwargs["sources"].sources == ()
             return CaseAnalysisOutput(
                 answer="Here is general information about the case.", trace=None
             )
@@ -129,7 +128,6 @@ async def test_asking_question_without_analysis_stores_messages():
             case_id=case_id,
             user_id=user_id,
             content="Can I ask before analyzing?",
-            response_language="english",
             client_request_id="send-no-analysis",
             session_factory=session_factory,
             answer_request=fake_answer,
@@ -149,14 +147,13 @@ async def test_retrying_the_same_send_returns_the_first_exchange():
         calls: list[str] = []
 
         async def fake_answer(**kwargs):
-            calls.append(str(kwargs.get("user_message")))
+            calls.append(kwargs["question"])
             return CaseAnalysisOutput(answer="Answered once.", trace=None)
 
         send = {
             "case_id": case_id,
             "user_id": user_id,
             "content": "What do we know so far?",
-            "response_language": "english",
             "client_request_id": "send-1",
             "session_factory": session_factory,
             "answer_request": fake_answer,
@@ -167,6 +164,40 @@ async def test_retrying_the_same_send_returns_the_first_exchange():
         assert again_question.id == first_question.id
         assert again_answer.id == first_answer.id
         assert len(calls) == 1, "the retry asked the model a second time"
+
+
+async def test_a_reply_without_letters_is_answered_in_the_case_language():
+    async with isolated_database() as session_factory:
+        case_id, user_id = await seeded_case(session_factory)
+        async with session_factory() as db, db.begin():
+            db.add(
+                CaseSource(
+                    case_id=case_id,
+                    source_kind="narrative",
+                    exact_text="ผู้เสียหายแจ้งว่าไฟล์ในไดรฟ์กลางถูกเข้ารหัส",
+                )
+            )
+        languages: dict[str, str] = {}
+
+        async def fake_answer(**kwargs):
+            languages[kwargs["question"]] = kwargs["language"]
+            return CaseAnalysisOutput(answer="Answered.", trace=None)
+
+        for sent, content in enumerate(("02:00", "Who reported it?", "ใครเป็นผู้แจ้ง")):
+            await answer_case_question(
+                case_id=case_id,
+                user_id=user_id,
+                content=content,
+                client_request_id=f"send-{sent}",
+                session_factory=session_factory,
+                answer_request=fake_answer,
+            )
+
+        assert languages == {
+            "02:00": "thai",
+            "Who reported it?": "english",
+            "ใครเป็นผู้แจ้ง": "thai",
+        }
 
 
 async def test_chat_route_is_reachable():

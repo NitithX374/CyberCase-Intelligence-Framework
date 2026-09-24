@@ -1,13 +1,9 @@
 import asyncio
-from types import SimpleNamespace
 
 from case_mitre_test_support import _fixtures, _gate, _response
 
-from app.schemas.rag import LegalReferenceResult
-from app.services.analysis.contracts import (
-    CaseAnalysisOutput,
-    CaseMitreAssociation,
-)
+from app.schemas.rag import LegalReferenceResult, QueryResponse
+from app.services.analysis.contracts import CaseMitreAssociation
 from app.services.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
@@ -66,7 +62,6 @@ def test_technical_case_accepts_all_rag_rows_without_mapping_call():
         assert result.retrieval_context_id == "retrieval-case-1"
         assert list(result.context.mitre_table) == list(context.mitre_table)
         assert result.context.legal_relevance == context.legal_relevance
-        assert result.associations == ()
         assert [item[0] for item in observed] == ["gate", "rag"]
 
     asyncio.run(exercise())
@@ -77,7 +72,8 @@ def test_empty_retrieval_is_insufficient():
         _, _, source_bundle, applicability, _ = _fixtures()
 
         async def rag(_query):
-            return SimpleNamespace(
+            return QueryResponse(
+                status="completed",
                 retrieval_context_id="retrieval-empty",
                 context="",
                 mitre_table=[],
@@ -99,7 +95,8 @@ def test_a_retrieval_that_found_nothing_is_insufficient_not_failed():
         _, _, source_bundle, applicability, _ = _fixtures()
 
         async def rag(_query):
-            return SimpleNamespace(
+            return QueryResponse(
+                status="completed",
                 retrieval_context_id=None,
                 context="",
                 mitre_table=[],
@@ -134,7 +131,7 @@ def test_rag_transport_failure_preserves_failed_augmentation_status():
         )
         assert result.status == "failed"
         assert result.failure_code == "rag_timeout"
-        assert result.associations == ()
+        assert result.context is None
 
     asyncio.run(exercise())
 
@@ -152,11 +149,7 @@ def test_workflow_scenario_a_non_cyber_case_gate_skip():
 
         async def fake_analysis(**kwargs):
             analysis_calls.append(kwargs)
-            return CaseAnalysisOutput(
-                answer="Analysis completed without technical context.",
-                trace=trace,
-                execution_receipt={"calls": []},
-            )
+            return trace
 
         data = AnalysisInput(sources=source_bundle, response_language="english")
         artifacts = await retrieve_technical_context(
@@ -170,9 +163,8 @@ def test_workflow_scenario_a_non_cyber_case_gate_skip():
         assert rag_calls == []
         assert len(analysis_calls) == 1
         assert analysis_calls[0]["technical_context"] is None
-        assert analysis_calls[0]["retrieval_context_id"] is None
         assert artifacts.trace.mitre_associations == []
-        assert artifacts.receipt["technical_augmentation"]["status"] == "not_applicable"
+        assert external_context(artifacts)["technical_augmentation"]["status"] == "not_applicable"
 
     asyncio.run(exercise())
 
@@ -207,16 +199,8 @@ def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
 
         async def fake_analysis(**kwargs):
             call_order.append("analysis")
-            assert kwargs["technical_context"] == {
-                "context": context.context,
-                "mitre_table": list(context.mitre_table),
-            }
-            assert kwargs["retrieval_context_id"] == "retrieval-case-1"
-            return CaseAnalysisOutput(
-                answer="Analysis with technical context.",
-                trace=augmented_trace,
-                execution_receipt={"calls": []},
-            )
+            assert kwargs["technical_context"] == context
+            return augmented_trace
 
         data = AnalysisInput(sources=source_bundle, response_language="english")
         artifacts = await retrieve_technical_context(

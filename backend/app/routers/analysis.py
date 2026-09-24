@@ -66,11 +66,7 @@ async def analyse_case(
 ):
     await commit_dependency_transaction(db)
     try:
-        step = await run_case_analysis(
-            case_id=case_id,
-            user_id=user.id,
-            response_language=request.response_language,
-        )
+        step = await run_case_analysis(case_id=case_id, user_id=user.id)
     except CaseWorkflowError as error:
         raise workflow_http_error(error) from error
     return analysis_step_read(step)

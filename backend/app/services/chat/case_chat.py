@@ -140,7 +140,6 @@ async def reply_in_conversation(
             case_id=case_id,
             user_id=user_id,
             content=request.content,
-            response_language=request.response_language,
             client_request_id=request.client_request_id,
             session_factory=session_factory,
         )
@@ -207,7 +206,6 @@ async def analyse_after_round(
         step = await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
-            response_language=request.response_language,
             session_factory=session_factory,
             continuing_followup=True,
         )

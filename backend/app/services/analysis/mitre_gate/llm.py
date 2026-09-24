@@ -6,19 +6,14 @@ import unicodedata
 from collections.abc import Sequence
 from typing import Literal
 
-import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from app.config import settings
-from app.services.analysis.provider import extract_visible_text
-from app.services.llm.core_llm import resolve_core_llm_target
-from app.services.llm.structured_output import (
-    structured_output_request_options,
-    structured_output_schema,
-)
+from app.services.analysis.contracts import CaseAnalysisFailure
+from app.services.analysis.provider import request_stage
+from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.sources.case_source_bundle import CaseSourceItem
 
-logger = logging.getLogger("app.chat")
+logger = logging.getLogger(__name__)
 
 
 MITRE_APPLICABILITY_GATE_VERSION = "mitre_applicability_v1"
@@ -26,6 +21,7 @@ MitreApplicabilityDecision = Literal["SKIP", "RETRIEVE"]
 
 MITRE_APPLICABILITY_INPUT_MAX_CHARS = 20_000
 MITRE_APPLICABILITY_SOURCE_MAX_CHARS = 4_000
+MITRE_APPLICABILITY_OUTPUT_TOKENS = 1_024
 
 MITRE_APPLICABILITY_SYSTEM_PROMPT = """
 You are the conservative MITRE ATT&CK applicability gate for CyberCase.
@@ -233,94 +229,41 @@ def validate_mitre_applicability(
     )
 
 
-class MitreApplicabilityFailure(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
+async def ask_mitre_applicability(
+    case_sources: Sequence[CaseSourceItem],
+) -> MitreApplicabilityRecord:
+    provider_result = await request_stage(
+        config=AnalysisPipelineConfig(output_tokens=MITRE_APPLICABILITY_OUTPUT_TOKENS),
+        stage="mitre_applicability",
+        system=MITRE_APPLICABILITY_SYSTEM_PROMPT,
+        content=build_mitre_applicability_prompt(case_sources),
+        schema=ProviderMitreApplicability,
+        temperature=0.0,
+    )
+    return validate_mitre_applicability(provider_result, case_sources)
 
 
-class MitreApplicabilityGate:
-    def __init__(self, *, client: httpx.AsyncClient | None = None) -> None:
-        self._client = client
+GATE_FAILURE_CODES = {
+    "mitre_applicability_timeout": "mitre_applicability_timeout",
+    "mitre_applicability_budget_exceeded": "mitre_applicability_budget_exceeded",
+    "mitre_applicability_invalid": "mitre_applicability_invalid_output",
+    "analysis_incomplete": "mitre_applicability_invalid_output",
+    "analysis_invalid_response": "mitre_applicability_invalid_output",
+}
 
-    async def evaluate(
-        self,
-        case_sources: Sequence[CaseSourceItem],
-    ) -> MitreApplicabilityRecord:
-        target = resolve_core_llm_target(settings.case_analysis_model)
-        request_payload = {
-            "model": target.model,
-            **structured_output_request_options(
-                feature="mitre_applicability",
-                configured_max_tokens=512,
-                temperature=0.0,
-            ),
-            "system": MITRE_APPLICABILITY_SYSTEM_PROMPT,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": build_mitre_applicability_prompt(case_sources),
-                }
-            ],
-            "output_config": {
-                "format": {
-                    "type": "json_schema",
-                    "schema": structured_output_schema(ProviderMitreApplicability),
-                }
-            },
-        }
-        if self._client is not None:
-            response = await self.post(
-                self._client,
-                target.messages_url,
-                target.headers,
-                request_payload,
-            )
-        else:
-            async with httpx.AsyncClient(
-                timeout=max(0.01, settings.chat_ask_timeout_seconds)
-            ) as client:
-                response = await self.post(
-                    client,
-                    target.messages_url,
-                    target.headers,
-                    request_payload,
-                )
-        return validate_mitre_applicability(
-            parse_provider_response(response),
-            case_sources,
-        )
 
-    @staticmethod
-    async def post(
-        client: httpx.AsyncClient,
-        url: str,
-        headers: dict[str, str],
-        payload: dict[str, object],
-    ) -> httpx.Response:
-        try:
-            return await client.post(url, headers=headers, json=payload)
-        except httpx.TimeoutException as error:
-            raise MitreApplicabilityFailure(
-                "mitre_applicability_timeout",
-                "MITRE applicability provider timed out",
-            ) from error
-        except httpx.RequestError as error:
-            raise MitreApplicabilityFailure(
-                "mitre_applicability_provider_error",
-                "MITRE applicability provider request failed",
-            ) from error
+def gate_failure_code(error: CaseAnalysisFailure) -> str:
+    return GATE_FAILURE_CODES.get(error.code, "mitre_applicability_provider_error")
 
 
 async def evaluate_mitre_applicability(
     *,
     case_sources: Sequence[CaseSourceItem],
-    gate: MitreApplicabilityGate | None = None,
 ) -> MitreApplicabilityRecord:
     try:
-        result = await (gate or MitreApplicabilityGate()).evaluate(case_sources)
-    except MitreApplicabilityFailure as error:
-        result = skipped_mitre_applicability(error.code)
+        result = await ask_mitre_applicability(case_sources)
+    except CaseAnalysisFailure as error:
+        result = skipped_mitre_applicability(gate_failure_code(error))
     except Exception:
         result = skipped_mitre_applicability("mitre_applicability_provider_error")
     if result.failure_code is not None:
@@ -332,56 +275,13 @@ async def evaluate_mitre_applicability(
     return result.model_copy(update={"input_truncated": gate_input_truncated(case_sources)})
 
 
-def parse_provider_response(response: httpx.Response) -> dict[str, object]:
-    if not 200 <= response.status_code < 300:
-        raise MitreApplicabilityFailure(
-            "mitre_applicability_provider_error",
-            "MITRE applicability provider returned an error",
-        )
-    try:
-        payload = response.json()
-    except (TypeError, ValueError) as error:
-        raise MitreApplicabilityFailure(
-            "mitre_applicability_invalid_output",
-            "MITRE applicability provider response was invalid",
-        ) from error
-
-    if not isinstance(payload, dict) or payload.get("stop_reason") in {
-        "refusal",
-        "max_tokens",
-        "length",
-        "pause_turn",
-    }:
-        raise MitreApplicabilityFailure(
-            "mitre_applicability_invalid_output",
-            "MITRE applicability provider did not return a complete object",
-        )
-
-    raw_text = extract_visible_text(payload).strip()
-    try:
-        parsed = json.loads(raw_text)
-    except (TypeError, ValueError) as error:
-        raise MitreApplicabilityFailure(
-            "mitre_applicability_invalid_output",
-            "MITRE applicability output was not strict JSON",
-        ) from error
-
-    if not isinstance(parsed, dict):
-        raise MitreApplicabilityFailure(
-            "mitre_applicability_invalid_output",
-            "MITRE applicability output was not an object",
-        )
-    return parsed
-
-
 __all__ = [
     "MITRE_APPLICABILITY_GATE_VERSION",
     "MITRE_APPLICABILITY_INPUT_MAX_CHARS",
+    "MITRE_APPLICABILITY_OUTPUT_TOKENS",
     "MITRE_APPLICABILITY_SOURCE_MAX_CHARS",
     "MITRE_APPLICABILITY_SYSTEM_PROMPT",
     "MitreApplicabilityDecision",
-    "MitreApplicabilityFailure",
-    "MitreApplicabilityGate",
     "MitreApplicabilityRecord",
     "ProviderMitreApplicability",
     "build_mitre_applicability_prompt",

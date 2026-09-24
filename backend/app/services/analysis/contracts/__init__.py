@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
 from app.services.analysis.contracts.claims import (
     CaseAnalysisClaim,
@@ -27,8 +26,6 @@ from app.services.analysis.contracts.trace import (
     CaseInvolvedParty,
     CaseMitreAssociation,
     CaseProviderAnalysis,
-    CaseProviderJudgement,
-    CaseProviderReading,
     CaseTimelineItem,
 )
 
@@ -40,24 +37,10 @@ class CaseAnalysisFailure(Exception):
         self.message = message
 
 
-ResponseLanguage = Literal["thai", "english"]
-
-
-def resolve_response_language(user_message: object) -> ResponseLanguage:
-    if not isinstance(user_message, str) or not user_message.strip():
-        raise ValueError("User message must be a non-empty string")
-    if any("\u0e00" <= character <= "\u0e7f" for character in user_message):
-        return "thai"
-    if any(character.isascii() and character.isalpha() for character in user_message):
-        return "english"
-    raise ValueError("User message language must be Thai or English")
-
-
 @dataclass(frozen=True)
 class CaseAnalysisOutput:
     answer: str
     trace: CaseAnalysisTrace | None
-    execution_receipt: dict[str, object] | None = None
 
 
 __all__ = [
@@ -80,13 +63,9 @@ __all__ = [
     "CaseProviderAnalysis",
     "CaseProviderCitation",
     "CaseProviderClaim",
-    "CaseProviderJudgement",
-    "CaseProviderReading",
     "CaseTimelineItem",
-    "ResponseLanguage",
     "followup_history_of_snapshot",
     "followup_payload",
     "followup_qa_id",
     "followup_snapshot",
-    "resolve_response_language",
 ]

@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from copy import deepcopy
 from typing import Literal
 
-import httpx
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
@@ -14,14 +12,13 @@ from app.services.analysis.contracts import (
     CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseGeneratedUnit,
-    resolve_response_language,
 )
-from app.services.analysis.provider import request_stage, resolve_target
-from app.services.analysis.settings import AnalysisPipelineConfig, configured_pipeline
+from app.services.analysis.language import ResponseLanguage
+from app.services.analysis.provider import request_stage
+from app.services.analysis.settings import configured_pipeline
 from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
-ANSWER_VERSION = "case_chat_answer_v1"
 ANSWER_PROMPT = """Answer only the current question about the supplied completed Case analysis.
 Do not perform a new Case analysis, extract claims, generate quotes or add evidence.
 Case claims are derived findings with bound source citations, not independent sources.
@@ -92,165 +89,46 @@ Rules:
 """
 
 
-def build_answer_context(
+async def generate_case_answer(
     *,
     result: CaseAnalysisResult | None,
     question: str,
     history: list[ChatMessage],
-    source_bundle: CaseSourceBundle,
-) -> dict[str, object]:
-    if result is None:
-        return {
-            "analysis_result_id": None,
-            "source_revision": source_bundle.revision,
-            "analysis_summary": None,
-            "trace": None,
-            "question": question,
-            "history": [
-                {"id": str(item.id), "role": item.role, "content": item.content} for item in history
-            ],
-        }
-
-    return {
-        "analysis_result_id": str(result.id),
-        "source_revision": source_bundle.revision,
-        "analysis_summary": result.summary,
-        "trace": result.trace_json,
-        "question": question,
-        "history": [
-            {"id": str(item.id), "role": item.role, "content": item.content} for item in history
-        ],
-    }
-
-
-async def generate_pre_analysis_answer(
-    *,
-    config: AnalysisPipelineConfig,
-    question: str,
-    history: list[dict[str, str]],
-    source_bundle: CaseSourceBundle,
-    language: str,
-    client: httpx.AsyncClient | None = None,
+    sources: CaseSourceBundle,
+    language: ResponseLanguage,
 ) -> CaseAnalysisOutput:
-    calls: list[dict[str, object]] = []
-    sources_data = [
-        {
-            "source_id": s.source_id,
-            "source_kind": s.source_kind,
-            "filename": s.filename,
-            "text": s.text[:6000],
-        }
-        for s in source_bundle.sources
+    conversation = [
+        {"id": str(message.id), "role": message.role, "content": message.content}
+        for message in history
+        if message.content.strip()
     ]
-    content = {
-        "response_language": language,
-        "question": question,
-        "case_sources": sources_data,
-        "conversation_history": history,
-    }
-    receipt: dict[str, object] = {
-        "prompt_version": "case_chat_pre_analysis_v1",
-        "outcome": "general",
-        "calls": calls,
-    }
+    if result is None:
+        return await pre_analysis_answer(question, conversation, sources, language)
 
-    async def generate(active_client: httpx.AsyncClient) -> GeneralCaseAnswerResponse:
-        return await request_stage(
-            client=active_client,
-            target=resolve_target(config),
-            config=config,
-            stage="chat_general_answer",
-            system=PRE_ANALYSIS_ANSWER_PROMPT,
-            content=content,
-            schema=GeneralCaseAnswerResponse,
-            calls=calls,
-        )
-
-    if client is not None:
-        response = await generate(client)
-    else:
-        async with httpx.AsyncClient() as owned_client:
-            response = await generate(owned_client)
-
-    return CaseAnalysisOutput(
-        answer=response.answer.strip(),
-        trace=None,
-        execution_receipt=receipt,
+    trace = CaseAnalysisTrace.model_validate(result.trace_json)
+    response = await request_stage(
+        config=configured_pipeline(),
+        stage="chat_answer",
+        system=ANSWER_PROMPT,
+        content={
+            "response_language": language,
+            "question": question,
+            "analysis_summary": result.summary,
+            "claims": [claim.model_dump(mode="json") for claim in trace.claims],
+            "involved_parties": [party.model_dump(mode="json") for party in trace.involved_parties],
+            "timeline": [item.model_dump(mode="json") for item in trace.timeline],
+            "impacts": [impact.model_dump(mode="json") for impact in trace.impacts],
+            "mitre_associations": [
+                association.model_dump(mode="json") for association in trace.mitre_associations
+            ],
+            "gaps": [
+                {"topic": gap.topic, "status": gap.status, "description": gap.description}
+                for gap in trace.gaps
+            ],
+            "conversation_history": conversation,
+        },
+        schema=CaseAnswerResponse,
     )
-
-
-async def generate_case_answer(
-    *,
-    context: dict[str, object],
-    source_bundle: CaseSourceBundle,
-    user_message: object,
-    client: httpx.AsyncClient | None = None,
-) -> CaseAnalysisOutput:
-    config = configured_pipeline()
-    question = context.get("question")
-    analysis_result_id = context.get("analysis_result_id")
-    history = context.get("history")
-    if not isinstance(question, str) or not question.strip() or not isinstance(history, list):
-        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is incomplete")
-    normalized_history = validate_history(history)
-    language = resolve_response_language(user_message)
-
-    if analysis_result_id is None:
-        return await generate_pre_analysis_answer(
-            config=config,
-            question=question,
-            history=normalized_history,
-            source_bundle=source_bundle,
-            language=language,
-            client=client,
-        )
-
-    summary = context.get("analysis_summary")
-    if not isinstance(summary, str) or not isinstance(analysis_result_id, str):
-        raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is incomplete")
-    trace = parse_trace(context.get("trace"), "Chat analysis trace is invalid")
-    calls: list[dict[str, object]] = []
-    content = {
-        "response_language": language,
-        "question": question,
-        "analysis_summary": summary,
-        "claims": [claim.model_dump(mode="json") for claim in trace.claims],
-        "involved_parties": [party.model_dump(mode="json") for party in trace.involved_parties],
-        "timeline": [item.model_dump(mode="json") for item in trace.timeline],
-        "impacts": [impact.model_dump(mode="json") for impact in trace.impacts],
-        "mitre_associations": [
-            association.model_dump(mode="json") for association in trace.mitre_associations
-        ],
-        "gaps": [
-            {"topic": gap.topic, "status": gap.status, "description": gap.description}
-            for gap in trace.gaps
-        ],
-        "conversation_history": normalized_history,
-    }
-    receipt = {
-        "prompt_version": ANSWER_VERSION,
-        "context_analysis_result_id": analysis_result_id,
-        "history_message_ids": [item["id"] for item in normalized_history],
-        "calls": calls,
-    }
-
-    async def generate(active_client: httpx.AsyncClient) -> CaseAnswerResponse:
-        return await request_stage(
-            client=active_client,
-            target=resolve_target(config),
-            config=config,
-            stage="chat_answer",
-            system=ANSWER_PROMPT,
-            content=content,
-            schema=CaseAnswerResponse,
-            calls=calls,
-        )
-
-    if client is not None:
-        response = await generate(client)
-    else:
-        async with httpx.AsyncClient() as owned_client:
-            response = await generate(owned_client)
     known = {claim.claim_id: claim for claim in trace.claims}
     selected = list(
         dict.fromkeys(claim_id for unit in response.units for claim_id in unit.claim_ids)
@@ -265,49 +143,48 @@ async def generate_case_answer(
         answer = response.general_answer.strip()
     else:
         answer = NOT_IN_ANALYSIS[language]
-    receipt["outcome"] = response.outcome
-    receipt["answer_units"] = [unit.model_dump(mode="json") for unit in response.units]
     answer_trace = resolve_case_trace(
         CaseAnalysisTrace(
             analysis_mode="question_answer",
             summary=answer,
             claims=[deepcopy(known[claim_id]) for claim_id in selected],
         ),
-        source_bundle,
+        sources,
     )
-    return CaseAnalysisOutput(answer=answer, trace=answer_trace, execution_receipt=receipt)
+    return CaseAnalysisOutput(answer=answer, trace=answer_trace)
 
 
-def validate_history(value: list[object]) -> list[dict[str, str]]:
-    normalized: list[dict[str, str]] = []
-    for item in value:
-        if not isinstance(item, Mapping):
-            raise CaseAnalysisFailure(
-                "case_ask_context_invalid", "Chat analysis history is invalid"
-            )
-        message_id = item.get("id")
-        role = item.get("role")
-        content = item.get("content")
-        if not all(
-            isinstance(entry, str) and entry.strip() for entry in (message_id, role, content)
-        ):
-            raise CaseAnalysisFailure(
-                "case_ask_context_invalid", "Chat analysis history is incomplete"
-            )
-        normalized.append({"id": message_id, "role": role, "content": content})
-    return normalized
-
-
-def parse_trace(value: object, message: str) -> CaseAnalysisTrace:
-    try:
-        return CaseAnalysisTrace.model_validate(value)
-    except ValidationError as error:
-        raise CaseAnalysisFailure("case_ask_context_invalid", message) from error
+async def pre_analysis_answer(
+    question: str,
+    conversation: list[dict[str, str]],
+    sources: CaseSourceBundle,
+    language: ResponseLanguage,
+) -> CaseAnalysisOutput:
+    response = await request_stage(
+        config=configured_pipeline(),
+        stage="chat_general_answer",
+        system=PRE_ANALYSIS_ANSWER_PROMPT,
+        content={
+            "response_language": language,
+            "question": question,
+            "case_sources": [
+                {
+                    "source_id": source.source_id,
+                    "source_kind": source.source_kind,
+                    "filename": source.filename,
+                    "text": source.text[:6000],
+                }
+                for source in sources.sources
+            ],
+            "conversation_history": conversation,
+        },
+        schema=GeneralCaseAnswerResponse,
+    )
+    return CaseAnalysisOutput(answer=response.answer.strip(), trace=None)
 
 
 __all__ = [
     "CaseAnswerResponse",
     "GeneralCaseAnswerResponse",
-    "build_answer_context",
     "generate_case_answer",
 ]

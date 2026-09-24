@@ -4,7 +4,6 @@ from case_mitre_test_support import _fixtures, _gate
 
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
-    CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseMitreAssociation,
     CaseSourceCitation,
@@ -86,11 +85,7 @@ def test_rag_failure_falls_back_to_case_sources():
 
         async def fake_analysis(**kwargs):
             analysis_kwargs.append(kwargs)
-            return CaseAnalysisOutput(
-                answer="Analysis without RAG context.",
-                trace=trace,
-                execution_receipt={"calls": []},
-            )
+            return trace
 
         data = AnalysisInput(sources=source_bundle, response_language="english")
         artifacts = await retrieve_technical_context(
@@ -100,11 +95,9 @@ def test_rag_failure_falls_back_to_case_sources():
 
         assert len(analysis_kwargs) == 1
         assert analysis_kwargs[0]["technical_context"] is None
-        assert analysis_kwargs[0]["retrieval_context_id"] is None
         assert artifacts.trace.mitre_associations == []
-        augmentation = artifacts.receipt["technical_augmentation"]
-        assert augmentation["status"] == "failed"
-        assert augmentation["failure_code"] == "rag_timeout"
+        assert artifacts.augmentation.status == "failed"
+        assert artifacts.augmentation.failure_code == "rag_timeout"
 
     asyncio.run(exercise())
 
