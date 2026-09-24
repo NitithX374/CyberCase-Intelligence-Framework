@@ -209,6 +209,130 @@ def test_case_provider_analysis_normalizes_model_claim_ids_from_json():
     assert parsed.mitre_associations[0].claim_ids == ["A-01", "A-09"]
 
 
+def gap_payload(**overrides) -> dict[str, object]:
+    return {
+        "gap_id": "G-01",
+        "gap_key": "incident_time",
+        "topic": "Incident time",
+        "status": "NOT_PROVIDED",
+        "description": "The time is not stated.",
+        "affected_claim_ids": [],
+        "reason": "Timing matters.",
+        "priority": "high",
+        "askable": True,
+        "clarification_question": "When did it happen?",
+        **overrides,
+    }
+
+
+def test_provider_output_is_normalized_instead_of_rejected():
+    parsed = CaseProviderAnalysis.model_validate(
+        {
+            "version": "case_analysis_trace_v1",
+            "summary": "Files were encrypted.",
+            "involved_parties": [
+                {"name": "ACME", "role": "Victim", "claim_ids": ["A-01", "A-1", "claim-1"]}
+            ],
+            "timeline": [],
+            "impacts": [],
+            "claims": [
+                {
+                    "claim_id": "A-01",
+                    "claim_type": "reported",
+                    "text": "Files were encrypted.",
+                    "epistemic_status": "reported",
+                    "supporting_source_ids": ["s1"],
+                    "contradicting_source_ids": [],
+                    "supporting_citations": [
+                        {
+                            "source_id": "s1",
+                            "exact_quote": "Files were encrypted.",
+                            "document_id": "d1",
+                            "filename": "report.pdf",
+                            "page_numbers": list(range(1, 10)),
+                        }
+                    ],
+                    "contradicting_citations": [],
+                    "reasoning_summary": "r" * 1_001,
+                }
+            ],
+            "gaps": [
+                gap_payload(
+                    gap_key="incident\ntime",
+                    topic="Incident\r\ntime",
+                    affected_claim_ids=["A-01", "A-1"],
+                    clarification_question="When did\nit happen?",
+                ),
+                gap_payload(gap_id="G-02", clarification_question="x" * 301),
+            ],
+            "mitre_associations": [
+                {
+                    "association_id": "MA-01",
+                    "technique_id": " S0096 ",
+                    "claim_ids": ["A-01", "A-1"],
+                    "reason": "Copied from the table.",
+                    "plain_meaning": "p" * 601,
+                    "status": "candidate_only",
+                    "support_role": "external_technical_context",
+                }
+            ],
+        }
+    )
+
+    assert parsed.involved_parties[0].claim_ids == ["A-01"]
+    assert parsed.claims[0].supporting_citations[0].model_dump() == {
+        "source_id": "s1",
+        "exact_quote": "Files were encrypted.",
+    }
+    assert parsed.gaps[0].gap_key == "incident time"
+    assert parsed.gaps[0].topic == "Incident time"
+    assert parsed.gaps[0].affected_claim_ids == ["A-01"]
+    assert parsed.gaps[0].clarification_question == "When did it happen?"
+    assert parsed.gaps[1].clarification_question is None
+    assert parsed.mitre_associations[0].technique_id == "S0096"
+    assert parsed.mitre_associations[0].claim_ids == ["A-01"]
+    assert parsed.claims[0].reasoning_summary == "r" * 1_000
+    assert parsed.mitre_associations[0].plain_meaning == "p" * 600
+
+
+def test_a_quote_spanning_more_pages_than_a_citation_holds_keeps_no_page_locator():
+    lines = [f"line {number}" for number in range(1, 11)]
+    content = "\n\n".join(lines)
+    provenance = bind_exact_page_spans(
+        {
+            "pages": [
+                {"page_number": number, "merged_text": line} for number, line in enumerate(lines, 1)
+            ]
+        },
+        content,
+    )
+    quote = "\n\n".join(lines[:9])
+    source = CaseSourceItem(
+        source_id="s1",
+        source_kind="document",
+        text=content,
+        document_id="d1",
+        filename="report.pdf",
+        provenance={"pages": provenance["pages"]},
+    )
+    claim = CaseAnalysisClaim(
+        claim_id="A-01",
+        claim_type="reported",
+        text="Nine pages were quoted.",
+        epistemic_status="reported",
+        supporting_source_ids=["s1"],
+        supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote=quote)],
+    )
+
+    validated = resolve_case_trace(
+        _trace(claim, content), CaseSourceBundle(revision=1, sources=(source,)), []
+    )
+
+    citation = validated.claims[0].supporting_citations[0]
+    assert citation.exact_quote == quote
+    assert citation.page_numbers == []
+
+
 def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
     parsed = CaseProviderAnalysis.model_validate(
         {

@@ -9,6 +9,8 @@ from app.services.analysis.contracts import (
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderAnalysis,
+    CaseProviderCitation,
+    CaseProviderClaim,
     CaseSourceCitation,
     CaseTimelineItem,
 )
@@ -77,15 +79,25 @@ def test_resolve_case_trace_accepts_valid_parties_timeline_and_impacts() -> None
     assert len(validated.impacts) == 1
 
 
-def test_resolve_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
+@pytest.mark.parametrize(
+    ("section", "item"),
+    [
+        (
+            "involved_parties",
+            CaseInvolvedParty(name="Unknown Actor", role="Attacker", claim_ids=["A-99"]),
+        ),
+        (
+            "timeline",
+            CaseTimelineItem(time="Tuesday", event="Lateral movement", claim_ids=["A-05"]),
+        ),
+        ("impacts", CaseImpactItem(description="Financial loss", claim_ids=["A-99"])),
+    ],
+)
+def test_resolve_case_trace_drops_an_unknown_claim_id(section, item) -> None:
     source = CaseSourceItem(
         source_id="s1",
         source_kind="narrative",
         text="Server breached.",
-    )
-    citation = CaseSourceCitation(
-        source_id="s1",
-        exact_quote="Server breached.",
     )
     claim = CaseAnalysisClaim(
         claim_id="A-01",
@@ -93,74 +105,16 @@ def test_resolve_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
         text="Server breached.",
         epistemic_status="reported",
         supporting_source_ids=["s1"],
-        supporting_citations=[citation],
+        supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote="Server breached.")],
     )
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="Breach occurred.",
-        involved_parties=[
-            CaseInvolvedParty(name="Unknown Actor", role="Attacker", claim_ids=["A-99"])
-        ],
         claims=[claim],
+        **{section: [item]},
     )
     validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert validated.involved_parties[0].claim_ids == []
-
-
-def test_resolve_case_trace_rejects_unknown_claim_in_timeline() -> None:
-    source = CaseSourceItem(
-        source_id="s1",
-        source_kind="narrative",
-        text="Server breached.",
-    )
-    citation = CaseSourceCitation(
-        source_id="s1",
-        exact_quote="Server breached.",
-    )
-    claim = CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="Server breached.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        supporting_citations=[citation],
-    )
-    trace = CaseAnalysisTrace(
-        analysis_mode="case_overview",
-        summary="Breach occurred.",
-        timeline=[CaseTimelineItem(time="Tuesday", event="Lateral movement", claim_ids=["A-05"])],
-        claims=[claim],
-    )
-    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert validated.timeline[0].claim_ids == []
-
-
-def test_resolve_case_trace_rejects_unknown_claim_in_impacts() -> None:
-    source = CaseSourceItem(
-        source_id="s1",
-        source_kind="narrative",
-        text="Server breached.",
-    )
-    citation = CaseSourceCitation(
-        source_id="s1",
-        exact_quote="Server breached.",
-    )
-    claim = CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="Server breached.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        supporting_citations=[citation],
-    )
-    trace = CaseAnalysisTrace(
-        analysis_mode="case_overview",
-        summary="Breach occurred.",
-        impacts=[CaseImpactItem(description="Financial loss", claim_ids=["A-99"])],
-        claims=[claim],
-    )
-    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert validated.impacts[0].claim_ids == []
+    assert getattr(validated, section)[0].claim_ids == []
 
 
 class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
@@ -171,11 +125,11 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             source_kind="narrative",
             text=raw_text,
         )
-        citation = CaseSourceCitation(
+        citation = CaseProviderCitation(
             source_id="s1",
             exact_quote=raw_text,
         )
-        claim = CaseAnalysisClaim(
+        claim = CaseProviderClaim(
             claim_id="A-01",
             claim_type="reported",
             text="Company ACME was targeted by unauthorized access on Monday.",

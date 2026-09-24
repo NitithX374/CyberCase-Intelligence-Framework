@@ -45,7 +45,6 @@ def answer_output(outcome: str, language_prompt: str, general: str = ""):
     context = {
         "analysis_result_id": str(uuid4()),
         "source_revision": bundle.revision,
-        "pipeline_config": {},
         "analysis_summary": trace.summary,
         "trace": trace.model_dump(mode="json"),
         "question": "1+1",
@@ -86,7 +85,6 @@ def test_the_model_is_shown_the_whole_analysis_not_only_its_claims():
     context = {
         "analysis_result_id": str(uuid4()),
         "source_revision": bundle.revision,
-        "pipeline_config": {},
         "analysis_summary": trace.summary,
         "trace": trace.model_dump(mode="json"),
         "question": "Which techniques were mapped?",
@@ -124,12 +122,11 @@ def test_the_model_is_shown_the_whole_analysis_not_only_its_claims():
         assert section in seen, section
 
 
-def test_chat_uses_the_current_model_for_a_stored_analysis():
+def test_chat_uses_the_configured_model_for_a_stored_analysis():
     bundle, trace = analysed_case()
     context = {
         "analysis_result_id": str(uuid4()),
         "source_revision": bundle.revision,
-        "pipeline_config": {"model": "openai/gpt-5.6-luna"},
         "analysis_summary": trace.summary,
         "trace": trace.model_dump(mode="json"),
         "question": "Who are you?",
@@ -221,3 +218,4 @@ def test_the_answer_context_carries_only_what_the_call_needs():
     assert context["question"] == "What happened?"
     assert context["source_revision"] == 1
     assert context["history"] == []
+    assert "pipeline_config" not in context

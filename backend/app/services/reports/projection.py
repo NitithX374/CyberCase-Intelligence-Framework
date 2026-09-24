@@ -137,11 +137,6 @@ def technical_augmentation_input(
             "case_technical_augmentation_invalid",
             "The persisted Case technical augmentation outcome is invalid",
         ) from error
-    if augmentation.retrieval_context_id != trace.retrieval_context_id:
-        raise ReportGenerationConflict(
-            "case_technical_augmentation_invalid",
-            "The persisted technical retrieval context is not bound to the analysis trace",
-        )
     if augmentation.association_ids != [item.association_id for item in trace.mitre_associations]:
         raise ReportGenerationConflict(
             "case_technical_augmentation_invalid",
@@ -166,11 +161,7 @@ def validate_augmentation_outcome(
             and not has_associations
         )
     elif augmentation.status == "insufficient_context":
-        valid = (
-            augmentation.applicability.decision == "RETRIEVE"
-            and has_context
-            and not has_associations
-        )
+        valid = augmentation.applicability.decision == "RETRIEVE" and not has_associations
     elif (
         augmentation.status == "retrieved_from_rag"
         or augmentation.status == "retrieved_without_supported_match"

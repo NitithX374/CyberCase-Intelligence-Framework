@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from app.services.analysis.contracts import CaseAnalysisFailure, CaseAnalysisMode
+from app.services.analysis.contracts.claims import MAX_CLARIFICATION_QUESTION_CHARS
 
-CASE_ANALYSIS_PROMPT_VERSION = "main_case_analysis_v1"
-
-GAP_IDENTIFICATION_INSTRUCTIONS = """
+GAP_IDENTIFICATION_INSTRUCTIONS = f"""
 Gaps:
 - Include only materially unresolved factual issues that affect the current analysis.
 - Use sequential gap IDs G-01 through G-32.
@@ -15,7 +14,8 @@ Gaps:
 - Link affected claim IDs when applicable. Set askable false for EXPLICITLY_UNKNOWN.
 - Do not create gaps for optional enrichment or information that would merely be useful.
 - For every askable high-priority gap, provide clarification_question as one concise,
-  standalone question in the requested language. Use null when the gap is not askable.
+  standalone question of at most {MAX_CLARIFICATION_QUESTION_CHARS} characters in the
+  requested language. A longer question is not asked. Use null when the gap is not askable.
 - Do not ask for information merely to strengthen a MITRE mapping when it does not
   materially affect the Case analysis.
 """.strip()
@@ -75,8 +75,7 @@ Claims:
 - Reported facts and inferences need supporting source IDs copied from the supplied Case
   sources, or qa_ids copied from the supplied follow-up history.
 - For each supporting or contradicting source, copy one specific exact quote from the
-  Case source text, or from the answer text of the qa_id you name. Leave document_id and
-  filename null and page_numbers empty so the backend can attach document locations.
+  Case source text, or from the answer text of the qa_id you name.
 - For one claim, a source ID may appear in only one role. If one source contains
   opposing statements, create separate attributed claims or a conflict gap; never
   list that source in both supporting_source_ids and contradicting_source_ids.
@@ -103,13 +102,6 @@ MITRE ATT&CK Associations:
 - Do not infer that an ATT&CK technique occurred merely because it was retrieved.
 - Do not create associations outside the supplied MITRE table.
 - Prefer an empty association list over a weak or speculative mapping.
-
-Follow-up answers:
-- A case source with source_kind "followup_answer" is the reader's reply to the question in
-  its answers_question field. Read the two together: the reply is only meaningful as an
-  answer to that question, and says nothing about any other gap.
-- A reply that declines or says nothing is known makes that one gap EXPLICITLY_UNKNOWN. It is
-  not evidence about anything else, and it is not a reason to weaken unrelated claims.
 
 {GAP_IDENTIFICATION_INSTRUCTIONS}
 
@@ -169,13 +161,6 @@ Case structure:
   and "claim_ids" referencing supporting claims. Do not invent chronology when time is unknown.
 - impacts: list tangible impacts, losses, or scope as objects with "description"
   and "claim_ids" referencing supporting claims.
-
-Follow-up answers:
-- A case source with source_kind "followup_answer" is the reader's reply to the question in
-  its answers_question field. Read the two together: the reply is only meaningful as an
-  answer to that question, and says nothing about any other gap.
-- A reply that declines or says nothing is known is not evidence about anything else, and
-  it is not a reason to weaken unrelated claims.
 
 Do not return hashes, retrieval_context_id, retrieval bindings, confidence scores,
 hidden reasoning, or markdown fences around the JSON.
@@ -304,7 +289,6 @@ def validate_analysis_request(
 
 
 __all__ = [
-    "CASE_ANALYSIS_PROMPT_VERSION",
     "CASE_JUDGEMENT_PROMPT_VERSION",
     "CASE_JUDGEMENT_SYSTEM_PROMPT",
     "CASE_READING_PROMPT_VERSION",

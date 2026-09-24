@@ -23,7 +23,7 @@ from app.services.analysis.prompts import (
     case_reading_prompt,
     validate_analysis_request,
 )
-from app.services.analysis.settings import AnalysisPipelineConfig, read_pipeline
+from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps.write import (
     provider_source_payload,
     request_analysis_stage,
@@ -67,7 +67,7 @@ async def request_case_reading(
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseReadingOutput:
     validated_mode, validated_question = validate_analysis_request(mode, question)
-    config = read_pipeline(pipeline_config)
+    config = AnalysisPipelineConfig.model_validate(pipeline_config)
     receipt = stage_receipt(config)
     try:
         validate_source_bundle(source_bundle)
@@ -115,7 +115,7 @@ async def request_case_judgement(
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisOutput:
     validated_mode, validated_question = validate_analysis_request(mode, question)
-    config = read_pipeline(pipeline_config)
+    config = AnalysisPipelineConfig.model_validate(pipeline_config)
     receipt = stage_receipt(config)
     try:
         validate_source_bundle(source_bundle)

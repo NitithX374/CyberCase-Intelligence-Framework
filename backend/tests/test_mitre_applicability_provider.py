@@ -6,6 +6,7 @@ import httpx
 
 from app.services.analysis.mitre_gate.llm import (
     MITRE_APPLICABILITY_GATE_VERSION,
+    MITRE_APPLICABILITY_SOURCE_MAX_CHARS,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
     MitreApplicabilityGate,
     evaluate_mitre_applicability,
@@ -17,8 +18,6 @@ from app.services.sources.case_source_bundle import CaseSourceItem
 def target():
     return CoreLlmTarget(
         model="test-model",
-        api_key="test-key",
-        base_url="https://provider.test",
         messages_url="https://provider.test/messages",
         headers={"Authorization": "Bearer test-key"},
     )
@@ -129,3 +128,31 @@ def test_provider_error_fails_closed(monkeypatch) -> None:
 
     assert result.decision == "SKIP"
     assert result.failure_code == "mitre_applicability_provider_error"
+
+
+def test_the_record_says_when_the_gate_read_only_part_of_a_source(monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        output = {"decision": "SKIP", "source_message_ids": [], "trigger_text": []}
+        return httpx.Response(200, json={"output_text": json.dumps(output)})
+
+    monkeypatch.setattr(
+        "app.services.analysis.mitre_gate.llm.resolve_core_llm_target",
+        lambda model: target(),
+    )
+
+    def evaluated(text: str):
+        source = CaseSourceItem(source_id=str(uuid4()), source_kind="narrative", text=text)
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        try:
+            return asyncio.run(
+                evaluate_mitre_applicability(
+                    case_sources=[source],
+                    gate=MitreApplicabilityGate(client=client),
+                )
+            )
+        finally:
+            asyncio.run(client.aclose())
+
+    assert evaluated("A laptop was taken.").input_truncated is False
+    long_source = "A laptop was taken. " + "x" * MITRE_APPLICABILITY_SOURCE_MAX_CHARS
+    assert evaluated(long_source).input_truncated is True

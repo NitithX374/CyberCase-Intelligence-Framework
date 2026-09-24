@@ -20,3 +20,9 @@ def test_case_provider_analysis_schema_exposes_grounded_claim_roles() -> None:
     for section in ("involved_parties", "timeline", "impacts", "claims", "gaps"):
         assert section in schema["properties"]
     assert set(schema["required"]) == set(schema["properties"])
+
+
+def test_the_provider_is_not_asked_for_document_locators() -> None:
+    schema = structured_output_schema(CaseProviderAnalysis)
+    citation = schema["$defs"]["CaseProviderCitation"]
+    assert set(citation["properties"]) == {"source_id", "exact_quote"}

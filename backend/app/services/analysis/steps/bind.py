@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 
 from app.services.analysis.contracts import (
@@ -7,6 +8,7 @@ from app.services.analysis.contracts import (
     CaseAnalysisTrace,
     CaseFollowupExchange,
     CaseGroundingReport,
+    CaseMitreAssociation,
     CaseSourceCitation,
 )
 from app.services.analysis.steps.quotes import (
@@ -20,6 +22,8 @@ from app.services.sources.case_source_bundle import (
     CaseSourceItem,
     build_document_source_context,
 )
+
+ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
 
 
 def followup_registry_items(
@@ -51,7 +55,7 @@ def resolve_case_trace(
     known_claim_ids = {claim.claim_id for claim in claims}
     resolved_claims = [resolve_claim(claim, registry, document_context) for claim in claims]
 
-    associations, dropped_associations = kept_associations(
+    associations, outside_context, without_claim = kept_associations(
         trace.mitre_associations,
         known_claim_ids,
         context_technique_ids(mitre_table),
@@ -72,7 +76,8 @@ def resolve_case_trace(
                 claims,
                 resolved_claims,
                 registry,
-                associations_dropped=dropped_associations,
+                associations_outside_context=outside_context,
+                associations_without_claim=without_claim,
                 claims_dropped=len(trace.claims) - len(claims),
             ),
         }
@@ -105,21 +110,31 @@ def answerable_gap(gap, known_claim_ids: set[str]):
     )
 
 
-def kept_associations(associations, known_claim_ids, context_techniques, *, has_retrieval):
-    kept = []
+def kept_associations(
+    associations: list[CaseMitreAssociation],
+    known_claim_ids: set[str],
+    context_techniques: set[str],
+    *,
+    has_retrieval: bool,
+) -> tuple[list[CaseMitreAssociation], int, int]:
+    kept: list[CaseMitreAssociation] = []
+    outside_context = 0
+    without_claim = 0
     for association in associations:
-        if not has_retrieval:
+        technique_id = association.technique_id
+        if (
+            not has_retrieval
+            or ATTACK_TECHNIQUE_ID.fullmatch(technique_id) is None
+            or technique_id not in context_techniques
+        ):
+            outside_context += 1
             continue
-        if association.technique_id not in context_techniques:
+        claim_ids = [cid for cid in association.claim_ids if cid in known_claim_ids]
+        if not claim_ids:
+            without_claim += 1
             continue
-        kept.append(
-            association.model_copy(
-                update={
-                    "claim_ids": [cid for cid in association.claim_ids if cid in known_claim_ids]
-                }
-            )
-        )
-    return kept, len(associations) - len(kept)
+        kept.append(association.model_copy(update={"claim_ids": claim_ids}))
+    return kept, outside_context, without_claim
 
 
 def grounding_report(
@@ -127,7 +142,8 @@ def grounding_report(
     kept: list[CaseAnalysisClaim],
     registry: dict[str, CaseSourceItem],
     *,
-    associations_dropped: int = 0,
+    associations_outside_context: int = 0,
+    associations_without_claim: int = 0,
     claims_dropped: int = 0,
 ) -> CaseGroundingReport:
     def all_citations(claims: list[CaseAnalysisClaim]) -> list[CaseSourceCitation]:
@@ -138,19 +154,17 @@ def grounding_report(
         ]
 
     claimed = all_citations(written)
-    survived = {(c.source_id, c.exact_quote) for c in all_citations(kept)}
+    verified = len(all_citations(kept))
+    located = 0
     paraphrased = 0
     unfound = 0
     for citation in claimed:
-        if (citation.source_id, citation.exact_quote) in survived:
-            continue
         source = registry.get(citation.source_id)
         if source is None:
             unfound += 1
-            continue
-        if find_aligned_quote(source.text, citation.exact_quote) is not None:
-            continue
-        if looks_like_a_paraphrase(source.text, citation.exact_quote):
+        elif located_quote(source.text, citation.exact_quote) is not None:
+            located += 1
+        elif looks_like_a_paraphrase(source.text, citation.exact_quote):
             paraphrased += 1
         else:
             unfound += 1
@@ -158,12 +172,14 @@ def grounding_report(
     return CaseGroundingReport(
         claims=len(kept),
         citations_claimed=len(claimed),
-        citations_verified=len(all_citations(kept)),
+        citations_verified=verified,
         citations_paraphrased=paraphrased,
         citations_unfound=unfound,
         claims_without_citation=sum(1 for c in kept if not c.supporting_citations),
         claims_duplicated=claims_dropped,
-        associations_outside_context=associations_dropped,
+        citations_duplicated=located - verified,
+        associations_outside_context=associations_outside_context,
+        associations_without_claim=associations_without_claim,
         sources_cited=len({c.source_id for c in all_citations(kept)}),
         sources_total=len(registry),
     )
@@ -174,63 +190,57 @@ def resolve_claim(
     registry: dict[str, CaseSourceItem],
     document_context: object,
 ) -> CaseAnalysisClaim:
-    supporting = {sid for sid in claim.supporting_source_ids if sid in registry}
-    contradicting = {sid for sid in claim.contradicting_source_ids if sid in registry}
+    supporting = resolved_citations(claim.supporting_citations, registry, document_context)
+    contradicting = resolved_citations(claim.contradicting_citations, registry, document_context)
     return claim.model_copy(
         update={
-            "supporting_source_ids": sorted(supporting),
-            "contradicting_source_ids": sorted(contradicting),
-            "supporting_citations": resolved_citations(
-                claim.supporting_citations, supporting, registry, document_context
+            "supporting_source_ids": role_source_ids(
+                claim.supporting_source_ids, supporting, registry
             ),
-            "contradicting_citations": resolved_citations(
-                claim.contradicting_citations, contradicting, registry, document_context
+            "contradicting_source_ids": role_source_ids(
+                claim.contradicting_source_ids, contradicting, registry
             ),
+            "supporting_citations": supporting,
+            "contradicting_citations": contradicting,
         }
     )
 
 
+def role_source_ids(
+    source_ids: list[str],
+    citations: list[CaseSourceCitation],
+    registry: dict[str, CaseSourceItem],
+) -> list[str]:
+    named = {*source_ids, *(citation.source_id for citation in citations)}
+    return sorted(source_id for source_id in named if source_id in registry)
+
+
+def located_quote(content: str, quote: str) -> str | None:
+    if quote_occurrences(content, quote):
+        return quote
+    return find_aligned_quote(content, quote)
+
+
 def resolved_citations(
     citations: list[CaseSourceCitation],
-    allowed_ids: set[str],
     registry: dict[str, CaseSourceItem],
     document_context: object,
 ) -> list[CaseSourceCitation]:
     resolved: list[CaseSourceCitation] = []
     seen: set[tuple[str, str]] = set()
     for citation in citations:
-        if citation.source_id not in allowed_ids:
-            continue
         source = registry.get(citation.source_id)
         if source is None:
             continue
-        exact_quote = citation.exact_quote
-        positions = quote_occurrences(source.text, exact_quote)
-        if len(positions) == 0:
-            aligned = find_aligned_quote(source.text, exact_quote)
-            if aligned is not None:
-                exact_quote = aligned
-                positions = quote_occurrences(source.text, exact_quote)
-        if len(positions) == 0:
+        exact_quote = located_quote(source.text, citation.exact_quote)
+        if exact_quote is None:
             continue
-        locator = resolve_document_locator(
-            source.source_id,
-            exact_quote,
-            source.text,
-            document_context,
-        )
-        has_documents = any(
-            isinstance(entry, Mapping)
-            and entry.get("source_id") == source.source_id
-            and entry.get("documents")
-            for entry in (document_context if isinstance(document_context, list) else [])
-        )
-        if len(positions) > 1 and has_documents and not locator.get("page_numbers"):
-            locator["page_numbers"] = []
         canonical = CaseSourceCitation(
             source_id=source.source_id,
             exact_quote=exact_quote,
-            **locator,
+            **resolve_document_locator(
+                source.source_id, exact_quote, source.text, document_context
+            ),
         )
         key = (canonical.source_id, canonical.exact_quote)
         if key not in seen:
