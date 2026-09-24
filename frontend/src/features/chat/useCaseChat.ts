@@ -1,14 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState, type FormEvent } from "react";
-import {
-  createCaseChatMessage,
-  getCaseChat,
-  type CaseChatDetail,
-  type CaseRead,
-  type ChatMessageRead,
-} from "@/lib/api";
+import { createCaseChatMessage, getCaseChat, type CaseRead, type ChatMessageRead } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
 interface Submission {
@@ -24,12 +18,9 @@ export function openQuestionId(messages: ChatMessageRead[]): string | null {
 }
 
 export function useCaseChatMessages({ caseId }: { caseId: string | null }) {
-  return useQuery<CaseChatDetail>({
+  return useQuery<ChatMessageRead[]>({
     queryKey: caseQueryKeys.chat(caseId ?? "none"),
-    queryFn: async ({ signal }) => {
-      const response = await getCaseChat(caseId!, signal);
-      return { ...response, messages: inOrder(response.messages) };
-    },
+    queryFn: async ({ signal }) => inOrder((await getCaseChat(caseId!, signal)).messages ?? []),
     enabled: Boolean(caseId),
     retry: false,
     staleTime: 0,
@@ -49,13 +40,12 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
 
   const chatQuery = useCaseChatMessages({ caseId });
   const send = useMutation({
+    mutationKey: caseQueryKeys.chatSend(caseId ?? "none"),
     mutationFn: ({ content, key }: Submission) => createCaseChatMessage(caseId!, content, key),
     onSuccess: (result) => {
       setInput("");
-      queryClient.setQueryData<CaseChatDetail>(caseQueryKeys.chat(caseId!), (current) =>
-        current
-          ? { ...current, messages: inOrder([...current.messages, ...result.messages]) }
-          : current,
+      queryClient.setQueryData<ChatMessageRead[]>(caseQueryKeys.chat(caseId!), (current) =>
+        current ? inOrder([...current, ...result.messages]) : current,
       );
       if (result.analysis) {
         queryClient.setQueryData(caseQueryKeys.analysis(caseId!), result.analysis);
@@ -79,10 +69,10 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
   });
 
   const messages = useMemo(() => {
-    const loaded = chatQuery.data?.messages ?? [];
+    const loaded = chatQuery.data ?? [];
     if (!send.isPending || !send.variables || !caseId) return loaded;
     return [...loaded, beingSent(caseId, send.variables, loaded)];
-  }, [caseId, chatQuery.data?.messages, send.isPending, send.variables]);
+  }, [caseId, chatQuery.data, send.isPending, send.variables]);
 
   const pendingQuestionId = useMemo(() => openQuestionId(messages), [messages]);
   const loadError =
@@ -126,6 +116,20 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
       [input, submitContent],
     ),
   };
+}
+
+export function useIsFollowupPending(caseId: string | null): boolean {
+  const answering = useMutationState({
+    filters: {
+      mutationKey: caseQueryKeys.chatSend(caseId ?? "none"),
+      exact: true,
+      status: "pending",
+      predicate: (mutation) =>
+        (mutation.state.variables as Submission | undefined)?.answersQuestion === true,
+    },
+    select: (mutation) => mutation.mutationId,
+  });
+  return caseId !== null && answering.length > 0;
 }
 
 function inOrder(messages: ChatMessageRead[]): ChatMessageRead[] {

@@ -1,46 +1,76 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useWorkspaceActivity } from "@/features/workspace/WorkspaceActivityContext";
+import type { AnalysisStepRead } from "@/lib/api";
+import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
+import { deferred } from "@/features/chat/chatTestSupport";
+import { analysisResult, caseId, narrativeSource } from "@/test/fixtures";
 import { httpError, refusal } from "@/test/httpErrors";
 import CaseShellLayout from "./layout";
 
-const caseId = "22222222-2222-4222-8222-222222222222";
-
 const state = vi.hoisted(() => ({
   createCase: vi.fn(),
-  startAnalysis: vi.fn(),
+  push: vi.fn(),
+  start: vi.fn(),
+  segment: "sources" as string | null,
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => `/case/${caseId}/sources`,
   useParams: () => ({ caseId }),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push: state.push, replace: vi.fn() }),
+  useSelectedLayoutSegment: () => state.segment,
+}));
+vi.mock("@/lib/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api")>()),
+  startCaseAnalysis: (...args: unknown[]) => state.start(...args),
 }));
 vi.mock("@/features/cases/queries", () => ({
-  useCases: () => ({ data: [] }),
   useCase: () => ({ data: undefined }),
   useCaseMutations: () => ({
     createMutation: { isPending: false, mutateAsync: state.createCase },
-    deleteMutation: { isPending: false, mutateAsync: vi.fn() },
     updateMutation: { isPending: false, mutateAsync: vi.fn() },
   }),
 }));
-vi.mock("@/features/sources/queries", () => ({ useCaseSources: () => ({ data: [] }) }));
-vi.mock("@/features/analysis/queries", () => ({
-  useIsCaseAnalysisRunning: () => false,
-  useStartCaseAnalysis: () => ({ mutateAsync: state.startAnalysis }),
+vi.mock("@/features/sources/queries", () => ({
+  useCaseSources: () => ({ data: [narrativeSource("ไฟล์เงินเดือนถูกเข้ารหัส")] }),
 }));
 vi.mock("@/features/workspace/WorkspaceHeader", () => ({
-  WorkspaceHeader: ({ onNewCase }: { onNewCase: () => void }) => (
-    <button type="button" onClick={onNewCase}>
-      New case
-    </button>
+  WorkspaceHeader: ({ activeView, onNewCase }: { activeView: string; onNewCase: () => void }) => (
+    <>
+      <p>Viewing {activeView}</p>
+      <button type="button" onClick={onNewCase}>
+        New case
+      </button>
+    </>
   ),
 }));
-vi.mock("@/features/chat/WorkspaceChatPanel", () => ({ WorkspaceChatPanel: () => null }));
+vi.mock("@/features/chat/WorkspaceChatPanel", () => ({
+  WorkspaceChatPanel: ({ isOpen, onCloseChat }: { isOpen: boolean; onCloseChat: () => void }) =>
+    isOpen ? (
+      <aside aria-label="Ask about this case">
+        <p>When did the incident happen?</p>
+        <button type="button" onClick={onCloseChat}>
+          Close Ask
+        </button>
+      </aside>
+    ) : null,
+}));
+
+const QUESTION: AnalysisStepRead = {
+  status: "need_followup",
+  round: 1,
+  max_rounds: 3,
+  question: {
+    message_id: "question-1",
+    gap_id: "G-01",
+    gap_key: "topic:incident-time",
+    question: "When did the incident happen?",
+  },
+};
 
 function AnalyzeButton() {
-  const { runAnalysis } = useWorkspaceActivity();
+  const runAnalysis = useRunCaseAnalysis(caseId);
   return (
     <button type="button" onClick={runAnalysis}>
       Analyze
@@ -48,20 +78,33 @@ function AnalyzeButton() {
   );
 }
 
+function renderLayout(page: ReactNode = <p>workspace</p>) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const layout = (children: ReactNode) => (
+    <QueryClientProvider client={queryClient}>
+      <CaseShellLayout>{children}</CaseShellLayout>
+    </QueryClientProvider>
+  );
+  const view = render(layout(page));
+  return { showPage: (next: ReactNode) => view.rerender(layout(next)) };
+}
+
+const ask = () => screen.queryByRole("complementary", { name: "Ask about this case" });
+
 beforeEach(() => {
   state.createCase.mockReset();
-  state.startAnalysis.mockReset();
+  state.push.mockReset();
+  state.start.mockReset();
+  state.segment = "sources";
   localStorage.clear();
 });
 
 describe("CaseShellLayout", () => {
   it("tells the reader when a new case could not be created, and remembers the closed chat", async () => {
     state.createCase.mockRejectedValue(httpError(500, "Internal Server Error"));
-    render(
-      <CaseShellLayout>
-        <p>workspace</p>
-      </CaseShellLayout>,
-    );
+    renderLayout();
 
     fireEvent.click(screen.getByRole("button", { name: "New case" }));
 
@@ -69,27 +112,76 @@ describe("CaseShellLayout", () => {
     expect(localStorage.getItem("cybercase:chat-open")).toBe("false");
   });
 
-  it("shows why the backend refused to start an analysis", async () => {
-    state.startAnalysis.mockRejectedValue(
-      refusal(
-        409,
-        "case_sources_changed",
-        "The case sources changed while the analysis was running. Analyse again.",
-      ),
-    );
-    render(
-      <CaseShellLayout>
-        <AnalyzeButton />
-      </CaseShellLayout>,
-    );
+  it("reads the open view from the route", () => {
+    renderLayout();
+    expect(screen.getByText("Viewing sources")).toBeInTheDocument();
+  });
+
+  it("treats the case root as Analysis", () => {
+    state.segment = null;
+    renderLayout();
+    expect(screen.getByText("Viewing analysis")).toBeInTheDocument();
+  });
+});
+
+describe("an analysis run started from a page", () => {
+  it("goes to the analysis once it is written, in the language of the sources", async () => {
+    state.start.mockResolvedValue({
+      status: "completed",
+      round: 1,
+      max_rounds: 3,
+      result: analysisResult(),
+    });
+    renderLayout(<AnalyzeButton />);
 
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
 
+    await waitFor(() => expect(state.push).toHaveBeenCalledWith(`/case/${caseId}/analysis`));
+    expect(state.start).toHaveBeenCalledWith(caseId, { response_language: "thai" });
+  });
+
+  it("says in Thai why it failed, after the reader has left the page that started it", async () => {
+    const run = deferred<AnalysisStepRead>();
+    state.start.mockReturnValue(run.promise);
+    const { showPage } = renderLayout(<AnalyzeButton />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    await waitFor(() => expect(state.start).toHaveBeenCalledOnce());
+    showPage(<p>legal</p>);
+    expect(screen.queryByRole("button", { name: "Analyze" })).not.toBeInTheDocument();
+
+    await act(async () =>
+      run.reject(
+        refusal(
+          409,
+          "case_sources_changed",
+          "The case sources changed while the analysis was running. Analyse again.",
+        ),
+      ),
+    );
+
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent(
-      "The case sources changed while the analysis was running. Analyse again.",
+      "แหล่งข้อมูลของคดีเปลี่ยนไประหว่างการวิเคราะห์ กรุณาวิเคราะห์อีกครั้ง",
     );
-    fireEvent.click(screen.getAllByRole("button", { name: /ปิด/ })[0]);
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("opens Ask every time it asks, even when the question is one Ask already showed", async () => {
+    localStorage.setItem("cybercase:chat-open", "false");
+    state.start.mockResolvedValue(QUESTION);
+    renderLayout(<AnalyzeButton />);
+    expect(ask()).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    await waitFor(() => expect(ask()).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Close Ask" }));
+    expect(ask()).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    await waitFor(() => expect(ask()).toBeInTheDocument());
+    expect(state.start).toHaveBeenCalledTimes(2);
+    expect(state.push).not.toHaveBeenCalled();
   });
 });

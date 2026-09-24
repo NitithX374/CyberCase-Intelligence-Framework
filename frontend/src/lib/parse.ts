@@ -11,7 +11,3 @@ export function asArray(value: unknown): unknown[] {
 export function asString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
-
-export function asStringArray(value: unknown): string[] {
-  return asArray(value).map(asString).filter(Boolean);
-}

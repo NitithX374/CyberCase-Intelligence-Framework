@@ -1,74 +1,97 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
+import type { ChatMessageRead } from "@/lib/api";
+import { mergeCaseSourceRows } from "@/features/sources/followupSources";
+import {
+  analysisResult,
+  followupExchange,
+  narrativeSource,
+  pagedDocumentSource,
+} from "@/test/fixtures";
 import { ChatTranscript } from "./ChatTranscript";
 
-const sampleResult: CaseAnalysisResultRead = {
-  id: "analysis-result-1",
-  case_id: "case-123",
-  source_revision: 1,
-  schema_version: "case_analysis_trace_v1",
-  status: "validated",
-  summary: "Initial compromise occurred via spearphishing attachment delivering malware.",
-  trace_json: null,
-  retrieval_context_id: null,
-  pipeline_config: {},
-  external_context_json: {},
-  created_at: "2026-09-10T12:00:00Z",
-  freshness: "current",
-};
-
-const sources: CaseSourceRead[] = [
-  {
-    id: "source-1",
+function message(
+  id: string,
+  ordinal: number,
+  role: "user" | "assistant",
+  content: string,
+  metadata: ChatMessageRead["metadata_json"] = {},
+): ChatMessageRead {
+  return {
+    id,
     case_id: "case-123",
-    source_kind: "narrative",
-    document_id: null,
-    exact_text: "Initial compromise occurred via spearphishing attachment delivering malware.",
-    provenance_json: {},
-    source_metadata_json: {},
-    created_at: "2026-09-10T11:59:00Z",
-    archived_at: null,
-  },
-];
+    ordinal,
+    role,
+    content,
+    message_kind: "conversation",
+    analysis_result_id: null,
+    metadata_json: metadata,
+    created_at: "2026-09-10T12:00:00Z",
+  };
+}
+
+function analysisMessage(claims: Record<string, unknown>[]): ChatMessageRead {
+  return message("analysis-1", 3, "assistant", "Case analysis", {
+    analysis_trace: {
+      version: "case_analysis_trace_v1",
+      validation_status: "validated",
+      claims,
+    },
+  });
+}
 
 describe("ChatTranscript", () => {
   it("shows the exchange the analysis pinned to itself", () => {
-    const question: ChatMessageRead = {
-      id: "msg-q-1",
-      case_id: "case-123",
-      ordinal: 1,
-      role: "assistant",
-      content: "When did the incident happen?",
-      message_kind: "conversation",
-      analysis_result_id: "analysis-result-1",
-      gap_key: "topic:incident-time",
-      metadata_json: {},
-      created_at: "2026-09-10T12:00:01Z",
-    };
-    const answer: ChatMessageRead = {
-      id: "msg-a-1",
-      case_id: "case-123",
-      ordinal: 2,
-      role: "user",
-      content: "Around two in the morning.",
-      message_kind: "conversation",
-      analysis_result_id: "analysis-result-1",
-      in_reply_to_message_id: "msg-q-1",
-      metadata_json: {},
-      created_at: "2026-09-10T12:05:00Z",
-    };
+    const [question, answer] = followupExchange(
+      "When did the incident happen?",
+      "Around two in the morning.",
+    );
     render(
       <ChatTranscript
         messages={[question, answer]}
         isProcessing={false}
-        leadResult={sampleResult}
-        sources={sources}
+        leadResult={analysisResult()}
+        sources={[narrativeSource("Initial compromise occurred via spearphishing.")]}
       />,
     );
     expect(screen.getByText("When did the incident happen?")).toBeInTheDocument();
     expect(screen.getByText("Around two in the morning.")).toBeInTheDocument();
     expect(screen.getByText("Question")).toBeInTheDocument();
+  });
+
+  it("reads assistant messages as Markdown and keeps what the reader typed as written", () => {
+    render(
+      <ChatTranscript
+        messages={[
+          message("msg-user", 1, "user", "Check this **user message** with `code`."),
+          message("msg-assistant", 2, "assistant", "Here is **assistant response**."),
+        ]}
+        isProcessing={false}
+      />,
+    );
+
+    expect(screen.getByText("Check this **user message** with `code`.")).toBeInTheDocument();
+    expect(screen.getByText("assistant response").tagName).toBe("STRONG");
+  });
+
+  it("does not render raw HTML an assistant message contains", () => {
+    const { container } = render(
+      <ChatTranscript
+        messages={[
+          message(
+            "msg-assistant",
+            1,
+            "assistant",
+            `Hello <button id="unsafe-btn">Click me</button> <script>console.log('xss')</script>`,
+          ),
+        ]}
+        isProcessing={false}
+      />,
+    );
+
+    expect(container.querySelector("#unsafe-btn")).toBeNull();
+    expect(container.querySelector("script")).toBeNull();
+    expect(screen.getByText(/Hello/)).toBeInTheDocument();
   });
 
   describe("scrolling", () => {
@@ -90,28 +113,81 @@ describe("ChatTranscript", () => {
         configurable: true,
         value: scrollIntoView,
       });
-      const message = (id: string, ordinal: number): ChatMessageRead => ({
-        id,
-        case_id: "case-123",
-        ordinal,
-        role: "user",
-        content: `Message ${ordinal}`,
-        message_kind: "conversation",
-        analysis_result_id: null,
-        metadata_json: {},
-        created_at: "2026-09-10T12:00:00Z",
-      });
+      const first = message("m-1", 1, "user", "Message 1");
+      const second = message("m-2", 2, "user", "Message 2");
 
       const { container, rerender } = render(
-        <ChatTranscript messages={[message("m-1", 1)]} isProcessing={false} />,
+        <ChatTranscript messages={[first]} isProcessing={false} />,
       );
       expect(scrolled).toEqual([]);
 
-      rerender(
-        <ChatTranscript messages={[message("m-1", 1), message("m-2", 2)]} isProcessing={false} />,
-      );
+      rerender(<ChatTranscript messages={[first, second]} isProcessing={false} />);
       expect(scrolled).toEqual([container.firstElementChild]);
       expect(scrollIntoView).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("ChatTranscript source references", () => {
+  it("shows a narrative citation without inventing a page number", () => {
+    const narrative = narrativeSource(
+      "The witness reported seeing a blue vehicle near the entrance.",
+    );
+    const analysis = analysisMessage([
+      {
+        supporting_source_ids: [narrative.id],
+        contradicting_source_ids: [],
+        supporting_citations: [{ source_id: narrative.id, exact_quote: "seeing a blue vehicle" }],
+        contradicting_citations: [],
+      },
+    ]);
+
+    render(<ChatTranscript messages={[analysis]} isProcessing={false} sources={[narrative]} />);
+    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
+    expect(screen.queryByText(/p\. 1/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Case narrative #1" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("seeing a blue vehicle");
+  });
+
+  it("shows a page citation, and a follow-up answer that conflicts with it", () => {
+    const statement = pagedDocumentSource("Page 4 records the transfer.", 4);
+    const exchange = followupExchange(
+      "Was the transfer made?",
+      "No transfer was ever made.",
+      "topic:transfer",
+    );
+    const analysis = analysisMessage([
+      {
+        supporting_source_ids: [statement.id],
+        contradicting_source_ids: ["QA-01"],
+        supporting_citations: [
+          {
+            source_id: statement.id,
+            exact_quote: "records the transfer",
+            document_id: "DOC-1",
+            filename: "statement.pdf",
+            page_numbers: [4],
+          },
+        ],
+        contradicting_citations: [
+          { source_id: "QA-01", exact_quote: "No transfer was ever made." },
+        ],
+      },
+    ]);
+
+    render(
+      <ChatTranscript
+        messages={[...exchange, analysis]}
+        isProcessing={false}
+        sources={mergeCaseSourceRows([statement], exchange)}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Conflicts with Follow-up answer QA-01" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Page 4");
+    expect(screen.getByRole("dialog")).toHaveTextContent("records the transfer");
   });
 });

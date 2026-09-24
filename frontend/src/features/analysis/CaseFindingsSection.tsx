@@ -11,7 +11,7 @@ import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 const INITIAL_FINDINGS = 5;
 
 export interface FindingSourceActions {
-  onSelectSource?: (
+  onSelectSource: (
     sourceRef: SourceMessageRef,
     anchorElement: HTMLElement,
     sourceKey: string,
@@ -58,14 +58,14 @@ export function FindingRow({
           role="conflicting"
           {...sourceActions}
         />
-        {finding.mitreTechniques.map((technique) => (
+        {finding.techniqueIds.map((techniqueId) => (
           <a
-            key={technique.techniqueId}
-            href={`#mitre-${technique.techniqueId}`}
-            title={`ATT&CK ${technique.techniqueId}`}
+            key={techniqueId}
+            href={`#mitre-${techniqueId}`}
+            title={`ATT&CK ${techniqueId}`}
             className="inline-flex h-6 items-center px-1 text-xs font-medium text-ink-secondary underline-offset-2 hover:text-ink hover:underline"
           >
-            {technique.techniqueId}
+            {techniqueId}
           </a>
         ))}
         {finding.reasoningSummary && (

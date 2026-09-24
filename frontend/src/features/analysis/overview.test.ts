@@ -1,163 +1,113 @@
 import { describe, expect, it } from "vitest";
-import type {
-  CaseAnalysisResultRead,
-  CaseSourceCitation,
-  CaseSourceRead,
-  ChatMessageRead,
-} from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceCitation } from "@/lib/api";
+import {
+  analysisResult,
+  claim,
+  followupExchange,
+  narrativeSource,
+  pagedDocumentSource,
+  sourceId,
+  trace,
+} from "@/test/fixtures";
 import { buildCaseOverview } from "./overview";
 import { mergeCaseSourceRows } from "@/features/sources/followupSources";
 
-const sourceId = "11111111-1111-4111-8111-111111111111";
-const caseId = "22222222-2222-4222-8222-222222222222";
 const quote = "The witness saw a blue vehicle.";
-
-function sourceItem(
-  text: string,
-  kind = "narrative",
-  options: Record<string, unknown> = {},
-): CaseSourceRead {
-  return {
-    id: sourceId,
-    case_id: caseId,
-    source_kind: kind,
-    document_id: typeof options.document_id === "string" ? options.document_id : null,
-    filename: typeof options.filename === "string" ? options.filename : null,
-    exact_text: text,
-    provenance_json: (options.provenance_json as Record<string, unknown> | undefined) ?? {},
-    source_metadata_json:
-      (options.source_metadata_json as Record<string, unknown> | undefined) ?? {},
-    created_at: "2026-09-10T00:00:00Z",
-    archived_at: null,
-  };
-}
 
 function result(
   text: string,
   citation: CaseSourceCitation,
-  referencedSourceId = sourceId,
+  citedSourceId = sourceId,
 ): CaseAnalysisResultRead {
-  return {
-    id: "44444444-4444-4444-8444-444444444444",
-    case_id: caseId,
-    source_revision: 1,
-    schema_version: "case_analysis_trace_v1",
-    status: "validated",
+  return analysisResult({
     summary: text,
-    trace_json: {
-      version: "case_analysis_trace_v1",
-      validation_status: "validated",
-      analysis_mode: "case_overview",
+    trace_json: trace({
       summary: "The submitted material identifies a blue vehicle.",
-      claims: [
-        {
-          claim_id: "A-01",
-          claim_type: "reported",
-          text,
-          epistemic_status: "reported",
-          reasoning_summary: null,
-          supporting_source_ids: [referencedSourceId],
-          contradicting_source_ids: [],
-          supporting_citations: [citation],
-          contradicting_citations: [],
-        },
-      ],
-      gaps: [],
-      mitre_associations: [],
-    },
-    retrieval_context_id: null,
-    pipeline_config: {},
-    external_context_json: {},
-    created_at: "2026-09-10T00:00:00Z",
-    freshness: "current",
+      claims: [claim(text, citedSourceId, { supporting_citations: [citation] })],
+    }),
+  });
+}
+
+function pagedCitation(exactQuote: string, pageNumbers: number[]): CaseSourceCitation {
+  return {
+    source_id: sourceId,
+    exact_quote: exactQuote,
+    document_id: "DOC-1",
+    filename: "statement.pdf",
+    page_numbers: pageNumbers,
   };
 }
 
 describe("Case overview projection", () => {
   it("renders claims from current case sources", () => {
     const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
-      sourceItem(quote),
+      narrativeSource(quote),
     ]);
     const source = overview.findings[0].supportingSources[0];
     expect(overview.incidentSummary).toContain("blue vehicle");
-    expect(source).toMatchObject({
-      id: sourceId,
-      ordinal: 1,
-      isNativeSource: true,
-      exactQuote: quote,
-    });
+    expect(source).toMatchObject({ id: sourceId, label: "Case narrative #1", exactQuote: quote });
   });
 
-  it("renders overview with OCR document sources", () => {
+  it("shows the pages the stored citation names", () => {
     const documentQuote = "Defendant was seen at the scene.";
-    const documentSource = sourceItem(documentQuote, "document", {
-      document_id: "DOC-001",
-      filename: "report.pdf",
-      provenance_json: {
-        pages: [{ end_offset: documentQuote.length, page_number: 1, start_offset: 0 }],
-      },
-    });
-    const documentResult = result(documentQuote, {
-      source_id: sourceId,
-      exact_quote: documentQuote,
-      document_id: "DOC-001",
-      filename: "report.pdf",
-      page_numbers: [1],
-    });
-    const overview = buildCaseOverview(documentResult, [documentSource]);
+    const overview = buildCaseOverview(result(documentQuote, pagedCitation(documentQuote, [1])), [
+      pagedDocumentSource(documentQuote, 1),
+    ]);
     expect(overview.hasAnalysis).toBe(true);
-    expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
+    expect(overview.findings[0].supportingSources[0]).toMatchObject({
+      label: "statement.pdf · p. 1",
+      pageNumbers: [1],
+    });
   });
 
-  it("supports repeated quotes when page binding is unambiguous", () => {
+  it("keeps the stored page of a quote that appears more than once", () => {
     const repeatedQuote = "Suspicious vehicle reported.";
     const fullText = `${repeatedQuote}\nSome intermediate text.\n${repeatedQuote}`;
-    const documentSource = sourceItem(fullText, "document", {
-      document_id: "DOC-001",
-      filename: "report.pdf",
+    const overview = buildCaseOverview(result(repeatedQuote, pagedCitation(repeatedQuote, [1])), [
+      pagedDocumentSource(fullText, 1),
+    ]);
+    expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
+  });
+
+  it("cuts a page where the backend counted it, in characters", () => {
+    const first = "หน้า 1 😀 received";
+    const second = "Page two records the transfer.";
+    const text = `${first}\n${second}`;
+    const firstLength = Array.from(first).length + 1;
+    const source = pagedDocumentSource(text, 1, {
       provenance_json: {
-        pages: [{ end_offset: fullText.length, page_number: 1, start_offset: 0 }],
+        pages: [
+          { page_number: 1, start_offset: 0, end_offset: firstLength },
+          {
+            page_number: 2,
+            start_offset: firstLength,
+            end_offset: firstLength + Array.from(second).length,
+          },
+        ],
       },
     });
-    const documentResult = result(repeatedQuote, {
-      source_id: sourceId,
-      exact_quote: repeatedQuote,
-      document_id: "DOC-001",
-      filename: "report.pdf",
-      page_numbers: [1],
-    });
-    const overview = buildCaseOverview(documentResult, [documentSource]);
+
+    const overview = buildCaseOverview(result(second, pagedCitation(second, [2])), [source]);
+
+    expect(overview.findings[0].supportingSources[0].sourcePages).toEqual([
+      { pageNumber: 2, text: second },
+    ]);
+  });
+
+  it("keeps a citation the stored sources do not hold out of the finding", () => {
+    const overview = buildCaseOverview(
+      result(quote, { source_id: "missing", exact_quote: quote }, "missing"),
+      [narrativeSource(quote)],
+    );
     expect(overview.hasAnalysis).toBe(true);
-    expect(overview.findings[0].supportingSources[0].pageNumbers).toEqual([1]);
+    expect(overview.findings[0].supportingSources).toEqual([]);
   });
 
   it("keeps valid follow-up answers as finding sources", () => {
-    const question: ChatMessageRead = {
-      id: "question-1",
-      case_id: caseId,
-      ordinal: 1,
-      role: "assistant",
-      content: "When did the incident occur?",
-      message_kind: "followup_question",
-      gap_key: "topic:incident-time",
-      analysis_result_id: null,
-      in_reply_to_message_id: null,
-      metadata_json: {},
-      created_at: "2026-09-10T00:00:00Z",
-    };
-    const answer: ChatMessageRead = {
-      id: "answer-1",
-      case_id: caseId,
-      ordinal: 2,
-      role: "user",
-      content: "The incident occurred at 02:00.",
-      message_kind: "followup_answer",
-      gap_key: null,
-      analysis_result_id: null,
-      in_reply_to_message_id: question.id,
-      metadata_json: {},
-      created_at: "2026-09-10T00:01:00Z",
-    };
+    const [question, answer] = followupExchange(
+      "When did the incident occur?",
+      "The incident occurred at 02:00.",
+    );
     const followupResult = result(
       answer.content,
       { source_id: "QA-01", exact_quote: answer.content },
@@ -168,8 +118,7 @@ describe("Case overview projection", () => {
     expect(overview.findings[0].supportingSources[0]).toMatchObject({
       id: "QA-01",
       label: "Follow-up answer QA-01",
-      sourceType: "followup_response",
-      fullContent: answer.content,
+      question: "When did the incident occur?",
     });
   });
 
@@ -195,7 +144,7 @@ describe("Case overview projection", () => {
       },
     };
 
-    const overview = buildCaseOverview(analysis, [sourceItem(quote)]);
+    const overview = buildCaseOverview(analysis, [narrativeSource(quote)]);
 
     expect(overview.parties).toEqual([
       expect.objectContaining({ name: "Witness", role: "Saw the vehicle", inferred: false }),
@@ -205,5 +154,30 @@ describe("Case overview projection", () => {
     expect(overview.timeline[0].inferred).toBe(false);
     expect(overview.timeline[1]).toMatchObject({ sources: [], inferred: false });
     expect(overview.impacts[0].inferred).toBe(true);
+  });
+
+  it("links each finding to the ATT&CK techniques associated with it", () => {
+    const base = result(quote, { source_id: sourceId, exact_quote: quote });
+    const analysis: CaseAnalysisResultRead = {
+      ...base,
+      trace_json: {
+        ...base.trace_json!,
+        mitre_associations: [
+          {
+            association_id: "MA-01",
+            technique_id: "T1566",
+            claim_ids: ["A-01"],
+            reason: "A phishing email was reported.",
+            plain_meaning: "",
+            status: "candidate_only",
+            support_role: "external_technical_context",
+          },
+        ],
+      },
+    };
+
+    const overview = buildCaseOverview(analysis, [narrativeSource(quote)]);
+
+    expect(overview.findings[0].techniqueIds).toEqual(["T1566"]);
   });
 });

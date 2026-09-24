@@ -5,11 +5,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   async redirects() {
-    return [
-      { source: "/", destination: "/case", permanent: false },
-      { source: "/case/:caseId/intake", destination: "/case/:caseId/sources", permanent: false },
-      { source: "/case/:caseId/materials", destination: "/case/:caseId/sources", permanent: false },
-    ];
+    return [{ source: "/", destination: "/case", permanent: false }];
   },
 };
 

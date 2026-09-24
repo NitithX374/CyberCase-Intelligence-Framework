@@ -14,9 +14,12 @@ const state = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ caseId }) }));
 vi.mock("@/features/cases/queries", () => ({ useCase: () => ({ data: undefined }) }));
-vi.mock("@/features/analysis/queries", () => ({ useIsCaseAnalysisRunning: () => false }));
+vi.mock("@/features/analysis/queries", () => ({ useIsAnalysisUpdating: () => false }));
+vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
+  useRunCaseAnalysis: () => vi.fn(),
+}));
 vi.mock("@/features/chat/useCaseChat", () => ({
-  useCaseChatMessages: () => ({ data: { case_id: caseId, messages: [] }, isLoading: false }),
+  useCaseChatMessages: () => ({ data: [], isLoading: false }),
 }));
 vi.mock("@/features/sources/queries", () => ({
   useCaseDocuments: () => ({ data: [], isLoading: false }),
@@ -56,7 +59,7 @@ describe("SourcesPage", () => {
     expect(state.refetchSources).toHaveBeenCalledOnce();
   });
 
-  it("shows the reason a document was refused as the message", async () => {
+  it("says in Thai why a document was refused", async () => {
     state.upload.mockRejectedValue(
       refusal(422, "extraction_text_empty", "Document extraction text is empty"),
     );
@@ -68,8 +71,9 @@ describe("SourcesPage", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent(
-      "Document extraction text is empty",
+      "ไม่พบข้อความที่อ่านได้ในเอกสารนี้",
     );
+    expect(dialog).toHaveTextContent("Reason: extraction_text_empty");
     expect(dialog).not.toHaveTextContent("เกิดข้อผิดพลาดที่ไม่คาดคิด");
   });
 });

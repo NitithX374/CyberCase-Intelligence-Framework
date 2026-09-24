@@ -10,8 +10,8 @@ export function useCaseSourceRows(caseId: string | null) {
   const chatQuery = useCaseChatMessages({ caseId });
   const caseSources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
   const rows = useMemo(
-    () => mergeCaseSourceRows(caseSources, chatQuery.data?.messages ?? []),
-    [caseSources, chatQuery.data?.messages],
+    () => mergeCaseSourceRows(caseSources, chatQuery.data ?? []),
+    [caseSources, chatQuery.data],
   );
   const refetch = () => {
     if (sourcesQuery.isLoadingError) void sourcesQuery.refetch();

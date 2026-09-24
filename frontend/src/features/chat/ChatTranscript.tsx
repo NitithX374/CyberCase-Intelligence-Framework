@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import type {
+  CaseAnalysisClaim,
+  CaseAnalysisResultRead,
+  CaseSourceRead,
+  ChatMessageRead,
+} from "@/lib/api";
 import type { SourceMessageRef } from "@/features/sources/types";
-import { asArray, asRecord, asStringArray } from "@/lib/parse";
-import { parseCaseCitations, parseCaseSources, sourceRefs } from "@/features/sources/sourceRefs";
+import { asArray, asRecord } from "@/lib/parse";
+import { claimRefs, parseCaseSources } from "@/features/sources/sourceRefs";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { SourceDrawer } from "@/features/sources/SourceDrawer";
 import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
@@ -28,10 +33,6 @@ export function ChatTranscript({
 
   const initialMessageIdsRef = useRef<Set<string> | null>(null);
   const leadResultIdRef = useRef<string | null>(leadResult?.id ?? null);
-  const uniqueSources = useMemo(
-    () => [...new Map((sources ?? []).map((source) => [source.id, source])).values()],
-    [sources],
-  );
 
   useEffect(() => {
     if (leadResultIdRef.current !== (leadResult?.id ?? null)) {
@@ -69,7 +70,7 @@ export function ChatTranscript({
           messages={messages}
           isProcessing={isProcessing}
           isAnsweringQuestion={isAnsweringQuestion}
-          sources={uniqueSources}
+          sources={sources ?? []}
         />
       )}
     </div>
@@ -145,22 +146,11 @@ function sourceReferencesForAnalysisMessage(
     return [];
 
   const sources = parseCaseSources(rows);
-  const references = asArray(trace.claims).flatMap((value) => {
-    const claim = asRecord(value);
-    if (!claim) return [];
-    const supportingIds = asStringArray(claim.supporting_source_ids);
-    const contradictingIds = asStringArray(claim.contradicting_source_ids);
+  const references = (asArray(trace.claims) as CaseAnalysisClaim[]).flatMap((claim) => {
+    const cited = claimRefs(claim, sources);
     return [
-      ...sourceRefs(
-        supportingIds,
-        parseCaseCitations(claim.supporting_citations, supportingIds, sources),
-        sources,
-      ).map((source) => ({ role: "supporting" as const, source })),
-      ...sourceRefs(
-        contradictingIds,
-        parseCaseCitations(claim.contradicting_citations, contradictingIds, sources),
-        sources,
-      ).map((source) => ({ role: "conflicting" as const, source })),
+      ...cited.supporting.map((source) => ({ role: "supporting" as const, source })),
+      ...cited.contradicting.map((source) => ({ role: "conflicting" as const, source })),
     ];
   });
   const unique = new Map<string, AnalysisSourceReference>();

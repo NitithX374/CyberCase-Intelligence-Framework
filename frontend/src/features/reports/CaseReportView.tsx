@@ -3,16 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
+  downloadCaseReportHtml,
   downloadCaseReportPdf,
   generateCaseReport,
   listCaseReports,
   type CaseAnalysisResultRead,
-  type CaseReport,
+  type CaseReportRead,
 } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
+import { useBlobUrl } from "@/lib/useBlobUrl";
 import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { toUserFacingError, type UserFacingError } from "@/lib/userFacingError";
-import { PersistedReportCard } from "./PersistedReportCard";
 import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
 import { formatDate } from "@/lib/format";
@@ -33,7 +34,7 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
   const generateMutation = useMutation({
     mutationFn: (resultId: string) => generateCaseReport(caseId, { analysis_result_id: resultId }),
     onSuccess: (report) => {
-      queryClient.setQueryData<CaseReport[]>(caseQueryKeys.reports(caseId), (current) => [
+      queryClient.setQueryData<CaseReportRead[]>(caseQueryKeys.reports(caseId), (current) => [
         report,
         ...(current ?? []).filter((item) => item.report_id !== report.report_id),
       ]);
@@ -41,7 +42,7 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
     },
   });
   const downloadMutation = useMutation({
-    mutationFn: (report: CaseReport) => downloadCaseReportPdf(caseId, report.report_id),
+    mutationFn: (report: CaseReportRead) => downloadCaseReportPdf(caseId, report.report_id),
     onSuccess: (blob, report) => downloadPdf(blob, report.version_number),
   });
   const reports = reportsQuery.data ?? [];
@@ -170,11 +171,7 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
             </button>
           </EmptyState>
         ) : selectedReport ? (
-          <PersistedReportCard
-            key={selectedReport.report_id}
-            report={selectedReport}
-            caseId={caseId}
-          />
+          <ReportPreview key={selectedReport.report_id} caseId={caseId} report={selectedReport} />
         ) : (
           <NoSavedReport
             isGenerating={generateMutation.isPending}
@@ -204,6 +201,65 @@ function downloadPdf(blob: Blob, versionNumber: number): void {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(blobUrl);
+}
+
+function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportRead }) {
+  const [isModalDismissed, setIsModalDismissed] = useState(false);
+  const html = useBlobUrl(["case-report-html-blob", caseId, report.report_id], () =>
+    downloadCaseReportHtml(caseId, report.report_id),
+  );
+  const error = useMemo(
+    () =>
+      html.error ? toUserFacingError(html.error, { actionLabel: "โหลดตัวอย่างรายงานใหม่" }) : null,
+    [html.error],
+  );
+  const reload = () => {
+    setIsModalDismissed(false);
+    void html.refetch();
+  };
+
+  return (
+    <article aria-label="Persisted report" className="mt-4">
+      {html.isLoading ? (
+        <div
+          role="status"
+          aria-label="Loading report preview"
+          className="flex h-[820px] w-full items-center justify-center rounded-xl bg-surface-nested text-ink-muted"
+        >
+          <Icon name="spinner" className="h-6 w-6" />
+        </div>
+      ) : html.error || !html.url ? (
+        <>
+          <div
+            aria-label="Report Preview Unavailable"
+            className="flex h-[320px] w-full flex-col items-center justify-center gap-3 rounded-xl bg-surface-nested p-6 text-center"
+          >
+            <p className="text-sm font-medium text-ink">ไม่สามารถแสดงตัวอย่างรายงานได้</p>
+            <button type="button" onClick={reload} className="btn-secondary h-8 px-3">
+              ลองโหลดใหม่
+            </button>
+          </div>
+          <MeaningfulErrorModal
+            isOpen={!isModalDismissed && Boolean(error)}
+            error={error}
+            onClose={() => setIsModalDismissed(true)}
+            onRetry={reload}
+          />
+        </>
+      ) : (
+        <div
+          aria-label="HTML Report Viewer"
+          className="overflow-hidden rounded-xl border border-line bg-canvas"
+        >
+          <iframe
+            src={html.url}
+            title={`Case report: ${report.report.title}`}
+            className="h-[820px] w-full border-0 bg-canvas"
+          />
+        </div>
+      )}
+    </article>
+  );
 }
 
 function NoSavedReport({

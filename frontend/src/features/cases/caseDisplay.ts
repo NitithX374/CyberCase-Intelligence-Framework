@@ -3,17 +3,10 @@ import { casePath } from "@/features/workspace/routes";
 
 export type CaseLibrarySort = "recent" | "oldest" | "title";
 export type CaseLibraryViewMode = "grid" | "list";
-export type CaseStatusTone = "neutral" | "positive" | "attention";
 
 const statusLabels: Record<CaseRead["status"], string> = {
   idle: "Not analyzed",
   answered: "Analyzed",
-};
-
-export const toneTextClass: Record<CaseStatusTone, string> = {
-  neutral: "",
-  positive: "",
-  attention: "text-unresolved",
 };
 
 export function caseDestination(caseRecord: CaseRead): string {
@@ -23,12 +16,6 @@ export function caseDestination(caseRecord: CaseRead): string {
 export function caseStatusLabel(caseRecord: CaseRead): string {
   if (caseRecord.analysis_freshness === "stale") return "Out of date";
   return statusLabels[caseRecord.status];
-}
-
-export function caseStatusTone(caseRecord: CaseRead): CaseStatusTone {
-  if (caseRecord.analysis_freshness === "stale") return "attention";
-  if (caseRecord.status === "answered") return "positive";
-  return "neutral";
 }
 
 export function sortCases(cases: CaseRead[], sort: CaseLibrarySort): CaseRead[] {

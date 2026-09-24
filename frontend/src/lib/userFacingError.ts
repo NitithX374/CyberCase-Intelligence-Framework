@@ -40,6 +40,31 @@ const ERROR_COPY = {
   },
 } as const;
 
+const REFUSAL_MESSAGES = new Map<string, string>([
+  ["case_not_found", "ไม่พบคดีนี้ หรือคดีถูกลบไปแล้ว"],
+  ["case_sources_missing", "กรุณาเพิ่มแหล่งข้อมูลของคดีก่อนเริ่มการวิเคราะห์"],
+  ["case_sources_changed", "แหล่งข้อมูลของคดีเปลี่ยนไประหว่างการวิเคราะห์ กรุณาวิเคราะห์อีกครั้ง"],
+  ["source_text_empty", "แหล่งข้อมูลนี้ไม่มีข้อความ"],
+  ["extraction_text_empty", "ไม่พบข้อความที่อ่านได้ในเอกสารนี้"],
+  ["extraction_text_missing", "ไม่พบข้อความที่อ่านได้ในเอกสารนี้"],
+  ["unsupported_document_type", "ระบบไม่รองรับไฟล์ประเภทนี้"],
+  ["invalid_document", "ไม่สามารถอ่านไฟล์นี้ได้ ไฟล์อาจเสียหายหรือภาพมีขนาดใหญ่เกินไป"],
+  ["document_size_limit_exceeded", "ไฟล์มีขนาดใหญ่เกินกว่าที่ระบบรองรับ"],
+  ["document_page_limit_exceeded", "เอกสารมีจำนวนหน้ามากเกินกว่าที่ระบบรองรับ"],
+  ["document_not_found", "ไม่พบเอกสารนี้"],
+  ["report_not_found", "ไม่พบรายงานนี้"],
+  ["report_generation_disabled", "ระบบปิดการสร้างรายงานไว้ในขณะนี้"],
+  ["case_analysis_missing", "ยังไม่มีผลการวิเคราะห์ของคดีนี้ กรุณาวิเคราะห์ก่อนสร้างรายงาน"],
+  [
+    "analysis_source_snapshot_missing",
+    "การวิเคราะห์นี้ไม่ได้บันทึกแหล่งข้อมูลที่ใช้ จึงสร้างรายงานไม่ได้ กรุณาวิเคราะห์คดีอีกครั้ง",
+  ],
+  [
+    "analysis_followup_snapshot_missing",
+    "การวิเคราะห์นี้ไม่ได้บันทึกคำตอบที่ใช้ จึงสร้างรายงานไม่ได้ กรุณาวิเคราะห์คดีอีกครั้ง",
+  ],
+]);
+
 export function detailMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const detail = responseDetail(error.response?.data);
@@ -55,11 +80,13 @@ export function toUserFacingError(
 ): UserFacingError {
   const category = axios.isAxiosError(error) ? categoryOf(error) : "unknown";
   const detail = axios.isAxiosError(error) ? responseDetail(error.response?.data) : "";
+  const code = axios.isAxiosError(error) ? detailCode(error.response?.data) : "";
   const retryable = category !== "refused";
+  const refusal = category === "refused" ? (REFUSAL_MESSAGES.get(code) ?? detail) : "";
   return {
     title: ERROR_COPY[category].title,
-    message: (category === "refused" && detail) || ERROR_COPY[category].message,
-    technicalDetail: technicalDetail(error, detail) || undefined,
+    message: refusal || ERROR_COPY[category].message,
+    technicalDetail: technicalDetail(error, code, detail) || undefined,
     retryable,
     category,
     actionLabel: options?.actionLabel ?? (retryable ? "ลองอีกครั้ง" : "ปิด"),
@@ -92,11 +119,14 @@ function responseDetail(data: unknown): string {
   return asString(record?.message) || asString(record?.msg);
 }
 
-function technicalDetail(error: unknown, detail: string): string {
+function detailCode(data: unknown): string {
+  return asString(asRecord(asRecord(data)?.detail)?.code);
+}
+
+function technicalDetail(error: unknown, code: string, detail: string): string {
   if (!axios.isAxiosError(error)) {
     return error instanceof Error ? error.message.trim() : "";
   }
-  const code = asString(asRecord(asRecord(error.response?.data)?.detail)?.code);
   return [
     error.message ? `Message: ${error.message}` : null,
     error.code ? `Code: ${error.code}` : null,

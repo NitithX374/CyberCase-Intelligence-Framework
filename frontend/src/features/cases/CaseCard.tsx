@@ -2,18 +2,11 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import type { CaseRead } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import {
-  caseDestination,
-  caseStatusLabel,
-  caseStatusTone,
-  toneTextClass,
-  type CaseLibraryViewMode,
-} from "./caseDisplay";
+import { caseDestination, caseStatusLabel, type CaseLibraryViewMode } from "./caseDisplay";
 
 export function CaseStatus({ caseRecord }: { caseRecord: CaseRead }) {
-  return (
-    <span className={toneTextClass[caseStatusTone(caseRecord)]}>{caseStatusLabel(caseRecord)}</span>
-  );
+  const stale = caseRecord.analysis_freshness === "stale";
+  return <span className={stale ? "text-unresolved" : ""}>{caseStatusLabel(caseRecord)}</span>;
 }
 
 interface CaseCardProps {

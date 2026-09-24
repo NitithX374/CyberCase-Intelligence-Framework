@@ -1,27 +1,30 @@
 import axios from "axios";
 import type {
-  CaseAnalysisCreate,
   AnalysisStepRead,
+  CaseAnalysisCreate,
   CaseAnalysisResultRead,
-  CaseChatResponse,
-  CaseChatDetail,
   CaseChatRead,
+  CaseChatResponse,
   CaseDocumentRead,
   CaseRead,
-  CaseReport,
   CaseReportCreate,
+  CaseReportRead,
   CaseSourceCreate,
   CaseSourceRead,
-  UserProfile,
+  PasswordLoginRequest,
+  RegisterRequest,
+  UserRead,
 } from "./types";
-import type { CaseReportRead } from "./generated/reportTypes";
 
-const CHAT_REQUEST_TIMEOUT_MS = 15_000;
-const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
+const LONG_REQUEST_TIMEOUT_MS = 120_000;
 const ANALYSIS_REQUEST_TIMEOUT_MS = 300_000;
 
-axios.defaults.withCredentials = true;
-axios.defaults.timeout = DEFAULT_REQUEST_TIMEOUT_MS;
+export const http = axios.create({ withCredentials: true, timeout: 15_000 });
+
+http.interceptors.request.use((config) => {
+  config.baseURL = getApiBaseUrl();
+  return config;
+});
 
 export type ResponseLanguage = "thai" | "english";
 
@@ -30,7 +33,7 @@ export function detectResponseLanguage(text: string): ResponseLanguage {
   return "english";
 }
 
-export function getApiBaseUrl(): string {
+function getApiBaseUrl(): string {
   let url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     if (typeof window !== "undefined") {
@@ -50,220 +53,158 @@ export function getApiBaseUrl(): string {
   return url;
 }
 
-export const getCaseChat = async (
-  caseId: string,
-  signal?: AbortSignal,
-): Promise<CaseChatDetail> => {
-  const response = await axios.get<CaseChatRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat`,
-    { signal, timeout: CHAT_REQUEST_TIMEOUT_MS },
-  );
-  return { ...response.data, messages: response.data.messages ?? [] };
-};
+function caseUrl(caseId: string, ...parts: string[]): string {
+  return `/${["cases", caseId, ...parts].map(encodeURIComponent).join("/")}`;
+}
 
-export const getSession = async (signal?: AbortSignal): Promise<UserProfile | null> => {
-  const response = await axios.get<UserProfile | null>(`${getApiBaseUrl()}/auth/session`, {
-    signal,
-    timeout: CHAT_REQUEST_TIMEOUT_MS,
-  });
-  return response.data;
-};
+export async function login(request: PasswordLoginRequest): Promise<UserRead> {
+  return (await http.post<UserRead>("/auth/login", request)).data;
+}
 
-export const logout = async (signal?: AbortSignal): Promise<{ message: string }> => {
-  const response = await axios.post<{ message: string }>(
-    `${getApiBaseUrl()}/auth/logout`,
-    {},
-    { signal },
-  );
-  return response.data;
-};
+export async function register(request: RegisterRequest): Promise<UserRead> {
+  return (await http.post<UserRead>("/auth/register", request)).data;
+}
 
-export const createCaseChatMessage = async (
+export async function getSession(signal?: AbortSignal): Promise<UserRead | null> {
+  return (await http.get<UserRead | null>("/auth/session", { signal })).data;
+}
+
+export async function logout(): Promise<void> {
+  await http.post("/auth/logout", {});
+}
+
+export async function listCases(signal?: AbortSignal): Promise<CaseRead[]> {
+  return (await http.get<CaseRead[]>("/cases", { signal })).data;
+}
+
+export async function createCase(title = "New case"): Promise<CaseRead> {
+  return (await http.post<CaseRead>("/cases", { title })).data;
+}
+
+export async function getCase(caseId: string, signal?: AbortSignal): Promise<CaseRead> {
+  return (await http.get<CaseRead>(caseUrl(caseId), { signal })).data;
+}
+
+export async function updateCase(caseId: string, title: string): Promise<CaseRead> {
+  return (await http.patch<CaseRead>(caseUrl(caseId), { title })).data;
+}
+
+export async function deleteCase(caseId: string): Promise<void> {
+  await http.delete(caseUrl(caseId));
+}
+
+export async function getCaseChat(caseId: string, signal?: AbortSignal): Promise<CaseChatRead> {
+  return (await http.get<CaseChatRead>(caseUrl(caseId, "chat"), { signal })).data;
+}
+
+export async function createCaseChatMessage(
   caseId: string,
   content: string,
   idempotencyKey: string,
-): Promise<CaseChatResponse> => {
-  const response = await axios.post<CaseChatResponse>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/chat/messages`,
-    {
-      content,
-      client_request_id: idempotencyKey,
-      response_language: detectResponseLanguage(content),
-    },
-    { timeout: ANALYSIS_REQUEST_TIMEOUT_MS },
-  );
-  return response.data;
-};
+): Promise<CaseChatResponse> {
+  const request = {
+    content,
+    client_request_id: idempotencyKey,
+    response_language: detectResponseLanguage(content),
+  };
+  return (
+    await http.post<CaseChatResponse>(caseUrl(caseId, "chat", "messages"), request, {
+      timeout: ANALYSIS_REQUEST_TIMEOUT_MS,
+    })
+  ).data;
+}
 
-export const listCases = async (signal?: AbortSignal): Promise<CaseRead[]> => {
-  const response = await axios.get<CaseRead[]>(`${getApiBaseUrl()}/cases`, { signal });
-  return response.data;
-};
-
-export const createCase = async (
-  title: string = "New case",
-  signal?: AbortSignal,
-): Promise<CaseRead> => {
-  const response = await axios.post<CaseRead>(`${getApiBaseUrl()}/cases`, { title }, { signal });
-  return response.data;
-};
-
-export const getCase = async (caseId: string, signal?: AbortSignal): Promise<CaseRead> => {
-  const response = await axios.get<CaseRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}`,
-    { signal },
-  );
-  return response.data;
-};
-
-export const updateCase = async (
-  caseId: string,
-  title: string,
-  signal?: AbortSignal,
-): Promise<CaseRead> => {
-  const response = await axios.patch<CaseRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}`,
-    { title },
-    { signal },
-  );
-  return response.data;
-};
-
-export const deleteCase = async (caseId: string, signal?: AbortSignal): Promise<void> => {
-  await axios.delete(`${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}`, { signal });
-};
-
-export const listCaseDocuments = async (
+export async function listCaseDocuments(
   caseId: string,
   signal?: AbortSignal,
-): Promise<CaseDocumentRead[]> => {
-  const response = await axios.get<CaseDocumentRead[]>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/documents`,
-    { signal },
-  );
-  return response.data;
-};
+): Promise<CaseDocumentRead[]> {
+  return (await http.get<CaseDocumentRead[]>(caseUrl(caseId, "documents"), { signal })).data;
+}
 
-export const fetchCaseDocumentContent = async (
+export async function uploadCaseDocument(caseId: string, file: File): Promise<CaseDocumentRead> {
+  const body = new FormData();
+  body.append("file", file);
+  return (
+    await http.post<CaseDocumentRead>(caseUrl(caseId, "documents"), body, {
+      timeout: LONG_REQUEST_TIMEOUT_MS,
+    })
+  ).data;
+}
+
+export function fetchCaseDocumentContent(
   caseId: string,
   documentId: string,
   signal?: AbortSignal,
-): Promise<Blob> =>
-  getBlob(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(documentId)}/content`,
-    signal,
-  );
+): Promise<Blob> {
+  return getBlob(caseUrl(caseId, "documents", documentId, "content"), signal);
+}
 
-export const listCaseSources = async (
+export async function listCaseSources(
   caseId: string,
   signal?: AbortSignal,
-): Promise<CaseSourceRead[]> => {
-  const response = await axios.get<CaseSourceRead[]>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/sources`,
-    { signal },
-  );
-  return response.data;
-};
+): Promise<CaseSourceRead[]> {
+  return (await http.get<CaseSourceRead[]>(caseUrl(caseId, "sources"), { signal })).data;
+}
 
-export const addCaseSource = async (
+export async function addCaseSource(
   caseId: string,
   request: CaseSourceCreate,
-  signal?: AbortSignal,
-): Promise<CaseSourceRead> => {
-  const response = await axios.post<CaseSourceRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/sources`,
-    request,
-    { signal },
-  );
-  return response.data;
-};
+): Promise<CaseSourceRead> {
+  return (await http.post<CaseSourceRead>(caseUrl(caseId, "sources"), request)).data;
+}
 
-export const uploadCaseDocument = async (
-  caseId: string,
-  file: File,
-  signal?: AbortSignal,
-): Promise<CaseDocumentRead> => {
-  const body = new FormData();
-  body.append("file", file);
-  const response = await axios.post<CaseDocumentRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/documents`,
-    body,
-    { signal, timeout: 120_000 },
-  );
-  return response.data;
-};
-
-export const startCaseAnalysis = async (
+export async function startCaseAnalysis(
   caseId: string,
   request: CaseAnalysisCreate,
-  signal?: AbortSignal,
-): Promise<AnalysisStepRead> => {
-  const response = await axios.post<AnalysisStepRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/analysis`,
-    request,
-    { signal, timeout: ANALYSIS_REQUEST_TIMEOUT_MS },
-  );
-  return response.data;
-};
+): Promise<AnalysisStepRead> {
+  return (
+    await http.post<AnalysisStepRead>(caseUrl(caseId, "analysis"), request, {
+      timeout: ANALYSIS_REQUEST_TIMEOUT_MS,
+    })
+  ).data;
+}
 
-export const getCaseAnalysis = async (
+export async function getCaseAnalysis(
   caseId: string,
   signal?: AbortSignal,
-): Promise<CaseAnalysisResultRead | null> => {
-  const response = await axios.get<CaseAnalysisResultRead | null>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/analysis`,
-    { signal, timeout: 15_000 },
-  );
-  return response.data;
-};
+): Promise<CaseAnalysisResultRead | null> {
+  return (await http.get<CaseAnalysisResultRead | null>(caseUrl(caseId, "analysis"), { signal }))
+    .data;
+}
 
-export const listCaseReports = async (
+export async function listCaseReports(
   caseId: string,
   signal?: AbortSignal,
-): Promise<CaseReport[]> => {
-  const response = await axios.get<CaseReportRead[]>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports`,
-    { signal },
-  );
-  return response.data.map(normalizeCaseReport);
-};
+): Promise<CaseReportRead[]> {
+  return (await http.get<CaseReportRead[]>(caseUrl(caseId, "reports"), { signal })).data;
+}
 
-export const generateCaseReport = async (
+export async function generateCaseReport(
   caseId: string,
   request: CaseReportCreate,
-  signal?: AbortSignal,
-): Promise<CaseReport> => {
-  const response = await axios.post<CaseReportRead>(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports`,
-    request,
-    { signal, timeout: 120_000 },
-  );
-  return normalizeCaseReport(response.data);
-};
+): Promise<CaseReportRead> {
+  return (
+    await http.post<CaseReportRead>(caseUrl(caseId, "reports"), request, {
+      timeout: LONG_REQUEST_TIMEOUT_MS,
+    })
+  ).data;
+}
 
-export const downloadCaseReportPdf = async (
-  caseId: string,
-  reportId: string,
-  signal?: AbortSignal,
-): Promise<Blob> =>
-  getBlob(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports/${encodeURIComponent(reportId)}/pdf`,
-    signal,
-  );
+export function downloadCaseReportPdf(caseId: string, reportId: string): Promise<Blob> {
+  return getBlob(caseUrl(caseId, "reports", reportId, "pdf"));
+}
 
-export const downloadCaseReportHtml = async (
-  caseId: string,
-  reportId: string,
-  signal?: AbortSignal,
-): Promise<Blob> =>
-  getBlob(
-    `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports/${encodeURIComponent(reportId)}/html`,
-    signal,
-  );
+export function downloadCaseReportHtml(caseId: string, reportId: string): Promise<Blob> {
+  return getBlob(caseUrl(caseId, "reports", reportId, "html"));
+}
 
 async function getBlob(url: string, signal?: AbortSignal): Promise<Blob> {
   try {
-    const response = await axios.get<Blob>(url, { signal, responseType: "blob", timeout: 120_000 });
+    const response = await http.get<Blob>(url, {
+      signal,
+      responseType: "blob",
+      timeout: LONG_REQUEST_TIMEOUT_MS,
+    });
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
@@ -277,24 +218,4 @@ async function getBlob(url: string, signal?: AbortSignal): Promise<Blob> {
     }
     throw error;
   }
-}
-
-function normalizeCaseReport(report: CaseReportRead): CaseReport {
-  return {
-    ...report,
-    report: {
-      ...report.report,
-      sections: report.report.sections.map((section) => ({
-        ...section,
-        paragraphs: section.paragraphs ?? [],
-        items: section.items ?? [],
-      })),
-      claims: (report.report.claims ?? []).map((claim) => ({
-        ...claim,
-        source_ids: claim.source_ids ?? [],
-        mitre_technique_ids: claim.mitre_technique_ids ?? [],
-      })),
-      limitations: report.report.limitations ?? [],
-    },
-  };
 }
