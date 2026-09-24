@@ -1,4 +1,10 @@
 import type { CaseSourceRead, ChatMessageRead } from "@/lib/api";
+import { asRecord, asString } from "@/lib/parse";
+
+export function followupQuestion(source: CaseSourceRead): string {
+  if (source.source_kind !== "followup_answer") return "";
+  return asString(asRecord(source.source_metadata_json)?.question);
+}
 
 export function mergeCaseSourceRows(
   caseSources: CaseSourceRead[],

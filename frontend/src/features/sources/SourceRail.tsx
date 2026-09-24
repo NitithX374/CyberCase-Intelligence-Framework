@@ -6,6 +6,7 @@ import { useDismiss } from "@/lib/useDismiss";
 import { formatBytes, formatDate } from "@/lib/format";
 import type { CaseDocumentRead, CaseSourceRead } from "@/lib/api";
 import type { SourcesAnalysis } from "./CaseSourcesView";
+import { followupQuestion } from "./followupSources";
 
 export type RailItem =
   | { id: string; kind: "file"; document: CaseDocumentRead; source: CaseSourceRead | null }
@@ -44,7 +45,7 @@ export function railGroups(documents: CaseDocumentRead[], sources: CaseSourceRea
 
 export function itemTitle(item: RailItem): string {
   if (item.kind === "file") return item.document.filename;
-  return firstLine(item.source.exact_text);
+  return firstLine(followupQuestion(item.source) || item.source.exact_text);
 }
 
 function firstLine(text: string): string {
@@ -158,6 +159,8 @@ function RailButton({
   if (item.kind === "file") {
     const state = item.source ? null : "Pending";
     detail = [formatBytes(item.document.size_bytes), state].filter(Boolean).join(" · ");
+  } else if (followupQuestion(item.source)) {
+    detail = firstLine(item.source.exact_text);
   } else {
     detail = formatDate(item.source.created_at, "day");
   }
@@ -175,7 +178,7 @@ function RailButton({
     >
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[13px] font-medium">{itemTitle(item)}</span>
-        <span className="mt-0.5 block text-xs text-ink-muted">{detail}</span>
+        <span className="mt-0.5 block truncate text-xs text-ink-muted">{detail}</span>
       </span>
     </button>
   );

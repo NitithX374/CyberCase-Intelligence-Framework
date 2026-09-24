@@ -5,6 +5,7 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import { plural } from "@/lib/format";
 import { fetchCaseDocumentContent, type CaseDocumentRead, type CaseSourceRead } from "@/lib/api";
+import { followupQuestion } from "./followupSources";
 import { itemTitle, type RailItem } from "./SourceRail";
 
 export type PreviewMode = "original" | "ocr" | "split";
@@ -123,13 +124,31 @@ function Paper({ label, children }: { label?: string; children: ReactNode }) {
 }
 
 function TextSourcePreview({ source }: { source: CaseSourceRead }) {
+  const question = followupQuestion(source);
   return (
     <div className="h-full overflow-auto p-4 sm:p-8">
       <div className="mx-auto max-w-3xl">
         <Paper>
-          <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
-            {source.exact_text}
-          </p>
+          {question ? (
+            <dl className="space-y-6">
+              <div>
+                <dt className="text-xs font-medium text-ink-muted">Question</dt>
+                <dd className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-8 text-ink-secondary">
+                  {question}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-ink-muted">Answer</dt>
+                <dd className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
+                  {source.exact_text}
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
+              {source.exact_text}
+            </p>
+          )}
         </Paper>
       </div>
     </div>
