@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaseRead } from "@/lib/api";
 import { CaseLibraryPage } from "./CaseLibraryPage";
 import { useCaseMutations, useCases } from "@/features/cases/queries";
+import { refusal } from "@/test/httpErrors";
 
 const routerPush = vi.fn();
 const mutateAsync = vi.fn();
@@ -41,7 +42,7 @@ function caseRecord(overrides: Partial<CaseRead> = {}): CaseRead {
   };
 }
 
-function configureQuery(cases: CaseRead[]) {
+function configureQuery(cases: CaseRead[], deleteError: Error | null = null) {
   vi.mocked(useCases).mockReturnValue({
     data: cases,
     isLoading: false,
@@ -56,7 +57,7 @@ function configureQuery(cases: CaseRead[]) {
     },
     deleteMutation: {
       isPending: false,
-      error: null,
+      error: deleteError,
       variables: undefined,
       mutateAsync: deleteCase,
     },
@@ -141,5 +142,24 @@ describe("CaseLibraryPage", () => {
     expect(screen.getByRole("heading", { name: "Delete this case?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Delete case" }));
     await waitFor(() => expect(deleteCase).toHaveBeenCalledWith("case-1"));
+  });
+
+  it("closes the dialog without an unhandled rejection when a delete fails", async () => {
+    deleteCase.mockRejectedValue(refusal(404, "case_not_found", "Case not found"));
+    render(<CaseLibraryPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Delete Police Investigation Report" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete case" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Delete this case?" })).not.toBeInTheDocument(),
+    );
+    expect(deleteCase).toHaveBeenCalledWith("case-1");
+  });
+
+  it("says why a case could not be deleted", () => {
+    configureQuery([caseRecord()], refusal(404, "case_not_found", "Case not found"));
+    render(<CaseLibraryPage />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Case not found");
   });
 });

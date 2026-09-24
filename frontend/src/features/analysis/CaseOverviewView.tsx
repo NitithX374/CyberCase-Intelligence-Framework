@@ -27,7 +27,8 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const router = useRouter();
 
   const analysisQuery = useCaseAnalysis(caseId);
-  const { caseSources, rows: sources, isLoading: sourcesLoading } = useCaseSourceRows(caseId);
+  const sourceRows = useCaseSourceRows(caseId);
+  const { caseSources, rows: sources, isLoading: sourcesLoading } = sourceRows;
   const drawer = useSourceDrawer();
 
   const isAnalysisRunning = useIsCaseAnalysisRunning(caseId);
@@ -55,6 +56,24 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
 
   if ((analysisQuery.isLoading && !analysisResult) || (sourcesLoading && analysisResult)) {
     return <CaseOverviewSkeleton />;
+  }
+
+  if (analysisQuery.isLoadingError || sourceRows.isError) {
+    return (
+      <CaseOverviewState
+        title="Analysis could not be loaded"
+        description={
+          analysisQuery.isLoadingError
+            ? "The saved analysis could not be read. Nothing was changed."
+            : "The case sources could not be read, so the findings cannot be shown with their sources."
+        }
+        actionLabel="Try again"
+        onAction={() => {
+          if (analysisQuery.isLoadingError) void analysisQuery.refetch();
+          if (sourceRows.isError) sourceRows.refetch();
+        }}
+      />
+    );
   }
 
   if (overview.unavailableReason) {
@@ -190,7 +209,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
             <CaseFindingsSection
               key={analysisKey}
               findings={overview.findings}
-              onNavigateToSource={navigateToSources}
               onSelectSource={handleSelectSource}
               activeSourceKey={drawer.openKey}
             />
@@ -212,7 +230,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
           sourceRef={drawer.open.sourceRef}
           anchorElement={drawer.open.anchorElement}
           onClose={drawer.close}
-          onNavigateToSource={navigateToSources}
           citationRole={drawer.open.citationRole}
         />
       )}

@@ -13,6 +13,8 @@ mockNativeDialog();
 
 const routerPush = vi.fn();
 const runAnalysis = vi.fn();
+const refetchAnalysis = vi.fn();
+const refetchSources = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPush }),
 }));
@@ -159,7 +161,9 @@ interface MockOverrides {
   analysisResult?: CaseAnalysisResultRead | null;
   sources?: CaseSourceRead[];
   analysisLoading?: boolean;
+  analysisFailed?: boolean;
   sourcesLoading?: boolean;
+  sourcesFailed?: boolean;
   followupPending?: boolean;
   analysisRunning?: boolean;
 }
@@ -190,13 +194,17 @@ function configureAndRender(overrides: MockOverrides = {}) {
   } as never);
 
   vi.mocked(useCaseAnalysis).mockReturnValue({
-    data: result,
+    data: overrides.analysisFailed ? undefined : result,
     isLoading: overrides.analysisLoading ?? false,
+    isLoadingError: overrides.analysisFailed ?? false,
+    refetch: refetchAnalysis,
   } as never);
 
   vi.mocked(useCaseSources).mockReturnValue({
-    data: sourceRows,
+    data: overrides.sourcesFailed ? undefined : sourceRows,
     isLoading: overrides.sourcesLoading ?? false,
+    isLoadingError: overrides.sourcesFailed ?? false,
+    refetch: refetchSources,
   } as never);
 
   vi.mocked(useCaseChatMessages).mockReturnValue({
@@ -219,6 +227,8 @@ function configureAndRender(overrides: MockOverrides = {}) {
 beforeEach(() => {
   routerPush.mockClear();
   runAnalysis.mockClear();
+  refetchAnalysis.mockClear();
+  refetchSources.mockClear();
 });
 
 describe("CaseOverviewView", () => {
@@ -237,8 +247,6 @@ describe("CaseOverviewView", () => {
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
     expect(screen.getByRole("dialog").querySelector("mark")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Open in Sources/i }));
-    expect(routerPush).toHaveBeenCalled();
   });
 
   it("does not render external cyber references in the Case Overview", () => {
@@ -308,6 +316,33 @@ describe("CaseOverviewView", () => {
     expect(screen.getByRole("heading", { name: "Not analyzed yet" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
     expect(runAnalysis).toHaveBeenCalledOnce();
+  });
+
+  it("offers to load a failed analysis again, never to run a new one", () => {
+    configureAndRender({ analysisFailed: true });
+
+    expect(
+      screen.getByRole("heading", { name: "Analysis could not be loaded" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Not analyzed yet" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetchAnalysis).toHaveBeenCalledOnce();
+    expect(runAnalysis).not.toHaveBeenCalled();
+  });
+
+  it("does not show findings stripped of their sources when the sources fail to load", () => {
+    configureAndRender({ sourcesFailed: true });
+
+    expect(
+      screen.getByRole("heading", { name: "Analysis could not be loaded" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Summary" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetchSources).toHaveBeenCalledOnce();
+    expect(refetchAnalysis).not.toHaveBeenCalled();
   });
 
   it("switches between the Findings and Open questions tabs", () => {

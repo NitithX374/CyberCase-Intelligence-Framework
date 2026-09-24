@@ -6,7 +6,8 @@ import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { DeleteCaseDialog } from "@/features/cases/DeleteCaseDialog";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { Icon } from "@/components/icons";
-import { getApiErrorMessage, type CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api";
+import { detailMessage } from "@/lib/userFacingError";
 import { useCaseMutations, useCases } from "@/features/cases/queries";
 import { CaseCard } from "./CaseCard";
 import { CaseLibraryToolbar } from "./CaseLibraryToolbar";
@@ -49,6 +50,8 @@ export function CaseLibraryPage() {
     if (!deleteCandidate) return;
     try {
       await deleteMutation.mutateAsync(deleteCandidate.id);
+    } catch {
+      return;
     } finally {
       setDeleteCandidate(null);
     }
@@ -91,7 +94,12 @@ export function CaseLibraryPage() {
 
         {createMutation.error && (
           <p role="alert" className="mt-3 text-[13px] text-critical">
-            {getApiErrorMessage(createMutation.error, "A new case could not be created.")}
+            {detailMessage(createMutation.error, "A new case could not be created.")}
+          </p>
+        )}
+        {deleteMutation.error && (
+          <p role="alert" className="mt-3 text-[13px] text-critical">
+            {detailMessage(deleteMutation.error, "The case could not be deleted.")}
           </p>
         )}
 
@@ -99,7 +107,7 @@ export function CaseLibraryPage() {
           <CaseLibraryLoading />
         ) : casesQuery.error ? (
           <CaseLibraryError
-            message={getApiErrorMessage(casesQuery.error, "Cases could not be loaded.")}
+            message={detailMessage(casesQuery.error, "Cases could not be loaded.")}
             onRetry={() => void casesQuery.refetch()}
           />
         ) : cases.length === 0 ? (

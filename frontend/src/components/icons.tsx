@@ -34,7 +34,6 @@ export type KnownIconName =
   | "download"
   | "refresh"
   | "info"
-  | "chevron-right"
   | "legal"
   | "spinner";
 
@@ -74,7 +73,6 @@ const nameToBoxicon: Record<string, string> = {
   download: "bx-download",
   refresh: "bx-refresh",
   info: "bx-info-circle",
-  "chevron-right": "bx-chevron-right",
   legal: "bx-book-bookmark",
   spinner: "bx-loader-alt bx-spin",
 };

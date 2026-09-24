@@ -29,7 +29,7 @@ export function WorkspaceChatPanel({
 }: WorkspaceChatPanelProps) {
   const chat = useCaseChat({ caseId });
   const analysisQuery = useCaseAnalysis(caseId);
-  const { caseSources, rows: sources } = useCaseSourceRows(caseId);
+  const { caseSources, rows: sources, isError: sourcesFailed } = useCaseSourceRows(caseId);
 
   const leadResult = analysisQuery.data ?? null;
   const messages = chat.messages;
@@ -79,7 +79,7 @@ export function WorkspaceChatPanel({
         </button>
       </div>
 
-      {messages.length === 0 && !hasSources && (
+      {messages.length === 0 && !hasSources && !sourcesFailed && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-2.5 text-[13px]">
           <p className="text-ink-muted">This case has no sources yet.</p>
           <button
@@ -98,7 +98,6 @@ export function WorkspaceChatPanel({
         isAnsweringQuestion={isAnsweringQuestion}
         leadResult={leadResult}
         sources={sources}
-        onNavigateToSource={() => onViewChange("sources")}
       />
 
       <div className="shrink-0 px-4 pt-2 pb-4">
@@ -113,9 +112,7 @@ export function WorkspaceChatPanel({
 
       <MeaningfulErrorModal
         isOpen={Boolean(chat.queryError)}
-        error={
-          chat.queryError ? toUserFacingError(chat.queryError, { isUncertain: isSending }) : null
-        }
+        error={chat.queryError ? toUserFacingError(chat.queryError) : null}
         onClose={chat.clearQueryError}
         onRetry={chat.retryQuery}
       />

@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import {
   createCaseChatMessage,
-  getApiErrorMessage,
   getCaseChat,
   type CaseChatDetail,
   type CaseRead,
@@ -40,7 +39,7 @@ export function useCaseChatMessages({ caseId }: { caseId: string | null }) {
 export function useCaseChat({ caseId }: { caseId: string | null }) {
   const queryClient = useQueryClient();
   const [input, setInput] = useState("");
-  const [dismissed, setDismissed] = useState<string | null>(null);
+  const [dismissedLoadError, setDismissedLoadError] = useState<number | null>(null);
 
   const [typedFor, setTypedFor] = useState(caseId);
   if (typedFor !== caseId) {
@@ -86,11 +85,8 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
   }, [caseId, chatQuery.data?.messages, send.isPending, send.variables]);
 
   const pendingQuestionId = useMemo(() => openQuestionId(messages), [messages]);
-  const failure = send.error
-    ? getApiErrorMessage(send.error, "The message could not be submitted.")
-    : chatQuery.error
-      ? getApiErrorMessage(chatQuery.error, "The Case Chat could not be loaded.")
-      : null;
+  const loadError =
+    chatQuery.error && chatQuery.errorUpdatedAt !== dismissedLoadError ? chatQuery.error : null;
 
   const submitContent = useCallback(
     (raw: string) => {
@@ -112,14 +108,15 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
     isAnsweringQuestion: send.isPending && send.variables?.answersQuestion === true,
     input,
     changeInput: setInput,
-    queryError: failure === dismissed ? null : failure,
+    queryError: send.error ?? loadError,
     clearQueryError: useCallback(() => {
-      send.reset();
-      setDismissed(failure);
-    }, [failure, send]),
+      if (send.error) send.reset();
+      else setDismissedLoadError(chatQuery.errorUpdatedAt);
+    }, [chatQuery.errorUpdatedAt, send]),
     retryQuery: useCallback(() => {
-      if (send.variables) send.mutate(send.variables);
-    }, [send]),
+      if (send.error && send.variables) send.mutate(send.variables);
+      else void chatQuery.refetch();
+    }, [chatQuery, send]),
     submitContent,
     submitMessage: useCallback(
       (event: FormEvent<HTMLFormElement>) => {

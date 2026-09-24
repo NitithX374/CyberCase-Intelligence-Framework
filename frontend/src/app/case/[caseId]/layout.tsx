@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useParams } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { detectResponseLanguage, getApiErrorMessage, type CaseRead } from "@/lib/api";
+import { detectResponseLanguage, type CaseRead } from "@/lib/api";
 import type { WorkspaceView } from "@/features/workspace/routes";
 import { useCase, useCaseMutations, useCases } from "@/features/cases/queries";
 import { useCaseSources } from "@/features/sources/queries";
@@ -41,7 +41,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
       return false;
     }
   });
-  const [chatActionError, setChatActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
   const [isFollowupPending, setIsFollowupPending] = useState(false);
 
   const casesQuery = useCases();
@@ -79,7 +79,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
       }
       router.push(casePath(caseId, "analysis"));
     } catch (error) {
-      setChatActionError(getApiErrorMessage(error, "The Case analysis could not be started."));
+      setActionError(error);
     }
   }, [caseId, isAnalysisRunning, openChat, router, sources, startAnalysis]);
   const requestAnalysis = useCallback(() => void runAnalysis(), [runAnalysis]);
@@ -90,7 +90,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
       try {
         await updateMutation.mutateAsync({ caseId, title });
       } catch (error) {
-        setChatActionError(getApiErrorMessage(error, "The Case could not be renamed."));
+        setActionError(error);
       }
     },
     [caseId, updateMutation],
@@ -98,14 +98,14 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
 
   const handleNewCase = useCallback(async () => {
     if (createMutation.isPending) return;
-    setIsChatOpen(false);
+    setChatOpen(false);
     try {
       const caseRecord = await createMutation.mutateAsync();
       router.push(casePath(caseRecord.id, "sources"));
-    } catch {
-      return;
+    } catch (error) {
+      setActionError(error);
     }
-  }, [createMutation, router]);
+  }, [createMutation, router, setChatOpen]);
 
   const handleViewChange = useCallback(
     (view: WorkspaceView) => {
@@ -166,9 +166,9 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
         onConfirm={() => void confirmDelete()}
       />
       <MeaningfulErrorModal
-        isOpen={Boolean(chatActionError)}
-        error={chatActionError ? toUserFacingError(chatActionError) : null}
-        onClose={() => setChatActionError(null)}
+        isOpen={actionError !== null}
+        error={actionError !== null ? toUserFacingError(actionError) : null}
+        onClose={() => setActionError(null)}
       />
     </div>
   );

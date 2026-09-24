@@ -19,7 +19,12 @@ export function formatSourceCitationText(
 }
 
 export function parseCaseSources(rows: CaseSourceRead[]): CaseSourceRef[] {
-  const refs = rows.map((row, index) => parseSourceRow(row, index + 1));
+  const counts = new Map<string, number>();
+  const refs = rows.map((row) => {
+    const ordinal = (counts.get(row.source_kind) ?? 0) + 1;
+    counts.set(row.source_kind, ordinal);
+    return parseSourceRow(row, ordinal);
+  });
   if (new Set(refs.map((ref) => ref.id)).size !== refs.length) {
     throw new Error("The case has duplicate source IDs.");
   }
@@ -111,7 +116,11 @@ export function sourceRefs(
 function buildSourceRef(source: CaseSourceRef, citation: CaseCitation | null): SourceMessageRef {
   const pageBinding = citation ? resolvePageBinding(source, citation) : null;
   const sourceType = sourceTypeFor(source.kind);
-  const identity = source.filename ?? `${sourceTypeLabel(sourceType)} #${source.ordinal}`;
+  const identity =
+    source.filename ??
+    (sourceType === "followup_response"
+      ? `Follow-up answer ${source.id}`
+      : `Case narrative #${source.ordinal}`);
   const label = pageBinding
     ? `${identity} · ${formatPageReference(pageBinding.pageNumbers)}`
     : identity;
@@ -198,11 +207,6 @@ function sourceTypeFor(kind: string): SourceMessageRef["sourceType"] {
   if (kind === "followup_answer") return "followup_response";
   if (kind === "narrative" || kind === "document") return "case_description";
   throw new Error("Unsupported native source kind.");
-}
-
-function sourceTypeLabel(type: SourceMessageRef["sourceType"]): string {
-  if (type === "followup_response") return "Follow-up answer";
-  return "Case narrative";
 }
 
 function quoteOccurrences(content: string, quote: string): number[] {

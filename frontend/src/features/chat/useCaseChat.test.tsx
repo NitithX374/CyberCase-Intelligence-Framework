@@ -164,3 +164,50 @@ it("retries with the key the server already saw, so one message is not written t
   const [firstCall, retryCall] = createCaseChatMessage.mock.calls;
   expect(retryCall[2]).toBe(firstCall[2]);
 });
+
+describe("the chat error modal", () => {
+  it("opens again when a second send fails with the same error", async () => {
+    createCaseChatMessage.mockRejectedValue(new Error("Network Error"));
+    const { result } = render();
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+
+    act(() => result.current.submitContent("สวัสดี"));
+    await waitFor(() => expect(result.current.queryError).not.toBeNull());
+    act(() => result.current.clearQueryError());
+    await waitFor(() => expect(result.current.queryError).toBeNull());
+
+    act(() => result.current.submitContent("สวัสดี"));
+    await waitFor(() => expect(result.current.queryError).not.toBeNull());
+    expect(createCaseChatMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("reloads the chat to retry a failed load, and sends nothing", async () => {
+    createCaseChatMessage.mockResolvedValue(chatResponse(message("a", 2, "assistant", "ครับ")));
+    const { result, queryClient } = render();
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+    act(() => result.current.submitContent("สวัสดี"));
+    await waitFor(() => expect(result.current.isSending).toBe(false));
+
+    getCaseChat.mockRejectedValueOnce(new Error("the chat could not be read"));
+    await act(() => queryClient.refetchQueries({ queryKey: caseQueryKeys.chat("a") }));
+    await waitFor(() => expect(result.current.queryError).not.toBeNull());
+
+    act(() => result.current.retryQuery());
+
+    await waitFor(() => expect(result.current.queryError).toBeNull());
+    expect(getCaseChat).toHaveBeenCalledTimes(3);
+    expect(createCaseChatMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a closed load error closed until the chat fails to load again", async () => {
+    getCaseChat.mockRejectedValue(new Error("the chat could not be read"));
+    const { result, queryClient } = render();
+    await waitFor(() => expect(result.current.queryError).not.toBeNull());
+
+    act(() => result.current.clearQueryError());
+    expect(result.current.queryError).toBeNull();
+
+    await act(() => queryClient.refetchQueries({ queryKey: caseQueryKeys.chat("a") }));
+    await waitFor(() => expect(result.current.queryError).not.toBeNull());
+  });
+});

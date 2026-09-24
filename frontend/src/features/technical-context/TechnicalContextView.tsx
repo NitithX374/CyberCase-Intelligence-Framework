@@ -19,7 +19,6 @@ interface TechnicalContextViewProps {
   analysisResult: CaseAnalysisResultRead | null;
   sources: CaseSourceRead[] | null;
   onOpenSources?: () => void;
-  onNavigateToSource?: (messageId: string) => void;
 }
 
 const SCORE_EXPLANATION =
@@ -53,6 +52,12 @@ function TechnicalItem({
 
       {item.shortPlainMeaning && (
         <p className="mt-1 text-sm leading-6 text-ink-secondary">{item.shortPlainMeaning}</p>
+      )}
+
+      {item.caseBasisSources.length === 0 && (
+        <p className="mt-2 text-xs text-ink-muted">
+          No case source is recorded for this technique.
+        </p>
       )}
 
       {item.caseBasisSources.length > 0 && (
@@ -184,7 +189,6 @@ export function TechnicalContextView({
   analysisResult,
   sources,
   onOpenSources,
-  onNavigateToSource,
 }: TechnicalContextViewProps) {
   const contextData = buildTechnicalContext(analysisResult, sources);
   const drawer = useSourceDrawer();
@@ -293,7 +297,6 @@ export function TechnicalContextView({
           sourceRef={drawer.open.sourceRef}
           anchorElement={drawer.open.anchorElement}
           onClose={drawer.close}
-          onNavigateToSource={onNavigateToSource}
         />
       )}
     </section>

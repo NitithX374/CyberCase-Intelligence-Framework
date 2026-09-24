@@ -86,7 +86,9 @@ export type CaseGroundingReport = {
     citations_unfound: number;
     claims_without_citation: number;
     claims_duplicated: number;
+    citations_duplicated: number;
     associations_outside_context: number;
+    associations_without_claim: number;
     sources_cited: number;
     sources_total: number;
 };

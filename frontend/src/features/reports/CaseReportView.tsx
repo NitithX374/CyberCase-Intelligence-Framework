@@ -19,11 +19,10 @@ import { formatDate } from "@/lib/format";
 
 interface CaseReportViewProps {
   caseId: string;
-  caseTitle: string;
-  analysisResult: CaseAnalysisResultRead | null;
+  analysisResult: CaseAnalysisResultRead;
 }
 
-export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReportViewProps) {
+export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) {
   const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const reportsQuery = useQuery({
@@ -48,21 +47,14 @@ export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReport
   const reports = reportsQuery.data ?? [];
   const selectedReport =
     reports.find((report) => report.report_id === selectedReportId) ?? reports[0] ?? null;
-  const canGenerate = Boolean(
-    analysisResult?.status === "validated" && !generateMutation.isPending,
-  );
+  const canGenerate = !reports.some((report) => report.analysis_result_id === analysisResult.id);
   const activeError: UserFacingError | null = useMemo(() => {
-    const error = generateMutation.error ?? downloadMutation.error ?? reportsQuery.error;
-    return error
-      ? toUserFacingError(error, {
-          isUncertain: generateMutation.error !== null,
-          actionLabel: "ลองอีกครั้ง",
-        })
-      : null;
-  }, [downloadMutation.error, generateMutation.error, reportsQuery.error]);
+    const error = generateMutation.error ?? downloadMutation.error;
+    return error ? toUserFacingError(error) : null;
+  }, [downloadMutation.error, generateMutation.error]);
 
   const handleGenerate = async () => {
-    if (!canGenerate || !analysisResult) return;
+    if (!canGenerate || generateMutation.isPending) return;
     await generateMutation.mutateAsync(analysisResult.id).catch(() => undefined);
   };
   const handleRetry = () => {
@@ -72,8 +64,6 @@ export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReport
     } else if (downloadMutation.error && selectedReport) {
       downloadMutation.reset();
       downloadMutation.mutate(selectedReport);
-    } else if (reportsQuery.error) {
-      void reportsQuery.refetch();
     }
   };
 
@@ -127,19 +117,21 @@ export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReport
           </div>
           {selectedReport && (
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => void handleGenerate()}
-                disabled={!canGenerate}
-                title="Generate a new version from the latest analysis"
-                className="btn-ghost h-8 px-2.5"
-              >
-                <Icon
-                  name={generateMutation.isPending ? "spinner" : "refresh"}
-                  className="h-4 w-4"
-                />
-                {generateMutation.isPending ? "Generating…" : "New version"}
-              </button>
+              {canGenerate && (
+                <button
+                  type="button"
+                  onClick={() => void handleGenerate()}
+                  disabled={generateMutation.isPending}
+                  title="Generate a new version from the latest analysis"
+                  className="btn-ghost h-8 px-2.5"
+                >
+                  <Icon
+                    name={generateMutation.isPending ? "spinner" : "refresh"}
+                    className="h-4 w-4"
+                  />
+                  {generateMutation.isPending ? "Generating…" : "New version"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => downloadMutation.mutate(selectedReport)}
@@ -162,16 +154,29 @@ export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReport
             aria-label="Loading reports"
             className="mt-4 h-[420px] animate-pulse rounded-xl bg-surface-nested"
           />
+        ) : reportsQuery.isLoadingError ? (
+          <EmptyState
+            title="Reports could not be loaded"
+            titleAs="h3"
+            description={toUserFacingError(reportsQuery.error).message}
+            className="py-14"
+          >
+            <button
+              type="button"
+              onClick={() => void reportsQuery.refetch()}
+              className="btn-secondary mt-5"
+            >
+              Try again
+            </button>
+          </EmptyState>
         ) : selectedReport ? (
           <PersistedReportCard
             key={selectedReport.report_id}
             report={selectedReport}
             caseId={caseId}
-            caseTitle={caseTitle}
           />
         ) : (
           <NoSavedReport
-            canGenerate={canGenerate}
             isGenerating={generateMutation.isPending}
             onGenerate={() => void handleGenerate()}
           />
@@ -202,37 +207,28 @@ function downloadPdf(blob: Blob, versionNumber: number): void {
 }
 
 function NoSavedReport({
-  canGenerate,
   isGenerating,
   onGenerate,
 }: {
-  canGenerate: boolean;
   isGenerating: boolean;
   onGenerate: () => void;
 }) {
-  const available = canGenerate || isGenerating;
   return (
     <EmptyState
       title="No report yet"
       titleAs="h3"
-      description={
-        available
-          ? "Turn this analysis into a printable report."
-          : "Analyze the case before generating a report."
-      }
+      description="Turn this analysis into a printable report."
       className="py-14"
     >
-      {available && (
-        <button
-          type="button"
-          onClick={onGenerate}
-          disabled={isGenerating}
-          className="btn-primary mt-5"
-        >
-          {isGenerating && <Icon name="spinner" className="h-4 w-4" />}
-          {isGenerating ? "Generating…" : "Generate report"}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onGenerate}
+        disabled={isGenerating}
+        className="btn-primary mt-5"
+      >
+        {isGenerating && <Icon name="spinner" className="h-4 w-4" />}
+        {isGenerating ? "Generating…" : "Generate report"}
+      </button>
     </EmptyState>
   );
 }
