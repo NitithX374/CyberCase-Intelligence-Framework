@@ -1,5 +1,6 @@
 import type { CaseSourceRead } from "@/lib/api";
 import { asArray, asRecord, asString } from "@/lib/parse";
+import { followupQuestion } from "./followupSources";
 import type { CaseCitation, CaseSourceRef, SourceMessageRef, SourcePage } from "./types";
 
 export function formatPageReference(pageNumbers: number[]): string {
@@ -39,6 +40,7 @@ function parseSourceRow(source: CaseSourceRead, ordinal: number): CaseSourceRef 
     provenance,
     documentId: source.document_id || asString(metadata.document_id) || null,
     filename: source.filename ?? null,
+    question: followupQuestion(source) || null,
   };
 }
 
@@ -130,6 +132,7 @@ function buildSourceRef(source: CaseSourceRef, citation: CaseCitation | null): S
     pageNumbers: pageBinding?.pageNumbers ?? [],
     sourcePages: pageBinding?.pages ?? [],
     isNativeSource: true,
+    question: source.question ?? null,
   };
 }
 

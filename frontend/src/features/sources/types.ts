@@ -15,6 +15,7 @@ export interface SourceMessageRef {
   pageNumbers: number[];
   sourcePages: SourcePage[];
   isNativeSource?: boolean;
+  question?: string | null;
 }
 
 export interface SourcePage {
@@ -31,6 +32,7 @@ export interface CaseSourceRef {
   provenance: Record<string, unknown>;
   documentId: string | null;
   filename: string | null;
+  question?: string | null;
 }
 
 export interface CaseCitation {

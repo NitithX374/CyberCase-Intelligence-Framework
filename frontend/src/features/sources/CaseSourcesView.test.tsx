@@ -182,6 +182,26 @@ describe("CaseSourcesView", () => {
     expect(screen.getAllByText("The backups were offline.")).toHaveLength(3);
   });
 
+  it("reads a follow-up answer beside the question it answers", () => {
+    renderSources({
+      sources: [
+        caseSource({
+          id: "QA-01",
+          source_kind: "followup_answer",
+          exact_text: "ไม่มี",
+          source_metadata_json: { question: "มีหมายจับหรือไม่" },
+        }),
+      ],
+    });
+
+    expect(screen.getByRole("heading", { level: 2, name: "มีหมายจับหรือไม่" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /มีหมายจับหรือไม่\s*ไม่มี/ })).toBeInTheDocument();
+    const terms = screen.getAllByRole("term").map((term) => term.textContent);
+    const definitions = screen.getAllByRole("definition").map((item) => item.textContent);
+    expect(terms).toEqual(["Question", "Answer"]);
+    expect(definitions).toEqual(["มีหมายจับหรือไม่", "ไม่มี"]);
+  });
+
   it("adds a case narrative from the plus menu", async () => {
     const onAddNarrative = vi.fn().mockResolvedValue(true);
     renderSources({ sources: [caseSource()], onAddNarrative });

@@ -23,7 +23,9 @@ export function SourceDrawer({
   const citation = formatSourceCitationText(sourceRef);
   const sourceTitle =
     sourceRef.filename ??
-    (sourceRef.sourceType === "case_description" ? citation : `${citation} #${sourceRef.ordinal}`);
+    (sourceRef.isNativeSource || sourceRef.sourceType === "case_description"
+      ? citation
+      : `${citation} #${sourceRef.ordinal}`);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -107,6 +109,25 @@ export function SourceDrawer({
 function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
   const pages = sourceRef.sourcePages;
   const content = sourceRef.displayContent || sourceRef.excerpt;
+
+  if (sourceRef.question) {
+    return (
+      <dl className="space-y-6">
+        <div>
+          <dt className="mb-2 text-xs font-medium text-ink-muted">Question</dt>
+          <dd className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-secondary [overflow-wrap:anywhere]">
+            {sourceRef.question}
+          </dd>
+        </div>
+        <div>
+          <dt className="mb-2 text-xs font-medium text-ink-muted">Answer</dt>
+          <dd className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+            {content || "(No text content)"}
+          </dd>
+        </div>
+      </dl>
+    );
+  }
 
   return (
     <div className="space-y-6">
