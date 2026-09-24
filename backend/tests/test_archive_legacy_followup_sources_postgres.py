@@ -140,7 +140,11 @@ def test_archive_migration_preserves_history_and_hides_old_sources() -> None:
                     sources=sources, source_revision=case.source_revision
                 )
                 current = case_source_bundle_from_case(case_snapshot)
-                historical = case_source_bundle_for_analysis(case_snapshot, analysis)
+                historical = case_source_bundle_for_analysis(
+                    case_snapshot,
+                    analysis,
+                    [str(narrative_id), str(first_source_id), str(second_source_id)],
+                )
                 assert {item.source_id for item in current.sources} == {str(narrative_id)}
                 assert {item.source_id for item in historical.sources} == {
                     str(narrative_id),

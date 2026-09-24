@@ -281,7 +281,7 @@ answer: one case in the development database holds six analyses at
 pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and its source snapshots, keeps report versions, and exposes HTML and PDF export. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system.
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and its source snapshots, keeps report versions, and exposes HTML and PDF export. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the case sources it read (cited or not) and `external_context_json.followup_history` the answered follow-ups. Both are taken from what the analysis read when it started — never re-read from the case's current sources or chat, and never inferred from timestamps. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system.
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim, FP16)
 - **Reranker**: `BAAI/bge-reranker-v2-m3` (multilingual incl. Thai)
