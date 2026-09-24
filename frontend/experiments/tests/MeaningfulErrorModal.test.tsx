@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { MeaningfulErrorModal } from "./MeaningfulErrorModal";
+import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import type { UserFacingError } from "@/lib/userFacingError";
 
 describe("MeaningfulErrorModal component", () => {
