@@ -1,4 +1,6 @@
-# Attribute-first Phase 1 implementation
+# Historical Attribute-first Phase 1 implementation
+
+> **Status (2026-09-22):** Historical implementation receipt. The `claim_anchored` branch, its configuration variables, and its old execution paths are not the current production runtime in this checkout. Current production uses `raw_direct` / `main_case_analysis_v1` with pre-gap assessment and request-scoped persistence. Keep this file for the dated experiment record; use [`CURRENT_PROJECT_DIRECTION.md`](CURRENT_PROJECT_DIRECTION.md) for the current system.
 
 Implemented 2026-09-08. This implements the bounded, case-only claim-anchored adaptation proposed in MAIN_ANALYSIS_V11_MIGRATION_AUDIT.md. It is not a full CAMS or ACL Attribute First reproduction. NLI/XNLI inference is not installed or enabled.
 

@@ -1,5 +1,7 @@
 # OCR Summarization Experiment: Scope & Protocol
 
+**Status:** research protocol and candidate evaluation direction, updated 2026-09-22. It is not a report of completed experiments and its claim-anchored comparison is not the current production pipeline. Current production uses `raw_direct` / `main_case_analysis_v1`; OCR robustness still requires paired verified text, annotations, and held-out evaluation.
+
 This document defines the research protocol and experimental scope for evaluating the impact of Optical Character Recognition (OCR) quality on Thai investigative case summarization.
 
 ---
