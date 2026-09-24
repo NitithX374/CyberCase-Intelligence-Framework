@@ -11,7 +11,7 @@ from app.services.analysis.prompts import (
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps import assess as assess_module
 from app.services.analysis.steps.assess import assess_case
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
 def test_assessment_and_full_analysis_share_gap_identity_instructions():

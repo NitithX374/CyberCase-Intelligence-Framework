@@ -9,11 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.case import Case
-from app.models.sources import (
-    CaseDocument,
-    CaseSource,
-    DocumentExtraction,
-)
+from app.models.sources import CaseDocument, CaseSource
 from app.services.document_ingestion.provenance import bind_exact_page_spans
 
 
@@ -68,39 +64,32 @@ class SourceService:
         )
         self.db.add(document)
         await self.db.flush()
-        extraction_record = DocumentExtraction(
-            document_id=document.id,
-            provider=required_string(extraction, "provider"),
-            config_json=as_dictionary(extraction.get("config_json")),
-            extracted_text=extracted_text,
-            provenance_json=as_dictionary(extraction.get("provenance_json")),
-            warnings_json=as_list(extraction.get("warnings_json")),
+        self.db.add(
+            CaseSource(
+                case_id=case.id,
+                source_kind="document",
+                document_id=document.id,
+                exact_text=extracted_text,
+                provenance_json=build_document_provenance(
+                    as_dictionary(extraction.get("provenance_json")),
+                    extracted_text,
+                    required_string(extraction, "provider"),
+                ),
+                source_metadata_json={"received_via": "document_upload"},
+            )
         )
-        self.db.add(extraction_record)
-        await self.db.flush()
-        case_source = CaseSource(
-            case_id=case.id,
-            source_kind="document",
-            document_id=document.id,
-            exact_text=extracted_text,
-            provenance_json=build_document_provenance(extraction_record),
-            source_metadata_json={"received_via": "document_upload"},
-        )
-        self.db.add(case_source)
         case.source_revision += 1
         await self.db.flush()
-        await self.db.refresh(document, attribute_names=["extractions"])
         return document
 
     async def list_documents(self, case_id: UUID, user_id: UUID | None) -> list[CaseDocument]:
         await self.get_owned_case(case_id, user_id)
         result = await self.db.execute(
             select(CaseDocument)
-            .options(selectinload(CaseDocument.extractions))
             .where(CaseDocument.case_id == case_id)
             .order_by(CaseDocument.created_at, CaseDocument.id)
         )
-        return list(result.scalars().unique().all())
+        return list(result.scalars().all())
 
     async def add_text_source(
         self,
@@ -153,25 +142,17 @@ def as_dictionary(value: object) -> dict[str, object]:
     return deepcopy(value) if isinstance(value, dict) else {}
 
 
-def as_list(value: object) -> list[object]:
-    return deepcopy(value) if isinstance(value, list) else []
-
-
-def build_document_provenance(extraction: DocumentExtraction) -> dict[str, object]:
-    provenance = bind_exact_page_spans(
-        extraction.provenance_json,
-        extraction.extracted_text,
-    )
-    provenance["extraction_id"] = str(extraction.id)
-    if extraction.warnings_json:
-        provenance["warnings"] = list(extraction.warnings_json)
-    extraction_method = extraction.provenance_json.get("extraction_method") or extraction.provider
+def build_document_provenance(
+    read: dict[str, object], text: str, provider: str
+) -> dict[str, object]:
+    provenance = bind_exact_page_spans(read, text)
+    extraction_method = read.get("extraction_method") or provider
     if extraction_method:
         provenance["extraction_method"] = str(extraction_method)
-    if extraction.provider:
-        provenance["provider"] = extraction.provider
+    if provider:
+        provenance["provider"] = provider
 
-    verification_status = extraction.provenance_json.get("verification_status")
+    verification_status = read.get("verification_status")
     if not verification_status:
         statuses = [
             page.get("verification_status")
@@ -189,7 +170,7 @@ def build_document_provenance(extraction: DocumentExtraction) -> dict[str, objec
             verification_status = "native"
     provenance["verification_status"] = str(verification_status)
 
-    confidence_status = extraction.provenance_json.get("confidence_status")
+    confidence_status = read.get("confidence_status")
     if not confidence_status:
         confidence_status = (
             "not_reported"

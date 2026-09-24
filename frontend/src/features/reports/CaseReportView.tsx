@@ -63,7 +63,6 @@ export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReport
 
   const handleGenerate = async () => {
     if (!canGenerate || !analysisResult) return;
-    // One report per analysis, so asking twice returns the same one.
     await generateMutation.mutateAsync(analysisResult.id).catch(() => undefined);
   };
   const handleRetry = () => {
@@ -91,7 +90,7 @@ export function CaseReportView({ caseId, caseTitle, analysisResult }: CaseReport
             {selectedReport && (
               <>
                 <span
-                  className="tag bg-unresolved/10 text-unresolved"
+                  className="text-[13px] text-unresolved"
                   title="Generated from the analysis. Not yet verified by an analyst."
                 >
                   Provisional
@@ -214,7 +213,6 @@ function NoSavedReport({
   const available = canGenerate || isGenerating;
   return (
     <EmptyState
-      icon="report"
       title="No report yet"
       titleAs="h3"
       description={

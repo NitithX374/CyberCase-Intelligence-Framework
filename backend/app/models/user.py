@@ -1,5 +1,3 @@
-"""User model for OAuth authentication and chat ownership."""
-
 from __future__ import annotations
 
 import uuid
@@ -8,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     DateTime,
-    Index,
     PrimaryKeyConstraint,
     String,
     UniqueConstraint,
@@ -28,7 +25,6 @@ class User(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_users"),
         UniqueConstraint("oauth_provider", "oauth_subject_id", name="uq_users_provider_subject"),
-        Index("ix_users_email", "email"),
         UniqueConstraint("email", name="uq_users_email"),
     )
 
@@ -44,18 +40,10 @@ class User(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    verification_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    verification_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
     password_hash: Mapped[str | None] = mapped_column(String(512), nullable=True)
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-    )
-    avatar_url: Mapped[str | None] = mapped_column(
-        String(1024),
-        nullable=True,
     )
     oauth_provider: Mapped[str] = mapped_column(
         String(32),

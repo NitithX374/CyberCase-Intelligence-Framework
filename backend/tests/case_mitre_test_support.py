@@ -9,7 +9,7 @@ from app.services.analysis.contracts import (
 )
 from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
 from app.services.analysis.steps.technical_context import CaseRagContextPayload
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
 def _fixtures():

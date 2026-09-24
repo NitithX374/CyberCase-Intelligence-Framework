@@ -5,30 +5,27 @@ from fastapi import UploadFile
 
 from app.config import settings
 from app.services.document_ingestion.contracts import (
+    DocumentLimitError,
     DocumentPage,
+    DocumentRecognitionError,
     ExtractionMethod,
     IngestedDocument,
-)
-from app.services.document_ingestion.detection import DocumentKind, detect_document
-from app.services.document_ingestion.errors import (
-    DocumentLimitError,
-    DocumentRecognitionError,
     InvalidDocumentError,
 )
-from app.services.document_ingestion.parsers import inspect_pdf, parse_docx
-from app.services.document_ingestion.parsers.pdf_text_parser import (
-    NativeTextPolicy,
-    PdfPageInspection,
-)
-from app.services.document_ingestion.provenance import build_document_id
-from app.services.document_ingestion.recognition import (
-    DocumentRecognizer,
-    RenderedPage,
-)
-from app.services.document_ingestion.rendering import (
+from app.services.document_ingestion.files import (
+    DocumentKind,
+    detect_document,
     normalize_image,
     render_pdf_page,
 )
+from app.services.document_ingestion.parsers import (
+    NativeTextPolicy,
+    PdfPageInspection,
+    inspect_pdf,
+    parse_docx,
+)
+from app.services.document_ingestion.provenance import build_document_id
+from app.services.document_ingestion.recognition import DocumentRecognizer, RenderedPage
 
 
 @dataclass(frozen=True)
@@ -209,7 +206,7 @@ class DocumentIngestionService:
 
 
 def build_document_recognizer() -> DocumentRecognizer:
-    from app.services.document_ingestion.recognition.typhoon import (
+    from app.services.document_ingestion.recognition import (
         TyphoonDocumentRecognizer,
         TyphoonRecognizerConfig,
     )

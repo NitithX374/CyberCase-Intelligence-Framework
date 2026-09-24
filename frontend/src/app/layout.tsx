@@ -10,8 +10,6 @@ const manrope = Manrope({
   display: "swap",
 });
 
-// Case material is mostly Thai. Without a Thai face it renders in whatever the
-// operating system has, which never matches Manrope's size or weight.
 const notoSansThai = Noto_Sans_Thai({
   variable: "--font-thai",
   subsets: ["thai"],

@@ -1,5 +1,3 @@
-"""Concurrent chat sends cannot answer one standing question twice."""
-
 from __future__ import annotations
 
 import asyncio
@@ -59,7 +57,6 @@ async def seeded_case(session_factory) -> tuple[uuid.UUID, uuid.UUID]:
         analysis = CaseAnalysisResult(
             case_id=case.id,
             source_revision=1,
-            answer="The incident time is not established.",
             summary="The incident time is not established.",
             trace_json=TRACE,
             pipeline_config={},

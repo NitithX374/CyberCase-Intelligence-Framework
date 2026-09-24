@@ -15,7 +15,7 @@ from app.services.analysis.mitre_gate.llm import (
     skipped_mitre_applicability,
 )
 from app.services.clients.rag_client import RagCallFailure, request_rag
-from app.services.sources import CaseSourceBundle, build_rag_query
+from app.services.sources.case_source_bundle import CaseSourceBundle, build_rag_query
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +24,6 @@ def technical_context_key(
     source_revision: int,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> dict[str, int]:
-    """What has to change before the retrieval is worth running again.
-
-    The sources, by revision, and how many follow-up questions have been
-    answered. A round that adds neither asks the RAG service the same thing it
-    asked last time -- and gets a different answer, because the pipeline it
-    runs is not deterministic. One case in this database holds six analyses at
-    revision 1 whose technique tables read 6, 6, 11, 10, 9, 9.
-    """
-
     return {
         "source_revision": source_revision,
         "followup_answers": sum(1 for item in followup_history if item.is_answered),
@@ -44,15 +35,6 @@ def retrieval_query(
     trigger_text: Sequence[str],
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> str:
-    """What the RAG service is asked: the sources, and what the reader answered.
-
-    The gate still reads only the sources, because its ``trigger_text`` has to
-    be an exact span of the material it judged. A retrieval query carries no
-    such promise, so an answer belongs in it: the sentence naming the tool or
-    the access route is often the most technical one the case has, and leaving
-    it out is why a round that learned something retrieved as if it had not.
-    """
-
     query = ("\n".join(trigger_text).strip() if trigger_text else "") or build_rag_query(
         source_bundle
     )
@@ -102,9 +84,6 @@ class CaseMitreAugmentation:
             "applicability": self.applicability.model_dump(mode="json"),
             "retrieval_context_id": self.retrieval_context_id,
             "retrieval_context_reused": self.reused,
-            # The table belongs in here, not beside it. reports/projection.py
-            # and the frontend both read technical_augmentation; nothing reads
-            # a copy hoisted to the top of external_context_json.
             "mitre_table": self.mitre_table,
             "association_ids": [item.association_id for item in self.associations],
         }

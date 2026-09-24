@@ -1,58 +1,41 @@
 # CyberCase Backend
 
-The FastAPI backend owns authentication, Case CRUD, document intake, Case sources,
-analysis, deterministic follow-up, the Case Ask/Chat panel, optional MITRE context,
-and preliminary reports.
+The FastAPI backend owns authentication, Case CRUD, document intake, Case sources, request-scoped analysis, deterministic follow-up, Case Ask/Chat, optional technical context, and preliminary reports.
 
 ## Current boundary
 
-All application routes use `/api/v1`, one router per resource in `app/routers/`.
-`tests/test_route_surface.py` asserts the exact set; it is the authority when this
-list and the code disagree.
+All application routes use `/api/v1`, one router per resource in `app/routers/`. `tests/test_route_surface.py` asserts the exact surface; it is the authority when this list and the code disagree.
 
-- `/health` — the service and its database;
+- `/health` — service and database health;
 - `/auth/register`, `/login`, `/logout`, `/dev-login`, `/me`, `/session` — cookie session;
 - `/cases`, `/cases/{case_id}` — Case lifecycle;
-- `/cases/{case_id}/documents`, `/documents/{document_id}/content` — upload, list, read back;
-- `/cases/{case_id}/sources` — what the Case is analysed from;
-- `/cases/{case_id}/analysis` — read the latest analysis, or run one;
-- `/cases/{case_id}/chat`, `/chat/messages` — the Case Ask/Chat panel;
+- `/cases/{case_id}/documents`, `/documents/{document_id}/content` — document upload, listing, and extracted content;
+- `/cases/{case_id}/sources` — native sources used for analysis;
+- `/cases/{case_id}/analysis` — read the latest validated analysis or start a request-scoped analysis;
+- `/cases/{case_id}/chat`, `/chat/messages` — Case Ask/Chat and clarification answers;
 - `/cases/{case_id}/reports` — report generation, history, HTML, and PDF.
 
-The browser calls only this backend. Authentication and Case ownership are enforced
-here. External MITRE retrieval is performed by the backend when the analysis gate
-requires it; external context is not a Case source.
+The browser calls only this backend. Authentication and Case ownership are enforced here. Optional MITRE retrieval is called by the backend only when that augmentation is enabled and applicable; external context is not a Case source.
 
-There is no run resource. An analysis and an answer are each one model call the
-caller waits for, made in the request that asked for it — which is why
-`app/main.py` refuses to start with more than one application worker.
+There is no run resource. An analysis and an answer happen inside the request that asked for them. The analysis request may perform a gap assessment, optional technical augmentation, one structured main-analysis call, and deterministic source binding. `app/main.py` therefore refuses to start with more than one application worker.
 
 ## Persistence
 
-PostgreSQL stores Cases, documents, extraction records, Case sources, analysis
-results, Case-owned messages, optional RAG context, and Case reports. The
-SQLAlchemy models and Alembic migrations are the authority for the persisted shape.
+PostgreSQL stores Cases, documents, native Case sources, analysis results, Case-owned messages, optional retrieval context, and Case reports. The SQLAlchemy models and Alembic migrations are the authority for the persisted shape.
 
 ## Source flow
 
-Documents become `CaseDocument` and `DocumentExtraction` records, then a document
-source. Narratives and follow-up answers are also persisted as Case sources. Active
-sources are loaded as one `CaseSourceBundle(revision, sources)`; analysis,
-validation, Chat, MITRE augmentation, and reports derive their local views from that
-bundle. A Case carries the revision its bundle was read at, so an analysis whose
-sources changed underneath it is refused rather than stored.
+A document becomes a `CaseDocument` holding the file and a document `CaseSource` holding the text read from it; the source's `provenance_json` keeps the pages, their offsets into that text, and the warnings from reading it, and the source carries the file's name as `filename`. A narrative becomes a narrative `CaseSource`. Each native source changes the Case `source_revision`.
+
+Clarification answers are different: they are persisted `ChatMessage` rows and loaded as `followup_history` for later analysis. They are not native Case sources and do not change `source_revision`; the binding layer may expose them to the analysis trace through synthetic QA identifiers.
+
+An analysis reads one `CaseSourceBundle(revision, sources)` plus the separate follow-up history. The bundle is passed through assessment, optional technical augmentation, structured analysis, source binding, and report projection without database access inside the analysis steps. The workflow stores the result only after model work finishes and refuses to store it if the Case source revision changed meanwhile.
 
 ## One name per thing
 
-A Case is analysed from **sources**. `case_sources`, `source_revision`,
-`CaseSource`, `CaseSourceCreate`, `CaseSourceRead` and `/cases/{case_id}/sources`
-all say the same word, and `0006_source_vocabulary` is the migration that made
-them agree. Prose that still says "evidence" or "material" for that thing is using
-an older name for it.
+A Case is analysed from **sources**. `case_sources`, `source_revision`, `CaseSource`, `CaseSourceCreate`, `CaseSourceRead`, and `/cases/{case_id}/sources` use the same vocabulary. In prose, “evidence” can describe what a report found, but it is not the identifier for the persisted input object.
 
-The report's `case_evidence` and `evidence_to_examine` sections are a different
-thing, and keep their names: what the analysis found, and what an investigator
-should still look at.
+The report's `case_evidence` and `evidence_to_examine` sections are separate report concepts: findings produced by the analysis and information that still needs checking.
 
 ## Run and verify
 

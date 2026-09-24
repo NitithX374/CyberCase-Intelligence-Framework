@@ -1,13 +1,3 @@
-/**
- * An analysis that paused to ask something is not a finished analysis.
- *
- * The mutation used to write whatever the POST returned straight into the
- * analysis cache, on the reasoning that the analysis was over by the time it
- * resolved. It is not over any more: a step can come back holding a question
- * and no result, and writing that envelope into the cache renders the overview
- * as "Analysis unavailable" over a case that is merely mid-clarification.
- */
-
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { act } from "react";
@@ -30,7 +20,6 @@ const RESULT = {
   source_revision: 1,
   schema_version: "case_analysis_trace_v1",
   status: "validated",
-  answer: "Files were encrypted.",
   summary: "Files were encrypted.",
   trace_json: null,
   retrieval_context_id: null,

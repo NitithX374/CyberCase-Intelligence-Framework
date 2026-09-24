@@ -21,6 +21,8 @@ def test_migration_chain_is_clean_and_linear() -> None:
         "0012_analysis_assessment_status.py",
         "0013_retrieval_context_contract.py",
         "0014_archive_legacy_followup_sources.py",
+        "0015_schema_cleanup.py",
+        "0016_fold_extractions.py",
     ]
     baseline_source = migrations[0].read_text(encoding="utf-8")
     assert 'revision = "0001_canonical_case_system"' in baseline_source

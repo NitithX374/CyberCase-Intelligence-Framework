@@ -1,16 +1,3 @@
-"""A report stores its content, not the story of how it was made.
-
-The report is a deterministic template render of a saved analysis — it makes no
-model call. The columns that described a provider request (prompt version,
-latency, token counts) always held constants or NULL, and the five columns
-recording whether it worked described an operation that either returns a report
-or raises. One report per analysis replaces the idempotency key.
-
-Revision ID: 0007_report_content_only
-Revises: 0006_source_vocabulary
-Create Date: 2026-09-19
-"""
-
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -38,7 +25,6 @@ DROPPED = (
 
 
 def upgrade() -> None:
-    # A report that never completed has no content to keep.
     op.execute("DELETE FROM case_reports WHERE status <> 'completed' OR structured_report IS NULL")
 
     op.drop_constraint("uq_case_reports_case_id_idempotency_key", "case_reports", type_="unique")

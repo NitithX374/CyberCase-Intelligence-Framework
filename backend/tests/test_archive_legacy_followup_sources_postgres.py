@@ -1,44 +1,28 @@
 import asyncio
-import importlib.util
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-from alembic.migration import MigrationContext
-from alembic.operations import Operations
-from isolated_database import isolated_database
-from sqlalchemy import select
+from migration_support import migrate, schema_before
+from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from app.models import Case, CaseAnalysisResult, CaseSource, ChatMessage
-from app.services.sources import SourceService
+from app.models import Case, CaseAnalysisResult, CaseSource
 from app.services.sources.case_source_bundle import (
     case_source_bundle_for_analysis,
     case_source_bundle_from_case,
 )
+from app.services.sources.source_service import SourceService
 
-
-def apply_archive_migration(connection) -> None:
-    migration_path = (
-        Path(__file__).parents[1]
-        / "alembic"
-        / "baseline_versions"
-        / "0014_archive_legacy_followup_sources.py"
-    )
-    spec = importlib.util.spec_from_file_location("archive_legacy_followup_sources", migration_path)
-    assert spec is not None and spec.loader is not None
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
-    migration.op = Operations(MigrationContext.configure(connection))
-    migration.upgrade()
+ARCHIVE = "0014_archive_followup_sources"
 
 
 def test_archive_migration_preserves_history_and_hides_old_sources() -> None:
     async def exercise() -> None:
-        async with isolated_database() as factory:
+        async with schema_before(ARCHIVE) as (engine, schema, archive):
             case_id = uuid4()
             other_case_id = uuid4()
             narrative_id = uuid4()
@@ -50,84 +34,72 @@ def test_archive_migration_preserves_history_and_hides_old_sources() -> None:
             historical_time = datetime.now(UTC) - timedelta(days=1)
             prior_archive_time = historical_time + timedelta(hours=2)
 
-            async with factory() as db, db.begin():
-                db.add_all(
-                    [
-                        Case(id=case_id, title="Legacy follow-up", source_revision=3),
-                        Case(id=other_case_id, title="Other case", source_revision=2),
-                    ]
+            async with engine.begin() as connection:
+                await connection.execute(
+                    text(
+                        "INSERT INTO cases (id, title, source_revision) "
+                        "VALUES (:case, 'Legacy follow-up', 3), (:other, 'Other case', 2)"
+                    ),
+                    {"case": case_id, "other": other_case_id},
                 )
-                await db.flush()
-                db.add_all(
-                    [
-                        ChatMessage(
-                            id=first_message_id,
-                            case_id=case_id,
-                            ordinal=1,
-                            role="user",
-                            content="First answer",
-                            message_kind="conversation",
-                        ),
-                        ChatMessage(
-                            id=second_message_id,
-                            case_id=case_id,
-                            ordinal=2,
-                            role="user",
-                            content="Second answer",
-                            message_kind="followup_answer",
-                        ),
-                    ]
+                await connection.execute(
+                    text(
+                        "INSERT INTO chat_messages (id, case_id, ordinal, role, content, "
+                        "message_kind) VALUES "
+                        "(:first, :case, 1, 'user', 'First answer', 'conversation'), "
+                        "(:second, :case, 2, 'user', 'Second answer', 'followup_answer')"
+                    ),
+                    {"first": first_message_id, "second": second_message_id, "case": case_id},
                 )
-                await db.flush()
-                db.add_all(
-                    [
-                        CaseSource(
-                            id=narrative_id,
-                            case_id=case_id,
-                            source_kind="narrative",
-                            exact_text="Original narrative",
-                            created_at=historical_time,
-                        ),
-                        CaseSource(
-                            id=first_source_id,
-                            case_id=case_id,
-                            source_kind="followup_answer",
-                            origin_message_id=first_message_id,
-                            exact_text="First answer",
-                            created_at=historical_time,
-                        ),
-                        CaseSource(
-                            id=second_source_id,
-                            case_id=case_id,
-                            source_kind="followup_answer",
-                            origin_message_id=second_message_id,
-                            exact_text="Second answer",
-                            created_at=historical_time,
-                        ),
-                        CaseSource(
-                            id=archived_source_id,
-                            case_id=other_case_id,
-                            source_kind="followup_answer",
-                            exact_text="Already archived",
-                            archived_at=prior_archive_time,
-                            created_at=historical_time,
-                        ),
-                        CaseAnalysisResult(
-                            case_id=case_id,
-                            source_revision=3,
-                            answer="Old answer",
-                            summary="Old summary",
-                            trace_json={},
-                            created_at=historical_time + timedelta(hours=1),
-                        ),
-                    ]
+                await connection.execute(
+                    text(
+                        "INSERT INTO case_sources (id, case_id, source_kind, origin_message_id, "
+                        "exact_text, archived_at, created_at) VALUES "
+                        "(:narrative, :case, 'narrative', NULL, 'Original narrative', NULL, :then), "
+                        "(:first_source, :case, 'followup_answer', :first, 'First answer', "
+                        "NULL, :then), "
+                        "(:second_source, :case, 'followup_answer', :second, 'Second answer', "
+                        "NULL, :then), "
+                        "(:archived, :other, 'followup_answer', NULL, 'Already archived', "
+                        ":archived_at, :then)"
+                    ),
+                    {
+                        "narrative": narrative_id,
+                        "first_source": first_source_id,
+                        "second_source": second_source_id,
+                        "archived": archived_source_id,
+                        "case": case_id,
+                        "other": other_case_id,
+                        "first": first_message_id,
+                        "second": second_message_id,
+                        "archived_at": prior_archive_time,
+                        "then": historical_time,
+                    },
+                )
+                await connection.execute(
+                    text(
+                        "INSERT INTO case_analysis_results (id, case_id, source_revision, answer, "
+                        "summary, trace_json, created_at) VALUES "
+                        "(:id, :case, 3, 'Old answer', 'Old summary', '{}'::jsonb, :at)"
+                    ),
+                    {"id": uuid4(), "case": case_id, "at": historical_time + timedelta(hours=1)},
                 )
 
-            async with factory() as db, db.begin():
-                connection = await db.connection()
-                await connection.run_sync(apply_archive_migration)
+            async with engine.begin() as connection:
+                await connection.run_sync(migrate, schema, (archive, "upgrade"))
+                origins = await connection.execute(
+                    text(
+                        "SELECT id, origin_message_id FROM case_sources "
+                        "WHERE source_kind = 'followup_answer' AND case_id = :case"
+                    ),
+                    {"case": case_id},
+                )
+                assert dict(origins.all()) == {
+                    first_source_id: first_message_id,
+                    second_source_id: second_message_id,
+                }
 
-            async with factory() as db:
+            async with async_sessionmaker(engine)() as db:
                 case = await db.get(Case, case_id)
                 other_case = await db.get(Case, other_case_id)
                 assert case is not None and case.source_revision == 4
@@ -147,8 +119,6 @@ def test_archive_migration_preserves_history_and_hides_old_sources() -> None:
                 by_id = {source.id: source for source in sources}
                 assert by_id[first_source_id].archived_at is not None
                 assert by_id[second_source_id].archived_at is not None
-                assert by_id[first_source_id].origin_message_id == first_message_id
-                assert by_id[second_source_id].origin_message_id == second_message_id
                 assert by_id[first_source_id].exact_text == "First answer"
                 assert by_id[second_source_id].exact_text == "Second answer"
 
@@ -183,27 +153,30 @@ def test_archive_migration_preserves_history_and_hides_old_sources() -> None:
 
 def test_archive_migration_rejects_unmatched_followup_source() -> None:
     async def exercise() -> None:
-        async with isolated_database() as factory:
+        async with schema_before(ARCHIVE) as (engine, schema, archive):
             case_id = uuid4()
             source_id = uuid4()
-            async with factory() as db, db.begin():
-                db.add(Case(id=case_id, title="Unmatched follow-up", source_revision=5))
-                await db.flush()
-                db.add(
-                    CaseSource(
-                        id=source_id,
-                        case_id=case_id,
-                        source_kind="followup_answer",
-                        exact_text="Unique answer",
-                    )
+            async with engine.begin() as connection:
+                await connection.execute(
+                    text(
+                        "INSERT INTO cases (id, title, source_revision) "
+                        "VALUES (:id, 'Unmatched follow-up', 5)"
+                    ),
+                    {"id": case_id},
+                )
+                await connection.execute(
+                    text(
+                        "INSERT INTO case_sources (id, case_id, source_kind, exact_text) "
+                        "VALUES (:id, :case, 'followup_answer', 'Unique answer')"
+                    ),
+                    {"id": source_id, "case": case_id},
                 )
 
             with pytest.raises(DBAPIError, match="Unmatched active follow-up sources"):
-                async with factory() as db, db.begin():
-                    connection = await db.connection()
-                    await connection.run_sync(apply_archive_migration)
+                async with engine.begin() as connection:
+                    await connection.run_sync(migrate, schema, (archive, "upgrade"))
 
-            async with factory() as db:
+            async with async_sessionmaker(engine)() as db:
                 case = await db.get(Case, case_id)
                 source = await db.get(CaseSource, source_id)
                 assert case is not None and case.source_revision == 5

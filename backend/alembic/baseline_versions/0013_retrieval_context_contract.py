@@ -1,10 +1,3 @@
-"""Remove redundant chat and external-context retrieval fields.
-
-Revision ID: 0013_retrieval_context_contract
-Revises: 0012_analysis_assessment_status
-Create Date: 2026-09-23
-"""
-
 from __future__ import annotations
 
 import sqlalchemy as sa

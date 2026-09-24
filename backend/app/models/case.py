@@ -1,5 +1,3 @@
-"""Case aggregate owning sources, analysis, and chat messages."""
-
 from __future__ import annotations
 
 import uuid
@@ -38,8 +36,7 @@ class Case(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_cases"),
         CheckConstraint("source_revision >= 0", name="ck_cases_source_revision_nonnegative"),
-        Index("ix_cases_user_id", "user_id"),
-        Index("ix_cases_updated_at", "updated_at"),
+        Index("ix_cases_user_id_updated_at", "user_id", "updated_at"),
         Index("ix_cases_latest_analysis_result_id", "latest_analysis_result_id"),
     )
 

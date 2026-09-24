@@ -12,7 +12,6 @@ const analysis: CaseAnalysisResultRead = {
   source_revision: 1,
   schema_version: "case_analysis_trace_v1",
   status: "validated",
-  answer: "",
   summary: "",
   trace_json: null,
   retrieval_context_id: null,

@@ -18,7 +18,6 @@ import type { CaseReportRead } from "./generated/reportTypes";
 
 const CHAT_REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
-// An analysis is a model call the caller waits for.
 const ANALYSIS_REQUEST_TIMEOUT_MS = 300_000;
 
 axios.defaults.withCredentials = true;
@@ -226,8 +225,6 @@ export const uploadCaseDocument = async (
   return response.data;
 };
 
-// One step of the analysis, not necessarily the whole of it: a step that ended
-// with a question for the reader returns the question instead of a result.
 export const startCaseAnalysis = async (
   caseId: string,
   request: CaseAnalysisCreate,

@@ -15,7 +15,7 @@ from app.services.analysis.provider import validate_response_payload
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps.quotes import find_aligned_quote
 from app.services.analysis.steps.write import execute_analysis_pipeline
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
 def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
@@ -141,14 +141,6 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_a_source_in_both_roles_costs_no_second_provider_call(self) -> None:
-        """The analysis used to be sent back to be fixed. Now it is shown.
-
-        A source the model marked as both supporting and contradicting one
-        claim is a strange thing to say, but it is what the model said and the
-        reader can see both. Nothing here rejects an analysis any more, so
-        nothing asks for it a second time.
-        """
-
         source = CaseSourceItem(
             source_id="s1",
             source_kind="narrative",

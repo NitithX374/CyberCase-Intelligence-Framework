@@ -36,14 +36,11 @@ export interface CaseGap {
   reason: string;
   priority: GapPriority;
   askable: boolean;
-  /** The question the analysis wants answered, when it thought one worth asking. */
   clarificationQuestion: string | null;
 }
 
-/** What a party, a moment or an impact rests on: the sources of the claims it cites. */
 interface ClaimBacked {
   sources: SourceMessageRef[];
-  /** Every claim it cites is the analysis's own inference, none a reported fact. */
   inferred: boolean;
 }
 

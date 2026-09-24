@@ -1,5 +1,3 @@
-/** What the library shows when there are no cases to show. */
-
 import { EmptyState } from "@/components/EmptyState";
 
 export function CaseLibraryLoading() {
@@ -39,7 +37,6 @@ export function CaseLibraryEmpty({
 }) {
   return (
     <EmptyState
-      icon="folder"
       title="No saved cases yet"
       description="A case holds its sources, analysis and report."
       className="mt-16"

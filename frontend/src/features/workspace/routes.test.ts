@@ -10,9 +10,6 @@ describe("Case workspace routes", () => {
   });
 
   it("sends the views that were folded into Analysis there", () => {
-    // Findings, ATT&CK context and the report were three routes. A link kept
-    // from then should land on the page that now holds all three, not on a
-    // blank workspace.
     for (const retired of ["overview", "technical-context", "report"]) {
       expect(caseRouteState(`/case/case-1/${retired}`)).toEqual({
         caseId: "case-1",

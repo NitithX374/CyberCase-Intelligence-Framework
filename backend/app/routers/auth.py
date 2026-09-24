@@ -1,5 +1,3 @@
-"""Authentication API router for registration, login, user profile, and dev-mode login."""
-
 from __future__ import annotations
 
 import uuid
@@ -25,9 +23,8 @@ from app.services.auth.auth_service import (
     build_auth_cookie_options,
     get_or_create_dev_user,
 )
+from app.services.auth.credentials import create_access_token, hash_password, verify_password
 from app.services.auth.dependencies import get_current_user, get_optional_user
-from app.services.auth.jwt import create_access_token
-from app.services.auth.passwords import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -88,7 +85,6 @@ async def login(
 async def get_me(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> UserRead:
-    """Return user profile for the currently logged-in user."""
     return UserRead.model_validate(current_user)
 
 
@@ -96,7 +92,6 @@ async def get_me(
 async def get_session(
     user: Annotated[User | None, Depends(get_optional_user)],
 ) -> UserRead | None:
-    """Return user profile if logged in, or null without 401 challenge."""
     if user is None:
         return None
     return UserRead.model_validate(user)
@@ -104,7 +99,6 @@ async def get_session(
 
 @router.post("/logout", summary="Log out user and clear session cookie")
 async def logout(response: Response) -> dict[str, str]:
-    """Clear session cookie and log out."""
     response.delete_cookie(
         key=settings.jwt_cookie_name,
         path="/",
@@ -124,7 +118,6 @@ async def dev_login(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> AuthTokenResponse:
-    """Simulate login locally for development and automated testing."""
     if not settings.auth_dev_login_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -135,7 +128,6 @@ async def dev_login(
         db,
         email=payload.email,
         name=payload.name,
-        avatar_url=payload.avatar_url,
     )
     token = create_access_token(user_id=user.id, email=user.email)
 

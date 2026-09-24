@@ -1,7 +1,7 @@
-"""JWT encoding and decoding helpers."""
-
 from __future__ import annotations
 
+import hashlib
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -11,12 +11,25 @@ import jwt
 from app.config import settings
 
 
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+    return f"scrypt${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    algorithm, salt, expected = stored.split("$")
+    if algorithm != "scrypt":
+        raise ValueError("Unsupported password hash")
+    digest = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1)
+    return secrets.compare_digest(digest.hex(), expected)
+
+
 def create_access_token(
     user_id: uuid.UUID,
     email: str,
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Create a signed JWT access token for the given user."""
     if len(settings.jwt_secret_key) < 32:
         raise ValueError("JWT_SECRET_KEY must contain at least 32 characters")
     if expires_delta:
@@ -39,7 +52,6 @@ def create_access_token(
 
 
 def decode_access_token(token: str) -> dict[str, Any] | None:
-    """Decode and validate a JWT access token. Returns None on failure/expiration."""
     if len(settings.jwt_secret_key) < 32:
         raise ValueError("JWT_SECRET_KEY must contain at least 32 characters")
     try:
@@ -50,9 +62,3 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
         )
     except jwt.PyJWTError:
         return None
-
-
-__all__ = [
-    "create_access_token",
-    "decode_access_token",
-]

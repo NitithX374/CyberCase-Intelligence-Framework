@@ -1,11 +1,3 @@
-"""The follow-up loop, against a real database.
-
-The analysis asks about one gap at a time. Each reply stays a chat message the
-next analysis reads as follow-up history — it is not case material and does not
-revise ``source_revision`` — and only the last reply of a round costs another
-analysis, which is what makes asking three things affordable.
-"""
-
 from __future__ import annotations
 
 import uuid
@@ -52,8 +44,6 @@ TRACE = {
 async def case_with_a_question(
     session_factory, trace: dict | None = None
 ) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
-    """A case whose analysis has already asked about the first gap it found."""
-
     trace = trace or TRACE
 
     async with session_factory() as db, db.begin():
@@ -79,7 +69,6 @@ async def case_with_a_question(
         analysis = CaseAnalysisResult(
             case_id=case.id,
             source_revision=1,
-            answer="Files were encrypted.",
             summary="Files were encrypted.",
             trace_json=trace,
             pipeline_config={"version": "case_analysis_v1"},
@@ -119,8 +108,6 @@ def three_gaps() -> CaseAnalysisTrace:
 
 
 def decide(trace: CaseAnalysisTrace, *, asked=(), this_round=0, rounds=1):
-    """The policy at the settings the product ships, so the defaults are tested."""
-
     return decide_followup(
         gaps=trace.gaps,
         asked_gap_keys=asked,
@@ -141,7 +128,6 @@ def test_a_round_walks_the_gaps_one_at_a_time():
 def test_a_round_stops_at_three_even_with_more_gaps():
     spent = decide(three_gaps(), asked={"topic:1", "topic:2", "topic:3"}, this_round=3)
     assert spent == Proceed("round_budget_spent")
-    # Not terminal: the caller analyses again rather than finishing here.
     assert not spent.is_terminal
 
 
@@ -152,8 +138,6 @@ def test_the_rounds_run_out():
 
 
 def test_a_gap_already_asked_is_not_asked_again_in_a_later_round():
-    """The keys come from the whole case, so a new analysis cannot re-ask one."""
-
     trace = CaseAnalysisTrace.model_validate({**TRACE, "gaps": [GAP]})
     assert decide(trace, asked={GAP["gap_key"]}, rounds=2) == Proceed("gaps_exhausted")
 
@@ -166,8 +150,6 @@ def test_a_gap_with_no_question_is_never_asked():
 
 
 def test_nothing_to_ask_and_everything_asked_are_told_apart():
-    """A settled case and an exhausted one stop for different reasons."""
-
     settled = CaseAnalysisTrace.model_validate({**TRACE, "gaps": []})
     assert decide(settled) == Proceed("no_eligible_gap")
     assert decide(three_gaps(), asked={f"topic:{n}" for n in (1, 2, 3, 4)}) == Proceed(
@@ -177,13 +159,6 @@ def test_nothing_to_ask_and_everything_asked_are_told_apart():
 
 @pytest.mark.asyncio
 async def test_replying_to_the_question_stays_conversation():
-    """The reply is admitted and the case analysed again, without being marked.
-
-    It does not become a case source, and it does not move source_revision:
-    answering a question is not a revision of the material the case was filed
-    with, and treating it as one would invalidate any analysis already running.
-    """
-
     async with isolated_database() as session_factory:
         case_id, user_id, question_id = await case_with_a_question(session_factory)
         analyses: list[str] = []
@@ -225,8 +200,6 @@ async def test_replying_to_the_question_stays_conversation():
 
 @pytest.mark.asyncio
 async def test_a_question_that_was_answered_is_no_longer_pending():
-    """A second send is an ordinary question, not another answer."""
-
     async with isolated_database() as session_factory:
         case_id, user_id, question_id = await case_with_a_question(session_factory)
         async with session_factory() as db, db.begin():
@@ -248,8 +221,6 @@ async def test_a_question_that_was_answered_is_no_longer_pending():
 
 @pytest.mark.asyncio
 async def test_the_round_asks_the_next_gap_before_spending_an_analysis():
-    """Three questions, one analysis: the reply moves the round along."""
-
     async with isolated_database() as session_factory:
         trace = three_gaps().model_dump(mode="json")
         case_id, user_id, first_id = await case_with_a_question(session_factory, trace)
@@ -283,8 +254,6 @@ async def test_the_round_asks_the_next_gap_before_spending_an_analysis():
 
 @pytest.mark.asyncio
 async def test_a_retried_send_gets_what_it_already_produced():
-    """The analysis is slow enough that a client can give up and try again."""
-
     async with isolated_database() as session_factory:
         trace = three_gaps().model_dump(mode="json")
         case_id, user_id, _ = await case_with_a_question(session_factory, trace)
@@ -307,29 +276,20 @@ async def test_a_retried_send_gets_what_it_already_produced():
 
 @pytest.mark.asyncio
 async def test_a_spent_budget_does_not_silence_the_case_for_good():
-    """The budget spent. A reply gets nothing more; the reader's own analysis asks.
-
-    The budget bounds the chain a reply keeps going, not the case. Counted over
-    the case's whole life it would turn the questions off permanently, however
-    much new material arrived afterwards.
-    """
-
     from app.services.analysis.contracts import CaseAnalysisTrace
     from app.services.analysis.pipeline import AnalysisArtifacts
-    from app.services.sources import load_case_source_bundle
-    from app.services.workflow import CaseUnderAnalysis, store_analysis
+    from app.services.sources.case_source_bundle import load_case_source_bundle
+    from app.services.workflow.run_analysis import store_analysis
+    from app.services.workflow.shared import CaseUnderAnalysis
 
     async with isolated_database() as session_factory:
         trace_json = three_gaps().model_dump(mode="json")
         case_id, user_id, _ = await case_with_a_question(session_factory, trace_json)
         async with session_factory() as db, db.begin():
-            # Enough further asking analyses to spend the whole budget. The
-            # fixture already contributed one.
             for extra in range(settings.chat_followup_max_rounds):
                 other = CaseAnalysisResult(
                     case_id=case_id,
                     source_revision=1,
-                    answer="Earlier.",
                     summary="Earlier.",
                     trace_json=trace_json,
                     pipeline_config={},
@@ -379,10 +339,6 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
         )
 
         asked, step = await store(continuing=False)
-        # Still asking -- that is what "not silenced" means. It does not have
-        # to be a *new* question: this case already has one standing, and
-        # writing a rival beside it would strand whichever is older, since a
-        # reply is only ever matched to the latest.
         assert step.stop_reason is None
         assert step.question is not None, "the reader's own analysis may ask again"
         assert asked == 0, "and it re-offers the standing question rather than adding one"
@@ -390,13 +346,6 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
 
 @pytest.mark.asyncio
 async def test_a_second_analysis_does_not_strand_the_standing_question():
-    """Analysing again while a question is open keeps that question, not a rival.
-
-    Two outstanding questions cannot both be answered: a reply is matched to
-    the latest one, so the older is stranded with no way to close it. The
-    composer then read it as an open question on every send, for good.
-    """
-
     async with isolated_database() as session_factory:
         case_id, user_id, question_id = await case_with_a_question(session_factory)
 

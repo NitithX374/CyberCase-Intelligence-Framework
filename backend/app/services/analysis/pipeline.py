@@ -1,16 +1,3 @@
-"""The analysis, as the product runs it.
-
-Three steps in a fixed order. There is no arm switch here and no stage list to
-assemble: what an analysis does is what ``analyse_case`` does, readable top to
-bottom. The alternative compositions the thesis measures live in
-``experiments/analysis_arms.py`` and call these same step functions, so an
-ablation measures this code rather than a second copy of it that drifts.
-
-No step touches the database. Each is handed what it needs and returns what it
-produced, which is what lets the same steps run over a case row or over a
-dataset file.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -38,23 +25,16 @@ from app.services.analysis.steps.technical_context import (
 )
 from app.services.analysis.steps.write import request_case_analysis
 from app.services.clients.rag_client import request_rag
-from app.services.sources import CaseSourceBundle
+from app.services.sources.case_source_bundle import CaseSourceBundle
 
 
 @dataclass(frozen=True)
 class AnalysisInput:
-    """Everything the pipeline reads. The caller assembles it; no step adds to it."""
-
     sources: CaseSourceBundle
     response_language: str = "english"
     mode: str = "case_overview"
     question: str | None = None
-    # What the reader has already been asked and answered. Conversation, not
-    # case sources, so it is versioned by nothing and carried separately.
     followup_history: tuple[CaseFollowupExchange, ...] = ()
-    # The context a previous analysis of this same input already retrieved.
-    # The caller decides whether it still applies -- the steps hold no history
-    # and read no rows, so they cannot know. None means retrieve.
     reused_context: CaseRagContextPayload | None = None
     asked_gap_keys: frozenset[str] = frozenset()
     rounds_spent: int = 1
@@ -64,12 +44,8 @@ class AnalysisInput:
 
 @dataclass(frozen=True)
 class AnalysisArtifacts:
-    """What the steps have produced. Each step returns the next version of it."""
-
     answer: str = ""
     trace: CaseAnalysisTrace | None = None
-    # Only the split arm fills this: what its reading call wrote, on its way to
-    # its judgement call. The production path has no halfway point to hold.
     reading: CaseProviderReading | None = None
     technical_context: dict[str, object] | None = None
     retrieval_context_id: str | None = None
@@ -107,21 +83,6 @@ async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
     )
 
 
-async def analyse_case(data: AnalysisInput) -> AnalysisArtifacts:
-    """One analysis, start to finish."""
-
-    artifacts = AnalysisArtifacts()
-    artifacts = await retrieve_technical_context(data, artifacts)
-    artifacts = await write_analysis(data, artifacts)
-    artifacts = await bind_to_case(data, artifacts)
-    # RET504 would fold this into the line above. The three steps read as one
-    # list precisely because they are written the same way.
-    return artifacts  # noqa: RET504
-
-
-# -- the steps ----------------------------------------------------------------
-
-
 async def assess_gaps(
     data: AnalysisInput,
     *,
@@ -143,17 +104,6 @@ async def retrieve_technical_context(
     gate: Callable = mitre_gate,
     rag: Callable = request_rag,
 ) -> AnalysisArtifacts:
-    """MITRE ATT&CK context, when the gate says the case calls for it.
-
-    Every failure inside the augmentation comes back as a status, so a RAG
-    service that is unreachable costs the analysis its technical context and
-    nothing else.
-
-    A retrieval the caller has already paid for is used as given. The gate
-    still runs either way: whether ATT&CK applies is cheap to ask and is what
-    the analysis records about itself.
-    """
-
     augmentation = await run_case_mitre_augmentation(
         source_bundle=data.sources,
         applicability_gate=gate,
@@ -182,8 +132,6 @@ async def write_analysis(
     request: Callable = request_case_analysis,
     config: Callable[[], AnalysisPipelineConfig] = configured_pipeline,
 ) -> AnalysisArtifacts:
-    """The one model call that reads the sources and writes the trace."""
-
     output = await request(
         source_bundle=data.sources,
         pipeline_config=config().model_dump(mode="json"),
@@ -207,14 +155,6 @@ async def write_analysis(
 
 
 async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
-    """Bind what the model wrote to what the case actually holds.
-
-    A quotation in no source is dropped and counted rather than raised on, so
-    one bad citation costs its claim its support and not the whole analysis.
-    Asking the model to fix what missed is the revise arm's business, not this
-    step's.
-    """
-
     trace = bound_trace(data, so_far, so_far.trace)
     return replace(
         so_far,
@@ -224,14 +164,9 @@ async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> Analys
     )
 
 
-# -- what the steps and the arms share ----------------------------------------
-
-
 def bound_trace(
     data: AnalysisInput, so_far: AnalysisArtifacts, trace: CaseAnalysisTrace | None
 ) -> CaseAnalysisTrace:
-    """One binding pass. The revise arm runs several; production runs one."""
-
     if trace is None:
         raise CaseAnalysisFailure(
             "analysis_trace_missing", "Verification needs an analysis to check"
@@ -248,13 +183,6 @@ def bound_trace(
 def merged_receipt(
     so_far: dict[str, object], produced: dict[str, object] | None
 ) -> dict[str, object]:
-    """Two model calls, one receipt, and every call still in it.
-
-    A plain merge would let the second call's ``calls`` list replace the
-    first's, which is how an arm that costs two calls comes to look like it
-    cost one.
-    """
-
     produced = produced or {}
     merged = {**so_far, **produced}
     calls = [*(so_far.get("calls") or []), *(produced.get("calls") or [])]
@@ -283,7 +211,6 @@ __all__ = [
     "AnalysisArtifacts",
     "AnalysisInput",
     "advance_case",
-    "analyse_case",
     "assess_gaps",
     "analysis_instruction",
     "bind_to_case",

@@ -10,13 +10,12 @@ const statusLabels: Record<CaseRead["status"], string> = {
   answered: "Analyzed",
 };
 
-export const toneDotClass: Record<CaseStatusTone, string> = {
-  neutral: "bg-ink-disabled",
-  positive: "bg-established",
-  attention: "bg-unresolved",
+export const toneTextClass: Record<CaseStatusTone, string> = {
+  neutral: "",
+  positive: "",
+  attention: "text-unresolved",
 };
 
-/** A case with an analysis opens on it; one without opens where you add sources. */
 export function caseDestination(caseRecord: CaseRead): string {
   return casePath(caseRecord.id, caseRecord.latest_analysis_result_id ? "analysis" : "sources");
 }

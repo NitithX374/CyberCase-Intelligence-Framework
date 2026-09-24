@@ -5,11 +5,9 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 
-# Disable verbose SQLAlchemy engine SQL query logging in container logs
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
 
-# ── Engine ───────────────────────────────────────────────────────────────────
 if settings.database_url:
     engine = create_async_engine(
         settings.async_database_url,
@@ -32,7 +30,6 @@ else:
     )
 
 
-# ── Session factory ──────────────────────────────────────────────────────────
 async_session = async_sessionmaker(
     engine,
     class_=AsyncSession,
@@ -40,14 +37,11 @@ async_session = async_sessionmaker(
 )
 
 
-# ── Base class for all models ────────────────────────────────────────────────
 class Base(DeclarativeBase):
     pass
 
 
-# ── Dependency for route injection ───────────────────────────────────────────
 async def get_db():
-    """Yield an async DB session for FastAPI dependency injection."""
     async with async_session() as session:
         try:
             yield session

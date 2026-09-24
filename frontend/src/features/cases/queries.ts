@@ -58,7 +58,6 @@ export function useCaseMutations() {
       queryClient.setQueryData<CaseRead[]>(caseQueryKeys.cases(), (current) =>
         (current ?? []).filter((item) => item.id !== deletedCaseId),
       );
-      // Explicitly removes the entire case subtree (case, chat, documents, sources, analysis)
       queryClient.removeQueries({ queryKey: caseQueryKeys.case(deletedCaseId) });
     },
   });

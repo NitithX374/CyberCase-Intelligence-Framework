@@ -63,14 +63,9 @@ async def store_assessment(
             source_revision=started.source_revision,
             schema_version=assessment.version,
             status="assessment",
-            answer="",
             summary="",
             trace_json=assessment.model_dump(mode="json"),
             pipeline_config=configured_pipeline().model_dump(mode="json"),
-            external_context_json={
-                "source_reference_type": "case_source",
-                "source_revision": started.source_revision,
-            },
         )
         db.add(result)
         await db.flush()
@@ -128,12 +123,11 @@ async def store_analysis(
             source_revision=started.source_revision,
             schema_version=trace.version,
             status="validated",
-            answer=artifacts.answer,
             summary=trace.summary,
             trace_json=trace.model_dump(mode="json"),
             retrieval_context_id=trace.retrieval_context_id,
             pipeline_config=configured_pipeline().model_dump(mode="json"),
-            external_context_json=external_context(artifacts, started.source_revision),
+            external_context_json=external_context(artifacts),
             retrieval_context_json=retrieval_context_row(artifacts, started),
         )
         db.add(result)
@@ -230,15 +224,12 @@ def retrieval_context_row(
     }
 
 
-def external_context(artifacts: AnalysisArtifacts, source_revision: int) -> dict[str, object]:
+def external_context(artifacts: AnalysisArtifacts) -> dict[str, object]:
     if artifacts.trace is None:
         raise CaseAnalysisFailure(
             "analysis_trace_missing", "Case analysis did not produce a validated trace"
         )
-    context: dict[str, object] = {
-        "source_reference_type": "case_source",
-        "source_revision": source_revision,
-    }
+    context: dict[str, object] = {}
     augmentation = artifacts.receipt.get("technical_augmentation")
     if not isinstance(augmentation, dict):
         return context

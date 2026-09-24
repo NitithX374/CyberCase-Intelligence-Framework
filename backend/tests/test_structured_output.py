@@ -19,5 +19,4 @@ def test_case_provider_analysis_schema_exposes_grounded_claim_roles() -> None:
     assert schema["properties"]["version"]["const"] == "case_analysis_trace_v1"
     for section in ("involved_parties", "timeline", "impacts", "claims", "gaps"):
         assert section in schema["properties"]
-    # Every property is required, so the model cannot quietly omit a section.
     assert set(schema["required"]) == set(schema["properties"])

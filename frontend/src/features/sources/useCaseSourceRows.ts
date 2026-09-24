@@ -5,13 +5,6 @@ import { useCaseChatMessages } from "@/features/chat/useCaseChat";
 import { mergeCaseSourceRows } from "./followupSources";
 import { useCaseSources } from "./queries";
 
-/**
- * The case's sources as the reader sees them: what was written or uploaded,
- * followed by the follow-up answers given in the chat.
- *
- * `caseSources` is the first part on its own, for questions only a real
- * source answers, such as whether there is anything to analyze.
- */
 export function useCaseSourceRows(caseId: string | null) {
   const sourcesQuery = useCaseSources(caseId);
   const chatQuery = useCaseChatMessages({ caseId });
@@ -20,5 +13,5 @@ export function useCaseSourceRows(caseId: string | null) {
     () => mergeCaseSourceRows(caseSources, chatQuery.data?.messages ?? []),
     [caseSources, chatQuery.data?.messages],
   );
-  return { caseSources, rows, isLoading: sourcesQuery.isLoading };
+  return { caseSources, rows, isLoading: sourcesQuery.isLoading || chatQuery.isLoading };
 }

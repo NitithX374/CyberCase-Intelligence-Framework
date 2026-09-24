@@ -67,10 +67,8 @@ function TechnicalItem({
                 type="button"
                 onClick={(event) => onSelectSource(source, event.currentTarget, buttonKey)}
                 aria-haspopup="dialog"
-                className={`block w-full rounded-lg border-l-2 px-3 py-2 text-left transition-colors ${
-                  isActive
-                    ? "border-ink bg-surface-nested"
-                    : "border-mitre/30 bg-surface-nested/60 hover:bg-surface-nested"
+                className={`block w-full border-l-2 py-1 pl-3 text-left transition-colors ${
+                  isActive ? "border-ink" : "border-line-strong hover:border-ink"
                 }`}
               >
                 <span className="block text-sm leading-6 text-ink">
@@ -117,20 +115,13 @@ function TechniqueTitle({
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-      <span className="font-mono text-xs text-mitre">{techniqueId}</span>
+      <span className="text-[13px] font-medium text-ink-secondary">{techniqueId}</span>
       <Heading className="text-[15px] font-semibold text-ink">{techniqueName}</Heading>
       {tactic && <span className="text-[13px] text-ink-muted">{tactic}</span>}
     </div>
   );
 }
 
-/** How the technique was retrieved, and how closely it matched.
- *
- *  The number is the retriever's similarity between the case text and this
- *  technique's ATT&CK description. It says how strongly the technique was
- *  found, not whether mapping it to this claim is correct — which the analysis
- *  decided afterwards, and which nothing here measures.
- */
 function RetrievalScore({
   score,
   retrievedBy,
@@ -148,15 +139,10 @@ function RetrievalScore({
       </span>
     );
   }
-  const percent = Math.round(score * 100);
   return (
-    <div className="flex shrink-0 items-center gap-2 pt-1" title={SCORE_EXPLANATION}>
-      <span className="sr-only">Retrieval match</span>
-      <span className="h-1 w-12 overflow-hidden rounded-full bg-surface-nested" aria-hidden="true">
-        <span className="block h-full rounded-full bg-mitre/70" style={{ width: `${percent}%` }} />
-      </span>
-      <span className="font-mono text-[13px] text-ink-secondary">{score.toFixed(2)}</span>
-    </div>
+    <span className="shrink-0 pt-0.5 text-xs text-ink-muted" title={SCORE_EXPLANATION}>
+      Match {score.toFixed(2)}
+    </span>
   );
 }
 
@@ -225,7 +211,7 @@ export function TechnicalContextView({
             {count > 0 && <span className="text-[13px] font-medium text-ink-muted">{count}</span>}
           </div>
           <span
-            className="tag bg-mitre/[0.07] text-mitre"
+            className="text-[13px] text-ink-muted"
             title="External technical reference. It is not a case source."
           >
             External reference

@@ -5,7 +5,6 @@ import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/
 import type { SourceMessageRef } from "@/features/sources/types";
 import { asArray, asRecord, asStringArray } from "@/lib/parse";
 import { parseCaseCitations, parseCaseSources, sourceRefs } from "@/features/sources/sourceRefs";
-import { Icon } from "@/components/icons";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { SourceDrawer } from "@/features/sources/SourceDrawer";
 import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
@@ -13,7 +12,6 @@ import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
 interface ChatTranscriptProps {
   messages: ChatMessageRead[];
   isProcessing: boolean;
-  /** The send in flight answers a question, so an analysis follows it. */
   isAnsweringQuestion?: boolean;
   leadResult?: CaseAnalysisResultRead | null;
   sources?: CaseSourceRead[] | null;
@@ -28,7 +26,7 @@ export function ChatTranscript({
   sources,
   onNavigateToSource,
 }: ChatTranscriptProps) {
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
 
   const initialMessageIdsRef = useRef<Set<string> | null>(null);
   const leadResultIdRef = useRef<string | null>(leadResult?.id ?? null);
@@ -54,24 +52,46 @@ export function ChatTranscript({
     );
     if (!hasNewMessage && !isProcessing) return;
     initialMessageIdsRef.current = new Set(messages.map((message) => message.id));
-    bottomRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    const scroller = scrollerRef.current;
+    scroller?.scrollTo?.({ top: scroller.scrollHeight, behavior: "smooth" });
   }, [isProcessing, leadResult?.id, messages]);
 
-  if (messages.length === 0) {
-    return (
-      <div className="flex h-full min-h-[320px] flex-col items-center justify-center px-8 text-center">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-nested text-ink-muted">
-          <Icon name="chat" className="h-5 w-5" />
-        </span>
-        <p className="mt-3 max-w-60 text-sm leading-6 text-ink-muted">
-          {leadResult
-            ? "Ask about the findings, the sources, or what is still missing."
-            : "Ask anything about this case."}
-        </p>
-      </div>
-    );
-  }
+  return (
+    <div ref={scrollerRef} className="relative min-h-0 flex-1 overflow-y-auto">
+      {messages.length === 0 ? (
+        <div className="flex h-full min-h-[320px] flex-col items-center justify-center px-8 text-center">
+          <p className="max-w-60 text-sm leading-6 text-ink-muted">
+            {leadResult
+              ? "Ask about the findings, the sources, or what is still missing."
+              : "Ask anything about this case."}
+          </p>
+        </div>
+      ) : (
+        <Messages
+          messages={messages}
+          isProcessing={isProcessing}
+          isAnsweringQuestion={isAnsweringQuestion}
+          sources={uniqueSources}
+          onNavigateToSource={onNavigateToSource}
+        />
+      )}
+    </div>
+  );
+}
 
+function Messages({
+  messages,
+  isProcessing,
+  isAnsweringQuestion,
+  sources,
+  onNavigateToSource,
+}: {
+  messages: ChatMessageRead[];
+  isProcessing: boolean;
+  isAnsweringQuestion: boolean;
+  sources: CaseSourceRead[];
+  onNavigateToSource?: (messageId: string) => void;
+}) {
   return (
     <div className="space-y-6 px-5 py-6">
       {messages.map((message) => {
@@ -90,14 +110,8 @@ export function ChatTranscript({
 
         if (isQuestion) {
           return (
-            <article
-              key={message.id}
-              className="rounded-xl border border-unresolved/25 bg-unresolved/[0.05] px-4 py-3"
-            >
-              <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-unresolved">
-                <Icon name="chat" className="h-3.5 w-3.5" />
-                Question
-              </p>
+            <article key={message.id}>
+              <p className="mb-1 text-xs font-semibold text-unresolved">Question</p>
               <ChatMessageMarkdown content={message.content} />
             </article>
           );
@@ -108,7 +122,7 @@ export function ChatTranscript({
             <ChatMessageMarkdown content={message.content} />
             <AnalysisSourceReferences
               analysisMessage={message}
-              sources={uniqueSources}
+              sources={sources}
               onNavigateToSource={onNavigateToSource}
             />
           </article>
@@ -116,32 +130,11 @@ export function ChatTranscript({
       })}
 
       {isProcessing && (
-        <div role="status" className="flex items-center gap-2.5 text-[13px] text-ink-muted">
-          <TypingDots />
-          {isAnsweringQuestion ? (
-            <span>Updating the analysis with your answer…</span>
-          ) : (
-            <span className="sr-only">Answering…</span>
-          )}
-        </div>
+        <p role="status" className="text-[13px] text-ink-muted">
+          {isAnsweringQuestion ? "Updating the analysis with your answer…" : "Answering…"}
+        </p>
       )}
-
-      <div ref={bottomRef} aria-hidden="true" />
     </div>
-  );
-}
-
-function TypingDots() {
-  return (
-    <span className="inline-flex items-center gap-1" aria-hidden="true">
-      {[0, 150, 300].map((delay) => (
-        <span
-          key={delay}
-          className="h-1.5 w-1.5 rounded-full bg-ink-muted/60 motion-safe:animate-bounce"
-          style={{ animationDelay: `${delay}ms` }}
-        />
-      ))}
-    </span>
   );
 }
 

@@ -60,7 +60,7 @@ export function SourceDrawer({
         <header className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 sm:px-6">
           <div className="min-w-0 space-y-1">
             {citationRole === "conflicting" && (
-              <span className="tag bg-critical/[0.07] text-critical">Conflicting source</span>
+              <p className="text-xs font-medium text-critical">Conflicting source</p>
             )}
             <h2
               id={titleId}

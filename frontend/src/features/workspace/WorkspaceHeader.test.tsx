@@ -22,7 +22,6 @@ const sampleCase: CaseRead = {
   updated_at: "2026-09-14T08:10:00Z",
 };
 
-/** The decorative dot on the Analysis tab, if there is one. */
 function analysisDot() {
   return screen.getByRole("tab", { name: "Analysis" }).querySelector('[aria-hidden="true"]');
 }
@@ -55,8 +54,6 @@ describe("WorkspaceHeader", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Legal" }));
     expect(onViewChange).toHaveBeenCalledWith("legal");
 
-    // Analyze sits under the sources and beside the result, where it is the
-    // next step; an up-to-date analysis puts no dot on its tab.
     expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
     expect(analysisDot()).toBeNull();
   });
@@ -107,7 +104,6 @@ describe("WorkspaceHeader", () => {
 
     expect(screen.queryByRole("button", { name: "New case" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open account menu" }));
-    // The logo and the menu item both lead back to the library.
     const libraryLinks = screen.getAllByRole("link", { name: "All cases" });
     expect(libraryLinks).toHaveLength(2);
     libraryLinks.forEach((link) => expect(link).toHaveAttribute("href", "/case"));

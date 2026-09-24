@@ -1,10 +1,3 @@
-"""Talking to the model, and reading what comes back.
-
-One job in two halves that were two files: build the request for a stage and
-send it, then pull the text out of whatever shape the provider answered in.
-Splitting them meant every caller of one imported the other anyway.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -28,12 +21,10 @@ from app.services.llm.structured_output import (
 )
 
 logger = logging.getLogger("app.case_analysis")
-# A block with no type, or one of these, carries the text directly.
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text", "message", None})
 
 
 def extract_text_value(value: object) -> str:
-    """Recursively extract raw text values from provider block payload."""
     if isinstance(value, str):
         return value
     if isinstance(value, list):
@@ -59,7 +50,6 @@ def extract_text_value(value: object) -> str:
 
 
 def extract_visible_text(payload: Mapping[str, object]) -> str:
-    """Extract visible assistant text across supported provider response shapes."""
     direct_output = payload.get("output_text")
     if isinstance(direct_output, str):
         return direct_output
@@ -78,7 +68,6 @@ def extract_visible_text(payload: Mapping[str, object]) -> str:
 
 
 def log_response_shape(status_code: int, payload: Mapping[str, object]) -> None:
-    """Log provider shape metadata without logging prompts or answer text."""
     content = payload.get("content")
     block_types = []
     if isinstance(content, list):
@@ -102,7 +91,6 @@ def log_response_shape(status_code: int, payload: Mapping[str, object]) -> None:
 
 
 def validate_response_payload(response: httpx.Response) -> dict[str, object]:
-    """Validate HTTP response payload from analysis provider."""
     if response.status_code in {408, 429, 504}:
         raise CaseAnalysisFailure(
             "analysis_provider_timeout",
@@ -258,7 +246,6 @@ async def request_stage(
             f"{stage}_transport", "Analysis stage transport failed"
         ) from error
     except ValidationError as error:
-        # Which fields, not what was in them: the values are case material.
         logger.warning(
             "Analysis stage %s rejected the provider payload: %s",
             stage,

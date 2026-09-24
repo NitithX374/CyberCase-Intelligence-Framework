@@ -1,11 +1,3 @@
-"""The split arm: one call reads the case, a second one judges what was read.
-
-The single call asks for seven structures at once, five of which cross-reference
-claim ids it is inventing as it writes. These tests hold the seam in place: the
-reading call never sees ATT&CK, the judgement call never sees a claim it did not
-receive, and an arm that costs two calls does not come back looking like one.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -29,7 +21,7 @@ from app.services.analysis.pipeline import (
     merged_receipt,
 )
 from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from experiments import analysis_arms
 from experiments.analysis_arms import judge_reading, split
 from experiments.split_analysis import (
@@ -82,8 +74,6 @@ def judgement(**overrides) -> CaseProviderJudgement:
 
 
 def split_stages(*, seen: list[dict], reading: CaseProviderReading, technical_context=None):
-    """The two stages with their model calls replaced by recorders."""
-
     async def fake_reading(**kwargs):
         seen.append({"stage": "reading", **kwargs})
         return CaseReadingOutput(
@@ -122,14 +112,10 @@ def test_the_split_arm_is_two_calls_where_the_direct_arm_is_one(monkeypatch):
         monkeypatch.setattr(analysis_arms, name, record(name))
     asyncio.run(split(AnalysisInput(sources=case_with_one_narrative())))
 
-    # The split still binds its trace to the case, exactly as the shipped arm does.
     assert called == ["retrieve_technical_context", "read_sources", "judge_reading", "bind_to_case"]
 
 
 def test_the_reading_call_is_never_shown_the_technical_context():
-    """A claim that named a technique because retrieval mentioned it would be
-    grounded in the retrieval rather than in the case."""
-
     bundle = case_with_one_narrative()
     seen: list[dict] = []
     context = {"context": "T1486 encrypts data.", "mitre_table": [{"technique_id": "T1486"}]}
@@ -207,13 +193,10 @@ def test_the_trace_takes_its_claims_from_the_reading_and_its_summary_from_the_ju
     assert [claim.claim_id for claim in trace.claims] == ["A-01"]
     assert trace.summary == "Overnight encryption of a file share."
     assert trace.involved_parties == reading.involved_parties
-    # Nothing is bound yet: that is still the verify stage's job.
     assert trace.grounding is None
 
 
 def test_a_split_trace_is_bound_to_the_case_the_same_way_a_direct_one_is():
-    """A claim id the judgement invented is trimmed, and the loss is counted."""
-
     bundle = case_with_one_narrative()
     trace = split_trace(
         reading_of(bundle),
@@ -249,7 +232,6 @@ def test_a_split_trace_is_bound_to_the_case_the_same_way_a_direct_one_is():
     bound = resolve_case_trace(trace, bundle, mitre_table=[{"technique_id": "T1486"}])
 
     assert bound.gaps[0].affected_claim_ids == ["A-01"]
-    # No retrieval bound to this trace, so the association is dropped and counted.
     assert bound.mitre_associations == []
     assert bound.grounding.associations_outside_context == 1
     assert bound.grounding.citations_verified == 1

@@ -66,8 +66,6 @@ describe("PersistedReportCard with Jinja2 HTML Viewer", () => {
       </QueryClientProvider>,
     );
 
-    // The version, its status and the download live in the report header now;
-    // the card is the document itself.
     expect(screen.getByRole("article", { name: "Persisted report" })).toBeInTheDocument();
 
     await waitFor(() => {

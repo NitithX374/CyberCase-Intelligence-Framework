@@ -4,9 +4,14 @@ from app.schemas.reports import (
     PRELIMINARY_REPORT_SECTION_HEADINGS,
     ReportClaim,
     ReportSection,
+    StructuredReport,
 )
 from app.services.analysis.contracts import CaseAnalysisClaim, CaseAnalysisTrace
-from app.services.reports.contracts import CaseReportInput
+from app.services.reports.contracts import (
+    CaseReportInput,
+    case_source_ids,
+    validate_case_structured_report,
+)
 
 SUPPORT_TYPE_LABELS = {
     "user_reported": "ข้อเท็จจริงที่ปรากฏในหลักฐาน",
@@ -127,13 +132,6 @@ CLARIFICATION_LIMITATIONS = {
 
 
 def clarification_limitation(trace: CaseAnalysisTrace) -> str | None:
-    """Why the system stopped asking, in the reader's terms.
-
-    A report that simply lists what is missing reads the same whether nobody
-    thought it worth asking or the budget ran out before it could be. Those
-    mean different things to whoever reads the case next.
-    """
-
     return CLARIFICATION_LIMITATIONS.get(trace.stop_reason or "")
 
 
@@ -204,28 +202,33 @@ def claim_references(
     claims_by_id: dict[str, CaseAnalysisClaim],
     source_labels: dict[str, str],
 ) -> str:
+    labels = reference_labels(claim_ids, claims_by_id, source_labels)
+    return f"อ้างอิง: {', '.join(labels)}" if labels else "อ้างอิง: ไม่มีหลักฐานโดยตรง"
+
+
+def reference_labels(
+    claim_ids: list[str],
+    claims_by_id: dict[str, CaseAnalysisClaim],
+    source_labels: dict[str, str],
+) -> tuple[str, ...]:
     source_ids: list[str] = []
     for claim_id in claim_ids:
         claim = claims_by_id.get(claim_id)
         if claim is not None:
             source_ids.extend(claim.supporting_source_ids)
             source_ids.extend(claim.contradicting_source_ids)
-    labels = list(
+    return labels_for_sources(source_ids, source_labels)
+
+
+def labels_for_sources(source_ids: list[str], source_labels: dict[str, str]) -> tuple[str, ...]:
+    return tuple(
         dict.fromkeys(
             source_labels[source_id] for source_id in source_ids if source_id in source_labels
         )
     )
-    return f"อ้างอิง: {', '.join(labels)}" if labels else "อ้างอิง: ไม่มีหลักฐานโดยตรง"
 
 
 def source_labels_for_report(report_input: CaseReportInput) -> dict[str, str]:
-    """E-nn for case material, Q-nn for something the reader told us.
-
-    Labelled apart on purpose: a reader checking a finding should be able to
-    see at a glance that it rests on their own answer rather than on a
-    document, because only one of those has been verified against anything.
-    """
-
     labels = {
         source.source_id: f"E-{index:02d}"
         for index, source in enumerate(report_input.source_bundle.sources, 1)
@@ -329,9 +332,6 @@ def technical_rationale(
 def gap_items(trace: CaseAnalysisTrace) -> list[str]:
     if not trace.gaps:
         return ["ไม่พบช่องว่างสำคัญที่ต้องตรวจสอบเพิ่มเติมจากผลวิเคราะห์นี้"]
-    # No gap_id. It is how the analysis and the follow-up policy refer to a
-    # gap to each other; to the reader it is a code with nothing behind it,
-    # and the topic already names the thing.
     return [
         f"{gap.topic} · ระดับความสำคัญ: {PRIORITY_LABELS[gap.priority]} · สถานะ: {GAP_STATUS_LABELS[gap.status]} · {gap.description} เหตุผล: {gap.reason}"
         for gap in trace.gaps
@@ -353,8 +353,38 @@ def recommendation_items(trace: CaseAnalysisTrace) -> list[str]:
     return list(dict.fromkeys(items))
 
 
+def build_case_report(report_input: CaseReportInput) -> StructuredReport:
+    report = build_case_template_report(report_input)
+    trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
+    validate_case_structured_report(
+        report,
+        allowed_source_ids=case_source_ids(report_input),
+        mitre_ids={association.technique_id for association in trace.mitre_associations},
+    )
+    return report
+
+
+def build_case_template_report(
+    report_input: CaseReportInput,
+) -> StructuredReport:
+    trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
+    claims = build_case_report_claims(report_input, trace)
+    sections = build_case_report_sections(report_input, trace)
+    limitations = build_case_report_limitations(report_input, trace)
+    return StructuredReport(
+        report_version="preliminary_analysis_report_v1",
+        status="provisional_unverified",
+        title=report_input.case_title or "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น",
+        sections=sections,
+        claims=claims,
+        limitations=limitations,
+    )
+
+
 __all__ = [
     "EPISTEMIC_STATUS_LABELS",
+    "build_case_report",
+    "build_case_template_report",
     "GAP_STATUS_LABELS",
     "PRIORITY_LABELS",
     "SUPPORT_TYPE_LABELS",

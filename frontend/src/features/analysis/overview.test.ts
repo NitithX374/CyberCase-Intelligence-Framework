@@ -22,7 +22,7 @@ function sourceItem(
     case_id: caseId,
     source_kind: kind,
     document_id: typeof options.document_id === "string" ? options.document_id : null,
-    origin_message_id: null,
+    filename: typeof options.filename === "string" ? options.filename : null,
     exact_text: text,
     provenance_json: (options.provenance_json as Record<string, unknown> | undefined) ?? {},
     source_metadata_json:
@@ -43,7 +43,6 @@ function result(
     source_revision: 1,
     schema_version: "case_analysis_trace_v1",
     status: "validated",
-    answer: text,
     summary: text,
     trace_json: {
       version: "case_analysis_trace_v1",
@@ -93,10 +92,10 @@ describe("Case overview projection", () => {
     const documentQuote = "Defendant was seen at the scene.";
     const documentSource = sourceItem(documentQuote, "document", {
       document_id: "DOC-001",
+      filename: "report.pdf",
       provenance_json: {
         pages: [{ end_offset: documentQuote.length, page_number: 1, start_offset: 0 }],
       },
-      source_metadata_json: { filename: "report.pdf" },
     });
     const documentResult = result(documentQuote, {
       source_id: sourceId,
@@ -115,10 +114,10 @@ describe("Case overview projection", () => {
     const fullText = `${repeatedQuote}\nSome intermediate text.\n${repeatedQuote}`;
     const documentSource = sourceItem(fullText, "document", {
       document_id: "DOC-001",
+      filename: "report.pdf",
       provenance_json: {
         pages: [{ end_offset: fullText.length, page_number: 1, start_offset: 0 }],
       },
-      source_metadata_json: { filename: "report.pdf" },
     });
     const documentResult = result(repeatedQuote, {
       source_id: sourceId,
@@ -202,7 +201,6 @@ describe("Case overview projection", () => {
       expect.objectContaining({ name: "Witness", role: "Saw the vehicle", inferred: false }),
     ]);
     expect(overview.parties[0].sources.map((source) => source.id)).toEqual([sourceId]);
-    // Two claims citing the same passage are one source, not two chips.
     expect(overview.timeline[0].sources).toHaveLength(1);
     expect(overview.timeline[0].inferred).toBe(false);
     expect(overview.timeline[1]).toMatchObject({ sources: [], inferred: false });

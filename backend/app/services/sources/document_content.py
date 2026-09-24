@@ -20,7 +20,6 @@ async def get_owned_document_content(
 ) -> CaseDocument:
     result = await db.execute(
         select(CaseDocument)
-        # The bytes are deferred on the model; this is the one route that wants them.
         .options(undefer(CaseDocument.content_bytes))
         .join(Case, Case.id == CaseDocument.case_id)
         .where(

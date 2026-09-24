@@ -50,7 +50,6 @@ def test_dev_login_and_authenticated_session(client, mock_db, monkeypatch):
         id=uuid4(),
         email="dev@example.com",
         name="Dev User",
-        avatar_url="https://example.com/avatar.png",
         oauth_provider="dev",
         oauth_subject_id="dev:dev@example.com",
         created_at=datetime.now(UTC),
@@ -63,7 +62,6 @@ def test_dev_login_and_authenticated_session(client, mock_db, monkeypatch):
     ) as mock_get_user:
         mock_get_user.return_value = dev_user
 
-        # Perform dev login
         login_res = client.post(
             "/api/v1/auth/dev-login",
             json={"email": "dev@example.com", "name": "Dev User"},
@@ -76,12 +74,10 @@ def test_dev_login_and_authenticated_session(client, mock_db, monkeypatch):
 
         token = token_data["access_token"]
 
-        # Mock database lookup for user by ID
         exec_result = MagicMock()
         exec_result.scalar_one_or_none.return_value = dev_user
         mock_db.execute = AsyncMock(return_value=exec_result)
 
-        # Test GET /api/v1/auth/me using Bearer token header
         me_res = client.get(
             "/api/v1/auth/me",
             headers={"Authorization": f"Bearer {token}"},
@@ -90,7 +86,6 @@ def test_dev_login_and_authenticated_session(client, mock_db, monkeypatch):
         assert me_res.json()["email"] == "dev@example.com"
         assert me_res.json()["name"] == "Dev User"
 
-        # Test GET /api/v1/auth/session using session cookie
         session_res = client.get("/api/v1/auth/session")
         assert session_res.status_code == 200
         session_data = session_res.json()

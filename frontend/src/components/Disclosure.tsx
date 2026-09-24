@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Icon } from "./icons";
 
-/** The small "Reasoning ⌄" toggle that opens a detail below a row. */
 export function DisclosureToggle({
   label,
   isOpen,
@@ -32,7 +31,6 @@ export function DisclosureToggle({
   );
 }
 
-/** What a disclosure opens: a quiet, indented block under its row. */
 export function DisclosurePanel({
   id,
   children,

@@ -12,15 +12,15 @@ from app.models.case import Case
 from app.models.report import CaseReport
 from app.models.sources import CaseSource
 from app.schemas.reports import CaseReportCreate, CaseReportRead, StructuredReport
-from app.services.reports.assembly import build_case_report
+from app.services.reports.content import build_case_report
 from app.services.reports.contracts import (
     CaseReportInput,
     ReportGenerationConflict,
     ReportNotFound,
 )
+from app.services.reports.display import ReportIssue
 from app.services.reports.projection import build_case_report_input, serialize_case_report
-from app.services.reports.render_html import render_case_report_html
-from app.services.reports.render_pdf import render_case_report_pdf
+from app.services.reports.render import render_case_report_html, render_case_report_pdf
 
 
 class CaseReportService:
@@ -41,7 +41,6 @@ class CaseReportService:
         async with self.db.begin():
             case = await self.locked_case(case_id, user_id)
             result = await self.selected_result(case, request.analysis_result_id)
-            # One report per analysis: asking again returns what was built before.
             existing = await self.report_for_analysis(result.id)
             if existing is not None:
                 return serialize_case_report(existing)
@@ -72,11 +71,7 @@ class CaseReportService:
         user_id: UUID | None,
     ) -> tuple[bytes, str]:
         report_input, structured, report = await self.stored_report(case_id, report_id, user_id)
-        pdf_bytes = render_case_report_pdf(
-            report_input,
-            structured,
-            report.id,
-        )
+        pdf_bytes = render_case_report_pdf(report_input, structured, report_issue(report))
         return pdf_bytes, f"case_report_v{report.version_number}.pdf"
 
     async def get_report_html(
@@ -85,8 +80,8 @@ class CaseReportService:
         report_id: UUID,
         user_id: UUID | None,
     ) -> str:
-        report_input, structured, _ = await self.stored_report(case_id, report_id, user_id)
-        return render_case_report_html(report_input, structured)
+        report_input, structured, report = await self.stored_report(case_id, report_id, user_id)
+        return render_case_report_html(report_input, structured, report_issue(report))
 
     async def stored_report(
         self,
@@ -94,11 +89,6 @@ class CaseReportService:
         report_id: UUID,
         user_id: UUID | None,
     ) -> tuple[CaseReportInput, StructuredReport, CaseReport]:
-        """The stored report and the case it describes, ready to render.
-
-        It was checked when it was built, so nothing checks it again here.
-        """
-
         case = await self.owned_case(case_id, user_id)
         report = await self.report(case_id, report_id)
         result = await self.selected_result(case, report.analysis_result_id)
@@ -173,6 +163,10 @@ class CaseReportService:
             )
         )
         return int(result or 0) + 1
+
+
+def report_issue(report: CaseReport) -> ReportIssue:
+    return ReportIssue(version_number=report.version_number, created_at=report.created_at)
 
 
 __all__ = [

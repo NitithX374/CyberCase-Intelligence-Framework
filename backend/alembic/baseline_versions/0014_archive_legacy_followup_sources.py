@@ -1,10 +1,3 @@
-"""Archive duplicated follow-up sources while preserving historical analyses.
-
-Revision ID: 0014_archive_followup_sources
-Revises: 0013_retrieval_context_contract
-Create Date: 2026-09-23
-"""
-
 from __future__ import annotations
 
 from alembic import op

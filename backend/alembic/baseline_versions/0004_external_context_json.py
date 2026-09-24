@@ -1,5 +1,3 @@
-"""Rename provider_metadata_json to external_context_json on case_analysis_results."""
-
 from alembic import op
 
 

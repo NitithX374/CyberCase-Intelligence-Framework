@@ -1,5 +1,3 @@
-"""Database schema parity integration tests: Alembic baseline vs PostgreSQL catalog vs Base.metadata."""
-
 import asyncio
 import importlib.util
 import os
@@ -20,7 +18,6 @@ EXPECTED_CANONICAL_TABLES = {
     "users",
     "chat_messages",
     "case_documents",
-    "document_extractions",
     "case_sources",
     "case_analysis_results",
     "case_reports",
@@ -28,8 +25,6 @@ EXPECTED_CANONICAL_TABLES = {
 
 
 def _load_migration_modules():
-    """Every migration in order, so a new one cannot be forgotten here."""
-
     baseline = Path(__file__).parents[1] / "alembic" / "baseline_versions"
     names = [path.name for path in sorted(baseline.glob("[0-9]*.py"))]
     modules = []
@@ -59,7 +54,6 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
             async with admin_engine.begin() as conn:
                 await conn.execute(text(f'CREATE SCHEMA "{schema}"'))
 
-            # Run Alembic upgrade in the schema
             async with engine.begin() as conn:
 
                 def run_upgrade(sync_conn):
@@ -72,7 +66,6 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
 
                 await conn.run_sync(run_upgrade)
 
-            # Inspect catalog using synchronous reflection
             async with engine.connect() as conn:
 
                 def inspect_schema(sync_conn):
@@ -88,7 +81,6 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     assert "case_evidence_snapshots" not in tables
                     assert "case_evidence_revisions" not in tables
 
-                    # 1. Compare columns against Base.metadata
                     for table_name in EXPECTED_CANONICAL_TABLES:
                         orm_table = Base.metadata.tables[table_name]
                         db_columns = {
@@ -104,7 +96,6 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                                 f"Column {table_name}.{orm_col_name} nullable mismatch: DB={db_col['nullable']}, ORM={orm_col.nullable}"
                             )
 
-                    # 2. Check foreign key cascade rules
                     analysis_fks = inspector.get_foreign_keys(
                         "case_analysis_results", schema=schema
                     )
@@ -120,7 +111,6 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                     )
                     assert analysis_link.get("options", {}).get("ondelete") == "SET NULL"
 
-                    # 3. Check unique constraints
                     message_uniques = inspector.get_unique_constraints(
                         "chat_messages", schema=schema
                     )
@@ -128,7 +118,6 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
                         u["column_names"] == ["case_id", "ordinal"] for u in message_uniques
                     ), "uq_chat_messages_case_id_ordinal missing"
 
-                    # 4. Check chat_messages.in_reply_to_message_id exists
                     msg_cols = {
                         c["name"] for c in inspector.get_columns("chat_messages", schema=schema)
                     }

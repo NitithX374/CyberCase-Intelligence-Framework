@@ -1,6 +1,5 @@
 import { useEffect, type RefObject } from "react";
 
-/** Close a menu or popover on a click outside it, or on Escape. */
 export function useDismiss(ref: RefObject<HTMLElement | null>, isOpen: boolean, close: () => void) {
   useEffect(() => {
     if (!isOpen) return;

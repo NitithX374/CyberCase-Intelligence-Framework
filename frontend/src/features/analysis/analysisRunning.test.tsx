@@ -1,14 +1,3 @@
-/**
- * A running analysis belongs to the case, not to the page that started it.
- *
- * The header read `useStartCaseAnalysis(...).isPending`, which is one
- * component's view of the run. Open another case and come back and that
- * observer is a new one: the analysis was still running on the server, and the
- * header offered to start it again. The mutation itself outlives the component
- * in the mutation cache, so the question "is this case being analysed" is
- * answered from the cache, keyed by case.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { act } from "react";
@@ -50,7 +39,6 @@ function wrapperFor(queryClient: QueryClient) {
   return Wrapper;
 }
 
-/** A request the test finishes by hand, so the run can be observed mid-flight. */
 function pendingCall() {
   let finish: (step: AnalysisStepRead) => void = () => {};
   startCaseAnalysis.mockImplementation(
@@ -80,14 +68,11 @@ it("still reports the run after the component that started it is gone", async ()
   });
   await waitFor(() => expect(watcher.result.current).toBe(true));
 
-  // The reader opens another case. The page holding the mutation goes away.
   starter.unmount();
 
   const remounted = renderHook(() => useIsCaseAnalysisRunning("a"), { wrapper });
   expect(remounted.result.current).toBe(true);
 
-  // And the reason the hook exists: a fresh observer of the same mutation
-  // reports nothing pending, which is what the header used to believe.
   const freshObserver = renderHook(() => useStartCaseAnalysis("a"), { wrapper });
   expect(freshObserver.result.current.isPending).toBe(false);
 

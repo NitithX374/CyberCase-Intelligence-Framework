@@ -4,12 +4,6 @@ import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./useAuth";
 
-/**
- * Nothing is public except signing in.
- *
- * The root path redirects to the case library (see next.config.ts), so every
- * page a reader can reach is either the workspace or the way into it.
- */
 export function AccountGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -19,7 +13,6 @@ export function AccountGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    // Already signed in, and looking at the sign-in page: go back to work.
     if (isAuthPage && user) {
       const saved = localStorage.getItem(`cybercase:${user.id}:route`);
       router.replace(saved?.startsWith("/case/") ? saved : "/case");
@@ -31,7 +24,6 @@ export function AccountGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Where to come back to, next time.
     if (user && !isAuthPage) {
       localStorage.setItem(`cybercase:${user.id}:route`, pathname);
     }

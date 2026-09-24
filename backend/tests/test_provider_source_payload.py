@@ -1,16 +1,9 @@
-"""What each case source looks like by the time the model sees it.
-
-A follow-up answer is the one source that cannot be read on its own. "No
-information" settles exactly one of the case's open questions, and which one it
-settles is not in the reply.
-"""
-
 from __future__ import annotations
 
 from uuid import uuid4
 
 from app.services.analysis.steps.write import provider_source_payload
-from app.services.sources import CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceItem
 
 
 def test_a_follow_up_answer_carries_the_question_it_answers():
@@ -54,8 +47,6 @@ def test_a_document_still_carries_its_extraction_quality():
 
 
 def test_an_answer_with_no_recorded_question_is_sent_as_it_is():
-    """Sources written before the question was kept still have to go through."""
-
     source = CaseSourceItem(
         source_id=str(uuid4()),
         source_kind="followup_answer",
