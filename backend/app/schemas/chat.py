@@ -1,5 +1,3 @@
-"""Case-owned chat message and status contracts."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,7 +16,6 @@ MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 
 class ChatMessageCreate(BaseModel):
     content: str = Field(default="")
-    # Set by the client so a retried send cannot create a second message.
     client_request_id: str | None = Field(default=None, max_length=255)
     response_language: Literal["thai", "english"] = "english"
 
@@ -31,9 +28,7 @@ class ChatMessageRead(BaseModel):
     ordinal: int
     role: MessageRole
     content: str
-    retrieval_context_id: str | None
     message_kind: MessageKind
-    # Set when this message asks about one gap the analysis left open.
     gap_key: str | None = None
     analysis_result_id: UUID | None
     in_reply_to_message_id: UUID | None = None
@@ -48,8 +43,6 @@ class CaseChatRead(BaseModel):
 
 
 class CaseChatResponse(BaseModel):
-    """What one send produced: the message, and whatever answered it."""
-
     messages: list[ChatMessageRead]
     analysis: CaseAnalysisResultRead | None = None
 

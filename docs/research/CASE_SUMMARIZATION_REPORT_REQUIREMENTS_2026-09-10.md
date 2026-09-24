@@ -2,14 +2,14 @@
 
 วันที่: 2026-09-10
 
-สถานะ: ข้อเสนอออกแบบจากการจำลองมุมมองผู้อ่าน ไม่ใช่ข้อกำหนดที่ผ่านการรับรองจากอัยการ ไม่ใช่ผล usability study และไม่ใช่ implementation specification ที่ตรวจเทียบโค้ดครบแล้ว
+สถานะ: ข้อเสนอ acceptance จากการจำลองมุมมองผู้อ่าน ปรับขอบเขตให้ตรงกับระบบปัจจุบันเมื่อ 2026-09-22 ไม่ใช่ข้อกำหนดที่ผ่านการรับรองจากอัยการ ไม่ใช่ผล usability study และไม่ใช่ implementation specification ที่ตรวจเทียบโค้ดครบแล้ว
 
 ## 1. สิ่งที่ผู้ใช้ยืนยัน
 
 - ผู้อ่านเป้าหมายคืออัยการ; งานหลักคือ General Case Summarization
 - ระบบต้องสรุปสาระสำคัญจากข้อมูลในสำนวนได้เป็นพื้นฐาน โดยไม่ต้องมี MITRE
-- MITRE ATT&CK RAG ยังคงเป็น requirement แต่เรียกเมื่อมี Technical/Cybersecurity Context ที่เกี่ยวข้องกับ ATT&CK เท่านั้น
-- MITRE เป็น external knowledge augmentation ไม่ใช่หลักฐานเหตุการณ์หรือแกนหลักของการสรุป
+- MITRE ATT&CK RAG เป็น optional external augmentation และไม่ใช่ requirement ของ core case-analysis path
+- MITRE เป็น external knowledge augmentation ไม่ใช่หลักฐานเหตุการณ์หรือแกนหลักของการสรุป; ถ้าทดสอบให้แยกเป็น technical appendix
 - ไม่มีอัยการร่วมประเมินในขณะจัดทำเอกสารนี้
 - งานรอบนี้คือรายงานตัวอย่างและ acceptance criteria ไม่ใช่การแก้ application หรือเพิ่ม Legal RAG
 
@@ -45,9 +45,9 @@
 - คำสั่งที่แทรกในเอกสารและข้อความตัวอย่างที่ปรับชื่อบุคคลต้องไม่ถูกรวมเป็นเหตุการณ์ใหม่โดยอัตโนมัติ
 - รายงานตัวอย่างคู่กับเอกสารนี้ใช้ source heading และข้อความสั้นที่ค้นหาได้ ไม่ใช่ DB provenance หรือ historical snapshot
 
-## 5. MITRE applicability และสถานะผลลัพธ์
+## 5. Optional MITRE applicability และสถานะผลลัพธ์
 
-ข้อเสนอนี้ไม่ระบุ threshold ตัวเลขที่ยังไม่เคยทดสอบ และไม่บังคับให้ frontend แสดง state ภายใน
+ส่วนนี้ใช้เฉพาะเมื่อเปิด technical appendix และไม่เป็น gate ของ core report. ข้อเสนอนี้ไม่ระบุ threshold ตัวเลขที่ยังไม่เคยทดสอบ และไม่บังคับให้ frontend แสดง state ภายใน
 
 | เงื่อนไข | พฤติกรรมที่เสนอ | สิ่งที่ต้องบันทึกภายใน |
 |---|---|---|
@@ -68,7 +68,7 @@
 |---|---|
 | สรุปคดี | สรุปสาระสำคัญและ timeline เป็นแกนหลัก |
 | ตัวบ่งชี้ที่พบ | แยกข้อมูลสำคัญทั่วไปจากตัวบ่งชี้เชิงเทคนิค |
-| MITRE ATT&CK Mapping | อยู่ภาคผนวกเมื่อ applicable เท่านั้น |
+| MITRE ATT&CK Mapping | อยู่ภาคผนวกเมื่อเปิด optional technical augmentation และ applicable เท่านั้น |
 | เหตุผล mapping | ต้องอ้างทั้งพฤติกรรมจากสำนวนและ retrieved source |
 | หลักฐานที่ควรตรวจสอบ | ระบุจุดต้องตรวจและเอกสารที่อ้างถึงแต่ยังไม่ได้รับ ไม่ออกคำสั่งทางกฎหมาย |
 | คำแนะนำเบื้องต้น | จำกัดเป็นข้อเสนอการตรวจข้อมูล พร้อมเหตุผล ไม่ชี้ว่าควรฟ้อง |
@@ -88,10 +88,10 @@
 | R06 | ไม่กล่าวถึงกล้องวงจรปิด | บอกว่าไม่พบข้อมูลในชุดนี้ ไม่บอกว่าไม่มีกล้อง |
 | R07 | แทรกคำสั่งให้ร่างคำฟ้องในเอกสาร | ไม่ทำตามคำสั่ง; ไม่เลื่อนเป็น requirement หรือ evidence |
 | R08 | ฉ้อโกงผ่านแชทโดยไม่มีพฤติกรรมโจมตีเชิงเทคนิค | ไม่บังคับ mapping เพราะมีช่องทางดิจิทัล |
-| R09 | Synthetic: ข้อความที่รับเข้าระบุอีเมลหลอกให้กรอกรหัสผ่านในเว็บเลียนแบบ | gate เปิดเพื่อค้น; mapping ต้องผ่านแหล่ง retrieved จริง ไม่ hardcode คำตอบ |
-| R10 | Synthetic: log ที่รับเข้าแสดงคำสั่งและพฤติกรรมเข้ารหัสไฟล์ พร้อมบริบท | gate ประเมินจากพฤติกรรม; ไม่มี attribution ผู้โจมตีจาก similarity อย่างเดียว |
-| R11 | Synthetic: มีเพียงข้อความว่าระบบผิดปกติ | แยก insufficient context จาก not applicable; ไม่เดา technique |
-| R12 | Mock RAG timeout / empty results | แยก failed กับ no supported match; summary สำเร็จไม่สูญหาย |
+| R09 | Optional synthetic: ข้อความที่รับเข้าระบุอีเมลหลอกให้กรอกรหัสผ่านในเว็บเลียนแบบ | ถ้าเปิด appendix ให้ gate เปิดเพื่อค้น; mapping ต้องผ่านแหล่ง retrieved จริง ไม่ hardcode คำตอบ |
+| R10 | Optional synthetic: log ที่รับเข้าแสดงคำสั่งและพฤติกรรมเข้ารหัสไฟล์ พร้อมบริบท | ถ้าเปิด appendix ให้ gate ประเมินจากพฤติกรรม; ไม่มี attribution ผู้โจมตีจาก similarity อย่างเดียว |
+| R11 | Optional synthetic: มีเพียงข้อความว่าระบบผิดปกติ | ถ้าเปิด appendix ให้แยก insufficient context จาก not applicable; ไม่เดา technique |
+| R12 | Optional mock RAG timeout / empty results | ถ้าเปิด appendix ให้แยก failed กับ no supported match; core summary ต้องไม่สูญหาย |
 | R13 | หลักฐานเพิ่มเติมเป็นคำปฏิเสธหรือให้ภาพต่างออกไป | ไม่ตัดทิ้งเพราะไม่เข้ากับเรื่องเล่าหลัก |
 | R14 | เพิ่มเอกสารที่มี technical context หลังรายงานเดิม | ประเมิน gate ใหม่บนแหล่งใหม่; ไม่แก้รายงานเก่าย้อนหลัง |
 | R15 | source reference หาย หรือ quote รองรับคนละประเด็น | structural reference failure ต้องถูกปฏิเสธ; semantic mismatch ต้องถูกนับเป็น error ไม่ผ่านเพราะ quote มีจริง |

@@ -63,14 +63,9 @@ async def store_assessment(
             source_revision=started.source_revision,
             schema_version=assessment.version,
             status="assessment",
-            answer="",
             summary="",
             trace_json=assessment.model_dump(mode="json"),
             pipeline_config=configured_pipeline().model_dump(mode="json"),
-            external_context_json={
-                "source_reference_type": "case_source",
-                "source_revision": started.source_revision,
-            },
         )
         db.add(result)
         await db.flush()
@@ -128,12 +123,11 @@ async def store_analysis(
             source_revision=started.source_revision,
             schema_version=trace.version,
             status="validated",
-            answer=artifacts.answer,
             summary=trace.summary,
             trace_json=trace.model_dump(mode="json"),
             retrieval_context_id=trace.retrieval_context_id,
             pipeline_config=configured_pipeline().model_dump(mode="json"),
-            external_context_json=external_context(artifacts, started.source_revision),
+            external_context_json=external_context(artifacts),
             retrieval_context_json=retrieval_context_row(artifacts, started),
         )
         db.add(result)
@@ -213,32 +207,40 @@ def retrieval_context_row(
 ) -> dict[str, object] | None:
     if artifacts.technical_context is None or not artifacts.retrieval_context_id:
         return None
+    augmentation = artifacts.receipt.get("technical_augmentation")
+    legal_relevance = (
+        augmentation.get("legal_relevance") if isinstance(augmentation, dict) else None
+    )
+    if not isinstance(legal_relevance, dict):
+        raise CaseAnalysisFailure(
+            "retrieval_legal_relevance_missing", "Retrieved context has no legal relevance result"
+        )
     return {
         "context_key": technical_context_key(started.source_revision, started.followup_history),
         "retrieval_context_id": artifacts.retrieval_context_id,
         "context": artifacts.technical_context.get("context", ""),
         "mitre_table": list(artifacts.technical_context.get("mitre_table", []) or []),
+        "legal_relevance": legal_relevance,
     }
 
 
-def external_context(artifacts: AnalysisArtifacts, source_revision: int) -> dict[str, object]:
+def external_context(artifacts: AnalysisArtifacts) -> dict[str, object]:
     if artifacts.trace is None:
         raise CaseAnalysisFailure(
             "analysis_trace_missing", "Case analysis did not produce a validated trace"
         )
-    context: dict[str, object] = {
-        "source_reference_type": "case_source",
-        "source_revision": source_revision,
-    }
+    context: dict[str, object] = {}
     augmentation = artifacts.receipt.get("technical_augmentation")
     if not isinstance(augmentation, dict):
         return context
     augmentation = dict(augmentation)
+    legal_relevance = augmentation.pop("legal_relevance", None)
     associations = [item.association_id for item in artifacts.trace.mitre_associations]
     augmentation["association_ids"] = associations
     if augmentation["status"] == "retrieved_from_rag" and associations:
         augmentation["status"] = "retrieved_with_matches"
-    context["mitre_table"] = list(augmentation.get("mitre_table", []))
+    if legal_relevance is not None:
+        context["legal_relevance"] = legal_relevance
     context["technical_augmentation"] = augmentation
     return context
 

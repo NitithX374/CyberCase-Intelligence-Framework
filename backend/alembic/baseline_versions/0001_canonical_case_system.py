@@ -1,14 +1,3 @@
-"""Canonical Case System Baseline Migration.
-
-Defines the 10 canonical tables for the simplified CyberCase Framework:
-users, cases, case_documents, document_extractions, case_evidence_sources,
-case_runs, case_analysis_results, rag_contexts, case_reports, chat_messages.
-
-Revision ID: 0001_canonical_case_system
-Revises: None
-Create Date: 2026-09-14
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -21,7 +10,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # 1. users
     op.create_table(
         "users",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -52,7 +40,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_users_email", "users", ["email"])
 
-    # 2. cases
     op.create_table(
         "cases",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -80,7 +67,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_cases_user_id_updated_at", "cases", ["user_id", "updated_at"])
 
-    # 3. case_documents
     op.create_table(
         "case_documents",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -106,7 +92,6 @@ def upgrade() -> None:
         "ix_case_documents_case_id_created_at", "case_documents", ["case_id", "created_at"]
     )
 
-    # 4. document_extractions
     op.create_table(
         "document_extractions",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -151,7 +136,6 @@ def upgrade() -> None:
         ["document_id", "created_at"],
     )
 
-    # 5. chat_messages (created before case_runs and case_evidence_sources due to FK references)
     op.create_table(
         "chat_messages",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -198,7 +182,6 @@ def upgrade() -> None:
     op.create_index("ix_chat_messages_case_id_ordinal", "chat_messages", ["case_id", "ordinal"])
     op.create_index("ix_chat_messages_analysis_result_id", "chat_messages", ["analysis_result_id"])
 
-    # 6. case_evidence_sources
     op.create_table(
         "case_evidence_sources",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -253,7 +236,6 @@ def upgrade() -> None:
         ["case_id", "created_at"],
     )
 
-    # 7. case_runs
     op.create_table(
         "case_runs",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -313,7 +295,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_case_runs_case_id_created_at", "case_runs", ["case_id", "created_at"])
 
-    # 8. case_analysis_results
     op.create_table(
         "case_analysis_results",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -368,7 +349,6 @@ def upgrade() -> None:
         ["case_id", "created_at"],
     )
 
-    # 9. rag_contexts
     op.create_table(
         "rag_contexts",
         sa.Column("retrieval_context_id", sa.String(length=160), nullable=False),
@@ -402,7 +382,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_rag_contexts_case_id_created_at", "rag_contexts", ["case_id", "created_at"])
 
-    # 10. case_reports
     op.create_table(
         "case_reports",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -464,7 +443,6 @@ def upgrade() -> None:
     op.create_index("ix_case_reports_analysis_result_id", "case_reports", ["analysis_result_id"])
     op.create_index("ix_case_reports_case_id_created_at", "case_reports", ["case_id", "created_at"])
 
-    # Circular and cross-table foreign keys
     op.create_foreign_key(
         "fk_case_analysis_results_retrieval_context_id",
         "case_analysis_results",

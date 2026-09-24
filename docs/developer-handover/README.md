@@ -413,13 +413,14 @@ Important environment values:
 | `DATABASE_URL` or `POSTGRES_*` | Backend | Async PostgreSQL connection. |
 | `CORE_LLM_PROVIDER` | Backend and RAG | `openrouter` or `anthropic`. |
 | `OPENROUTER_CYBERCASE` | Backend and RAG | OpenRouter credential. |
-| `ANTHROPIC_API_KEY` | Backend and RAG | Anthropic credential. |
+| `ANTHROPIC_API_KEY` | RAG | Anthropic credential, used only when `CORE_LLM_PROVIDER=anthropic`. |
 | `RAG_SERVICE_URL` | Backend | Private RAG base URL. |
 | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` | RAG | Graph database. |
 | `QDRANT_URL`, `QDRANT_API_KEY` | RAG | Vector database. |
 | `HF_TOKEN`, `HF_HOME` | RAG | Model download/cache. |
 | `NEXT_PUBLIC_API_URL` | Frontend | Browser-facing backend `/api/v1` URL. Required at runtime. |
-| `TYPHOON_OCR_API_KEY` | Backend preview | OCR credential. |
+| `TYPHOON_API_KEY` | Backend | OCR credential. |
+| `THANOY_API_KEY` | RAG | Thai legal reference lookup (iApp). |
 
 Use Doppler for local secrets. Do not commit `.env` or paste provider payloads containing source evidence into tickets.
 

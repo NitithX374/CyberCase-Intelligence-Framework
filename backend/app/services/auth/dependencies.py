@@ -1,5 +1,3 @@
-"""FastAPI dependencies for resolving the authenticated user."""
-
 from __future__ import annotations
 
 import uuid
@@ -8,15 +6,15 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
 
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.services.auth.jwt import decode_access_token
+from app.services.auth.credentials import decode_access_token
 
 
 def extract_token_from_request(request: Request) -> str | None:
-    """Extract token from Authorization header or HTTP-only auth cookie."""
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header[7:].strip()
@@ -34,7 +32,6 @@ async def get_optional_user(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User | None:
-    """Resolve current user if a valid token exists, otherwise return None."""
     token = extract_token_from_request(request)
     if not token:
         return None
@@ -59,7 +56,6 @@ async def get_optional_user(
 async def get_current_user(
     user: Annotated[User | None, Depends(get_optional_user)],
 ) -> User:
-    """Enforce that an authenticated user is present. Raises 401 if not."""
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -69,7 +65,13 @@ async def get_current_user(
     return user
 
 
-__all__ = [
-    "get_current_user",
-    "get_optional_user",
-]
+async def guard_browser_request(request, call_next):
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        origin = request.headers.get("origin")
+        if origin and origin not in settings.cors_origins_list:
+            return JSONResponse({"detail": "Untrusted request origin"}, status_code=403)
+    response = await call_next(request)
+    if request.url.path.startswith("/api/v1/auth"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+    return response

@@ -1,5 +1,3 @@
-"""Unit tests for the OpenRouter model registry and alias resolver."""
-
 import pytest
 
 from app.services.llm.model_registry import (
@@ -9,7 +7,7 @@ from app.services.llm.model_registry import (
 
 
 def test_default_model():
-    assert DEFAULT_OPENROUTER_MODEL == "openai/gpt-5.6-luna"
+    assert DEFAULT_OPENROUTER_MODEL == "deepseek/deepseek-v4.1-flash"
     assert resolve_openrouter_model(None) == DEFAULT_OPENROUTER_MODEL
     assert resolve_openrouter_model("") == DEFAULT_OPENROUTER_MODEL
     assert resolve_openrouter_model("default") == DEFAULT_OPENROUTER_MODEL
@@ -34,6 +32,10 @@ def test_default_model():
         ("haiku", "anthropic/claude-3.5-haiku"),
         ("claude-haiku", "anthropic/claude-3.5-haiku"),
         ("4o", "openai/gpt-4o"),
+        ("qwen3.8-27b", "qwen/qwen3.8-27b"),
+        ("qwen", "qwen/qwen3.8-27b"),
+        ("deepseek", "deepseek/deepseek-v4.1-flash"),
+        ("deepseek-v4.1-flash", "deepseek/deepseek-v4.1-flash"),
         ("gpt-4o", "openai/gpt-4o"),
     ],
 )

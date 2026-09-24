@@ -4,22 +4,10 @@ from collections.abc import Mapping
 
 MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
-# Enough of a quote's character trigrams present in the source to call it a
-# clumsy quotation of something real rather than an invention.
 PARAPHRASE_TRIGRAM_SHARE = 0.6
 
 
 def folded(text: str) -> tuple[str, list[int]]:
-    """The text with compatibility forms folded, and where each piece came from.
-
-    Thai SARA AM (ำ) is one character that Unicode will not let NFC compose, so
-    a model writing it as NIKHAHIT + SARA AA produces a string that looks
-    identical and compares unequal. NFKC folds both to the same pair. Folding
-    one character at a time keeps an index back to the original, so a quote
-    matched this way can still be cut from the untouched source and located on
-    its page.
-    """
-
     pieces: list[str] = []
     index: list[int] = []
     for position, character in enumerate(text):
@@ -35,12 +23,6 @@ def trigrams(text: str) -> set[str]:
 
 
 def looks_like_a_paraphrase(content: str, quote: str) -> bool:
-    """Whether a quote that is not in the source is at least drawn from it.
-
-    Character trigrams, so it reads Thai — which has no word boundaries — the
-    same way it reads English.
-    """
-
     wanted = trigrams(quote)
     if not wanted:
         return False
@@ -123,13 +105,6 @@ def find_document_locator(
 
 
 def verify_quote_coverage(spans: list[tuple[int, int, int]], start: int, end: int) -> bool:
-    """Whether the spans cover the quote end to end, without a hole.
-
-    Every span here came from validate_page_spans, which already refused
-    anything whose page number was not an integer in range, so the only thing
-    left to establish is that one span starts where the last one stopped.
-    """
-
     cursor = start
     covered = 0
     for _page, lower, upper in spans:
@@ -232,8 +207,6 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
 
 
 def find_folded_quote(content: str, quote: str) -> str | None:
-    """The original span whose folded form is the quote's, when there is one."""
-
     folded_content, index = folded(content)
     folded_quote, _ = folded(quote)
     if not folded_quote:

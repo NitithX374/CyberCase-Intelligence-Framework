@@ -6,8 +6,8 @@ from docx import Document
 from PIL import Image
 from reportlab.pdfgen import canvas
 
-from app.services.document_ingestion.contracts import ExtractionMethod
-from app.services.document_ingestion.errors import (
+from app.services.document_ingestion.contracts import (
+    ExtractionMethod,
     RecognitionProviderError,
     UnsupportedDocumentError,
 )
@@ -169,7 +169,6 @@ def test_mixed_pdf_routes_pages_independently_and_preserves_page_numbers() -> No
 
 def test_concurrent_ocr_is_bounded_by_semaphore() -> None:
     recognizer = ConcurrencyTrackingRecognizer(delay=0.03)
-    # 6 scanned pages with limit = 2
     service = _service(recognizer, max_concurrent_ocr=2)
     result = asyncio.run(service.ingest(_pdf_bytes([None] * 6), "six_pages.pdf"))
 

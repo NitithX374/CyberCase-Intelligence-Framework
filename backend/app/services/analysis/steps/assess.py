@@ -15,7 +15,7 @@ from app.services.analysis.prompts import case_assessment_prompt
 from app.services.analysis.provider import request_stage, resolve_target
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps.write import provider_source_payload, validate_source_bundle
-from app.services.sources import CaseSourceBundle
+from app.services.sources.case_source_bundle import CaseSourceBundle
 
 
 async def assess_case(

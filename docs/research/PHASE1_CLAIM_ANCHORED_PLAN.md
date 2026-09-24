@@ -1,13 +1,16 @@
 # Phase 1 Claim-Anchored Analysis Plan (HOW)
 
+> **Status (2026-09-22):** Historical plan, not an active production implementation plan. The current checkout exposes `raw_direct` / `main_case_analysis_v1`; do not infer that `CASE_ANALYSIS_PIPELINE=claim_anchored` is available. Any future reactivation requires a new scoped decision and a fresh code audit.
+
 > [!NOTE]
 > **Document Role**: Implementation Architecture Plan (**HOW**).
 > * **Canonical Project Direction (WHY / WHAT)**: [`CURRENT_PROJECT_DIRECTION.md`](CURRENT_PROJECT_DIRECTION.md)
 > * **Actual Implemented Code (STATUS)**: [`ATTRIBUTE_FIRST_IMPLEMENTATION.md`](ATTRIBUTE_FIRST_IMPLEMENTATION.md)
 > * **Historical Ledger**: Retained in the appendix at the bottom of this document.
 
-## 1. Recommendation
-Implement the limited opt-in case-overview branch (`CASE_ANALYSIS_PIPELINE=claim_anchored`). Use GPT-5.6 Luna for extraction and generation initially, with the same model in the case-only baseline. Treat CAMS as methodological related work, not a reproduced algorithm or evidence that CyberCase improves accuracy.
+## 1. Historical recommendation
+
+The dated recommendation was to implement a limited opt-in case-overview branch (`CASE_ANALYSIS_PIPELINE=claim_anchored`). It is retained for research history only. It is not the current production method and does not establish that CyberCase improves accuracy. CAMS remains methodological related work, not a reproduced algorithm.
 
 ## Verified starting point
 

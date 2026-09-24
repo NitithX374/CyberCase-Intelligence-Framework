@@ -1,10 +1,3 @@
-"""Answering a question about an analysis that has already run.
-
-One model call the caller is waiting for, so it happens in the request that
-asked for it. The question is stored before the call and the answer after, with
-no connection held across it.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -19,7 +12,8 @@ from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
 from app.schemas.message_metadata import message_trace, serialize_message_metadata
 from app.services.chat.case_answer import build_answer_context, generate_case_answer
-from app.services.sources import CaseSourceBundle, SourceError, load_case_source_bundle
+from app.services.sources.case_source_bundle import CaseSourceBundle, load_case_source_bundle
+from app.services.sources.source_service import SourceError
 from app.services.workflow.shared import (
     CaseWorkflowError,
     next_ordinal,
@@ -37,8 +31,6 @@ async def answer_case_question(
     session_factory: Callable = async_session,
     answer_request=generate_case_answer,
 ) -> tuple[ChatMessage, ChatMessage]:
-    """Store the question, answer it, store the answer. Returns both messages."""
-
     question_text = content.strip()
     if not question_text:
         raise CaseWorkflowError(
@@ -121,8 +113,6 @@ async def answer_case_question(
 async def sent_exchange(
     db: AsyncSession, case_id: UUID, client_request_id: str | None
 ) -> tuple[ChatMessage, ChatMessage] | None:
-    """The exchange this send already produced, when the client is retrying."""
-
     if client_request_id is None:
         return None
     question = await db.scalar(

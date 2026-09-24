@@ -13,8 +13,6 @@ class QueryRequest(BaseModel):
 
 
 class MitreTableRow(BaseModel):
-    """One entry of the MITRE mapping table produced by the RAG service."""
-
     model_config = ConfigDict(extra="forbid")
 
     technique_id: str = ""
@@ -29,8 +27,6 @@ class MitreTableRow(BaseModel):
 
 
 class LegalProvision(BaseModel):
-    """One provision returned by the external legal service."""
-
     model_config = ConfigDict(extra="forbid")
 
     citation: str = ""
@@ -41,8 +37,6 @@ class LegalProvision(BaseModel):
 
 
 class LegalReferenceResult(BaseModel):
-    """Provisions that may be relevant — references, not recommendations."""
-
     model_config = ConfigDict(extra="forbid")
 
     provisions: list[LegalProvision] = Field(default_factory=list)
@@ -59,16 +53,11 @@ class QueryResponse(BaseModel):
     retrieval_context_id: str | None
     context: str
     mitre_table: list[MitreTableRow] = Field(default_factory=list)
-    # Must stay in step with rag_service/app/schemas/rag.py: both models set
-    # extra="forbid", so a field renamed on one side alone turns every chat
-    # request into a 422 here.
-    legal_reference: LegalReferenceResult = Field(default_factory=LegalReferenceResult)
+    legal_reference: LegalReferenceResult
 
     @field_validator("retrieval_context_id", mode="before")
     @classmethod
     def normalize_empty_retrieval_context_id(cls, value: Any) -> Any:
-        """Treat the RAG service's empty-string sentinel as no frozen context."""
-
         return None if value == "" else value
 
 

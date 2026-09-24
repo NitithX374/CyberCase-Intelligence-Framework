@@ -123,10 +123,6 @@ Keep the summary concise, readable, and complete.
 CASE_READING_PROMPT_VERSION = "case_reading_v1"
 CASE_JUDGEMENT_PROMPT_VERSION = "case_judgement_v1"
 
-# The split pipeline says the same things as the single prompt above, divided
-# where the work divides: one call reads the sources, one call judges what was
-# read. The single prompt is left exactly as it is, because it is the control
-# the split is measured against.
 
 CASE_READING_SYSTEM_PROMPT = """
 You are the Reading component of CyberCase. Read the supplied case for

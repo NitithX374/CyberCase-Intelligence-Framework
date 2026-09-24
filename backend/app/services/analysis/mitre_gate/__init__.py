@@ -1,17 +1,3 @@
-"""Which gate decides whether a case needs ATT&CK at all.
-
-The gate is something the research compares rather than something the system
-simply has, so there are three of them and one setting picks between them:
-
-    llm       a prompt, reading the whole case at once      (the default)
-    encoder   XLM-R, reading one sentence at a time
-    never     no retrieval, ever -- the ablation that says
-              what the technical context was worth
-
-The mode is read on each call rather than at import, so a test or an experiment
-can change it without rebuilding the pipeline.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -22,7 +8,7 @@ from app.services.analysis.mitre_gate.llm import (
     evaluate_mitre_applicability,
     skipped_mitre_applicability,
 )
-from app.services.sources import CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceItem
 
 
 async def never_applicable(*, case_sources: Sequence[CaseSourceItem]) -> MitreApplicabilityRecord:
@@ -42,8 +28,6 @@ def chosen_gate():
 
 
 async def mitre_gate(*, case_sources: Sequence[CaseSourceItem]) -> MitreApplicabilityRecord:
-    """The configured gate, resolved at the moment it is asked."""
-
     return await chosen_gate()(case_sources=case_sources)
 
 

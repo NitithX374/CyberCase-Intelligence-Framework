@@ -1,10 +1,3 @@
-"""What both halves of the workflow hold in common.
-
-The error they raise, the snapshot an analysis is taken from, and the two small
-queries that every write needs: whose case this is, and where the next message
-goes in the order.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,7 +11,7 @@ from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.services.analysis.contracts import CaseFollowupExchange
 from app.services.analysis.steps.technical_context import CaseRagContextPayload
-from app.services.sources import CaseSourceBundle
+from app.services.sources.case_source_bundle import CaseSourceBundle
 
 
 class CaseWorkflowError(Exception):
@@ -33,23 +26,15 @@ class CaseWorkflowError(Exception):
 
 @dataclass(frozen=True)
 class CaseUnderAnalysis:
-    """What one analysis reads, captured before the connection is released."""
-
     case_id: UUID
     source_bundle: CaseSourceBundle
-    # Conversation, not sources: carried beside the bundle and versioned by
-    # nothing, because answering a question does not revise the case material.
     followup_history: tuple[CaseFollowupExchange, ...] = ()
-    # A retrieval an earlier analysis of this same input already paid for.
-    # Read here, where there is a connection, because the pipeline has none.
     reused_context: CaseRagContextPayload | None = None
     asked_gap_keys: frozenset[str] = frozenset()
     rounds_spent: int = 1
 
     @property
     def source_revision(self) -> int:
-        """The revision the bundle was read at, which the store must still find."""
-
         return self.source_bundle.revision
 
 

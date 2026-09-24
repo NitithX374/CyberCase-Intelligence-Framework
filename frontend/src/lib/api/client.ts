@@ -1,6 +1,5 @@
 import axios from "axios";
 import type {
-  AuthTokenResponse,
   CaseAnalysisCreate,
   AnalysisStepRead,
   CaseAnalysisResultRead,
@@ -13,14 +12,12 @@ import type {
   CaseReportCreate,
   CaseSourceCreate,
   CaseSourceRead,
-  DevLoginPayload,
   UserProfile,
 } from "./types";
 import type { CaseReportRead } from "./generated/reportTypes";
 
 const CHAT_REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
-// An analysis is a model call the caller waits for.
 const ANALYSIS_REQUEST_TIMEOUT_MS = 300_000;
 
 axios.defaults.withCredentials = true;
@@ -99,18 +96,6 @@ export const getSession = async (signal?: AbortSignal): Promise<UserProfile | nu
     signal,
     timeout: CHAT_REQUEST_TIMEOUT_MS,
   });
-  return response.data;
-};
-
-export const devLogin = async (
-  payload: DevLoginPayload,
-  signal?: AbortSignal,
-): Promise<AuthTokenResponse> => {
-  const response = await axios.post<AuthTokenResponse>(
-    `${getApiBaseUrl()}/auth/dev-login`,
-    payload,
-    { signal },
-  );
   return response.data;
 };
 
@@ -240,8 +225,6 @@ export const uploadCaseDocument = async (
   return response.data;
 };
 
-// One step of the analysis, not necessarily the whole of it: a step that ended
-// with a question for the reader returns the question instead of a result.
 export const startCaseAnalysis = async (
   caseId: string,
   request: CaseAnalysisCreate,

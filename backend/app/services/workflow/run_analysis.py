@@ -1,11 +1,10 @@
-"""Advance a case without holding a database connection during model work."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import status
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,6 +13,7 @@ from app.config import settings
 from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
+from app.schemas.rag import LegalReferenceResult
 from app.services.analysis.clarification import Ask
 from app.services.analysis.contracts import CaseAnalysisFailure
 from app.services.analysis.pipeline import (
@@ -27,7 +27,8 @@ from app.services.analysis.steps.technical_context import (
     technical_context_key,
 )
 from app.services.chat.followup import asked_gap_keys, load_followup_history, rounds_asked
-from app.services.sources import SourceError, load_case_source_bundle
+from app.services.sources.case_source_bundle import load_case_source_bundle
+from app.services.sources.source_service import SourceError
 from app.services.workflow.analysis_storage import (
     AnalysisStep,
     external_context,
@@ -52,8 +53,15 @@ async def run_case_analysis(
         user_id=user_id,
         continuing_followup=continuing_followup,
     )
+    outcome = await think(pipeline, started, response_language)
+    return await store_outcome(
+        session_factory, started, outcome, continuing_followup=continuing_followup
+    )
+
+
+async def think(pipeline: Callable, started: CaseUnderAnalysis, response_language: str):
     try:
-        outcome = await pipeline(
+        return await pipeline(
             AnalysisInput(
                 sources=started.source_bundle,
                 response_language=response_language,
@@ -68,6 +76,14 @@ async def run_case_analysis(
     except CaseAnalysisFailure as error:
         raise CaseWorkflowError(error.code, error.message) from error
 
+
+async def store_outcome(
+    session_factory: Callable,
+    started: CaseUnderAnalysis,
+    outcome: object,
+    *,
+    continuing_followup: bool,
+) -> AnalysisStep:
     if isinstance(outcome, AnalysisAdvance):
         if isinstance(outcome.decision, Ask):
             return await store_assessment(
@@ -146,13 +162,25 @@ async def reusable_context(
         return None
     context = stored.get("context")
     context_id = stored.get("retrieval_context_id")
-    if not isinstance(context, str) or not context or not isinstance(context_id, str):
+    if (
+        not isinstance(context, str)
+        or not context
+        or not isinstance(context_id, str)
+        or not context_id.strip()
+    ):
         return None
     table = stored.get("mitre_table")
+    if not isinstance(table, list):
+        return None
+    try:
+        legal_relevance = LegalReferenceResult.model_validate(stored.get("legal_relevance"))
+    except ValidationError:
+        return None
     return CaseRagContextPayload(
         retrieval_context_id=context_id,
         context=context,
-        mitre_table=tuple(table if isinstance(table, list) else ()),
+        mitre_table=tuple(table),
+        legal_relevance=legal_relevance,
     )
 
 

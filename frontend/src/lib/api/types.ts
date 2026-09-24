@@ -30,7 +30,7 @@ export type {
   CaseTimelineItem,
   FollowupQuestionRead,
 } from "./generated/analysisTypes";
-export type { CaseDocumentRead, DocumentExtractionRead } from "./generated/caseTypes";
+export type { CaseDocumentRead } from "./generated/caseTypes";
 export type { CaseSourceCreate, CaseSourceRead } from "./generated/sourceTypes";
 export type { CaseReportCreate } from "./generated/reportTypes";
 export type CaseReportClaim = Omit<ReportClaim, "source_ids" | "mitre_technique_ids"> & {
@@ -57,20 +57,6 @@ export interface UserProfile {
   id: string;
   email: string;
   name: string;
-  avatar_url?: string | null;
   oauth_provider: string;
   created_at: string;
-}
-
-export interface AuthTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  user: UserProfile;
-}
-
-export interface DevLoginPayload {
-  email: string;
-  name?: string;
-  avatar_url?: string;
 }

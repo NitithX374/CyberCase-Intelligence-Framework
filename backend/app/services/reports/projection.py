@@ -51,6 +51,7 @@ def build_case_report_input(
         case_id=case.id,
         case_title=case.title or "CyberCase Investigation",
         analysis_result_id=result.id,
+        analysis_created_at=result.created_at,
         source_bundle=source_bundle,
         analysis_summary=result.summary,
         analysis_trace=trace.model_dump(mode="json"),

@@ -11,7 +11,7 @@ const frontend = modulePath ? resolve(dirname(modulePath), "..") : resolve(proce
 const workspace = resolve(frontend, "..");
 
 export const SCHEMA_GROUPS = Object.freeze({
-  caseTypes: ["CaseDocumentRead", "CaseRead", "DocumentExtractionRead"],
+  caseTypes: ["CaseDocumentRead", "CaseRead"],
   sourceTypes: ["CaseSourceCreate", "CaseSourceRead"],
   analysisTypes: [
     "AnalysisStepRead",
@@ -19,8 +19,6 @@ export const SCHEMA_GROUPS = Object.freeze({
     "CaseAnalysisResultRead",
     "CaseChatResponse",
     "FollowupQuestionRead",
-    // The analysis trace, as the service defines it. The client reads this
-    // instead of re-deriving the shape from an untyped blob.
     "CaseAnalysisClaim",
     "CaseAnalysisGap",
     "CaseAnalysisTrace",

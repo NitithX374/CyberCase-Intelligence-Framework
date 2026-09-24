@@ -1,5 +1,3 @@
-"""Rename document evidence sources for automatic Case material receipt."""
-
 from alembic import op
 import sqlalchemy as sa
 

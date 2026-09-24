@@ -1,5 +1,3 @@
-"""Case aggregate HTTP endpoints."""
-
 from __future__ import annotations
 
 from uuid import UUID
@@ -11,7 +9,7 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
 from app.services.auth.dependencies import get_current_user
-from app.services.cases import CaseService
+from app.services.cases.case_service import CaseService
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
