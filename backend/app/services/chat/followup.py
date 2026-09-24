@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
 from app.schemas.message_metadata import message_trace, serialize_message_metadata
 from app.services.analysis.contracts import (
@@ -110,6 +111,29 @@ async def pending_question(db: AsyncSession, case_id: UUID) -> ChatMessage | Non
     return None if reply else question
 
 
+async def last_question_awaiting_analysis(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
+    question = await db.scalar(
+        select(ChatMessage)
+        .where(ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None))
+        .order_by(ChatMessage.ordinal.desc())
+        .limit(1)
+    )
+    if question is None or question.analysis_result_id is None:
+        return None
+    reply = await db.scalar(
+        select(ChatMessage.id).where(ChatMessage.in_reply_to_message_id == question.id)
+    )
+    if reply is None:
+        return None
+    latest = await db.scalar(
+        select(CaseAnalysisResult.id)
+        .where(CaseAnalysisResult.case_id == case_id)
+        .order_by(CaseAnalysisResult.created_at.desc(), CaseAnalysisResult.id.desc())
+        .limit(1)
+    )
+    return question if latest == question.analysis_result_id else None
+
+
 def answer_message(
     *,
     case_id: UUID,
@@ -156,6 +180,7 @@ __all__ = [
     "analysis_result_message",
     "followup_history_from",
     "asked_this_round",
+    "last_question_awaiting_analysis",
     "load_followup_history",
     "pending_question",
     "question_message",

@@ -21,12 +21,17 @@ from app.services.chat.followup import (
     answer_message,
     asked_gap_keys,
     asked_this_round,
+    last_question_awaiting_analysis,
     pending_question,
     question_message,
     rounds_asked,
 )
 from app.services.workflow.answer_question import answer_case_question
-from app.services.workflow.run_analysis import AnalysisStep, run_case_analysis
+from app.services.workflow.run_analysis import (
+    AnalysisStep,
+    analysis_running,
+    run_case_analysis,
+)
 from app.services.workflow.shared import CaseWorkflowError, next_ordinal, owned_case
 
 
@@ -78,9 +83,17 @@ async def post_case_message(
     session_factory: Callable = async_session,
 ) -> tuple[list[ChatMessage], AnalysisStep | None]:
     if (
-        already := await messages_of_send(session_factory, case_id, request.client_request_id)
+        sent := await sent_message(session_factory, case_id, user_id, request.client_request_id)
     ) is not None:
-        return already, None
+        if await closes_unanalysed_round(session_factory, case_id, sent):
+            return await analyse_after_round(
+                case_id=case_id,
+                user_id=user_id,
+                request=request,
+                first_new_ordinal=sent.ordinal,
+                session_factory=session_factory,
+            )
+        return await messages_from(session_factory, case_id, sent.ordinal), None
 
     try:
         standing = await standing_question(session_factory, case_id, user_id)
@@ -110,7 +123,7 @@ async def post_case_message(
         case_id=case_id,
         user_id=user_id,
         request=request,
-        recorded=recorded,
+        first_new_ordinal=recorded.first_new_ordinal,
         session_factory=session_factory,
     )
 
@@ -187,7 +200,7 @@ async def analyse_after_round(
     case_id: UUID,
     user_id: UUID | None,
     request: ChatMessageCreate,
-    recorded: RecordedFollowup,
+    first_new_ordinal: int,
     session_factory: Callable,
 ) -> tuple[list[ChatMessage], AnalysisStep | None]:
     try:
@@ -200,24 +213,37 @@ async def analyse_after_round(
         )
     except CaseWorkflowError as error:
         raise CaseChatError(error.code, error.message, error.status_code) from error
-    return await messages_from(session_factory, case_id, recorded.first_new_ordinal), step
+    return await messages_from(session_factory, case_id, first_new_ordinal), step
 
 
-async def messages_of_send(
-    session_factory: Callable, case_id: UUID, client_request_id: str | None
-) -> list[ChatMessage] | None:
+async def sent_message(
+    session_factory: Callable,
+    case_id: UUID,
+    user_id: UUID | None,
+    client_request_id: str | None,
+) -> ChatMessage | None:
     if client_request_id is None:
         return None
     async with session_factory() as db:
-        sent = await db.scalar(
-            select(ChatMessage).where(
+        return await db.scalar(
+            select(ChatMessage)
+            .join(Case, Case.id == ChatMessage.case_id)
+            .where(
                 ChatMessage.case_id == case_id,
                 ChatMessage.client_request_id == client_request_id,
+                Case.user_id == user_id,
             )
         )
-    if sent is None:
-        return None
-    return await messages_from(session_factory, case_id, sent.ordinal)
+
+
+async def closes_unanalysed_round(
+    session_factory: Callable, case_id: UUID, sent: ChatMessage
+) -> bool:
+    if sent.message_kind != "followup_answer" or analysis_running(case_id):
+        return False
+    async with session_factory() as db:
+        question = await last_question_awaiting_analysis(db, case_id)
+    return question is not None and sent.in_reply_to_message_id == question.id
 
 
 async def next_question_of_round(

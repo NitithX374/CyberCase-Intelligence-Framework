@@ -16,8 +16,13 @@ from app.schemas.chat import ChatMessageCreate
 from app.services.analysis.clarification import Ask, Proceed, decide_followup
 from app.services.analysis.contracts import CaseAnalysisTrace, CaseAssessmentTrace
 from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
-from app.services.chat.case_chat import post_case_message
-from app.services.workflow.run_analysis import get_latest_case_analysis, run_case_analysis
+from app.services.chat.case_chat import CaseChatError, post_case_message
+from app.services.workflow.run_analysis import (
+    analysing,
+    get_latest_case_analysis,
+    run_case_analysis,
+)
+from app.services.workflow.shared import CaseWorkflowError
 
 GAP = {
     "gap_id": "G-01",
@@ -88,6 +93,39 @@ async def case_with_a_question(
         db.add(question)
         await db.flush()
         return case.id, user.id, question.id
+
+
+async def answer_the_question(
+    session_factory, case_id: uuid.UUID, question_id: uuid.UUID, *, sent: str | None = None
+) -> None:
+    async with session_factory() as db, db.begin():
+        question = await db.get(ChatMessage, question_id)
+        db.add(
+            ChatMessage(
+                case_id=case_id,
+                ordinal=2,
+                role="user",
+                content="Around two in the morning.",
+                message_kind="followup_answer",
+                analysis_result_id=question.analysis_result_id,
+                in_reply_to_message_id=question_id,
+                client_request_id=sent,
+            )
+        )
+
+
+async def analysed_after_the_round(session_factory, case_id: uuid.UUID) -> None:
+    async with session_factory() as db, db.begin():
+        db.add(
+            CaseAnalysisResult(
+                case_id=case_id,
+                source_revision=1,
+                summary="Analysed after the round.",
+                trace_json=TRACE,
+                pipeline_config={},
+                external_context_json={},
+            )
+        )
 
 
 def three_gaps() -> CaseAnalysisTrace:
@@ -272,6 +310,154 @@ async def test_a_retried_send_gets_what_it_already_produced():
             case = await db.get(Case, case_id)
         assert len(list(stored)) == 3, "the retry must not add a second answer"
         assert case.source_revision == 1, "and no reply revises the case"
+
+
+@pytest.mark.asyncio
+async def test_a_retried_answer_runs_the_analysis_its_first_attempt_lost(monkeypatch):
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        send = ChatMessageCreate(content="Around two in the morning.", client_request_id="send-1")
+        continuing: list[bool] = []
+        finished = object()
+
+        async def lost(**kwargs):
+            continuing.append(kwargs["continuing_followup"])
+            raise CaseWorkflowError("case_assessment_transport", "Analysis stage transport failed")
+
+        async def analysed(**kwargs):
+            continuing.append(kwargs["continuing_followup"])
+            return finished
+
+        import app.services.chat.case_chat as module
+
+        monkeypatch.setattr(module, "run_case_analysis", lost)
+        with pytest.raises(CaseChatError) as failure:
+            await post_case_message(
+                case_id=case_id, user_id=user_id, request=send, session_factory=session_factory
+            )
+        assert failure.value.code == "case_assessment_transport"
+
+        monkeypatch.setattr(module, "run_case_analysis", analysed)
+        produced, step = await post_case_message(
+            case_id=case_id, user_id=user_id, request=send, session_factory=session_factory
+        )
+
+        assert step is finished
+        assert continuing == [True, True]
+        assert [message.in_reply_to_message_id for message in produced] == [question_id]
+        async with session_factory() as db:
+            answers = list(
+                await db.scalars(
+                    select(ChatMessage).where(ChatMessage.in_reply_to_message_id == question_id)
+                )
+            )
+        assert len(answers) == 1, "the retry must not record the answer twice"
+
+
+@pytest.mark.asyncio
+async def test_a_retried_answer_whose_analysis_ran_is_not_analysed_again(monkeypatch):
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        await answer_the_question(session_factory, case_id, question_id, sent="send-1")
+        await analysed_after_the_round(session_factory, case_id)
+        analyses: list[uuid.UUID] = []
+
+        async def analysed(**kwargs):
+            analyses.append(kwargs["case_id"])
+
+        import app.services.chat.case_chat as module
+
+        monkeypatch.setattr(module, "run_case_analysis", analysed)
+        produced, step = await post_case_message(
+            case_id=case_id,
+            user_id=user_id,
+            request=ChatMessageCreate(
+                content="Around two in the morning.", client_request_id="send-1"
+            ),
+            session_factory=session_factory,
+        )
+
+        assert analyses == []
+        assert step is None
+        assert produced[0].in_reply_to_message_id == question_id
+
+
+@pytest.mark.asyncio
+async def test_a_retry_while_the_round_is_being_analysed_does_not_start_another(monkeypatch):
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        await answer_the_question(session_factory, case_id, question_id, sent="send-1")
+        analyses: list[uuid.UUID] = []
+
+        async def analysed(**kwargs):
+            analyses.append(kwargs["case_id"])
+
+        import app.services.chat.case_chat as module
+
+        monkeypatch.setattr(module, "run_case_analysis", analysed)
+        with analysing(case_id):
+            produced, step = await post_case_message(
+                case_id=case_id,
+                user_id=user_id,
+                request=ChatMessageCreate(
+                    content="Around two in the morning.", client_request_id="send-1"
+                ),
+                session_factory=session_factory,
+            )
+
+        assert analyses == [], "the first attempt is still analysing the round"
+        assert step is None
+        assert produced[0].in_reply_to_message_id == question_id
+
+
+@pytest.mark.asyncio
+async def test_analysing_again_continues_a_round_whose_analysis_never_ran():
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        await answer_the_question(session_factory, case_id, question_id)
+        seen = []
+
+        async def pipeline(data):
+            seen.append((data.asked_gap_keys, data.rounds_spent))
+            return AnalysisArtifacts(
+                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
+            )
+
+        step = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language="english",
+            session_factory=session_factory,
+            pipeline=pipeline,
+        )
+
+        assert seen == [(frozenset({GAP["gap_key"]}), 2)]
+        assert step.question is None, "the gap that was answered is not asked again"
+
+
+@pytest.mark.asyncio
+async def test_analysing_again_after_the_round_was_analysed_starts_afresh():
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        await answer_the_question(session_factory, case_id, question_id)
+        await analysed_after_the_round(session_factory, case_id)
+        seen = []
+
+        async def pipeline(data):
+            seen.append((data.asked_gap_keys, data.rounds_spent))
+            return AnalysisArtifacts(
+                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
+            )
+
+        await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language="english",
+            session_factory=session_factory,
+            pipeline=pipeline,
+        )
+
+        assert seen == [(frozenset(), 1)]
 
 
 @pytest.mark.asyncio
