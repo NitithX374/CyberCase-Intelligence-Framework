@@ -461,6 +461,99 @@ async def test_analysing_again_after_the_round_was_analysed_starts_afresh():
 
 
 @pytest.mark.asyncio
+async def test_an_analysis_records_the_answers_it_read_and_not_later_ones():
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        await answer_the_question(session_factory, case_id, question_id)
+
+        async def pipeline(data):
+            async with session_factory() as db, db.begin():
+                asked_by = (await db.get(ChatMessage, question_id)).analysis_result_id
+                later = ChatMessage(
+                    case_id=case_id,
+                    ordinal=3,
+                    role="assistant",
+                    content="Who reported it?",
+                    gap_key="topic:reporter",
+                    analysis_result_id=asked_by,
+                )
+                db.add(later)
+                await db.flush()
+                db.add(
+                    ChatMessage(
+                        case_id=case_id,
+                        ordinal=4,
+                        role="user",
+                        content="The payroll manager.",
+                        message_kind="followup_answer",
+                        analysis_result_id=asked_by,
+                        in_reply_to_message_id=later.id,
+                    )
+                )
+            return AnalysisArtifacts(
+                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
+            )
+
+        step = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language="english",
+            session_factory=session_factory,
+            pipeline=pipeline,
+        )
+
+        async with session_factory() as db:
+            stored = await db.get(CaseAnalysisResult, step.result.id)
+        assert stored.external_context_json["followup_history"] == {
+            "version": "followup_snapshot_v1",
+            "items": [
+                {
+                    "qa_id": "QA-01",
+                    "gap_key": GAP["gap_key"],
+                    "question": GAP["clarification_question"],
+                    "answer": "Around two in the morning.",
+                }
+            ],
+        }, "the answer given while the model was thinking was never read"
+
+
+@pytest.mark.asyncio
+async def test_an_analysis_records_the_sources_it_read_and_not_later_ones():
+    async with isolated_database() as session_factory:
+        case_id, user_id, _ = await case_with_a_question(session_factory)
+        async with session_factory() as db:
+            read = await db.scalar(select(CaseSource.id).where(CaseSource.case_id == case_id))
+
+        async def pipeline(data):
+            async with session_factory() as db, db.begin():
+                db.add(
+                    CaseSource(
+                        case_id=case_id,
+                        source_kind="narrative",
+                        exact_text="Added while the model was thinking.",
+                    )
+                )
+            return AnalysisArtifacts(
+                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
+            )
+
+        step = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            response_language="english",
+            session_factory=session_factory,
+            pipeline=pipeline,
+        )
+
+        async with session_factory() as db:
+            stored = await db.get(CaseAnalysisResult, step.result.id)
+        assert stored.external_context_json["sources_read"] == {
+            "version": "sources_read_v1",
+            "source_ids": [str(read)],
+        }, "the source added while the model was thinking was never read"
+
+
+@pytest.mark.asyncio
 async def test_a_spent_budget_does_not_silence_the_case_for_good():
     from app.services.analysis.contracts import CaseAnalysisTrace
     from app.services.analysis.pipeline import AnalysisArtifacts

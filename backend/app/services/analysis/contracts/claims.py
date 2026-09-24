@@ -277,3 +277,44 @@ def followup_payload(history: Sequence[CaseFollowupExchange]) -> list[dict[str, 
         for item in history
         if item.is_answered
     ]
+
+
+class FollowupSnapshotItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    qa_id: str = Field(min_length=1)
+    gap_key: str
+    question: str
+    answer: str = Field(min_length=1)
+
+
+class FollowupSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal["followup_snapshot_v1"] = "followup_snapshot_v1"
+    items: list[FollowupSnapshotItem]
+
+
+def followup_snapshot(history: Sequence[CaseFollowupExchange]) -> dict[str, object]:
+    return FollowupSnapshot(
+        items=[
+            FollowupSnapshotItem(
+                qa_id=item.qa_id,
+                gap_key=item.gap_key,
+                question=item.question,
+                answer=item.answer or "",
+            )
+            for item in history
+            if item.is_answered
+        ]
+    ).model_dump(mode="json")
+
+
+def followup_history_of_snapshot(value: object) -> tuple[CaseFollowupExchange, ...]:
+    snapshot = FollowupSnapshot.model_validate(value)
+    return tuple(
+        CaseFollowupExchange(
+            qa_id=item.qa_id, gap_key=item.gap_key, question=item.question, answer=item.answer
+        )
+        for item in snapshot.items
+    )

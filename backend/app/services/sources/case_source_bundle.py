@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Literal
 from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -62,37 +65,33 @@ def case_source_bundle_from_case(case: Case) -> CaseSourceBundle:
     )
 
 
-def case_source_bundle_for_analysis(case: Case, result: CaseAnalysisResult) -> CaseSourceBundle:
-    referenced_source_ids: set[str] = set()
-    if isinstance(result.trace_json, dict):
-        claims = result.trace_json.get("claims")
-        if isinstance(claims, list):
-            for claim in claims:
-                if isinstance(claim, dict):
-                    supporting = claim.get("supporting_source_ids")
-                    if isinstance(supporting, list):
-                        referenced_source_ids.update(str(s) for s in supporting)
-                    contradicting = claim.get("contradicting_source_ids")
-                    if isinstance(contradicting, list):
-                        referenced_source_ids.update(str(s) for s in contradicting)
+class SourcesRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-    if referenced_source_ids:
-        analysis_sources = [
-            source for source in case.sources if str(source.id) in referenced_source_ids
-        ]
-    else:
-        analysis_sources = [
-            source
-            for source in case.sources
-            if (
-                source.created_at <= result.created_at
-                and (source.archived_at is None or source.archived_at > result.created_at)
-            )
-        ]
-    analysis_sources.sort(key=lambda source: (source.created_at, str(source.id)))
+    version: Literal["sources_read_v1"] = "sources_read_v1"
+    source_ids: list[str]
+
+
+def sources_read(bundle: CaseSourceBundle) -> dict[str, object]:
+    return SourcesRead(source_ids=[source.source_id for source in bundle.sources]).model_dump(
+        mode="json"
+    )
+
+
+def source_ids_of_sources_read(value: object) -> tuple[str, ...]:
+    return tuple(SourcesRead.model_validate(value).source_ids)
+
+
+def case_source_bundle_for_analysis(
+    case: Case, result: CaseAnalysisResult, source_ids: Sequence[str]
+) -> CaseSourceBundle:
+    by_id = {str(source.id): source for source in case.sources}
+    missing = [source_id for source_id in source_ids if source_id not in by_id]
+    if missing:
+        raise ValueError(f"The case no longer has sources the analysis read: {missing}")
     return CaseSourceBundle(
         revision=result.source_revision,
-        sources=tuple(case_source_item(source) for source in analysis_sources),
+        sources=tuple(case_source_item(by_id[source_id]) for source_id in source_ids),
     )
 
 
@@ -156,11 +155,14 @@ def build_rag_query(bundle: CaseSourceBundle) -> str:
 __all__ = [
     "CaseSourceBundle",
     "CaseSourceItem",
+    "SourcesRead",
     "build_document_source_context",
     "build_rag_query",
     "case_source_bundle_for_analysis",
     "case_source_bundle_from_case",
     "case_source_item",
     "load_case_source_bundle",
+    "source_ids_of_sources_read",
     "source_label",
+    "sources_read",
 ]

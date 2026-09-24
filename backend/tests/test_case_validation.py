@@ -397,65 +397,107 @@ def test_case_reference_lists_drop_invalid_entries_without_rejecting_claim():
     assert claim.supporting_citations[1].filename is None
 
 
-def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources():
+def narrative_written_at(source_id: str, created_at, *, archived_at=None):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        id=source_id,
+        source_kind="narrative",
+        exact_text=f"Narrative {source_id}",
+        document_id=None,
+        provenance_json={},
+        created_at=created_at,
+        archived_at=archived_at,
+        source_metadata_json={},
+        document=None,
+        filename=None,
+    )
+
+
+def analysis_citing(created_at, *cited: str):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        created_at=created_at,
+        source_revision=2,
+        trace_json={
+            "claims": [
+                {"claim_id": f"A-{index:02d}", "supporting_source_ids": [source_id]}
+                for index, source_id in enumerate(cited, 1)
+            ]
+        },
+    )
+
+
+def test_a_report_reads_the_sources_its_analysis_recorded_in_that_order():
     from datetime import datetime, timedelta
     from types import SimpleNamespace
 
     from app.services.sources.case_source_bundle import case_source_bundle_for_analysis
 
-    t0 = datetime.now(UTC)
-    t_result = t0 + timedelta(minutes=10)
-    t_archived_later = t0 + timedelta(minutes=20)
+    written = datetime.now(UTC)
+    first = narrative_written_at("00000000-0000-0000-0000-000000000001", written)
+    archived_later = narrative_written_at(
+        "00000000-0000-0000-0000-000000000002",
+        written,
+        archived_at=written + timedelta(days=1),
+    )
+    never_read = narrative_written_at("00000000-0000-0000-0000-000000000003", written)
+    case = SimpleNamespace(source_revision=3, sources=[first, archived_later, never_read])
+    result = analysis_citing(written + timedelta(minutes=5), first.id)
 
-    s1 = SimpleNamespace(
-        id="00000000-0000-0000-0000-000000000001",
-        source_kind="narrative",
-        exact_text="Source 1 text",
-        document_id=None,
-        provenance_json={},
-        created_at=t0,
-        archived_at=None,
-        source_metadata_json={},
-        document=None,
-        filename=None,
-    )
-    s2 = SimpleNamespace(
-        id="00000000-0000-0000-0000-000000000002",
-        source_kind="narrative",
-        exact_text="Source 2 text",
-        document_id=None,
-        provenance_json={},
-        created_at=t0 + timedelta(minutes=1),
-        archived_at=t_archived_later,
-        source_metadata_json={},
-        document=None,
-        filename=None,
-    )
-    s3 = SimpleNamespace(
-        id="00000000-0000-0000-0000-000000000003",
-        source_kind="narrative",
-        exact_text="Source 3 text",
-        document_id=None,
-        provenance_json={},
-        created_at=t0,
-        archived_at=t0 + timedelta(minutes=5),
-        source_metadata_json={},
-        document=None,
-        filename=None,
-    )
-    case = SimpleNamespace(
-        source_revision=3,
-        sources=[s1, s2, s3],
-    )
-    result = SimpleNamespace(
-        created_at=t_result,
-        source_revision=2,
-        trace_json={},
-    )
+    bundle = case_source_bundle_for_analysis(case, result, [archived_later.id, first.id])
 
-    bundle = case_source_bundle_for_analysis(case, result)
     assert bundle.revision == 2
-    bundle_source_ids = {s.source_id for s in bundle.sources}
-    assert s1.id in bundle_source_ids
-    assert s2.id in bundle_source_ids
-    assert s3.id not in bundle_source_ids
+    assert [source.source_id for source in bundle.sources] == [archived_later.id, first.id]
+
+
+def test_a_report_reads_the_recorded_sources_whatever_the_claims_cite():
+    from datetime import datetime, timedelta
+    from types import SimpleNamespace
+
+    from app.services.sources.case_source_bundle import case_source_bundle_for_analysis
+
+    written = datetime.now(UTC)
+    narrative = narrative_written_at("00000000-0000-0000-0000-00000000000a", written)
+    case = SimpleNamespace(source_revision=1, sources=[narrative])
+    result = analysis_citing(written + timedelta(minutes=5), "QA-01", "QA-02")
+
+    bundle = case_source_bundle_for_analysis(case, result, [narrative.id])
+
+    assert [source.source_id for source in bundle.sources] == [narrative.id]
+
+
+def test_a_source_added_while_the_analysis_ran_is_not_in_its_report():
+    from datetime import datetime, timedelta
+    from types import SimpleNamespace
+
+    from app.services.sources.case_source_bundle import case_source_bundle_for_analysis
+
+    written = datetime.now(UTC)
+    read = narrative_written_at("00000000-0000-0000-0000-00000000000b", written)
+    raced = narrative_written_at("00000000-0000-0000-0000-00000000000c", written)
+    case = SimpleNamespace(source_revision=1, sources=[read, raced])
+    result = analysis_citing(written + timedelta(minutes=5), read.id)
+
+    bundle = case_source_bundle_for_analysis(case, result, [read.id])
+
+    assert [source.source_id for source in bundle.sources] == [read.id], (
+        "a source whose timestamp is older than the analysis is still not one it read"
+    )
+
+
+def test_a_recorded_source_that_no_longer_exists_is_an_error():
+    from datetime import datetime, timedelta
+    from types import SimpleNamespace
+
+    import pytest
+
+    from app.services.sources.case_source_bundle import case_source_bundle_for_analysis
+
+    written = datetime.now(UTC)
+    case = SimpleNamespace(source_revision=1, sources=[])
+    result = analysis_citing(written + timedelta(minutes=5))
+
+    with pytest.raises(ValueError):
+        case_source_bundle_for_analysis(case, result, ["00000000-0000-0000-0000-00000000000d"])

@@ -6,15 +6,18 @@ from app.models.report import CaseReport
 from app.schemas.reports import CaseReportRead, StructuredReport
 from app.services.analysis.contracts import (
     CaseAnalysisTrace,
+    CaseFollowupExchange,
+    followup_history_of_snapshot,
 )
-from app.services.chat.followup import followup_history_from
 from app.services.reports.contracts import (
     CaseReportInput,
     CaseReportTechnicalAugmentation,
     ReportGenerationConflict,
 )
 from app.services.sources.case_source_bundle import (
+    CaseSourceBundle,
     case_source_bundle_for_analysis,
+    source_ids_of_sources_read,
 )
 
 
@@ -41,7 +44,7 @@ def build_case_report_input(
         raise ReportGenerationConflict(
             "case_analysis_unavailable", "Only a validated Case analysis can produce a report"
         )
-    source_bundle = case_source_bundle_for_analysis(case, result)
+    source_bundle = recorded_source_bundle(case, result)
     if not source_bundle.sources:
         raise ReportGenerationConflict(
             "case_report_input_invalid", "The Case has no active sources"
@@ -57,8 +60,46 @@ def build_case_report_input(
         analysis_trace=trace.model_dump(mode="json"),
         technical_augmentation=technical_augmentation_input(result, trace),
         unresolved_issues=[gap.description for gap in trace.gaps],
-        followup_history=followup_history_from(case.chat_messages),
+        followup_history=recorded_followup_history(result),
     )
+
+
+def recorded(result: CaseAnalysisResult) -> dict[str, object]:
+    return result.external_context_json if isinstance(result.external_context_json, dict) else {}
+
+
+def recorded_source_bundle(case: Case, result: CaseAnalysisResult) -> CaseSourceBundle:
+    context = recorded(result)
+    if "sources_read" not in context:
+        raise ReportGenerationConflict(
+            "analysis_source_snapshot_missing",
+            "The analysis did not record the sources it read",
+        )
+    try:
+        return case_source_bundle_for_analysis(
+            case, result, source_ids_of_sources_read(context["sources_read"])
+        )
+    except ValueError as error:
+        raise ReportGenerationConflict(
+            "analysis_source_snapshot_invalid",
+            "The sources recorded by the analysis are invalid or no longer exist",
+        ) from error
+
+
+def recorded_followup_history(result: CaseAnalysisResult) -> tuple[CaseFollowupExchange, ...]:
+    context = recorded(result)
+    if "followup_history" not in context:
+        raise ReportGenerationConflict(
+            "analysis_followup_snapshot_missing",
+            "The analysis did not record the follow-up answers it read",
+        )
+    try:
+        return followup_history_of_snapshot(context["followup_history"])
+    except ValueError as error:
+        raise ReportGenerationConflict(
+            "analysis_followup_snapshot_invalid",
+            "The follow-up answers recorded by the analysis are invalid",
+        ) from error
 
 
 def validated_trace(

@@ -16,6 +16,7 @@ from app.services.analysis.contracts import (
     CaseAnalysisGap,
     CaseAnalysisTrace,
     CaseAssessmentTrace,
+    followup_snapshot,
 )
 from app.services.analysis.pipeline import AnalysisArtifacts
 from app.services.analysis.settings import configured_pipeline
@@ -27,6 +28,7 @@ from app.services.chat.followup import (
     question_message,
     rounds_asked,
 )
+from app.services.sources.case_source_bundle import sources_read
 from app.services.workflow.shared import (
     CaseUnderAnalysis,
     CaseWorkflowError,
@@ -127,7 +129,11 @@ async def store_analysis(
             trace_json=trace.model_dump(mode="json"),
             retrieval_context_id=trace.retrieval_context_id,
             pipeline_config=configured_pipeline().model_dump(mode="json"),
-            external_context_json=external_context(artifacts),
+            external_context_json={
+                **external_context(artifacts),
+                "sources_read": sources_read(started.source_bundle),
+                "followup_history": followup_snapshot(started.followup_history),
+            },
             retrieval_context_json=retrieval_context_row(artifacts, started),
         )
         db.add(result)

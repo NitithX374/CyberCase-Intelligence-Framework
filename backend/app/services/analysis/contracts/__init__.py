@@ -13,8 +13,10 @@ from app.services.analysis.contracts.claims import (
     CaseFollowupExchange,
     CaseGeneratedUnit,
     CaseSourceCitation,
+    followup_history_of_snapshot,
     followup_payload,
     followup_qa_id,
+    followup_snapshot,
 )
 from app.services.analysis.contracts.trace import (
     CaseAnalysisFailureMetadata,
@@ -81,7 +83,9 @@ __all__ = [
     "CaseProviderReading",
     "CaseTimelineItem",
     "ResponseLanguage",
+    "followup_history_of_snapshot",
     "followup_payload",
     "followup_qa_id",
+    "followup_snapshot",
     "resolve_response_language",
 ]
