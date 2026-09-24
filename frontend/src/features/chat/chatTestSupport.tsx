@@ -31,7 +31,6 @@ export function chatResponse(...messages: ChatMessageRead[]): CaseChatResponse {
   return { messages, analysis: null };
 }
 
-/** A promise this test resolves by hand, to hold a request open. */
 export function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;

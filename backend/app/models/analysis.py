@@ -1,10 +1,3 @@
-"""A stored analysis of the case sources.
-
-``source_revision`` is the revision it was computed from; comparing it with
-``cases.source_revision`` is the whole staleness rule. It belongs to no run:
-the request that produced it has already returned.
-"""
-
 from __future__ import annotations
 
 import uuid
@@ -59,14 +52,9 @@ class CaseAnalysisResult(Base):
     status: Mapped[str] = mapped_column(
         String(24), nullable=False, default="validated", server_default=text("'validated'")
     )
-    answer: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     trace_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     retrieval_context_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    # The context the model was actually given, kept so a later round with
-    # the same input can reuse it instead of retrieving again. Not in
-    # external_context_json: the frontend reads that on every analysis and
-    # has no use for several kilobytes of retrieval prose.
     retrieval_context_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     pipeline_config: Mapped[dict[str, object]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")

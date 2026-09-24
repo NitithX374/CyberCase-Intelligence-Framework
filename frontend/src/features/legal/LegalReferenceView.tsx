@@ -5,7 +5,7 @@ import type { CaseAnalysisResultRead } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DisclosureToggle } from "@/components/Disclosure";
 import { EmptyState } from "@/components/EmptyState";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
 import {
   legalLookupSkipped,
   readLegalReference,
@@ -17,19 +17,11 @@ interface LegalReferenceViewProps {
   analysisResult: CaseAnalysisResultRead | null;
   isLoading?: boolean;
   isError?: boolean;
-  /** Where the reader goes when they turn the notice down. */
   onDecline: () => void;
 }
 
-/** Past this many characters a provision's text is clamped behind "Full text". */
 const LONG_PROVISION_TEXT = 480;
 
-/**
- * Thai provisions the RAG service matched to the case.
- *
- * They are references, not advice, so every visit to the page opens with the
- * provider's notice, and no provision is shown until the reader accepts it.
- */
 export function LegalReferenceView({
   analysisResult,
   isLoading = false,
@@ -39,11 +31,7 @@ export function LegalReferenceView({
   if (isLoading) return <LegalSkeleton />;
   if (isError) {
     return (
-      <LegalState
-        icon="error"
-        title="Analysis unavailable"
-        description="The analysis could not be loaded."
-      />
+      <LegalState title="Analysis unavailable" description="The analysis could not be loaded." />
     );
   }
   if (!analysisResult) {
@@ -104,7 +92,7 @@ function LegalProvisions({
               </span>
             </div>
             <span
-              className="tag bg-surface-nested text-ink-secondary"
+              className="text-[13px] text-ink-muted"
               title={`From ${reference.provider || "an external legal service"}. It is not a case source.`}
             >
               External reference
@@ -113,9 +101,8 @@ function LegalProvisions({
 
           {accepted && (
             <>
-              <p className="mt-4 flex gap-2.5 rounded-lg bg-unresolved/[0.08] px-3.5 py-2.5 text-[13px] leading-6 text-ink">
-                <Icon name="alert" className="mt-1 h-4 w-4 shrink-0 text-unresolved" />
-                <span>{reference.disclaimer}</span>
+              <p className="mt-4 text-[13px] leading-6 text-ink-secondary">
+                {reference.disclaimer}
               </p>
 
               <ol className="divide-y divide-line">
@@ -166,7 +153,6 @@ function LegalProvisions({
 function ProvisionItem({ item, index }: { item: LegalProvision; index: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const heading = item.citation || item.title || `Provision ${index + 1}`;
-  // The citation usually already names the act, so the title would repeat it.
   const showTitle = Boolean(item.title) && !heading.includes(item.title);
   const isLong = item.text.length > LONG_PROVISION_TEXT;
   const textId = `legal-provision-${index}-text`;
@@ -216,15 +202,7 @@ function ProvisionItem({ item, index }: { item: LegalProvision; index: number })
   );
 }
 
-function LegalState({
-  icon = "legal",
-  title,
-  description,
-}: {
-  icon?: IconName;
-  title: string;
-  description: string;
-}) {
+function LegalState({ title, description }: { title: string; description: string }) {
   return (
     <section
       id="workspace-legal-panel"
@@ -232,7 +210,6 @@ function LegalState({
       className="flex shrink-0 flex-col bg-surface"
     >
       <EmptyState
-        icon={icon}
         title={title}
         description={description}
         className="mx-auto min-h-[420px] w-full max-w-[52rem] justify-center px-5 py-16 sm:px-8"

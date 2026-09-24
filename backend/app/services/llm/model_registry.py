@@ -1,87 +1,38 @@
-"""Central OpenRouter model registry, curated presets, and alias resolver for Backend services."""
-
 from __future__ import annotations
 
-from dataclasses import dataclass
+from app.config import DEFAULT_CASE_ANALYSIS_MODEL
 
-DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.6-luna"
+DEFAULT_OPENROUTER_MODEL = DEFAULT_CASE_ANALYSIS_MODEL
 
+MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "openai/gpt-5.6-luna": ("luna", "gpt-luna", "gpt-5.6-luna"),
+    "openai/gpt-4o-mini": ("4o-mini", "gpt-4o-mini", "mini"),
+    "openai/gpt-oss-120b": ("oss", "gpt-oss", "gpt-oss-120b", "oss-120b"),
+    "anthropic/claude-3.5-sonnet": ("sonnet", "claude-sonnet", "claude-3.5-sonnet", "sonnet-3.5"),
+    "anthropic/claude-3.5-haiku": ("haiku", "claude-haiku", "claude-3.5-haiku", "haiku-3.5"),
+    "openai/gpt-4o": ("4o", "gpt-4o", "openai-4o"),
+    "qwen/qwen3.8-27b": ("qwen3.8-27b", "qwen"),
+    DEFAULT_OPENROUTER_MODEL: ("deepseek-v4.1-flash", "deepseek", "default"),
+}
 
-@dataclass(frozen=True)
-class ModelPreset:
-    canonical_id: str
-    display_name: str
-    family: str
-    aliases: tuple[str, ...]
-    description: str
-
-
-CURATED_MODEL_PRESETS: tuple[ModelPreset, ...] = (
-    ModelPreset(
-        canonical_id="openai/gpt-5.6-luna",
-        display_name="GPT 5.6 Luna",
-        family="GPT",
-        aliases=("luna", "gpt-luna", "gpt-5.6-luna", "default"),
-        description="High-context general analysis (Default)",
-    ),
-    ModelPreset(
-        canonical_id="openai/gpt-4o-mini",
-        display_name="GPT-4o Mini",
-        family="GPT",
-        aliases=("4o-mini", "gpt-4o-mini", "mini"),
-        description="Fast, cost-efficient OpenAI model",
-    ),
-    ModelPreset(
-        canonical_id="openai/gpt-oss-120b",
-        display_name="GPT-OSS 120B",
-        family="GPT-OSS",
-        aliases=("oss", "gpt-oss", "gpt-oss-120b", "oss-120b"),
-        description="Open-weight 120B reasoning model",
-    ),
-    ModelPreset(
-        canonical_id="anthropic/claude-3.5-sonnet",
-        display_name="Claude 3.5 Sonnet",
-        family="Claude",
-        aliases=("sonnet", "claude-sonnet", "claude-3.5-sonnet", "sonnet-3.5"),
-        description="Frontier cyber reasoning and incident report generation",
-    ),
-    ModelPreset(
-        canonical_id="anthropic/claude-3.5-haiku",
-        display_name="Claude 3.5 Haiku",
-        family="Claude",
-        aliases=("haiku", "claude-haiku", "claude-3.5-haiku", "haiku-3.5"),
-        description="Fast, token-efficient analysis and evaluation",
-    ),
-    ModelPreset(
-        canonical_id="openai/gpt-4o",
-        display_name="GPT-4o",
-        family="GPT",
-        aliases=("4o", "gpt-4o", "openai-4o"),
-        description="Flagship multimodal OpenAI model",
-    ),
-)
-
-_ALIAS_MAP: dict[str, str] = {}
-for preset in CURATED_MODEL_PRESETS:
-    _ALIAS_MAP[preset.canonical_id.lower()] = preset.canonical_id
-    for alias in preset.aliases:
-        _ALIAS_MAP[alias.lower().strip()] = preset.canonical_id
+_ALIAS_MAP = {
+    key.lower(): model_id
+    for model_id, aliases in MODEL_ALIASES.items()
+    for key in (model_id, *aliases)
+}
 
 
 def resolve_openrouter_model(model_name_or_alias: str | None) -> str:
-    """Resolve an alias or model name to its canonical OpenRouter model string."""
     if not model_name_or_alias or not model_name_or_alias.strip():
         return DEFAULT_OPENROUTER_MODEL
-
     cleaned = model_name_or_alias.strip()
     if cleaned.lower().startswith("openrouter/"):
         cleaned = cleaned[len("openrouter/") :]
-
-    lookup_key = cleaned.lower()
-    if lookup_key in _ALIAS_MAP:
-        return _ALIAS_MAP[lookup_key]
-
+    if cleaned.lower() in _ALIAS_MAP:
+        return _ALIAS_MAP[cleaned.lower()]
     if "/" in cleaned:
         return cleaned
-
     raise ValueError(f"Unknown OpenRouter model alias: {model_name_or_alias}")
+
+
+__all__ = ["DEFAULT_OPENROUTER_MODEL", "MODEL_ALIASES", "resolve_openrouter_model"]

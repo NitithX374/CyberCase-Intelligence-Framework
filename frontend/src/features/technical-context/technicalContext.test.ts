@@ -23,7 +23,6 @@ function technicalContextFixture(
       case_id: caseId,
       source_kind: "narrative",
       document_id: null,
-      origin_message_id: null,
       exact_text: exactQuote,
       provenance_json: {},
       source_metadata_json: {},
@@ -47,7 +46,6 @@ function technicalContextFixture(
     source_revision: 1,
     schema_version: "case_analysis_trace_v1",
     status: "validated",
-    answer: exactQuote,
     summary: exactQuote,
     trace_json: {
       version: "case_analysis_trace_v1",
@@ -166,10 +164,22 @@ describe("buildTechnicalContext", () => {
     expect(result.techniques[0].caseBasisSources).toHaveLength(1);
   });
 
+  it("reads a retrieval that came back empty as no supported context", () => {
+    const fixture = technicalContextFixture("insufficient_context", []);
+    fixture.result.trace_json!.retrieval_context_id = null;
+    fixture.result.retrieval_context_id = null;
+    const result = buildTechnicalContext(fixture.result, fixture.sources);
+    expect(result.status).toBe("insufficient_context");
+  });
+
+  it("withholds an empty retrieval that the trace claims to have used", () => {
+    const fixture = technicalContextFixture("insufficient_context", []);
+    const result = buildTechnicalContext(fixture.result, fixture.sources);
+    expect(result.status).toBe("invalid_trace");
+  });
+
   it("withholds context when the persisted trace binding is invalid", () => {
     const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
-    // A payload the current service cannot produce, kept to prove the guard holds
-    // if an older deployment ever sends one.
     fixture.result.trace_json = {
       ...fixture.result.trace_json!,
       validation_status: "failed",
@@ -202,16 +212,12 @@ describe("a technique several claims rest on", () => {
         },
       ],
     );
-    // A second claim resting on the same sentence of the same source. React
-    // saw two children under one source id before these were folded together.
     const trace = result.trace_json as Record<string, unknown>;
     const claims = trace.claims as Record<string, unknown>[];
     trace.claims = [claims[0], { ...claims[0], claim_id: "A-02" }];
 
     const context = buildTechnicalContext(result, sources);
 
-    // The invariant a React key needs: no technique lists the same sentence of
-    // the same source twice. It used to, once per claim that cited it.
     for (const technique of context.techniques) {
       const seen = technique.caseBasisSources.map((source) => `${source.id}|${source.exactQuote}`);
       expect(new Set(seen).size).toBe(seen.length);

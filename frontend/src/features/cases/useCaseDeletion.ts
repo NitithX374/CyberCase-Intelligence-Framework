@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import type { CaseRead } from "@/lib/api";
-import type { WorkspaceView } from "@/features/workspace/views";
+import type { WorkspaceView } from "@/features/workspace/routes";
 import { casePath } from "@/features/workspace/routes";
 
 export interface UseCaseDeletionOptions {

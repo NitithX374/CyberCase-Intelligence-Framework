@@ -1,13 +1,3 @@
-"""The production analysis runs three steps, and the arms compose those same three.
-
-The technical-context step used to be unreachable. The workflow took the
-applicability gate and the RAG client as arguments, and every caller left both
-at None, so six hundred lines of MITRE retrieval never ran against a real
-analysis. `analyse_case` makes that impossible to miss: the steps are named in
-one function, in order, with no switch between them — and these tests hold
-that shape rather than trusting it.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -25,11 +15,10 @@ from app.services.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
     advance_case,
-    analyse_case,
     bind_to_case,
     write_analysis,
 )
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from experiments import analysis_arms
 
 
@@ -54,8 +43,6 @@ def case_with_one_narrative() -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
 
 
 def steps_run_by(monkeypatch, run) -> list[str]:
-    """Which steps a composition actually called, in order."""
-
     called: list[str] = []
 
     def record(name):
@@ -78,8 +65,8 @@ def steps_run_by(monkeypatch, run) -> list[str]:
     return called
 
 
-def test_the_shipped_analysis_runs_every_step(monkeypatch):
-    assert steps_run_by(monkeypatch, analyse_case) == [
+def test_the_verify_arm_runs_every_expensive_step(monkeypatch):
+    assert steps_run_by(monkeypatch, analysis_arms.verify) == [
         "retrieve_technical_context",
         "write_analysis",
         "bind_to_case",
@@ -162,8 +149,6 @@ def test_assessment_with_no_question_runs_the_full_analysis(monkeypatch):
 
 
 def test_the_baseline_arm_is_the_shipped_one_minus_binding(monkeypatch):
-    """direct and verify differ by one step, which is what the comparison measures."""
-
     direct = steps_run_by(monkeypatch, analysis_arms.direct)
     verify = steps_run_by(monkeypatch, analysis_arms.verify)
 
@@ -172,8 +157,6 @@ def test_the_baseline_arm_is_the_shipped_one_minus_binding(monkeypatch):
 
 
 def test_a_step_left_out_means_the_model_is_given_no_technical_context():
-    """The ablation is a composition that omits the step, not a flag it reads."""
-
     bundle, trace = case_with_one_narrative()
     seen = []
 
@@ -193,8 +176,6 @@ def test_a_step_left_out_means_the_model_is_given_no_technical_context():
 
 
 def test_binding_is_what_writes_the_grounding_report():
-    """Which is why the arm that skips it reports none — deliberately."""
-
     bundle, trace = case_with_one_narrative()
     data = AnalysisInput(sources=bundle)
 
@@ -207,8 +188,6 @@ def test_binding_is_what_writes_the_grounding_report():
 
 
 def test_the_analysis_needs_no_case_row_to_run():
-    """What the experiment depends on: sources in, artifacts out, no database."""
-
     bundle, trace = case_with_one_narrative()
 
     async def fake_analysis(**kwargs):

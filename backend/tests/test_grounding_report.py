@@ -1,12 +1,3 @@
-"""How much of an analysis is actually bound to a source, counted.
-
-A quotation the model invented is dropped during validation rather than
-rejected — losing a whole analysis over one bad citation would be worse. But
-dropped silently, a fabricated quote and a correct one leave the same trace,
-and a claim can reach the reader with nothing behind it. These counts are what
-makes that visible, and measurable.
-"""
-
 from __future__ import annotations
 
 from uuid import uuid4
@@ -17,7 +8,7 @@ from app.services.analysis.contracts import (
     CaseSourceCitation,
 )
 from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 TEXT = "Filenames had been changed and a text file demanded contact by email."
 
@@ -61,8 +52,6 @@ def test_a_quote_that_is_in_the_source_counts_as_verified():
 
 
 def test_an_invented_quote_is_dropped_and_counted():
-    """The claim survives, as it always did. Now the loss is on the record."""
-
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(
         trace_of(claim(source_id, "A-01", "There were no issues with the finance drive.")),
@@ -78,8 +67,6 @@ def test_an_invented_quote_is_dropped_and_counted():
 
 
 def test_a_loose_quotation_of_a_real_sentence_is_counted_apart():
-    """Quoting badly and inventing evidence are not the same failure."""
-
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(
         trace_of(
@@ -94,8 +81,6 @@ def test_a_loose_quotation_of_a_real_sentence_is_counted_apart():
 
 
 def test_a_thai_quote_written_with_the_decomposed_vowel_still_matches():
-    """SARA AM has two forms that look identical and compare unequal."""
-
     thai = "พนักงานสอบสวนรวบรวมสำนวนคดีไว้แล้ว"
     source_id = str(uuid4())
     bundle = CaseSourceBundle(
@@ -128,13 +113,6 @@ def test_the_counts_separate_the_grounded_from_the_rest():
 
 
 def test_the_counts_always_add_up_to_what_was_claimed():
-    """A citation is verified, or clumsy, or invented — never two of those.
-
-    A quote the resolver had to repair is kept under the source's spelling
-    rather than the model's, which once made it count as verified and as
-    missing at the same time.
-    """
-
     thai = "พนักงานสอบสวนรวบรวมสำนวนคดีไว้แล้ว"
     source_id = str(uuid4())
     bundle = CaseSourceBundle(

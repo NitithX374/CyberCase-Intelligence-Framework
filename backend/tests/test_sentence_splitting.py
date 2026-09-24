@@ -1,14 +1,7 @@
-"""Cutting case material into sentences the gate can be held to.
-
-Whatever the splitter returns becomes the gate's trigger text, and trigger text
-is checked against the source it came from. A sentence that is not an exact
-piece of its source cannot pass that check, however good the gate's judgement.
-"""
-
 from __future__ import annotations
 
 from app.services.analysis.mitre_gate.sentences import split_sources, split_text
-from app.services.sources import CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceItem
 
 THAI_REPORT = """เมื่อวันที่ 4 พฤศจิกายน 2563 ผู้เสียหายเข้าแจ้งความ
 ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น.
@@ -21,21 +14,15 @@ def test_every_sentence_is_an_exact_piece_of_its_source():
 
 
 def test_lines_are_separated_before_the_thai_splitter_sees_them():
-    """A report is headings and form fields, which prose splitting runs together."""
-
     assert len(split_text(THAI_REPORT)) >= 3
 
 
 def test_a_short_fragment_joins_the_sentence_it_belongs_to():
-    """crfcut is trained on prose and breaks at the dot in PowerShell.exe."""
-
     trigger = "ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น."
     assert any("PowerShell.exe เชื่อมต่อ" in sentence for sentence in split_text(trigger))
 
 
 def test_a_trailing_scrap_joins_the_sentence_before_it():
-    """Alone it is a word like "upload", and a useless retrieval query."""
-
     line = "เว็บเซิร์ฟเวอร์ถูกโจมตีด้วย SQL injection และมีการวาง web shell ไว้ที่โฟลเดอร์ upload"
     sentences = split_text(line)
 

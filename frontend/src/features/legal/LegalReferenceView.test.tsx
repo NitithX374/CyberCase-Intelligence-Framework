@@ -14,7 +14,6 @@ function analysis(externalContext: Record<string, unknown>): CaseAnalysisResultR
     source_revision: 1,
     schema_version: "case_analysis_trace_v1",
     status: "validated",
-    answer: "",
     summary: "",
     trace_json: null,
     retrieval_context_id: null,
@@ -69,7 +68,6 @@ describe("LegalReferenceView", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: ACCESS_SECTION })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: FRAUD_SECTION })).toBeInTheDocument();
-    // The notice stays on the page after it is accepted.
     expect(screen.getByRole("region", { name: "Legal references" })).toHaveTextContent(
       "รายการอ้างอิงตัวบทที่อาจเกี่ยวข้อง ไม่ใช่ความเห็นทางกฎหมาย",
     );

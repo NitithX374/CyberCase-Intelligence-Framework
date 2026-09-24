@@ -29,7 +29,6 @@ function buildFollowupSources(messages: ChatMessageRead[]): CaseSourceRead[] {
         case_id: answer.case_id,
         source_kind: "followup_answer",
         document_id: null,
-        origin_message_id: answer.id,
         exact_text: answer.content,
         provenance_json: {
           origin: "case_followup",

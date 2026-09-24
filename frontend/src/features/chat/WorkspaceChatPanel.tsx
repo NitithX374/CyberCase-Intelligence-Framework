@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { Icon } from "@/components/icons";
-import type { WorkspaceView } from "@/features/workspace/views";
+import type { WorkspaceView } from "@/features/workspace/routes";
 import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { useCaseChat } from "./useCaseChat";
 import { useCaseAnalysis } from "@/features/analysis/queries";
@@ -16,19 +16,9 @@ interface WorkspaceChatPanelProps {
   onOpenChat: () => void;
   onCloseChat: () => void;
   onViewChange: (view: WorkspaceView) => void;
-  /** The panel is where a follow-up answer is sent, so it is where the
-   *  workspace learns that an analysis is running because of one. */
   onActivityChange: (isAnsweringQuestion: boolean) => void;
 }
 
-/**
- * The Ask panel, and everything the conversation needs.
- *
- * The chat used to be read in the layout and handed down thirteen props, six
- * of which were forwarded again to the transcript. The layout only ever needed
- * two facts out of it — whether a follow-up is in flight, and whether a new
- * question arrived — so those are what it gets now, as callbacks.
- */
 export function WorkspaceChatPanel({
   caseId,
   isOpen,
@@ -50,8 +40,6 @@ export function WorkspaceChatPanel({
     onActivityChange(isAnsweringQuestion);
   }, [isAnsweringQuestion, onActivityChange]);
 
-  // A question the analysis left waiting is worth interrupting for, once. If
-  // the reader closes the panel it stays closed until a different one arrives.
   const pendingQuestionId = chat.pendingQuestionId;
   const announcedQuestionRef = useRef<string | null>(null);
   useEffect(() => {
@@ -104,16 +92,14 @@ export function WorkspaceChatPanel({
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <ChatTranscript
-          messages={messages}
-          isProcessing={isSending}
-          isAnsweringQuestion={isAnsweringQuestion}
-          leadResult={leadResult}
-          sources={sources}
-          onNavigateToSource={() => onViewChange("sources")}
-        />
-      </div>
+      <ChatTranscript
+        messages={messages}
+        isProcessing={isSending}
+        isAnsweringQuestion={isAnsweringQuestion}
+        leadResult={leadResult}
+        sources={sources}
+        onNavigateToSource={() => onViewChange("sources")}
+      />
 
       <div className="shrink-0 px-4 pt-2 pb-4">
         <ChatComposer

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
 import { ChatTranscript } from "./ChatTranscript";
 
@@ -10,7 +10,6 @@ const sampleResult: CaseAnalysisResultRead = {
   schema_version: "case_analysis_trace_v1",
   status: "validated",
   summary: "Initial compromise occurred via spearphishing attachment delivering malware.",
-  answer: "Initial compromise occurred via spearphishing attachment delivering malware.",
   trace_json: null,
   retrieval_context_id: null,
   pipeline_config: {},
@@ -25,7 +24,6 @@ const sources: CaseSourceRead[] = [
     case_id: "case-123",
     source_kind: "narrative",
     document_id: null,
-    origin_message_id: null,
     exact_text: "Initial compromise occurred via spearphishing attachment delivering malware.",
     provenance_json: {},
     source_metadata_json: {},
@@ -36,8 +34,6 @@ const sources: CaseSourceRead[] = [
 
 describe("ChatTranscript", () => {
   it("shows the exchange the analysis pinned to itself", () => {
-    // A question and its answer both carry the analysis that asked, which an
-    // old filter took for a duplicate of the lead card and hid.
     const question: ChatMessageRead = {
       id: "msg-q-1",
       case_id: "case-123",
@@ -72,7 +68,50 @@ describe("ChatTranscript", () => {
     );
     expect(screen.getByText("When did the incident happen?")).toBeInTheDocument();
     expect(screen.getByText("Around two in the morning.")).toBeInTheDocument();
-    // The question is marked as one, so it reads apart from the conversation.
     expect(screen.getByText("Question")).toBeInTheDocument();
+  });
+
+  describe("scrolling", () => {
+    afterEach(() => {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo;
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    });
+
+    it("brings a new message into view by scrolling the transcript alone", () => {
+      const scrolled: Element[] = [];
+      Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+        configurable: true,
+        value(this: HTMLElement) {
+          scrolled.push(this);
+        },
+      });
+      const scrollIntoView = vi.fn();
+      Object.defineProperty(Element.prototype, "scrollIntoView", {
+        configurable: true,
+        value: scrollIntoView,
+      });
+      const message = (id: string, ordinal: number): ChatMessageRead => ({
+        id,
+        case_id: "case-123",
+        ordinal,
+        role: "user",
+        content: `Message ${ordinal}`,
+        message_kind: "conversation",
+        analysis_result_id: null,
+        metadata_json: {},
+        created_at: "2026-09-10T12:00:00Z",
+      });
+
+      const { container, rerender } = render(
+        <ChatTranscript messages={[message("m-1", 1)]} isProcessing={false} />,
+      );
+      expect(scrolled).toEqual([]);
+
+      rerender(
+        <ChatTranscript messages={[message("m-1", 1), message("m-2", 2)]} isProcessing={false} />,
+      );
+      expect(scrolled).toEqual([container.firstElementChild]);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    });
   });
 });

@@ -6,20 +6,13 @@ import {
   caseDestination,
   caseStatusLabel,
   caseStatusTone,
-  toneDotClass,
+  toneTextClass,
   type CaseLibraryViewMode,
 } from "./caseDisplay";
 
-/** Where a case stands, as a coloured dot and a word or two. */
 export function CaseStatus({ caseRecord }: { caseRecord: CaseRead }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${toneDotClass[caseStatusTone(caseRecord)]}`}
-        aria-hidden="true"
-      />
-      {caseStatusLabel(caseRecord)}
-    </span>
+    <span className={toneTextClass[caseStatusTone(caseRecord)]}>{caseStatusLabel(caseRecord)}</span>
   );
 }
 

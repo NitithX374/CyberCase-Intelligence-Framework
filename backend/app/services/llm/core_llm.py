@@ -1,5 +1,3 @@
-"""Resolve the production chat LLM target. One provider, no fallback."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,8 +7,6 @@ from app.services.llm.model_registry import resolve_openrouter_model
 
 
 class CoreLlmConfigurationError(RuntimeError):
-    """The production provider is missing required configuration."""
-
     def __init__(self, key_env_name: str) -> None:
         super().__init__(f"OpenRouter requires {key_env_name}; no provider fallback is configured")
         self.key_env_name = key_env_name
@@ -31,8 +27,6 @@ def resolve_core_llm_target(
     require_key: bool = True,
     configured_settings: Settings | None = None,
 ) -> CoreLlmTarget:
-    """Return the target for one feature's call, with its model resolved."""
-
     active_settings = configured_settings or settings
     api_key = active_settings.openrouter_cybercase.strip()
     if require_key and not api_key:
@@ -44,8 +38,6 @@ def resolve_core_llm_target(
         messages_url=active_settings.openrouter_messages_url,
         headers={
             "Authorization": f"Bearer {api_key}",
-            # The endpoint is OpenRouter's Anthropic-compatible /v1/messages,
-            # which requires this header whatever model is behind it.
             "anthropic-version": "2023-06-01",
         },
     )

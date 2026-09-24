@@ -44,7 +44,6 @@ export type CaseAnalysisResultRead = {
     source_revision: number;
     schema_version: string;
     status: "validated";
-    answer: string;
     summary: string;
     trace_json: CaseAnalysisTrace | null;
     retrieval_context_id: string | null;

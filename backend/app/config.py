@@ -1,14 +1,13 @@
-"""Application configuration — modular component mixins loaded from environment / .env."""
-
 from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_CASE_ANALYSIS_MODEL = "deepseek/deepseek-v4.1-flash"
 
-# ── 1. Database Configuration ────────────────────────────────────────────────
+
 class DatabaseConfig(BaseModel):
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"
@@ -19,21 +18,12 @@ class DatabaseConfig(BaseModel):
 
     @property
     def async_database_url(self) -> str:
-        """The URL with the driver SQLAlchemy's async engine needs.
-
-        A URL that already names one, such as postgresql+asyncpg://, starts
-        with neither spelling below and comes back untouched. The branch this
-        replaced ran only when the URL held neither prefix, and then replaced
-        a prefix that by definition was not there.
-        """
-
         if self.database_url:
             for spelling in ("postgres://", "postgresql://"):
                 if self.database_url.startswith(spelling):
                     return self.database_url.replace(spelling, "postgresql+asyncpg://", 1)
             return self.database_url
 
-        # Construct from components if DATABASE_URL is not provided
         from sqlalchemy.engine.url import URL
 
         return str(
@@ -48,62 +38,52 @@ class DatabaseConfig(BaseModel):
         )
 
 
-# ── 2. CORS Configuration ────────────────────────────────────────────────────
 class CORSConfig(BaseModel):
     cors_origins: str = "http://localhost:3000"
 
     @property
     def cors_origins_list(self) -> list[str]:
-        # Always allow localhost for development
         origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-        # Add origins from environment variable if they exist
         if self.cors_origins:
             env_origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
             for o in env_origins:
-                # Ensure protocol is present
                 if not o.startswith("http"):
                     origins.append(f"https://{o}")
                     origins.append(f"http://{o}")
                 else:
                     origins.append(o)
 
-        return list(set(origins))  # Deduplicate
+        return list(set(origins))
 
 
-# ── 3. LLM Providers & Core Routing ──────────────────────────────────────────
 class LLMProviderConfig(BaseModel):
     openrouter_cybercase: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_messages_url: str = "https://openrouter.ai/api/v1/messages"
-    # The model the case analysis runs on. An alias from the registry or a
-    # full OpenRouter id.
-    case_analysis_model: str = "openai/gpt-5.6-luna"
+    case_analysis_model: str = Field(default=DEFAULT_CASE_ANALYSIS_MODEL, min_length=1)
     rag_service_url: str = "http://rag-service:8001"
 
+    @field_validator("case_analysis_model")
+    @classmethod
+    def validate_case_analysis_model(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("CASE_ANALYSIS_MODEL must not be blank")
+        return value
 
-# ── 6. Case Analysis & Post-Answer Q&A ────────────────────────────────────────
+
 class CaseAnalysisConfig(BaseModel):
-    # Which applicability gate decides whether a case needs ATT&CK:
-    # "llm" prompts a model with the whole case, "encoder" runs XLM-R over
-    # one sentence at a time, "never" skips retrieval so an ablation can
-    # measure what the technical context was worth.
     mitre_gate_mode: Literal["llm", "encoder", "never"] = "llm"
-    # The analysis runs one path; the arms it is compared against live in
-    # experiments/analysis_arms.py and are passed in, never configured here.
     mitre_gate_model_path: str = "research/mitre_gate/model"
     chat_followup_max_rounds: int = Field(default=3, ge=0)
     chat_followup_gaps_per_round: int = Field(default=3, ge=1)
-    chat_ask_model: str = "deepseek/deepseek-v4.1-flash"
     chat_ask_timeout_seconds: float = 120.0
 
 
-# ── 7. Persisted Report Generation ───────────────────────────────────────────
 class ReportConfig(BaseModel):
     chat_report_enabled: bool = True
 
 
-# ── 8. Document Ingestion & OCR Recognition ──────────────────────────────────
 class DocumentIngestionConfig(BaseModel):
     document_ingestion_max_bytes: int = Field(
         default=20 * 1024 * 1024,
@@ -119,7 +99,6 @@ class DocumentIngestionConfig(BaseModel):
     document_ingestion_max_concurrent_ocr: int = Field(default=4, ge=1, le=16)
 
 
-# ── 9. Authentication Configuration ─────────────────────────────────────────────
 class AuthConfig(BaseModel):
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
@@ -130,7 +109,6 @@ class AuthConfig(BaseModel):
     auth_dev_login_enabled: bool = False
 
 
-# ── Root Settings Composition ─────────────────────────────────────────────────
 class Settings(
     DatabaseConfig,
     CORSConfig,
@@ -141,11 +119,6 @@ class Settings(
     DocumentIngestionConfig,
     BaseSettings,
 ):
-    """
-    All configuration values are read from environment variables.
-    A `.env` file in the backend/ directory is also supported.
-    """
-
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
@@ -163,6 +136,7 @@ __all__ = [
     "CORSConfig",
     "CaseAnalysisConfig",
     "DatabaseConfig",
+    "DEFAULT_CASE_ANALYSIS_MODEL",
     "DocumentIngestionConfig",
     "LLMProviderConfig",
     "ReportConfig",

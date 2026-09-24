@@ -5,7 +5,7 @@ import pytest
 from app.services.analysis.mitre_gate.llm import (
     validate_mitre_applicability,
 )
-from app.services.sources import CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceItem
 
 SEMANTIC_FIXTURES = [
     ("phone_theft_th", "โทรศัพท์มือถือที่วางไว้บนโต๊ะสูญหาย", "SKIP", None),

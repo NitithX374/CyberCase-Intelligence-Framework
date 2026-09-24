@@ -1,11 +1,3 @@
-/**
- * Nothing is public except signing in.
- *
- * The front page was deleted and the root now redirects to /case, so the gate
- * is the only thing between a visitor and the workspace. It used to treat "/"
- * as public, which is the exemption that has to be gone.
- */
-
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountGate } from "./AccountGate";

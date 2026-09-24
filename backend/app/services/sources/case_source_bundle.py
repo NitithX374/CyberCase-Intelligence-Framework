@@ -45,7 +45,7 @@ def case_source_item(source: CaseSource) -> CaseSourceItem:
         source_kind=source.source_kind,
         text=source.exact_text,
         document_id=str(source.document_id) if source.document_id else None,
-        filename=source.document.filename if source.document else None,
+        filename=source.filename,
         provenance=source.provenance_json,
         source_metadata=source.source_metadata_json,
     )

@@ -53,7 +53,6 @@ describe("CaseDetails", () => {
 
     const parties = screen.getByRole("region", { name: "Parties 1" });
     expect(within(parties).getByText("Account holder")).toBeInTheDocument();
-    // Nothing the party rests on is reported, and the row says so.
     expect(within(parties).getByText("Inference")).toBeInTheDocument();
 
     expect(screen.getByRole("region", { name: "Impact 1" })).toHaveTextContent(

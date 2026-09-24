@@ -13,7 +13,6 @@ interface PersistedReportCardProps {
   caseTitle: string;
 }
 
-/** A saved report version, as the backend renders it. */
 export function PersistedReportCard({ report, caseId, caseTitle }: PersistedReportCardProps) {
   return (
     <article aria-label="Persisted report" className="mt-4">

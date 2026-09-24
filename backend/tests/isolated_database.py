@@ -1,5 +1,3 @@
-"""A disposable PostgreSQL schema for one test."""
-
 import os
 from contextlib import asynccontextmanager
 from uuid import uuid4

@@ -21,16 +21,11 @@ export interface FindingSourceActions {
   activeSourceKey?: string | null;
 }
 
-/** The dot beside a group heading. Colour is reserved for what needs a look. */
-const groupDotClass: Record<string, string> = {
-  not_established: "bg-critical",
-  contradicted: "bg-critical",
-  not_confirmed: "bg-unresolved",
-  suspected: "bg-unresolved",
-  unknown: "bg-ink-disabled",
-  unknown_claim: "bg-ink-disabled",
-  reported: "bg-line-strong",
-  analytical_inference: "bg-line-strong",
+const groupTitleClass: Record<string, string> = {
+  not_established: "text-critical",
+  contradicted: "text-critical",
+  not_confirmed: "text-unresolved",
+  suspected: "text-unresolved",
 };
 
 export function FindingRow({
@@ -46,7 +41,7 @@ export function FindingRow({
       <p className="break-words text-[15px] leading-7 text-ink">{finding.text}</p>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {showClaimType && finding.claimType !== "reported" && (
-          <span className="tag border border-line-strong text-ink-secondary">
+          <span className="text-xs text-ink-muted">
             {finding.claimType === "analytical_inference"
               ? "Inference"
               : claimTypeLabels[finding.claimType]}
@@ -69,7 +64,7 @@ export function FindingRow({
             key={technique.techniqueId}
             href={`#mitre-${technique.techniqueId}`}
             title={`ATT&CK ${technique.techniqueId}`}
-            className="inline-flex h-6 items-center rounded-md px-1.5 font-mono text-xs text-mitre transition-colors hover:bg-mitre/[0.07]"
+            className="inline-flex h-6 items-center px-1 text-xs font-medium text-ink-secondary underline-offset-2 hover:text-ink hover:underline"
           >
             {technique.techniqueId}
           </a>
@@ -146,7 +141,6 @@ export function CaseFindingsSection({
         const canCollapse = group.collapsible && group.findings.length > INITIAL_FINDINGS;
         const visible =
           canCollapse && !expanded ? group.findings.slice(0, INITIAL_FINDINGS) : group.findings;
-        // A claim's type only needs saying where the group does not already say it.
         const showClaimType = group.id !== "reported" && group.id !== "analytical_inference";
         return (
           <section
@@ -156,12 +150,8 @@ export function CaseFindingsSection({
           >
             <h3
               id={`findings-${group.id}-heading`}
-              className="flex items-center gap-2 text-[13px] font-semibold text-ink-secondary"
+              className={`text-[13px] font-semibold ${groupTitleClass[group.id] ?? "text-ink-secondary"}`}
             >
-              <span
-                className={`h-2 w-2 rounded-full ${groupDotClass[group.id] ?? "bg-line-strong"}`}
-                aria-hidden="true"
-              />
               {group.title}{" "}
               <span className="font-medium text-ink-muted">{group.findings.length}</span>
             </h3>

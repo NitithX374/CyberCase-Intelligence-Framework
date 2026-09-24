@@ -1,11 +1,3 @@
-"""The three kinds of reply the chat can give.
-
-A question about the case is answered from claims or not at all. A question
-that is not about the case gets a plain answer with nothing bound to it. The
-three are kept apart because the reader cannot tell them apart otherwise: being
-told the analysis lacks information is only useful when adding material fixes it.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -25,7 +17,7 @@ from app.services.chat.case_answer import (
     build_answer_context,
     generate_case_answer,
 )
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 QUOTE = "The finance share was encrypted overnight."
 
@@ -90,8 +82,6 @@ def answer_for(outcome: str, language_prompt: str, general: str = "") -> str:
 
 
 def test_the_model_is_shown_the_whole_analysis_not_only_its_claims():
-    """Asked which techniques were mapped, the chat needs the associations."""
-
     bundle, trace = analysed_case()
     context = {
         "analysis_result_id": str(uuid4()),
@@ -132,6 +122,41 @@ def test_the_model_is_shown_the_whole_analysis_not_only_its_claims():
         "gaps",
     ):
         assert section in seen, section
+
+
+def test_chat_uses_the_current_model_for_a_stored_analysis():
+    bundle, trace = analysed_case()
+    context = {
+        "analysis_result_id": str(uuid4()),
+        "source_revision": bundle.revision,
+        "pipeline_config": {"model": "openai/gpt-5.6-luna"},
+        "analysis_summary": trace.summary,
+        "trace": trace.model_dump(mode="json"),
+        "question": "Who are you?",
+        "history": [],
+    }
+    seen: dict[str, object] = {}
+
+    async def fake_stage(**kwargs):
+        seen["model"] = kwargs["config"].model
+        return CaseAnswerResponse(outcome="general", units=[], general_answer="CyberCase")
+
+    import app.services.chat.case_answer as module
+
+    original = module.request_stage
+    module.request_stage = fake_stage
+    try:
+        asyncio.run(
+            generate_case_answer(
+                context=context,
+                source_bundle=bundle,
+                user_message="Answer this question.",
+            )
+        )
+    finally:
+        module.request_stage = original
+
+    assert seen["model"] == "deepseek/deepseek-v4.1-flash"
 
 
 def test_a_question_the_case_does_not_cover_says_how_to_fix_it():

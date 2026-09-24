@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
+
+
 CaseEpistemicStatus = Literal[
     "reported",
     "suspected",
@@ -14,6 +18,8 @@ CaseEpistemicStatus = Literal[
     "unknown",
     "not_confirmed",
 ]
+
+
 CaseAnalysisMode = Literal["case_overview", "question_answer"]
 
 
@@ -75,14 +81,6 @@ class CaseSourceCitation(BaseModel):
 
     @model_validator(mode="after")
     def drop_incomplete_locator(self) -> CaseSourceCitation:
-        """A locator is all three parts or none of them.
-
-        The same rule runs before validation, on the raw input. It runs again
-        here because sanitising the page numbers can empty them — a citation
-        naming page 0 arrives with a document and leaves without pages — and a
-        half a locator points at nothing.
-        """
-
         if not (self.document_id and self.filename and self.page_numbers):
             self.document_id = None
             self.filename = None
@@ -140,14 +138,10 @@ class CaseAnalysisClaim(BaseModel):
                     if item.exact_quote.strip():
                         cleaned.append(item)
                 elif isinstance(item, dict):
-                    source_id = item.get("source_id")
-                    quote = item.get("exact_quote")
-                    if not source_id or not isinstance(source_id, str) or not source_id.strip():
-                        continue
-                    if not quote or not isinstance(quote, str) or not quote.strip():
-                        continue
-                    cleaned.append(item)
-            data[field_name] = cleaned
+                    citation = normalized_citation(item)
+                    if citation is not None:
+                        cleaned.append(citation)
+            data[field_name] = cleaned[:64]
         return data
 
     @field_validator("claim_id", mode="before")
@@ -171,13 +165,46 @@ class CaseAnalysisClaim(BaseModel):
             raise ValueError("claim text values must be non-empty")
         return normalized
 
-    @field_validator("supporting_source_ids", "contradicting_source_ids")
+    @field_validator("supporting_source_ids", "contradicting_source_ids", mode="before")
     @classmethod
-    def unique_source_ids(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip() for item in value]
-        if any(not item for item in normalized) or len(set(normalized)) != len(normalized):
-            raise ValueError("source IDs must be non-empty and unique")
-        return normalized
+    def unique_source_ids(cls, value: object) -> object:
+        if not isinstance(value, (list, tuple)):
+            return value
+        normalized: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            source_id = item.strip()
+            if source_id and source_id not in normalized:
+                normalized.append(source_id)
+        return normalized[:64]
+
+
+def normalized_citation(data: dict[object, object]) -> dict[str, object] | None:
+    source_id = data.get("source_id")
+    quote = data.get("exact_quote")
+    if not isinstance(source_id, str) or not isinstance(quote, str):
+        return None
+    source_id = source_id.strip()
+    quote = quote.strip()
+    if not source_id or not quote or len(source_id) > 160 or len(quote) > 2_000:
+        return None
+    return {
+        "source_id": source_id,
+        "exact_quote": quote,
+        "document_id": bounded_locator(data.get("document_id"), 160),
+        "filename": bounded_locator(data.get("filename"), 255),
+        "page_numbers": data.get("page_numbers")
+        if isinstance(data.get("page_numbers"), (list, tuple))
+        else [],
+    }
+
+
+def bounded_locator(value: object, limit: int) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized if normalized and len(normalized) <= limit else None
 
 
 class CaseAnalysisGap(BaseModel):
@@ -221,12 +248,32 @@ class CaseAnalysisGap(BaseModel):
         return value
 
 
-__all__ = [
-    "CaseAnalysisMode",
-    "CaseAnalysisClaim",
-    "CaseAnalysisGap",
-    "CaseClaimType",
-    "CaseEpistemicStatus",
-    "CaseGeneratedUnit",
-    "CaseSourceCitation",
-]
+class CaseAssessmentTrace(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal["case_assessment_v1"] = "case_assessment_v1"
+    gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
+
+
+@dataclass(frozen=True)
+class CaseFollowupExchange:
+    qa_id: str
+    gap_key: str
+    question: str
+    answer: str | None = None
+
+    @property
+    def is_answered(self) -> bool:
+        return bool(self.answer and self.answer.strip())
+
+
+def followup_qa_id(index: int) -> str:
+    return f"QA-{index:02d}"
+
+
+def followup_payload(history: Sequence[CaseFollowupExchange]) -> list[dict[str, str]]:
+    return [
+        {"qa_id": item.qa_id, "question": item.question, "answer": item.answer or ""}
+        for item in history
+        if item.is_answered
+    ]

@@ -6,7 +6,7 @@ import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { Icon } from "@/components/icons";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import type { CaseRead } from "@/lib/api";
-import { workspaceViewDescriptions, type WorkspaceView } from "./views";
+import { workspaceViewDescriptions, type WorkspaceView } from "./routes";
 
 interface WorkspaceHeaderProps {
   activeCase: CaseRead | null;
@@ -27,14 +27,6 @@ const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
   { view: "legal", label: "Legal" },
 ];
 
-/**
- * One row: the case, its views, Ask, and the account menu.
- *
- * Analyze is not here. It lives where it is the next step: under the sources
- * when they have not been analyzed, and on Analysis beside the result. The
- * header keeps only a dot on the Analysis tab, so a run or an out-of-date
- * analysis is visible from every view.
- */
 export function WorkspaceHeader({
   activeCase,
   activeView,
@@ -164,11 +156,6 @@ export function WorkspaceHeader({
   );
 }
 
-/** The title, while it is being changed.
- *
- * Enter and leaving the field both keep what was typed; Escape abandons it.
- * The field starts selected, because renaming usually means replacing.
- */
 function CaseTitleField({ title, onCommit }: { title: string; onCommit: (next: string) => void }) {
   const field = useRef<HTMLInputElement | null>(null);
   const [value, setValue] = useState(title);

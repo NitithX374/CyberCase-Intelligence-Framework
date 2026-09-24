@@ -45,12 +45,12 @@ function caseProjection(
       case_id: caseId,
       source_kind: options.page ? "document" : "narrative",
       document_id: options.page ? "DOC-1" : null,
-      origin_message_id: null,
+      filename: options.page ? "statement.pdf" : null,
       exact_text: text,
       provenance_json: options.page
         ? { pages: [{ end_offset: text.length, page_number: 4, start_offset: 0 }] }
         : { origin: "analyst-authored" },
-      source_metadata_json: options.page ? { filename: "statement.pdf" } : {},
+      source_metadata_json: {},
       created_at: "2026-09-10T00:00:00Z",
       archived_at: null,
     },
@@ -64,7 +64,6 @@ function caseProjection(
     source_revision: 1,
     schema_version: "case_analysis_trace_v1",
     status: "validated",
-    answer: text,
     summary: "The submitted material establishes a reported transaction.",
     trace_json: {
       version: "case_analysis_trace_v1",
@@ -266,6 +265,14 @@ describe("CaseOverviewView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Analyze again" }));
     expect(runAnalysis).toHaveBeenCalledOnce();
+  });
+
+  it("names the case's files in the analysis record", () => {
+    const projection = caseProjection({ page: true });
+    configureAndRender({ analysisResult: projection.result, sources: projection.sources });
+
+    fireEvent.click(screen.getByRole("button", { name: "Analysis record" }));
+    expect(screen.getByText("Documents").nextElementSibling).toHaveTextContent("statement.pdf");
   });
 
   it("says the analysis is being updated while a run is in flight", () => {

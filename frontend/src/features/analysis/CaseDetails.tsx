@@ -5,7 +5,6 @@ import type { SourceMessageRef } from "@/features/sources/types";
 import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
 import type { CaseImpact, CaseParty, CaseTimelineEvent } from "./types";
 
-/** Past this many rows a list shows the first ones and offers the rest. */
 const VISIBLE_ROWS = 6;
 
 interface CaseDetailsProps {
@@ -20,11 +19,6 @@ interface CaseDetailsProps {
   activeSourceKey: string | null;
 }
 
-/**
- * What happened when, who was involved, and what it cost, as the analysis
- * wrote them. Each row carries the sources of the claims it cites, so it can
- * be checked the way a finding can.
- */
 export function CaseDetails({
   timeline,
   parties,
@@ -55,13 +49,9 @@ export function CaseDetails({
             items={timeline}
             label="events"
             as="ol"
-            className="border-l border-line-strong"
+            className="space-y-5"
             render={(item, index) => (
-              <li key={index} className="relative pb-5 pl-5 last:pb-0">
-                <span
-                  aria-hidden="true"
-                  className="absolute top-[5px] -left-[5.5px] h-2.5 w-2.5 rounded-full border-2 border-surface bg-ink-secondary"
-                />
+              <li key={index}>
                 <p className="text-[13px] font-medium text-ink-secondary">{item.time}</p>
                 <p className="mt-0.5 text-[15px] leading-7 text-ink">{item.event}</p>
                 {backing(item, `timeline-${index}`)}
@@ -97,15 +87,9 @@ export function CaseDetails({
                 label="impacts"
                 className="space-y-3"
                 render={(impact, index) => (
-                  <li key={index} className="flex gap-3">
-                    <span
-                      aria-hidden="true"
-                      className="mt-[11px] h-1.5 w-1.5 shrink-0 rounded-full bg-unresolved"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-[15px] leading-7 text-ink">{impact.description}</p>
-                      {backing(impact, `impact-${index}`)}
-                    </div>
+                  <li key={index}>
+                    <p className="text-[15px] leading-7 text-ink">{impact.description}</p>
+                    {backing(impact, `impact-${index}`)}
                   </li>
                 )}
               />
@@ -175,7 +159,6 @@ function FoldedList<T>({
   );
 }
 
-/** The row's sources as chips, after an Inference tag when nothing it cites is reported. */
 function Backing({
   row,
   owner,
@@ -190,9 +173,7 @@ function Backing({
   if (!row.inferred && !row.sources.length) return null;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      {row.inferred && (
-        <span className="tag border border-line-strong text-ink-secondary">Inference</span>
-      )}
+      {row.inferred && <span className="text-xs text-ink-muted">Inference</span>}
       {row.sources.map((source, index) => {
         const key = `${owner}-${source.id}-${index}`;
         return (

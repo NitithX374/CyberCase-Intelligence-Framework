@@ -61,13 +61,6 @@ async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
     artifacts = await write_analysis(data, artifacts)
     artifacts = await bind_to_case(data, artifacts)
     return AnalysisAdvance(assessment, decision, artifacts)
-
-async def analyse_case(data: AnalysisInput) -> AnalysisArtifacts:
-    artifacts = AnalysisArtifacts()
-    artifacts = await retrieve_technical_context(data, artifacts)  # MITRE, if the gate says so
-    artifacts = await write_analysis(data, artifacts)              # the one model call
-    artifacts = await bind_to_case(data, artifacts)                # bind claims to sources
-    return artifacts
 ```
 
 `advance_case` is the production request path. An askable gap stops it before
@@ -75,8 +68,8 @@ the MITRE gate, RAG retrieval, full analysis model, and claim binding. The
 assessment row is stored with `status="assessment"` so its questions retain an
 `analysis_result_id`, but it never moves `Case.latest_analysis_result_id`.
 
-`analyse_case` remains the complete three-step composition used by experiments.
-There is no arm switch or config value that changes either composition. The
+The `verify` arm in `experiments/analysis_arms.py` runs the same three steps
+without the assessment. There is no arm switch or config value that changes either composition. The
 alternative compositions the thesis measures live in
 `backend/experiments/analysis_arms.py` and call these same functions.
 
@@ -148,17 +141,19 @@ over HTTP to the RAG service. The frontend never calls the RAG service.
 
 ## 6. Rules that look arbitrary and are not
 
-**`app/services/__init__.py` is empty, deliberately.** Python runs it on any
-`app.services.*` import. When it re-exported the subpackages, a router that
-wanted a JWT helper loaded the PDF renderer and the whole analysis pipeline —
-and one broken leaf broke the application. Leave it empty.
+**Package `__init__.py` files are empty, deliberately.** Python runs one on any
+import below it. When they re-exported their modules, a router that wanted a
+JWT helper loaded the PDF renderer and the whole analysis pipeline — and one
+broken leaf broke the application. Import from the module that defines the
+name. Only `models/__init__`, `analysis/contracts/__init__` and
+`analysis/mitre_gate/__init__` hold code.
 
 **`app/main.py` refuses to start with more than one worker.** The analysis runs
 inside the request that asked for it. Two workers would mean two analyses of the
 same case racing for the same row.
 
 **Heavy native libraries are imported inside the function that needs them.**
-`render_pdf.py` imports WeasyPrint inside `render_case_report_pdf`, because
+`reports/render.py` imports WeasyPrint inside `render_case_report_pdf`, because
 WeasyPrint loads Pango and Cairo through `ctypes` at import time and raises if
 they are missing. At module level, one absent system library would break every
 import of `app.services.reports`. Same reasoning as the empty barrel.

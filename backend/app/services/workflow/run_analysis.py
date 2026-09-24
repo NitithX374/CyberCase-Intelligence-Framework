@@ -1,5 +1,3 @@
-"""Advance a case without holding a database connection during model work."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -29,7 +27,8 @@ from app.services.analysis.steps.technical_context import (
     technical_context_key,
 )
 from app.services.chat.followup import asked_gap_keys, load_followup_history, rounds_asked
-from app.services.sources import SourceError, load_case_source_bundle
+from app.services.sources.case_source_bundle import load_case_source_bundle
+from app.services.sources.source_service import SourceError
 from app.services.workflow.analysis_storage import (
     AnalysisStep,
     external_context,
@@ -54,8 +53,15 @@ async def run_case_analysis(
         user_id=user_id,
         continuing_followup=continuing_followup,
     )
+    outcome = await think(pipeline, started, response_language)
+    return await store_outcome(
+        session_factory, started, outcome, continuing_followup=continuing_followup
+    )
+
+
+async def think(pipeline: Callable, started: CaseUnderAnalysis, response_language: str):
     try:
-        outcome = await pipeline(
+        return await pipeline(
             AnalysisInput(
                 sources=started.source_bundle,
                 response_language=response_language,
@@ -70,6 +76,14 @@ async def run_case_analysis(
     except CaseAnalysisFailure as error:
         raise CaseWorkflowError(error.code, error.message) from error
 
+
+async def store_outcome(
+    session_factory: Callable,
+    started: CaseUnderAnalysis,
+    outcome: object,
+    *,
+    continuing_followup: bool,
+) -> AnalysisStep:
     if isinstance(outcome, AnalysisAdvance):
         if isinstance(outcome.decision, Ask):
             return await store_assessment(

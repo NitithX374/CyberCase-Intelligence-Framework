@@ -17,7 +17,6 @@ function technicalProjection(): { result: CaseAnalysisResultRead; sources: CaseS
       case_id: caseId,
       source_kind: "narrative",
       document_id: null,
-      origin_message_id: null,
       exact_text: exactQuote,
       provenance_json: {},
       source_metadata_json: {},
@@ -31,7 +30,6 @@ function technicalProjection(): { result: CaseAnalysisResultRead; sources: CaseS
     source_revision: 1,
     schema_version: "case_analysis_trace_v1",
     status: "validated",
-    answer: exactQuote,
     summary: exactQuote,
     trace_json: {
       version: "case_analysis_trace_v1",
@@ -120,13 +118,9 @@ describe("TechnicalContextView", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: "PowerShell" })).toBeInTheDocument();
-    // The card quotes the sentence it rests on, and says how firmly.
     expect(screen.getByText(`“${exactQuote}”`)).toBeInTheDocument();
-    // The number comes from the retriever, not from the model rating itself.
-    expect(screen.getByText("Retrieval match")).toBeInTheDocument();
-    expect(screen.getByText("0.93")).toBeInTheDocument();
+    expect(screen.getByText("Match 0.93")).toBeInTheDocument();
     expect(screen.getByText("Someone ran commands through PowerShell.")).toBeInTheDocument();
-    // Why the technique fits this case is one step away, not on the card.
     expect(screen.queryByText("The claim describes PowerShell activity.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Why it applies" }));
     expect(screen.getByText("The claim describes PowerShell activity.")).toBeInTheDocument();

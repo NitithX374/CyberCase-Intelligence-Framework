@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { UserProfileMenu } from "./UserProfileMenu";
+import { UserProfileMenu } from "./AccountMenu";
 import { useAuth } from "./useAuth";
 
 vi.mock("./useAuth");
@@ -27,7 +27,6 @@ it("confirms before signing out the current account", async () => {
       id: "u1",
       email: "a@example.com",
       name: "Analyst",
-      avatar_url: null,
       oauth_provider: "password",
       created_at: "2026-09-09",
     },

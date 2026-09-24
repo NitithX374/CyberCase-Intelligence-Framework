@@ -14,7 +14,7 @@ from app.services.analysis.steps.quotes import (
     resolve_document_locator,
 )
 from app.services.document_ingestion.provenance import bind_exact_page_spans
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
 def _source(
@@ -371,10 +371,30 @@ def test_claim_malformed_raw_citations_dropped_without_failing_claim():
             ],
         }
     )
-    # Empty quote and empty source_id are dropped; valid quote with duplicate/out-of-range pages is sanitized
     assert len(claim.supporting_citations) == 1
     assert claim.supporting_citations[0].exact_quote == "valid quote"
     assert claim.supporting_citations[0].page_numbers == [1]
+
+
+def test_case_reference_lists_drop_invalid_entries_without_rejecting_claim():
+    claim = CaseAnalysisClaim.model_validate(
+        {
+            "claim_id": "A-01",
+            "claim_type": "reported",
+            "text": "Valid factual claim text",
+            "epistemic_status": "reported",
+            "supporting_source_ids": ["s1", "s1", "", 17],
+            "supporting_citations": [
+                {"source_id": "s1", "exact_quote": "valid quote"},
+                {"source_id": "s2", "exact_quote": "x" * 2_001},
+                {"source_id": "s3", "exact_quote": "another quote", "filename": 42},
+            ],
+        }
+    )
+
+    assert claim.supporting_source_ids == ["s1"]
+    assert [citation.source_id for citation in claim.supporting_citations] == ["s1", "s3"]
+    assert claim.supporting_citations[1].filename is None
 
 
 def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources():
@@ -387,7 +407,6 @@ def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources(
     t_result = t0 + timedelta(minutes=10)
     t_archived_later = t0 + timedelta(minutes=20)
 
-    # Source 1: active, created before analysis
     s1 = SimpleNamespace(
         id="00000000-0000-0000-0000-000000000001",
         source_kind="narrative",
@@ -398,8 +417,8 @@ def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources(
         archived_at=None,
         source_metadata_json={},
         document=None,
+        filename=None,
     )
-    # Source 2: archived AFTER analysis was run
     s2 = SimpleNamespace(
         id="00000000-0000-0000-0000-000000000002",
         source_kind="narrative",
@@ -410,8 +429,8 @@ def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources(
         archived_at=t_archived_later,
         source_metadata_json={},
         document=None,
+        filename=None,
     )
-    # Source 3: archived BEFORE analysis was run
     s3 = SimpleNamespace(
         id="00000000-0000-0000-0000-000000000003",
         source_kind="narrative",
@@ -422,6 +441,7 @@ def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources(
         archived_at=t0 + timedelta(minutes=5),
         source_metadata_json={},
         document=None,
+        filename=None,
     )
     case = SimpleNamespace(
         source_revision=3,
@@ -430,12 +450,11 @@ def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources(
     result = SimpleNamespace(
         created_at=t_result,
         source_revision=2,
-        trace_json={},  # No referenced claims -> triggers fallback
+        trace_json={},
     )
 
     bundle = case_source_bundle_for_analysis(case, result)
     assert bundle.revision == 2
-    # s1 (active) and s2 (archived after analysis) should be included; s3 (archived before analysis) should NOT be
     bundle_source_ids = {s.source_id for s in bundle.sources}
     assert s1.id in bundle_source_ids
     assert s2.id in bundle_source_ids

@@ -35,13 +35,13 @@ function source(
     case_id: "caseChat-1",
     source_kind: sourceKind,
     document_id: documentId,
-    origin_message_id: null,
+    filename,
     exact_text: exactText,
     provenance_json:
       pageNumber === null
         ? {}
         : { pages: [{ page_number: pageNumber, start_offset: 0, end_offset: exactText.length }] },
-    source_metadata_json: filename ? { filename } : {},
+    source_metadata_json: {},
     created_at: "2026-09-01T00:00:00Z",
     archived_at: null,
   };

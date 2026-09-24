@@ -58,8 +58,6 @@ interface MitreRow {
   name: string;
   tactic: string;
   description: string;
-  /** How closely the case text matched this technique. Absent on rows the
-   *  graph expansion reached, which were not scored against anything. */
   retrievalScore: number | null;
   retrievedBy: "vector" | "graph";
 }
@@ -132,7 +130,8 @@ function parseTechnicalAugmentation(
   ) {
     throw new Error("Technical augmentation associations are not bound to the analysis trace.");
   }
-  if (retrievalContextId !== trace.retrievalContextId)
+  const boundRetrievalId = rawStatus === "insufficient_context" ? null : retrievalContextId;
+  if (boundRetrievalId !== trace.retrievalContextId)
     throw new Error("Retrieval context is not bound to the analysis trace.");
   if (rawStatus === "retrieved_with_matches" && (!retrievalContextId || !trace.associations.length))
     throw new Error("Technical augmentation match status is incomplete.");
@@ -182,8 +181,6 @@ function mappedCard(
     ...new Set(association.claimIds.flatMap((claimId) => claims.get(claimId)?.supportingIds ?? [])),
   ];
   if (!sourceIds.length) throw new Error("MITRE association has no case source support.");
-  // Several claims can rest on the same sentence of the same source. That is
-  // one piece of case basis for this technique, however many claims cite it.
   const citations = [
     ...new Map(
       association.claimIds
@@ -196,7 +193,6 @@ function mappedCard(
     techniqueId: row.id,
     techniqueName: row.name || row.id,
     tactic: row.tactic,
-    // The analysis writes this for the reader; ATT&CK's own text is the fallback.
     shortPlainMeaning: association.plainMeaning || attackDescription(row.description),
     retrievalScore: row.retrievalScore,
     retrievedBy: row.retrievedBy,
@@ -288,8 +284,6 @@ function failureStageForCode(code: string | null): TechnicalFailureStage | null 
   return "augmentation";
 }
 
-/** ATT&CK's own text, without the "Subtechnique: Web Shell. " that the ingester
- *  prepends so each embedding carries the entity's type and name. */
 function attackDescription(description: string): string {
   return description.replace(/^[A-Za-z][A-Za-z ]{0,30}: [^.]{1,120}\.\s+/, "").trim();
 }

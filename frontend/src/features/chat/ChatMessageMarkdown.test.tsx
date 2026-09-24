@@ -1,15 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { ChatTranscript } from "./ChatTranscript";
 import type { ChatMessageRead } from "@/lib/api";
-
-beforeAll(() => {
-  Object.defineProperty(Element.prototype, "scrollIntoView", {
-    configurable: true,
-    value: vi.fn(),
-  });
-});
 
 describe("ChatMessageMarkdown", () => {
   it("renders headings, paragraphs, lists, bold text, blockquotes, inline code, and code blocks", () => {
@@ -118,15 +111,12 @@ describe("ChatTranscript Markdown vs Plain Text behavior", () => {
 
     render(<ChatTranscript messages={messages} isProcessing={false} />);
 
-    // User message remains plain text
     expect(screen.getByText("Check this **user message** with `code`.")).toBeInTheDocument();
 
-    // Assistant message renders Markdown (formatted bold text element)
     const boldElement = screen.getByText("assistant response");
     expect(boldElement).toHaveClass("font-semibold");
     expect(boldElement.tagName).toBe("STRONG");
 
-    // The reader's own words sit in a bubble; the answer is plain text.
     const userMessage = screen.getByText("Check this **user message** with `code`.");
     expect(userMessage).toHaveClass("bg-surface-nested", "whitespace-pre-wrap");
     expect(userMessage.querySelector("strong")).toBeNull();

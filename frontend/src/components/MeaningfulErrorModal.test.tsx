@@ -27,17 +27,14 @@ describe("MeaningfulErrorModal component", () => {
       />,
     );
 
-    // 1. Visible Title and Message
     expect(
       screen.getByRole("heading", { name: "การดำเนินการใช้เวลานานกว่าที่กำหนด" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/ระบบยังไม่สามารถยืนยันผลลัพธ์ได้ในขณะนี้/)).toBeInTheDocument();
 
-    // 2. Technical details disclosure is present
     const details = screen.getByText("Technical details");
     expect(details).toBeInTheDocument();
 
-    // 3. Raw technical string is inside the disclosure
     expect(screen.getByText("timeout of 15000ms exceeded (ECONNABORTED)")).toBeInTheDocument();
   });
 
@@ -78,7 +75,7 @@ describe("MeaningfulErrorModal component", () => {
 
     render(<MeaningfulErrorModal isOpen={true} error={timeoutError} onClose={handleClose} />);
 
-    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 

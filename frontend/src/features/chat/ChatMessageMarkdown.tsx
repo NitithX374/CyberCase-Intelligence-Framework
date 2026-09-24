@@ -39,7 +39,7 @@ export function ChatMessageMarkdown({ content }: ChatMessageMarkdownProps) {
             </h5>
           ),
           h6: ({ children }) => (
-            <h6 className="mt-2 mb-1 text-xs font-mono font-bold uppercase tracking-wider text-ink-secondary first:mt-0">
+            <h6 className="mt-2 mb-1 text-xs font-semibold text-ink-secondary first:mt-0">
               {children}
             </h6>
           ),

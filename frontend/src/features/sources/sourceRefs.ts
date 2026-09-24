@@ -38,7 +38,7 @@ function parseSourceRow(source: CaseSourceRead, ordinal: number): CaseSourceRef 
     text: source.exact_text,
     provenance,
     documentId: source.document_id || asString(metadata.document_id) || null,
-    filename: asString(metadata.filename) || asString(provenance.filename) || null,
+    filename: source.filename ?? null,
   };
 }
 
@@ -109,8 +109,6 @@ export function sourceRefs(
 function buildSourceRef(source: CaseSourceRef, citation: CaseCitation | null): SourceMessageRef {
   const pageBinding = citation ? resolvePageBinding(source, citation) : null;
   const sourceType = sourceTypeFor(source.kind);
-  // What a reader can recognise: the file it came from, or where it sits in
-  // the case. A source id is a UUID and says nothing to anyone.
   const identity = source.filename ?? `${sourceTypeLabel(sourceType)} #${source.ordinal}`;
   const label = pageBinding
     ? `${identity} · ${formatPageReference(pageBinding.pageNumbers)}`

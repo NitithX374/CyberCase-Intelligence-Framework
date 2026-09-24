@@ -6,7 +6,7 @@ test.describe("public authentication boundary", () => {
     await page.waitForTimeout(1500);
     await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 
     await page.goto("/case");
     await page.waitForTimeout(1500);

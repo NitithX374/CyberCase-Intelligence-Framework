@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
 @theme {
-  /* Manrope has no Thai glyphs, so Thai text falls through to Noto Sans Thai
-     per character instead of to whatever the operating system provides. */
   --font-sans: var(--font-manrope), var(--font-thai), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Consolas, monospace;
 
@@ -37,9 +35,7 @@
   --color-charcoal-pressed: #09090b;
   --color-ivory: #ffffff;
 
-  /* SEMANTIC ANNOTATIONS (Annotations only, never large surfaces) */
   --color-source: #0f766e;
-  --color-mitre: #6d28d9;
   --color-unresolved: #b45309;
   --color-established: #0f766e;
   --color-critical: #b91c1c;
@@ -66,8 +62,6 @@ body {
   scrollbar-width: thin;
 }
 
-/* Buttons. One size and one type treatment for every control, so a toolbar
-   never mixes 10px, 11px and 12px labels. */
 @utility btn-primary {
   @apply inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-ivory transition-colors duration-150 hover:bg-charcoal-hover active:bg-charcoal-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled motion-reduce:transition-none;
 }
@@ -84,11 +78,6 @@ body {
   @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors duration-150 hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none;
 }
 
-/* A small coloured label: a finding's status, a question's kind. */
-@utility tag {
-  @apply inline-flex h-5 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium whitespace-nowrap;
-}
-
 ::selection {
   background: #ccfbf1;
   color: #18181b;
@@ -103,7 +92,6 @@ body {
   outline: none;
 }
 
-/* A <details> used as a disclosure shows its own chevron, not the marker. */
 summary::-webkit-details-marker {
   display: none;
 }

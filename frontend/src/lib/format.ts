@@ -1,5 +1,3 @@
-/** Display formatting shared across the workspace. */
-
 type DateStyle = "day" | "dayTime" | "monthDay" | "full";
 
 const DATE_FORMATS: Record<DateStyle, Intl.DateTimeFormatOptions> = {

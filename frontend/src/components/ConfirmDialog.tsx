@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Dialog } from "./Dialog";
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -10,7 +10,6 @@ export interface ConfirmDialogProps {
   confirmLoadingLabel?: string;
   cancelLabel?: string;
   isProcessing?: boolean;
-  /** A destructive action gets a red confirm button. */
   tone?: "danger" | "neutral";
   onCancel: () => void;
   onConfirm: () => void;
@@ -32,39 +31,13 @@ export function ConfirmDialog({
   titleId = "confirm-dialog-title",
   descriptionId = "confirm-dialog-description",
 }: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    const element = dialogRef.current;
-    if (!element) return;
-
-    if (isOpen && !element.open) {
-      if (typeof element.showModal === "function") {
-        element.showModal();
-      } else {
-        element.open = true;
-      }
-      cancelButtonRef.current?.focus();
-    } else if (!isOpen && element.open) {
-      if (typeof element.close === "function") {
-        element.close();
-      } else {
-        element.open = false;
-      }
-    }
-  }, [isOpen]);
-
   return (
-    <dialog
-      ref={dialogRef}
-      aria-labelledby={titleId}
-      aria-describedby={description ? descriptionId : undefined}
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!isProcessing) onCancel();
-      }}
-      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-line bg-surface p-6 text-ink shadow-2xl shadow-black/10 backdrop:bg-ink/30"
+    <Dialog
+      isOpen={isOpen}
+      onDismiss={onCancel}
+      canDismiss={!isProcessing}
+      labelledBy={titleId}
+      describedBy={description ? descriptionId : undefined}
     >
       <h2 id={titleId} className="text-base font-semibold tracking-tight">
         {title}
@@ -76,8 +49,8 @@ export function ConfirmDialog({
       )}
       <div className="mt-6 flex flex-wrap justify-end gap-2">
         <button
-          ref={cancelButtonRef}
           type="button"
+          data-autofocus
           disabled={isProcessing}
           onClick={onCancel}
           className="btn-ghost"
@@ -95,6 +68,6 @@ export function ConfirmDialog({
           {isProcessing ? (confirmLoadingLabel ?? confirmLabel) : confirmLabel}
         </button>
       </div>
-    </dialog>
+    </Dialog>
   );
 }

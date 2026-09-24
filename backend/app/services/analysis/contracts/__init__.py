@@ -3,18 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from app.services.analysis.contracts.assessment import CaseAssessmentTrace
 from app.services.analysis.contracts.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisMode,
+    CaseAssessmentTrace,
     CaseClaimType,
     CaseEpistemicStatus,
+    CaseFollowupExchange,
     CaseGeneratedUnit,
     CaseSourceCitation,
-)
-from app.services.analysis.contracts.exchange import (
-    CaseFollowupExchange,
     followup_payload,
     followup_qa_id,
 )

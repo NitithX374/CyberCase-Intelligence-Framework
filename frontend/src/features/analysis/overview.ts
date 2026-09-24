@@ -111,10 +111,6 @@ function emptyCaseOverview(): CaseOverviewData {
   };
 }
 
-/**
- * A party, a moment or an impact rests on the claims it cites, so it is shown
- * with their sources, and marked when every one of them is an inference.
- */
 function claimBacking(findings: CaseFinding[]) {
   const byId = new Map(findings.map((finding) => [finding.id, finding]));
   return (claimIds: string[] = []): { sources: SourceMessageRef[]; inferred: boolean } => {
@@ -123,8 +119,6 @@ function claimBacking(findings: CaseFinding[]) {
     const sources = cited
       .flatMap((finding) => finding.supportingSources)
       .filter((source) => {
-        // One chip per place a reader would open: two quotes from the same
-        // page would otherwise show as two identical chips.
         const key = JSON.stringify([source.id, source.pageNumbers]);
         if (seen.has(key)) return false;
         seen.add(key);
@@ -171,9 +165,6 @@ export function parseCaseTrace(
   sources: CaseSourceRef[],
 ): ParsedCaseTrace {
   const trace = result.trace_json;
-  // The version and validation status are literals in the service contract, so
-  // the types already rule these out. They are still checked, because rendering
-  // an analysis that says it was not validated is the one mistake worth cost.
   if (
     !trace ||
     trace.version !== "case_analysis_trace_v1" ||
@@ -182,10 +173,6 @@ export function parseCaseTrace(
   ) {
     throw new Error("The saved Case analysis trace is unavailable or unsupported.");
   }
-  // The service validates the trace against its own contract before storing it,
-  // and the generated types carry that contract, so nothing is re-checked here.
-  // Sources come from their own query, so a claim can still cite one this page
-  // has not loaded — that is the only filter left.
   const knownSourceIds = new Set(sources.map((source) => source.id));
   return {
     summary: trace.summary || result.summary || "Case summary not provided.",

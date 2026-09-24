@@ -18,7 +18,7 @@ from app.services.analysis.steps.technical_context import (
     run_case_mitre_augmentation,
 )
 from app.services.clients.rag_client import RagCallFailure
-from app.services.workflow import external_context
+from app.services.workflow.run_analysis import external_context
 
 
 def test_nontechnical_case_does_not_call_rag():
@@ -201,9 +201,7 @@ def test_workflow_scenario_b_cyber_case_gate_retrieve_augments_analysis():
         assert call_order == ["gate", "rag", "analysis"]
         assert len(artifacts.trace.mitre_associations) == 1
         assert artifacts.trace.mitre_associations[0].technique_id == "T1059.001"
-        # Whether the retrieved context was used is only knowable once the trace
-        # exists, so the stored status is settled at persistence time.
-        stored = external_context(artifacts, 1)["technical_augmentation"]
+        stored = external_context(artifacts)["technical_augmentation"]
         assert stored["status"] == "retrieved_with_matches"
         assert stored["association_ids"] == ["MA-01"]
 

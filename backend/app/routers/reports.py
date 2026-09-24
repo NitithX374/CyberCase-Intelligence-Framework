@@ -17,8 +17,6 @@ router = APIRouter(prefix="/cases/{case_id}/reports", tags=["case-reports"])
 
 
 def report_http_error(error: ReportServiceError) -> HTTPException:
-    """The class already says which it is; it used to be read off the wording."""
-
     return HTTPException(
         status_code=(
             status.HTTP_404_NOT_FOUND

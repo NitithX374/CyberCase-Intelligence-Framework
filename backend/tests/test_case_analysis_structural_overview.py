@@ -15,7 +15,7 @@ from app.services.analysis.contracts import (
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.analysis.steps.write import execute_analysis_pipeline
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
 def test_case_overview_models_construct_and_normalize_claim_ids() -> None:
@@ -207,7 +207,7 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
                 CaseSourceBundle(revision=1, sources=(source,)),
                 "english",
                 AnalysisPipelineConfig(),
-                None,  # client
+                None,
                 receipt={"calls": []},
                 mode="case_overview",
             )
@@ -249,7 +249,6 @@ def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() 
     assert valid.timeline == []
     assert valid.impacts == []
 
-    # Missing involved_parties raises ValidationError
     with pytest.raises(ValidationError):
         CaseProviderAnalysis.model_validate(
             {
@@ -261,7 +260,6 @@ def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() 
             }
         )
 
-    # Missing timeline raises ValidationError
     with pytest.raises(ValidationError):
         CaseProviderAnalysis.model_validate(
             {
@@ -273,7 +271,6 @@ def test_case_provider_analysis_requires_structural_keys_allowing_empty_lists() 
             }
         )
 
-    # Missing impacts raises ValidationError
     with pytest.raises(ValidationError):
         CaseProviderAnalysis.model_validate(
             {

@@ -43,7 +43,7 @@ def test_retrieved_legal_relevance_is_persisted_in_both_analysis_json_fields():
     )
     started = SimpleNamespace(source_revision=1, followup_history=())
 
-    external = external_context(artifacts, 1)
+    external = external_context(artifacts)
     reusable = retrieval_context_row(artifacts, started)
 
     assert "mitre_table" not in external
@@ -101,7 +101,7 @@ def test_analysis_without_retrieval_has_no_reusable_or_legal_context():
         receipt={"technical_augmentation": {"status": "not_applicable"}},
     )
 
-    external = external_context(artifacts, 1)
+    external = external_context(artifacts)
     reusable = retrieval_context_row(
         artifacts,
         SimpleNamespace(source_revision=1, followup_history=()),

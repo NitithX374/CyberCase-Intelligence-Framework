@@ -10,15 +10,12 @@ def test_schema_contains_only_product_runtime_tables() -> None:
         "chat_messages",
         "case_reports",
         "case_documents",
-        "document_extractions",
         "case_sources",
         "case_analysis_results",
     }
 
 
 def test_run_and_retrieval_tables_are_gone() -> None:
-    """An analysis is not a job, so there is no row describing one."""
-
     assert "case_runs" not in Base.metadata.tables
     assert "rag_contexts" not in Base.metadata.tables
     assert "run_id" not in Base.metadata.tables["case_analysis_results"].c
@@ -61,8 +58,6 @@ def test_case_owns_its_analysis() -> None:
 
 
 def test_report_stores_content_and_nothing_else() -> None:
-    """A template render has no provider, prompt, latency or token count."""
-
     table = Base.metadata.tables["case_reports"]
     columns = set(table.c.keys())
     assert columns == {
@@ -75,15 +70,12 @@ def test_report_stores_content_and_nothing_else() -> None:
     }
     assert table.c["analysis_result_id"].nullable is False
     assert table.c["structured_report"].nullable is False
-    # One report per analysis; regenerating returns the one that exists.
     assert any(
         constraint.name == "uq_case_reports_analysis_result_id" for constraint in table.constraints
     )
 
 
 def test_retrieval_context_id_points_at_no_table() -> None:
-    """It labels what was retrieved; the retrieval itself is stored with the analysis."""
-
     table = Base.metadata.tables["case_analysis_results"]
     assert table.c["retrieval_context_id"].foreign_keys == set()
 

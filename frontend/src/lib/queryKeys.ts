@@ -7,8 +7,5 @@ export const caseQueryKeys = {
   sources: (caseId: string) => [...caseQueryKeys.case(caseId), "sources"] as const,
   analysis: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis"] as const,
   reports: (caseId: string) => [...caseQueryKeys.case(caseId), "reports"] as const,
-  // Not a query. A mutation key, so a running analysis can be found in the
-  // mutation cache by the case it belongs to rather than by the component
-  // that happened to start it.
   analysisRun: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis", "run"] as const,
 };

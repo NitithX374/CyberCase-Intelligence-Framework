@@ -1,22 +1,3 @@
-"""The analysis as two calls: one that reads the case, one that judges it.
-
-The single call in ``analysis.py`` asks for seven structures at once, five of
-which cross-reference claim ids that same call is inventing as it writes. This
-divides the work along the seam where it actually divides. The reading call
-copies quotations and assigns the ids; the judgement call only ever points at
-ids that already exist, so it never has to invent an identifier and then
-remember it.
-
-The reading call is also the one that is *not* shown the ATT&CK context, even
-when the retrieval stage found some. A claim that named a technique because the
-retrieval mentioned it would be grounded in the retrieval rather than in the
-case, and withholding the context is the cheapest way to make that impossible.
-
-It costs a second model call and sends the sources twice. ``analysis.py`` is
-left untouched, because the single call is the control this is measured
-against.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -49,21 +30,17 @@ from app.services.analysis.steps.write import (
     usable_technical_context,
     validate_source_bundle,
 )
-from app.services.sources import CaseSourceBundle
+from app.services.sources.case_source_bundle import CaseSourceBundle
 
 
 @dataclass(frozen=True)
 class CaseReadingOutput:
-    """What the reading call produced, and what it cost to produce."""
-
     reading: CaseProviderReading
     execution_receipt: dict[str, object]
 
 
 @asynccontextmanager
 async def http_client(client: httpx.AsyncClient | None):
-    """The caller's client, or one of our own that closes with the call."""
-
     if client is not None:
         yield client
         return
@@ -89,8 +66,6 @@ async def request_case_reading(
     client: httpx.AsyncClient | None = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseReadingOutput:
-    """Call one. The sources in, the claims out, and nothing judged."""
-
     validated_mode, validated_question = validate_analysis_request(mode, question)
     config = read_pipeline(pipeline_config)
     receipt = stage_receipt(config)
@@ -139,8 +114,6 @@ async def request_case_judgement(
     client: httpx.AsyncClient | None = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisOutput:
-    """Call two. The claims in, the summary, the gaps and the ATT&CK out."""
-
     validated_mode, validated_question = validate_analysis_request(mode, question)
     config = read_pipeline(pipeline_config)
     receipt = stage_receipt(config)
@@ -190,13 +163,6 @@ async def request_case_judgement(
 
 
 def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
-    """The reading as the judgement call is shown it.
-
-    The claims keep their citations. The judgement call is forbidden to copy a
-    quotation, but seeing which sentence carries a claim is what lets it tell a
-    well-supported claim from a thin one when it writes the summary.
-    """
-
     return {
         "claims": [claim.model_dump(mode="json") for claim in reading.claims],
         "involved_parties": [party.model_dump(mode="json") for party in reading.involved_parties],
@@ -212,13 +178,6 @@ def split_trace(
     mode: str,
     retrieval_context_id: str | None = None,
 ) -> CaseAnalysisTrace:
-    """The two calls joined into the trace the rest of the system reads.
-
-    Nothing here is checked against the case. Binding it is bind_to_case's job,
-    exactly as it is for the single call, so a split run without that step is
-    just as unchecked as a direct one.
-    """
-
     return CaseAnalysisTrace(
         analysis_mode=mode,
         summary=judgement.summary,

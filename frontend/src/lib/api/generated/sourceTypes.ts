@@ -14,7 +14,7 @@ export type CaseSourceRead = {
     case_id: string;
     source_kind: string;
     document_id: string | null;
-    origin_message_id: string | null;
+    filename?: string | null;
     exact_text: string;
     provenance_json?: {
         [key: string]: unknown;

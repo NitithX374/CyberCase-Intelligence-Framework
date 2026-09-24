@@ -7,13 +7,6 @@ import { Icon } from "@/components/icons";
 import { useDismiss } from "@/lib/useDismiss";
 import { formatDate } from "@/lib/format";
 
-/**
- * Where the analysis stands, in one line: fresh or not, and when it ran.
- *
- * The provenance a reviewer may want — which result, which source revision,
- * what it cited — is one click away rather than four columns of the page.
- * Running it again sits here too, beside the result it would replace.
- */
 export function AnalysisMeta({
   overview,
   result,
@@ -23,7 +16,6 @@ export function AnalysisMeta({
   overview: CaseOverviewData;
   result: CaseAnalysisResultRead | null;
   sources: CaseSourceRead[];
-  /** Absent when there is nothing to start: out of date has its own button. */
   onReanalyze?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +24,9 @@ export function AnalysisMeta({
   useDismiss(containerRef, isOpen, close);
 
   const isStale = result?.freshness === "stale";
-  const documentNames = uniqueDocumentNames(sources);
+  const documentNames = [
+    ...new Set(sources.flatMap((source) => (source.filename ? [source.filename] : []))),
+  ];
   const citedSourceCount = new Set(
     overview.findings.flatMap((finding) => [
       ...finding.supportingSources.map((source) => source.id),
@@ -42,11 +36,7 @@ export function AnalysisMeta({
 
   return (
     <div ref={containerRef} className="relative flex items-center gap-2 text-[13px] text-ink-muted">
-      <span className="inline-flex items-center gap-1.5">
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${isStale ? "bg-unresolved" : "bg-established"}`}
-          aria-hidden="true"
-        />
+      <span className={isStale ? "text-unresolved" : undefined}>
         {isStale ? "Out of date" : "Up to date"}
       </span>
       {result && (
@@ -111,13 +101,4 @@ function RecordRow({
       </dd>
     </div>
   );
-}
-
-function uniqueDocumentNames(entries: CaseSourceRead[]): string[] {
-  const names = new Set<string>();
-  for (const entry of entries) {
-    const filename = String(entry.source_metadata_json?.filename ?? "").trim();
-    if (filename) names.add(filename);
-  }
-  return [...names];
 }

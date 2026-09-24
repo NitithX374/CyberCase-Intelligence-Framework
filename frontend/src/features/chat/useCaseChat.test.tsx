@@ -1,17 +1,3 @@
-/**
- * Sending a message, and stopping.
- *
- * The panel showed "Answering…" over a conversation that had already been
- * answered, and kept showing it after a reload. Whether a send is in flight
- * was a flag kept beside the request, set on the way in and cleared on one of
- * the ways out — a failure left it set, and it was written to localStorage, so
- * the case came back still believing it was sending.
- *
- * These hold the shape that makes that impossible: the state belongs to the
- * request, so every way out of the request is a way out of the state, and a
- * fresh mount starts from nothing.
- */
-
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { act } from "react";
@@ -129,7 +115,6 @@ describe("whether a send is in flight", () => {
       source_revision: 2,
       schema_version: "case_analysis_trace_v1",
       status: "validated" as const,
-      answer: "Updated answer",
       summary: "Updated summary",
       trace_json: null,
       retrieval_context_id: null,

@@ -1,5 +1,3 @@
-"""Typed HTTP boundary for chat requests to the RAG service."""
-
 from __future__ import annotations
 
 import httpx
@@ -12,8 +10,6 @@ RAG_HTTP_TIMEOUT_SECONDS = 300.0
 
 
 class RagCallFailure(Exception):
-    """A safe, stable failure that may be persisted on a chat run."""
-
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
@@ -25,8 +21,6 @@ async def request_rag(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> QueryResponse:
-    """Call only the current completed-response RAG query boundary."""
-
     payload = QueryRequest(query=content, use_agent=True).model_dump()
     url = f"{settings.rag_service_url.rstrip('/')}/query"
     if client is not None:

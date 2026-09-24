@@ -47,7 +47,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   if (!caseId) {
     return (
       <CaseOverviewState
-        icon="sources"
         title="No case material yet"
         description="Add a narrative or a file to begin."
       />
@@ -61,7 +60,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   if (overview.unavailableReason) {
     return (
       <CaseOverviewState
-        icon="error"
         title="Analysis unavailable"
         description={overview.unavailableReason}
         actionLabel="Open sources"
@@ -84,7 +82,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
     const hasSources = caseSources.length > 0;
     return (
       <CaseOverviewState
-        icon="overview"
         title="Not analyzed yet"
         description={
           hasSources
@@ -129,14 +126,11 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
         ) : isStale ? (
           <div
             role="alert"
-            className="mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-unresolved/[0.08] py-2 pr-2 pl-3.5 text-[13px] text-ink"
+            className="mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-y border-line py-2 text-[13px] text-ink"
           >
-            <p className="flex items-center gap-2.5">
-              <span className="h-2 w-2 shrink-0 rounded-full bg-unresolved" aria-hidden="true" />
-              <span>
-                <span className="font-semibold">Analysis is based on older sources.</span>{" "}
-                <span className="text-ink-secondary">New material was added since.</span>
-              </span>
+            <p>
+              <span className="font-semibold">Analysis is based on older sources.</span>{" "}
+              <span className="text-ink-secondary">New material was added since.</span>
             </p>
             <button type="button" onClick={runAnalysis} className="btn-secondary h-8 px-3">
               Analyze latest sources
@@ -151,8 +145,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
               overview={overview}
               result={analysisResult}
               sources={sources}
-              // Out of date has its own button in the banner above, and a run
-              // in progress has nothing to start.
               onReanalyze={isStale || isUpdating ? undefined : runAnalysis}
             />
           }
@@ -305,14 +297,12 @@ function CaseOverviewSkeleton() {
 }
 
 function CaseOverviewState({
-  icon,
   title,
   description,
   actionLabel,
   onAction,
   processing,
 }: {
-  icon?: "sources" | "overview" | "error";
   title: string;
   description: string;
   actionLabel?: string;
@@ -321,7 +311,7 @@ function CaseOverviewState({
 }) {
   return (
     <EmptyState
-      icon={processing ? "spinner" : (icon ?? "overview")}
+      busy={processing}
       title={title}
       description={description}
       className="mx-auto min-h-[420px] w-full max-w-[52rem] justify-center px-5 py-16 sm:px-8"
@@ -342,11 +332,11 @@ const gapLabels: Record<CaseGap["status"], string> = {
   CONFLICTING: "Conflicting",
 };
 
-const gapTagClass: Record<CaseGap["status"], string> = {
-  CONFLICTING: "bg-critical/[0.07] text-critical",
-  AMBIGUOUS: "bg-unresolved/10 text-unresolved",
-  NOT_PROVIDED: "bg-unresolved/10 text-unresolved",
-  EXPLICITLY_UNKNOWN: "bg-surface-nested text-ink-secondary",
+const gapTextClass: Record<CaseGap["status"], string> = {
+  CONFLICTING: "text-critical",
+  AMBIGUOUS: "text-unresolved",
+  NOT_PROVIDED: "text-unresolved",
+  EXPLICITLY_UNKNOWN: "text-ink-secondary",
 };
 
 function OpenQuestionsSection({ gaps }: { gaps: CaseGap[] }) {
@@ -368,7 +358,9 @@ function OpenQuestionRow({ gap }: { gap: CaseGap }) {
   return (
     <li className="grid gap-x-4 gap-y-1.5 py-4 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
       <div className="flex flex-wrap items-start gap-1.5 sm:pt-0.5">
-        <span className={`tag ${gapTagClass[gap.status]}`}>{gapLabels[gap.status]}</span>
+        <span className={`text-[13px] font-medium ${gapTextClass[gap.status]}`}>
+          {gapLabels[gap.status]}
+        </span>
       </div>
       <div className="min-w-0">
         <h3 className="text-[15px] font-semibold leading-6 text-ink">{gap.topic}</h3>
@@ -376,10 +368,7 @@ function OpenQuestionRow({ gap }: { gap: CaseGap }) {
         {(gap.askable || gap.reason) && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {gap.askable && (
-              <span className="tag bg-accent-soft text-accent-strong">
-                <Icon name="chat" className="h-3.5 w-3.5" />
-                Needs an answer
-              </span>
+              <span className="text-xs font-medium text-ink-secondary">Needs an answer</span>
             )}
             {gap.reason && (
               <DisclosureToggle

@@ -8,7 +8,7 @@ Password registration validates the email format and normalizes it to lowercase.
 
 Email format validation does not establish mailbox existence or ownership. Password accounts are not marked email-verified. Email confirmation, resend links and SMTP configuration were removed at the user's request on 2026-09-10. Existing password accounts can sign in without a verification timestamp.
 
-Login requires matching saved credentials. Google and GitHub sign-in remain available when their provider credentials are configured. OAuth retains browser-bound state validation and requires a provider-verified email; an email registered through a different method is rejected rather than silently linked.
+Login requires matching saved credentials.
 
 ## Access and persistence
 
@@ -27,13 +27,10 @@ No SMTP host, sender address or mail-service credentials are required.
 | `JWT_SECRET_KEY` | Random signing secret of at least 32 characters |
 | `JWT_COOKIE_SECURE` | Set true for HTTPS deployment; false is for local HTTP |
 | `NEXT_PUBLIC_API_URL` | Backend public URL supplied when building the frontend |
-| `FRONTEND_BASE_URL` | Frontend origin used for OAuth redirects |
 | `CORS_ORIGINS` | Exact frontend origins allowed to call the API |
-| `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_GOOGLE_CLIENT_SECRET`, `OAUTH_GOOGLE_REDIRECT_URI` | Optional Google OAuth application |
-| `OAUTH_GITHUB_CLIENT_ID`, `OAUTH_GITHUB_CLIENT_SECRET`, `OAUTH_GITHUB_REDIRECT_URI` | Optional GitHub OAuth application |
 | `AUTH_DEV_LOGIN_ENABLED` | Defaults to false; keep disabled on shared deployments |
 
-Provider callback URLs must exactly match `/api/v1/auth/callback/google` or `/api/v1/auth/callback/github`. Cookies use SameSite=Lax, so frontend and backend should share a site; localhost with different ports works.
+Cookies use SameSite=Lax, so frontend and backend should share a site; localhost with different ports works.
 
 Install backend requirements, apply `python -m alembic upgrade head` against the intended PostgreSQL component settings, and rebuild the application services. The existing migration through 0004 is unchanged. Its nullable email-verification token fields remain unused; format-only registration neither populates them nor fabricates a verification timestamp. Existing account data is preserved.
 

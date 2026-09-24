@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useParams } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { detectResponseLanguage, getApiErrorMessage, type CaseRead } from "@/lib/api";
-import type { WorkspaceView } from "@/features/workspace/views";
+import type { WorkspaceView } from "@/features/workspace/routes";
 import { useCase, useCaseMutations, useCases } from "@/features/cases/queries";
 import { useCaseSources } from "@/features/sources/queries";
 import { useIsCaseAnalysisRunning, useStartCaseAnalysis } from "@/features/analysis/queries";
@@ -42,7 +42,6 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
     }
   });
   const [chatActionError, setChatActionError] = useState<string | null>(null);
-  // Published by the chat panel, which is where a follow-up answer is sent.
   const [isFollowupPending, setIsFollowupPending] = useState(false);
 
   const casesQuery = useCases();
@@ -54,27 +53,18 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
 
   const sources = useMemo(() => sourcesQuery.data ?? [], [sourcesQuery.data]);
   const startAnalysis = useStartCaseAnalysis(caseId ?? null);
-  // Not startAnalysis.isPending: that is this component's view of the run,
-  // and it is false again the moment the reader comes back from another case.
   const isAnalysisRunning = useIsCaseAnalysisRunning(caseId ?? null);
 
-  // Whether the panel is open is the layout's business — it owns the shell
-  // width. Everything inside it is the panel's.
   const setChatOpen = useCallback((next: boolean) => {
     setIsChatOpen(next);
     try {
       localStorage.setItem(CHAT_OPEN_STORAGE_KEY, String(next));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, []);
   const openChat = useCallback(() => setChatOpen(true), [setChatOpen]);
   const closeChat = useCallback(() => setChatOpen(false), [setChatOpen]);
   const toggleChat = useCallback(() => setChatOpen(!isChatOpen), [isChatOpen, setChatOpen]);
 
-  // The analysis belongs to the case, not to one of its pages, so the layout
-  // runs it. The pages that offer the button call it through the workspace
-  // context, and the Analysis tab shows it running from every view.
   const runAnalysis = useCallback(async () => {
     if (!caseId || isAnalysisRunning) return;
     try {
@@ -83,9 +73,6 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
           sources.map((source) => source.exact_text).join("\n"),
         ),
       });
-      // A step that ended with a question belongs in the chat. The overview
-      // would render the analysis behind it as unavailable, which it is not —
-      // it is simply not the case's answer yet.
       if (step.status === "need_followup") {
         openChat();
         return;
@@ -153,7 +140,7 @@ export default function CaseShellLayout({ children }: CaseShellLayoutProps) {
           isChatOpen={isChatOpen}
           onToggleChat={() => void toggleChat()}
         />
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
+        <main className="relative flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
           <WorkspaceActivityProvider
             isFollowupPending={isFollowupPending}
             runAnalysis={requestAnalysis}

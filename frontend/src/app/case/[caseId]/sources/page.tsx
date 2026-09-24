@@ -34,8 +34,6 @@ export default function SourcesPage() {
         isAddingNarrative={actions.isAddingNarrative}
         onUploadDocument={(file) => void actions.uploadDocument(file)}
         onAddNarrative={actions.addNarrative}
-        // Until the case has loaded, whether it needs analyzing is unknown, and
-        // guessing would flash the button at an up-to-date case.
         analysis={
           caseQuery.data
             ? {

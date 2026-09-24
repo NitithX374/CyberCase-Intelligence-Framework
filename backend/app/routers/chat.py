@@ -1,5 +1,3 @@
-"""The case's Ask/Chat panel: read the thread, send a message."""
-
 from __future__ import annotations
 
 from uuid import UUID
@@ -49,8 +47,6 @@ async def create_case_chat_message(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Send a message and get back what it produced. Slow when it re-analyses."""
-
     await commit_dependency_transaction(db)
     try:
         messages, step = await post_case_message(case_id=case_id, user_id=user.id, request=request)
@@ -59,8 +55,6 @@ async def create_case_chat_message(
             status_code=error.status_code,
             detail={"code": error.code, "message": error.message},
         ) from error
-    # An analysis that paused to ask something is not the case's answer, so it
-    # is not handed back as one. The question it asked is in ``messages``.
     finished = step.result if step is not None and not step.needs_followup else None
     return CaseChatResponse(
         messages=[ChatMessageRead.model_validate(message) for message in messages],

@@ -3,7 +3,6 @@
 import { useCallback, useState } from "react";
 import { addCaseSource, getApiErrorMessage } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
-import { useCaseMutations } from "@/features/cases/queries";
 import { useUploadCaseDocument } from "@/features/sources/queries";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -11,13 +10,8 @@ interface UseCaseSourceActionsOptions {
   caseId: string | null;
 }
 
-/**
- * Adding case material from the sources page. Analyzing it is the workspace's
- * `runAnalysis`, the same one the Analysis page uses.
- */
 export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
   const queryClient = useQueryClient();
-  const { upsertCase, updateMutation } = useCaseMutations();
   const uploadMutation = useUploadCaseDocument(caseId);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isAddingNarrative, setIsAddingNarrative] = useState(false);
@@ -36,12 +30,11 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
   );
 
   const addNarrative = useCallback(
-    async ({ title, text }: { title?: string; text: string }) => {
+    async ({ text }: { text: string }) => {
       if (!caseId || isAddingNarrative) return false;
       setActionError(null);
       setIsAddingNarrative(true);
       try {
-        if (title) upsertCase(await updateMutation.mutateAsync({ caseId, title }));
         await addCaseSource(caseId, {
           exact_text: text,
           source_kind: "narrative",
@@ -60,7 +53,7 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
         setIsAddingNarrative(false);
       }
     },
-    [caseId, isAddingNarrative, queryClient, updateMutation, upsertCase],
+    [caseId, isAddingNarrative, queryClient],
   );
 
   return {

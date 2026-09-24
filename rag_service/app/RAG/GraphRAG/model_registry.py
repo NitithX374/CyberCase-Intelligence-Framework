@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.6-luna"
+DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4.1-flash"
 
 
 @dataclass(frozen=True)
@@ -23,8 +23,8 @@ CURATED_MODEL_PRESETS: tuple[ModelPreset, ...] = (
         canonical_id="openai/gpt-5.6-luna",
         display_name="GPT 5.6 Luna",
         family="GPT",
-        aliases=("luna", "gpt-luna", "gpt-5.6-luna", "default"),
-        description="High-context general analysis and extraction (Default)",
+        aliases=("luna", "gpt-luna", "gpt-5.6-luna"),
+        description="High-context general analysis and extraction",
     ),
     ModelPreset(
         canonical_id="openai/gpt-4o-mini",
@@ -60,6 +60,20 @@ CURATED_MODEL_PRESETS: tuple[ModelPreset, ...] = (
         family="GPT",
         aliases=("4o", "gpt-4o", "openai-4o"),
         description="Flagship multimodal OpenAI model",
+    ),
+    ModelPreset(
+        canonical_id="qwen/qwen3.8-27b",
+        display_name="Qwen3.8-27B",
+        family="Qwen",
+        aliases=("qwen3.8-27b", "qwen"),
+        description="Qwen3.8-27B model",
+    ),
+    ModelPreset(
+        canonical_id=DEFAULT_OPENROUTER_MODEL,
+        display_name="DeepSeek V4.1 Flash",
+        family="DeepSeek",
+        aliases=("deepseek-v4.1-flash", "deepseek", "default"),
+        description="DeepSeek V4.1 Flash, the default",
     ),
 )
 
@@ -128,7 +142,8 @@ def format_model_table() -> str:
         )
     lines.append("=" * 95)
     lines.append("Usage Examples:")
-    lines.append("  python -m RAG.GraphRAG.main --model luna            (Default: openai/gpt-5.6-luna)")
+    lines.append("  python -m RAG.GraphRAG.main --model deepseek       (Default: deepseek/deepseek-v4.1-flash)")
+    lines.append("  python -m RAG.GraphRAG.main --model qwen3.8-27b    (qwen/qwen3.8-27b)")
     lines.append("  python -m RAG.GraphRAG.main --model 4o-mini         (openai/gpt-4o-mini)")
     lines.append("  python -m RAG.GraphRAG.main --model oss             (openai/gpt-oss-120b)")
     lines.append("  python -m RAG.GraphRAG.main --model sonnet          (anthropic/claude-3.5-sonnet)")
