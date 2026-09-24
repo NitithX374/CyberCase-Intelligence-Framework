@@ -16,9 +16,8 @@ import {
 } from "./technicalContext";
 
 interface TechnicalContextViewProps {
-  analysisResult: CaseAnalysisResultRead | null;
+  analysisResult: CaseAnalysisResultRead;
   sources: CaseSourceRead[] | null;
-  onOpenSources?: () => void;
 }
 
 const SCORE_EXPLANATION =
@@ -185,11 +184,7 @@ function statusMessage(data: TechnicalContextData): string {
   return messages[data.status];
 }
 
-export function TechnicalContextView({
-  analysisResult,
-  sources,
-  onOpenSources,
-}: TechnicalContextViewProps) {
+export function TechnicalContextView({ analysisResult, sources }: TechnicalContextViewProps) {
   const contextData = buildTechnicalContext(analysisResult, sources);
   const drawer = useSourceDrawer();
   const handleSelectSource = (
@@ -223,15 +218,9 @@ export function TechnicalContextView({
         </header>
 
         {!contextData.hasContext ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 py-5" role="status">
-            <p className="text-sm text-ink-muted">{message}</p>
-            {onOpenSources && !analysisResult && (
-              <button type="button" onClick={onOpenSources} className="btn-secondary h-8 px-3">
-                <Icon name="sources" className="h-3.5 w-3.5" />
-                Go to sources
-              </button>
-            )}
-          </div>
+          <p className="py-5 text-sm text-ink-muted" role="status">
+            {message}
+          </p>
         ) : (
           <>
             {message && (

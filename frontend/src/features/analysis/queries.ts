@@ -7,6 +7,7 @@ import {
   type CaseAnalysisResultRead,
 } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
+import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 
 export function useCaseAnalysis(caseId: string | null) {
   return useQuery<CaseAnalysisResultRead | null>({
@@ -29,6 +30,12 @@ export function useIsCaseAnalysisRunning(caseId: string | null): boolean {
     select: (mutation) => mutation.mutationId,
   });
   return running.length > 0;
+}
+
+export function useIsAnalysisUpdating(caseId: string | null): boolean {
+  const running = useIsCaseAnalysisRunning(caseId);
+  const answering = useIsFollowupPending(caseId);
+  return running || answering;
 }
 
 export function useStartCaseAnalysis(caseId: string | null) {

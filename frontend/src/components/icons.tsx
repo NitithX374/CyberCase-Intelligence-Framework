@@ -2,7 +2,6 @@ import type { HTMLAttributes } from "react";
 
 export type KnownIconName =
   | "overview"
-  | "sources"
   | "technical"
   | "issues"
   | "chat"
@@ -41,7 +40,6 @@ export type IconName = KnownIconName | (string & {});
 
 const nameToBoxicon: Record<string, string> = {
   overview: "bx-grid-alt",
-  sources: "bx-file",
   technical: "bx-shield-quarter",
   issues: "bx-error-circle",
   chat: "bx-message-square-dots",

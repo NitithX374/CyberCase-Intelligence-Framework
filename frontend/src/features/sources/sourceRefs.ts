@@ -1,243 +1,111 @@
-import type { CaseSourceRead } from "@/lib/api";
-import { asArray, asRecord, asString } from "@/lib/parse";
+import type { CaseAnalysisClaim, CaseSourceCitation, CaseSourceRead } from "@/lib/api";
+import { asArray } from "@/lib/parse";
 import { followupQuestion } from "./followupSources";
-import type { CaseCitation, CaseSourceRef, SourceMessageRef, SourcePage } from "./types";
+import type { CaseSourceRef, SourceMessageRef, SourcePage } from "./types";
+
+interface ProvenancePage {
+  page_number: number;
+  start_offset: number;
+  end_offset: number;
+}
 
 export function formatPageReference(pageNumbers: number[]): string {
   if (pageNumbers.length === 1) return `p. ${pageNumbers[0]}`;
   return `pp. ${formatPageList(pageNumbers)}`;
 }
 
-export function formatSourceCitationText(
-  sourceRef: Pick<SourceMessageRef, "label" | "pageNumbers" | "sourceType" | "isNativeSource">,
-): string {
-  if (sourceRef.isNativeSource) return sourceRef.label;
-  if (sourceRef.pageNumbers.length > 0) return formatPageReference(sourceRef.pageNumbers);
-  if (sourceRef.sourceType === "case_description") return "Case narrative";
-  if (sourceRef.sourceType === "followup_response") return "Follow-up answer";
-  return sourceRef.label;
-}
-
 export function parseCaseSources(rows: CaseSourceRead[]): CaseSourceRef[] {
   const counts = new Map<string, number>();
-  const refs = rows.map((row) => {
+  return rows.map((row) => {
     const ordinal = (counts.get(row.source_kind) ?? 0) + 1;
     counts.set(row.source_kind, ordinal);
-    return parseSourceRow(row, ordinal);
+    return {
+      id: row.id,
+      kind: row.source_kind,
+      ordinal,
+      text: row.exact_text,
+      pages: sourcePages(row),
+      filename: row.filename ?? null,
+      question: followupQuestion(row) || null,
+    };
   });
-  if (new Set(refs.map((ref) => ref.id)).size !== refs.length) {
-    throw new Error("The case has duplicate source IDs.");
-  }
-  return refs;
 }
 
-function parseSourceRow(source: CaseSourceRead, ordinal: number): CaseSourceRef {
-  const metadata = asRecord(source.source_metadata_json) ?? {};
-  const provenance = asRecord(source.provenance_json) ?? {};
-  if (!source.id || !source.source_kind || !source.exact_text.trim()) {
-    throw new Error("Case source binding is incomplete.");
-  }
+export function claimRefs(
+  claim: Pick<
+    CaseAnalysisClaim,
+    | "supporting_source_ids"
+    | "supporting_citations"
+    | "contradicting_source_ids"
+    | "contradicting_citations"
+  >,
+  sources: CaseSourceRef[],
+): { supporting: SourceMessageRef[]; contradicting: SourceMessageRef[] } {
   return {
-    id: source.id,
-    kind: source.source_kind,
-    ordinal,
-    text: source.exact_text,
-    provenance,
-    documentId: source.document_id || asString(metadata.document_id) || null,
-    filename: source.filename ?? null,
-    question: followupQuestion(source) || null,
+    supporting: refs(claim.supporting_source_ids, claim.supporting_citations, sources),
+    contradicting: refs(claim.contradicting_source_ids, claim.contradicting_citations, sources),
   };
 }
 
-export function parseCaseCitations(
-  value: unknown,
-  sourceIds: string[],
-  sources: CaseSourceRef[],
-): CaseCitation[] {
-  return asArray(value).flatMap((item) => {
-    const citation = asRecord(item);
-    const rawPages = asArray(citation?.page_numbers);
-    const parsedPages =
-      rawPages.every(isPositiveInteger) &&
-      rawPages.length <= 8 &&
-      new Set(rawPages).size === rawPages.length
-        ? rawPages
-        : [];
-    const sourceId = asString(citation?.source_id);
-    const exactQuote = typeof citation?.exact_quote === "string" ? citation.exact_quote : "";
-    if (!sourceIds.includes(sourceId) || !exactQuote || exactQuote.trim() !== exactQuote) {
-      return [];
-    }
-    const source = sources.find((candidate) => candidate.id === sourceId);
-    if (!source) {
-      return [];
-    }
-    const occurrences = quoteOccurrences(source.text, exactQuote);
-    if (occurrences.length === 0) {
-      return [];
-    }
-    const parsed: CaseCitation = {
-      sourceId,
-      exactQuote,
-      documentId: asString(citation?.document_id) || null,
-      filename: asString(citation?.filename) || null,
-      pageNumbers: parsedPages,
-    };
-    if (
-      occurrences.length > 1 &&
-      (!parsed.pageNumbers.length || !resolvePageBinding(source, parsed))
-    ) {
-      return [
-        {
-          ...parsed,
-          pageNumbers: [],
-        },
-      ];
-    }
-    return [parsed];
-  });
-}
-
-export function sourceRefs(
-  ids: string[],
-  citations: CaseCitation[],
+function refs(
+  ids: string[] = [],
+  citations: CaseSourceCitation[] = [],
   sources: CaseSourceRef[],
 ): SourceMessageRef[] {
   return ids.flatMap((id) => {
     const source = sources.find((candidate) => candidate.id === id);
     if (!source) return [];
-    const matches = citations.filter((citation) => citation.sourceId === id);
-    return matches.length
-      ? matches.map((citation) => buildSourceRef(source, citation))
-      : [buildSourceRef(source, null)];
+    const cited = citations.filter((citation) => citation.source_id === id);
+    return cited.length
+      ? cited.map((citation) => sourceRef(source, citation))
+      : [sourceRef(source, null)];
   });
 }
 
-function buildSourceRef(source: CaseSourceRef, citation: CaseCitation | null): SourceMessageRef {
-  const pageBinding = citation ? resolvePageBinding(source, citation) : null;
-  const sourceType = sourceTypeFor(source.kind);
-  const identity =
-    source.filename ??
-    (sourceType === "followup_response"
-      ? `Follow-up answer ${source.id}`
-      : `Case narrative #${source.ordinal}`);
-  const label = pageBinding
-    ? `${identity} · ${formatPageReference(pageBinding.pageNumbers)}`
-    : identity;
+function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): SourceMessageRef {
+  const quote = citation?.exact_quote || null;
+  const pages = (citation?.page_numbers ?? []).flatMap(
+    (pageNumber) => source.pages.find((page) => page.pageNumber === pageNumber) ?? [],
+  );
+  const pageNumbers = pages.map((page) => page.pageNumber);
+  const identity = sourceIdentity(source);
   return {
     id: source.id,
-    ordinal: source.ordinal,
-    label,
+    label: pageNumbers.length ? `${identity} · ${formatPageReference(pageNumbers)}` : identity,
     excerpt: source.text.length > 120 ? `${source.text.slice(0, 120)}…` : source.text,
-    sourceType,
-    sourceTypeLabel: identity,
-    fullContent: source.text,
-    displayContent: pageBinding
-      ? pageBinding.pages.map((page) => page.text).join("\n\n")
-      : contextualExcerpt(source.text, citation?.exactQuote),
-    exactQuote: citation?.exactQuote ?? null,
-    documentId: source.documentId,
+    displayContent: pages.length
+      ? pages.map((page) => page.text).join("\n\n")
+      : contextualExcerpt(source.text, quote),
+    exactQuote: quote,
     filename: source.filename,
-    pageNumbers: pageBinding?.pageNumbers ?? [],
-    sourcePages: pageBinding?.pages ?? [],
-    isNativeSource: true,
-    question: source.question ?? null,
+    pageNumbers,
+    sourcePages: pages,
+    question: source.question,
   };
 }
 
-interface CasePageBinding {
-  pages: SourcePage[];
-  pageNumbers: number[];
+function sourceIdentity(source: CaseSourceRef): string {
+  if (source.filename) return source.filename;
+  if (source.kind === "followup_answer") return `Follow-up answer ${source.id}`;
+  return `Case narrative #${source.ordinal}`;
 }
 
-function resolvePageBinding(source: CaseSourceRef, citation: CaseCitation): CasePageBinding | null {
-  if (!citation.documentId || !citation.filename || citation.pageNumbers.length === 0) return null;
-  if (source.documentId !== citation.documentId || source.filename !== citation.filename)
-    return null;
-  const spans = asArray(source.provenance.pages).flatMap((value, index, values) => {
-    const span = asRecord(value);
-    const pageNumber = span?.page_number;
-    const start = span?.start_offset;
-    const end = span?.end_offset;
-    const previous = index > 0 ? asRecord(values[index - 1]) : null;
-    const previousEnd = previous?.end_offset;
-    const valid =
-      isInteger(pageNumber) &&
-      isInteger(start) &&
-      isInteger(end) &&
-      end > start &&
-      start >= 0 &&
-      end <= source.text.length &&
-      (!isInteger(previousEnd) || start >= previousEnd);
-    return valid ? [{ pageNumber, start, end }] : [];
-  });
-  const occurrences = quoteOccurrences(source.text, citation.exactQuote);
-  const pageSets = occurrences.map((start) =>
-    spans
-      .filter((span) => span.start < start + citation.exactQuote.length && span.end > start)
-      .map((span) => span.pageNumber),
-  );
-  if (
-    !pageSets.every((pages) => pages.length > 0 && sameNumbers(pages, citation.pageNumbers)) ||
-    new Set(pageSets.map((pages) => pages.join(","))).size !== 1
-  )
-    return null;
-  const start = occurrences[0];
-  const end = start + citation.exactQuote.length;
-  if (
-    !spans.some((span) => span.start <= start && start < span.end) ||
-    !spans.some((span) => span.start < end && end <= span.end)
-  )
-    return null;
-  const pages = citation.pageNumbers.map((pageNumber) =>
-    spans.find((span) => span.pageNumber === pageNumber),
-  );
-  if (pages.some((page) => !page)) return null;
-  return {
-    pageNumbers: citation.pageNumbers,
-    pages: pages.map((page) => ({
-      pageNumber: page!.pageNumber,
-      text: source.text.slice(page!.start, page!.end),
-      exactQuote: source.text.slice(Math.max(page!.start, start), Math.min(page!.end, end)),
-    })),
-  };
+function sourcePages(row: CaseSourceRead): SourcePage[] {
+  const spans = asArray(row.provenance_json?.pages) as ProvenancePage[];
+  if (!spans.length) return [];
+  const characters = Array.from(row.exact_text);
+  return spans.map((span) => ({
+    pageNumber: span.page_number,
+    text: characters.slice(span.start_offset, span.end_offset).join(""),
+  }));
 }
 
-function sourceTypeFor(kind: string): SourceMessageRef["sourceType"] {
-  if (kind === "followup_answer") return "followup_response";
-  if (kind === "narrative" || kind === "document") return "case_description";
-  throw new Error("Unsupported native source kind.");
-}
-
-function quoteOccurrences(content: string, quote: string): number[] {
-  const occurrences: number[] = [];
-  let start = content.indexOf(quote);
-  while (start >= 0) {
-    occurrences.push(start);
-    start = content.indexOf(quote, start + 1);
-  }
-  return occurrences;
-}
-
-function contextualExcerpt(content: string, exactQuote?: string): string {
-  if (!exactQuote) return content.length > 640 ? `${content.slice(0, 640)}…` : content;
-  const start = content.indexOf(exactQuote);
-  if (start < 0) return content.length > 640 ? `${content.slice(0, 640)}…` : content;
+function contextualExcerpt(content: string, exactQuote: string | null): string {
+  const start = exactQuote ? content.indexOf(exactQuote) : -1;
+  if (!exactQuote || start < 0) return content.length > 640 ? `${content.slice(0, 640)}…` : content;
   const lower = Math.max(0, start - 220);
   const upper = Math.min(content.length, start + exactQuote.length + 220);
   return `${lower > 0 ? "…" : ""}${content.slice(lower, upper)}${upper < content.length ? "…" : ""}`;
-}
-
-function sameNumbers(left: number[], right: number[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function isInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value);
-}
-
-function isPositiveInteger(value: unknown): value is number {
-  return isInteger(value) && value > 0;
 }
 
 function formatPageList(pageNumbers: number[]): string {

@@ -1,4 +1,4 @@
-import type { CaseChatDetail, CaseChatResponse, CaseChatStatus, ChatMessageRead } from "@/lib/api";
+import type { CaseChatRead, CaseChatResponse, ChatMessageRead } from "@/lib/api";
 
 export function message(
   caseId: string,
@@ -21,9 +21,9 @@ export function message(
 
 export function caseChat(
   caseId = "a",
-  status: CaseChatStatus = "idle",
+  status: CaseChatRead["status"] = "idle",
   messages: ChatMessageRead[] = [],
-): CaseChatDetail {
+): CaseChatRead {
   return { case_id: caseId, status, messages };
 }
 

@@ -6,6 +6,8 @@ import type { CaseGap } from "@/features/analysis/types";
 import type { SourceMessageRef } from "@/features/sources/types";
 import { buildCaseOverview } from "./overview";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
+import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
+import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
 import { useSourceDrawer } from "@/features/sources/useSourceDrawer";
 import { casePath } from "@/features/workspace/routes";
@@ -17,14 +19,10 @@ import { ChatMessageMarkdown } from "@/features/chat/ChatMessageMarkdown";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 import { EmptyState } from "@/components/EmptyState";
-import { useWorkspaceActivity } from "@/features/workspace/WorkspaceActivityContext";
 
-interface CaseOverviewViewProps {
-  caseId: string | null;
-}
-
-export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
+export function CaseOverviewView({ caseId }: { caseId: string }) {
   const router = useRouter();
+  const runAnalysis = useRunCaseAnalysis(caseId);
 
   const analysisQuery = useCaseAnalysis(caseId);
   const sourceRows = useCaseSourceRows(caseId);
@@ -34,25 +32,14 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
   const isAnalysisRunning = useIsCaseAnalysisRunning(caseId);
 
   const analysisResult = analysisQuery.data ?? null;
-  const { isFollowupPending, runAnalysis } = useWorkspaceActivity();
+  const isFollowupPending = useIsFollowupPending(caseId);
   const [overviewTab, setOverviewTab] = useState<"findings" | "questions">("findings");
   const overview = useMemo(
     () => buildCaseOverview(analysisResult, sources),
     [analysisResult, sources],
   );
 
-  const navigateToSources = () => {
-    if (caseId) router.push(casePath(caseId, "sources"));
-  };
-
-  if (!caseId) {
-    return (
-      <CaseOverviewState
-        title="No case material yet"
-        description="Add a narrative or a file to begin."
-      />
-    );
-  }
+  const navigateToSources = () => router.push(casePath(caseId, "sources"));
 
   if ((analysisQuery.isLoading && !analysisResult) || (sourcesLoading && analysisResult)) {
     return <CaseOverviewSkeleton />;

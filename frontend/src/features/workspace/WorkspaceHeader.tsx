@@ -41,11 +41,7 @@ export function WorkspaceHeader({
 }: WorkspaceHeaderProps) {
   const [renaming, setRenaming] = useState(false);
   const displayCaseTitle = activeCase?.title || "New case";
-  const analysisMarker = isAnalyzing
-    ? "bg-accent motion-safe:animate-pulse"
-    : isStale
-      ? "bg-unresolved"
-      : null;
+  const analysisStatus = isAnalyzing ? "running" : isStale ? "out of date" : null;
 
   return (
     <header className="shrink-0 border-b border-line bg-surface">
@@ -98,7 +94,7 @@ export function WorkspaceHeader({
         >
           {workspaceTabs.map((item) => {
             const selected = item.view === activeView;
-            const marker = item.view === "analysis" ? analysisMarker : null;
+            const status = item.view === "analysis" ? analysisStatus : null;
             return (
               <button
                 key={item.view}
@@ -117,8 +113,13 @@ export function WorkspaceHeader({
                 }`}
               >
                 {item.label}
-                {marker && (
-                  <span className={`h-1.5 w-1.5 rounded-full ${marker}`} aria-hidden="true" />
+                {status && " "}
+                {status && (
+                  <span
+                    className={`text-xs font-normal ${isAnalyzing ? "text-ink-muted" : "text-unresolved"}`}
+                  >
+                    {status}
+                  </span>
                 )}
               </button>
             );

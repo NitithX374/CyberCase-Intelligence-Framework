@@ -2,8 +2,7 @@
 
 import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import Link from "next/link";
-import axios from "axios";
-import { getApiBaseUrl, type UserProfile } from "@/lib/api";
+import { login, register as registerAccount } from "@/lib/api";
 import { detailMessage } from "@/lib/userFacingError";
 import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { Icon } from "@/components/icons";
@@ -11,12 +10,7 @@ import { Icon } from "@/components/icons";
 const MIN_PASSWORD_LENGTH = 8;
 
 export function AccountForm({ register = false }: { register?: boolean }) {
-  const [error, setError] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
-    if (!params.get("error")) return null;
-    return "Authentication failed. Please check your credentials and try again.";
-  });
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,18 +33,14 @@ export function AccountForm({ register = false }: { register?: boolean }) {
     const form = new FormData(event.currentTarget);
     setBusy(true);
     setError(null);
+    const email = String(form.get("email") ?? "");
     try {
-      const { data } = await axios.post<UserProfile>(
-        `${getApiBaseUrl()}/auth/${register ? "register" : "login"}`,
-        {
-          email: form.get("email"),
-          password: form.get("password"),
-          ...(register ? { name: form.get("name") } : {}),
-        },
-      );
-      localStorage.setItem("cybercase:account", data.id);
+      const user = register
+        ? await registerAccount({ email, password, name: String(form.get("name") ?? "") })
+        : await login({ email, password });
+      localStorage.setItem("cybercase:account", user.id);
       localStorage.setItem("cybercase:session-change", String(Date.now()));
-      const route = localStorage.getItem(`cybercase:${data.id}:route`);
+      const route = localStorage.getItem(`cybercase:${user.id}:route`);
       window.location.assign(route?.startsWith("/case/") ? route : "/case");
     } catch (err) {
       setError(detailMessage(err, "Unable to sign in. Please try again."));

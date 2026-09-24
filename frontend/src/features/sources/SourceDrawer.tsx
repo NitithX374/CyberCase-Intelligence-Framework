@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef } from "react";
 import type { SourceMessageRef } from "@/features/sources/types";
-import { formatSourceCitationText } from "@/features/sources/sourceRefs";
 import { Icon } from "@/components/icons";
 
 export function SourceDrawer({
@@ -18,12 +17,7 @@ export function SourceDrawer({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const citation = formatSourceCitationText(sourceRef);
-  const sourceTitle =
-    sourceRef.filename ??
-    (sourceRef.isNativeSource || sourceRef.sourceType === "case_description"
-      ? citation
-      : `${citation} #${sourceRef.ordinal}`);
+  const sourceTitle = sourceRef.filename ?? sourceRef.label;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -69,8 +63,8 @@ export function SourceDrawer({
               <span className="sr-only">Source: </span>
               {sourceTitle}
             </h2>
-            {sourceRef.filename && citation !== sourceTitle && (
-              <p className="text-[13px] text-ink-muted">{citation}</p>
+            {sourceRef.label !== sourceTitle && (
+              <p className="text-[13px] text-ink-muted">{sourceRef.label}</p>
             )}
           </div>
           <button type="button" onClick={onClose} aria-label="Close source" className="icon-btn">

@@ -1,62 +1,24 @@
-import type { CaseChatRead, ChatMessageRead } from "./generated/chatTypes";
-import type {
-  CaseReportRead,
-  ReportClaim,
-  ReportSection,
-  StructuredReport,
-} from "./generated/reportTypes";
+import type { components } from "./generated/openapi";
 
-export type CaseRead = import("./generated/caseTypes").CaseRead;
-export type { ChatMessageRead } from "./generated/chatTypes";
-export type CaseChatDetail = Omit<CaseChatRead, "messages"> & {
-  messages: ChatMessageRead[];
-};
-export type CaseChatStatus = CaseChatRead["status"];
+type Schemas = components["schemas"];
 
-export type { CaseChatRead } from "./generated/chatTypes";
-export type {
-  AnalysisStepRead,
-  CaseAnalysisClaim,
-  CaseAnalysisCreate,
-  CaseAnalysisGap,
-  CaseAnalysisResultRead,
-  CaseAnalysisTrace,
-  CaseChatResponse,
-  CaseGroundingReport,
-  CaseImpactItem,
-  CaseInvolvedParty,
-  CaseMitreAssociation,
-  CaseSourceCitation,
-  CaseTimelineItem,
-  FollowupQuestionRead,
-} from "./generated/analysisTypes";
-export type { CaseDocumentRead } from "./generated/caseTypes";
-export type { CaseSourceCreate, CaseSourceRead } from "./generated/sourceTypes";
-export type { CaseReportCreate } from "./generated/reportTypes";
-export type CaseReportClaim = Omit<ReportClaim, "source_ids" | "mitre_technique_ids"> & {
-  source_ids: string[];
-  mitre_technique_ids: string[];
-};
-
-export type CaseReportSection = Omit<ReportSection, "paragraphs" | "items"> & {
-  paragraphs: string[];
-  items: string[];
-};
-
-export type CaseStructuredReport = Omit<StructuredReport, "sections" | "claims" | "limitations"> & {
-  sections: CaseReportSection[];
-  claims: CaseReportClaim[];
-  limitations: string[];
-};
-
-export type CaseReport = Omit<CaseReportRead, "report"> & {
-  report: CaseStructuredReport;
-};
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  name: string;
-  oauth_provider: string;
-  created_at: string;
-}
+export type AnalysisStepRead = Schemas["AnalysisStepRead"];
+export type CaseAnalysisClaim = Schemas["CaseAnalysisClaim"];
+export type CaseAnalysisCreate = Schemas["CaseAnalysisCreate"];
+export type CaseAnalysisGap = Schemas["CaseAnalysisGap"];
+export type CaseAnalysisResultRead = Schemas["CaseAnalysisResultRead"];
+export type CaseAnalysisTrace = Schemas["CaseAnalysisTrace"];
+export type CaseChatRead = Schemas["CaseChatRead"];
+export type CaseChatResponse = Schemas["CaseChatResponse"];
+export type CaseDocumentRead = Schemas["CaseDocumentRead"];
+export type CaseMitreAssociation = Schemas["CaseMitreAssociation"];
+export type CaseRead = Schemas["CaseRead"];
+export type CaseReportCreate = Schemas["CaseReportCreate"];
+export type CaseReportRead = Schemas["CaseReportRead"];
+export type CaseSourceCitation = Schemas["CaseSourceCitation"];
+export type CaseSourceCreate = Schemas["CaseSourceCreate"];
+export type CaseSourceRead = Schemas["CaseSourceRead"];
+export type ChatMessageRead = Schemas["ChatMessageRead"];
+export type PasswordLoginRequest = Schemas["PasswordLoginRequest"];
+export type RegisterRequest = Schemas["RegisterRequest"];
+export type UserRead = Schemas["UserRead"];

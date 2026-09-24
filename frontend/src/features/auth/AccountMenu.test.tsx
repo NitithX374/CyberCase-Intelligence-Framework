@@ -10,7 +10,6 @@ beforeEach(() => {
     user: null,
     sessionError: null,
     isLoading: false,
-    isAuthenticated: false,
     logout,
     isLoggingOut: false,
     refetchSession: vi.fn(),

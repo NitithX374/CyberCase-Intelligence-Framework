@@ -20,7 +20,7 @@ export function AccountGate({ children }: { children: ReactNode }) {
     }
 
     if (!isAuthPage && !user && !sessionError) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      router.replace("/login");
       return;
     }
 

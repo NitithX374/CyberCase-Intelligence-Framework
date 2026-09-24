@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CyberCaseLogo } from "@/components/CyberCaseLogo";
-import { DeleteCaseDialog } from "@/features/cases/DeleteCaseDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { Icon } from "@/components/icons";
 import type { CaseRead } from "@/lib/api";
@@ -150,11 +150,18 @@ export function CaseLibraryPage() {
         )}
       </div>
 
-      <DeleteCaseDialog
-        caseRecord={deleteCandidate}
-        isDeleting={deleteMutation.isPending}
+      <ConfirmDialog
+        isOpen={Boolean(deleteCandidate)}
+        title="Delete this case?"
+        description={`“${deleteCandidate?.title ?? "This case"}” and its sources, chat and reports will be permanently deleted.`}
+        confirmLabel="Delete case"
+        confirmLoadingLabel="Deleting…"
+        isProcessing={deleteMutation.isPending}
+        tone="danger"
         onCancel={() => setDeleteCandidate(null)}
         onConfirm={() => void confirmDelete()}
+        titleId="delete-case-title"
+        descriptionId="delete-case-description"
       />
     </main>
   );

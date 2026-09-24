@@ -7,22 +7,21 @@ import { EmptyState } from "@/components/EmptyState";
 import { toUserFacingError } from "@/lib/userFacingError";
 import { useCase } from "@/features/cases/queries";
 import { useCaseDocuments } from "@/features/sources/queries";
-import { useIsCaseAnalysisRunning } from "@/features/analysis/queries";
+import { useIsAnalysisUpdating } from "@/features/analysis/queries";
+import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { useCaseSourceActions } from "@/features/sources/useCaseSourceActions";
 import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
-import { useWorkspaceActivity } from "@/features/workspace/WorkspaceActivityContext";
 
 export default function SourcesPage() {
-  const params = useParams();
-  const caseId = params?.caseId as string;
+  const { caseId } = useParams<{ caseId: string }>();
 
-  const caseQuery = useCase(caseId ?? null);
-  const documentsQuery = useCaseDocuments(caseId ?? null);
-  const isAnalysisRunning = useIsCaseAnalysisRunning(caseId ?? null);
-  const { isFollowupPending, runAnalysis } = useWorkspaceActivity();
+  const caseQuery = useCase(caseId);
+  const documentsQuery = useCaseDocuments(caseId);
+  const isAnalyzing = useIsAnalysisUpdating(caseId);
+  const runAnalysis = useRunCaseAnalysis(caseId);
 
-  const sourceRows = useCaseSourceRows(caseId ?? null);
-  const actions = useCaseSourceActions({ caseId: caseId ?? null });
+  const sourceRows = useCaseSourceRows(caseId);
+  const actions = useCaseSourceActions({ caseId });
 
   if (documentsQuery.isLoadingError || sourceRows.isError) {
     return (
@@ -60,7 +59,7 @@ export default function SourcesPage() {
           caseQuery.data
             ? {
                 freshness: caseQuery.data.analysis_freshness,
-                isRunning: isAnalysisRunning || isFollowupPending,
+                isRunning: isAnalyzing,
                 onAnalyze: runAnalysis,
               }
             : undefined

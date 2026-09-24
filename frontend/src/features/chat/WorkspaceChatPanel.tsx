@@ -16,7 +16,6 @@ interface WorkspaceChatPanelProps {
   onOpenChat: () => void;
   onCloseChat: () => void;
   onViewChange: (view: WorkspaceView) => void;
-  onActivityChange: (isAnsweringQuestion: boolean) => void;
 }
 
 export function WorkspaceChatPanel({
@@ -25,7 +24,6 @@ export function WorkspaceChatPanel({
   onOpenChat,
   onCloseChat,
   onViewChange,
-  onActivityChange,
 }: WorkspaceChatPanelProps) {
   const chat = useCaseChat({ caseId });
   const analysisQuery = useCaseAnalysis(caseId);
@@ -35,10 +33,6 @@ export function WorkspaceChatPanel({
   const messages = chat.messages;
   const isSending = chat.isSending;
   const isAnsweringQuestion = chat.isAnsweringQuestion;
-
-  useEffect(() => {
-    onActivityChange(isAnsweringQuestion);
-  }, [isAnsweringQuestion, onActivityChange]);
 
   const pendingQuestionId = chat.pendingQuestionId;
   const announcedQuestionRef = useRef<string | null>(null);

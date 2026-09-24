@@ -32,7 +32,6 @@ function renderPanel() {
       onOpenChat={vi.fn()}
       onCloseChat={vi.fn()}
       onViewChange={vi.fn()}
-      onActivityChange={vi.fn()}
     />,
   );
 }

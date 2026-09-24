@@ -1,14 +1,13 @@
 "use client";
 
 import type { SourceMessageRef } from "@/features/sources/types";
-import { formatSourceCitationText } from "@/features/sources/sourceRefs";
 
 interface SourceCitationChipProps {
   sourceRef: SourceMessageRef;
   sourceKey: string;
   isActive: boolean;
   citationRole?: "supporting" | "conflicting";
-  onSelect?: (
+  onSelect: (
     sourceRef: SourceMessageRef,
     anchorElement: HTMLElement,
     sourceKey: string,
@@ -23,7 +22,7 @@ export function SourceCitationChip({
   citationRole,
   onSelect,
 }: SourceCitationChipProps) {
-  const citationText = formatSourceCitationText(sourceRef);
+  const citationText = sourceRef.label;
   const isConflicting = citationRole === "conflicting";
   const label = isConflicting ? `Conflicts with ${citationText}` : citationText;
 
@@ -34,7 +33,7 @@ export function SourceCitationChip({
       aria-expanded={isActive}
       aria-haspopup="dialog"
       title={label}
-      onClick={(event) => onSelect?.(sourceRef, event.currentTarget, sourceKey, citationRole)}
+      onClick={(event) => onSelect(sourceRef, event.currentTarget, sourceKey, citationRole)}
       className={`inline-flex h-6 max-w-full items-center gap-1 rounded-md px-1.5 text-xs font-medium transition-colors ${
         isActive
           ? "bg-ink text-ivory"

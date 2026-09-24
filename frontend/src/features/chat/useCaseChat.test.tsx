@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { act } from "react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useCaseChat } from "./useCaseChat";
+import { useCaseChat, useIsFollowupPending } from "./useCaseChat";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { caseChat, chatResponse, deferred, message } from "./chatTestSupport";
 
@@ -23,7 +23,7 @@ function render() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  return { ...renderHook(() => useCaseChat({ caseId: "a" }), { wrapper }), queryClient };
+  return { ...renderHook(() => useCaseChat({ caseId: "a" }), { wrapper }), queryClient, wrapper };
 }
 
 beforeEach(() => {
@@ -74,12 +74,14 @@ describe("whether a send is in flight", () => {
   it("is on while the request is open, and the reader's own message is visible", async () => {
     const pending = deferred<ReturnType<typeof chatResponse>>();
     createCaseChatMessage.mockReturnValue(pending.promise);
-    const { result } = render();
+    const { result, wrapper } = render();
+    const followup = renderHook(() => useIsFollowupPending("a"), { wrapper });
     await waitFor(() => expect(result.current.messages).toHaveLength(1));
 
     act(() => result.current.submitContent("ถามหน่อย"));
     await waitFor(() => expect(result.current.isSending).toBe(true));
     expect(result.current.messages.map((m) => m.content)).toContain("ถามหน่อย");
+    expect(followup.result.current).toBe(false);
 
     await act(async () => {
       pending.resolve(chatResponse(message("a", 2, "assistant", "ครับ")));
@@ -96,16 +98,21 @@ describe("whether a send is in flight", () => {
     getCaseChat.mockResolvedValue(caseChat("a", "answered", [question]));
     const pending = deferred<ReturnType<typeof chatResponse>>();
     createCaseChatMessage.mockReturnValue(pending.promise);
-    const { result } = render();
+    const { result, wrapper } = render();
+    const followup = renderHook(() => useIsFollowupPending("a"), { wrapper });
+    const otherCase = renderHook(() => useIsFollowupPending("b"), { wrapper });
     await waitFor(() => expect(result.current.pendingQuestionId).toBe(question.id));
 
     act(() => result.current.submitContent("ตอนตีสอง"));
     await waitFor(() => expect(result.current.isAnsweringQuestion).toBe(true));
+    await waitFor(() => expect(followup.result.current).toBe(true));
+    expect(otherCase.result.current).toBe(false);
 
     await act(async () => {
       pending.resolve(chatResponse(message("a", 3, "assistant", "ขอบคุณครับ")));
     });
     await waitFor(() => expect(result.current.isAnsweringQuestion).toBe(false));
+    await waitFor(() => expect(followup.result.current).toBe(false));
   });
 
   it("puts the returned analysis in the cache before refetching the workspace", async () => {

@@ -1,95 +1,48 @@
 import { describe, expect, it } from "vitest";
-import type {
-  CaseAnalysisResultRead,
-  CaseAnalysisTrace,
-  CaseMitreAssociation,
-  CaseSourceRead,
-} from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseAnalysisTrace, CaseSourceRead } from "@/lib/api";
+import { analysisResult, association, claim, narrativeSource, trace } from "@/test/fixtures";
 import { buildTechnicalContext } from "./technicalContext";
 
-const sourceId = "11111111-1111-4111-8111-111111111111";
-const caseId = "22222222-2222-4222-8222-222222222222";
 const exactQuote = "The report records PowerShell network activity.";
+
+interface AssociationInput {
+  association_id: string;
+  technique_id: string;
+  claim_ids: string[];
+  reason: string;
+  plain_meaning: string;
+}
 
 function technicalContextFixture(
   status: string,
   rows: Record<string, string>[],
-  associations: Omit<CaseMitreAssociation, "status" | "support_role">[] = [],
+  associations: AssociationInput[] = [],
   failureCode?: string,
 ): { result: CaseAnalysisResultRead; sources: CaseSourceRead[] } {
-  const sources: CaseSourceRead[] = [
-    {
-      id: sourceId,
-      case_id: caseId,
-      source_kind: "narrative",
-      document_id: null,
-      exact_text: exactQuote,
-      provenance_json: {},
-      source_metadata_json: {},
-      created_at: "2026-09-10T00:00:00Z",
-      archived_at: null,
-    },
-  ];
   const retrievalContextId = status === "not_applicable" ? null : "retrieval-native-1";
-  const traceAssociations: CaseMitreAssociation[] = associations.map((association) => ({
-    association_id: association.association_id,
-    technique_id: association.technique_id,
-    claim_ids: association.claim_ids,
-    reason: association.reason,
-    plain_meaning: association.plain_meaning,
-    status: "candidate_only" as const,
-    support_role: "external_technical_context" as const,
-  }));
-  const result: CaseAnalysisResultRead = {
-    id: "44444444-4444-4444-8444-444444444444",
-    case_id: caseId,
-    source_revision: 1,
-    schema_version: "case_analysis_trace_v1",
-    status: "validated",
+  const result = analysisResult({
     summary: exactQuote,
-    trace_json: {
-      version: "case_analysis_trace_v1",
-      validation_status: "validated",
-      analysis_mode: "case_overview",
+    trace_json: trace({
       summary: exactQuote,
-      claims: [
-        {
-          claim_id: "A-01",
-          claim_type: "reported",
-          text: exactQuote,
-          epistemic_status: "reported",
-          reasoning_summary: null,
-          supporting_source_ids: [sourceId],
-          contradicting_source_ids: [],
-          supporting_citations: [{ source_id: sourceId, exact_quote: exactQuote }],
-          contradicting_citations: [],
-        },
-      ],
-      gaps: [],
-      mitre_associations: traceAssociations,
+      claims: [claim(exactQuote)],
+      mitre_associations: associations.map(({ technique_id, ...rest }) =>
+        association(technique_id, rest),
+      ),
       retrieval_context_id: retrievalContextId,
-    },
+    }),
     retrieval_context_id: retrievalContextId,
-    pipeline_config: {},
     external_context_json: {
       technical_augmentation: {
         version: "case_mitre_augmentation_v1",
         status,
-        applicability: {
-          decision: "RETRIEVE",
-          source_message_ids: [sourceId],
-          trigger_text: [exactQuote],
-        },
         retrieval_context_id: retrievalContextId,
         mitre_table: rows,
-        association_ids: associations.map((association) => association.association_id),
+        association_ids: associations.map((item) => item.association_id),
         ...(failureCode ? { failure_code: failureCode } : {}),
       },
     },
-    created_at: "2026-09-10T00:00:00Z",
-    freshness: "current",
-  };
-  return { result, sources };
+  });
+  return { result, sources: [narrativeSource(exactQuote)] };
 }
 
 describe("buildTechnicalContext", () => {

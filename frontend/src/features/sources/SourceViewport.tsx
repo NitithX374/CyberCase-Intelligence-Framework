@@ -1,10 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import { plural } from "@/lib/format";
 import { fetchCaseDocumentContent, type CaseDocumentRead, type CaseSourceRead } from "@/lib/api";
+import { useBlobUrl } from "@/lib/useBlobUrl";
 import { followupQuestion } from "./followupSources";
 import { itemTitle, type RailItem } from "./SourceRail";
 
@@ -156,25 +156,12 @@ function TextSourcePreview({ source }: { source: CaseSourceRead }) {
 }
 
 function OriginalFilePreview({ caseId, document }: { caseId: string; document: CaseDocumentRead }) {
-  const query = useQuery({
-    queryKey: ["case-document-content", caseId, document.id],
-    queryFn: ({ signal }) => fetchCaseDocumentContent(caseId, document.id, signal),
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
-  const objectUrl = useMemo(() => {
-    if (!query.data || typeof URL.createObjectURL !== "function") return null;
-    return URL.createObjectURL(query.data);
-  }, [query.data]);
-
-  useEffect(
-    () => () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    },
-    [objectUrl],
+  const file = useBlobUrl(["case-document-content", caseId, document.id], (signal) =>
+    fetchCaseDocumentContent(caseId, document.id, signal),
   );
+  const objectUrl = file.url;
 
-  if (query.isLoading) {
+  if (file.isLoading) {
     return (
       <div
         role="status"
@@ -185,12 +172,12 @@ function OriginalFilePreview({ caseId, document }: { caseId: string; document: C
       </div>
     );
   }
-  if (query.error || !objectUrl) {
+  if (file.error || !objectUrl) {
     return (
       <ViewportMessage title="The original file could not be loaded.">
         <button
           type="button"
-          onClick={() => void query.refetch()}
+          onClick={() => void file.refetch()}
           className="btn-secondary mt-4 h-8 px-3"
         >
           Try again
