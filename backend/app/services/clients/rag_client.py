@@ -64,19 +64,8 @@ async def post_and_validate(
         ) from exc
 
 
-def map_rag_response(response: QueryResponse) -> dict[str, object]:
-    return {
-        "retrieved_context": response.context,
-        "retrieval_context_id": response.retrieval_context_id,
-        "mitre_table": [row.model_dump(mode="json") for row in response.mitre_table],
-        "legal_reference": response.legal_reference.model_dump(mode="json"),
-        "previous_analysis": None,
-    }
-
-
 __all__ = [
     "RAG_HTTP_TIMEOUT_SECONDS",
     "RagCallFailure",
-    "map_rag_response",
     "request_rag",
 ]

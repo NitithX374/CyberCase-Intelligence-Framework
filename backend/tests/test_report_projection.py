@@ -1,11 +1,16 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 
+from app.schemas.rag import QueryResponse
+from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
+from app.services.analysis.steps.technical_context import run_case_mitre_augmentation
 from app.services.reports.contracts import ReportGenerationConflict
 from app.services.reports.projection import build_case_report_input
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 CASE_ID = uuid4()
 TRACE = {
@@ -145,3 +150,51 @@ def test_a_recorded_source_that_is_gone_is_refused():
         build_case_report_input(case, result)
 
     assert refused.value.code == "analysis_source_snapshot_invalid"
+
+
+def insufficient_augmentation(read, retrieval_context_id):
+    async def gate(**_kwargs):
+        return MitreApplicabilityRecord(
+            decision="RETRIEVE",
+            source_message_ids=[read.id],
+            trigger_text=["Payroll files were encrypted"],
+        )
+
+    async def rag(_query):
+        return QueryResponse(
+            status="completed",
+            retrieval_context_id=retrieval_context_id,
+            context="",
+            mitre_table=[],
+            legal_reference={},
+        )
+
+    bundle = CaseSourceBundle(
+        revision=1,
+        sources=(CaseSourceItem(source_id=read.id, source_kind="narrative", text=read.exact_text),),
+    )
+    return asyncio.run(
+        run_case_mitre_augmentation(source_bundle=bundle, applicability_gate=gate, rag_request=rag)
+    )
+
+
+@pytest.mark.parametrize("retrieval_context_id", ["retrieval-thin", None])
+def test_an_analysis_whose_retrieval_found_no_technique_still_reports(retrieval_context_id):
+    outcomes = []
+
+    def record(read):
+        augmentation = insufficient_augmentation(read, retrieval_context_id)
+        outcomes.append(augmentation)
+        return {
+            "sources_read": sources_read(read),
+            "followup_history": NO_ANSWERS,
+            "technical_augmentation": augmentation.to_metadata(),
+        }
+
+    case, result = case_and_analysis(record)
+
+    report_input = build_case_report_input(case, result)
+
+    assert outcomes[0].status == "insufficient_context"
+    assert report_input.technical_augmentation.status == "insufficient_context"
+    assert report_input.technical_augmentation.retrieval_context_id == retrieval_context_id

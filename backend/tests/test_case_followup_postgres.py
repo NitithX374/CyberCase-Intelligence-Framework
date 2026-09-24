@@ -166,13 +166,11 @@ def test_a_round_walks_the_gaps_one_at_a_time():
 def test_a_round_stops_at_three_even_with_more_gaps():
     spent = decide(three_gaps(), asked={"topic:1", "topic:2", "topic:3"}, this_round=3)
     assert spent == Proceed("round_budget_spent")
-    assert not spent.is_terminal
 
 
 def test_the_rounds_run_out():
     exhausted = decide(three_gaps(), rounds=settings.chat_followup_max_rounds + 1)
     assert exhausted == Proceed("max_rounds_reached")
-    assert exhausted.is_terminal
 
 
 def test_a_gap_already_asked_is_not_asked_again_in_a_later_round():

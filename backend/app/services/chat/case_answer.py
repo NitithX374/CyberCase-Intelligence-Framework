@@ -17,11 +17,7 @@ from app.services.analysis.contracts import (
     resolve_response_language,
 )
 from app.services.analysis.provider import request_stage, resolve_target
-from app.services.analysis.settings import (
-    AnalysisPipelineConfig,
-    configured_pipeline,
-    read_pipeline,
-)
+from app.services.analysis.settings import AnalysisPipelineConfig, configured_pipeline
 from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
@@ -107,7 +103,6 @@ def build_answer_context(
         return {
             "analysis_result_id": None,
             "source_revision": source_bundle.revision,
-            "pipeline_config": configured_pipeline().model_dump(mode="json"),
             "analysis_summary": None,
             "trace": None,
             "question": question,
@@ -119,7 +114,6 @@ def build_answer_context(
     return {
         "analysis_result_id": str(result.id),
         "source_revision": source_bundle.revision,
-        "pipeline_config": result.pipeline_config,
         "analysis_summary": result.summary,
         "trace": result.trace_json,
         "question": question,
@@ -192,20 +186,7 @@ async def generate_case_answer(
     user_message: object,
     client: httpx.AsyncClient | None = None,
 ) -> CaseAnalysisOutput:
-    pipeline_value = context.get("pipeline_config")
-    if not isinstance(pipeline_value, Mapping):
-        raise CaseAnalysisFailure(
-            "case_ask_context_invalid", "Chat analysis configuration is unavailable"
-        )
-    try:
-        config = read_pipeline(dict(pipeline_value)).model_copy(
-            update={"model": configured_pipeline().model}
-        )
-    except ValidationError as error:
-        raise CaseAnalysisFailure(
-            "case_ask_context_invalid", "Chat analysis configuration is invalid"
-        ) from error
-
+    config = configured_pipeline()
     question = context.get("question")
     analysis_result_id = context.get("analysis_result_id")
     history = context.get("history")

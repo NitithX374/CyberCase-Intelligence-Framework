@@ -17,8 +17,6 @@ class Probe(BaseModel):
 def target() -> CoreLlmTarget:
     return CoreLlmTarget(
         model="test/model",
-        api_key="test-key",
-        base_url="https://provider.test",
         messages_url="https://provider.test/v1/messages",
         headers={"Authorization": "Bearer test-key"},
     )

@@ -49,12 +49,11 @@ def retrieval_query(
 
 
 CASE_MITRE_AUGMENTATION_VERSION = "case_mitre_augmentation_v1"
-CaseMitreAugmentationStatus = str
 
 
 @dataclass(frozen=True)
 class CaseRagContextPayload:
-    retrieval_context_id: str
+    retrieval_context_id: str | None
     context: str
     mitre_table: tuple[dict[str, object], ...]
     legal_relevance: LegalReferenceResult
@@ -62,7 +61,7 @@ class CaseRagContextPayload:
 
 @dataclass(frozen=True)
 class CaseMitreAugmentation:
-    status: CaseMitreAugmentationStatus
+    status: str
     applicability: MitreApplicabilityRecord
     context: CaseRagContextPayload | None
     associations: tuple[CaseMitreAssociation, ...]
@@ -99,7 +98,6 @@ async def run_case_mitre_augmentation(
     source_bundle: CaseSourceBundle,
     applicability_gate=mitre_gate,
     rag_request=request_rag,
-    on_rag_validated=None,
     reused_context: CaseRagContextPayload | None = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseMitreAugmentation:
@@ -126,15 +124,6 @@ async def run_case_mitre_augmentation(
             logger.exception("Case MITRE retrieval failed")
             return failed_augmentation("rag_service_error", applicability)
 
-        if on_rag_validated is not None:
-            try:
-                try:
-                    await on_rag_validated(context, rag_query)
-                except TypeError:
-                    await on_rag_validated(context)
-            except Exception:
-                logger.exception("Case MITRE early persistence callback failed")
-
     if not context.retrieval_context_id or not context.mitre_table:
         return CaseMitreAugmentation(
             "insufficient_context", applicability, context, (), reused=is_reused
@@ -158,24 +147,15 @@ async def evaluate_gate(case_sources, gate):
 
 
 def failed_augmentation(
-    code: str,
-    applicability: MitreApplicabilityRecord | str,
-    context: CaseRagContextPayload | None = None,
+    code: str, applicability: MitreApplicabilityRecord
 ) -> CaseMitreAugmentation:
-    record = (
-        applicability
-        if isinstance(applicability, MitreApplicabilityRecord)
-        else skipped_mitre_applicability(code)
-    )
-    return CaseMitreAugmentation("failed", record, context, (), code)
+    return CaseMitreAugmentation("failed", applicability, None, (), code)
 
 
 def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload:
     retrieval_id = response.retrieval_context_id
     context = response.context
     mitre_table = response.mitre_table
-    if not isinstance(retrieval_id, str) or not retrieval_id.strip():
-        raise ValueError("RAG response has no retrieval context identifier")
     if not isinstance(context, str):
         raise ValueError("RAG response context is invalid")
     if not isinstance(mitre_table, list):
@@ -184,7 +164,7 @@ def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload
         row if isinstance(row, dict) else row.model_dump(mode="json") for row in mitre_table
     ]
     return CaseRagContextPayload(
-        retrieval_context_id=retrieval_id.strip(),
+        retrieval_context_id=(retrieval_id or "").strip() or None,
         context=context,
         mitre_table=tuple(deepcopy(normalized_rows)),
         legal_relevance=response.legal_reference,

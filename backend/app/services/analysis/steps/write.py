@@ -6,6 +6,7 @@ import httpx
 from pydantic import ValidationError
 
 from app.services.analysis.contracts import (
+    CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisMode,
     CaseAnalysisOutput,
@@ -20,8 +21,7 @@ from app.services.analysis.prompts import (
     validate_analysis_request,
 )
 from app.services.analysis.provider import request_stage, resolve_target
-from app.services.analysis.settings import AnalysisPipelineConfig, read_pipeline
-from app.services.analysis.steps.bind import resolve_case_trace
+from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
@@ -149,9 +149,6 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
         "source_kind": source.source_kind,
         "text": source.text,
     }
-    question = source.provenance.get("question")
-    if source.source_kind == "followup_answer" and isinstance(question, str) and question.strip():
-        payload["answers_question"] = question.strip()
     if source.source_kind == "document" or source.document_id or source.filename:
         document: dict[str, object] = {
             "document_id": source.document_id,
@@ -197,28 +194,11 @@ def direct_trace(
         summary=parsed.summary,
         involved_parties=parsed.involved_parties,
         timeline=parsed.timeline,
-        claims=parsed.claims,
+        claims=[CaseAnalysisClaim.model_validate(claim.model_dump()) for claim in parsed.claims],
         impacts=parsed.impacts,
         gaps=parsed.gaps,
         mitre_associations=parsed.mitre_associations,
         retrieval_context_id=retrieval_context_id,
-    )
-
-
-def validate_direct_trace(
-    parsed: CaseProviderAnalysis,
-    *,
-    mode: str,
-    source_bundle: CaseSourceBundle,
-    retrieval_context_id: str | None = None,
-    mitre_table: list[dict[str, object]] | tuple[dict[str, object], ...] | None = None,
-    followup_history: Sequence[CaseFollowupExchange] = (),
-) -> CaseAnalysisTrace:
-    return resolve_case_trace(
-        direct_trace(parsed, mode=mode, retrieval_context_id=retrieval_context_id),
-        source_bundle,
-        mitre_table=list(mitre_table) if mitre_table else [],
-        followup_history=followup_history,
     )
 
 
@@ -263,7 +243,7 @@ async def request_case_analysis(
     return await analyze_case(
         source_bundle=source_bundle,
         user_message=user_message,
-        config=read_pipeline(pipeline_config),
+        config=AnalysisPipelineConfig.model_validate(pipeline_config),
         question=validated_question,
         mode=validated_mode,
         client=client,

@@ -59,7 +59,6 @@ class CORSConfig(BaseModel):
 
 class LLMProviderConfig(BaseModel):
     openrouter_cybercase: str = ""
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_messages_url: str = "https://openrouter.ai/api/v1/messages"
     case_analysis_model: str = Field(default=DEFAULT_CASE_ANALYSIS_MODEL, min_length=1)
     rag_service_url: str = "http://rag-service:8001"

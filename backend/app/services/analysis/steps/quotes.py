@@ -34,15 +34,11 @@ def resolve_document_locator(
     quote: str,
     content: str,
     document_context: object,
-    *,
-    require_complete_coverage: bool = False,
 ) -> dict[str, object]:
     occurrences = quote_occurrences(content, quote)
     candidates: set[tuple[str, str, tuple[int, ...]]] = set()
     for document in extract_documents_for_source(source_id, document_context):
-        locator = find_document_locator(
-            document, content, occurrences, len(quote), require_complete_coverage
-        )
+        locator = find_document_locator(document, content, occurrences, len(quote))
         if locator is not None:
             candidates.add(locator)
     if len(candidates) != 1:
@@ -76,7 +72,6 @@ def find_document_locator(
     content: str,
     occurrences: list[int],
     quote_length: int,
-    require_complete_coverage: bool,
 ) -> tuple[str, str, tuple[int, ...]] | None:
     document_id = document.get("document_id")
     filename = document.get("filename")
@@ -86,11 +81,10 @@ def find_document_locator(
     occurrence_pages: list[tuple[int, ...]] = []
     for start in occurrences:
         end = start + quote_length
-        if require_complete_coverage and not verify_quote_coverage(spans, start, end):
-            return None
         pages = tuple(span[0] for span in spans if span[1] < end and span[2] > start)
         if (
             not pages
+            or len(pages) > MAX_PAGE_SPANS_PER_QUOTE
             or not any(span[1] <= start < span[2] for span in spans)
             or not any(span[1] < end <= span[2] for span in spans)
         ):
@@ -102,21 +96,6 @@ def find_document_locator(
     if len(unique_pages) != 1:
         return None
     return document_id, filename, unique_pages.pop()
-
-
-def verify_quote_coverage(spans: list[tuple[int, int, int]], start: int, end: int) -> bool:
-    cursor = start
-    covered = 0
-    for _page, lower, upper in spans:
-        if upper <= cursor:
-            continue
-        if lower > cursor:
-            return False
-        covered += 1
-        cursor = upper
-        if cursor >= end:
-            return covered <= MAX_PAGE_SPANS_PER_QUOTE
-    return False
 
 
 def validate_page_spans(value: object, content: str) -> list[tuple[int, int, int]]:
@@ -261,5 +240,4 @@ __all__ = [
     "quote_occurrences",
     "resolve_document_locator",
     "validate_page_spans",
-    "verify_quote_coverage",
 ]

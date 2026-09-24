@@ -12,6 +12,8 @@ from app.services.analysis.contracts.claims import (
     CaseEpistemicStatus,
     CaseFollowupExchange,
     CaseGeneratedUnit,
+    CaseProviderCitation,
+    CaseProviderClaim,
     CaseSourceCitation,
     followup_history_of_snapshot,
     followup_payload,
@@ -19,7 +21,6 @@ from app.services.analysis.contracts.claims import (
     followup_snapshot,
 )
 from app.services.analysis.contracts.trace import (
-    CaseAnalysisFailureMetadata,
     CaseAnalysisTrace,
     CaseGroundingReport,
     CaseImpactItem,
@@ -56,14 +57,12 @@ def resolve_response_language(user_message: object) -> ResponseLanguage:
 class CaseAnalysisOutput:
     answer: str
     trace: CaseAnalysisTrace | None
-    trace_failure: CaseAnalysisFailureMetadata | None = None
     execution_receipt: dict[str, object] | None = None
 
 
 __all__ = [
     "CaseAnalysisClaim",
     "CaseAnalysisFailure",
-    "CaseAnalysisFailureMetadata",
     "CaseAnalysisGap",
     "CaseAnalysisMode",
     "CaseAnalysisOutput",
@@ -79,6 +78,8 @@ __all__ = [
     "CaseInvolvedParty",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
+    "CaseProviderCitation",
+    "CaseProviderClaim",
     "CaseProviderJudgement",
     "CaseProviderReading",
     "CaseTimelineItem",

@@ -5,8 +5,8 @@ from case_mitre_test_support import _fixtures, _gate
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisOutput,
+    CaseAnalysisTrace,
     CaseMitreAssociation,
-    CaseProviderAnalysis,
     CaseSourceCitation,
 )
 from app.services.analysis.pipeline import (
@@ -15,39 +15,64 @@ from app.services.analysis.pipeline import (
     retrieve_technical_context,
     write_analysis,
 )
-from app.services.analysis.steps.write import validate_direct_trace
+from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.clients.rag_client import RagCallFailure
 
 
-def test_invalid_technique_is_rejected_by_validation():
-    _, trace, source_bundle, _, context = _fixtures()
-    invalid_assoc = CaseMitreAssociation(
+def association(technique_id: str, claim_ids: list[str]) -> CaseMitreAssociation:
+    return CaseMitreAssociation(
         association_id="MA-01",
-        technique_id="T9999",
-        claim_ids=["A-01"],
-        reason="Invented technique.",
+        technique_id=technique_id,
+        claim_ids=claim_ids,
+        reason="PowerShell reached an external address.",
         status="candidate_only",
         support_role="external_technical_context",
     )
-    parsed = CaseProviderAnalysis(
-        version="case_analysis_trace_v1",
-        summary="Summary",
-        involved_parties=[],
-        timeline=[],
-        claims=list(trace.claims),
-        impacts=[],
-        gaps=[],
-        mitre_associations=[invalid_assoc],
-    )
-    trace = validate_direct_trace(
-        parsed,
-        mode="case_overview",
-        source_bundle=source_bundle,
-        retrieval_context_id="retrieval-case-1",
+
+
+def bound_with(*associations: CaseMitreAssociation) -> CaseAnalysisTrace:
+    _, trace, source_bundle, _, context = _fixtures()
+    return resolve_case_trace(
+        trace.model_copy(
+            update={
+                "mitre_associations": list(associations),
+                "retrieval_context_id": "retrieval-case-1",
+            }
+        ),
+        source_bundle,
         mitre_table=list(context.mitre_table),
     )
+
+
+def test_a_technique_outside_the_retrieved_table_is_dropped_and_counted():
+    trace = bound_with(association("T9999", ["A-01"]))
+
     assert trace.mitre_associations == []
     assert trace.grounding.associations_outside_context == 1
+
+
+def test_a_table_row_that_is_not_a_technique_is_dropped_and_counted():
+    trace = bound_with(association("S0096", ["A-01"]))
+
+    assert trace.mitre_associations == []
+    assert trace.grounding.associations_outside_context == 1
+
+
+def test_an_association_whose_claims_are_all_unknown_is_dropped_and_counted():
+    trace = bound_with(association("T1059.001", ["A-07"]))
+
+    assert trace.mitre_associations == []
+    assert trace.grounding.associations_without_claim == 1
+    assert trace.grounding.associations_outside_context == 0
+    assert CaseAnalysisTrace.model_validate(trace.model_dump()).mitre_associations == []
+
+
+def test_an_association_keeps_only_the_claims_that_exist():
+    trace = bound_with(association("T1059.001", ["A-01", "A-07"]))
+
+    assert [item.claim_ids for item in trace.mitre_associations] == [["A-01"]]
+    assert trace.grounding.associations_without_claim == 0
+    assert CaseAnalysisTrace.model_validate(trace.model_dump()) == trace
 
 
 def test_rag_failure_falls_back_to_case_sources():
@@ -85,8 +110,8 @@ def test_rag_failure_falls_back_to_case_sources():
 
 
 def test_case_sources_remain_the_only_allowed_claim_source_ids():
-    _, _, source_bundle, _, context = _fixtures()
-    invalid_claim = CaseAnalysisClaim(
+    _, trace, source_bundle, _, context = _fixtures()
+    outside = CaseAnalysisClaim(
         claim_id="A-02",
         claim_type="reported",
         text="A claim citing external non-case source.",
@@ -99,22 +124,14 @@ def test_case_sources_remain_the_only_allowed_claim_source_ids():
             )
         ],
     )
-    parsed = CaseProviderAnalysis(
-        version="case_analysis_trace_v1",
-        summary="Summary",
-        involved_parties=[],
-        timeline=[],
-        claims=[invalid_claim],
-        impacts=[],
-        gaps=[],
-        mitre_associations=[],
-    )
-    trace = validate_direct_trace(
-        parsed,
-        mode="case_overview",
-        source_bundle=source_bundle,
-        retrieval_context_id="retrieval-case-1",
+
+    bound = resolve_case_trace(
+        trace.model_copy(update={"claims": [outside], "retrieval_context_id": "retrieval-case-1"}),
+        source_bundle,
         mitre_table=list(context.mitre_table),
     )
-    assert trace.claims[0].supporting_source_ids == []
-    assert trace.grounding.claims_without_citation == 1
+
+    assert bound.claims[0].supporting_source_ids == []
+    assert bound.claims[0].supporting_citations == []
+    assert bound.grounding.claims_without_citation == 1
+    assert bound.grounding.citations_unfound == 1

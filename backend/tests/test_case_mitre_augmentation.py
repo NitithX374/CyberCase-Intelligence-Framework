@@ -94,6 +94,32 @@ def test_empty_retrieval_is_insufficient():
     asyncio.run(exercise())
 
 
+def test_a_retrieval_that_found_nothing_is_insufficient_not_failed():
+    async def exercise():
+        _, _, source_bundle, applicability, _ = _fixtures()
+
+        async def rag(_query):
+            return SimpleNamespace(
+                retrieval_context_id=None,
+                context="",
+                mitre_table=[],
+                legal_reference=LegalReferenceResult(),
+            )
+
+        result = await run_case_mitre_augmentation(
+            source_bundle=source_bundle,
+            applicability_gate=_gate(applicability),
+            rag_request=rag,
+        )
+        assert result.status == "insufficient_context"
+        assert result.failure_code is None
+        metadata = result.to_metadata()
+        assert metadata["retrieval_context_id"] is None
+        assert "failure_code" not in metadata
+
+    asyncio.run(exercise())
+
+
 def test_rag_transport_failure_preserves_failed_augmentation_status():
     async def exercise():
         _, _, source_bundle, applicability, _ = _fixtures()

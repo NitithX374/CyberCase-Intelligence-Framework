@@ -82,18 +82,27 @@ Return only the requested JSON object. Do not include reasoning or markdown.
 """.strip()
 
 
-def build_mitre_applicability_prompt(
-    case_sources: Sequence[CaseSourceItem],
-) -> str:
-    per_source_limit = min(
+def per_source_limit(case_sources: Sequence[CaseSourceItem]) -> int:
+    return min(
         MITRE_APPLICABILITY_SOURCE_MAX_CHARS,
         max(1, MITRE_APPLICABILITY_INPUT_MAX_CHARS // max(1, len(case_sources))),
     )
+
+
+def gate_input_truncated(case_sources: Sequence[CaseSourceItem]) -> bool:
+    limit = per_source_limit(case_sources)
+    return any(len(source.text) > limit for source in case_sources)
+
+
+def build_mitre_applicability_prompt(
+    case_sources: Sequence[CaseSourceItem],
+) -> str:
+    limit = per_source_limit(case_sources)
     payload = {
         "case_sources": [
             {
                 "source_message_id": source.source_id,
-                "content": source.text[:per_source_limit],
+                "content": source.text[:limit],
                 "document_sources": document_source_metadata(source),
             }
             for source in case_sources
@@ -154,6 +163,7 @@ class MitreApplicabilityRecord(BaseModel):
     source_message_ids: list[str] = Field(default_factory=list, max_length=64)
     trigger_text: list[str] = Field(default_factory=list, max_length=16)
     failure_code: str | None = Field(default=None, max_length=120)
+    input_truncated: bool = False
 
     @model_validator(mode="after")
     def validate_routing_record(self) -> MitreApplicabilityRecord:
@@ -309,24 +319,17 @@ async def evaluate_mitre_applicability(
 ) -> MitreApplicabilityRecord:
     try:
         result = await (gate or MitreApplicabilityGate()).evaluate(case_sources)
-        if result.failure_code is not None:
-            logger.warning(
-                "MITRE applicability failed closed gate_version=%s failure_code=%s",
-                MITRE_APPLICABILITY_GATE_VERSION,
-                result.failure_code,
-            )
-        return result
     except MitreApplicabilityFailure as error:
-        failure_code = error.code
+        result = skipped_mitre_applicability(error.code)
     except Exception:
-        failure_code = "mitre_applicability_provider_error"
-
-    logger.warning(
-        "MITRE applicability failed closed gate_version=%s failure_code=%s",
-        MITRE_APPLICABILITY_GATE_VERSION,
-        failure_code,
-    )
-    return skipped_mitre_applicability(failure_code)
+        result = skipped_mitre_applicability("mitre_applicability_provider_error")
+    if result.failure_code is not None:
+        logger.warning(
+            "MITRE applicability failed closed gate_version=%s failure_code=%s",
+            MITRE_APPLICABILITY_GATE_VERSION,
+            result.failure_code,
+        )
+    return result.model_copy(update={"input_truncated": gate_input_truncated(case_sources)})
 
 
 def parse_provider_response(response: httpx.Response) -> dict[str, object]:
@@ -383,6 +386,7 @@ __all__ = [
     "ProviderMitreApplicability",
     "build_mitre_applicability_prompt",
     "evaluate_mitre_applicability",
+    "gate_input_truncated",
     "skipped_mitre_applicability",
     "validate_mitre_applicability",
 ]
