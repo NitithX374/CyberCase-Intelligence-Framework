@@ -1,22 +1,3 @@
-"""The applicability gate as a classifier over sentences, not as a prompt.
-
-The LLM gate reads the whole case at once and writes back the spans it chose to
-copy out. This one is shown one sentence at a time and answers about that
-sentence, so the span it points at is the sentence itself -- there is nothing
-for it to invent, and the trigger text is an exact piece of the material by
-construction rather than by checking afterwards.
-
-XLM-R reads Thai and English with the same weights, which is what lets one gate
-serve both without a translation step in front of it. The checkpoint is the
-LADDER attack-pattern sentence classifier (RAID 2023), which was trained to
-answer "does this sentence describe an attack pattern" over English CTI prose.
-``research/mitre_gate`` measures what that is worth on Thai and English police
-reports, and writes the ``gate.json`` beside the weights that this reads.
-
-Torch is imported inside the loader, so a backend without the model installed
-still starts and still runs the LLM gate.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -34,12 +15,10 @@ from app.services.analysis.mitre_gate.llm import (
     skipped_mitre_applicability,
 )
 from app.services.analysis.mitre_gate.sentences import split_sources
-from app.services.sources import CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceItem
 
 logger = logging.getLogger(__name__)
 
-# What MitreApplicabilityRecord accepts. Past this, the highest-scoring
-# sentences are the ones worth sending, and they are also the better query.
 MAX_TRIGGERS = 16
 MAX_TRIGGER_CHARS = 500
 BATCH = 32
@@ -57,8 +36,6 @@ class Loaded:
 
 @lru_cache(maxsize=1)
 def loaded_gate() -> Loaded:
-    """The model, and the reading of it that was measured alongside it."""
-
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -71,8 +48,6 @@ def loaded_gate() -> Loaded:
         torch=torch,
         tokenizer=tokenizer,
         model=model,
-        # Nothing in the checkpoint says which output means "attack pattern";
-        # research/mitre_gate/evaluate_gate.py finds it and records it here.
         positive_index=int(card["positive_index"]),
         threshold=float(card["threshold"]),
         max_tokens=int(card["max_tokens"]),
@@ -80,8 +55,6 @@ def loaded_gate() -> Loaded:
 
 
 def scores(texts: Sequence[str]) -> list[float]:
-    """How much each sentence looks like recorded cyber behaviour."""
-
     gate = loaded_gate()
     out: list[float] = []
     for start in range(0, len(texts), BATCH):

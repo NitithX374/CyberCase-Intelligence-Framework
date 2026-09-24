@@ -1,4 +1,5 @@
 import re
+from datetime import UTC, datetime
 from io import BytesIO
 from uuid import uuid4
 
@@ -18,15 +19,17 @@ from app.services.analysis.contracts import (
     CaseTimelineItem,
 )
 from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
-from app.services.reports.assembly import build_case_report, build_case_template_report
+from app.services.reports.content import build_case_report, build_case_template_report
 from app.services.reports.contracts import (
     CaseReportInput,
     CaseReportTechnicalAugmentation,
     ReportValidationError,
 )
-from app.services.reports.render_html import render_case_report_html
-from app.services.reports.render_pdf import render_case_report_pdf
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.reports.display import ReportIssue, build_case_report_display, thai_date
+from app.services.reports.render import render_case_report_html, render_case_report_pdf
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+
+ISSUE = ReportIssue(version_number=2, created_at=datetime(2026, 9, 24, 6, 22, tzinfo=UTC))
 
 
 def _input(technical: bool = False) -> CaseReportInput:
@@ -166,8 +169,6 @@ def test_report_uses_readable_sections_and_restores_analysis_context() -> None:
     assert report.sections[0].items[1].startswith("ลำดับเหตุการณ์:")
     assert report.sections[0].items[2].startswith("ผลกระทบที่ปรากฏ:")
     assert report.claims[0].section_id == "case_evidence"
-    # The gap's topic, not its id: G-01 means something to the pipeline and
-    # nothing to whoever reads the report.
     assert report.sections[4].items[0].startswith("ผู้ใช้ที่สั่งงาน")
     assert "G-01" not in report.sections[4].items[0]
     assert "ข้อสันนิษฐาน" not in report.sections[6].items[0]
@@ -177,8 +178,6 @@ ANSWER = "เหตุการณ์เกิดขึ้นเวลา 23:30 
 
 
 def _input_citing_a_followup_answer(*, with_history: bool) -> CaseReportInput:
-    """A case whose finding rests on something the reader told the system."""
-
     report_input = _input()
     trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
     cited = trace.model_copy(
@@ -220,37 +219,19 @@ def _input_citing_a_followup_answer(*, with_history: bool) -> CaseReportInput:
 
 
 def test_a_claim_resting_on_a_followup_answer_does_not_fail_the_report() -> None:
-    """The analysis was allowed to cite the reader's answer, so the report is too.
-
-    Validation used to compare every cited id against the source bundle alone.
-    A QA id is not in it, so a case that had been clarified could not produce a
-    report at all — the whole thing failed over a citation that had already
-    been checked and found good.
-    """
-
     report = build_case_report(_input_citing_a_followup_answer(with_history=True))
 
     cited = next(claim for claim in report.claims if "QA-01" in claim.source_ids)
     assert cited.source_ids == [cited.source_ids[0], "QA-01"]
-    # Labelled apart from case material: a reader can see the finding rests on
-    # something they said rather than on a document.
     assert any("Q-01" in item for item in report.sections[0].items)
 
 
 def test_an_id_no_exchange_backs_is_still_refused() -> None:
-    """Widening the allowlist is not the same as removing it."""
-
     with pytest.raises(ReportValidationError):
         build_case_report(_input_citing_a_followup_answer(with_history=False))
 
 
 def test_the_report_says_why_the_system_stopped_asking() -> None:
-    """A budget that ran out and a case with nothing left to ask read alike.
-
-    Both leave gaps listed under "หลักฐานที่ควรตรวจสอบ". Only the limitations
-    section can tell the reader which of the two produced them.
-    """
-
     report_input = _input()
     trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
 
@@ -271,30 +252,20 @@ def test_the_report_says_why_the_system_stopped_asking() -> None:
     assert any("ถามทุกประเด็นที่ถามได้แล้ว" in item for item in exhausted)
     assert spent != exhausted, "the two reasons must not read the same"
 
-    # A case still being clarified has no reason yet, and inventing one would
-    # tell the reader the questions are over when they are not.
     assert limitations(None) == limitations("round_budget_spent")
 
 
 def test_no_internal_identifier_reaches_the_reader() -> None:
-    """G-01, A-01 and MA-01 are how the pipeline's parts name things to each other.
-
-    They mean nothing to whoever reads the report, and printing one invites a
-    reader to go looking for a register that does not exist. This is a guard,
-    not a formatting preference: the ids leak whenever a renderer prints an
-    item verbatim, which is easy to do by accident.
-    """
-
     report_input = _input(technical=True)
     report = build_case_report(report_input)
-    pdf = PdfReader(BytesIO(render_case_report_pdf(report_input, report, uuid4())))
+    pdf = PdfReader(BytesIO(render_case_report_pdf(report_input, report, ISSUE)))
 
     rendered = "\n".join(
         [
             *(item for section in report.sections for item in section.items),
             *(paragraph for section in report.sections for paragraph in section.paragraphs),
             *report.limitations,
-            render_case_report_html(report_input, report),
+            render_case_report_html(report_input, report, ISSUE),
             *(page.extract_text() for page in pdf.pages),
         ]
     )
@@ -304,8 +275,6 @@ def test_no_internal_identifier_reaches_the_reader() -> None:
 
 
 def test_the_report_does_not_claim_chat_answers_are_excluded() -> None:
-    """Claims may cite a follow-up answer, so the report must not deny it."""
-
     limitations = build_case_template_report(_input()).limitations
     assert any("คำถามติดตามผล" in item for item in limitations)
     assert not any("ไม่รวมคำตอบจาก Chat" in item for item in limitations)
@@ -314,15 +283,58 @@ def test_the_report_does_not_claim_chat_answers_are_excluded() -> None:
 def test_jinja_report_renders_sections_and_escapes_case_content() -> None:
     report_input = _input(technical=True)
     report = build_case_template_report(report_input)
-    html = render_case_report_html(report_input, report)
+    html = render_case_report_html(report_input, report, ISSUE)
 
-    assert "1. สรุปคดี" in html
-    assert "2. ตัวบ่งชี้ที่พบ" in html
-    assert "3. MITRE ATT&amp;CK Mapping" in html
+    assert "1. สรุปข้อเท็จจริงของคดี" in html
+    assert "2. ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ" in html
+    assert "3. การจำแนกพฤติกรรมตามกรอบ MITRE ATT&amp;CK" in html
+    assert "7. ข้อจำกัดและข้อสงวนของรายงาน" in html
     assert "T1059.001" in html
-    assert "บริบททางเทคนิคภายนอก ไม่ใช่หลักฐานของคดี" in html
+    assert "MITRE ATT&amp;CK เป็นข้อมูลภายนอก" in html
     assert "&lt;script&gt;กิจกรรม PowerShell ปรากฏในหลักฐาน&lt;/script&gt;" in html
     assert "<script>กิจกรรม PowerShell ปรากฏในหลักฐาน</script>" not in html
+
+
+def test_the_document_names_its_version_and_dates() -> None:
+    analysed = datetime(2026, 9, 23, 20, 0, tzinfo=UTC)
+    report_input = _input().model_copy(update={"analysis_created_at": analysed})
+    html = render_case_report_html(report_input, build_case_report(report_input), ISSUE)
+
+    assert "24 กันยายน 2569 เวลา 13.22 น." in html
+    assert "ลงวันที่ 24 กันยายน 2569" in html
+    assert "ฉบับที่ 2" in html, "the page footer names the version"
+    assert thai_date(analysed) == "24 กันยายน 2569"
+
+
+def test_an_untitled_case_is_not_printed_under_its_placeholder() -> None:
+    report_input = _input().model_copy(update={"case_title": "New case"})
+    html = render_case_report_html(report_input, build_case_report(report_input), ISSUE)
+
+    assert "ไม่ได้ระบุชื่อเรื่อง" in html
+    assert "New case" not in html
+
+
+def test_every_reference_resolves_in_the_evidence_register() -> None:
+    report_input = _input_citing_a_followup_answer(with_history=True)
+    report = build_case_report(report_input)
+    display = build_case_report_display(report_input, report, ISSUE)
+
+    assert display.claims[0].source_labels == ("E-01", "Q-01")
+    assert [(source.label, source.detail) for source in display.sources] == [
+        ("E-01", "หลักฐาน.pdf"),
+        ("Q-01", "คำถาม: เหตุการณ์เกิดขึ้นเมื่อใด"),
+    ]
+
+
+def test_a_technique_points_at_the_finding_it_rests_on() -> None:
+    report_input = _input(technical=True)
+    display = build_case_report_display(report_input, build_case_report(report_input), ISSUE)
+
+    assert display.techniques_matched
+    [technique] = display.techniques
+    assert (technique.technique_id, technique.name) == ("T1059.001", "PowerShell")
+    assert technique.findings == (1,), "finding 1 in the findings table"
+    assert technique.references == ("E-01",)
 
 
 def test_report_accepts_all_rag_rows_without_claim_mapping() -> None:
@@ -338,7 +350,7 @@ def test_report_accepts_all_rag_rows_without_claim_mapping() -> None:
 def test_pdf_report_is_generated_from_the_readable_report_content() -> None:
     report_input = _input(technical=True)
     report = build_case_template_report(report_input)
-    pdf = render_case_report_pdf(report_input, report, uuid4())
+    pdf = render_case_report_pdf(report_input, report, ISSUE)
 
     assert pdf.startswith(b"%PDF-")
     assert len(PdfReader(BytesIO(pdf)).pages) >= 1

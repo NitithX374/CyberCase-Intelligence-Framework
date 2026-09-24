@@ -28,6 +28,36 @@ def test_missing_historical_configuration_uses_direct_analysis():
     assert read_pipeline(None).version == "main_case_analysis_v1"
 
 
+def test_missing_snapshot_fields_use_the_current_configured_pipeline(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.analysis.settings.settings.case_analysis_model",
+        "vendor/custom-model",
+    )
+
+    assert AnalysisPipelineConfig().model == "vendor/custom-model"
+    assert configured_pipeline().model == "vendor/custom-model"
+    assert read_pipeline(None).model == "vendor/custom-model"
+    assert read_pipeline({}).model == "vendor/custom-model"
+    assert read_pipeline({"context_tokens": 128_000}).model == "vendor/custom-model"
+
+
+def test_explicit_historical_model_is_preserved_when_reading_snapshot():
+    payload = {"model": "openai/gpt-4o"}
+
+    assert read_pipeline(payload).model == "openai/gpt-4o"
+    assert payload == {"model": "openai/gpt-4o"}
+
+
+def test_configured_model_alias_is_canonicalized_in_new_snapshots(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.analysis.settings.settings.case_analysis_model",
+        "default",
+    )
+
+    assert configured_pipeline().model == "deepseek/deepseek-v4.1-flash"
+    assert read_pipeline({}).model == "deepseek/deepseek-v4.1-flash"
+
+
 def test_new_runs_cannot_select_experimental_pipeline():
     assert configured_pipeline().pipeline == "raw_direct"
     with pytest.raises(TypeError):

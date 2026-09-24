@@ -1,20 +1,14 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { CaseOverviewView } from "@/components/overview/CaseOverviewView";
-import { TechnicalContextView } from "@/components/technical-context/TechnicalContextView";
-import { CaseReportView } from "@/components/report/CaseReportView";
-import { useCase, useCaseAnalysis, useCaseSources } from "@/hooks/useCaseQueries";
-import { casePath } from "@/lib/workspaceRoutes";
+import { CaseOverviewView } from "@/features/analysis/CaseOverviewView";
+import { TechnicalContextView } from "@/features/technical-context/TechnicalContextView";
+import { CaseReportView } from "@/features/reports/CaseReportView";
+import { useCase } from "@/features/cases/queries";
+import { useCaseAnalysis } from "@/features/analysis/queries";
+import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
+import { casePath } from "@/features/workspace/routes";
 
-/**
- * Everything the case analysis produced, on one page.
- *
- * Findings, the ATT&CK context they were read against, and the report built
- * from them used to be three routes. They are three readings of one analysis,
- * and splitting them meant the reader had to know which tab held the part they
- * wanted before they could look for it.
- */
 export default function CaseAnalysisPage() {
   const params = useParams();
   const router = useRouter();
@@ -22,7 +16,7 @@ export default function CaseAnalysisPage() {
 
   const caseQuery = useCase(caseId);
   const analysisQuery = useCaseAnalysis(caseId);
-  const sourcesQuery = useCaseSources(caseId);
+  const { rows: sources, isLoading: sourcesLoading } = useCaseSourceRows(caseId);
 
   const activeCase = caseQuery.data ?? null;
   const analysisResult = analysisQuery.data ?? null;
@@ -33,15 +27,17 @@ export default function CaseAnalysisPage() {
   return (
     <>
       <CaseOverviewView caseId={caseId} />
-      <TechnicalContextView
-        analysisResult={analysisResult}
-        sources={sourcesQuery.data ?? null}
-        onOpenSources={openSources}
-        onNavigateToSource={openSources}
-      />
-      {caseId && (
+      {analysisResult && (
+        <TechnicalContextView
+          analysisResult={analysisResult}
+          sources={sourcesLoading ? null : sources}
+          onOpenSources={openSources}
+          onNavigateToSource={openSources}
+        />
+      )}
+      {caseId && analysisResult && (
         <CaseReportView
-          key={`${caseId}:${analysisResult?.id ?? "empty"}`}
+          key={`${caseId}:${analysisResult.id}`}
           caseId={caseId}
           caseTitle={activeCase?.title || "New case"}
           analysisResult={analysisResult}

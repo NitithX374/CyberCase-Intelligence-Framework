@@ -1,9 +1,3 @@
-"""Sending a chat message, over HTTP, against a real database.
-
-The ask path had no coverage, which is how a message that could never be stored
-reached main: the service passed a column the model did not declare.
-"""
-
 from __future__ import annotations
 
 import uuid
@@ -20,7 +14,7 @@ from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.models.user import User
 from app.services.analysis.contracts import CaseAnalysisOutput
-from app.services.workflow import answer_case_question
+from app.services.workflow.answer_question import answer_case_question
 
 pytestmark = pytest.mark.asyncio
 
@@ -60,7 +54,6 @@ async def seeded_case(session_factory) -> tuple[uuid.UUID, uuid.UUID]:
         analysis = CaseAnalysisResult(
             case_id=case.id,
             source_revision=1,
-            answer="Files were encrypted.",
             summary="Files were encrypted.",
             trace_json=TRACE,
             pipeline_config={"version": "case_analysis_v1"},
@@ -73,8 +66,6 @@ async def seeded_case(session_factory) -> tuple[uuid.UUID, uuid.UUID]:
 
 
 async def test_asking_a_question_stores_both_messages():
-    """The question and the answer are written, and the request id is kept."""
-
     async with isolated_database() as session_factory:
         case_id, user_id = await seeded_case(session_factory)
 
@@ -111,8 +102,6 @@ async def test_asking_a_question_stores_both_messages():
 
 
 async def test_asking_question_without_analysis_stores_messages():
-    """Asking a question when the case has no analysis result succeeds and stores both messages."""
-
     async with isolated_database() as session_factory:
         async with session_factory() as db, db.begin():
             user = User(
@@ -155,8 +144,6 @@ async def test_asking_question_without_analysis_stores_messages():
 
 
 async def test_retrying_the_same_send_returns_the_first_exchange():
-    """A client that timed out and retried gets its answer, not a second one."""
-
     async with isolated_database() as session_factory:
         case_id, user_id = await seeded_case(session_factory)
         calls: list[str] = []
@@ -183,8 +170,6 @@ async def test_retrying_the_same_send_returns_the_first_exchange():
 
 
 async def test_chat_route_is_reachable():
-    """The route exists and rejects an unauthenticated send."""
-
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test/api/v1") as client:
         response = await client.post(

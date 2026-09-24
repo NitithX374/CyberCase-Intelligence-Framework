@@ -1,17 +1,3 @@
-"""The two arms the experiment compares.
-
-    A  Case -> Analysis
-    B  Case -> Analysis -> Verify -> Revise
-
-A is the baseline everyone already has: one model call, nothing checked. B adds
-a step that binds the analysis to the case and, when quotations turn out not to
-be in the sources they name, hands those back and asks again.
-
-The thing to watch is that B can improve its grounding by deleting the claims it
-could not support. A perfect score over three claims is not better than a
-flawed one over twelve, so every number here is read next to how much survived.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -28,7 +14,7 @@ from app.services.analysis.pipeline import (
     AnalysisInput,
     write_analysis,
 )
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from experiments.analysis_arms import revise
 
 TEXT = "The finance share was encrypted overnight and a note demanded contact."
@@ -57,8 +43,6 @@ def trace_of(*claims: CaseAnalysisClaim) -> CaseAnalysisTrace:
 
 
 def analysis_returning(*traces: CaseAnalysisTrace):
-    """A model that answers with each trace in turn, and records its prompts."""
-
     seen: list[str | None] = []
 
     async def request(**kwargs):
@@ -70,8 +54,6 @@ def analysis_returning(*traces: CaseAnalysisTrace):
 
 
 def test_arm_a_leaves_an_invented_quotation_in_place():
-    """Nothing checks it, so the reader is shown a quotation from nowhere."""
-
     request, seen = analysis_returning(trace_of(claim("A-01", "There was no incident.")))
     artifacts = asyncio.run(
         write_analysis(AnalysisInput(sources=BUNDLE), AnalysisArtifacts(), request=request)
@@ -113,13 +95,6 @@ def test_arm_b_hands_back_the_quotations_that_missed():
 
 
 def test_the_receipt_shows_whether_revising_fixed_or_deleted():
-    """The number that makes the experiment readable.
-
-    A model that answers the correction by dropping the claim reaches a clean
-    grounding report over nothing. Both rounds are recorded so the two are
-    told apart.
-    """
-
     invented = trace_of(claim("A-01", TEXT), claim("A-02", "Nothing of the sort happened."))
     gutted = trace_of(claim("A-01", TEXT))
     request, _ = analysis_returning(invented, gutted)

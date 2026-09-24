@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from app.services.document_ingestion.errors import RecognitionResponseError
-from app.services.document_ingestion.recognition.typhoon import (
+from app.services.document_ingestion.contracts import RecognitionResponseError
+from app.services.document_ingestion.recognition import (
     TyphoonDocumentRecognizer,
     TyphoonRecognizerConfig,
 )
@@ -25,7 +25,7 @@ class NoGooglePackages(importlib.abc.MetaPathFinder):
 
 sys.meta_path.insert(0, NoGooglePackages())
 from app.services.document_ingestion.service import build_document_recognizer
-from app.services.document_ingestion.recognition.typhoon import TyphoonDocumentRecognizer
+from app.services.document_ingestion.recognition import TyphoonDocumentRecognizer
 assert isinstance(build_document_recognizer(), TyphoonDocumentRecognizer)
 """
     backend_root = str(Path(__file__).resolve().parent.parent)
@@ -55,7 +55,7 @@ def test_recognizer_rejects_length_terminated_output(monkeypatch):
         )
     )
     monkeypatch.setattr(
-        "app.services.document_ingestion.recognition.typhoon.prepare_messages",
+        "app.services.document_ingestion.recognition.prepare_messages",
         lambda image_bytes, target_image_dimension: [],
     )
 

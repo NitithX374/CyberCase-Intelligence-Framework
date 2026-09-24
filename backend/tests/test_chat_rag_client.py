@@ -4,7 +4,7 @@ import unittest
 import httpx
 
 from app.schemas.rag import QueryResponse
-from app.services.clients import RagCallFailure, map_rag_response, request_rag
+from app.services.clients.rag_client import RagCallFailure, map_rag_response, request_rag
 
 
 class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
@@ -21,6 +21,7 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                     "retrieval_context_id": "retrieval-1",
                     "context": "bounded MITRE context",
                     "mitre_table": [],
+                    "legal_reference": {"provider": "thanoy", "query_sent": "inspect this"},
                 },
             )
 
@@ -37,6 +38,13 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                 "retrieved_context": "bounded MITRE context",
                 "retrieval_context_id": "retrieval-1",
                 "mitre_table": [],
+                "legal_reference": {
+                    "provisions": [],
+                    "provider": "thanoy",
+                    "query_sent": "inspect this",
+                    "degraded": "",
+                    "disclaimer": "",
+                },
                 "previous_analysis": None,
             },
         )
@@ -53,6 +61,7 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                             "retrieval_context_id": None,
                             "context": "",
                             "mitre_table": [],
+                            "legal_reference": {},
                             field: "must not cross this boundary",
                         },
                     )
@@ -105,6 +114,7 @@ class ChatRagResponseMappingTests(unittest.TestCase):
                 retrieval_context_id="retrieval-1",
                 context="PowerShell retrieval context",
                 mitre_table=[mitre_row],
+                legal_reference={"provider": "thanoy"},
             )
         )
 
@@ -121,6 +131,7 @@ class ChatRagResponseMappingTests(unittest.TestCase):
                 "retrieval_context_id": "",
                 "context": "",
                 "mitre_table": [],
+                "legal_reference": {},
             }
         )
         self.assertIsNone(response.retrieval_context_id)

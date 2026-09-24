@@ -22,7 +22,7 @@ from app.services.analysis.prompts import (
 from app.services.analysis.provider import request_stage, resolve_target
 from app.services.analysis.settings import AnalysisPipelineConfig, read_pipeline
 from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.sources import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
 async def analyze_case(
@@ -130,13 +130,6 @@ async def execute_analysis_pipeline(
 
 
 def usable_technical_context(value: object) -> dict[str, object] | None:
-    """The retrieved context, or nothing if there is not enough of it to use.
-
-    A context string without a MITRE table is a paragraph the model cannot map
-    anything to, so it is treated as no context at all rather than passed along
-    to be mentioned.
-    """
-
     if (
         isinstance(value, dict)
         and isinstance(value.get("context"), str)
@@ -156,10 +149,6 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
         "source_kind": source.source_kind,
         "text": source.text,
     }
-    # A reply reads as nothing on its own. "No information" answers one question
-    # out of several the case has open, and which one changes what it means.
-    # Replies arrive as followup_history now, not as sources — this is here for
-    # cases analysed before that, whose rows are still in the bundle.
     question = source.provenance.get("question")
     if source.source_kind == "followup_answer" and isinstance(question, str) and question.strip():
         payload["answers_question"] = question.strip()
@@ -203,12 +192,6 @@ def direct_trace(
     mode: str,
     retrieval_context_id: str | None = None,
 ) -> CaseAnalysisTrace:
-    """What the model said, before anything is checked against the case.
-
-    Binding it to the sources is bind_to_case's job, so that a composition
-    without that step is genuinely an unchecked analysis.
-    """
-
     return CaseAnalysisTrace(
         analysis_mode=mode,
         summary=parsed.summary,
@@ -231,8 +214,6 @@ def validate_direct_trace(
     mitre_table: list[dict[str, object]] | tuple[dict[str, object], ...] | None = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisTrace:
-    """Build the trace and bind it, in one call, for callers outside the pipeline."""
-
     return resolve_case_trace(
         direct_trace(parsed, mode=mode, retrieval_context_id=retrieval_context_id),
         source_bundle,

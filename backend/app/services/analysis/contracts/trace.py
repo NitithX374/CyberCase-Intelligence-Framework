@@ -111,8 +111,6 @@ class CaseMitreAssociation(BaseModel):
     technique_id: str = Field(pattern=r"^T\d{4}(?:\.\d{3})?$", max_length=9)
     claim_ids: list[str] = Field(min_length=1, max_length=64)
     reason: str = Field(min_length=1, max_length=4_000)
-    # What the technique means, in the reader's own words rather than ATT&CK's.
-    # Optional because analyses stored before it existed have to keep reading.
     plain_meaning: str = Field(default="", max_length=600)
     status: Literal["candidate_only"]
     support_role: Literal["external_technical_context"]
@@ -131,34 +129,16 @@ class CaseMitreAssociation(BaseModel):
 
 
 class CaseGroundingReport(BaseModel):
-    """How much of what the model asserted is actually bound to a source.
-
-    A quotation the model invented is dropped during validation rather than
-    rejected, because one bad citation should not lose a whole analysis. Dropped
-    silently, though, a fabricated quote and a correct one look the same
-    afterwards. These are the counts that tell them apart.
-    """
-
     model_config = ConfigDict(extra="forbid")
 
     claims: int = 0
     citations_claimed: int = 0
     citations_verified: int = 0
-    # Of the citations that were not found: wording drawn from the source but
-    # quoted loosely, against wording that is in no source at all. The first is
-    # a real fact quoted badly; only the second is an invention.
     citations_paraphrased: int = 0
     citations_unfound: int = 0
     claims_without_citation: int = 0
-    # Two claims under one id: the second is dropped, because everything
-    # downstream keys on it.
     claims_duplicated: int = 0
-    # A technique the model named that the retrieval never returned — the
-    # ATT&CK counterpart of a quotation that is in no source.
     associations_outside_context: int = 0
-    # How much of the case was drawn on at all. Grounding alone rises when an
-    # analysis drops what it cannot support, so the two are only readable
-    # together: quoting one sentence perfectly is not a better analysis.
     sources_cited: int = 0
     sources_total: int = 0
 
@@ -177,13 +157,7 @@ class CaseAnalysisTrace(BaseModel):
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=64)
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
     retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
-    # Written by validation, not by the model. Absent on traces stored
-    # before it was counted.
     grounding: CaseGroundingReport | None = None
-    # Why the analysis stopped asking the reader for more, written by the
-    # clarification policy rather than the model. None while the case is still
-    # being clarified, and on traces stored before it was recorded. Never
-    # "sufficient": see clarification.ProceedReason.
     stop_reason: str | None = Field(default=None, max_length=40)
 
 
@@ -201,14 +175,6 @@ class CaseProviderAnalysis(BaseModel):
 
 
 class CaseProviderReading(BaseModel):
-    """What the first call of the split pipeline returns: the case as read.
-
-    Everything here is drawn from the sources and nothing in it judges the
-    case, which is why it carries no summary, no gaps and no ATT&CK. The call
-    that produces it is never shown the technical context either, so a claim
-    cannot pick up wording from a technique that was merely retrieved.
-    """
-
     model_config = ConfigDict(extra="forbid")
 
     version: Literal["case_analysis_trace_v1"]
@@ -219,14 +185,6 @@ class CaseProviderReading(BaseModel):
 
 
 class CaseProviderJudgement(BaseModel):
-    """What the second call returns: what the claims already written add up to.
-
-    It writes no claims and copies no quotation. Every claim id it carries
-    points at a claim the reading call wrote, which is the reason the split is
-    worth a second call: this one never has to invent an identifier and then
-    remember it.
-    """
-
     model_config = ConfigDict(extra="forbid")
 
     version: Literal["case_analysis_trace_v1"]

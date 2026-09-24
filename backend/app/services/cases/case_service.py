@@ -1,33 +1,17 @@
-"""Case aggregate lifecycle and construction services."""
-
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
-from app.models.chat import ChatMessage
 from app.models.report import CaseReport
-from app.models.sources import (
-    CaseDocument,
-    CaseSource,
-    DocumentExtraction,
-)
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
-from app.services.workflow import analysis_freshness
+from app.services.workflow.run_analysis import analysis_freshness
 
 
 def serialize_case(case: Case) -> CaseRead:
-    """A case is waiting on the user, has an analysis, or has neither.
-
-    There is no "processing" state: an analysis runs inside the request that
-    asked for it, so by the time a case is serialised it has either finished or
-    failed with an error the caller already saw.
-    """
-
     status_value = "answered" if case.latest_analysis_result is not None else "idle"
     freshness = analysis_freshness(case, case.latest_analysis_result)
     return CaseRead(
@@ -110,24 +94,7 @@ class CaseService:
         case = await self.load_case(case_id, lock=True)
         self.verify_case_access(case, user_id)
 
-        # Delete case-owned entities in dependency order within transaction
         await self.db.execute(delete(CaseReport).where(CaseReport.case_id == case.id))
-
-        await self.db.execute(
-            update(Case).where(Case.id == case.id).values(latest_analysis_result_id=None)
-        )
-        await self.db.execute(
-            delete(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case.id)
-        )
-        await self.db.execute(delete(ChatMessage).where(ChatMessage.case_id == case.id))
-        await self.db.execute(delete(CaseSource).where(CaseSource.case_id == case.id))
-
-        doc_ids_subq = select(CaseDocument.id).where(CaseDocument.case_id == case.id)
-        await self.db.execute(
-            delete(DocumentExtraction).where(DocumentExtraction.document_id.in_(doc_ids_subq))
-        )
-        await self.db.execute(delete(CaseDocument).where(CaseDocument.case_id == case.id))
-
         self.db.expunge_all()
         await self.db.execute(delete(Case).where(Case.id == case.id))
         await self.db.commit()

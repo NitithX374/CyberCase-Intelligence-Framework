@@ -1,13 +1,3 @@
-"""The case conversation: asking about an analysis, and answering what it asks.
-
-A question is answered in the request that sent it, from the analysis the case
-already has. When the analysis left something open it asks about it here, one
-question at a time, and each reply stays a message — conversation the next
-analysis reads as follow-up history, not a case source that revises the
-material. The case is analysed again once the round's questions are spent, not
-after every reply.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -35,14 +25,9 @@ from app.services.chat.followup import (
     question_message,
     rounds_asked,
 )
-from app.services.workflow import (
-    AnalysisStep,
-    CaseWorkflowError,
-    answer_case_question,
-    next_ordinal,
-    owned_case,
-    run_case_analysis,
-)
+from app.services.workflow.answer_question import answer_case_question
+from app.services.workflow.run_analysis import AnalysisStep, run_case_analysis
+from app.services.workflow.shared import CaseWorkflowError, next_ordinal, owned_case
 
 
 class CaseChatError(Exception):
@@ -92,8 +77,6 @@ async def post_case_message(
     request: ChatMessageCreate,
     session_factory: Callable = async_session,
 ) -> tuple[list[ChatMessage], AnalysisStep | None]:
-    """Handle one sent message through one of the four chat paths."""
-
     if (
         already := await messages_of_send(session_factory, case_id, request.client_request_id)
     ) is not None:
@@ -177,7 +160,6 @@ async def record_answer_and_ask_next(
             raise CaseChatError(error.code, error.message, error.status_code) from error
         question = await pending_question(db, case.id)
         if question is None:
-            # The lock re-check closes the race between dispatch and this write.
             return None
         answer = answer_message(
             case_id=case.id,
@@ -208,7 +190,6 @@ async def analyse_after_round(
     recorded: RecordedFollowup,
     session_factory: Callable,
 ) -> tuple[list[ChatMessage], AnalysisStep | None]:
-
     try:
         step = await run_case_analysis(
             case_id=case_id,
@@ -225,8 +206,6 @@ async def analyse_after_round(
 async def messages_of_send(
     session_factory: Callable, case_id: UUID, client_request_id: str | None
 ) -> list[ChatMessage] | None:
-    """Everything a send already produced, when the client is sending it again."""
-
     if client_request_id is None:
         return None
     async with session_factory() as db:
@@ -244,12 +223,6 @@ async def messages_of_send(
 async def next_question_of_round(
     db: AsyncSession, *, case_id: UUID, question: ChatMessage
 ) -> ChatMessage | None:
-    """The next question from the analysis that asked this one, if any is left.
-
-    None means this round is over — not that the case is settled. The caller
-    analyses again, and that analysis decides afresh whether to ask or stop.
-    """
-
     analysis_result_id = question.analysis_result_id
     result = await db.get(CaseAnalysisResult, analysis_result_id)
     if result is None:

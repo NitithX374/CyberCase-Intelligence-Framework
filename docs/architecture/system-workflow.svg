@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="622" height="872" viewBox="-1 -1 622 872" font-family="Helvetica, Arial, sans-serif">
+<rect x="-1" y="-1" width="622" height="872" fill="#fff"/>
+<g fill="none" stroke="#000" stroke-width="1">
+<rect x="0" y="0" width="150" height="870"/>
+<line x1="0" y1="30" x2="150" y2="30"/>
+<rect x="150" y="0" width="320" height="870"/>
+<line x1="150" y1="30" x2="470" y2="30"/>
+<rect x="470" y="0" width="150" height="870"/>
+<line x1="470" y1="30" x2="620" y2="30"/>
+<polyline points="75,65 75,78.632"/>
+<polygon points="75.00,83.88 71.50,76.88 75.00,78.63 78.50,76.88" fill="#000" stroke="#000"/>
+<polyline points="135,105 161.632,105"/>
+<polygon points="166.88,105.00 159.88,108.50 161.63,105.00 159.88,101.50" fill="#000" stroke="#000"/>
+<polyline points="230,125 230,142 75,142 75,153.632"/>
+<polygon points="75.00,158.88 71.50,151.88 75.00,153.63 78.50,151.88" fill="#000" stroke="#000"/>
+<polyline points="135,180 161.632,180"/>
+<polygon points="166.88,180.00 159.88,183.50 161.63,180.00 159.88,176.50" fill="#000" stroke="#000"/>
+<polyline points="230,200 230,218.632"/>
+<polygon points="230.00,223.88 226.50,216.88 230.00,218.63 233.50,216.88" fill="#000" stroke="#000"/>
+<polyline points="230,295 230,313.632"/>
+<polygon points="230.00,318.88 226.50,311.88 230.00,313.63 233.50,311.88" fill="#000" stroke="#000"/>
+<polyline points="288,260 325.632,260"/>
+<polygon points="330.88,260.00 323.88,263.50 325.63,260.00 323.88,256.50" fill="#000" stroke="#000"/>
+<polyline points="448,260 545,260 545,288.632"/>
+<polygon points="545.00,293.88 541.50,286.88 545.00,288.63 548.50,286.88" fill="#000" stroke="#000"/>
+<polyline points="390,295 390,358.632"/>
+<polygon points="390.00,363.88 386.50,356.88 390.00,358.63 393.50,356.88" fill="#000" stroke="#000"/>
+<polyline points="545,335 545,358.632"/>
+<polygon points="545.00,363.88 541.50,356.88 545.00,358.63 548.50,356.88" fill="#000" stroke="#000"/>
+<polyline points="485,385 461.368,385"/>
+<polygon points="456.12,385.00 463.12,381.50 461.37,385.00 463.12,388.50" fill="#000" stroke="#000"/>
+<polyline points="168,340 75,340 75,393.632"/>
+<polygon points="75.00,398.88 71.50,391.88 75.00,393.63 78.50,391.88" fill="#000" stroke="#000"/>
+<polyline points="135,420 161.632,420"/>
+<polygon points="166.88,420.00 159.88,423.50 161.63,420.00 159.88,416.50" fill="#000" stroke="#000"/>
+<polyline points="230,440 230,458.632"/>
+<polygon points="230.00,463.88 226.50,456.88 230.00,458.63 233.50,456.88" fill="#000" stroke="#000"/>
+<polyline points="230,535 230,553.632"/>
+<polygon points="230.00,558.88 226.50,551.88 230.00,553.63 233.50,551.88" fill="#000" stroke="#000"/>
+<polyline points="288,500 312,500 312,180 298.368,180"/>
+<polygon points="293.12,180.00 300.12,176.50 298.37,180.00 300.12,183.50" fill="#000" stroke="#000"/>
+<polyline points="168,580 75,580 75,446.368"/>
+<polygon points="75.00,441.12 78.50,448.12 75.00,446.37 71.50,448.12" fill="#000" stroke="#000"/>
+<polyline points="390,405 390,428.632"/>
+<polygon points="390.00,433.88 386.50,426.88 390.00,428.63 393.50,426.88" fill="#000" stroke="#000"/>
+<polyline points="390,475 390,498.632"/>
+<polygon points="390.00,503.88 386.50,496.88 390.00,498.63 393.50,496.88" fill="#000" stroke="#000"/>
+<polyline points="390,545 390,630 141.368,630"/>
+<polygon points="136.12,630.00 143.12,626.50 141.37,630.00 143.12,633.50" fill="#000" stroke="#000"/>
+<polyline points="75,650 75,673.632"/>
+<polygon points="75.00,678.88 71.50,671.88 75.00,673.63 78.50,671.88" fill="#000" stroke="#000"/>
+<polyline points="135,700 161.632,700"/>
+<polygon points="166.88,700.00 159.88,703.50 161.63,700.00 159.88,696.50" fill="#000" stroke="#000"/>
+<polyline points="230,720 230,737 75,737 75,748.632"/>
+<polygon points="75.00,753.88 71.50,746.88 75.00,748.63 78.50,746.88" fill="#000" stroke="#000"/>
+<polyline points="75,795 75,817.632"/>
+<polygon points="75.00,822.88 71.50,815.88 75.00,817.63 78.50,815.88" fill="#000" stroke="#000"/>
+<circle cx="75" cy="55" r="10" fill="#000"/>
+<rect x="15" y="85" width="120" height="40" fill="#fff"/>
+<rect x="168" y="85" width="124" height="40" fill="#fff"/>
+<rect x="15" y="160" width="120" height="40" fill="#fff"/>
+<rect x="168" y="160" width="124" height="40" fill="#fff"/>
+<polygon points="230,225 288,260 230,295 172,260" fill="#fff"/>
+<polygon points="390,225 448,260 390,295 332,260" fill="#fff"/>
+<rect x="485" y="295" width="120" height="40" fill="#fff"/>
+<rect x="168" y="320" width="124" height="40" fill="#fff"/>
+<rect x="485" y="365" width="120" height="40" fill="#fff"/>
+<rect x="325" y="365" width="130" height="40" fill="#fff"/>
+<rect x="15" y="400" width="120" height="40" fill="#fff"/>
+<rect x="168" y="400" width="124" height="40" fill="#fff"/>
+<rect x="325" y="435" width="130" height="40" fill="#fff"/>
+<polygon points="230,465 288,500 230,535 172,500" fill="#fff"/>
+<rect x="325" y="505" width="130" height="40" fill="#fff"/>
+<rect x="168" y="560" width="124" height="40" fill="#fff"/>
+<rect x="15" y="610" width="120" height="40" fill="#fff"/>
+<rect x="15" y="680" width="120" height="40" fill="#fff"/>
+<rect x="168" y="680" width="124" height="40" fill="#fff"/>
+<rect x="15" y="755" width="120" height="40" fill="#fff"/>
+<circle cx="75" cy="835" r="11" fill="#fff"/>
+<circle cx="75" cy="835" r="7" fill="#000"/>
+</g>
+<g fill="#000" stroke="none">
+<text x="75" y="19.16" text-anchor="middle" font-size="12" font-weight="bold">User (Web UI)</text>
+<text x="310" y="19.16" text-anchor="middle" font-size="12" font-weight="bold">Backend API</text>
+<text x="545" y="19.16" text-anchor="middle" font-size="12" font-weight="bold">RAG Service</text>
+<text x="75" y="101.96" text-anchor="middle" font-size="12" font-weight="normal">Create case and</text>
+<text x="75" y="116.36" text-anchor="middle" font-size="12" font-weight="normal">add sources</text>
+<text x="230" y="101.96" text-anchor="middle" font-size="12" font-weight="normal">Extract text and</text>
+<text x="230" y="116.36" text-anchor="middle" font-size="12" font-weight="normal">save as case source</text>
+<text x="75" y="184.16" text-anchor="middle" font-size="12" font-weight="normal">Run analysis</text>
+<text x="230" y="176.96" text-anchor="middle" font-size="12" font-weight="normal">Assess</text>
+<text x="230" y="191.36" text-anchor="middle" font-size="12" font-weight="normal">information gaps</text>
+<text x="230" y="256.96" text-anchor="middle" font-size="12" font-weight="normal">Gap worth</text>
+<text x="230" y="271.36" text-anchor="middle" font-size="12" font-weight="normal">asking?</text>
+<text x="390" y="256.96" text-anchor="middle" font-size="12" font-weight="normal">ATT&amp;CK</text>
+<text x="390" y="271.36" text-anchor="middle" font-size="12" font-weight="normal">applicable?</text>
+<text x="545" y="311.96" text-anchor="middle" font-size="12" font-weight="normal">Retrieve ATT&amp;CK</text>
+<text x="545" y="326.36" text-anchor="middle" font-size="12" font-weight="normal">context</text>
+<text x="230" y="336.96" text-anchor="middle" font-size="12" font-weight="normal">Save assessment</text>
+<text x="230" y="351.36" text-anchor="middle" font-size="12" font-weight="normal">and post question</text>
+<text x="545" y="381.96" text-anchor="middle" font-size="12" font-weight="normal">Look up Thai</text>
+<text x="545" y="396.36" text-anchor="middle" font-size="12" font-weight="normal">legal provisions</text>
+<text x="390" y="381.96" text-anchor="middle" font-size="12" font-weight="normal">Write structured</text>
+<text x="390" y="396.36" text-anchor="middle" font-size="12" font-weight="normal">analysis</text>
+<text x="75" y="416.96" text-anchor="middle" font-size="12" font-weight="normal">Answer question</text>
+<text x="75" y="431.36" text-anchor="middle" font-size="12" font-weight="normal">in chat</text>
+<text x="230" y="416.96" text-anchor="middle" font-size="12" font-weight="normal">Save answer as</text>
+<text x="230" y="431.36" text-anchor="middle" font-size="12" font-weight="normal">chat message</text>
+<text x="390" y="451.96" text-anchor="middle" font-size="12" font-weight="normal">Verify citations</text>
+<text x="390" y="466.36" text-anchor="middle" font-size="12" font-weight="normal">against sources</text>
+<text x="230" y="496.96" text-anchor="middle" font-size="12" font-weight="normal">More to ask</text>
+<text x="230" y="511.36" text-anchor="middle" font-size="12" font-weight="normal">this round?</text>
+<text x="390" y="521.96" text-anchor="middle" font-size="12" font-weight="normal">Save validated</text>
+<text x="390" y="536.36" text-anchor="middle" font-size="12" font-weight="normal">analysis</text>
+<text x="230" y="584.16" text-anchor="middle" font-size="12" font-weight="normal">Post next question</text>
+<text x="75" y="634.16" text-anchor="middle" font-size="12" font-weight="normal">Review analysis</text>
+<text x="75" y="704.16" text-anchor="middle" font-size="12" font-weight="normal">Generate report</text>
+<text x="230" y="696.96" text-anchor="middle" font-size="12" font-weight="normal">Build report</text>
+<text x="230" y="711.36" text-anchor="middle" font-size="12" font-weight="normal">from template</text>
+<text x="75" y="771.96" text-anchor="middle" font-size="12" font-weight="normal">Download report</text>
+<text x="75" y="786.36" text-anchor="middle" font-size="12" font-weight="normal">as HTML or PDF</text>
+<text x="246" y="310.81" text-anchor="middle" font-size="11" font-weight="normal">Yes</text>
+<text x="299" y="251.81" text-anchor="middle" font-size="11" font-weight="normal">No</text>
+<text x="502" y="253.81" text-anchor="middle" font-size="11" font-weight="normal">Yes</text>
+<text x="404" y="310.81" text-anchor="middle" font-size="11" font-weight="normal">No</text>
+<text x="246" y="550.81" text-anchor="middle" font-size="11" font-weight="normal">Yes</text>
+<text x="300" y="515.81" text-anchor="middle" font-size="11" font-weight="normal">No</text>
+</g></svg>

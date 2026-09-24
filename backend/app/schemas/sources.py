@@ -1,5 +1,3 @@
-"""HTTP contracts for a case's documents and the sources read from them."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -7,19 +5,6 @@ from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-
-
-class DocumentExtractionRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    document_id: UUID
-    provider: str
-    config_json: dict[str, object]
-    extracted_text: str
-    provenance_json: dict[str, object]
-    warnings_json: list[object]
-    created_at: datetime
 
 
 class CaseDocumentRead(BaseModel):
@@ -30,9 +15,7 @@ class CaseDocumentRead(BaseModel):
     filename: str
     mime_type: str
     size_bytes: int
-    archived_at: datetime | None
     created_at: datetime
-    extractions: list[DocumentExtractionRead] = Field(default_factory=list)
 
 
 class CaseSourceCreate(BaseModel):
@@ -49,7 +32,7 @@ class CaseSourceRead(BaseModel):
     case_id: UUID
     source_kind: str
     document_id: UUID | None
-    origin_message_id: UUID | None
+    filename: str | None = None
     exact_text: str
     provenance_json: dict[str, object] = Field(default_factory=dict)
     source_metadata_json: dict[str, object] = Field(default_factory=dict)
@@ -61,5 +44,4 @@ __all__ = [
     "CaseDocumentRead",
     "CaseSourceCreate",
     "CaseSourceRead",
-    "DocumentExtractionRead",
 ]

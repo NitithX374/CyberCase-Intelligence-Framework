@@ -1,5 +1,3 @@
-"""Report history scoped to a Case and bound to a CaseAnalysisResult."""
-
 from __future__ import annotations
 
 import uuid
@@ -27,13 +25,6 @@ if TYPE_CHECKING:
 
 
 class CaseReport(Base):
-    """A saved report: the rendered content and the analysis it came from.
-
-    One report per analysis, so regenerating returns the existing row instead of
-    creating a second version. Version numbers count up per case, which is what
-    "version 2 of this case's report" means to a reader.
-    """
-
     __tablename__ = "case_reports"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_case_reports"),
@@ -56,7 +47,7 @@ class CaseReport(Base):
         ForeignKey(
             "case_analysis_results.id",
             name="fk_case_reports_analysis_result_id_case_analysis_results",
-            ondelete="RESTRICT",
+            ondelete="CASCADE",
         ),
         nullable=False,
     )

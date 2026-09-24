@@ -1,5 +1,3 @@
-"""Analysis endpoints. The analysis runs inside the request that asks for it."""
-
 from __future__ import annotations
 
 from uuid import UUID
@@ -17,13 +15,13 @@ from app.schemas.analysis import (
     FollowupQuestionRead,
 )
 from app.services.auth.dependencies import get_current_user
-from app.services.workflow import (
+from app.services.workflow.run_analysis import (
     AnalysisStep,
-    CaseWorkflowError,
     analysis_freshness,
     get_latest_case_analysis,
     run_case_analysis,
 )
+from app.services.workflow.shared import CaseWorkflowError
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-analysis"])
 
@@ -36,8 +34,6 @@ def workflow_http_error(error: CaseWorkflowError) -> HTTPException:
 
 
 def analysis_step_read(step: AnalysisStep) -> AnalysisStepRead:
-    """One step as the client sees it: a question, or a finished analysis."""
-
     if step.question is not None and step.gap is not None:
         return AnalysisStepRead(
             status="need_followup",
@@ -68,12 +64,6 @@ async def analyse_case(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Advance the analysis one step. This call is slow by nature.
-
-    A step that ends with a question returns the question. Its assessment is
-    stored for the follow-up round but is not returned by ``GET /analysis``.
-    """
-
     await commit_dependency_transaction(db)
     try:
         step = await run_case_analysis(

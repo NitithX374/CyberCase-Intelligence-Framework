@@ -23,7 +23,7 @@ from app.services.analysis.settings import (
     read_pipeline,
 )
 from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.sources import CaseSourceBundle
+from app.services.sources.case_source_bundle import CaseSourceBundle
 
 ANSWER_VERSION = "case_chat_answer_v1"
 ANSWER_PROMPT = """Answer only the current question about the supplied completed Case analysis.
@@ -59,13 +59,6 @@ NOT_IN_ANALYSIS = {
 
 
 class CaseAnswerResponse(BaseModel):
-    """One reply, and which of the three kinds of reply it is.
-
-    A question about the case is answered from claims or not at all. A question
-    that is not about the case is answered in plain prose with nothing bound to
-    it, which is why the two never share a field.
-    """
-
     model_config = ConfigDict(extra="forbid")
 
     outcome: Literal["answered", "not_in_analysis", "general"]
@@ -82,8 +75,6 @@ class CaseAnswerResponse(BaseModel):
 
 
 class GeneralCaseAnswerResponse(BaseModel):
-    """Fallback plain-text answer when the case has no completed analysis yet."""
-
     model_config = ConfigDict(extra="forbid")
 
     answer: str = Field(
@@ -112,12 +103,6 @@ def build_answer_context(
     history: list[ChatMessage],
     source_bundle: CaseSourceBundle,
 ) -> dict[str, object]:
-    """What the answer call needs, taken from rows this request just read.
-
-    When result is None, the case has not been analysed yet; a pre-analysis
-    fallback answer will be generated.
-    """
-
     if result is None:
         return {
             "analysis_result_id": None,
@@ -213,7 +198,9 @@ async def generate_case_answer(
             "case_ask_context_invalid", "Chat analysis configuration is unavailable"
         )
     try:
-        config = read_pipeline(dict(pipeline_value))
+        config = read_pipeline(dict(pipeline_value)).model_copy(
+            update={"model": configured_pipeline().model}
+        )
     except ValidationError as error:
         raise CaseAnalysisFailure(
             "case_ask_context_invalid", "Chat analysis configuration is invalid"
@@ -242,9 +229,6 @@ async def generate_case_answer(
         raise CaseAnalysisFailure("case_ask_context_invalid", "Chat analysis context is incomplete")
     trace = parse_trace(context.get("trace"), "Chat analysis trace is invalid")
     calls: list[dict[str, object]] = []
-    # The whole analysis, not just its claims. Everything but the gaps carries
-    # the claim_ids it rests on, so answering from it cites the same claims a
-    # direct answer would.
     content = {
         "response_language": language,
         "question": question,

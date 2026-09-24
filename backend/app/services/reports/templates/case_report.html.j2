@@ -3,225 +3,390 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ report.title }}</title>
+  <title>รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น เรื่อง {{ display.subject }}</title>
   <style>
     @page {
       size: A4;
-      margin: 18mm 16mm 16mm;
-      /* What render_pdf.py used to draw on the reportlab canvas by hand. */
+      margin: 25mm 20mm 22mm 30mm;
+      @top-right {
+        content: "รายงานเบื้องต้น ยังไม่ผ่านการตรวจสอบ";
+        font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+        font-size: 8.5pt; color: #3f3f46;
+      }
       @bottom-left {
-        content: "CyberCase · Preliminary analysis";
-        font-family: "Noto Sans Thai", "Garuda", "Tahoma", sans-serif;
-        font-size: 7pt; color: #4b5563;
-        border-top: 0.5pt solid #1e293b; padding-top: 4pt;
-        vertical-align: top;
+        content: "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น{% if display.issue %} ฉบับที่ {{ display.issue.version_number }}{% endif %}";
+        font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+        font-size: 8.5pt; color: #3f3f46;
+        border-top: 0.5pt solid #52525b; padding-top: 3pt; vertical-align: top;
       }
       @bottom-right {
-        content: "Page " counter(page);
-        font-family: "Noto Sans Thai", "Garuda", "Tahoma", sans-serif;
-        font-size: 7pt; color: #4b5563;
-        border-top: 0.5pt solid #1e293b; padding-top: 4pt;
-        vertical-align: top; text-align: right;
+        content: "หน้า " counter(page) " จาก " counter(pages);
+        font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+        font-size: 8.5pt; color: #3f3f46;
+        border-top: 0.5pt solid #52525b; padding-top: 3pt; vertical-align: top; text-align: right;
       }
     }
-    :root { color-scheme: light; font-family: "Noto Sans Thai", "Garuda", "Tahoma", sans-serif; color: #111827; background: #f9fafb; }
+    @page :first { @top-right { content: none; } }
+
+    html {
+      color-scheme: light;
+      background: #ffffff;
+      font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; background: #f9fafb; color: #111827; font-size: 13.5px; line-height: 1.75; }
-    .document { width: min(100%, 880px); margin: 0 auto; padding: 36px 32px 48px; background: #ffffff; }
-    .eyebrow { margin: 0 0 6px; color: #4b5563; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    h1 { margin: 0; color: #1e293b; font-size: 24px; line-height: 1.3; }
-    .report-type { margin: 6px 0 16px; color: #4b5563; font-size: 13.5px; font-weight: 600; }
-    .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12.5px; }
-    .meta-table td { padding: 8px 12px; border: 1px solid #d1d5db; background: #f3f4f6; color: #111827; }
-    .meta-table strong { color: #4b5563; }
-    .formal-rule { border: 0; border-top: 1.5px solid #1e293b; margin: 18px 0 22px; }
-    .report-section { margin-top: 24px; break-inside: avoid; }
-    .report-section h2, .source-register h2 { margin: 0 0 12px; padding: 6px 12px; border: 1px solid #d1d5db; background: #f3f4f6; color: #1e293b; font-size: 15px; line-height: 1.4; font-weight: 700; }
-    .paragraph { margin: 0 0 8px; white-space: pre-wrap; }
-    .body-indent { text-indent: 24px; }
-    .summary-subhead { margin: 14px 0 6px; font-size: 13.5px; font-weight: 700; color: #1e293b; }
-    .formal-bullet { margin: 4px 0 4px 12px; line-height: 1.65; }
-    .purpose-block { margin: 0 0 12px; padding: 8px 12px; border: 1px solid #d1d5db; background: #f9fafb; font-size: 13px; line-height: 1.6; }
-    .indicator-list { margin-top: 10px; }
-    .indicator-list > * + * { margin-top: 14px; }
-    .indicator-formal { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; background: #ffffff; break-inside: avoid; }
-    .indicator-title { color: #1e293b; font-size: 14px; margin-bottom: 4px; }
-    .epistemic-tag { color: #4b5563; font-style: italic; font-size: 12px; font-weight: normal; margin-left: 6px; }
-    .claim-text { margin: 0 0 6px; }
-    .formal-quote { margin: 4px 0 4px 20px; font-style: italic; color: #4b5563; font-size: 13px; }
-    .quote-contradict { color: #991b1b; }
-    .formal-reasoning { margin: 4px 0 4px 20px; font-style: italic; color: #1e3a8a; font-size: 13px; }
-    .source-register { margin-top: 32px; padding-top: 12px; border-top: 1px solid #d1d5db; }
-    .source-register p { margin: 0 0 8px; color: #4b5563; font-size: 12px; }
-    .source-row { padding: 3px 0 3px 12px; font-size: 13px; }
-    footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 11px; text-align: center; }
-    @media print {
-      body { background: #ffffff; }
-      .document { width: auto; padding: 0; }
-      .report-section, .source-register { break-inside: auto; }
-      .indicator-formal { break-inside: avoid; }
+    body { margin: 0; color: #111111; font-size: 11pt; line-height: 1.65; }
+    p { margin: 0 0 6pt; }
+
+    .title-block { text-align: center; margin-bottom: 14pt; }
+    .issuer { margin: 0 0 4pt; font-size: 9pt; letter-spacing: 0.08em; color: #3f3f46; }
+    h1 { margin: 0; font-size: 17pt; line-height: 1.4; font-weight: 700; }
+    .subject { margin: 4pt 0 0; font-size: 12.5pt; }
+    .subject .label { font-weight: 700; margin-right: 6pt; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 0.6pt solid #3f3f46; padding: 3.5pt 6pt; vertical-align: top; text-align: left; }
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
+
+    .doc-info { margin-bottom: 10pt; font-size: 10pt; }
+    .doc-info th { width: 17%; background: #f1f1f2; font-weight: 700; white-space: nowrap; }
+    .doc-info td { width: 33%; }
+    .doc-info .nowrap { white-space: nowrap; }
+
+    .notice { margin: 0 0 16pt; padding: 6pt 9pt; border: 0.6pt solid #3f3f46; font-size: 10pt; text-indent: 0; }
+    .notice strong { margin-right: 4pt; }
+
+    section { margin-top: 16pt; }
+    h2 {
+      margin: 0 0 7pt; padding-bottom: 2pt; border-bottom: 0.75pt solid #111111;
+      font-size: 13pt; line-height: 1.45; font-weight: 700; break-after: avoid;
+    }
+    h3 { margin: 10pt 0 5pt; font-size: 11.5pt; font-weight: 700; break-after: avoid; }
+    .body { text-indent: 2.5em; white-space: pre-wrap; }
+    .note { font-size: 10pt; color: #27272a; }
+
+    .caption { margin: 8pt 0 3pt; font-size: 10pt; font-weight: 700; break-after: avoid; }
+    .formal { margin-bottom: 8pt; font-size: 10pt; line-height: 1.55; }
+    .formal th { background: #f1f1f2; font-weight: 700; text-align: center; vertical-align: middle; }
+    .formal .n { text-align: center; white-space: nowrap; }
+    .formal .ref { white-space: nowrap; }
+    .formal .minor { display: block; font-size: 9pt; color: #3f3f46; }
+    .quote { margin-top: 3pt; font-size: 9.5pt; color: #27272a; }
+    .quote-label { font-weight: 700; }
+
+    ol.numbered { margin: 0; padding: 0; list-style: none; }
+    ol.numbered > li { display: flex; gap: 6pt; margin: 0 0 4pt; }
+    ol.numbered .n { flex: none; min-width: 2.2em; }
+
+    .signoff { margin-top: 20pt; break-inside: avoid; }
+    .signature { width: 92mm; margin: 14pt 0 0 auto; text-align: center; line-height: 1.9; }
+    .signature p { margin: 0; white-space: nowrap; }
+
+    .annex { margin-top: 28pt; }
+
+    @media screen {
+      html { background: #e9ebee; }
+      body { padding: 24px 12px; }
+      .document {
+        max-width: 210mm; margin: 0 auto; padding: 25mm 20mm 22mm 30mm;
+        background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+    }
+    @media screen and (max-width: 640px) {
+      body { padding: 0; }
+      .document { padding: 20px 16px; box-shadow: none; }
     }
   </style>
 </head>
 <body>
+  {% set tables = namespace(n=0) %}
+  {% set sections = display.sections %}
   <article class="document">
-    <header>
-      <p class="eyebrow">CYBERCASE INTELLIGENCE FRAMEWORK</p>
+    <header class="title-block">
+      <p class="issuer">CyberCase Intelligence Framework</p>
       <h1>รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น</h1>
-      <p class="report-type">เรื่อง: {{ report.title }}</p>
-      <table class="meta-table">
-        <tr>
-          <td><strong>ประเภทเอกสาร:</strong> รายงานสรุปผลการวิเคราะห์เบื้องต้น</td>
-          <td><strong>สถานะ:</strong> เบื้องต้น / ยังไม่ยืนยัน</td>
-        </tr>
-        <tr>
-          <td><strong>เอกสารที่นำเข้า:</strong> {{ display.sources | length }} รายการ</td>
-          <td><strong>วัตถุประสงค์:</strong> สำหรับการตรวจสำนวนภายใน</td>
-        </tr>
-      </table>
-      <hr class="formal-rule">
+      <p class="subject"><span class="label">เรื่อง</span>{{ display.subject }}</p>
     </header>
+
+    <table class="doc-info">
+      <tr>
+        <th scope="row">ฉบับที่</th>
+        <td>{{ display.issue.version_number if display.issue else "-" }}</td>
+        <th scope="row">วันที่จัดทำ</th>
+        <td class="nowrap">{{ display.issued or "-" }}</td>
+      </tr>
+      <tr>
+        <th scope="row">สถานะเอกสาร</th>
+        <td>รายงานเบื้องต้น ยังไม่ผ่านการตรวจสอบ</td>
+        <th scope="row">การใช้งาน</th>
+        <td>ใช้ภายใน เพื่อประกอบการตรวจสำนวน</td>
+      </tr>
+      <tr>
+        <th scope="row">ผลการวิเคราะห์</th>
+        <td>{{ "ลงวันที่ " ~ display.analysed if display.analysed else "-" }}</td>
+        <th scope="row">หลักฐานประกอบ</th>
+        <td>{{ display.sources | length }} รายการ (ภาคผนวก ก)</td>
+      </tr>
+    </table>
+
+    <p class="notice"><strong>คำชี้แจง</strong>รายงานฉบับนี้จัดทำโดยระบบวิเคราะห์อัตโนมัติจากหลักฐานที่นำเข้าในสำนวนคดี เพื่อให้ผู้ตรวจสอบเห็นภาพรวมของคดี ประเด็นสำคัญ และหลักฐานที่ควรตรวจสอบต่อ รายงานนี้มิใช่คำวินิจฉัยข้อเท็จจริงหรือข้อกฎหมาย และต้องผ่านการตรวจสอบโดยเจ้าหน้าที่ผู้รับผิดชอบก่อนนำไปใช้</p>
+
     <main>
-      {% for section in report.sections %}
-      <section class="report-section" id="{{ section.section_id }}">
-        <h2>{{ section.heading }}</h2>
+      <section id="case_summary">
+        <h2>1. {{ display.titles.case_summary }}</h2>
+        {% set sub = namespace(n=1) %}
+        <h3>1.1 ภาพรวมของเหตุการณ์</h3>
+        <p class="body">{{ display.summary | clean_report_text }}</p>
 
-        {% if section.section_id == "case_summary" %}
-          {% for paragraph in section.paragraphs %}
-            {% set p_clean = paragraph | strip_reference_text %}
-            {% if p_clean.startswith("วัตถุประสงค์ของรายงาน:") %}
-              <div class="purpose-block">
-                <strong>วัตถุประสงค์:</strong> {{ p_clean.replace("วัตถุประสงค์ของรายงาน:", "").strip() }}
-              </div>
-            {% elif p_clean.startswith("สรุปจากผลวิเคราะห์:") %}
-              <div class="summary-subhead">สรุปภาพรวมจากผลการวิเคราะห์:</div>
-              <p class="paragraph body-indent">{{ p_clean.replace("สรุปจากผลวิเคราะห์:", "").strip() }}</p>
-            {% elif p_clean.startswith("ข้อสรุปเบื้องต้น:") %}
-              <div class="summary-subhead">ข้อสรุปเบื้องต้น:</div>
-              <p class="paragraph body-indent">{{ p_clean.replace("ข้อสรุปเบื้องต้น:", "").strip() }}</p>
-            {% else %}
-              <p class="paragraph body-indent">{{ p_clean }}</p>
-            {% endif %}
-          {% endfor %}
-
-          {% set ns_sum = namespace(has_parties=false, has_timeline=false, has_impacts=false, has_others=false) %}
-          {% for item in section.items %}
-            {% set item_clean = item | strip_reference_text %}
-            {% if item_clean.startswith("ผู้เกี่ยวข้อง:") %}
-              {% if not ns_sum.has_parties %}
-                {% set ns_sum.has_parties = true %}
-                <div class="summary-subhead">ผู้เกี่ยวข้องในคดี:</div>
-              {% endif %}
-              <div class="formal-bullet">• {{ item_clean.replace("ผู้เกี่ยวข้อง:", "").strip() }}</div>
-            {% endif %}
-          {% endfor %}
-
-          {% for item in section.items %}
-            {% set item_clean = item | strip_reference_text %}
-            {% if item_clean.startswith("ลำดับเหตุการณ์:") %}
-              {% if not ns_sum.has_timeline %}
-                {% set ns_sum.has_timeline = true %}
-                <div class="summary-subhead">ลำดับเหตุการณ์สำคัญ:</div>
-              {% endif %}
-              <div class="formal-bullet">• {{ item_clean.replace("ลำดับเหตุการณ์:", "").strip() }}</div>
-            {% endif %}
-          {% endfor %}
-
-          {% for item in section.items %}
-            {% set item_clean = item | strip_reference_text %}
-            {% if item_clean.startswith("ผลกระทบที่ปรากฏ:") %}
-              {% if not ns_sum.has_impacts %}
-                {% set ns_sum.has_impacts = true %}
-                <div class="summary-subhead">ความเสียหายและผลกระทบที่ปรากฏ:</div>
-              {% endif %}
-              <div class="formal-bullet">• {{ item_clean.replace("ผลกระทบที่ปรากฏ:", "").strip() }}</div>
-            {% endif %}
-          {% endfor %}
-
-          {% for item in section.items %}
-            {% set item_clean = item | strip_reference_text %}
-            {% if not item_clean.startswith("ผู้เกี่ยวข้อง:") and not item_clean.startswith("ลำดับเหตุการณ์:") and not item_clean.startswith("ผลกระทบที่ปรากฏ:") %}
-              {% if not ns_sum.has_others %}
-                {% set ns_sum.has_others = true %}
-                <div class="summary-subhead">ข้อมูลสรุปเพิ่มเติม:</div>
-              {% endif %}
-              <div class="formal-bullet">• {{ item_clean }}</div>
-            {% endif %}
-          {% endfor %}
-
-        {% elif section.section_id == "case_evidence" and display.claims %}
-          {% for paragraph in section.paragraphs %}
-            <p class="paragraph">{{ paragraph | clean_report_text }}</p>
-          {% endfor %}
-          <div class="indicator-list">
-            {% for claim in display.claims %}
-            <article class="indicator-formal">
-              <div class="indicator-title">
-                <strong>ตัวบ่งชี้ที่ {{ claim.ordinal }}:</strong>
-                {% if claim.epistemic_label not in ["ปรากฏในหลักฐาน", "reported"] %}
-                  <span class="epistemic-tag">({{ claim.epistemic_label }})</span>
-                {% endif %}
-              </div>
-              <p class="claim-text">{{ claim.text | clean_report_text }}</p>
-              {% for quote in claim.supporting_quotes %}
-                <div class="formal-quote">ข้อความจากหลักฐาน: “{{ quote }}”</div>
+        {% if display.parties %}
+          {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
+          <h3>1.{{ sub.n }} บุคคลและหน่วยงานที่เกี่ยวข้อง</h3>
+          <p class="caption">ตารางที่ {{ tables.n }} บุคคลและหน่วยงานที่เกี่ยวข้องในคดี</p>
+          <table class="formal">
+            <colgroup><col style="width: 9%"><col style="width: 33%"><col style="width: 44%"><col style="width: 14%"></colgroup>
+            <thead><tr><th>ลำดับ</th><th>ชื่อ</th><th>บทบาทหรือความเกี่ยวข้อง</th><th>อ้างอิง</th></tr></thead>
+            <tbody>
+              {% for party in display.parties %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ party.name }}</td>
+                <td>{{ party.role }}</td>
+                <td class="ref">{{ party.references | join(", ") or "-" }}</td>
+              </tr>
               {% endfor %}
-              {% for quote in claim.contradicting_quotes %}
-                <div class="formal-quote quote-contradict">ข้อความที่ขัดแย้ง: “{{ quote }}”</div>
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if display.timeline %}
+          {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
+          <h3>1.{{ sub.n }} ลำดับเหตุการณ์</h3>
+          <p class="caption">ตารางที่ {{ tables.n }} ลำดับเหตุการณ์ตามที่ปรากฏในหลักฐาน</p>
+          <table class="formal">
+            <colgroup><col style="width: 9%"><col style="width: 22%"><col style="width: 55%"><col style="width: 14%"></colgroup>
+            <thead><tr><th>ลำดับ</th><th>วันและเวลา</th><th>เหตุการณ์</th><th>อ้างอิง</th></tr></thead>
+            <tbody>
+              {% for event in display.timeline %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ event.time }}</td>
+                <td>{{ event.event | clean_report_text }}</td>
+                <td class="ref">{{ event.references | join(", ") or "-" }}</td>
+              </tr>
               {% endfor %}
-              {% if claim.reasoning_summary %}
-                <div class="formal-reasoning">เหตุผลเชิงวิเคราะห์: {{ claim.reasoning_summary | clean_report_text }}</div>
-              {% endif %}
-            </article>
-            {% endfor %}
-          </div>
+            </tbody>
+          </table>
+        {% endif %}
 
-        {% elif section.section_id == "preliminary_recommendations" %}
-          {% for paragraph in section.paragraphs %}
-            <p class="paragraph">{{ paragraph | clean_report_text }}</p>
-          {% endfor %}
-          {% set ns_rec = namespace(has_specific=false, has_general=false) %}
-          {% for item in section.items %}
-            {% set item_clean = item | strip_reference_text %}
-            {% if item_clean.startswith("ตรวจสอบเพิ่มเติมในประเด็น") %}
-              {% if not ns_rec.has_specific %}
-                {% set ns_rec.has_specific = true %}
-                <div class="summary-subhead">ประเด็นสำคัญที่ควรดำเนินการตรวจสอบเพิ่มเติม:</div>
-              {% endif %}
-              <div class="formal-bullet">• {{ item_clean.replace("ตรวจสอบเพิ่มเติมในประเด็น", "").strip() }}</div>
-            {% endif %}
-          {% endfor %}
-          {% for item in section.items %}
-            {% set item_clean = item | strip_reference_text %}
-            {% if not item_clean.startswith("ตรวจสอบเพิ่มเติมในประเด็น") %}
-              {% if not ns_rec.has_general %}
-                {% set ns_rec.has_general = true %}
-                <div class="summary-subhead">แนวทางการปฏิบัติในการรวบรวมพยานหลักฐาน:</div>
-              {% endif %}
-              <div class="formal-bullet">• {{ item_clean }}</div>
-            {% endif %}
-          {% endfor %}
+        {% if display.impacts %}
+          {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
+          <h3>1.{{ sub.n }} ความเสียหายและผลกระทบ</h3>
+          <p class="caption">ตารางที่ {{ tables.n }} ความเสียหายและผลกระทบที่ปรากฏ</p>
+          <table class="formal">
+            <colgroup><col style="width: 9%"><col style="width: 77%"><col style="width: 14%"></colgroup>
+            <thead><tr><th>ลำดับ</th><th>ความเสียหายหรือผลกระทบ</th><th>อ้างอิง</th></tr></thead>
+            <tbody>
+              {% for impact in display.impacts %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ impact.description | clean_report_text }}</td>
+                <td class="ref">{{ impact.references | join(", ") or "-" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
 
+        {% if not (display.parties or display.timeline or display.impacts) %}
+          <p class="note">ผลการวิเคราะห์ยังไม่ระบุผู้เกี่ยวข้อง ลำดับเหตุการณ์ หรือผลกระทบของคดี</p>
+        {% endif %}
+      </section>
+
+      <section id="case_evidence">
+        <h2>2. {{ display.titles.case_evidence }}</h2>
+        {% if display.claims %}
+          {% set tables.n = tables.n + 1 %}
+          <p class="body">ตารางต่อไปนี้แสดงข้อเท็จจริงและตัวบ่งชี้ที่ปรากฏในหลักฐาน พร้อมสถานะการยืนยันและรหัสอ้างอิงหลักฐานตามภาคผนวก ก</p>
+          <p class="caption">ตารางที่ {{ tables.n }} ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ</p>
+          <table class="formal">
+            <colgroup><col style="width: 7%"><col style="width: 63%"><col style="width: 16%"><col style="width: 14%"></colgroup>
+            <thead><tr><th>ข้อ</th><th>ข้อเท็จจริงหรือตัวบ่งชี้</th><th>สถานะ</th><th>อ้างอิง</th></tr></thead>
+            <tbody>
+              {% for claim in display.claims %}
+              <tr>
+                <td class="n">{{ claim.ordinal }}</td>
+                <td>
+                  {{ claim.text | clean_report_text }}
+                  {% for quote in claim.supporting_quotes %}
+                    <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> “{{ quote }}”</div>
+                  {% endfor %}
+                  {% for quote in claim.contradicting_quotes %}
+                    <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> “{{ quote }}”</div>
+                  {% endfor %}
+                  {% if claim.reasoning_summary %}
+                    <div class="quote"><span class="quote-label">เหตุผลเชิงวิเคราะห์:</span> {{ claim.reasoning_summary | clean_report_text }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ claim.epistemic_label }}
+                  {% if claim.is_inference %}<span class="minor">ข้อสันนิษฐานเชิงวิเคราะห์</span>{% endif %}
+                </td>
+                <td class="ref">
+                  {{ claim.source_labels | join(", ") or "-" }}
+                  {% if claim.contradicting_source_labels %}<span class="minor">ขัดแย้ง: {{ claim.contradicting_source_labels | join(", ") }}</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         {% else %}
-          {% for paragraph in section.paragraphs %}
-            <p class="paragraph">{{ paragraph | clean_report_text }}</p>
-          {% endfor %}
-          {% for item in section.items %}
-            <div class="formal-bullet">• {{ item | strip_reference_text }}</div>
+          <p class="body">ยังไม่พบตัวบ่งชี้ที่ผ่านการตรวจสอบจากผลการวิเคราะห์</p>
+        {% endif %}
+      </section>
+
+      <section id="mitre_attack_mapping">
+        <h2>3. {{ display.titles.mitre_attack_mapping }}</h2>
+        {% for paragraph in sections.mitre_attack_mapping.paragraphs %}
+          <p class="body">{{ paragraph | clean_report_text }}</p>
+        {% endfor %}
+        {% if display.techniques %}
+          {% set tables.n = tables.n + 1 %}
+          {% if display.techniques_matched %}
+            <p class="caption">ตารางที่ {{ tables.n }} เทคนิคที่เชื่อมโยงกับข้อเท็จจริงของคดี</p>
+            <table class="formal">
+              <colgroup><col style="width: 13%"><col style="width: 27%"><col style="width: 44%"><col style="width: 16%"></colgroup>
+              <thead><tr><th>รหัสเทคนิค</th><th>ชื่อเทคนิค</th><th>ความหมายโดยสังเขป</th><th>ตัวบ่งชี้ที่เกี่ยวข้อง</th></tr></thead>
+              <tbody>
+                {% for technique in display.techniques %}
+                <tr>
+                  <td class="n">{{ technique.technique_id }}</td>
+                  <td>{{ technique.name or "-" }}{% if technique.tactic %}<span class="minor">กลยุทธ์: {{ technique.tactic }}</span>{% endif %}</td>
+                  <td>{{ technique.meaning | clean_report_text or "-" }}</td>
+                  <td class="ref">{% if technique.findings %}ข้อ {{ technique.findings | join(", ") }}{% else %}-{% endif %}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="body">รายการต่อไปนี้ได้จากฐานความรู้ MITRE ATT&amp;CK โดยตรง และยังไม่ได้เชื่อมโยงกับข้อเท็จจริงรายข้อ</p>
+            <p class="caption">ตารางที่ {{ tables.n }} เทคนิคที่ได้จากฐานความรู้</p>
+            <table class="formal">
+              <colgroup><col style="width: 9%"><col style="width: 18%"><col style="width: 45%"><col style="width: 28%"></colgroup>
+              <thead><tr><th>ลำดับ</th><th>รหัส</th><th>ชื่อเทคนิค</th><th>กลยุทธ์</th></tr></thead>
+              <tbody>
+                {% for technique in display.techniques %}
+                <tr>
+                  <td class="n">{{ loop.index }}</td>
+                  <td>{{ technique.technique_id }}</td>
+                  <td>{{ technique.name or "-" }}</td>
+                  <td>{{ technique.tactic or "-" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+        {% else %}
+          {% for item in sections.mitre_attack_mapping.items %}
+            <p class="body">{{ item | strip_reference_text }}</p>
           {% endfor %}
         {% endif %}
       </section>
+
+      <section id="mapping_rationale">
+        <h2>4. {{ display.titles.mapping_rationale }}</h2>
+        {% for paragraph in sections.mapping_rationale.paragraphs %}
+          <p class="body">{{ paragraph | clean_report_text }}</p>
+        {% endfor %}
+        {% if display.techniques_matched %}
+          <ol class="numbered">
+            {% for technique in display.techniques %}
+            <li>
+              <span class="n">4.{{ loop.index }}</span>
+              <span><strong>{{ technique.technique_id }}{% if technique.name %} {{ technique.name }}{% endif %}</strong> {{ technique.reason | clean_report_text }}{% if technique.references %} (อ้างอิง {{ technique.references | join(", ") }}){% endif %}</span>
+            </li>
+            {% endfor %}
+          </ol>
+        {% elif display.techniques %}
+          <p class="body">เทคนิคในส่วนที่ 3 ยังไม่ได้วิเคราะห์ความเชื่อมโยงกับข้อเท็จจริงรายข้อ จึงไม่มีเหตุผลประกอบเป็นรายเทคนิค และใช้เป็นบริบทประกอบเท่านั้น</p>
+        {% else %}
+          {% for item in sections.mapping_rationale.items %}
+            <p class="body">{{ item | strip_reference_text }}</p>
+          {% endfor %}
+        {% endif %}
+      </section>
+
+      <section id="evidence_to_examine">
+        <h2>5. {{ display.titles.evidence_to_examine }}</h2>
+        {% for paragraph in sections.evidence_to_examine.paragraphs %}
+          <p class="body">{{ paragraph | clean_report_text }}</p>
+        {% endfor %}
+        {% if display.gaps %}
+          {% set tables.n = tables.n + 1 %}
+          <p class="caption">ตารางที่ {{ tables.n }} ประเด็นที่ต้องตรวจสอบเพิ่มเติม</p>
+          <table class="formal">
+            <colgroup><col style="width: 7%"><col style="width: 24%"><col style="width: 12%"><col style="width: 15%"><col style="width: 42%"></colgroup>
+            <thead><tr><th>ข้อ</th><th>ประเด็น</th><th>ความสำคัญ</th><th>สถานะข้อมูล</th><th>รายละเอียด</th></tr></thead>
+            <tbody>
+              {% for gap in display.gaps %}
+              <tr>
+                <td class="n">{{ loop.index }}</td>
+                <td>{{ gap.topic }}</td>
+                <td class="n">{{ gap.priority }}</td>
+                <td>{{ gap.status }}</td>
+                <td>{{ gap.description | clean_report_text }}<span class="minor">เหตุผล: {{ gap.reason | clean_report_text }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="body">ไม่พบประเด็นสำคัญที่ต้องตรวจสอบเพิ่มเติมจากผลการวิเคราะห์นี้</p>
+        {% endif %}
+      </section>
+
+      {% for section_id, number in (("preliminary_recommendations", 6), ("system_limitations", 7)) %}
+      <section id="{{ section_id }}">
+        <h2>{{ number }}. {{ display.titles[section_id] }}</h2>
+        {% for paragraph in sections[section_id].paragraphs %}
+          <p class="body">{{ paragraph | clean_report_text }}</p>
+        {% endfor %}
+        <ol class="numbered">
+          {% for item in sections[section_id].items %}
+          <li><span class="n">{{ number }}.{{ loop.index }}</span><span>{{ item | strip_reference_text }}</span></li>
+          {% endfor %}
+        </ol>
+      </section>
       {% endfor %}
 
-      <section class="source-register">
-        <h2>เอกสารที่ใช้ประกอบการวิเคราะห์</h2>
-        <p>รายงานฉบับนี้จัดทำขึ้นจากการประมวลผลเอกสารหลักฐานในสำนวนคดีดังต่อไปนี้:</p>
-        {% for source in display.sources %}
-          <div class="source-row">• {{ source.filename }}</div>
-        {% endfor %}
+      <section class="signoff">
+        <p>ผู้จัดทำ: ระบบ CyberCase Intelligence Framework (จัดทำโดยอัตโนมัติ)</p>
+        <div class="signature">
+          <p>ลงชื่อ ........................................ ผู้ตรวจสอบ</p>
+          <p>(........................................)</p>
+          <p>ตำแหน่ง ........................................</p>
+          <p>วันที่ .......... / .......... / ..........</p>
+        </div>
+      </section>
+
+      <section class="annex" id="evidence_register">
+        <h2>ภาคผนวก ก บัญชีหลักฐานที่ใช้ประกอบการวิเคราะห์</h2>
+        <p class="body">รหัสอ้างอิงในรายงานนี้หมายถึงรายการดังต่อไปนี้ รหัสขึ้นต้นด้วย E หมายถึงหลักฐานในสำนวนคดี รหัสขึ้นต้นด้วย Q หมายถึงคำตอบของผู้ใช้ต่อคำถามติดตามผล ซึ่งเป็นคำบอกเล่าที่ยังไม่ได้ตรวจสอบกับหลักฐาน</p>
+        {% set tables.n = tables.n + 1 %}
+        <p class="caption">ตารางที่ {{ tables.n }} บัญชีหลักฐาน</p>
+        <table class="formal">
+          <colgroup><col style="width: 12%"><col style="width: 26%"><col style="width: 62%"></colgroup>
+          <thead><tr><th>รหัส</th><th>ประเภท</th><th>รายละเอียด</th></tr></thead>
+          <tbody>
+            {% for source in display.sources %}
+            <tr>
+              <td class="n">{{ source.label }}</td>
+              <td>{{ source.kind }}</td>
+              <td>{{ source.detail }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </section>
     </main>
-    <footer>รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น จัดทำโดย CyberCase Intelligence Framework</footer>
   </article>
 </body>
 </html>

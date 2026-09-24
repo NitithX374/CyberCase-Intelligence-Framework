@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.config import settings
+from app.services.llm.model_registry import resolve_openrouter_model
 
 
 class AnalysisPipelineConfig(BaseModel):
@@ -11,7 +12,10 @@ class AnalysisPipelineConfig(BaseModel):
     pipeline: Literal["raw_direct"] = "raw_direct"
     version: Literal["main_case_analysis_v1"] = "main_case_analysis_v1"
     provider: Literal["openrouter"] = "openrouter"
-    model: str = Field(default="openai/gpt-5.6-luna", min_length=1)
+    model: str = Field(
+        default_factory=lambda: resolve_openrouter_model(settings.case_analysis_model),
+        min_length=1,
+    )
     context_tokens: int = Field(default=128_000, ge=1)
     input_tokens: int = Field(default=80_000, ge=1)
     output_tokens: int = Field(default=16_384, ge=16_384)
@@ -39,16 +43,18 @@ class AnalysisPipelineConfig(BaseModel):
 
 
 def configured_pipeline() -> AnalysisPipelineConfig:
-    return AnalysisPipelineConfig(model=settings.case_analysis_model)
+    return AnalysisPipelineConfig()
 
 
 def read_pipeline(value: object) -> AnalysisPipelineConfig:
     if value is None:
-        return AnalysisPipelineConfig()
+        return configured_pipeline()
     if (
         isinstance(value, dict)
         and value.get("pipeline") == "raw_direct"
         and value.get("version") == "main_case_analysis_v10"
     ):
         value = {**value, "version": "main_case_analysis_v1"}
+    if isinstance(value, dict):
+        value = {**configured_pipeline().model_dump(mode="json"), **value}
     return AnalysisPipelineConfig.model_validate(value)

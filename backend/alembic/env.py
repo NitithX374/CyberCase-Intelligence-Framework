@@ -3,20 +3,15 @@ import os
 import sys
 from logging.config import fileConfig
 
-# Add backend directory to sys.path to resolve 'app' imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from alembic import context
 
-# this is the Alembic Config object, which provides access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# Make sure models are imported so they are registered on the Base metadata
 import app.models  # noqa
 from app.database import Base  # noqa: E402
 
@@ -24,7 +19,6 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
     from app.config import settings
 
     url = settings.async_database_url
@@ -47,7 +41,6 @@ def do_run_migrations(connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
     from app.database import engine
 
     async with engine.connect() as connection:

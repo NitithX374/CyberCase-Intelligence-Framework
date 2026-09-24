@@ -1,7 +1,3 @@
-"""
-Health-check router.
-"""
-
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +9,6 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health")
 async def health_check(db: AsyncSession = Depends(get_db)):
-    """
-    Returns service health and database connectivity status.
-    """
     db_status = "disconnected"
     try:
         await db.execute(text("SELECT 1"))

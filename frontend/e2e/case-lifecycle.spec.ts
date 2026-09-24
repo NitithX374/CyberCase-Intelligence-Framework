@@ -2,10 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 const apiBaseUrl = "http://localhost:18000/api/v1";
 
-async function addCaseNarrative(page: Page, caseTitle: string, narrative: string) {
-  await page.getByRole("button", { name: "Add source" }).click();
-  await page.getByRole("menuitem", { name: "Case narrative" }).click();
-  await page.getByLabel(/Case title/).fill(caseTitle);
+async function addCaseNarrative(page: Page, narrative: string) {
+  await page.getByRole("button", { name: "Write narrative" }).click();
   await page.getByLabel("Narrative", { exact: true }).fill(narrative);
   await page.getByRole("button", { name: "Add narrative" }).click();
 }
@@ -19,19 +17,14 @@ test.describe("case lifecycle", () => {
 
   test("registers, receives, analyzes, reports, downloads, and asks", async ({ page }) => {
     const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const caseTitle = `Playwright case ${unique}`;
     const narrative = `The operator reported a suspicious login from workstation ${unique}.`;
 
     await page.goto("/register");
     await page.getByLabel("Name").fill("Playwright E2E Analyst");
     await page.getByLabel("Email").fill(`playwright-${unique}@gmail.com`);
-    // Two password fields and two show/hide buttons all answer to "Password",
-    // so both of these have to be exact.
     await page.getByLabel("Password", { exact: true }).fill("E2E-Playwright-Password-123!");
-    await page
-      .getByLabel("Confirm password", { exact: true })
-      .fill("E2E-Playwright-Password-123!");
-    await page.getByRole("button", { name: "Create workspace" }).click();
+    await page.getByLabel("Confirm password", { exact: true }).fill("E2E-Playwright-Password-123!");
+    await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(/\/case$/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "No saved cases yet" })).toBeVisible();
 
@@ -39,7 +32,7 @@ test.describe("case lifecycle", () => {
     await expect(page).toHaveURL(/\/case\/[^/]+\/(?:sources|analysis)$/, { timeout: 45_000 });
     if (page.url().endsWith("/analysis")) await page.locator("#workspace-tab-sources").click();
     await expect(page).toHaveURL(/\/case\/[^/]+\/sources$/);
-    await addCaseNarrative(page, caseTitle, narrative);
+    await addCaseNarrative(page, narrative);
     await page.getByRole("button", { name: /^Analyze/ }).click();
     await expect(page).toHaveURL(/\/case\/[^/]+\/analysis$/);
 
@@ -58,10 +51,9 @@ test.describe("case lifecycle", () => {
       .toBe("validated");
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Executive Summary" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Summary", exact: true })).toBeVisible();
     await expect(page.getByText(narrative, { exact: true })).toBeVisible();
 
-    // MITRE context and the report are sections of the analysis page now.
     await expect(page.getByRole("region", { name: "Technical Context" })).toBeVisible();
     const report = page.getByRole("region", { name: "Case report" });
     await report.scrollIntoViewIfNeeded();
@@ -82,8 +74,6 @@ test.describe("case lifecycle", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/^CyberCase-Report-v\d+\.pdf$/);
 
-    // The panel opens itself on a wide viewport, and again when an analysis
-    // leaves a question waiting, so it is often open before anyone asks.
     const chat = page.getByRole("complementary", { name: "Ask about this case" });
     if (!(await chat.isVisible())) {
       await page.getByRole("button", { name: "Open Ask" }).click();

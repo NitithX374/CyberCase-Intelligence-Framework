@@ -1,16 +1,3 @@
-"""Asking the reader about the things the analysis could not settle.
-
-The analysis decides which gaps are worth asking about and writes the question
-for each; `case_analysis.clarification` decides which of those is put to the
-reader. This is the database side of it: what has been asked, what came back,
-and the messages that carry both.
-
-One question is outstanding at a time, so a reply needs no marking: it answers
-the question above it. The reply stays a chat message. It is not a case source
-and does not move `source_revision` — the analysis reads it as follow-up
-history, alongside the sources rather than among them.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -30,13 +17,6 @@ from app.services.analysis.contracts import (
 
 
 async def rounds_asked(db: AsyncSession, case_id: UUID) -> int:
-    """How many analyses have asked. One analysis is one round of questions.
-
-    Counted over the case, and spent only against a chain a reply is continuing:
-    an analysis the reader asked for is a fresh start, not the next round of an
-    old one.
-    """
-
     return await db.scalar(
         select(func.count(func.distinct(ChatMessage.analysis_result_id))).where(
             ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None)
@@ -45,8 +25,6 @@ async def rounds_asked(db: AsyncSession, case_id: UUID) -> int:
 
 
 async def asked_this_round(db: AsyncSession, analysis_result_id: UUID) -> set[str]:
-    """The gaps this analysis has already asked about."""
-
     rows = await db.scalars(
         select(ChatMessage.gap_key).where(
             ChatMessage.analysis_result_id == analysis_result_id,
@@ -57,14 +35,6 @@ async def asked_this_round(db: AsyncSession, analysis_result_id: UUID) -> set[st
 
 
 async def asked_gap_keys(db: AsyncSession, case_id: UUID) -> set[str]:
-    """Every gap this case has been asked about, across all its analyses.
-
-    Each analysis writes its own gap keys, so two analyses can name the same
-    gap differently — but when they do agree, asking it twice spends a round on
-    something the reader has already addressed. Deduplicating here makes that
-    a property of the policy rather than something the model has to remember.
-    """
-
     rows = await db.scalars(
         select(ChatMessage.gap_key).where(
             ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None)
@@ -76,8 +46,6 @@ async def asked_gap_keys(db: AsyncSession, case_id: UUID) -> set[str]:
 async def load_followup_history(
     db: AsyncSession, case_id: UUID
 ) -> tuple[CaseFollowupExchange, ...]:
-    """Every question put to the reader on this case, with its reply if it has one."""
-
     return followup_history_from(
         list(
             await db.scalars(
@@ -92,14 +60,6 @@ async def load_followup_history(
 def followup_history_from(
     messages: Sequence[ChatMessage],
 ) -> tuple[CaseFollowupExchange, ...]:
-    """The same history, from messages already in hand.
-
-    Ordered by when each question was asked, so the ids are stable for as long
-    as the conversation only grows — which is the only thing a citation written
-    against one needs. The report builder holds the case's messages already,
-    and re-querying for them would let the two disagree.
-    """
-
     messages = sorted(messages, key=lambda message: message.ordinal)
     replies = {
         message.in_reply_to_message_id: message
@@ -137,8 +97,6 @@ def question_message(
 
 
 async def pending_question(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
-    """The question waiting on a reply. There is never more than one."""
-
     question = await db.scalar(
         select(ChatMessage)
         .where(ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None))
@@ -179,7 +137,6 @@ def analysis_result_message(
     trace: CaseAnalysisTrace,
     analysis_result_id: UUID,
 ) -> ChatMessage:
-
     return ChatMessage(
         case_id=case_id,
         ordinal=ordinal,

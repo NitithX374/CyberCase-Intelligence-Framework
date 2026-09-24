@@ -43,6 +43,32 @@ function asObject(value) {
   }
 }
 
+function assessedGaps(request) {
+  const sources = Array.isArray(request?.case_sources) ? request.case_sources : [];
+  const history = Array.isArray(request?.followup_history) ? request.followup_history : [];
+  const text = sources
+    .map((source) => (typeof source?.text === "string" ? source.text : ""))
+    .join("\n");
+  const answered = history.some((item) => typeof item?.answer === "string" && item.answer.trim());
+  if (!text.includes("needs-clarification") || answered) return [];
+  return [
+    {
+      gap_id: "G-01",
+      gap_key: "workstation_owner",
+      topic: "Workstation Owner",
+      status: "AMBIGUOUS",
+      description:
+        "Which identification is correct: the primary operator or the secondary contractor?",
+      reason: "Clarifying workstation ownership is required to substantiate findings.",
+      priority: "high",
+      askable: true,
+      clarification_question:
+        "Which identification is correct: the primary operator or the secondary contractor?",
+      affected_claim_ids: [],
+    },
+  ];
+}
+
 function responseFor(body) {
   const system = typeof body?.system === "string" ? body.system : "";
   const content = firstMessageContent(body);
@@ -53,8 +79,8 @@ function responseFor(body) {
       trigger_text: [],
     };
   }
-  if (typeof content === "string" && content.includes("Return all relevant case-specific gaps")) {
-    return { gaps: [] };
+  if (system.includes("case_assessment_v1")) {
+    return { version: "case_assessment_v1", gaps: assessedGaps(asObject(content)) };
   }
   if (system.includes("Answer only the current question")) {
     return {
@@ -103,9 +129,6 @@ function responseFor(body) {
     contradicting_citations: [],
   }));
 
-  // A reply is conversation now, not a case source, so it arrives as
-  // follow-up history. The legacy source check stays for cases filed before
-  // that, whose replies are still rows in the bundle.
   const followupHistory = Array.isArray(request?.followup_history) ? request.followup_history : [];
   const hasClarificationAnswer =
     followupHistory.some((item) => item && typeof item.answer === "string" && item.answer.trim()) ||

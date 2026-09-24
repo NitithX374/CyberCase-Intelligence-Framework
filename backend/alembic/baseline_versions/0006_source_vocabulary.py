@@ -1,16 +1,3 @@
-"""One name for the thing a case knows: a source.
-
-The schema called it three things — the table was `case_evidence_sources`, the
-service package `case_materials`, the module inside `case_source_bundle`. Reading
-one row from Postgres to the screen meant holding three synonyms in your head.
-This renames the table, the revision column and their constraints so the database
-says what the code says.
-
-Revision ID: 0006_source_vocabulary
-Revises: 0005_remove_case_runs
-Create Date: 2026-09-19
-"""
-
 from __future__ import annotations
 
 from alembic import op

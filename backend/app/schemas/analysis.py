@@ -1,11 +1,3 @@
-"""Analysis request, result and step contracts.
-
-An analysis is one step of a bounded clarification loop. A step either pauses
-with a question for the reader or finishes with a result, and the envelope says
-which — so the client never has to guess whether a body it was handed is a
-finished analysis.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -31,10 +23,7 @@ class CaseAnalysisResultRead(BaseModel):
     source_revision: int
     schema_version: str
     status: Literal["validated"]
-    answer: str
     summary: str
-    # The trace's own shape, so the OpenAPI carries it and the client does not
-    # have to re-derive a contract this service already validated.
     trace_json: CaseAnalysisTrace | None
     retrieval_context_id: str | None
     pipeline_config: dict[str, object]
@@ -44,8 +33,6 @@ class CaseAnalysisResultRead(BaseModel):
 
 
 class FollowupQuestionRead(BaseModel):
-    """The one question the analysis is waiting on."""
-
     message_id: UUID
     gap_id: str
     gap_key: str
@@ -53,18 +40,9 @@ class FollowupQuestionRead(BaseModel):
 
 
 class AnalysisStepRead(BaseModel):
-    """What one analysis step produced.
-
-    ``need_followup`` carries the question and no result. Its gap-only
-    assessment is stored for round continuity but is never exposed as the
-    case's latest complete analysis.
-    """
-
     status: Literal["need_followup", "completed"]
     round: int
     max_rounds: int
-    # Why the loop stopped asking. Set only when status is completed, and never
-    # "sufficient": a spent budget and a settled case read differently.
     stop_reason: str | None = None
     question: FollowupQuestionRead | None = None
     result: CaseAnalysisResultRead | None = None

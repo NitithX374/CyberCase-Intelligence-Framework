@@ -1,5 +1,3 @@
-"""What the reader uploaded, before it became a source."""
-
 from __future__ import annotations
 
 from urllib.parse import quote
@@ -14,16 +12,10 @@ from app.models.user import User
 from app.routers.errors import ingestion_http_error, source_http_error
 from app.schemas.sources import CaseDocumentRead
 from app.services.auth.dependencies import get_current_user
-from app.services.document_ingestion import (
-    DocumentIngestionError,
-    build_document_ingestion_service,
-    read_limited,
-)
-from app.services.sources import (
-    SourceError,
-    SourceService,
-    get_owned_document_content,
-)
+from app.services.document_ingestion.contracts import DocumentIngestionError
+from app.services.document_ingestion.service import build_document_ingestion_service, read_limited
+from app.services.sources.document_content import get_owned_document_content
+from app.services.sources.source_service import SourceError, SourceService
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-documents"])
 
@@ -84,7 +76,6 @@ async def add_case_document(
         await service.aclose()
     extraction = {
         "provider": ingested.extraction_method.value,
-        "config_json": {},
         "extracted_text": ingested.full_text,
         "provenance_json": {
             "document_id": ingested.document_id,
@@ -93,7 +84,6 @@ async def add_case_document(
             "pages": [page.model_dump(mode="json") for page in ingested.pages],
             "warnings": list(ingested.warnings),
         },
-        "warnings_json": list(ingested.warnings),
     }
     try:
         async with db.begin():

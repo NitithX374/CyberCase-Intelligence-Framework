@@ -16,7 +16,7 @@ from app.services.llm.structured_output import (
     structured_output_request_options,
     structured_output_schema,
 )
-from app.services.sources import CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceItem
 
 logger = logging.getLogger("app.chat")
 
@@ -185,7 +185,6 @@ def validate_mitre_applicability(
     payload: object,
     case_sources: Sequence[CaseSourceItem],
 ) -> MitreApplicabilityRecord:
-    """Validate provider output structure and grounding against Case sources."""
     try:
         provider_result = ProviderMitreApplicability.model_validate(payload)
     except ValidationError:
@@ -238,7 +237,7 @@ class MitreApplicabilityGate:
         self,
         case_sources: Sequence[CaseSourceItem],
     ) -> MitreApplicabilityRecord:
-        target = resolve_core_llm_target(settings.chat_ask_model)
+        target = resolve_core_llm_target(settings.case_analysis_model)
         request_payload = {
             "model": target.model,
             **structured_output_request_options(
@@ -308,7 +307,6 @@ async def evaluate_mitre_applicability(
     case_sources: Sequence[CaseSourceItem],
     gate: MitreApplicabilityGate | None = None,
 ) -> MitreApplicabilityRecord:
-    """Whether the case sources warrant MITRE ATT&CK retrieval."""
     try:
         result = await (gate or MitreApplicabilityGate()).evaluate(case_sources)
         if result.failure_code is not None:

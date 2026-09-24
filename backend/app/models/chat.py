@@ -1,5 +1,3 @@
-"""Persistent chat messages and thread compatibility view."""
-
 from __future__ import annotations
 
 import uuid
@@ -49,7 +47,6 @@ class ChatMessage(Base):
             "message_kind IN ('conversation', 'followup_question', 'followup_answer')",
             name="ck_chat_messages_message_kind",
         ),
-        Index("ix_chat_messages_case_id_ordinal", "case_id", "ordinal"),
         Index("ix_chat_messages_analysis_result_id", "analysis_result_id"),
         Index(
             "ix_chat_messages_in_reply_to_message_id",
@@ -78,23 +75,16 @@ class ChatMessage(Base):
         ),
         nullable=False,
     )
-    # Set by the client so a retried send cannot create a second message.
     client_request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    retrieval_context_id: Mapped[str | None] = mapped_column(
-        String(160),
-        nullable=True,
-    )
     message_kind: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
         default="conversation",
         server_default=text("'conversation'"),
     )
-    # Set on an assistant message that asks about one analysis gap. Null on
-    # every other message, which is what makes "already asked" a single query.
     gap_key: Mapped[str | None] = mapped_column(String(160), nullable=True)
     analysis_result_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

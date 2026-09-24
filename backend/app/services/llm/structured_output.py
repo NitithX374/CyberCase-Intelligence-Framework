@@ -1,5 +1,3 @@
-"""Provider-facing JSON Schema and request helpers for structured model output."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -18,8 +16,6 @@ _OUTPUT_TOKEN_FLOORS: dict[StructuredOutputFeature, int] = {
     "mitre_applicability": 1_024,
 }
 
-# Constraints the provider's structured-output grammar rejects. They are
-# dropped from the schema on the wire and still enforced locally by Pydantic.
 _UNSUPPORTED_SCHEMA_KEYS = frozenset(
     {
         "exclusiveMaximum",
@@ -55,13 +51,6 @@ _SUPPORTED_STRING_FORMATS = frozenset(
 
 
 def structured_output_schema(model: type[BaseModel]) -> dict[str, Any]:
-    """Build the structured-output schema for ``model``.
-
-    Pydantic's full schema stays the source of truth for validating the reply.
-    This copy only drops constraints the provider cannot express, closes object
-    schemas, and marks every property required.
-    """
-
     schema = normalize_schema(model.model_json_schema())
     if not isinstance(schema, dict):
         raise TypeError("Pydantic model schema must be a JSON object")
@@ -75,8 +64,6 @@ def structured_output_request_options(
     configured_max_tokens: int,
     temperature: float | None = None,
 ) -> dict[str, object]:
-    """Return the structured-output request options for one feature."""
-
     if feature not in _STRUCTURED_OUTPUT_FEATURES:
         raise ValueError(f"Unsupported structured-output feature: {feature!r}")
     options: dict[str, object] = {
@@ -102,9 +89,6 @@ def normalize_schema(value: object) -> object:
             continue
         normalized[key_text] = normalize_schema(child)
 
-    # Keep an explicitly open mapping (for example a bounded delta value)
-    # open. Pydantic emits ``additionalProperties: true`` for dict fields;
-    # closing that mapping would make a valid structured mutation impossible.
     if normalized.get("type") == "object" and "additionalProperties" not in normalized:
         normalized["additionalProperties"] = False
     return normalized

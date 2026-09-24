@@ -11,7 +11,7 @@ from app.services.analysis.mitre_gate.llm import (
     evaluate_mitre_applicability,
 )
 from app.services.llm.core_llm import CoreLlmTarget
-from app.services.sources import CaseSourceItem
+from app.services.sources.case_source_bundle import CaseSourceItem
 
 
 def target():
@@ -28,6 +28,7 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
     monkeypatch,
 ) -> None:
     captured = {}
+    resolved_models = []
     source = CaseSourceItem(
         source_id=str(uuid4()),
         source_kind="narrative",
@@ -44,14 +45,24 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
         return httpx.Response(200, json={"output_text": json.dumps(output)})
 
     monkeypatch.setattr(
+        "app.services.analysis.mitre_gate.llm.settings.case_analysis_model",
+        "openrouter/custom-model",
+    )
+
+    def resolve_target(model):
+        resolved_models.append(model)
+        return target()
+
+    monkeypatch.setattr(
         "app.services.analysis.mitre_gate.llm.resolve_core_llm_target",
-        lambda model: target(),
+        resolve_target,
     )
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     result = asyncio.run(MitreApplicabilityGate(client=client).evaluate([source]))
     asyncio.run(client.aclose())
 
     assert result.decision == "RETRIEVE"
+    assert resolved_models == ["openrouter/custom-model"]
     assert captured["system"] == MITRE_APPLICABILITY_SYSTEM_PROMPT
     assert captured["temperature"] == 0.0
     assert captured["max_tokens"] == 1024

@@ -1,5 +1,3 @@
-"""The sources a case is analysed from."""
-
 from __future__ import annotations
 
 from uuid import UUID
@@ -12,7 +10,7 @@ from app.models.user import User
 from app.routers.errors import source_http_error
 from app.schemas.sources import CaseSourceCreate, CaseSourceRead
 from app.services.auth.dependencies import get_current_user
-from app.services.sources import SourceError, SourceService
+from app.services.sources.source_service import SourceError, SourceService
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-sources"])
 

@@ -1,12 +1,7 @@
-"""FastAPI application for the Case-owned API."""
-
 import logging
 import os
 from contextlib import asynccontextmanager
 
-# Before anything else imports a module that takes a logger, so the root
-# handler exists by the time one is asked for. The imports below therefore
-# cannot come first, which is what E402 is about.
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 
 from fastapi import Depends, FastAPI
@@ -25,8 +20,7 @@ from app.routers import (
     reports,
     sources,
 )
-from app.services.auth.dependencies import get_current_user
-from app.services.auth.request_guard import guard_browser_request
+from app.services.auth.dependencies import get_current_user, guard_browser_request
 
 
 @asynccontextmanager
@@ -63,7 +57,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── Routers ──────────────────────────────────────────────────────────────────
 app.middleware("http")(guard_browser_request)
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
@@ -74,7 +67,6 @@ app.include_router(sources.router, prefix="/api/v1", dependencies=[Depends(get_c
 app.include_router(analysis.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(reports.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
-# Wrap the full ASGI app so even unhandled 500 responses carry CORS headers.
 app = CORSMiddleware(
     app,
     allow_origins=settings.cors_origins_list,

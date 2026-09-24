@@ -16,17 +16,6 @@ _metadata_adapter = TypeAdapter(MessageMetadata)
 
 
 def message_trace(trace: CaseAnalysisTrace) -> dict[str, object]:
-    """What a chat message carries of the analysis behind it.
-
-    Enough to parse back as a trace, and no more: the reader of a message
-    wants what each finding rests on, which is the claims. The rest of the
-    analysis is on the row the message names.
-
-    Both producers go through here — the analysis reporting a finished case,
-    and an Ask answer — so the two cannot drift into carrying different
-    fields.
-    """
-
     return {
         "version": trace.version,
         "validation_status": trace.validation_status,

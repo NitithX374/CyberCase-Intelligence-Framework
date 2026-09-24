@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.routers import documents
-from app.services.sources import SourceError
+from app.services.sources.source_service import SourceError
 
 
 def test_document_content_response_preserves_original_bytes(monkeypatch) -> None:

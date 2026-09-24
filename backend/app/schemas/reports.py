@@ -1,5 +1,3 @@
-"""Typed Case report output and API contracts."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -81,7 +79,6 @@ class StructuredReport(BaseModel):
 class CaseReportCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    # Defaults to the case's current analysis.
     analysis_result_id: UUID | None = None
 
 

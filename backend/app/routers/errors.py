@@ -1,11 +1,9 @@
-"""Service errors, said in HTTP."""
-
 from __future__ import annotations
 
 from fastapi import HTTPException, status
 
-from app.services.document_ingestion import DocumentIngestionError
-from app.services.sources import SourceError
+from app.services.document_ingestion.contracts import DocumentIngestionError
+from app.services.sources.source_service import SourceError
 
 
 def source_http_error(error: SourceError) -> HTTPException:
