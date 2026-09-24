@@ -14,7 +14,6 @@ interface SourceCitationChipProps {
     sourceKey: string,
     citationRole?: "supporting" | "conflicting",
   ) => void;
-  onNavigateToSource?: (messageId: string) => void;
 }
 
 export function SourceCitationChip({
@@ -23,7 +22,6 @@ export function SourceCitationChip({
   isActive,
   citationRole,
   onSelect,
-  onNavigateToSource,
 }: SourceCitationChipProps) {
   const citationText = formatSourceCitationText(sourceRef);
   const isConflicting = citationRole === "conflicting";
@@ -36,13 +34,7 @@ export function SourceCitationChip({
       aria-expanded={isActive}
       aria-haspopup="dialog"
       title={label}
-      onClick={(event) => {
-        if (onSelect) {
-          onSelect(sourceRef, event.currentTarget, sourceKey, citationRole);
-        } else {
-          onNavigateToSource?.(sourceRef.id);
-        }
-      }}
+      onClick={(event) => onSelect?.(sourceRef, event.currentTarget, sourceKey, citationRole)}
       className={`inline-flex h-6 max-w-full items-center gap-1 rounded-md px-1.5 text-xs font-medium transition-colors ${
         isActive
           ? "bg-ink text-ivory"

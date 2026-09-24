@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
 import { mockNativeDialog } from "@/test/mockNativeDialog";
 import CaseAnalysisPage from "./page";
@@ -113,9 +113,8 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ caseId }),
   useRouter: () => ({ push: vi.fn() }),
 }));
-vi.mock("@/features/cases/queries", () => ({
-  useCase: () => ({ data: { id: caseId, title: "Encrypted payroll" } }),
-}));
+const chatState = vi.hoisted(() => ({ failed: false }));
+
 vi.mock("@/features/analysis/queries", () => ({
   useCaseAnalysis: () => ({ data: analysis, isLoading: false }),
 }));
@@ -123,8 +122,15 @@ vi.mock("@/features/sources/queries", () => ({
   useCaseSources: () => ({ data: [narrative], isLoading: false }),
 }));
 vi.mock("@/features/chat/useCaseChat", () => ({
-  useCaseChatMessages: () => ({ data: { case_id: caseId, messages }, isLoading: false }),
+  useCaseChatMessages: () =>
+    chatState.failed
+      ? { data: undefined, isLoading: false, isLoadingError: true }
+      : { data: { case_id: caseId, messages }, isLoading: false },
 }));
+
+beforeEach(() => {
+  chatState.failed = false;
+});
 vi.mock("@/features/analysis/CaseOverviewView", () => ({ CaseOverviewView: () => null }));
 vi.mock("@/features/reports/CaseReportView", () => ({ CaseReportView: () => null }));
 
@@ -136,5 +142,17 @@ describe("CaseAnalysisPage", () => {
       screen.getByRole("heading", { name: "Exploit Public-Facing Application" }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/could not be verified/)).not.toBeInTheDocument();
+  });
+
+  it("withholds ATT&CK context while the answers it rests on cannot be loaded", () => {
+    chatState.failed = true;
+    render(<CaseAnalysisPage />);
+
+    expect(
+      screen.queryByRole("heading", { name: "Exploit Public-Facing Application" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("No ATT&CK context is available for this analysis."),
+    ).toBeInTheDocument();
   });
 });

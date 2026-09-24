@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PersistedReportCard } from "./PersistedReportCard";
 import type { CaseReport } from "@/lib/api";
 import * as api from "@/lib/api";
+import { timeoutError } from "@/test/httpErrors";
 
 function sampleReport(): CaseReport {
   return {
@@ -62,7 +63,7 @@ describe("PersistedReportCard with Jinja2 HTML Viewer", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <PersistedReportCard report={sampleReport()} caseId="case-1" caseTitle="Investigation" />
+        <PersistedReportCard report={sampleReport()} caseId="case-1" />
       </QueryClientProvider>,
     );
 
@@ -80,13 +81,11 @@ describe("PersistedReportCard with Jinja2 HTML Viewer", () => {
   });
 
   it("shows MeaningfulErrorModal on report preview failure without raw inline error and retries preview", async () => {
-    const downloadSpy = vi
-      .spyOn(api, "downloadCaseReportHtml")
-      .mockRejectedValue(new Error("timeout of 15000ms exceeded"));
+    const downloadSpy = vi.spyOn(api, "downloadCaseReportHtml").mockRejectedValue(timeoutError());
 
     render(
       <QueryClientProvider client={queryClient}>
-        <PersistedReportCard report={sampleReport()} caseId="case-1" caseTitle="Investigation" />
+        <PersistedReportCard report={sampleReport()} caseId="case-1" />
       </QueryClientProvider>,
     );
 

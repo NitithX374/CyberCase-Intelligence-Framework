@@ -167,7 +167,7 @@ describe("Case overview projection", () => {
 
     expect(overview.findings[0].supportingSources[0]).toMatchObject({
       id: "QA-01",
-      label: "Follow-up answer #1",
+      label: "Follow-up answer QA-01",
       sourceType: "followup_response",
       fullContent: answer.content,
     });

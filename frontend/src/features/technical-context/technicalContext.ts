@@ -94,10 +94,9 @@ export function buildTechnicalContext(
     const claims = new Map(trace.claims.map((claim) => [claim.claimId, claim]));
     const rowsById = new Map(augmentation.rows.map((row) => [row.id, row]));
     const mappedIds = new Set(trace.associations.map((association) => association.techniqueId));
-    const techniques = trace.associations.map((association) => {
+    const techniques = trace.associations.flatMap((association) => {
       const row = rowsById.get(association.techniqueId);
-      if (!row) throw new Error("MITRE association is outside persisted retrieval context.");
-      return mappedCard(association, row, claims, sources);
+      return row ? [mappedCard(association, row, claims, sources)] : [];
     });
     const retrievedOnlyTechniques = augmentation.rows
       .filter((row) => !mappedIds.has(row.id))
@@ -180,7 +179,6 @@ function mappedCard(
   const sourceIds = [
     ...new Set(association.claimIds.flatMap((claimId) => claims.get(claimId)?.supportingIds ?? [])),
   ];
-  if (!sourceIds.length) throw new Error("MITRE association has no case source support.");
   const citations = [
     ...new Map(
       association.claimIds

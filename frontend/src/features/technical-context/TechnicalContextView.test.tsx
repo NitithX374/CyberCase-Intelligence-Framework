@@ -109,13 +109,8 @@ describe("TechnicalContextView", () => {
 
   it("shows validated Case mappings and inspects their exact source", () => {
     const projection = technicalProjection();
-    const navigateToSource = vi.fn();
     render(
-      <TechnicalContextView
-        analysisResult={projection.result}
-        sources={projection.sources}
-        onNavigateToSource={navigateToSource}
-      />,
+      <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
     );
     expect(screen.getByRole("heading", { name: "PowerShell" })).toBeInTheDocument();
     expect(screen.getByText(`“${exactQuote}”`)).toBeInTheDocument();
@@ -127,8 +122,19 @@ describe("TechnicalContextView", () => {
     const source = screen.getByRole("button", { name: new RegExp(exactQuote.slice(0, 20), "i") });
     fireEvent.click(source);
     expect(screen.getByRole("dialog")).toHaveTextContent(exactQuote);
-    fireEvent.click(screen.getByRole("button", { name: /Open in Sources/i }));
-    expect(navigateToSource).toHaveBeenCalledWith(sourceId);
+  });
+
+  it("says in words when a technique rests on no case source", () => {
+    const projection = technicalProjection();
+    const claim = projection.result.trace_json!.claims[0];
+    claim.supporting_source_ids = [];
+    claim.supporting_citations = [];
+    render(
+      <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
+    );
+    expect(screen.getByRole("heading", { name: "PowerShell" })).toBeInTheDocument();
+    expect(screen.getByText("No case source is recorded for this technique.")).toBeInTheDocument();
+    expect(screen.queryByText(/could not be verified/)).not.toBeInTheDocument();
   });
 
   it("keeps a non-technical Case valid without MITRE rows", () => {

@@ -10,17 +10,12 @@ import { toUserFacingError } from "@/lib/userFacingError";
 interface PersistedReportCardProps {
   report: CaseReport;
   caseId: string;
-  caseTitle: string;
 }
 
-export function PersistedReportCard({ report, caseId, caseTitle }: PersistedReportCardProps) {
+export function PersistedReportCard({ report, caseId }: PersistedReportCardProps) {
   return (
     <article aria-label="Persisted report" className="mt-4">
-      <ReportHtmlViewer
-        caseId={caseId}
-        reportId={report.report_id}
-        title={report.report.title ?? caseTitle}
-      />
+      <ReportHtmlViewer caseId={caseId} reportId={report.report_id} title={report.report.title} />
     </article>
   );
 }

@@ -3,7 +3,8 @@
 import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import Link from "next/link";
 import axios from "axios";
-import { getApiBaseUrl, getApiErrorMessage, type UserProfile } from "@/lib/api";
+import { getApiBaseUrl, type UserProfile } from "@/lib/api";
+import { detailMessage } from "@/lib/userFacingError";
 import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { Icon } from "@/components/icons";
 
@@ -52,7 +53,7 @@ export function AccountForm({ register = false }: { register?: boolean }) {
       const route = localStorage.getItem(`cybercase:${data.id}:route`);
       window.location.assign(route?.startsWith("/case/") ? route : "/case");
     } catch (err) {
-      setError(getApiErrorMessage(err, "Unable to sign in. Please try again."));
+      setError(detailMessage(err, "Unable to sign in. Please try again."));
     } finally {
       setBusy(false);
     }

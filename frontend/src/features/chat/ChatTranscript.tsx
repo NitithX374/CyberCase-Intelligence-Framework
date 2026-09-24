@@ -15,7 +15,6 @@ interface ChatTranscriptProps {
   isAnsweringQuestion?: boolean;
   leadResult?: CaseAnalysisResultRead | null;
   sources?: CaseSourceRead[] | null;
-  onNavigateToSource?: (messageId: string) => void;
 }
 
 export function ChatTranscript({
@@ -24,7 +23,6 @@ export function ChatTranscript({
   isAnsweringQuestion = false,
   leadResult,
   sources,
-  onNavigateToSource,
 }: ChatTranscriptProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -72,7 +70,6 @@ export function ChatTranscript({
           isProcessing={isProcessing}
           isAnsweringQuestion={isAnsweringQuestion}
           sources={uniqueSources}
-          onNavigateToSource={onNavigateToSource}
         />
       )}
     </div>
@@ -84,13 +81,11 @@ function Messages({
   isProcessing,
   isAnsweringQuestion,
   sources,
-  onNavigateToSource,
 }: {
   messages: ChatMessageRead[];
   isProcessing: boolean;
   isAnsweringQuestion: boolean;
   sources: CaseSourceRead[];
-  onNavigateToSource?: (messageId: string) => void;
 }) {
   return (
     <div className="space-y-6 px-5 py-6">
@@ -120,11 +115,7 @@ function Messages({
         return (
           <article key={message.id}>
             <ChatMessageMarkdown content={message.content} />
-            <AnalysisSourceReferences
-              analysisMessage={message}
-              sources={sources}
-              onNavigateToSource={onNavigateToSource}
-            />
+            <AnalysisSourceReferences analysisMessage={message} sources={sources} />
           </article>
         );
       })}
@@ -187,11 +178,9 @@ function sourceReferencesForAnalysisMessage(
 function AnalysisSourceReferences({
   analysisMessage,
   sources,
-  onNavigateToSource,
 }: {
   analysisMessage: ChatMessageRead;
   sources: CaseSourceRead[];
-  onNavigateToSource?: (messageId: string) => void;
 }) {
   const references = sourceReferencesForAnalysisMessage(analysisMessage, sources);
   const [active, setActive] = useState<{
@@ -229,7 +218,6 @@ function AnalysisSourceReferences({
           anchorElement={active.anchor}
           onClose={() => setActive(null)}
           citationRole={active.role}
-          onNavigateToSource={onNavigateToSource}
         />
       )}
     </div>

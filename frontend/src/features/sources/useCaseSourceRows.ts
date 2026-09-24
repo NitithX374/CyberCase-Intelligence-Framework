@@ -13,5 +13,15 @@ export function useCaseSourceRows(caseId: string | null) {
     () => mergeCaseSourceRows(caseSources, chatQuery.data?.messages ?? []),
     [caseSources, chatQuery.data?.messages],
   );
-  return { caseSources, rows, isLoading: sourcesQuery.isLoading || chatQuery.isLoading };
+  const refetch = () => {
+    if (sourcesQuery.isLoadingError) void sourcesQuery.refetch();
+    if (chatQuery.isLoadingError) void chatQuery.refetch();
+  };
+  return {
+    caseSources,
+    rows,
+    isLoading: sourcesQuery.isLoading || chatQuery.isLoading,
+    isError: sourcesQuery.isLoadingError || chatQuery.isLoadingError,
+    refetch,
+  };
 }

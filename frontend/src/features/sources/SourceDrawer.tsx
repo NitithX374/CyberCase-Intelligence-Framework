@@ -10,13 +10,11 @@ export function SourceDrawer({
   anchorElement,
   citationRole,
   onClose,
-  onNavigateToSource,
 }: {
   sourceRef: SourceMessageRef;
   anchorElement: HTMLElement;
   citationRole?: "supporting" | "conflicting";
   onClose: () => void;
-  onNavigateToSource?: (id: string) => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -86,21 +84,6 @@ export function SourceDrawer({
         >
           <SourceContent sourceRef={sourceRef} />
         </div>
-        {onNavigateToSource && (
-          <footer className="border-t border-line px-3 py-2.5 sm:px-4">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onNavigateToSource(sourceRef.id);
-              }}
-              className="btn-ghost h-8 px-2.5"
-            >
-              Open in Sources
-              <Icon name="chevron-right" className="h-4 w-4" />
-            </button>
-          </footer>
-        )}
       </div>
     </dialog>
   );

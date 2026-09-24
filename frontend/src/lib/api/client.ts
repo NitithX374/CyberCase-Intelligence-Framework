@@ -61,36 +61,6 @@ export const getCaseChat = async (
   return { ...response.data, messages: response.data.messages ?? [] };
 };
 
-export function getApiErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data;
-    if (typeof data === "string" && data.trim()) return data.trim();
-    if (data && typeof data === "object" && "detail" in data) {
-      const detail = (data as { detail?: unknown }).detail;
-      if (typeof detail === "string" && detail.trim()) return detail.trim();
-      if (
-        detail &&
-        typeof detail === "object" &&
-        "message" in detail &&
-        typeof detail.message === "string"
-      ) {
-        return detail.message.trim();
-      }
-      if (Array.isArray(detail) && detail.length > 0) {
-        const first = detail[0];
-        if (typeof first === "string" && first.trim()) return first.trim();
-        if (first && typeof first === "object" && "msg" in first && typeof first.msg === "string") {
-          return first.msg.trim();
-        }
-      }
-    }
-  }
-  if (error instanceof Error && error.message.trim()) {
-    return error.message.trim();
-  }
-  return fallback;
-}
-
 export const getSession = async (signal?: AbortSignal): Promise<UserProfile | null> => {
   const response = await axios.get<UserProfile | null>(`${getApiBaseUrl()}/auth/session`, {
     signal,
@@ -178,13 +148,11 @@ export const fetchCaseDocumentContent = async (
   caseId: string,
   documentId: string,
   signal?: AbortSignal,
-): Promise<Blob> => {
-  const response = await axios.get<Blob>(
+): Promise<Blob> =>
+  getBlob(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(documentId)}/content`,
-    { signal, responseType: "blob", timeout: 120_000 },
+    signal,
   );
-  return response.data;
-};
 
 export const listCaseSources = async (
   caseId: string,
@@ -277,25 +245,39 @@ export const downloadCaseReportPdf = async (
   caseId: string,
   reportId: string,
   signal?: AbortSignal,
-): Promise<Blob> => {
-  const response = await axios.get<Blob>(
+): Promise<Blob> =>
+  getBlob(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports/${encodeURIComponent(reportId)}/pdf`,
-    { signal, responseType: "blob", timeout: 120_000 },
+    signal,
   );
-  return response.data;
-};
 
 export const downloadCaseReportHtml = async (
   caseId: string,
   reportId: string,
   signal?: AbortSignal,
-): Promise<Blob> => {
-  const response = await axios.get<Blob>(
+): Promise<Blob> =>
+  getBlob(
     `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/reports/${encodeURIComponent(reportId)}/html`,
-    { signal, responseType: "blob", timeout: 120_000 },
+    signal,
   );
-  return response.data;
-};
+
+async function getBlob(url: string, signal?: AbortSignal): Promise<Blob> {
+  try {
+    const response = await axios.get<Blob>(url, { signal, responseType: "blob", timeout: 120_000 });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      const body = error.response.data;
+      if (body.type.includes("json")) {
+        error.response.data = await body
+          .text()
+          .then((text) => JSON.parse(text) as unknown)
+          .catch(() => body);
+      }
+    }
+    throw error;
+  }
+}
 
 function normalizeCaseReport(report: CaseReportRead): CaseReport {
   return {

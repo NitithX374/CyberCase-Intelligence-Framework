@@ -11,7 +11,6 @@ import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 const INITIAL_FINDINGS = 5;
 
 export interface FindingSourceActions {
-  onNavigateToSource?: (messageId: string) => void;
   onSelectSource?: (
     sourceRef: SourceMessageRef,
     anchorElement: HTMLElement,
@@ -93,7 +92,6 @@ function SourceGroup({
   findingId,
   role,
   onSelectSource,
-  onNavigateToSource,
   activeSourceKey,
 }: FindingSourceActions & {
   sources: SourceMessageRef[];
@@ -113,7 +111,6 @@ function SourceGroup({
             citationRole={role}
             isActive={activeSourceKey === key}
             onSelect={onSelectSource}
-            onNavigateToSource={onNavigateToSource}
           />
         );
       })}

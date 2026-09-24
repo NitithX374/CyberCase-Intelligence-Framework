@@ -190,6 +190,74 @@ describe("buildTechnicalContext", () => {
   });
 });
 
+describe("an association the page cannot tie to a case source", () => {
+  const powershell = {
+    technique_id: "T1059.001",
+    name: "PowerShell",
+    tactic: "Execution",
+    description: "Command and scripting interpreter.",
+  };
+  const transfer = {
+    technique_id: "T1105",
+    name: "Ingress Tool Transfer",
+    tactic: "Command and Control",
+    description: "Transfer tools into the environment.",
+  };
+  const associations = [
+    {
+      association_id: "MA-01",
+      technique_id: "T1059.001",
+      claim_ids: ["A-01"],
+      reason: "The claim describes PowerShell activity.",
+      plain_meaning: "Someone ran commands through PowerShell.",
+    },
+    {
+      association_id: "MA-02",
+      technique_id: "T1105",
+      claim_ids: ["A-02"],
+      reason: "A tool was downloaded.",
+      plain_meaning: "Someone brought a tool in.",
+    },
+  ];
+
+  it("keeps every other technique, and shows this one without a case basis", () => {
+    const { result, sources } = technicalContextFixture(
+      "retrieved_with_matches",
+      [powershell, transfer],
+      associations,
+    );
+    const claims = result.trace_json!.claims;
+    claims.push({
+      ...claims[0],
+      claim_id: "A-02",
+      supporting_source_ids: ["QA-01"],
+      supporting_citations: [{ source_id: "QA-01", exact_quote: "I downloaded a tool." }],
+    });
+
+    const context = buildTechnicalContext(result, sources);
+
+    expect(context.status).toBe("retrieved_with_matches");
+    expect(context.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001", "T1105"]);
+    expect(context.techniques[0].caseBasisSources).toHaveLength(1);
+    expect(context.techniques[1].caseBasisSources).toEqual([]);
+  });
+
+  it("leaves out an association whose technique was not retrieved, and keeps the rest", () => {
+    const { result, sources } = technicalContextFixture(
+      "retrieved_with_matches",
+      [powershell],
+      associations,
+    );
+    const claims = result.trace_json!.claims;
+    claims.push({ ...claims[0], claim_id: "A-02" });
+
+    const context = buildTechnicalContext(result, sources);
+
+    expect(context.status).toBe("retrieved_with_matches");
+    expect(context.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001"]);
+  });
+});
+
 describe("a technique several claims rest on", () => {
   const row = {
     technique_id: "T1059.001",

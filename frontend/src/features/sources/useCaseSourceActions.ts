@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { addCaseSource, getApiErrorMessage } from "@/lib/api";
+import { addCaseSource } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { useUploadCaseDocument } from "@/features/sources/queries";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,7 @@ interface UseCaseSourceActionsOptions {
 export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
   const queryClient = useQueryClient();
   const uploadMutation = useUploadCaseDocument(caseId);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
   const [isAddingNarrative, setIsAddingNarrative] = useState(false);
 
   const uploadDocument = useCallback(
@@ -23,7 +23,7 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
       try {
         await uploadMutation.mutateAsync(file);
       } catch (error) {
-        setActionError(getApiErrorMessage(error, "The document could not be saved."));
+        setActionError(error);
       }
     },
     [caseId, uploadMutation],
@@ -47,7 +47,7 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
         ]);
         return true;
       } catch (error) {
-        setActionError(getApiErrorMessage(error, "The case narrative could not be saved."));
+        setActionError(error);
         return false;
       } finally {
         setIsAddingNarrative(false);
