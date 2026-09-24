@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>CyberCase Intelligence Framework — User Flow & Brief System Flow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      flowchart: {
+        curve: 'basis',
+        useMaxWidth: true,
+        htmlLabels: true
+      },
+      sequence: {
+        diagramMarginX: 20,
+        diagramMarginY: 15,
+        actorMargin: 65,
+        width: 175,
+        height: 44,
+        boxMargin: 8,
+        boxTextMargin: 4,
+        noteMargin: 8,
+        messageMargin: 20,
+        mirrorActors: false,
+        bottomMarginAdj: 5,
+        useMaxWidth: true,
+        rightAngles: false,
+        showSequenceNumbers: true
+      },
+      fontFamily: 'Inter, Sarabun, sans-serif'
+    });
+  </script>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 12mm 12mm;
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 8pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #ffffff;
+      color: #0f172a;
+      line-height: 1.45;
+      font-size: 9.5pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      padding: 2mm 0;
+      min-height: 255mm;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .page + .page {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* ── Cover Page ────────────────────────────── */
+    .cover-page {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 265mm;
+      text-align: center;
+      padding: 24mm 16mm;
+      background: linear-gradient(135deg, #090d16 0%, #172133 100%);
+      color: #ffffff;
+      border-radius: 8px;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      border-radius: 20px;
+      font-size: 9pt;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 14px;
+      color: #f8fafc;
+    }
+
+    .cover-subtitle {
+      font-size: 11.5pt;
+      color: #94a3b8;
+      max-width: 650px;
+      margin-bottom: 34px;
+      line-height: 1.6;
+    }
+
+    .actor-legend {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      max-width: 720px;
+      width: 100%;
+      margin-bottom: 34px;
+      text-align: left;
+    }
+
+    .actor-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .actor-icon {
+      font-size: 18pt;
+      margin-bottom: 6px;
+    }
+
+    .actor-name {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 2px;
+    }
+
+    .actor-role {
+      font-size: 7.8pt;
+      color: #94a3b8;
+      line-height: 1.35;
+    }
+
+    .cover-toc {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      max-width: 720px;
+      width: 100%;
+      margin-bottom: 30px;
+      text-align: left;
+    }
+
+    .toc-item {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+
+    .toc-num {
+      font-family: 'JetBrains Mono', monospace;
+      color: #38bdf8;
+      font-size: 7.5pt;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .toc-title {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .cover-meta {
+      display: flex;
+      gap: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      padding-top: 20px;
+      font-size: 8.5pt;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .cover-meta strong {
+      color: #cbd5e1;
+    }
+
+    /* ── Content Pages Header ──────────────────── */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .title-group h2 {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+    }
+
+    .title-group p {
+      font-size: 8.2pt;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .badge-tag {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 7.5pt;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    /* ── Diagram Box ───────────────────────────── */
+    .diagram-container {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 6px;
+      margin-bottom: 10px;
+      flex-grow: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .diagram-container .mermaid {
+      width: 100%;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-container svg {
+      max-width: 100% !important;
+      height: auto !important;
+      max-height: 185mm !important;
+    }
+
+    /* ── Footer Info Cards ─────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 10px;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 8pt;
+    }
+
+    .info-card h4 {
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-card ul {
+      margin-left: 14px;
+      color: #475569;
+    }
+
+    .info-card li {
+      margin-bottom: 2px;
+    }
+
+    .table-spec {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.5pt;
+    }
+
+    .table-spec th, .table-spec td {
+      border: 1px solid #e2e8f0;
+      padding: 4px 6px;
+      text-align: left;
+    }
+
+    .table-spec th {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .table-spec td code {
+      font-family: 'JetBrains Mono', monospace;
+      color: #0284c7;
+      background: #e0f2fe;
+      padding: 1px 3px;
+      border-radius: 2px;
+      font-size: 7pt;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover Page -->
+  <div class="page cover-page">
+    <div class="cover-badge">Executive & Technical Summary · System Flows</div>
+    <h1 class="cover-title">CyberCase Intelligence Framework</h1>
+    <p class="cover-subtitle">
+      สรุปภาพรวม User Flow & Brief System Flow ฉบับเข้าใจง่ายสำหรับทีมงานและผู้บริหาร 
+      จำลองปฏิสัมพันธ์และเส้นทางเชื่อมต่อของ 4 ผู้มีส่วนเกี่ยวข้องหลัก (4 Core Actors)
+    </p>
+
+    <!-- The 4 Core Actors -->
+    <div class="actor-legend">
+      <div class="actor-card">
+        <div class="actor-icon">👤</div>
+        <div class="actor-name">User</div>
+        <div class="actor-role">ผู้ใช้งาน / เจ้าหน้าที่สืบสวนคดี สั่งการและดูผลผ่าน Web UI</div>
+      </div>
+      <div class="actor-card">
+        <div class="actor-icon">⚙️</div>
+        <div class="actor-name">Backend</div>
+        <div class="actor-role">ระบบหลัก CyberCase (FastAPI + ควบคุมขั้นตอน + กฎเกณฑ์คดี)</div>
+      </div>
+      <div class="actor-card">
+        <div class="actor-icon">🗄️</div>
+        <div class="actor-name">Database</div>
+        <div class="actor-role">ฐานข้อมูลคดี PostgreSQL (บันทึกหลักฐาน, ประวัติแชท, ผลวิเคราะห์)</div>
+      </div>
+      <div class="actor-card">
+        <div class="actor-icon">🧠</div>
+        <div class="actor-name">External API</div>
+        <div class="actor-role">บริการ AI ภายนอก (Typhoon OCR, Core LLM, และ MITRE RAG)</div>
+      </div>
+    </div>
+
+    <!-- Table of Contents -->
+    <div class="cover-toc" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 24px;">
+      <div class="toc-item">
+        <div class="toc-num">PAGE 02</div>
+        <div class="toc-title">Brief System Flow (ผังระบบและเส้นทางเชื่อมต่อ 4 Actors)</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">PAGE 03</div>
+        <div class="toc-title">Flow 01 · End-to-End User & System Flow (ภาพรวมกระบวนการ)</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">PAGE 04</div>
+        <div class="toc-title">Flow 02 · Document Intake & Ingestion (นำเข้า + Typhoon OCR)</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">PAGE 05</div>
+        <div class="toc-title">Flow 03 · Case Analysis & Clarification Gating (วิเคราะห์คดี)</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">PAGE 06</div>
+        <div class="toc-title">Flow 04 · Interactive Chat & Case Inquiry (ซักถามและแชท)</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">PAGE 07</div>
+        <div class="toc-title">Flow 05 · Report Generation Flow & Key Principles (รายงาน PDF)</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">PAGE 08</div>
+        <div class="toc-title">Flow 06 · GraphRAG Architecture & Component Flow (ผังระบบ RAG)</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-num">PAGE 09</div>
+        <div class="toc-title">Flow 07 · GraphRAG Detailed Sequence Flow (ขั้นตอนการสืบค้นละเอียด)</div>
+      </div>
+    </div>
+
+    <div class="cover-meta">
+      <div><strong>Target Audience:</strong> Stakeholders / Developers</div>
+      <div><strong>Model:</strong> 4-Actor Interactive Architecture</div>
+      <div><strong>Date:</strong> 2026-09-23</div>
+      <div><strong>Status:</strong> Active Baseline</div>
+    </div>
+  </div>
+
+  <!-- Page 2: Brief System Flow (Flowchart with Explicit Lines to External API) -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Brief System Flow (แผนภาพผังระบบและเส้นทางเชื่อมต่อ)</h2>
+        <p>แสดงการเชื่อมต่อระหว่าง 4 Actors หลักอย่างชัดเจน: User, Backend, Database และ External API Provider</p>
+      </div>
+      <div class="badge-tag">SYSTEM TOPOLOGY</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+flowchart TB
+    %% Actors Definition
+    User["👤 <b>User (ผู้ใช้งาน)</b><br/>เจ้าหน้าที่สืบสวนคดี<br/><i>(Web UI: Next.js 16)</i>"]
+    
+    Backend["⚙️ <b>Backend (ระบบหลัก CyberCase)</b><br/>FastAPI Application<br/><i>(Workflow Controller · Ingestion · Binding)</i>"]
+    
+    DB[("🗄️ <b>Database (ฐานข้อมูล)</b><br/>PostgreSQL<br/><i>(case_sources · chat_messages · results)</i>")]
+    
+    subgraph ExternalProvider ["🧠 External API Provider (บริการภายนอก)"]
+        direction TB
+        OCR_API["📷 <b>Typhoon OCR API</b><br/>สกัดข้อความจากภาพ/เอกสารสแกน"]
+        LLM_API["🤖 <b>Core LLM (OpenRouter)</b><br/>Gap Assessment & Main Case Analysis"]
+        RAG_API["🛡️ <b>GraphRAG Service (:8001)</b><br/>สืบค้นภัยคุกคาม MITRE ATT&CK (Qdrant + Neo4j)"]
+    end
+
+    %% Connections
+    User <-->|"1. อัปโหลดไฟล์ / สั่งวิเคราะห์ / แชทซักถาม / โหลด PDF"| Backend
+    Backend <-->|"2. จัดเก็บหลักฐาน (Short Tx) / ดึงประวัติ / บันทึกผลลัพธ์"| DB
+    
+    %% Explicit Lines to External API Provider
+    Backend <-->|"3. ส่งภาพสแกน ➔ สกัดข้อความภาษาไทย"| OCR_API
+    Backend <-->|"4. ส่งข้อเท็จจริง ➔ ประเมิน Gap & สรุปสำนวนคดี"| LLM_API
+    Backend <-->|"5. สอบถาม Indicators ➔ ข้อมูลเทคนิคคนร้าย"| RAG_API
+
+    %% Styling
+    classDef actorStyle fill:#f8fafc,stroke:#334155,stroke-width:2px;
+    classDef backendStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;
+    classDef dbStyle fill:#fef3c7,stroke:#d97706,stroke-width:2px;
+    classDef extStyle fill:#fdf2f8,stroke:#db2777,stroke-width:1.5px;
+    
+    class User actorStyle;
+    class Backend backendStyle;
+    class DB dbStyle;
+    class OCR_API,LLM_API,RAG_API extStyle;
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>🔗 เส้นทางการเชื่อมต่อไปยัง External API Provider</h4>
+        <ul>
+          <li><strong>เส้นทางที่ 1 (OCR API):</strong> เมื่อพบไฟล์ภาพหรือ PDF สแกน Backend ส่งต่อไปให้ Typhoon OCR สกัดตัวอักษรภาษาไทย</li>
+          <li><strong>เส้นทางที่ 2 (Core LLM):</strong> ใช้ประเมินช่องว่างข้อมูล (Gap Assessment) และวิเคราะห์สรุปคดีฉบับสมบูรณ์ (Main Analysis)</li>
+          <li><strong>เส้นทางที่ 3 (GraphRAG):</strong> สื่อสารกับ RAG Service เมื่อตรวจพบพฤติการณ์โจมตีทางไซเบอร์ เพื่อดึงเทคนิค MITRE ATT&CK</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>📋 Dataflow Matrix</h4>
+        <table class="table-spec">
+          <tr><td>User ➔ Backend</td><td>HTTP REST / Cookie Session</td></tr>
+          <tr><td>Backend ➔ DB</td><td>Async SQLAlchemy (Short Tx)</td></tr>
+          <tr><td>Backend ➔ OCR</td><td>Typhoon OCR API Endpoint</td></tr>
+          <tr><td>Backend ➔ LLM</td><td>OpenRouter API (GPT-4o/Luna)</td></tr>
+          <tr><td>Backend ➔ RAG</td><td>FastAPI HTTP :8001 /query</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 3: Flow 01 · Master Flow (With Explicit OCR & LLM Calls) -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Flow 01 · End-to-End User & System Flow (ภาพรวมกระบวนการ)</h2>
+        <p>แสดงลำดับการเดินทางของข้อมูลตั้งแต่เริ่มนำเข้าหลักฐาน จนถึงการออกรายงานสรุปสำนวนคดี</p>
+      </div>
+      <div class="badge-tag">FLOW 01 · SEQUENCE</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (ผู้ใช้งาน)
+    participant Backend as ⚙️ Backend (ระบบหลัก)
+    participant DB as 🗄️ Database (ฐานข้อมูล)
+    participant ExtAPI as 🧠 External API Provider
+
+    rect rgb(240, 245, 255)
+    Note over User, ExtAPI: 1. นำเข้าพยานหลักฐาน (Case Intake)
+    User->>Backend: อัปโหลดเอกสารคดี (PDF, รูปถ่าย, คำให้การ)
+    alt เป็นเอกสารสแกนหรือรูปภาพ (Scanned Document)
+        Backend->>ExtAPI: ส่งภาพไปทำ OCR (Typhoon OCR API)
+        ExtAPI-->>Backend: ส่งข้อความที่สกัดได้พร้อมค่าความมั่นใจ
+    else เป็นไฟล์ดิจิทัลปกติ
+        Backend->>Backend: สกัดข้อความด้วย Native Parser
+    end
+    Backend->>DB: บันทึกหลักฐานลง case_sources และอัปเดต Version
+    DB-->>Backend: ยืนยันการบันทึกสำเร็จ
+    Backend-->>User: แสดงรายการหลักฐานพร้อมวิเคราะห์
+    end
+
+    rect rgb(245, 255, 245)
+    Note over User, ExtAPI: 2. วิเคราะห์คดีและตรวจสอบช่องว่างข้อมูล (Analysis & Gating)
+    User->>Backend: กดสั่ง "วิเคราะห์คดี" (Start Analysis)
+    Backend->>DB: ดึงพยานหลักฐานและประวัติคำตอบเดิม (Short Read Tx)
+    DB-->>Backend: ชุดเอกสารหลักฐานของคดี
+    Backend->>ExtAPI: ส่งเอกสารให้ AI ประเมินช่องว่างข้อมูล (Gap Assessment)
+    ExtAPI-->>Backend: รายการข้อเท็จจริงสำคัญที่ยังขาดหาย (Gaps)
+
+    alt พบข้อมูลสำคัญที่ขาดหาย (Need Clarification)
+        Backend->>DB: บันทึกคำถามข้อสงสัยลงในฐานข้อมูลแชท
+        Backend-->>User: ส่งการ์ดคำถามให้ผู้ใช้ตอบในหน้าแชท (Early Exit)
+        User->>Backend: พิมพ์ตอบข้อมูลเพิ่มเติม
+        Backend->>DB: บันทึกคำตอบเป็นบริบทเสริมของคดี
+    else ข้อมูลครบถ้วนเพียงพอ (Proceed to Full Analysis)
+        opt คดีมีพฤติกรรมภัยคุกคามทางไซเบอร์
+            Backend->>ExtAPI: สอบถามฐานความรู้ภัยคุกคาม (MITRE ATT&CK RAG)
+            ExtAPI-->>Backend: ข้อมูลเทคนิคและรูปแบบการโจมตี
+        end
+        Backend->>ExtAPI: สั่ง AI ประมวลผลและสรุปสำนวนคดีฉบับสมบูรณ์
+        ExtAPI-->>Backend: ผลวิเคราะห์ (สรุปคดี, ผู้เกี่ยวข้อง, ลำดับเหตุการณ์)
+        Backend->>Backend: ตรวจสอบความถูกต้องของการอ้างอิงกับเอกสารจริง
+        Backend->>DB: บันทึกผลการวิเคราะห์คดีฉบับสมบูรณ์
+        Backend-->>User: แสดงผลสรุปคดีและแผนผังไทม์ไลน์
+    end
+    end
+
+    rect rgb(255, 245, 255)
+    Note over User, ExtAPI: 3. การสร้างและส่งออกรายงาน (Report Export)
+    User->>Backend: กดขอไฟล์รายงานสรุปสำนวน (Export PDF)
+    Backend->>DB: ดึงผลการวิเคราะห์ล่าสุด
+    DB-->>Backend: ข้อมูลผลวิเคราะห์ที่ตรวจสอบแล้ว
+    Backend->>Backend: จัดรูปแบบเอกสารราชการและแปลงเป็นไฟล์ PDF
+    Backend-->>User: ดาวน์โหลดไฟล์ PDF รายงานสรุปคดี
+    end
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>🎯 จุดเชื่อมต่อกับ External API Provider ใน Flow หลัก</h4>
+        <ul>
+          <li><strong>Step 3-4 (Intake OCR):</strong> เชื่อมต่อไปยัง External OCR API เพื่อแปลงภาพเอกสารเป็นข้อความ</li>
+          <li><strong>Step 10-11 (Gap Assessment):</strong> เชื่อมต่อไปยัง External LLM เพื่อค้นหาจุดโหว่ของหลักฐาน</li>
+          <li><strong>Step 17-20 (Threat Intel & Main LLM):</strong> เชื่อมต่อไปยัง RAG และ Core LLM เพื่อสรุปคดี</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>📋 สถานะผลลัพธ์</h4>
+        <table class="table-spec">
+          <tr><td>Need Clarification</td><td>หยุดถามผู้ใช้ (สถานะ: <code>need_followup</code>)</td></tr>
+          <tr><td>Completed</td><td>วิเคราะห์สำเร็จ (สถานะ: <code>completed</code>)</td></tr>
+          <tr><td>Source Binding</td><td>ตัดคำกุเท็จทิ้ง (Hallucination Guard)</td></tr>
+          <tr><td>Export PDF</td><td>แปลง HTML เป็น PDF (WeasyPrint)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 4: Flow 02 · Ingestion Flow (Explicit OCR Line) -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Flow 02 · Document Intake & Ingestion (นำเข้า + OCR API)</h2>
+        <p>แสดงขั้นตอนการรับเอกสาร การเชื่อมต่อไปยัง Typhoon OCR ภายนอก และการบันทึกจัดเก็บ</p>
+      </div>
+      <div class="badge-tag">FLOW 02 · INGESTION</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (ผู้ใช้งาน)
+    participant Backend as ⚙️ Backend (ระบบหลัก)
+    participant DB as 🗄️ Database (ฐานข้อมูล)
+    participant ExtAPI as 🧠 External API Provider
+
+    User->>Backend: 1. อัปโหลดไฟล์เอกสาร (PDF, รูปถ่ายพยานหลักฐาน, หรือ DOCX)
+    Note over Backend: ตรวจสอบความปลอดภัยและประเภทไฟล์ (MIME Type Detection)
+    
+    alt กรณีที่ 1: ไฟล์เป็นเอกสารสแกนหรือรูปภาพ (Scanned PDF / Images)
+        Backend->>ExtAPI: 2a. ส่งภาพเอกสารไปสกัดข้อความ (Typhoon OCR API)
+        Note over ExtAPI: ประมวลผลโมเดล OCR ภาษาไทยและภาษาอังกฤษ
+        ExtAPI-->>Backend: 3a. ส่งคืนข้อความที่สกัดได้ + เลขหน้า + ค่าความมั่นใจ (Confidence)
+    else กรณีที่ 2: ไฟล์เป็นเอกสารดิจิทัลปกติ (Native Digital PDF / DOCX)
+        Backend->>Backend: 2b. สกัดข้อความตรงด้วยเครื่องมือภายใน (PyMuPDF / docx2txt)
+    end
+
+    Backend->>Backend: 4. บันทึกข้อมูลที่มาของเอกสาร (Provenance JSON & Page Spans)
+    
+    Backend->>DB: 5. บันทึกเอกสารลงตาราง `case_sources`
+    Backend->>DB: 6. ปรับเพิ่มเลขเวอร์ชันพยานหลักฐานของคดี (`Case.source_revision` + 1)
+    DB-->>Backend: 7. ยืนยันการจัดเก็บพยานหลักฐานสำเร็จ
+    
+    Backend-->>User: 8. แจ้งผลสำเร็จ พร้อมแสดงเนื้อหาข้อความที่สกัดได้บนหน้าจอ
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>🔍 การเชื่อมต่อกับ External OCR Provider</h4>
+        <ul>
+          <li><strong>Typhoon OCR API:</strong> รองรับการอ่านเอกสารทางราชการไทย เอกสารลายมือชื่อ และตรายางประทับ</li>
+          <li><strong>Graceful Fallback:</strong> หากเอกสารเป็น Text อยู่แล้ว ระบบจะไม่ยิง External API เพื่อประหยัดค่าใช้จ่ายและเวลา</li>
+          <li><strong>Audit Trail:</strong> เก็บค่า Provenance ไว้ครบถ้วนว่าคำไหนมาจากหน้าใด และสกัดด้วยวิธีใด (Native หรือ OCR)</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>📋 ข้อมูลทางเทคนิค</h4>
+        <table class="table-spec">
+          <tr><td>OCR Provider</td><td>Typhoon OCR (Base URL & Key)</td></tr>
+          <tr><td>Service Path</td><td><code>services/document_ingestion/</code></td></tr>
+          <tr><td>Evidence Table</td><td><code>case_sources</code></td></tr>
+          <tr><td>Revision Control</td><td>Atomic increment on upload</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 5: Flow 03 · Analysis & Gating (Explicit LLM & RAG Lines) -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Flow 03 · Case Analysis & Clarification Gating (วิเคราะห์คดี)</h2>
+        <p>แสดงขั้นตอนการเรียก External AI 2 จังหวะ: ประเมิน Gap และ สรุปคดี พร้อมการสืบค้น MITRE RAG</p>
+      </div>
+      <div class="badge-tag">FLOW 03 · ANALYSIS</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (ผู้ใช้งาน)
+    participant Backend as ⚙️ Backend (ระบบหลัก)
+    participant DB as 🗄️ Database (ฐานข้อมูล)
+    participant ExtAPI as 🧠 External API Provider
+
+    User->>Backend: 1. กดปุ่ม "สั่งวิเคราะห์สำนวนคดี" (Analyze Case)
+    Backend->>DB: 2. ดึงหลักฐานและประวัติคำตอบเดิม (Short DB Read Transaction)
+    DB-->>Backend: 3. ส่งข้อมูลหลักฐานและประวัติคำตอบ (Source Bundle)
+    Note over Backend, DB: ปิด DB Transaction ทันทีเพื่อไม่ให้ Connection ค้างระหว่างรอ AI
+
+    %% Step 1 to External LLM
+    Backend->>ExtAPI: 4. ส่งเอกสารให้ AI ประเมินหาช่องว่างข้อมูล (Core LLM: case_assessment_v1)
+    ExtAPI-->>Backend: 5. ส่งรายการช่องว่างข้อมูลที่พบ (Unresolved Gaps Trace)
+
+    Backend->>Backend: 6. ประเมินนโยบาย (Deterministic Policy): มี Gap สำคัญ และยังไม่เกินโควตาคำถามหรือไม่?
+
+    alt กรณีที่ 1: พบ Gap สำคัญที่ต้องถาม (Decision = ASK)
+        Backend->>DB: 7a. บันทึกคำถามข้อสงสัยลงในฐานข้อมูลแชท (ChatMessage)
+        DB-->>Backend: 8a. บันทึกสำเร็จ
+        Backend-->>User: 9a. หยุดวิเคราะห์ชั่วคราว + ส่งการ์ดคำถามให้ผู้ใช้ในแชท (Early Exit)
+        Note over User, Backend: ตัดจบเร็ว! ประหยัดค่า Token เพราะไม่เรียก Main Analysis โดยไม่จำเป็น
+    else กรณีที่ 2: ข้อมูลครบถ้วน หรือถามครบโควตาแล้ว (Decision = PROCEED)
+        opt คดีตรวจพบพฤติการณ์โจมตีทางไซเบอร์
+            Backend->>ExtAPI: 7b. สอบถามข้อมูลภัยคุกคามทางเทคนิค (GraphRAG: POST /query)
+            ExtAPI-->>Backend: 8b. ข้อมูลเทคนิคและรูปแบบพฤติการณ์ของคนร้าย (MITRE ATT&CK Context)
+        end
+        %% Step 2 to External LLM
+        Backend->>ExtAPI: 9b. สั่ง AI วิเคราะห์และสรุปสำนวนคดีฉบับสมบูรณ์ (Core LLM: main_case_analysis_v1)
+        ExtAPI-->>Backend: 10b. ผลวิเคราะห์คดี (Summary, Parties, Timeline, Findings)
+        Backend->>Backend: 11b. ตรวจสอบคำพูดอ้างอิง (Exact Quote) กับเอกสารจริง ถ้าไม่ตรงให้ตัดทิ้ง
+        Backend->>DB: 12b. บันทึกผลวิเคราะห์ที่ผ่านการรับรองลงตาราง `case_analysis_results`
+        DB-->>Backend: 13b. บันทึกสำเร็จ
+        Backend-->>User: 14b. แสดงผลสรุปคดีและไทม์ไลน์เหตุการณ์บนหน้าจอ
+    end
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>💡 การโต้ตอบกับ External API Provider ในขั้นตอนวิเคราะห์</h4>
+        <ul>
+          <li><strong>จังหวะที่ 1 (Gap Assessment):</strong> เรียก LLM ขนาดเล็ก/เร็ว เพื่อตรวจหาเฉพาะประเด็นที่ยังขาดหาย</li>
+          <li><strong>จังหวะที่ 2 (MITRE RAG):</strong> เรียก RAG Service เพื่อดึงเทคนิคการโจมตีจาก Qdrant/Neo4j มาใส่ในภาคผนวก</li>
+          <li><strong>จังหวะที่ 3 (Main Analysis):</strong> เรียก LLM ประมวลผลรอบสุดท้ายเพื่อสรุปคดี ข้อเท็จจริง และลำดับเหตุการณ์</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>⚙️ AI Contracts</h4>
+        <table class="table-spec">
+          <tr><td>Gap Assessment</td><td><code>case_assessment_v1</code></td></tr>
+          <tr><td>Main Analysis</td><td><code>main_case_analysis_v1</code></td></tr>
+          <tr><td>RAG Augmentation</td><td>STIX 2.1 ATT&CK Techniques</td></tr>
+          <tr><td>Verification</td><td>Deterministic Source Binding</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 6: Flow 04 · Chat & Q&A Flow (Explicit LLM Line) -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Flow 04 · Interactive Chat & Case Inquiry (ซักถามและแชท)</h2>
+        <p>แสดงการตอบคำถาม Clarification ของผู้ใช้ และการซักถามข้อสงสัยคดีผ่าน External LLM</p>
+      </div>
+      <div class="badge-tag">FLOW 04 · CHAT & Q&A</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (ผู้ใช้งาน)
+    participant Backend as ⚙️ Backend (ระบบหลัก)
+    participant DB as 🗄️ Database (ฐานข้อมูล)
+    participant ExtAPI as 🧠 External API Provider
+
+    User->>Backend: 1. พิมพ์ข้อความในกล่องแชทประจำคดี (Case Chat)
+    Backend->>DB: 2. ตรวจสอบสถานะ: มีคำถาม Gap ที่ระบบรอคำตอบอยู่หรือไม่?
+    DB-->>Backend: 3. ข้อมูลคำถามที่รอคำตอบ (Standing Question Status)
+
+    alt กรณีที่ 1: ผู้ใช้ตอบคำถาม Clarification Gap ที่ระบบถามค้างไว้
+        Backend->>DB: 4a. บันทึกคำตอบของผู้ใช้ ผูกเข้ากับรหัสคำถามเดิม (Synthetic QA Key)
+        Note over Backend, DB: คำตอบนี้ถือเป็นบทสนทนาเสริม จึงไม่เพิ่มเลข Version พยานหลักฐาน
+        Backend->>DB: 5a. ตรวจสอบโควตาคำถามที่ตอบไปแล้วในรอบนี้
+        
+        alt ยังไม่ครบโควตาของรอบ (เช่น ตอบ 1 จาก 3 คำถาม)
+            Backend->>ExtAPI: 6a. สั่ง AI ประเมินหาคำถามข้อถัดไป (Core LLM)
+            ExtAPI-->>Backend: 7a. คำถามข้อสงสัยข้อถัดไป
+            Backend->>DB: 8a. บันทึกคำถามใหม่ลงในแชท
+            Backend-->>User: 9a. แสดงคำตอบที่ส่งไป + ส่งการ์ดคำถามข้อถัดไปให้ตอบ
+        else ตอบครบโควตาของรอบแล้ว (เช่น ตอบครบ 3 คำถาม)
+            Backend->>ExtAPI: 6b. สั่ง AI วิเคราะห์คดีใหม่ทั้งหมด โดยรวมคำตอบทั้งหมดที่ได้รับ (Core LLM)
+            ExtAPI-->>Backend: 7b. ผลการวิเคราะห์คดีฉบับปรับปรุงใหม่
+            Backend->>DB: 8b. บันทึกผลวิเคราะห์ใหม่ลงในฐานข้อมูล
+            Backend-->>User: 9b. แจ้งเตือนว่าตอบครบแล้ว พร้อมอัปเดตผลสรุปคดีฉบับใหม่ทันที
+        end
+
+    else กรณีที่ 2: ผู้ใช้ซักถามข้อสงสัยเกี่ยวกับคดีทั่วไป (Case Ask / Inquiry)
+        Backend->>DB: 4b. ดึงผลวิเคราะห์และหลักฐานของคดีมาเป็นบริบท
+        DB-->>Backend: 5b. ข้อมูลบริบทคดี
+        Backend->>ExtAPI: 6c. สั่ง AI ตอบคำถามโดยอ้างอิงจากข้อมูลคดีเท่านั้น (Core LLM: Strict Grounding)
+        ExtAPI-->>Backend: 7c. คำตอบที่อ้างอิงจากพยานหลักฐาน
+        Backend->>DB: 8c. บันทึกข้อความคำถามและคำตอบลงในฐานข้อมูลแชท
+        Backend-->>User: 9c. แสดงข้อความคำตอบของ AI ในหน้าต่างแชททันที
+    end
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>💬 การเรียกใช้ External LLM ในระบบแชท</h4>
+        <ul>
+          <li><strong>ตอบ Gap ถัดไป:</strong> เรียก AI เลือกคำถามที่มีความสำคัญสูงถัดไปจาก Assessment เดิม</li>
+          <li><strong>วิเคราะห์รอบใหม่ (Re-analysis):</strong> เรียก AI วิเคราะห์คดีใหม่เมื่อผู้ใช้ตอบครบโควตารอบ (3 คำถาม)</li>
+          <li><strong>ซักถามคดี (Case Ask):</strong> เรียก AI ตอบคำถามเฉพาะหน้า โดยจำกัดให้ตอบจากหลักฐานในคดีเท่านั้น</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>📊 ข้อกำหนดการใช้งาน</h4>
+        <table class="table-spec">
+          <tr><td>Clarification Response</td><td>ผูกกับ Gap Key สำหรับวิเคราะห์รอบถัดไป</td></tr>
+          <tr><td>Case Inquiry</td><td>ตอบทันทีใน Request เดียว</td></tr>
+          <tr><td>Max Rounds</td><td>สูงสุด 3 รอบต่อคดี (คุมงบประมาณ)</td></tr>
+          <tr><td>Grounded Answers</td><td>ต้องมี Source Citation กำกับ</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 7: Flow 05 · Report Flow & Core Principles -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Flow 05 · Report Generation Flow & Key Principles (รายงาน PDF)</h2>
+        <p>แสดงขั้นตอนการออกรายงาน PDF และสรุปหลักการสำคัญที่ไม่ใช้ AI ดัดแปลงข้อมูลในขั้นตอนนี้</p>
+      </div>
+      <div class="badge-tag">FLOW 05 · REPORT & PRINCIPLES</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User (ผู้ใช้งาน)
+    participant Backend as ⚙️ Backend (ระบบหลัก)
+    participant DB as 🗄️ Database (ฐานข้อมูล)
+    participant ExtAPI as 🧠 External API Provider
+
+    User->>Backend: 1. กดปุ่ม "สร้างรายงานสรุปสำนวนคดี" (Generate Official Report)
+    Backend->>DB: 2. ดึงผลการวิเคราะห์คดีล่าสุดที่ผ่านการตรวจทานแล้ว
+    DB-->>Backend: 3. ส่งข้อมูลผลวิเคราะห์ (Case Analysis Result)
+    
+    Backend->>Backend: 4. ประกอบโครงสร้างรายงานตามแม่แบบทางการ (Deterministic Template Assembly)
+    Note over Backend, ExtAPI: ไม่เรียก External AI ในขั้นตอนนี้! เพื่อป้องกันไม่ให้ AI แก้ไขหรือแต่งเติมข้อเท็จจริง
+    
+    Backend->>DB: 5. บันทึกประวัติการสร้างรายงานลงตาราง `case_reports`
+    DB-->>Backend: 6. บันทึกสำเร็จ
+    Backend-->>User: 7. ส่งสถานะพร้อมแสดงรายงานบนหน้าจอเว็บ (HTML Preview)
+
+    opt ผู้ใช้ต้องการดาวน์โหลดไฟล์ PDF ทางการ
+        User->>Backend: 8. กดปุ่ม "ดาวน์โหลดไฟล์ PDF" (Download PDF)
+        Backend->>Backend: 9. เรนเดอร์ HTML เป็น PDF ด้วย WeasyPrint (จัดหน้า A4 + ตัดคำไทย)
+        Backend-->>User: 10. ส่งไฟล์ PDF ให้ผู้ใช้ดาวน์โหลดลงเครื่องคอมพิวเตอร์
+    end
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>🛡️ ทำไมขั้นตอนออกรายงานจึงไม่เรียก External AI?</h4>
+        <ul>
+          <li><strong>ป้องกันการบิดเบือน:</strong> ผลการวิเคราะห์ได้ผ่านการตรวจสอบ (Source Binding) มาแล้ว การประกอบเล่มรายงานจึงต้องใช้แม่แบบตายตัว</li>
+          <li><strong>ความถูกต้อง 100%:</strong> ทั้งหน้าเว็บและ PDF พิมพ์จากข้อมูลเดียวกัน ไม่มีความเสี่ยงที่ AI จะสุ่มคำใหม่</li>
+          <li><strong>ความรวดเร็ว:</strong> การเรนเดอร์ PDF เกิดขึ้นทันทีในหลักวินาทีโดยไม่ต้องรอคิวโมเดลภายนอก</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>📋 สรุป 4 เสาหลักการออกแบบ</h4>
+        <table class="table-spec">
+          <tr><td>1. Source Trust</td><td>หลักฐานคดีเท่านั้นที่เป็นความจริง</td></tr>
+          <tr><td>2. Early Exit</td><td>ตัดจบเร็วเพื่อประหยัดค่า Token</td></tr>
+          <tr><td>3. Short DB Tx</td><td>ไม่ค้าง DB Connection ระหว่างรอ AI</td></tr>
+          <tr><td>4. Quote Binding</td><td>ตัดคำอ้างอิงที่ไม่มีจริงในเอกสารทิ้ง</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 8: Flow 06 · GraphRAG Architecture & Component Flow -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Flow 06 · GraphRAG Architecture & Component Flow (ผังระบบ RAG)</h2>
+        <p>แสดงโครงสร้างภายในของ RAG Service (:8001): Router, Decomposer, Qdrant + Neo4j Hybrid Search, และ Self-Reflection Loop</p>
+      </div>
+      <div class="badge-tag">FLOW 06 · RAG ARCHITECTURE</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+flowchart TD
+    BackendReq["⚙️ <b>Backend Call</b><br/>POST /query (Trigger Text / Incident Findings)"] --> Router
+
+    subgraph RouterStage ["1. การจำแนกประเภทคำถาม (Query Router)"]
+        Router{"<b>QueryRouter</b><br/>จำแนกประเภทคำถาม"}
+        Router -->|"ถามนิยามทั่วไป (General)"| DirectLLM["🤖 <b>Reasoning LLM</b><br/>ตอบจากความรู้ทั่วไปทันที (Bypass RAG)"]
+        Router -->|"วิเคราะห์เหตุการณ์ (Incident)"| Decomposer["🔍 <b>Query Decomposer</b><br/>แตกเหตุการณ์เป็นคำค้นย่อยรายเทคนิค (Sub-queries)"]
+    end
+
+    subgraph RetrievalStage ["2. Hybrid Retrieval (คู่ขนาน Vector + Graph)"]
+        Decomposer --> EmbedModel["⚡ <b>Embedding Model</b><br/>BAAI/bge-m3 (1024-dim, Multilingual)"]
+        EmbedModel --> Qdrant[("🎯 <b>Qdrant Vector DB</b><br/>Semantic Search ใน STIX Entities & Relationships")]
+        Qdrant -->|"ส่ง STIX IDs ที่ค้นพบ"| Neo4j[("🕸️ <b>Neo4j Graph DB</b><br/>ขยายโครงข่าย 2-Hop Cypher<br/>(Tactics, Mitigations, Groups)")]
+        Qdrant & Neo4j --> RRF["🔀 <b>Reciprocal Rank Fusion (RRF)</b><br/>รวมผลคะแนน Vector + Graph เข้าด้วยกัน"]
+        RRF --> Reranker["⚖️ <b>Cross-Encoder Reranker</b><br/>BAAI/bge-reranker-v2-m3<br/>จัดอันดับความเกี่ยวข้องขั้นสุดท้าย"]
+    end
+
+    subgraph ReflectionStage ["3. Self-Reflection & Broaden Loop (วงรอบประเมินตนเอง)"]
+        Reranker --> Evaluator{"🧐 <b>Context Evaluator</b><br/>ข้อมูลที่ค้นได้เพียงพอต่อ<br/>การระบุพฤติการณ์หรือไม่?"}
+        Evaluator -->|"❌ ยังไม่พอ และ Broaden < 2"| Broaden["🔄 <b>Broaden Search</b><br/>Agent เขียนคำค้นหาใหม่ในระดับ Tactic<br/>พร้อม Sanitizer ตัด Noise"]
+        Broaden -->|"สืบค้นซ้ำโดยรวมผลสะสม"| EmbedModel
+        Evaluator -->|"✅ ข้อมูลเพียงพอ (SUFFICIENT)<br/>หรือวนครบ 2 รอบแล้ว"| ContextBuilder["📝 <b>Context Builder</b><br/>ประกอบ Context พยานหลักฐาน + กราฟความสัมพันธ์"]
+    end
+
+    subgraph OutputStage ["4. สรุปผลและสร้างตารางเทคนิค (Output Assembly)"]
+        ContextBuilder --> ReasoningLLM["🤖 <b>Reasoning LLM</b><br/>สังเคราะห์ความเชื่อมโยงของภัยคุกคาม (Grounded QA)"]
+        ReasoningLLM --> MitreTable["📊 <b>MITRE Table Builder</b><br/>สกัดรหัสเทคนิค (T1566, T1059) + ยุทธวิธี + คำอธิบาย"]
+        MitreTable --> ResponsePayload["📦 <b>QueryResponse</b><br/>(Context + MITRE Table + Legal Relevance)"]
+    end
+
+    DirectLLM --> ResponsePayload
+    ResponsePayload --> BackendResp["⚙️ <b>ส่งผลลัพธ์กลับ Backend</b><br/>(จัดเก็บใน Technical Context Appendix)"]
+
+    classDef stageStyle fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px;
+    classDef dbStyle fill:#fef3c7,stroke:#d97706,stroke-width:2px;
+    classDef aiStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;
+    class Qdrant,Neo4j dbStyle;
+    class EmbedModel,Reranker,ReasoningLLM,DirectLLM aiStyle;
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>🧠 กลไกสำคัญของ GraphRAG Pipeline</h4>
+        <ul>
+          <li><strong>Hybrid Vector + Graph:</strong> Qdrant ค้นหาความคล้ายคลึงของคำ และ Neo4j ช่วยขยายความสัมพันธ์ Tactics และ Mitigations ที่เกี่ยวข้อง 2-Hop</li>
+          <li><strong>Query Decomposition:</strong> แตกพฤติการณ์ซับซ้อนเป็นประเด็นย่อยรายเทคนิค เพื่อให้ดึงข้อมูลได้ครบถ้วน ไม่ตกหล่น</li>
+          <li><strong>Self-Reflection (Broaden Loop):</strong> ประเมินความเพียงพอของ Context ถ้าขาดหายจะเขียน Query ใหม่และสืบค้นซ้ำ (จำกัดสูงสุด 2 รอบ)</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>⚙️ RAG Specifications</h4>
+        <table class="table-spec">
+          <tr><td>Framework</td><td>LangGraph State Machine</td></tr>
+          <tr><td>Embedding</td><td><code>BAAI/bge-m3 (1024d, FP16)</code></td></tr>
+          <tr><td>Reranker</td><td><code>BAAI/bge-reranker-v2-m3</code></td></tr>
+          <tr><td>Graph Hop</td><td>2-Hop Cypher Traversal</td></tr>
+          <tr><td>Max Loops</td><td><code>MAX_BROADEN_RETRIES = 2</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 9: Flow 07 · GraphRAG Detailed Sequence Flow -->
+  <div class="page">
+    <div class="header-bar">
+      <div class="title-group">
+        <h2>Flow 07 · GraphRAG Detailed Sequence Flow (ขั้นตอนการสืบค้นละเอียด)</h2>
+        <p>ลำดับการทำงานทีละสเต็ป: การส่งคำขอจาก Backend, Worker Thread, การค้นหาคู่ขนาน, และการดึงข้อมูล Entity จาก Neo4j</p>
+      </div>
+      <div class="badge-tag">FLOW 07 · RAG SEQUENCE</div>
+    </div>
+    
+    <div class="diagram-container">
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Backend as ⚙️ FastAPI Backend
+    participant RagAPI as 🌐 RAG Service (:8001)
+    participant Router as 🔀 Query Router
+    participant Decomp as 🧩 Query Decomposer
+    participant Embedder as ⚡ BAAI/bge-m3
+    participant Qdrant as 🎯 Qdrant (Vector DB)
+    participant Neo4j as 🕸️ Neo4j (Graph DB)
+    participant Reranker as ⚖️ BGE Reranker
+    participant Evaluator as 🧐 Context Evaluator
+    participant CoreLLM as 🤖 Core LLM
+    participant TableBuilder as 📊 MITRE Table Builder
+
+    Backend->>RagAPI: 1. POST /query {"query": "Trigger text / Incident findings"}
+    
+    Note over RagAPI: 2. รันบน Worker Thread แยกเพื่อไม่ให้บล็อก Event Loop (to_thread)
+    RagAPI->>Router: 3. route_query(query)
+    
+    alt คำถามทั่วไป (GENERAL_EXPLANATION)
+        Router-->>RagAPI: route = GENERAL_EXPLANATION
+        RagAPI->>CoreLLM: ตอบคำถามโดยตรงจากความรู้ทั่วไป
+        CoreLLM-->>RagAPI: คำตอบทั่วไป
+    else วิเคราะห์เหตุการณ์ภัยคุกคาม (INCIDENT_ANALYSIS)
+        Router-->>RagAPI: route = INCIDENT_ANALYSIS
+        
+        RagAPI->>Decomp: 4. decompose(query)
+        Note over Decomp: แตกพฤติการณ์เป็นคำค้นย่อยรายเทคนิค (ภาษาเดิม ไม่ต้องแปลเพราะโมเดลเป็น Multilingual)
+        Decomp-->>RagAPI: 5. [sub_query_1, sub_query_2, ...]
+
+        loop กระบวนการสืบค้น (Retrieval Pass — วนซ้ำได้สูงสุด 2 รอบ)
+            par การค้นหาเวกเตอร์ (Dense Vector Search)
+                RagAPI->>Embedder: 6a. encode(sub_queries)
+                Embedder-->>RagAPI: 1024-dim Dense Vectors
+                RagAPI->>Qdrant: 7a. Similarity Search (mitre_entities & relationships)
+                Qdrant-->>RagAPI: Top Vector Hits (STIX IDs + ความคล้ายคลึง)
+            and การขยายโครงข่ายกราฟ (Graph Subgraph Traversal)
+                RagAPI->>Neo4j: 6b. Cypher Query 2-Hop Traversal (STIX IDs)
+                Note over Neo4j: ดึงความสัมพันธ์รอบข้าง: Tactics, Mitigations, Groups, Software
+                Neo4j-->>RagAPI: 7b. Subgraphs Data
+            end
+
+            RagAPI->>Reranker: 8. รวมผลลัพธ์ด้วย RRF + Cross-Encoder Reranking
+            Note over Reranker: ให้น้ำหนัก Technique/Tactic สูงกว่า Group/Software (Type Multipliers)
+            Reranker-->>RagAPI: 9. Ranked Candidates & Merged Context
+
+            RagAPI->>Evaluator: 10. evaluate_context(query, merged_context)
+            alt ผลการประเมิน = SUFFICIENT (ข้อมูลเพียงพอแล้ว)
+                Evaluator-->>RagAPI: verdict = SUFFICIENT
+            else ผลการประเมิน = INSUFFICIENT และรอบ < 2
+                Evaluator-->>RagAPI: verdict = INSUFFICIENT, new_query = rewrite
+                Note over RagAPI: ปรับปรุงคำค้นหาในมุมที่กว้างขึ้น (Broaden Search) แล้วสืบค้นเพิ่ม
+            else วนครบโควตา 2 รอบแล้ว (budget spent)
+                Evaluator-->>RagAPI: บังคับจบ (Short-circuit to SUFFICIENT)
+            end
+        end
+
+        RagAPI->>CoreLLM: 11. สั่งสังเคราะห์คำอธิบายเทคนิค (Grounded QA Prompt)
+        CoreLLM-->>RagAPI: 12. Technical Incident Synthesis
+
+        RagAPI->>TableBuilder: 13. build_mitre_table(graphrag_result, answer)
+        TableBuilder->>Neo4j: 14. Lookup entity details (ชื่อทางการ, รหัส T-Code, คำอธิบาย)
+        Neo4j-->>TableBuilder: 15. Entity Details
+        TableBuilder-->>RagAPI: 16. mitre_table (ตารางเทคนิค MITRE ATT&CK ที่เป็นทางการ)
+    end
+
+    RagAPI-->>Backend: 17. QueryResponse (context, mitre_table, legal_relevance)
+    Note over Backend: บันทึกข้อมูลลงในส่วน Technical Appendix ของผลวิเคราะห์คดี
+      </pre>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>🛡️ การทำงานร่วมกับ Backend</h4>
+        <ul>
+          <li><strong>Non-blocking Execution:</strong> `GraphRAGAgent.query()` ใช้เวลาประมาณ 10-30 วินาที จึงรันผ่าน `anyio.to_thread` ไม่ให้บล็อก FastAPI Backend</li>
+          <li><strong>Entity Lookup Fail-Safe:</strong> หาก Neo4j มีปัญหาในการดึงชื่อเทคนิค ระบบจะใช้ข้อมูลจาก Vector Search มาทดแทน ไม่ทำให้ Request พัง</li>
+          <li><strong>Source Role Isolation:</strong> ผลลัพธ์ทั้งหมดถูกเก็บใน `technical_context` ของรายงาน ไม่ถูกนับเป็นพยานหลักฐาน (Case Source)</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h4>📋 Data Entities ใน STIX 2.1</h4>
+        <table class="table-spec">
+          <tr><td>Techniques</td><td><code>attack-pattern</code> (เช่น T1566)</td></tr>
+          <tr><td>Tactics</td><td><code>x-mitre-tactic</code> (เช่น Initial Access)</td></tr>
+          <tr><td>Mitigations</td><td><code>course-of-action</code> (แนวทางแก้ไข)</td></tr>
+          <tr><td>Threat Groups</td><td><code>intrusion-set</code> (กลุ่มผู้ก่อภัยคุกคาม)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
