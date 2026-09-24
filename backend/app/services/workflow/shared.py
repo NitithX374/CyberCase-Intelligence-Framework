@@ -32,6 +32,7 @@ class CaseUnderAnalysis:
     reused_context: CaseRagContextPayload | None = None
     asked_gap_keys: frozenset[str] = frozenset()
     rounds_spent: int = 1
+    continuing_followup: bool = False
 
     @property
     def source_revision(self) -> int:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from uuid import UUID
 
 from fastapi import status
@@ -26,7 +28,12 @@ from app.services.analysis.steps.technical_context import (
     CaseRagContextPayload,
     technical_context_key,
 )
-from app.services.chat.followup import asked_gap_keys, load_followup_history, rounds_asked
+from app.services.chat.followup import (
+    asked_gap_keys,
+    last_question_awaiting_analysis,
+    load_followup_history,
+    rounds_asked,
+)
 from app.services.sources.case_source_bundle import load_case_source_bundle
 from app.services.sources.source_service import SourceError
 from app.services.workflow.analysis_storage import (
@@ -36,6 +43,23 @@ from app.services.workflow.analysis_storage import (
     store_assessment,
 )
 from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError, owned_case
+
+_running: Counter[UUID] = Counter()
+
+
+@contextmanager
+def analysing(case_id: UUID) -> Iterator[None]:
+    _running[case_id] += 1
+    try:
+        yield
+    finally:
+        _running[case_id] -= 1
+        if _running[case_id] <= 0:
+            del _running[case_id]
+
+
+def analysis_running(case_id: UUID) -> bool:
+    return _running[case_id] > 0
 
 
 async def run_case_analysis(
@@ -47,16 +71,17 @@ async def run_case_analysis(
     pipeline: Callable = advance_case,
     continuing_followup: bool = False,
 ) -> AnalysisStep:
-    started = await read_case_for_analysis(
-        session_factory,
-        case_id=case_id,
-        user_id=user_id,
-        continuing_followup=continuing_followup,
-    )
-    outcome = await think(pipeline, started, response_language)
-    return await store_outcome(
-        session_factory, started, outcome, continuing_followup=continuing_followup
-    )
+    with analysing(case_id):
+        started = await read_case_for_analysis(
+            session_factory,
+            case_id=case_id,
+            user_id=user_id,
+            continuing_followup=continuing_followup,
+        )
+        outcome = await think(pipeline, started, response_language)
+        return await store_outcome(
+            session_factory, started, outcome, continuing_followup=started.continuing_followup
+        )
 
 
 async def think(pipeline: Callable, started: CaseUnderAnalysis, response_language: str):
@@ -129,6 +154,9 @@ async def read_case_for_analysis(
         except SourceError as error:
             raise CaseWorkflowError(error.code, error.message, error.status_code) from error
         history = await load_followup_history(db, case.id)
+        continuing = continuing_followup or (
+            await last_question_awaiting_analysis(db, case.id) is not None
+        )
         return CaseUnderAnalysis(
             case_id=case.id,
             source_bundle=bundle,
@@ -136,10 +164,9 @@ async def read_case_for_analysis(
             reused_context=await reusable_context(
                 db, case.id, technical_context_key(bundle.revision, history)
             ),
-            asked_gap_keys=frozenset(
-                await asked_gap_keys(db, case.id) if continuing_followup else set()
-            ),
-            rounds_spent=(await rounds_asked(db, case.id) if continuing_followup else 0) + 1,
+            asked_gap_keys=frozenset(await asked_gap_keys(db, case.id) if continuing else set()),
+            rounds_spent=(await rounds_asked(db, case.id) if continuing else 0) + 1,
+            continuing_followup=continuing,
         )
 
 
@@ -209,7 +236,9 @@ def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
 
 __all__ = [
     "AnalysisStep",
+    "analysing",
     "analysis_freshness",
+    "analysis_running",
     "external_context",
     "get_latest_case_analysis",
     "read_case_for_analysis",
