@@ -155,6 +155,7 @@ deliverables/**/*.pdf
 *.sqlite3
 *.db
 /pgdata/
+/backups/
 /postgres-data/
 /db-data/
 
