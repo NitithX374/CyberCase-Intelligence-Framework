@@ -6,6 +6,7 @@ from case_mitre_test_support import _fixtures
 from pydantic import ValidationError
 
 from app.schemas.rag import LegalReferenceResult, QueryResponse
+from app.services.analysis.mitre_gate.llm import skipped_mitre_applicability
 from app.services.analysis.pipeline import AnalysisArtifacts
 from app.services.analysis.steps.technical_context import CaseMitreAugmentation
 from app.services.workflow.analysis_storage import external_context, retrieval_context_row
@@ -26,21 +27,13 @@ def test_rag_response_requires_legal_reference():
 
 def test_retrieved_legal_relevance_is_persisted_in_both_analysis_json_fields():
     _, trace, _, applicability, context = _fixtures()
-    metadata = CaseMitreAugmentation(
+    augmentation = CaseMitreAugmentation(
         status="retrieved_from_rag",
         applicability=applicability,
         context=context,
-        associations=(),
-    ).to_metadata()
-    artifacts = AnalysisArtifacts(
-        trace=trace,
-        technical_context={
-            "context": context.context,
-            "mitre_table": list(context.mitre_table),
-        },
-        retrieval_context_id=context.retrieval_context_id,
-        receipt={"technical_augmentation": metadata},
     )
+    metadata = augmentation.to_metadata()
+    artifacts = AnalysisArtifacts(trace=trace, augmentation=augmentation)
     started = SimpleNamespace(source_revision=1, followup_history=())
 
     external = external_context(artifacts)
@@ -51,6 +44,8 @@ def test_retrieved_legal_relevance_is_persisted_in_both_analysis_json_fields():
     assert external["technical_augmentation"]["mitre_table"] == list(context.mitre_table)
     assert reusable["mitre_table"] == list(context.mitre_table)
     assert reusable["legal_relevance"] == metadata["legal_relevance"]
+    assert reusable["retrieval_context_id"] == context.retrieval_context_id
+    assert reusable["context"] == context.context
 
 
 def test_old_retrieval_snapshot_without_legal_relevance_is_not_reused():
@@ -98,7 +93,11 @@ def test_analysis_without_retrieval_has_no_reusable_or_legal_context():
     _, trace, _, _, _ = _fixtures()
     artifacts = AnalysisArtifacts(
         trace=trace,
-        receipt={"technical_augmentation": {"status": "not_applicable"}},
+        augmentation=CaseMitreAugmentation(
+            status="not_applicable",
+            applicability=skipped_mitre_applicability(),
+            context=None,
+        ),
     )
 
     external = external_context(artifacts)
@@ -110,6 +109,27 @@ def test_analysis_without_retrieval_has_no_reusable_or_legal_context():
     assert reusable is None
     assert "legal_relevance" not in external
     assert "mitre_table" not in external
+    assert external["technical_augmentation"]["status"] == "not_applicable"
+    assert external["technical_augmentation"]["association_ids"] == []
+
+
+def test_a_retrieval_with_no_technique_is_not_stored_for_reuse():
+    _, trace, _, applicability, context = _fixtures()
+    artifacts = AnalysisArtifacts(
+        trace=trace,
+        augmentation=CaseMitreAugmentation(
+            status="insufficient_context",
+            applicability=applicability,
+            context=context,
+        ),
+    )
+
+    assert artifacts.technical_context is None
+    assert (
+        retrieval_context_row(artifacts, SimpleNamespace(source_revision=1, followup_history=()))
+        is None
+    )
+    assert "legal_relevance" not in external_context(artifacts)
 
 
 class _Database:

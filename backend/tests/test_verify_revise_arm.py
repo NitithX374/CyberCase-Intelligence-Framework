@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import patch
 from uuid import uuid4
+
+import pytest
+from case_mitre_test_support import _gate
 
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
-    CaseAnalysisOutput,
     CaseAnalysisTrace,
+    CaseProviderAnalysis,
+    CaseProviderCitation,
+    CaseProviderClaim,
     CaseSourceCitation,
 )
 from app.services.analysis.pipeline import (
@@ -14,8 +20,11 @@ from app.services.analysis.pipeline import (
     AnalysisInput,
     write_analysis,
 )
+from app.services.analysis.prompts import case_system_prompt
+from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
-from experiments.analysis_arms import revise
+from experiments import analysis_arms
+from experiments.analysis_arms import revise, write_revision
 
 TEXT = "The finance share was encrypted overnight and a note demanded contact."
 SOURCE_ID = str(uuid4())
@@ -23,6 +32,20 @@ BUNDLE = CaseSourceBundle(
     revision=1,
     sources=(CaseSourceItem(source_id=SOURCE_ID, source_kind="narrative", text=TEXT),),
 )
+
+
+@pytest.fixture(autouse=True)
+def no_technical_context(monkeypatch):
+    original = analysis_arms.retrieve_technical_context
+
+    async def skipped(data, so_far):
+        return await original(
+            data,
+            so_far,
+            gate=_gate({"decision": "SKIP", "source_message_ids": [], "trigger_text": []}),
+        )
+
+    monkeypatch.setattr(analysis_arms, "retrieve_technical_context", skipped)
 
 
 def claim(claim_id: str, quote: str) -> CaseAnalysisClaim:
@@ -47,8 +70,7 @@ def analysis_returning(*traces: CaseAnalysisTrace):
 
     async def request(**kwargs):
         seen.append(kwargs.get("revision"))
-        trace = traces[min(len(seen) - 1, len(traces) - 1)]
-        return CaseAnalysisOutput(answer=trace.summary, trace=trace, execution_receipt={})
+        return traces[min(len(seen) - 1, len(traces) - 1)]
 
     return request, seen
 
@@ -70,15 +92,15 @@ def test_arm_b_verifies_without_revising_when_nothing_missed():
 
     assert seen == [None], "a sound analysis costs no second call"
     assert artifacts.trace.grounding.citations_verified == 1
-    assert artifacts.receipt["verification"]["rounds"] == [
+    assert artifacts.rounds == (
         {
             "attempt": 0,
             "claims": 1,
             "citations_verified": 1,
             "citations_unfound": 0,
             "sources_cited": 1,
-        }
-    ]
+        },
+    )
 
 
 def test_arm_b_hands_back_the_quotations_that_missed():
@@ -94,14 +116,14 @@ def test_arm_b_hands_back_the_quotations_that_missed():
     assert artifacts.trace.grounding.citations_unfound == 0
 
 
-def test_the_receipt_shows_whether_revising_fixed_or_deleted():
+def test_the_rounds_show_whether_revising_fixed_or_deleted():
     invented = trace_of(claim("A-01", TEXT), claim("A-02", "Nothing of the sort happened."))
     gutted = trace_of(claim("A-01", TEXT))
     request, _ = analysis_returning(invented, gutted)
 
     artifacts = asyncio.run(revise(AnalysisInput(sources=BUNDLE), max_revisions=1, request=request))
 
-    rounds = artifacts.receipt["verification"]["rounds"]
+    rounds = artifacts.rounds
     assert [r["citations_unfound"] for r in rounds] == [1, 0], "grounding looks perfect after"
     assert [r["claims"] for r in rounds] == [2, 1], "and it got there by dropping one"
 
@@ -114,4 +136,49 @@ def test_a_model_that_keeps_missing_stops_at_the_bound():
 
     assert len(seen) == 3, "one analysis and two revisions, then it stops"
     assert artifacts.trace.grounding.citations_unfound == 1
-    assert len(artifacts.receipt["verification"]["rounds"]) == 3
+    assert len(artifacts.rounds) == 3
+
+
+def test_a_revision_is_the_direct_prompt_with_the_correction_appended():
+    observed: list[dict[str, object]] = []
+
+    async def request_stage(**kwargs):
+        observed.append(kwargs)
+        return CaseProviderAnalysis(
+            version="case_analysis_trace_v1",
+            summary="The share was encrypted.",
+            involved_parties=[],
+            timeline=[],
+            impacts=[],
+            claims=[
+                CaseProviderClaim(
+                    claim_id="A-01",
+                    claim_type="reported",
+                    text="The share was encrypted.",
+                    epistemic_status="reported",
+                    supporting_source_ids=[SOURCE_ID],
+                    supporting_citations=[
+                        CaseProviderCitation(source_id=SOURCE_ID, exact_quote=TEXT)
+                    ],
+                )
+            ],
+        )
+
+    with (
+        patch("app.services.analysis.steps.write.request_stage", new=request_stage),
+        patch.object(analysis_arms, "request_stage", new=request_stage),
+    ):
+        for revision in (None, "GROUNDING CORRECTION"):
+            asyncio.run(
+                write_revision(
+                    sources=BUNDLE,
+                    language="english",
+                    config=AnalysisPipelineConfig(),
+                    revision=revision,
+                )
+            )
+
+    assert [call["stage"] for call in observed] == ["case_direct", "case_direct_revision"]
+    assert observed[0]["system"] == case_system_prompt()
+    assert observed[1]["system"] == f"{case_system_prompt()}\n\nGROUNDING CORRECTION"
+    assert observed[0]["content"] == observed[1]["content"]

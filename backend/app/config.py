@@ -76,7 +76,6 @@ class CaseAnalysisConfig(BaseModel):
     mitre_gate_model_path: str = "research/mitre_gate/model"
     chat_followup_max_rounds: int = Field(default=3, ge=0)
     chat_followup_gaps_per_round: int = Field(default=3, ge=1)
-    chat_ask_timeout_seconds: float = 120.0
 
 
 class ReportConfig(BaseModel):

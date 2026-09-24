@@ -3,14 +3,16 @@ from __future__ import annotations
 import asyncio
 from uuid import uuid4
 
+from case_mitre_test_support import _fixtures
+
 from app.services.analysis import pipeline as pipeline_module
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
-    CaseAnalysisOutput,
     CaseAnalysisTrace,
     CaseAssessmentTrace,
     CaseSourceCitation,
 )
+from app.services.analysis.mitre_gate.llm import skipped_mitre_applicability
 from app.services.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
@@ -18,13 +20,17 @@ from app.services.analysis.pipeline import (
     bind_to_case,
     write_analysis,
 )
+from app.services.analysis.steps.technical_context import CaseMitreAugmentation
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.services.workflow.run_analysis import think
+from app.services.workflow.shared import CaseUnderAnalysis
 from experiments import analysis_arms
 
 
-def case_with_one_narrative() -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
+def case_with_one_narrative(
+    text: str = "The finance share was encrypted overnight.",
+) -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
     source_id = str(uuid4())
-    text = "The finance share was encrypted overnight."
     claim = CaseAnalysisClaim(
         claim_id="A-01",
         claim_type="reported",
@@ -160,19 +166,45 @@ def test_a_step_left_out_means_the_model_is_given_no_technical_context():
     bundle, trace = case_with_one_narrative()
     seen = []
 
-    async def fake_analysis(**kwargs):
+    async def fake_write(**kwargs):
         seen.append(kwargs)
-        return CaseAnalysisOutput(answer="Answered.", trace=trace, execution_receipt={})
+        return trace
 
     artifacts = asyncio.run(
-        write_analysis(AnalysisInput(sources=bundle), AnalysisArtifacts(), request=fake_analysis)
+        write_analysis(AnalysisInput(sources=bundle), AnalysisArtifacts(), request=fake_write)
     )
 
     assert len(seen) == 1
     assert seen[0]["technical_context"] is None
-    assert seen[0]["retrieval_context_id"] is None
-    assert artifacts.answer == "Answered."
-    assert "technical_augmentation" not in artifacts.receipt
+    assert artifacts.trace is trace
+    assert artifacts.augmentation is None
+
+
+def test_only_retrieved_context_reaches_the_writer():
+    _, _, bundle, applicability, context = _fixtures()
+    trace = CaseAnalysisTrace(analysis_mode="case_overview", summary="Summary.", claims=[])
+    seen = []
+
+    async def fake_write(**kwargs):
+        seen.append(kwargs["technical_context"])
+        return trace
+
+    for status, expected in (
+        ("retrieved_from_rag", context),
+        ("insufficient_context", None),
+    ):
+        augmentation = CaseMitreAugmentation(status, applicability, context)
+        asyncio.run(
+            write_analysis(
+                AnalysisInput(sources=bundle),
+                AnalysisArtifacts(augmentation=augmentation),
+                request=fake_write,
+            )
+        )
+        assert seen[-1] is expected, status
+
+    skipped = CaseMitreAugmentation("not_applicable", skipped_mitre_applicability(), None)
+    assert AnalysisArtifacts(augmentation=skipped).technical_context is None
 
 
 def test_binding_is_what_writes_the_grounding_report():
@@ -184,21 +216,46 @@ def test_binding_is_what_writes_the_grounding_report():
 
     assert unbound.trace.grounding is None
     assert bound.trace.grounding is not None
-    assert bound.receipt["verification"]["rounds"][0]["citations_verified"] == 1
+    assert bound.trace.grounding.citations_verified == 1
 
 
 def test_the_analysis_needs_no_case_row_to_run():
     bundle, trace = case_with_one_narrative()
 
-    async def fake_analysis(**kwargs):
+    async def fake_write(**kwargs):
         assert "case_id" not in kwargs and "session_factory" not in kwargs
-        return CaseAnalysisOutput(answer="Answered.", trace=trace, execution_receipt={})
+        return trace
 
     artifacts = asyncio.run(
         write_analysis(
             AnalysisInput(sources=bundle, response_language="thai"),
             AnalysisArtifacts(),
-            request=fake_analysis,
+            request=fake_write,
         )
     )
     assert artifacts.trace is trace
+
+
+def language_the_pipeline_is_given(*texts: str) -> str:
+    seen: list[str] = []
+
+    async def pipeline(data):
+        seen.append(data.response_language)
+
+    bundle = CaseSourceBundle(
+        revision=1,
+        sources=tuple(
+            CaseSourceItem(source_id=f"s{index}", source_kind="narrative", text=text)
+            for index, text in enumerate(texts)
+        ),
+    )
+    asyncio.run(think(pipeline, CaseUnderAnalysis(case_id=uuid4(), source_bundle=bundle)))
+    return seen[0]
+
+
+def test_the_analysis_language_comes_from_the_case_sources():
+    assert language_the_pipeline_is_given("Files were encrypted at 02:00.") == "english"
+    assert language_the_pipeline_is_given("ไฟล์ถูกเข้ารหัสเมื่อเวลา 02:00 น.") == "thai"
+    assert language_the_pipeline_is_given("Server log 10.0.0.5", "ผู้เสียหายแจ้งความ") == "thai", (
+        "one Thai source makes the case Thai"
+    )

@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Mapping
 from functools import lru_cache
 from typing import TypeVar
 
@@ -15,10 +15,7 @@ from pydantic import BaseModel, ValidationError
 from app.services.analysis.contracts import CaseAnalysisFailure
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.llm.core_llm import CoreLlmTarget, resolve_core_llm_target
-from app.services.llm.structured_output import (
-    structured_output_request_options,
-    structured_output_schema,
-)
+from app.services.llm.structured_output import structured_output_schema
 
 logger = logging.getLogger("app.case_analysis")
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text", "message", None})
@@ -30,6 +27,7 @@ TRANSIENT_TRANSPORT_ERRORS = (
 )
 TRANSPORT_ATTEMPTS = 2
 TRANSPORT_RETRY_DELAY_SECONDS = 2.0
+transport: httpx.AsyncBaseTransport | None = None
 
 
 def extract_text_value(value: object) -> str:
@@ -183,24 +181,26 @@ def input_budget(config: AnalysisPipelineConfig) -> int:
     )
 
 
-def resolve_target(config: AnalysisPipelineConfig) -> CoreLlmTarget:
-    return resolve_core_llm_target(config.model)
-
-
 def stage_payload(
     config: AnalysisPipelineConfig,
     system: str,
-    content: dict[str, object],
+    content: dict[str, object] | str,
     schema: type[BaseModel],
+    *,
+    temperature: float | None = None,
 ) -> dict[str, object]:
-    return {
+    payload: dict[str, object] = {
         "model": config.model,
-        **structured_output_request_options(
-            feature="case_analysis",
-            configured_max_tokens=config.output_tokens,
-        ),
+        "max_tokens": config.output_tokens,
         "system": system,
-        "messages": [{"role": "user", "content": json.dumps(content, ensure_ascii=False)}],
+        "messages": [
+            {
+                "role": "user",
+                "content": content
+                if isinstance(content, str)
+                else json.dumps(content, ensure_ascii=False),
+            }
+        ],
         "output_config": {
             "format": {
                 "type": "json_schema",
@@ -208,51 +208,53 @@ def stage_payload(
             }
         },
     }
+    if temperature is not None:
+        payload["temperature"] = temperature
+    return payload
 
 
 async def post_stage(
-    client: httpx.AsyncClient,
     target: CoreLlmTarget,
     payload: dict[str, object],
     *,
     stage: str,
     timeout: float,
 ) -> httpx.Response:
-    attempt = 1
-    while True:
-        try:
-            return await client.post(
-                target.messages_url,
-                headers=target.headers,
-                json=payload,
-                timeout=timeout,
-            )
-        except TRANSIENT_TRANSPORT_ERRORS as error:
-            if attempt >= TRANSPORT_ATTEMPTS:
-                raise
-            logger.warning(
-                "Analysis stage %s transport error on attempt %d, retrying: %r",
-                stage,
-                attempt,
-                error,
-            )
-            attempt += 1
-            await asyncio.sleep(TRANSPORT_RETRY_DELAY_SECONDS)
+    async with httpx.AsyncClient(transport=transport) as client:
+        attempt = 1
+        while True:
+            try:
+                return await client.post(
+                    target.messages_url,
+                    headers=target.headers,
+                    json=payload,
+                    timeout=timeout,
+                )
+            except TRANSIENT_TRANSPORT_ERRORS as error:
+                if attempt >= TRANSPORT_ATTEMPTS:
+                    raise
+                logger.warning(
+                    "Analysis stage %s transport error on attempt %d, retrying: %r",
+                    stage,
+                    attempt,
+                    error,
+                )
+                attempt += 1
+                await asyncio.sleep(TRANSPORT_RETRY_DELAY_SECONDS)
 
 
 async def request_stage(
     *,
-    client: httpx.AsyncClient,
-    target: CoreLlmTarget,
     config: AnalysisPipelineConfig,
     stage: str,
     system: str,
-    content: dict[str, object],
+    content: dict[str, object] | str,
     schema: type[ProviderResult],
-    calls: list[dict[str, object]],
-    checkpoint: Callable[[], Awaitable[None]] | None = None,
+    calls: list[dict[str, object]] | None = None,
+    temperature: float | None = None,
 ) -> ProviderResult:
-    payload = stage_payload(config, system, content, schema)
+    target = resolve_core_llm_target(config.model)
+    payload = stage_payload(config, system, content, schema, temperature=temperature)
     estimated = await asyncio.to_thread(token_count, payload)
     if estimated > input_budget(config):
         raise CaseAnalysisFailure(f"{stage}_budget_exceeded", "Stage input exceeds budget")
@@ -262,14 +264,11 @@ async def request_stage(
         "estimated_input_tokens": estimated,
         "status": "started",
     }
-    calls.append(receipt)
-    if checkpoint is not None:
-        await checkpoint()
+    if calls is not None:
+        calls.append(receipt)
     started = time.monotonic()
     try:
-        response = await post_stage(
-            client, target, payload, stage=stage, timeout=config.timeout_seconds
-        )
+        response = await post_stage(target, payload, stage=stage, timeout=config.timeout_seconds)
         decoded = validate_response_payload(response)
         result = schema.model_validate_json(extract_visible_text(decoded))
         receipt["status"] = "completed"
@@ -297,8 +296,6 @@ async def request_stage(
         receipt["elapsed_ms"] = round((time.monotonic() - started) * 1000)
         if receipt["status"] == "started":
             receipt["status"] = "failed"
-        if checkpoint is not None:
-            await checkpoint()
 
 
 __all__ = [
@@ -308,7 +305,6 @@ __all__ = [
     "log_response_shape",
     "post_stage",
     "request_stage",
-    "resolve_target",
     "stage_payload",
     "token_count",
     "validate_response_payload",

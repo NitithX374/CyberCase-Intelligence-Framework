@@ -11,7 +11,8 @@ from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
 from app.schemas.message_metadata import message_trace, serialize_message_metadata
-from app.services.chat.case_answer import build_answer_context, generate_case_answer
+from app.services.analysis.language import case_language, question_language
+from app.services.chat.case_answer import generate_case_answer
 from app.services.sources.case_source_bundle import CaseSourceBundle, load_case_source_bundle
 from app.services.sources.source_service import SourceError
 from app.services.workflow.shared import (
@@ -26,7 +27,6 @@ async def answer_case_question(
     case_id: UUID,
     user_id: UUID | None,
     content: str,
-    response_language: str,
     client_request_id: str | None = None,
     session_factory: Callable = async_session,
     answer_request=generate_case_answer,
@@ -73,19 +73,15 @@ async def answer_case_question(
         history = await answer_history(
             db, case.id, result.id if result is not None else None, question.ordinal
         )
-        context = build_answer_context(
-            result=result,
-            question=question_text,
-            history=history,
-            source_bundle=bundle,
-        )
         question_id = question.id
         analysis_id = result.id if result is not None else None
 
     output = await answer_request(
-        context=context,
-        source_bundle=bundle,
-        user_message=answer_instruction(response_language),
+        result=result,
+        question=question_text,
+        history=history,
+        sources=bundle,
+        language=question_language(question_text, case_language(bundle)),
     )
 
     async with session_factory() as db, db.begin():
@@ -145,13 +141,8 @@ async def answer_history(
     return list(reversed(list(rows)))
 
 
-def answer_instruction(response_language: str) -> str:
-    return "ตอบคำถามนี้" if response_language == "thai" else "Answer this question."
-
-
 __all__ = [
     "answer_case_question",
     "answer_history",
-    "answer_instruction",
     "sent_exchange",
 ]

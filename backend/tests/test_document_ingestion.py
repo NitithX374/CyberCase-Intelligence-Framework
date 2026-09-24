@@ -231,7 +231,7 @@ def test_ingestion_does_not_call_rag_or_case_analysis(monkeypatch) -> None:
 
     monkeypatch.setattr("app.services.clients.rag_client.request_rag", forbidden_rag)
     monkeypatch.setattr(
-        "app.services.analysis.steps.write.request_case_analysis",
+        "app.services.analysis.steps.write.write_trace",
         forbidden_analysis,
     )
 

@@ -417,14 +417,11 @@ async def test_analysing_again_continues_a_round_whose_analysis_never_ran():
 
         async def pipeline(data):
             seen.append((data.asked_gap_keys, data.rounds_spent))
-            return AnalysisArtifacts(
-                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
-            )
+            return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
 
         step = await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
-            response_language="english",
             session_factory=session_factory,
             pipeline=pipeline,
         )
@@ -443,14 +440,11 @@ async def test_analysing_again_after_the_round_was_analysed_starts_afresh():
 
         async def pipeline(data):
             seen.append((data.asked_gap_keys, data.rounds_spent))
-            return AnalysisArtifacts(
-                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
-            )
+            return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
 
         await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
-            response_language="english",
             session_factory=session_factory,
             pipeline=pipeline,
         )
@@ -488,14 +482,11 @@ async def test_an_analysis_records_the_answers_it_read_and_not_later_ones():
                         in_reply_to_message_id=later.id,
                     )
                 )
-            return AnalysisArtifacts(
-                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
-            )
+            return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
 
         step = await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
-            response_language="english",
             session_factory=session_factory,
             pipeline=pipeline,
         )
@@ -531,14 +522,11 @@ async def test_an_analysis_records_the_sources_it_read_and_not_later_ones():
                         exact_text="Added while the model was thinking.",
                     )
                 )
-            return AnalysisArtifacts(
-                answer="Analysed.", trace=CaseAnalysisTrace.model_validate(TRACE)
-            )
+            return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
 
         step = await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
-            response_language="english",
             session_factory=session_factory,
             pipeline=pipeline,
         )
@@ -601,9 +589,7 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
             step = await store_analysis(
                 session_factory,
                 CaseUnderAnalysis(case_id=case_id, source_bundle=bundle),
-                AnalysisArtifacts(
-                    answer="Analysed.", trace=CaseAnalysisTrace.model_validate(trace_json)
-                ),
+                AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(trace_json)),
                 continuing_followup=continuing,
             )
             return await questions() - before, step
@@ -627,15 +613,11 @@ async def test_a_second_analysis_does_not_strand_the_standing_question():
         case_id, user_id, question_id = await case_with_a_question(session_factory)
 
         async def pipeline(data):
-            return AnalysisArtifacts(
-                answer="Files were encrypted.",
-                trace=CaseAnalysisTrace.model_validate(TRACE),
-            )
+            return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
 
         step = await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
-            response_language="english",
             session_factory=session_factory,
             pipeline=pipeline,
         )
@@ -693,7 +675,6 @@ async def test_assessment_row_asks_without_becoming_the_latest_analysis():
         step = await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
-            response_language="english",
             session_factory=session_factory,
             pipeline=pipeline,
         )

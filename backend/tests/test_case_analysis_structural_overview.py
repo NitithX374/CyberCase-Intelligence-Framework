@@ -16,7 +16,7 @@ from app.services.analysis.contracts import (
 )
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.analysis.steps.write import execute_analysis_pipeline
+from app.services.analysis.steps.write import write_trace
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
@@ -150,31 +150,26 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
 
-        async def fake_request_stage(*args, **kwargs):
+        async def fake_request_stage(**kwargs):
             return provider_output
 
-        with patch(
-            "app.services.analysis.steps.write.request_analysis_stage",
-            new=fake_request_stage,
-        ):
-            result = await execute_analysis_pipeline(
-                CaseSourceBundle(revision=1, sources=(source,)),
-                "english",
-                AnalysisPipelineConfig(),
-                None,
-                receipt={"calls": []},
-                mode="case_overview",
+        with patch("app.services.analysis.steps.write.request_stage", new=fake_request_stage):
+            trace = await write_trace(
+                sources=CaseSourceBundle(revision=1, sources=(source,)),
+                language="english",
+                config=AnalysisPipelineConfig(),
             )
 
-        assert result.trace is not None
-        assert isinstance(result.trace, CaseAnalysisTrace)
-        assert len(result.trace.involved_parties) == 1
-        assert result.trace.involved_parties[0].name == "ACME"
-        assert result.trace.involved_parties[0].claim_ids == ["A-01"]
-        assert len(result.trace.timeline) == 1
-        assert result.trace.timeline[0].event == "Unauthorized access"
-        assert len(result.trace.impacts) == 1
-        assert result.trace.impacts[0].description == "Unauthorized access to systems"
+        assert isinstance(trace, CaseAnalysisTrace)
+        assert trace.analysis_mode == "case_overview"
+        assert trace.retrieval_context_id is None
+        assert len(trace.involved_parties) == 1
+        assert trace.involved_parties[0].name == "ACME"
+        assert trace.involved_parties[0].claim_ids == ["A-01"]
+        assert len(trace.timeline) == 1
+        assert trace.timeline[0].event == "Unauthorized access"
+        assert len(trace.impacts) == 1
+        assert trace.impacts[0].description == "Unauthorized access to systems"
 
 
 def test_case_overview_models_allow_empty_claim_ids() -> None:

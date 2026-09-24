@@ -211,9 +211,10 @@ def gap_of(gaps: list[CaseAnalysisGap], gap_key: str | None) -> CaseAnalysisGap 
 def retrieval_context_row(
     artifacts: AnalysisArtifacts, started: CaseUnderAnalysis
 ) -> dict[str, object] | None:
-    if artifacts.technical_context is None or not artifacts.retrieval_context_id:
+    technical_context = artifacts.technical_context
+    if technical_context is None:
         return None
-    augmentation = artifacts.receipt.get("technical_augmentation")
+    augmentation = artifacts.augmentation.to_metadata()
     legal_relevance = (
         augmentation.get("legal_relevance") if isinstance(augmentation, dict) else None
     )
@@ -223,9 +224,9 @@ def retrieval_context_row(
         )
     return {
         "context_key": technical_context_key(started.source_revision, started.followup_history),
-        "retrieval_context_id": artifacts.retrieval_context_id,
-        "context": artifacts.technical_context.get("context", ""),
-        "mitre_table": list(artifacts.technical_context.get("mitre_table", []) or []),
+        "retrieval_context_id": technical_context.retrieval_context_id,
+        "context": technical_context.context,
+        "mitre_table": list(technical_context.mitre_table),
         "legal_relevance": legal_relevance,
     }
 
@@ -236,10 +237,9 @@ def external_context(artifacts: AnalysisArtifacts) -> dict[str, object]:
             "analysis_trace_missing", "Case analysis did not produce a validated trace"
         )
     context: dict[str, object] = {}
-    augmentation = artifacts.receipt.get("technical_augmentation")
-    if not isinstance(augmentation, dict):
+    if artifacts.augmentation is None:
         return context
-    augmentation = dict(augmentation)
+    augmentation = artifacts.augmentation.to_metadata()
     legal_relevance = augmentation.pop("legal_relevance", None)
     associations = [item.association_id for item in artifacts.trace.mitre_associations]
     augmentation["association_ids"] = associations
