@@ -1074,7 +1074,7 @@ async def run(args: argparse.Namespace) -> int:
     cases = _read_cases(dataset_path)
     cases_by_id = {str(case["case_id"]): case for case in cases}
 
-    main_model = resolve_core_llm_target(settings.chat_ask_model).model
+    main_model = resolve_core_llm_target(settings.case_analysis_model).model
     if args.report_only:
         analysis_records = _read_jsonl_records(output_dir / "analysis_outputs.jsonl")
         claim_output_records = _read_jsonl_records(output_dir / "atomic_claims.jsonl")
