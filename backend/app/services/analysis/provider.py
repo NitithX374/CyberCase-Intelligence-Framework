@@ -22,6 +22,14 @@ from app.services.llm.structured_output import (
 
 logger = logging.getLogger("app.case_analysis")
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text", "message", None})
+TRANSIENT_TRANSPORT_ERRORS = (
+    httpx.ConnectError,
+    httpx.ReadError,
+    httpx.WriteError,
+    httpx.RemoteProtocolError,
+)
+TRANSPORT_ATTEMPTS = 2
+TRANSPORT_RETRY_DELAY_SECONDS = 2.0
 
 
 def extract_text_value(value: object) -> str:
@@ -202,6 +210,36 @@ def stage_payload(
     }
 
 
+async def post_stage(
+    client: httpx.AsyncClient,
+    target: CoreLlmTarget,
+    payload: dict[str, object],
+    *,
+    stage: str,
+    timeout: float,
+) -> httpx.Response:
+    attempt = 1
+    while True:
+        try:
+            return await client.post(
+                target.messages_url,
+                headers=target.headers,
+                json=payload,
+                timeout=timeout,
+            )
+        except TRANSIENT_TRANSPORT_ERRORS as error:
+            if attempt >= TRANSPORT_ATTEMPTS:
+                raise
+            logger.warning(
+                "Analysis stage %s transport error on attempt %d, retrying: %r",
+                stage,
+                attempt,
+                error,
+            )
+            attempt += 1
+            await asyncio.sleep(TRANSPORT_RETRY_DELAY_SECONDS)
+
+
 async def request_stage(
     *,
     client: httpx.AsyncClient,
@@ -229,11 +267,8 @@ async def request_stage(
         await checkpoint()
     started = time.monotonic()
     try:
-        response = await client.post(
-            target.messages_url,
-            headers=target.headers,
-            json=payload,
-            timeout=config.timeout_seconds,
+        response = await post_stage(
+            client, target, payload, stage=stage, timeout=config.timeout_seconds
         )
         decoded = validate_response_payload(response)
         result = schema.model_validate_json(extract_visible_text(decoded))
@@ -242,6 +277,7 @@ async def request_stage(
     except httpx.TimeoutException as error:
         raise CaseAnalysisFailure(f"{stage}_timeout", "Analysis stage timed out") from error
     except httpx.RequestError as error:
+        logger.warning("Analysis stage %s transport failed: %r", stage, error)
         raise CaseAnalysisFailure(
             f"{stage}_transport", "Analysis stage transport failed"
         ) from error
@@ -270,6 +306,7 @@ __all__ = [
     "extract_visible_text",
     "input_budget",
     "log_response_shape",
+    "post_stage",
     "request_stage",
     "resolve_target",
     "stage_payload",
