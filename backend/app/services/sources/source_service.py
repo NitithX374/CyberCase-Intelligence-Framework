@@ -6,38 +6,21 @@ from uuid import UUID
 from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, undefer
 
-from app.models.case import Case
+from app.errors import AppError
 from app.models.sources import CaseDocument, CaseSource
+from app.services.cases.ownership import owned_case
 from app.services.document_ingestion.provenance import bind_exact_page_spans
 
 
-class SourceError(Exception):
-    def __init__(
-        self, code: str, message: str, status_code: int = status.HTTP_422_UNPROCESSABLE_CONTENT
-    ) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.status_code = status_code
+class SourceError(AppError):
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 class SourceService:
     def __init__(self, db: AsyncSession):
         self.db = db
-
-    async def get_owned_case(
-        self, case_id: UUID, user_id: UUID | None, *, lock: bool = False
-    ) -> Case:
-        statement = select(Case).where(Case.id == case_id)
-        if lock:
-            statement = statement.with_for_update()
-        result = await self.db.execute(statement)
-        case = result.scalar_one_or_none()
-        if case is None or case.user_id != user_id:
-            raise SourceError("case_not_found", "Case not found", 404)
-        return case
 
     async def add_document(
         self,
@@ -49,7 +32,7 @@ class SourceService:
         content: bytes,
         extraction: dict[str, object],
     ) -> CaseDocument:
-        case = await self.get_owned_case(case_id, user_id, lock=True)
+        case = await owned_case(self.db, case_id, user_id, lock=True)
         extracted_text = extraction.get("extracted_text")
         if not isinstance(extracted_text, str):
             raise SourceError("extraction_text_missing", "Document extraction text is missing")
@@ -83,13 +66,26 @@ class SourceService:
         return document
 
     async def list_documents(self, case_id: UUID, user_id: UUID | None) -> list[CaseDocument]:
-        await self.get_owned_case(case_id, user_id)
+        await owned_case(self.db, case_id, user_id)
         result = await self.db.execute(
             select(CaseDocument)
             .where(CaseDocument.case_id == case_id)
             .order_by(CaseDocument.created_at, CaseDocument.id)
         )
         return list(result.scalars().all())
+
+    async def document_content(
+        self, case_id: UUID, document_id: UUID, user_id: UUID | None
+    ) -> CaseDocument:
+        await owned_case(self.db, case_id, user_id)
+        document = await self.db.scalar(
+            select(CaseDocument)
+            .options(undefer(CaseDocument.content_bytes))
+            .where(CaseDocument.id == document_id, CaseDocument.case_id == case_id)
+        )
+        if document is None:
+            raise SourceError("document_not_found", "Document not found", status.HTTP_404_NOT_FOUND)
+        return document
 
     async def add_text_source(
         self,
@@ -106,7 +102,7 @@ class SourceService:
         normalized_text = text.strip()
         if not normalized_text:
             raise SourceError("source_text_empty", "The case source text is empty")
-        case = await self.get_owned_case(case_id, user_id, lock=True)
+        case = await owned_case(self.db, case_id, user_id, lock=True)
         source = CaseSource(
             case_id=case.id,
             source_kind=source_kind,
@@ -121,7 +117,7 @@ class SourceService:
         return source
 
     async def list_sources(self, case_id: UUID, user_id: UUID | None) -> list[CaseSource]:
-        await self.get_owned_case(case_id, user_id)
+        await owned_case(self.db, case_id, user_id)
         result = await self.db.execute(
             select(CaseSource)
             .options(selectinload(CaseSource.document))

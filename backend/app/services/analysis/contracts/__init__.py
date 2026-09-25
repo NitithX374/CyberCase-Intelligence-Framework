@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.errors import AppError
 from app.services.analysis.contracts.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
@@ -30,11 +31,8 @@ from app.services.analysis.contracts.trace import (
 )
 
 
-class CaseAnalysisFailure(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
+class CaseAnalysisFailure(AppError):
+    pass
 
 
 @dataclass(frozen=True)

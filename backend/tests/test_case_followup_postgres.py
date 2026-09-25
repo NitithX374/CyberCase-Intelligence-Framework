@@ -16,7 +16,7 @@ from app.schemas.chat import ChatMessageCreate
 from app.services.analysis.clarification import Ask, Proceed, decide_followup
 from app.services.analysis.contracts import CaseAnalysisTrace, CaseAssessmentTrace
 from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
-from app.services.chat.case_chat import CaseChatError, post_case_message
+from app.services.chat.case_chat import post_case_message
 from app.services.workflow.run_analysis import (
     analysing,
     get_latest_case_analysis,
@@ -56,8 +56,6 @@ async def case_with_a_question(
             email="followup@example.com",
             name="Analyst",
             password_hash="x",
-            oauth_provider="password",
-            oauth_subject_id="followup@example.com",
         )
         db.add(user)
         await db.flush()
@@ -329,7 +327,7 @@ async def test_a_retried_answer_runs_the_analysis_its_first_attempt_lost(monkeyp
         import app.services.chat.case_chat as module
 
         monkeypatch.setattr(module, "run_case_analysis", lost)
-        with pytest.raises(CaseChatError) as failure:
+        with pytest.raises(CaseWorkflowError) as failure:
             await post_case_message(
                 case_id=case_id, user_id=user_id, request=send, session_factory=session_factory
             )
@@ -646,8 +644,6 @@ async def test_assessment_row_asks_without_becoming_the_latest_analysis():
                 email="assessment@example.com",
                 name="Analyst",
                 password_hash="x",
-                oauth_provider="password",
-                oauth_subject_id="assessment@example.com",
             )
             db.add(user)
             await db.flush()

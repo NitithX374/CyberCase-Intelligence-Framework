@@ -47,22 +47,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_me_api_v1_auth_me_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/session": {
         parameters: {
             query?: never;
@@ -89,22 +73,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["logout_api_v1_auth_logout_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/dev-login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["dev_login_api_v1_auth_dev_login_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -298,12 +266,6 @@ export interface components {
             stop_reason?: string | null;
             question?: components["schemas"]["FollowupQuestionRead"] | null;
             result?: components["schemas"]["CaseAnalysisResultRead"] | null;
-        };
-        AuthTokenResponse: {
-            access_token: string;
-            token_type: string;
-            expires_in: number;
-            user: components["schemas"]["UserRead"];
         };
         Body_add_case_document_api_v1_cases__case_id__documents_post: {
             file: string;
@@ -500,10 +462,6 @@ export interface components {
             metadata_json: components["schemas"]["MessageMetadata"];
             created_at: string;
         };
-        DevLoginRequest: {
-            email: string;
-            name: string;
-        };
         FollowupQuestionRead: {
             message_id: string;
             gap_id: string;
@@ -554,7 +512,6 @@ export interface components {
             id: string;
             email: string;
             name: string;
-            oauth_provider: string;
             created_at: string;
         };
         ValidationError: {
@@ -654,25 +611,6 @@ export interface operations {
             };
         };
     };
-    get_me_api_v1_auth_me_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserRead"];
-                };
-            };
-        };
-    };
     get_session_api_v1_auth_session_get: {
         parameters: {
             query?: never;
@@ -709,37 +647,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
-                };
-            };
-        };
-    };
-    dev_login_api_v1_auth_dev_login_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DevLoginRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthTokenResponse"];
-                };
-            };
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -1,7 +1,10 @@
 from enum import StrEnum
 from typing import Literal
 
+from fastapi import status
 from pydantic import BaseModel, Field
+
+from app.errors import AppError
 
 
 class ExtractionMethod(StrEnum):
@@ -28,21 +31,19 @@ class IngestedDocument(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-class DocumentIngestionError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
+class DocumentIngestionError(AppError):
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 class UnsupportedDocumentError(DocumentIngestionError):
+    status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+
     def __init__(self, message: str) -> None:
         super().__init__("unsupported_document_type", message)
 
 
 class DocumentLimitError(DocumentIngestionError):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(code, message)
+    status_code = status.HTTP_413_CONTENT_TOO_LARGE
 
 
 class InvalidDocumentError(DocumentIngestionError):

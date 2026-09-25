@@ -5,8 +5,10 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
+from fastapi import status
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.errors import AppError
 from app.schemas.reports import PRELIMINARY_REPORT_SECTION_IDS, StructuredReport
 from app.services.analysis.contracts import CaseFollowupExchange
 from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
@@ -56,19 +58,12 @@ def case_source_ids(report_input: CaseReportInput) -> set[str]:
     }
 
 
-class ReportServiceError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-
-
-class ReportGenerationConflict(ReportServiceError):
+class ReportGenerationConflict(AppError):
     pass
 
 
-class ReportNotFound(ReportServiceError):
-    pass
+class ReportNotFound(AppError):
+    status_code = status.HTTP_404_NOT_FOUND
 
 
 class ReportValidationError(ValueError):
@@ -109,7 +104,6 @@ __all__ = [
     "ReportGenerationConflict",
     "ReportNotFound",
     "BuiltReport",
-    "ReportServiceError",
     "ReportValidationError",
     "case_source_ids",
     "validate_case_structured_report",

@@ -98,8 +98,6 @@ async def test_history_is_read_from_the_conversation_in_order():
                 email="history@example.com",
                 name="Analyst",
                 password_hash="x",
-                oauth_provider="password",
-                oauth_subject_id="history@example.com",
             )
             db.add(user)
             await db.flush()
