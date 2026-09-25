@@ -2,8 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { addCaseSource } from "@/lib/api";
-import { caseQueryKeys } from "@/lib/queryKeys";
-import { useUploadCaseDocument } from "@/features/sources/queries";
+import { refreshAfterSourceChange, useUploadCaseDocument } from "@/features/sources/queries";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface UseCaseSourceActionsOptions {
@@ -41,10 +40,7 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
           provenance_json: { interface: "case_sources" },
           source_metadata_json: { interface: "case_sources" },
         });
-        void Promise.all([
-          queryClient.invalidateQueries({ queryKey: caseQueryKeys.sources(caseId) }),
-          queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
-        ]);
+        void refreshAfterSourceChange(queryClient, caseId);
         return true;
       } catch (error) {
         setActionError(error);

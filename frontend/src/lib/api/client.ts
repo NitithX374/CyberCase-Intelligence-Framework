@@ -16,7 +16,8 @@ import type {
 } from "./types";
 
 const LONG_REQUEST_TIMEOUT_MS = 120_000;
-const ANALYSIS_REQUEST_TIMEOUT_MS = 300_000;
+const UPLOAD_REQUEST_TIMEOUT_MS = 15 * 60_000;
+const ANALYSIS_REQUEST_TIMEOUT_MS = 20 * 60_000;
 
 export const http = axios.create({ withCredentials: true, timeout: 15_000 });
 
@@ -107,7 +108,7 @@ export async function uploadCaseDocument(caseId: string, file: File): Promise<Ca
   body.append("file", file);
   return (
     await http.post<CaseDocumentRead>(caseUrl(caseId, "documents"), body, {
-      timeout: LONG_REQUEST_TIMEOUT_MS,
+      timeout: UPLOAD_REQUEST_TIMEOUT_MS,
     })
   ).data;
 }

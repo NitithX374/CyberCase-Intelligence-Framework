@@ -154,12 +154,12 @@ function OriginalFilePreview({ caseId, item }: { caseId: string; item: FileItem 
   const { documentId } = item;
   const filename = item.source.filename ?? "";
   const mimeType = item.source.mime_type ?? "";
-  const file = useBlobUrl(["case-document-content", caseId, documentId], (signal) =>
-    fetchCaseDocumentContent(caseId, documentId, signal),
+  const { blob, attach, isLoading, error, refetch } = useBlobUrl(
+    ["case-document-content", caseId, documentId],
+    (signal) => fetchCaseDocumentContent(caseId, documentId, signal),
   );
-  const objectUrl = file.url;
 
-  if (file.isLoading) {
+  if (isLoading) {
     return (
       <div
         role="status"
@@ -170,12 +170,12 @@ function OriginalFilePreview({ caseId, item }: { caseId: string; item: FileItem 
       </div>
     );
   }
-  if (file.error || !objectUrl) {
+  if (error || !blob) {
     return (
       <ViewportMessage title="The original file could not be loaded.">
         <button
           type="button"
-          onClick={() => void file.refetch()}
+          onClick={() => void refetch()}
           className="btn-secondary mt-4 h-8 px-3"
         >
           Try again
@@ -188,7 +188,7 @@ function OriginalFilePreview({ caseId, item }: { caseId: string; item: FileItem 
   if (!canEmbed) {
     return (
       <ViewportMessage title="This file type has no preview.">
-        <a href={objectUrl} download={filename} className="btn-primary mt-4">
+        <a ref={attach} download={filename} className="btn-primary mt-4">
           <Icon name="download" className="h-4 w-4" />
           Download file
         </a>
@@ -198,7 +198,7 @@ function OriginalFilePreview({ caseId, item }: { caseId: string; item: FileItem 
 
   return (
     <iframe
-      src={objectUrl}
+      ref={attach}
       title={`Original file: ${filename}`}
       className="h-full min-h-[28rem] w-full border-0 bg-surface"
     />

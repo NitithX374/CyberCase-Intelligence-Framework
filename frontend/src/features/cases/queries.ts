@@ -29,6 +29,7 @@ export function useCaseMutations() {
         caseRecord,
         ...(current ?? []).filter((item) => item.id !== caseRecord.id),
       ]);
+      queryClient.setQueryData(caseQueryKeys.case(caseRecord.id), caseRecord);
     },
     [queryClient],
   );

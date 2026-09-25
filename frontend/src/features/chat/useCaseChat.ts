@@ -15,6 +15,7 @@ interface Submission {
   content: string;
   key: string;
   answersQuestion: boolean;
+  after: number;
 }
 
 export function useCaseChatQuery(caseId: string | null) {
@@ -69,9 +70,21 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
             : current,
         );
       }
+    },
+    onSettled: (_result, error) => {
+      if (!caseId) return;
       void Promise.all([
-        queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId!), exact: true }),
+        queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
+        ...(error
+          ? [
+              queryClient.invalidateQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true }),
+              queryClient.invalidateQueries({
+                queryKey: caseQueryKeys.analysis(caseId),
+                exact: true,
+              }),
+            ]
+          : []),
       ]);
     },
   });
@@ -79,6 +92,7 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
   const messages = useMemo(() => {
     const loaded = chatQuery.data?.messages ?? [];
     if (!send.isPending || !send.variables || !caseId) return loaded;
+    if (alreadyStored(send.variables, loaded)) return loaded;
     return [...loaded, beingSent(caseId, send.variables, loaded)];
   }, [caseId, chatQuery.data, send.isPending, send.variables]);
 
@@ -94,9 +108,10 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
         content,
         key: crypto.randomUUID(),
         answersQuestion: pendingQuestionId !== null,
+        after: lastOrdinal(chatQuery.data?.messages ?? []),
       });
     },
-    [caseId, pendingQuestionId, send],
+    [caseId, chatQuery.data, pendingQuestionId, send],
   );
 
   return {
@@ -145,6 +160,19 @@ function inOrder(messages: ChatMessageRead[]): ChatMessageRead[] {
   return [...byId.values()].sort((a, b) => a.ordinal - b.ordinal);
 }
 
+function lastOrdinal(messages: ChatMessageRead[]): number {
+  return messages.reduce((highest, message) => Math.max(highest, message.ordinal), 0);
+}
+
+function alreadyStored(submission: Submission, loaded: ChatMessageRead[]): boolean {
+  return loaded.some(
+    (message) =>
+      message.role === "user" &&
+      message.ordinal > submission.after &&
+      message.content === submission.content,
+  );
+}
+
 function beingSent(
   caseId: string,
   submission: Submission,
@@ -153,7 +181,7 @@ function beingSent(
   return {
     id: `being-sent:${submission.key}`,
     case_id: caseId,
-    ordinal: loaded.reduce((highest, message) => Math.max(highest, message.ordinal), 0) + 1,
+    ordinal: lastOrdinal(loaded) + 1,
     role: "user",
     content: submission.content,
     message_kind: "conversation",
