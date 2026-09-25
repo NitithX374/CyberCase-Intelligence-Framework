@@ -39,7 +39,12 @@ export function useAnalysisRunOutcome(caseId: string, outcome: AnalysisRunOutcom
   });
 
   useEffect(
-    () => queryClient.getMutationCache().subscribe((event) => settle(event)),
+    () =>
+      queryClient.getMutationCache().subscribe((event) => {
+        if (event.type !== "updated") return;
+        if (event.action.type !== "success" && event.action.type !== "error") return;
+        settle(event);
+      }),
     [queryClient],
   );
 }
