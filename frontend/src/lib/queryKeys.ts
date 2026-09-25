@@ -4,7 +4,6 @@ export const caseQueryKeys = {
   case: (caseId: string) => [...caseQueryKeys.all, caseId] as const,
   chat: (caseId: string) => [...caseQueryKeys.case(caseId), "chat"] as const,
   chatSend: (caseId: string) => [...caseQueryKeys.chat(caseId), "send"] as const,
-  documents: (caseId: string) => [...caseQueryKeys.case(caseId), "documents"] as const,
   sources: (caseId: string) => [...caseQueryKeys.case(caseId), "sources"] as const,
   analysis: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis"] as const,
   reports: (caseId: string) => [...caseQueryKeys.case(caseId), "reports"] as const,

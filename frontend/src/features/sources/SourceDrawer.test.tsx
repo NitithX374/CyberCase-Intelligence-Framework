@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CaseSourceRead } from "@/lib/api";
 import { caseId, followupExchange } from "@/test/fixtures";
-import { mergeCaseSourceRows } from "./followupSources";
+import { chatFollowups } from "./followupSources";
 import { claimRefs, parseCaseSources } from "./sourceRefs";
 import { SourceDrawer } from "./SourceDrawer";
 
@@ -24,11 +24,11 @@ const messages = followupExchange("Was a warrant issued?", "No.", "arrest_warran
 
 describe("SourceDrawer", () => {
   it("shows a follow-up answer with the question it answers, named by its QA id", () => {
-    const rows = mergeCaseSourceRows([caseSource("narrative-1", "narrative")], messages);
-    const [answer] = claimRefs(
-      { supporting_source_ids: ["QA-01"] },
-      parseCaseSources(rows),
-    ).supporting;
+    const sources = parseCaseSources(
+      [caseSource("narrative-1", "narrative")],
+      chatFollowups(messages),
+    );
+    const [answer] = claimRefs({ supporting_source_ids: ["QA-01"] }, sources).supporting;
     const anchor = document.body.appendChild(document.createElement("button"));
 
     render(<SourceDrawer sourceRef={answer} anchorElement={anchor} onClose={vi.fn()} />);
@@ -43,11 +43,14 @@ describe("SourceDrawer", () => {
   });
 
   it("numbers a narrative among narratives, not among every source", () => {
-    const sources = parseCaseSources([
-      caseSource("document-1", "document", "statement.pdf"),
-      caseSource("narrative-1", "narrative"),
-      caseSource("narrative-2", "narrative"),
-    ]);
+    const sources = parseCaseSources(
+      [
+        caseSource("document-1", "document", "statement.pdf"),
+        caseSource("narrative-1", "narrative"),
+        caseSource("narrative-2", "narrative"),
+      ],
+      [],
+    );
 
     const labels = claimRefs(
       { supporting_source_ids: ["document-1", "narrative-1", "narrative-2"] },

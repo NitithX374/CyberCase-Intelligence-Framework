@@ -49,6 +49,7 @@ export function followupExchange(
   question: string,
   answer: string,
   gapKey = "topic:incident-time",
+  qaId = "QA-01",
 ): ChatMessageRead[] {
   return [
     {
@@ -59,6 +60,7 @@ export function followupExchange(
       content: question,
       message_kind: "followup_question",
       gap_key: gapKey,
+      qa_id: qaId,
       analysis_result_id: null,
       in_reply_to_message_id: null,
       metadata_json: {},
@@ -72,12 +74,29 @@ export function followupExchange(
       content: answer,
       message_kind: "followup_answer",
       gap_key: null,
+      qa_id: qaId,
       analysis_result_id: null,
       in_reply_to_message_id: "question-1",
       metadata_json: {},
       created_at: "2026-09-10T00:02:00Z",
     },
   ];
+}
+
+export function followupHistory(
+  question: string,
+  answer: string,
+  qaId = "QA-01",
+  gapKey = "topic:incident-time",
+) {
+  return {
+    version: "followup_snapshot_v1",
+    items: [{ qa_id: qaId, gap_key: gapKey, question, answer }],
+  };
+}
+
+export function sourcesRead(...sourceIds: string[]) {
+  return { version: "sources_read_v1", source_ids: sourceIds };
 }
 
 export function claim(

@@ -15,6 +15,12 @@ export interface SourcePage {
   text: string;
 }
 
+export interface FollowupAnswer {
+  qaId: string;
+  question: string;
+  answer: string;
+}
+
 export interface CaseSourceRef {
   id: string;
   kind: string;

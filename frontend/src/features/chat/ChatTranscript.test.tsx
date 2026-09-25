@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CaseAnalysisClaim, ChatMessageRead } from "@/lib/api";
-import { mergeCaseSourceRows } from "@/features/sources/followupSources";
 import {
   analysisResult,
   followupExchange,
@@ -157,11 +156,12 @@ describe("ChatTranscript source references", () => {
       "Was the transfer made?",
       "No transfer was ever made.",
       "topic:transfer",
+      "QA-03",
     );
     const analysis = analysisMessage([
       {
         supporting_source_ids: [statement.id],
-        contradicting_source_ids: ["QA-01"],
+        contradicting_source_ids: ["QA-03"],
         supporting_citations: [
           {
             source_id: statement.id,
@@ -172,7 +172,7 @@ describe("ChatTranscript source references", () => {
           },
         ],
         contradicting_citations: [
-          { source_id: "QA-01", exact_quote: "No transfer was ever made." },
+          { source_id: "QA-03", exact_quote: "No transfer was ever made." },
         ],
       },
     ]);
@@ -181,12 +181,12 @@ describe("ChatTranscript source references", () => {
       <ChatTranscript
         messages={[...exchange, analysis]}
         isProcessing={false}
-        sources={mergeCaseSourceRows([statement], exchange)}
+        sources={[statement]}
       />,
     );
 
     expect(
-      screen.getByRole("button", { name: "Conflicts with Follow-up answer QA-01" }),
+      screen.getByRole("button", { name: "Conflicts with Follow-up answer QA-03" }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Page 4");

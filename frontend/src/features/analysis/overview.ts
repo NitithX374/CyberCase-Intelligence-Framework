@@ -1,6 +1,7 @@
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import { claimRefs, parseCaseSources } from "@/features/sources/sourceRefs";
 import type { SourceMessageRef } from "@/features/sources/types";
+import { analysisFollowups } from "./analysisRecord";
 import type { CaseFinding, CaseOverviewData, ClaimType } from "./types";
 
 export const claimTypeLabels: Record<ClaimType, string> = {
@@ -51,7 +52,7 @@ export function buildCaseOverview(
   ) {
     return unavailableCaseOverview("The saved Case analysis trace is unavailable or unsupported.");
   }
-  const sources = parseCaseSources(rows);
+  const sources = parseCaseSources(rows, analysisFollowups(result));
   const associations = trace.mitre_associations ?? [];
   const findings: CaseFinding[] = trace.claims.map((claim) => {
     const cited = claimRefs(claim, sources);

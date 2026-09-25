@@ -61,13 +61,6 @@ describe("buildTechnicalContext", () => {
     expect(result.retrievedOnlyTechniques).toHaveLength(1);
   });
 
-  it("distinguishes retrieval with no supported Case match", () => {
-    const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
-    const result = buildTechnicalContext(fixture.result, fixture.sources);
-    expect(result.status).toBe("retrieved_without_supported_match");
-    expect(result.retrievedOnlyCount).toBe(1);
-  });
-
   it("accepts every RAG row without creating Case mappings", () => {
     const fixture = technicalContextFixture("retrieved_from_rag", [
       row,
@@ -85,7 +78,6 @@ describe("buildTechnicalContext", () => {
       "T1059.001",
       "S0096",
     ]);
-    expect(result.retrievedOnlyCount).toBe(2);
   });
 
   it("renders only the source-bound mapped subset", () => {
@@ -124,14 +116,44 @@ describe("buildTechnicalContext", () => {
     expect(result.status).toBe("insufficient_context");
   });
 
-  it("withholds an empty retrieval that the trace claims to have used", () => {
-    const fixture = technicalContextFixture("insufficient_context", []);
+  it("reads the stored augmentation as written, without re-checking it against the trace", () => {
+    const fixture = technicalContextFixture(
+      "retrieved_with_matches",
+      [row],
+      [
+        {
+          association_id: "MA-01",
+          technique_id: "T1059.001",
+          claim_ids: ["A-01"],
+          reason: "The claim describes PowerShell activity.",
+          plain_meaning: "Someone ran commands through PowerShell.",
+        },
+      ],
+    );
+    fixture.result.external_context_json = {
+      technical_augmentation: {
+        status: "retrieved_with_matches",
+        retrieval_context_id: "another-retrieval",
+        mitre_table: [row],
+        association_ids: [],
+      },
+    };
+
     const result = buildTechnicalContext(fixture.result, fixture.sources);
-    expect(result.status).toBe("invalid_trace");
+
+    expect(result.status).toBe("retrieved_with_matches");
+    expect(result.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001"]);
   });
 
-  it("withholds context when the persisted trace binding is invalid", () => {
-    const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
+  it("reads an empty retrieval as no supported context, whatever the trace binds", () => {
+    const fixture = technicalContextFixture("insufficient_context", []);
+    const result = buildTechnicalContext(fixture.result, fixture.sources);
+    expect(result.status).toBe("insufficient_context");
+    expect(result.hasContext).toBe(false);
+  });
+
+  it("withholds context when the saved trace is not a validated case overview", () => {
+    const fixture = technicalContextFixture("retrieved_from_rag", [row]);
     fixture.result.trace_json = {
       ...fixture.result.trace_json!,
       validation_status: "failed",
@@ -139,6 +161,16 @@ describe("buildTechnicalContext", () => {
     const result = buildTechnicalContext(fixture.result, fixture.sources);
     expect(result.status).toBe("invalid_trace");
     expect(result.failureCode).toBe("invalid_trace");
+  });
+
+  it("withholds a stored augmentation whose status the page does not know", () => {
+    const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
+    const result = buildTechnicalContext(fixture.result, fixture.sources);
+    expect(result.status).toBe("invalid_trace");
+    expect(result.failureCode).toBe("invalid_technical_augmentation");
+    expect(result.failureStage).toBe("metadata");
+    expect(result.hasContext).toBe(false);
+    expect(result.retrievedOnlyTechniques).toHaveLength(0);
   });
 });
 

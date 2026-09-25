@@ -5,27 +5,18 @@ import { CaseOverviewView } from "@/features/analysis/CaseOverviewView";
 import { TechnicalContextView } from "@/features/technical-context/TechnicalContextView";
 import { CaseReportView } from "@/features/reports/CaseReportView";
 import { useCaseAnalysis } from "@/features/analysis/queries";
-import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
+import { useCaseSources } from "@/features/sources/queries";
 
 export default function CaseAnalysisPage() {
   const { caseId } = useParams<{ caseId: string }>();
 
   const analysisResult = useCaseAnalysis(caseId).data ?? null;
-  const {
-    rows: sources,
-    isLoading: sourcesLoading,
-    isError: sourcesError,
-  } = useCaseSourceRows(caseId);
+  const sources = useCaseSources(caseId).data ?? null;
 
   return (
     <>
       <CaseOverviewView caseId={caseId} />
-      {analysisResult && (
-        <TechnicalContextView
-          analysisResult={analysisResult}
-          sources={sourcesLoading || sourcesError ? null : sources}
-        />
-      )}
+      {analysisResult && <TechnicalContextView analysisResult={analysisResult} sources={sources} />}
       {analysisResult && (
         <CaseReportView
           key={`${caseId}:${analysisResult.id}`}
