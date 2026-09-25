@@ -110,9 +110,10 @@ def test_a_retrieval_that_found_nothing_is_insufficient_not_failed():
         )
         assert result.status == "insufficient_context"
         assert result.failure_code is None
-        metadata = result.to_metadata()
-        assert metadata["retrieval_context_id"] is None
-        assert "failure_code" not in metadata
+        recorded = result.recorded([])
+        assert recorded.status == "insufficient_context"
+        assert recorded.retrieval_context_id is None
+        assert recorded.failure_code is None
 
     asyncio.run(exercise())
 

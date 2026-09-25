@@ -17,12 +17,10 @@ function report(version: number, analysisResultId = "analysis-1"): CaseReportRea
     version_number: version,
     analysis_result_id: analysisResultId,
     report: {
-      report_version: "preliminary_analysis_report_v1",
-      status: "provisional_unverified",
+      version: "case_report_content_v1",
       title: "Traceable report",
-      sections: [],
-      claims: [],
-      limitations: [],
+      summary: "",
+      techniques_matched: false,
     },
     created_at: "2026-09-20T00:00:00Z",
   };

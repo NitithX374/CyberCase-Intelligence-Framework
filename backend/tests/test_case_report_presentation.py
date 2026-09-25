@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import UTC, datetime
 from io import BytesIO
@@ -6,7 +7,7 @@ from uuid import uuid4
 import pytest
 from pypdf import PdfReader
 
-from app.schemas.reports import PRELIMINARY_REPORT_SECTION_HEADINGS
+from app.schemas.reports import CaseReportContent
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
@@ -18,23 +19,34 @@ from app.services.analysis.contracts import (
     CaseSourceCitation,
     CaseTimelineItem,
 )
-from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
-from app.services.reports.content import build_case_report, build_case_template_report
-from app.services.reports.contracts import (
-    CaseReportInput,
-    CaseReportTechnicalAugmentation,
-    ReportValidationError,
+from app.services.analysis.mitre_gate.llm import (
+    MitreApplicabilityRecord,
+    skipped_mitre_applicability,
 )
-from app.services.reports.display import ReportIssue, build_case_report_display, thai_date
-from app.services.reports.render import render_case_report_html, render_case_report_pdf
+from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
+from app.services.reports.contracts import CaseReportInput
+from app.services.reports.display import build_case_report_content, thai_date
+from app.services.reports.render import (
+    ReportIssue,
+    render_case_report_html,
+    render_case_report_pdf,
+)
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 ISSUE = ReportIssue(version_number=2, created_at=datetime(2026, 9, 24, 6, 22, tzinfo=UTC))
+SOURCE_TEXT = "พบการใช้ PowerShell.exe เชื่อมต่อไปยัง 198.51.100.23"
+
+
+def _applicability(source_id: str) -> MitreApplicabilityRecord:
+    return MitreApplicabilityRecord(
+        decision="RETRIEVE",
+        source_message_ids=[source_id],
+        trigger_text=[SOURCE_TEXT],
+    )
 
 
 def _input(technical: bool = False) -> CaseReportInput:
     source_id = str(uuid4())
-    evidence_text = "พบการใช้ PowerShell.exe เชื่อมต่อไปยัง 198.51.100.23"
     association = CaseMitreAssociation(
         association_id="MA-01",
         technique_id="T1059.001",
@@ -61,7 +73,7 @@ def _input(technical: bool = False) -> CaseReportInput:
                 epistemic_status="reported",
                 supporting_source_ids=[source_id],
                 supporting_citations=[
-                    CaseSourceCitation(source_id=source_id, exact_quote=evidence_text)
+                    CaseSourceCitation(source_id=source_id, exact_quote=SOURCE_TEXT)
                 ],
             )
         ],
@@ -83,14 +95,9 @@ def _input(technical: bool = False) -> CaseReportInput:
     )
     augmentation = None
     if technical:
-        augmentation = CaseReportTechnicalAugmentation(
-            version="case_mitre_augmentation_v1",
+        augmentation = CaseTechnicalAugmentation(
             status="retrieved_with_matches",
-            applicability=MitreApplicabilityRecord(
-                decision="RETRIEVE",
-                source_message_ids=[source_id],
-                trigger_text=[evidence_text],
-            ),
+            applicability=_applicability(source_id),
             retrieval_context_id="retrieval-1",
             mitre_table=[
                 {
@@ -111,67 +118,56 @@ def _input(technical: bool = False) -> CaseReportInput:
                 CaseSourceItem(
                     source_id=source_id,
                     source_kind="document",
-                    text=evidence_text,
+                    text=SOURCE_TEXT,
                     document_id=str(uuid4()),
                     filename="หลักฐาน.pdf",
                 ),
             ),
         ),
         analysis_summary=trace.summary,
-        analysis_trace=trace.model_dump(mode="json"),
+        analysis_trace=trace,
         technical_augmentation=augmentation,
     )
 
 
+def _with_augmentation(augmentation: CaseTechnicalAugmentation | None) -> CaseReportInput:
+    return _input().model_copy(update={"technical_augmentation": augmentation})
+
+
 def _rag_only_input() -> CaseReportInput:
-    report_input = _input(technical=True)
-    trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
-    augmentation = report_input.technical_augmentation
-    assert augmentation is not None
-    rag_augmentation = CaseReportTechnicalAugmentation.model_validate(
-        {
-            **augmentation.model_dump(mode="json"),
-            "status": "retrieved_from_rag",
-            "mitre_table": [
-                {
-                    "technique_id": "T1059.001",
-                    "name": "PowerShell",
-                    "description": "Command and scripting interpreter.",
-                },
-                {
-                    "technique_id": "S0096",
-                    "name": "Systeminfo",
-                    "entity_type": "Software",
-                    "description": "System information utility.",
-                },
-            ],
-            "association_ids": [],
-        }
+    report_input = _input()
+    source_id = report_input.source_bundle.sources[0].source_id
+    augmentation = CaseTechnicalAugmentation(
+        status="retrieved_from_rag",
+        applicability=_applicability(source_id),
+        retrieval_context_id="retrieval-1",
+        mitre_table=[
+            {"technique_id": "T1059.001", "name": "PowerShell", "tactic": "execution"},
+            {"technique_id": "S0096", "name": "Systeminfo", "entity_type": "Software"},
+        ],
     )
-    return report_input.model_copy(
-        update={
-            "analysis_trace": trace.model_copy(update={"mitre_associations": []}).model_dump(
-                mode="json"
-            ),
-            "technical_augmentation": rag_augmentation,
-        }
-    )
+    return report_input.model_copy(update={"technical_augmentation": augmentation})
 
 
-def test_report_uses_readable_sections_and_restores_analysis_context() -> None:
-    report = build_case_template_report(_input())
-
-    assert [section.heading for section in report.sections] == list(
-        PRELIMINARY_REPORT_SECTION_HEADINGS.values()
+def _stored(report_input: CaseReportInput) -> CaseReportContent:
+    written = json.loads(
+        json.dumps(build_case_report_content(report_input).model_dump(mode="json"))
     )
-    assert report.sections[0].items[0].startswith("ผู้เกี่ยวข้อง: ผู้ใช้ A")
-    assert "E-01" in report.sections[0].items[0]
-    assert report.sections[0].items[1].startswith("ลำดับเหตุการณ์:")
-    assert report.sections[0].items[2].startswith("ผลกระทบที่ปรากฏ:")
-    assert report.claims[0].section_id == "case_evidence"
-    assert report.sections[4].items[0].startswith("ผู้ใช้ที่สั่งงาน")
-    assert "G-01" not in report.sections[4].items[0]
-    assert "ข้อสันนิษฐาน" not in report.sections[6].items[0]
+    return CaseReportContent.model_validate(written)
+
+
+def test_the_report_rows_carry_the_analysis_and_its_references() -> None:
+    report = build_case_report_content(_input())
+
+    [party] = report.parties
+    assert (party.name, party.references) == ("ผู้ใช้ A", ["E-01"])
+    assert report.timeline[0].event == "มีการเรียกใช้ PowerShell"
+    assert report.impacts[0].references == ["E-01"]
+    [gap] = report.gaps
+    assert (gap.topic, gap.priority, gap.status) == ("ผู้ใช้ที่สั่งงาน", "สูง", "ยังไม่มีข้อมูล")
+    assert "G-01" not in gap.model_dump_json()
+    assert report.recommendations[0].startswith("ตรวจสอบเพิ่มเติมในประเด็น ผู้ใช้ที่สั่งงาน")
+    assert "ข้อสันนิษฐาน" not in report.limitations[0]
 
 
 ANSWER = "เหตุการณ์เกิดขึ้นเวลา 23:30 ของวันที่ 12 พฤษภาคม"
@@ -179,7 +175,7 @@ ANSWER = "เหตุการณ์เกิดขึ้นเวลา 23:30 
 
 def _input_citing_a_followup_answer(*, with_history: bool) -> CaseReportInput:
     report_input = _input()
-    trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
+    trace = report_input.analysis_trace
     cited = trace.model_copy(
         update={
             "claims": [
@@ -210,40 +206,32 @@ def _input_citing_a_followup_answer(*, with_history: bool) -> CaseReportInput:
         if with_history
         else ()
     )
-    return report_input.model_copy(
-        update={
-            "analysis_trace": cited.model_dump(mode="json"),
-            "followup_history": history,
-        }
-    )
+    return report_input.model_copy(update={"analysis_trace": cited, "followup_history": history})
 
 
-def test_a_claim_resting_on_a_followup_answer_does_not_fail_the_report() -> None:
-    report = build_case_report(_input_citing_a_followup_answer(with_history=True))
+def test_a_claim_resting_on_a_followup_answer_cites_it() -> None:
+    report = build_case_report_content(_input_citing_a_followup_answer(with_history=True))
 
-    cited = next(claim for claim in report.claims if "QA-01" in claim.source_ids)
-    assert cited.source_ids == [cited.source_ids[0], "QA-01"]
-    assert any("Q-01" in item for item in report.sections[0].items)
+    assert report.findings[0].source_labels == ["E-01", "Q-01"]
+    assert report.parties[0].references == ["E-01", "Q-01"]
 
 
-def test_an_id_no_exchange_backs_is_still_refused() -> None:
-    with pytest.raises(ReportValidationError):
-        build_case_report(_input_citing_a_followup_answer(with_history=False))
+def test_an_id_no_exchange_backs_gets_no_reference() -> None:
+    report = build_case_report_content(_input_citing_a_followup_answer(with_history=False))
+
+    assert report.findings[0].source_labels == ["E-01"]
+    assert [source.label for source in report.sources] == ["E-01"]
 
 
 def test_the_report_says_why_the_system_stopped_asking() -> None:
     report_input = _input()
-    trace = CaseAnalysisTrace.model_validate(report_input.analysis_trace)
+    trace = report_input.analysis_trace
 
     def limitations(stop_reason: str | None) -> list[str]:
         paused = report_input.model_copy(
-            update={
-                "analysis_trace": trace.model_copy(update={"stop_reason": stop_reason}).model_dump(
-                    mode="json"
-                )
-            }
+            update={"analysis_trace": trace.model_copy(update={"stop_reason": stop_reason})}
         )
-        return build_case_template_report(paused).limitations
+        return build_case_report_content(paused).limitations
 
     spent = limitations("max_rounds_reached")
     assert any("ครบจำนวนรอบ" in item for item in spent)
@@ -256,34 +244,29 @@ def test_the_report_says_why_the_system_stopped_asking() -> None:
 
 
 def test_no_internal_identifier_reaches_the_reader() -> None:
-    report_input = _input(technical=True)
-    report = build_case_report(report_input)
-    pdf = PdfReader(BytesIO(render_case_report_pdf(report_input, report, ISSUE)))
+    report = _stored(_input(technical=True))
+    pdf = PdfReader(BytesIO(render_case_report_pdf(report, ISSUE)))
 
     rendered = "\n".join(
         [
-            *(item for section in report.sections for item in section.items),
-            *(paragraph for section in report.sections for paragraph in section.paragraphs),
-            *report.limitations,
-            render_case_report_html(report_input, report, ISSUE),
+            report.model_dump_json(),
+            render_case_report_html(report, ISSUE),
             *(page.extract_text() for page in pdf.pages),
         ]
     )
 
-    for pattern, what in ((r"G-\d{2}", "gap"), (r"MA-\d{2}", "ATT&CK association")):
+    for pattern, what in ((r"G-\d{2}", "gap"), (r"MA-\d{2}", "ATT&CK association")):
         assert not re.search(pattern, rendered), f"an internal {what} id reached the reader"
 
 
 def test_the_report_does_not_claim_chat_answers_are_excluded() -> None:
-    limitations = build_case_template_report(_input()).limitations
+    limitations = build_case_report_content(_input()).limitations
     assert any("คำถามติดตามผล" in item for item in limitations)
     assert not any("ไม่รวมคำตอบจาก Chat" in item for item in limitations)
 
 
 def test_jinja_report_renders_sections_and_escapes_case_content() -> None:
-    report_input = _input(technical=True)
-    report = build_case_template_report(report_input)
-    html = render_case_report_html(report_input, report, ISSUE)
+    html = render_case_report_html(_stored(_input(technical=True)), ISSUE)
 
     assert "1. สรุปข้อเท็จจริงของคดี" in html
     assert "2. ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ" in html
@@ -295,10 +278,19 @@ def test_jinja_report_renders_sections_and_escapes_case_content() -> None:
     assert "<script>กิจกรรม PowerShell ปรากฏในหลักฐาน</script>" not in html
 
 
+def test_the_document_is_printed_from_the_stored_copy() -> None:
+    report_input = _input(technical=True)
+    stored = _stored(report_input)
+
+    assert render_case_report_html(stored, ISSUE) == render_case_report_html(
+        build_case_report_content(report_input), ISSUE
+    )
+
+
 def test_the_document_names_its_version_and_dates() -> None:
     analysed = datetime(2026, 9, 23, 20, 0, tzinfo=UTC)
     report_input = _input().model_copy(update={"analysis_created_at": analysed})
-    html = render_case_report_html(report_input, build_case_report(report_input), ISSUE)
+    html = render_case_report_html(_stored(report_input), ISSUE)
 
     assert "24 กันยายน 2569 เวลา 13.22 น." in html
     assert "ลงวันที่ 24 กันยายน 2569" in html
@@ -308,49 +300,86 @@ def test_the_document_names_its_version_and_dates() -> None:
 
 def test_an_untitled_case_is_not_printed_under_its_placeholder() -> None:
     report_input = _input().model_copy(update={"case_title": "New case"})
-    html = render_case_report_html(report_input, build_case_report(report_input), ISSUE)
+    html = render_case_report_html(_stored(report_input), ISSUE)
 
     assert "ไม่ได้ระบุชื่อเรื่อง" in html
     assert "New case" not in html
 
 
-def test_every_reference_resolves_in_the_evidence_register() -> None:
-    report_input = _input_citing_a_followup_answer(with_history=True)
-    report = build_case_report(report_input)
-    display = build_case_report_display(report_input, report, ISSUE)
+def test_every_reference_resolves_in_the_source_register() -> None:
+    report = build_case_report_content(_input_citing_a_followup_answer(with_history=True))
 
-    assert display.claims[0].source_labels == ("E-01", "Q-01")
-    assert [(source.label, source.detail) for source in display.sources] == [
+    assert report.findings[0].source_labels == ["E-01", "Q-01"]
+    assert [(source.label, source.detail) for source in report.sources] == [
         ("E-01", "หลักฐาน.pdf"),
         ("Q-01", "คำถาม: เหตุการณ์เกิดขึ้นเมื่อใด"),
     ]
 
 
 def test_a_technique_points_at_the_finding_it_rests_on() -> None:
-    report_input = _input(technical=True)
-    display = build_case_report_display(report_input, build_case_report(report_input), ISSUE)
+    report = build_case_report_content(_input(technical=True))
 
-    assert display.techniques_matched
-    [technique] = display.techniques
+    assert report.techniques_matched
+    [technique] = report.techniques
     assert (technique.technique_id, technique.name) == ("T1059.001", "PowerShell")
-    assert technique.findings == (1,), "finding 1 in the findings table"
-    assert technique.references == ("E-01",)
+    assert technique.findings == [1], "finding 1 in the findings table"
+    assert technique.references == ["E-01"]
+    assert report.mapping_note is None
+    assert report.rationale_note is None
 
 
 def test_report_accepts_all_rag_rows_without_claim_mapping() -> None:
-    report = build_case_template_report(_rag_only_input())
+    report = build_case_report_content(_rag_only_input())
 
-    mapping_items = report.sections[2].items
-    rationale_items = report.sections[3].items
-    assert any("T1059.001" in item for item in mapping_items)
-    assert any("S0096" in item for item in mapping_items)
-    assert any("RAG service" in item for item in rationale_items)
+    assert not report.techniques_matched
+    assert [(row.technique_id, row.tactic) for row in report.techniques] == [
+        ("T1059.001", "execution"),
+        ("S0096", ""),
+    ]
+    html = render_case_report_html(report, ISSUE)
+    assert "ยังไม่ได้วิเคราะห์ความเชื่อมโยงกับข้อเท็จจริงรายข้อ" in html
+    assert any("RAG service" in item for item in report.limitations)
 
 
-def test_pdf_report_is_generated_from_the_readable_report_content() -> None:
-    report_input = _input(technical=True)
-    report = build_case_template_report(report_input)
-    pdf = render_case_report_pdf(report_input, report, ISSUE)
+@pytest.mark.parametrize(
+    ("augmentation", "mapping", "rationale"),
+    [
+        (None, "ไม่มีผลการเสริมข้อมูล MITRE ที่บันทึกไว้", "ไม่มีการอนุมาน mapping"),
+        (
+            CaseTechnicalAugmentation(
+                status="not_applicable", applicability=skipped_mitre_applicability()
+            ),
+            "ไม่พบเงื่อนไขที่จำเป็นต้องใช้ MITRE ATT&amp;CK",
+            "ระบบข้ามการค้นหา MITRE",
+        ),
+        (
+            CaseTechnicalAugmentation(
+                status="insufficient_context",
+                applicability=_applicability("source"),
+                retrieval_context_id="retrieval-thin",
+            ),
+            "ข้อมูลทางเทคนิคภายนอกไม่เพียงพอ",
+            "ยังไม่มีบริบททางเทคนิคเพียงพอ",
+        ),
+        (
+            CaseTechnicalAugmentation(
+                status="failed",
+                applicability=_applicability("source"),
+                failure_code="rag_service_unavailable",
+            ),
+            "ไม่สามารถเชื่อมต่อกับบริการภายนอกได้ในขณะนี้ จึงไม่แสดง mapping",
+            "ยังไม่สามารถอธิบาย mapping ได้",
+        ),
+    ],
+)
+def test_a_case_without_techniques_says_why_in_sections_three_and_four(
+    augmentation, mapping, rationale
+) -> None:
+    report = _stored(_with_augmentation(augmentation))
+    html = render_case_report_html(report, ISSUE)
 
-    assert pdf.startswith(b"%PDF-")
-    assert len(PdfReader(BytesIO(pdf)).pages) >= 1
+    assert report.techniques == []
+    section_three = html.split('id="mitre_attack_mapping"')[1].split('id="mapping_rationale"')[0]
+    section_four = html.split('id="mapping_rationale"')[1].split('id="evidence_to_examine"')[0]
+    assert mapping in section_three
+    assert rationale in section_four

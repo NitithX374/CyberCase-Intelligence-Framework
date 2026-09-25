@@ -5,8 +5,10 @@ from pathlib import Path
 
 
 def install_requirements(directory):
-    """Install requirements from a requirements.txt file in the specified directory."""
-    req_file = Path(directory) / "requirements.txt"
+    """Install requirements-dev.txt if the directory has one, else requirements.txt."""
+    req_file = Path(directory) / "requirements-dev.txt"
+    if not req_file.exists():
+        req_file = Path(directory) / "requirements.txt"
 
     if not req_file.exists():
         print(f"[-] Skip: {req_file} not found.")

@@ -137,20 +137,9 @@ def retrieval_context_row(
     technical_context = artifacts.technical_context
     if technical_context is None:
         return None
-    augmentation = artifacts.augmentation.to_metadata()
-    legal_relevance = (
-        augmentation.get("legal_relevance") if isinstance(augmentation, dict) else None
-    )
-    if not isinstance(legal_relevance, dict):
-        raise CaseAnalysisFailure(
-            "retrieval_legal_relevance_missing", "Retrieved context has no legal relevance result"
-        )
     return {
         "context_key": technical_context_key(started.source_revision, started.followup_history),
-        "retrieval_context_id": technical_context.retrieval_context_id,
         "context": technical_context.context,
-        "mitre_table": list(technical_context.mitre_table),
-        "legal_relevance": legal_relevance,
     }
 
 
@@ -162,15 +151,13 @@ def external_context(artifacts: AnalysisArtifacts) -> dict[str, object]:
     context: dict[str, object] = {}
     if artifacts.augmentation is None:
         return context
-    augmentation = artifacts.augmentation.to_metadata()
-    legal_relevance = augmentation.pop("legal_relevance", None)
+    retrieved = artifacts.technical_context
+    if retrieved is not None:
+        context["legal_relevance"] = retrieved.legal_relevance.model_dump(mode="json")
     associations = [item.association_id for item in artifacts.trace.mitre_associations]
-    augmentation["association_ids"] = associations
-    if augmentation["status"] == "retrieved_from_rag" and associations:
-        augmentation["status"] = "retrieved_with_matches"
-    if legal_relevance is not None:
-        context["legal_relevance"] = legal_relevance
-    context["technical_augmentation"] = augmentation
+    context["technical_augmentation"] = artifacts.augmentation.recorded(associations).model_dump(
+        mode="json"
+    )
     return context
 
 

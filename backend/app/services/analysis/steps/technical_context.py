@@ -3,6 +3,9 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.rag import LegalReferenceResult, QueryResponse
 from app.services.analysis.contracts import CaseFollowupExchange
@@ -47,6 +50,27 @@ def retrieval_query(
 
 CASE_MITRE_AUGMENTATION_VERSION = "case_mitre_augmentation_v1"
 
+CaseTechnicalAugmentationStatus = Literal[
+    "not_applicable",
+    "insufficient_context",
+    "retrieved_from_rag",
+    "retrieved_with_matches",
+    "failed",
+]
+
+
+class CaseTechnicalAugmentation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal["case_mitre_augmentation_v1"] = CASE_MITRE_AUGMENTATION_VERSION
+    status: CaseTechnicalAugmentationStatus
+    applicability: MitreApplicabilityRecord
+    retrieval_context_id: str | None = None
+    retrieval_context_reused: bool = False
+    mitre_table: list[dict[str, object]] = Field(default_factory=list)
+    association_ids: list[str] = Field(default_factory=list)
+    failure_code: str | None = None
+
 
 @dataclass(frozen=True)
 class CaseRagContextPayload:
@@ -58,7 +82,7 @@ class CaseRagContextPayload:
 
 @dataclass(frozen=True)
 class CaseMitreAugmentation:
-    status: str
+    status: CaseTechnicalAugmentationStatus
     applicability: MitreApplicabilityRecord
     context: CaseRagContextPayload | None
     failure_code: str | None = None
@@ -68,24 +92,17 @@ class CaseMitreAugmentation:
     def retrieval_context_id(self) -> str | None:
         return self.context.retrieval_context_id if self.context else None
 
-    @property
-    def mitre_table(self) -> list[dict[str, object]]:
-        return list(self.context.mitre_table) if self.context else []
-
-    def to_metadata(self) -> dict[str, object]:
-        metadata: dict[str, object] = {
-            "version": CASE_MITRE_AUGMENTATION_VERSION,
-            "status": self.status,
-            "applicability": self.applicability.model_dump(mode="json"),
-            "retrieval_context_id": self.retrieval_context_id,
-            "retrieval_context_reused": self.reused,
-            "mitre_table": self.mitre_table,
-        }
-        if self.failure_code is not None:
-            metadata["failure_code"] = self.failure_code
-        if self.status == "retrieved_from_rag" and self.context is not None:
-            metadata["legal_relevance"] = self.context.legal_relevance.model_dump(mode="json")
-        return metadata
+    def recorded(self, association_ids: list[str]) -> CaseTechnicalAugmentation:
+        matched = self.status == "retrieved_from_rag" and bool(association_ids)
+        return CaseTechnicalAugmentation(
+            status="retrieved_with_matches" if matched else self.status,
+            applicability=self.applicability,
+            retrieval_context_id=self.retrieval_context_id,
+            retrieval_context_reused=self.reused,
+            mitre_table=list(self.context.mitre_table) if self.context else [],
+            association_ids=association_ids,
+            failure_code=self.failure_code,
+        )
 
 
 async def run_case_mitre_augmentation(
@@ -152,6 +169,8 @@ __all__ = [
     "CASE_MITRE_AUGMENTATION_VERSION",
     "CaseMitreAugmentation",
     "CaseRagContextPayload",
+    "CaseTechnicalAugmentation",
+    "CaseTechnicalAugmentationStatus",
     "run_case_mitre_augmentation",
     "validated_case_rag_context",
 ]

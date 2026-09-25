@@ -41,7 +41,7 @@ steps over a dataset file instead of a case row.
 | 2 | `app/services/workflow/run_analysis.py` | The read/think/write split, and the follow-up loop |
 | 3 | `app/services/analysis/contracts/trace.py` | `CaseAnalysisTrace` — the object everything downstream reads |
 | 4 | `app/services/analysis/clarification.py` | Whether to ask the reader another question. Pure policy, no I/O |
-| 5 | `app/services/reports/content.py` | How a stored trace becomes the seven report sections |
+| 5 | `app/services/reports/display.py` | How a stored trace becomes the report snapshot the HTML and PDF print |
 
 After those five, the rest is plumbing you can read on demand.
 
@@ -170,12 +170,17 @@ not deterministic, so "ask again" is not free and not neutral.
 
 ## 7. Things that will trip you
 
-**`build_case_template_report` does not validate. `build_case_report` does.**
-The names are one word apart and the difference is whether the report is
-checked. Reach for `build_case_report` unless you specifically want the
-unvalidated render.
+**A report prints what was stored, not the analysis as it is now.**
+`reports/display.py` builds one `CaseReportContent` snapshot when the report is
+generated, and `case_reports.structured_report` holds it. The HTML and the PDF
+render from that stored copy only. A row stored in an older shape is refused
+with `case_report_outdated` rather than rebuilt from current code.
 
-**`validate_case_structured_report` checks less than it looks like.** It does
+**The validator belongs to the report-fidelity experiment, not to the app.**
+`StructuredReport`, `build_case_template_report` and
+`validate_case_structured_report` live in
+`experiments/report_fidelity/structured_report.py`; nothing in `app/` builds or
+checks that shape. The validator also checks less than it looks like. It does
 not check that a report's `claim_id` exists in the trace, and every subset check
 passes trivially for an empty list — so a claim the model invented, with no
 sources and no techniques, is accepted. A report whose seven sections are all
@@ -213,7 +218,7 @@ are in `analysis/prompts.py`.
 
 1. the model's structured-output contract (what the provider must return),
 2. the stored record (`case_analysis_results.trace_json`),
-3. the report's input (`reports/content.py` builds the seven sections from it),
+3. the report's input (`reports/display.py` builds the report snapshot from it),
 4. the overview the frontend renders,
 5. the attachment on the chat message that announces a finished analysis.
 
