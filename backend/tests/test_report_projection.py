@@ -33,7 +33,6 @@ def narrative(created_at):
         document_id=None,
         provenance_json={},
         created_at=created_at,
-        archived_at=None,
         source_metadata_json={},
         document=None,
         filename=None,

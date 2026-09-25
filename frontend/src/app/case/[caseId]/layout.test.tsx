@@ -57,17 +57,7 @@ vi.mock("@/features/chat/WorkspaceChatPanel", () => ({
     ) : null,
 }));
 
-const QUESTION: AnalysisStepRead = {
-  status: "need_followup",
-  round: 1,
-  max_rounds: 3,
-  question: {
-    message_id: "question-1",
-    gap_id: "G-01",
-    gap_key: "topic:incident-time",
-    question: "When did the incident happen?",
-  },
-};
+const QUESTION: AnalysisStepRead = { status: "need_followup" };
 
 function AnalyzeButton() {
   const runAnalysis = useRunCaseAnalysis(caseId);
@@ -126,12 +116,7 @@ describe("CaseShellLayout", () => {
 
 describe("an analysis run started from a page", () => {
   it("goes to the analysis once it is written, in the language of the sources", async () => {
-    state.start.mockResolvedValue({
-      status: "completed",
-      round: 1,
-      max_rounds: 3,
-      result: analysisResult(),
-    });
+    state.start.mockResolvedValue({ status: "completed", result: analysisResult() });
     renderLayout(<AnalyzeButton />);
 
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));

@@ -1,11 +1,5 @@
-import hashlib
 from collections.abc import Mapping
 from copy import deepcopy
-
-
-def build_document_id(content: bytes) -> str:
-    digest = hashlib.sha256(content).hexdigest()[:12].upper()
-    return f"DOC-{digest}"
 
 
 def bind_exact_page_spans(
@@ -51,7 +45,4 @@ def bind_exact_page_spans(
     return output
 
 
-__all__ = [
-    "bind_exact_page_spans",
-    "build_document_id",
-]
+__all__ = ["bind_exact_page_spans"]

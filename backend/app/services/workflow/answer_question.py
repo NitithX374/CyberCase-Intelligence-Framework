@@ -102,7 +102,6 @@ async def record_question(
                 message_kind="conversation",
                 analysis_result_id=case.latest_analysis_result_id,
                 client_request_id=client_request_id,
-                metadata_json=serialize_message_metadata({"action": "conversation"}),
             )
         )
 
@@ -149,9 +148,7 @@ async def reply_to(
             analysis_result_id=analysis_id,
             in_reply_to_message_id=question_id,
             metadata_json=serialize_message_metadata(
-                {"action": "conversation", "analysis_trace": message_trace(output.trace)}
-                if output.trace
-                else {"action": "conversation"}
+                {"analysis_trace": message_trace(output.trace)} if output.trace else {}
             ),
         )
         db.add(answer)

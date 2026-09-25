@@ -57,25 +57,9 @@ async def add_case_document(
         ingested = await service.ingest(content, file.filename or "document")
     finally:
         await service.aclose()
-    extraction = {
-        "provider": ingested.extraction_method.value,
-        "extracted_text": ingested.full_text,
-        "provenance_json": {
-            "document_id": ingested.document_id,
-            "media_type": ingested.media_type,
-            "extraction_method": ingested.extraction_method.value,
-            "pages": [page.model_dump(mode="json") for page in ingested.pages],
-            "warnings": list(ingested.warnings),
-        },
-    }
     async with db.begin():
         return await SourceService(db).add_document(
-            case_id=case_id,
-            user_id=user.id,
-            filename=ingested.filename,
-            mime_type=ingested.media_type,
-            content=content,
-            extraction=extraction,
+            case_id=case_id, user_id=user.id, ingested=ingested, content=content
         )
 
 

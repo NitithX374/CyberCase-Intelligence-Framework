@@ -24,6 +24,8 @@ EXPECTED_CANONICAL_TABLES = {
 }
 DROPPED_FROM_MODELS_BEFORE_SQUASH = {
     "users": {"email_verified_at", "oauth_provider", "oauth_subject_id"},
+    "case_sources": {"archived_at"},
+    "case_analysis_results": {"schema_version", "retrieval_context_id"},
 }
 
 

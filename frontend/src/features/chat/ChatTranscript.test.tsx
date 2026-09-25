@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ChatMessageRead } from "@/lib/api";
+import type { CaseAnalysisClaim, ChatMessageRead } from "@/lib/api";
 import { mergeCaseSourceRows } from "@/features/sources/followupSources";
 import {
   analysisResult,
@@ -35,7 +35,9 @@ function analysisMessage(claims: Record<string, unknown>[]): ChatMessageRead {
     analysis_trace: {
       version: "case_analysis_trace_v1",
       validation_status: "validated",
-      claims,
+      analysis_mode: "case_overview",
+      summary: "Case analysis",
+      claims: claims as CaseAnalysisClaim[],
     },
   });
 }

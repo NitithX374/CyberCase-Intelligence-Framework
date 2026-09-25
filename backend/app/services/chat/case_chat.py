@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -13,14 +13,17 @@ from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat import ChatMessage
-from app.schemas.chat import CaseChatRead, ChatMessageCreate, ChatMessageRead
+from app.schemas.analysis import CaseAnalysisResultRead
+from app.schemas.chat import CaseChatRead, CaseChatResponse, ChatMessageCreate, ChatMessageRead
 from app.services.analysis.clarification import Ask, decide_followup
 from app.services.analysis.contracts import CaseAnalysisTrace, CaseAssessmentTrace
 from app.services.cases.ownership import owned_case
 from app.services.chat.followup import (
     answer_message,
     asked_gap_keys,
-    asked_this_round,
+    asked_in_round,
+    case_messages,
+    followup_qa_ids,
     last_question_awaiting_analysis,
     pending_question,
     question_message,
@@ -52,19 +55,54 @@ async def get_case_chat(
     case_id: UUID,
     user_id: UUID | None,
 ) -> CaseChatRead:
-    case = await owned_case(
-        db,
-        case_id,
-        user_id,
-        options=(selectinload(Case.chat_messages), selectinload(Case.latest_analysis_result)),
-    )
-    messages = [ChatMessageRead.model_validate(message) for message in case.chat_messages]
-    answered = case.latest_analysis_result is not None or messages
+    case = await owned_case(db, case_id, user_id, options=(selectinload(Case.chat_messages),))
     return CaseChatRead(
         case_id=case.id,
-        status="answered" if answered else "idle",
-        messages=messages,
+        messages=message_reads(case.chat_messages, case.chat_messages),
+        pending_question_id=await pending_question_id(db, case.id),
     )
+
+
+async def send_case_message(
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+    request: ChatMessageCreate,
+    session_factory: Callable = async_session,
+) -> CaseChatResponse:
+    messages, step = await post_case_message(
+        case_id=case_id, user_id=user_id, request=request, session_factory=session_factory
+    )
+    async with session_factory() as db:
+        chat = await case_messages(db, case_id)
+        pending = await pending_question_id(db, case_id)
+    finished = step.result if step is not None and not step.needs_followup else None
+    return CaseChatResponse(
+        messages=message_reads(messages, chat),
+        pending_question_id=pending,
+        analysis=(
+            CaseAnalysisResultRead.model_validate(finished).model_copy(
+                update={"freshness": "current"}
+            )
+            if finished is not None
+            else None
+        ),
+    )
+
+
+def message_reads(
+    messages: Sequence[ChatMessage], chat: Sequence[ChatMessage]
+) -> list[ChatMessageRead]:
+    qa_ids = followup_qa_ids(chat)
+    return [
+        ChatMessageRead.model_validate(message).model_copy(update={"qa_id": qa_ids.get(message.id)})
+        for message in messages
+    ]
+
+
+async def pending_question_id(db: AsyncSession, case_id: UUID) -> UUID | None:
+    question = await pending_question(db, case_id)
+    return question.id if question is not None else None
 
 
 async def post_case_message(
@@ -94,15 +132,6 @@ async def post_case_message(
             )
             return [question, answer], None
         return await messages_from(session_factory, case_id, sent.ordinal), None
-
-    standing = await standing_question(session_factory, case_id, user_id)
-    if standing is None:
-        return await reply_in_conversation(
-            case_id=case_id,
-            user_id=user_id,
-            request=request,
-            session_factory=session_factory,
-        )
 
     recorded = await record_answer_and_ask_next(
         case_id=case_id, user_id=user_id, request=request, session_factory=session_factory
@@ -140,14 +169,6 @@ async def reply_in_conversation(
         session_factory=session_factory,
     )
     return [question, answer], None
-
-
-async def standing_question(
-    session_factory: Callable, case_id: UUID, user_id: UUID | None
-) -> ChatMessage | None:
-    async with session_factory() as db:
-        case = await owned_case(db, case_id, user_id)
-        return await pending_question(db, case.id)
 
 
 async def record_answer_and_ask_next(
@@ -249,11 +270,12 @@ async def next_question_of_round(
         gaps = CaseAssessmentTrace.model_validate(result.trace_json).gaps
     else:
         gaps = CaseAnalysisTrace.model_validate(result.trace_json).gaps
+    chat = await case_messages(db, case_id)
     decision = decide_followup(
         gaps=gaps,
-        asked_gap_keys=await asked_gap_keys(db, case_id),
-        asked_this_round=len(await asked_this_round(db, analysis_result_id)),
-        rounds_spent=await rounds_asked(db, case_id),
+        asked_gap_keys=asked_gap_keys(chat),
+        asked_this_round=asked_in_round(chat, analysis_result_id),
+        rounds_spent=rounds_asked(chat),
         max_rounds=settings.chat_followup_max_rounds,
         gaps_per_round=settings.chat_followup_gaps_per_round,
     )
@@ -279,4 +301,4 @@ async def messages_from(
         return list(rows)
 
 
-__all__ = ["get_case_chat", "post_case_message"]
+__all__ = ["get_case_chat", "post_case_message", "send_case_message"]

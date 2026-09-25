@@ -14,7 +14,7 @@ from app.services.document_ingestion.contracts import (
 from app.services.document_ingestion.recognition import (
     RecognizedPage,
     RenderedPage,
-    separate_generated_visual_descriptions,
+    strip_generated_visual_descriptions,
 )
 from app.services.document_ingestion.service import (
     DocumentIngestionLimits,
@@ -112,6 +112,7 @@ def test_docx_uses_native_extraction() -> None:
     assert result.pages[0].page_number == 1
     assert result.pages[0].text_method == "native"
     assert result.pages[0].verification_status == "native"
+    assert result.verification_status == "native"
     assert result.pages[0].text == "รายละเอียดคดี\n\nมีการโอนเงิน 131,000 บาท"
     assert recognizer.pages == []
 
@@ -137,6 +138,7 @@ def test_scanned_pdf_page_is_routed_to_recognizer() -> None:
     assert result.pages[0].text == "ข้อความจากภาพสแกน"
     assert result.pages[0].text_method == "ocr"
     assert result.pages[0].verification_status == "machine_read"
+    assert result.verification_status == "machine_read"
 
 
 def test_pdf_with_tiny_text_layer_is_still_routed_to_recognizer() -> None:
@@ -164,6 +166,7 @@ def test_mixed_pdf_routes_pages_independently_and_preserves_page_numbers() -> No
     assert result.pages[1].text_method == "ocr"
     assert result.pages[1].text == "recognized page two"
     assert result.pages[2].text_method == "native"
+    assert result.verification_status == "machine_read", "one machine-read page marks the document"
     assert recognizer.pages == [2]
 
 
@@ -178,15 +181,6 @@ def test_concurrent_ocr_is_bounded_by_semaphore() -> None:
     assert recognizer.max_observed_concurrency > 0
 
 
-def test_document_ids_are_deterministic() -> None:
-    content = _docx_bytes("first block", "second block")
-    first = asyncio.run(_service(RecordingRecognizer()).ingest(content, "a.docx"))
-    second = asyncio.run(_service(RecordingRecognizer()).ingest(content, "b.docx"))
-
-    assert first.document_id == second.document_id
-    assert first.pages[0].text == second.pages[0].text
-
-
 def test_unsupported_file_type_fails_cleanly() -> None:
     with pytest.raises(UnsupportedDocumentError) as raised:
         asyncio.run(_service(RecordingRecognizer()).ingest(b"plain text", "case.txt"))
@@ -199,12 +193,13 @@ def test_recognizer_failure_is_returned_as_controlled_warning() -> None:
 
     assert result.pages[0].text == ""
     assert result.pages[0].verification_status == "needs_review"
+    assert result.verification_status == "needs_review"
     assert "document_recognition_provider_error" in result.warnings[0]
 
 
 def test_generated_visual_descriptions_are_stripped() -> None:
     raw = "Evidence text before.\n<figure>Generated description of diagram</figure>\nEvidence text after."
-    text, descriptions = separate_generated_visual_descriptions(raw)
+    text = strip_generated_visual_descriptions(raw)
     assert "<figure>" not in text
     assert "Generated description of diagram" not in text
     assert text == "Evidence text before.\n\nEvidence text after."

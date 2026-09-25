@@ -261,10 +261,6 @@ export interface components {
     schemas: {
         AnalysisStepRead: {
             status: "need_followup" | "completed";
-            round: number;
-            max_rounds: number;
-            stop_reason?: string | null;
-            question?: components["schemas"]["FollowupQuestionRead"] | null;
             result?: components["schemas"]["CaseAnalysisResultRead"] | null;
         };
         Body_add_case_document_api_v1_cases__case_id__documents_post: {
@@ -300,11 +296,10 @@ export interface components {
             id: string;
             case_id: string;
             source_revision: number;
-            schema_version: string;
+            schema_version: "case_analysis_trace_v1";
             status: "validated";
             summary: string;
             trace_json: components["schemas"]["CaseAnalysisTrace"] | null;
-            retrieval_context_id: string | null;
             pipeline_config: {
                 [key: string]: unknown;
             };
@@ -313,6 +308,7 @@ export interface components {
             };
             created_at: string;
             freshness: "missing" | "current" | "stale";
+            readonly retrieval_context_id: string | null;
         };
         CaseAnalysisTrace: {
             version: "case_analysis_trace_v1";
@@ -331,11 +327,12 @@ export interface components {
         };
         CaseChatRead: {
             case_id: string;
-            status: "idle" | "answered";
             messages?: components["schemas"]["ChatMessageRead"][];
+            pending_question_id?: string | null;
         };
         CaseChatResponse: {
             messages: components["schemas"]["ChatMessageRead"][];
+            pending_question_id?: string | null;
             analysis?: components["schemas"]["CaseAnalysisResultRead"] | null;
         };
         CaseCreate: {
@@ -426,6 +423,8 @@ export interface components {
             source_kind: string;
             document_id: string | null;
             filename?: string | null;
+            mime_type?: string | null;
+            size_bytes?: number | null;
             exact_text: string;
             provenance_json?: {
                 [key: string]: unknown;
@@ -434,7 +433,6 @@ export interface components {
                 [key: string]: unknown;
             };
             created_at: string;
-            archived_at: string | null;
         };
         CaseTimelineItem: {
             time: string;
@@ -457,25 +455,25 @@ export interface components {
             content: string;
             message_kind: "conversation" | "followup_question" | "followup_answer";
             gap_key?: string | null;
+            qa_id?: string | null;
             analysis_result_id: string | null;
             in_reply_to_message_id?: string | null;
             metadata_json: components["schemas"]["MessageMetadata"];
             created_at: string;
         };
-        FollowupQuestionRead: {
-            message_id: string;
-            gap_id: string;
-            gap_key: string;
-            question: string;
-        };
         HTTPValidationError: {
             detail?: components["schemas"]["ValidationError"][];
         };
+        MessageAnalysisTrace: {
+            version: "case_analysis_trace_v1";
+            validation_status: "validated";
+            analysis_mode: "case_overview" | "question_answer";
+            summary: string;
+            claims: components["schemas"]["CaseAnalysisClaim"][];
+            grounding?: components["schemas"]["CaseGroundingReport"] | null;
+        };
         MessageMetadata: {
-            action?: "conversation";
-            analysis_trace?: {
-                [key: string]: unknown;
-            };
+            analysis_trace?: components["schemas"]["MessageAnalysisTrace"];
         };
         PasswordLoginRequest: {
             email: string;

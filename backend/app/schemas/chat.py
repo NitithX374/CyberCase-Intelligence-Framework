@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.analysis import CaseAnalysisResultRead
 from app.schemas.message_metadata import MessageMetadata
 
-CaseChatStatus = Literal["idle", "answered"]
 MessageRole = Literal["user", "assistant"]
 MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 
@@ -30,6 +29,7 @@ class ChatMessageRead(BaseModel):
     content: str
     message_kind: MessageKind
     gap_key: str | None = None
+    qa_id: str | None = None
     analysis_result_id: UUID | None
     in_reply_to_message_id: UUID | None = None
     metadata_json: MessageMetadata
@@ -38,19 +38,19 @@ class ChatMessageRead(BaseModel):
 
 class CaseChatRead(BaseModel):
     case_id: UUID
-    status: CaseChatStatus = "idle"
     messages: list[ChatMessageRead] = Field(default_factory=list)
+    pending_question_id: UUID | None = None
 
 
 class CaseChatResponse(BaseModel):
     messages: list[ChatMessageRead]
+    pending_question_id: UUID | None = None
     analysis: CaseAnalysisResultRead | None = None
 
 
 __all__ = [
     "CaseChatResponse",
     "CaseChatRead",
-    "CaseChatStatus",
     "ChatMessageCreate",
     "ChatMessageRead",
     "MessageKind",

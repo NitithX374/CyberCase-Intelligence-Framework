@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload, undefer
 from app.errors import AppError
 from app.models.sources import CaseDocument, CaseSource
 from app.services.cases.ownership import owned_case
+from app.services.document_ingestion.contracts import IngestedDocument
 from app.services.document_ingestion.provenance import bind_exact_page_spans
 
 
@@ -27,21 +28,16 @@ class SourceService:
         *,
         case_id: UUID,
         user_id: UUID | None,
-        filename: str,
-        mime_type: str,
+        ingested: IngestedDocument,
         content: bytes,
-        extraction: dict[str, object],
     ) -> CaseDocument:
         case = await owned_case(self.db, case_id, user_id, lock=True)
-        extracted_text = extraction.get("extracted_text")
-        if not isinstance(extracted_text, str):
-            raise SourceError("extraction_text_missing", "Document extraction text is missing")
-        if not extracted_text.strip():
+        if not ingested.full_text.strip():
             raise SourceError("extraction_text_empty", "Document extraction text is empty")
         document = CaseDocument(
             case_id=case.id,
-            filename=filename,
-            mime_type=mime_type,
+            filename=ingested.filename,
+            mime_type=ingested.media_type,
             size_bytes=len(content),
             content_bytes=content,
         )
@@ -52,12 +48,8 @@ class SourceService:
                 case_id=case.id,
                 source_kind="document",
                 document_id=document.id,
-                exact_text=extracted_text,
-                provenance_json=build_document_provenance(
-                    as_dictionary(extraction.get("provenance_json")),
-                    extracted_text,
-                    required_string(extraction, "provider"),
-                ),
+                exact_text=ingested.full_text,
+                provenance_json=document_provenance(ingested),
                 source_metadata_json={"received_via": "document_upload"},
             )
         )
@@ -121,61 +113,20 @@ class SourceService:
         result = await self.db.execute(
             select(CaseSource)
             .options(selectinload(CaseSource.document))
-            .where(CaseSource.case_id == case_id, CaseSource.archived_at.is_(None))
+            .where(CaseSource.case_id == case_id)
             .order_by(CaseSource.created_at, CaseSource.id)
         )
         return list(result.scalars().unique().all())
 
 
-def required_string(value: dict[str, object], key: str) -> str:
-    item = value.get(key)
-    if not isinstance(item, str) or not item.strip():
-        raise SourceError("extraction_metadata_invalid", f"Extraction {key} is required")
-    return item.strip()
-
-
-def as_dictionary(value: object) -> dict[str, object]:
-    return deepcopy(value) if isinstance(value, dict) else {}
-
-
-def build_document_provenance(
-    read: dict[str, object], text: str, provider: str
-) -> dict[str, object]:
-    provenance = bind_exact_page_spans(read, text)
-    extraction_method = read.get("extraction_method") or provider
-    if extraction_method:
-        provenance["extraction_method"] = str(extraction_method)
-    if provider:
-        provenance["provider"] = provider
-
-    verification_status = read.get("verification_status")
-    if not verification_status:
-        statuses = [
-            page.get("verification_status")
-            for page in provenance.get("pages", [])
-            if isinstance(page, dict) and page.get("verification_status")
-        ]
-        if any(value == "needs_review" for value in statuses):
-            verification_status = "needs_review"
-        elif any(value == "machine_read" for value in statuses) or extraction_method in (
-            "document_recognition",
-            "ocr",
-        ):
-            verification_status = "machine_read"
-        else:
-            verification_status = "native"
-    provenance["verification_status"] = str(verification_status)
-
-    confidence_status = read.get("confidence_status")
-    if not confidence_status:
-        confidence_status = (
-            "not_reported"
-            if extraction_method in ("document_recognition", "ocr", "hybrid")
-            else "not_applicable"
-        )
-    provenance["confidence_status"] = str(confidence_status)
-    provenance["minimum_confidence"] = None
-    return provenance
+def document_provenance(ingested: IngestedDocument) -> dict[str, object]:
+    pages = [page.model_dump(mode="json") for page in ingested.pages]
+    return {
+        **bind_exact_page_spans({"pages": pages}, ingested.full_text),
+        "extraction_method": ingested.extraction_method.value,
+        "verification_status": ingested.verification_status,
+        "warnings": list(ingested.warnings),
+    }
 
 
 __all__ = [

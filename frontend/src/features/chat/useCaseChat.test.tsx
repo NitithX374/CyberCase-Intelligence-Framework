@@ -29,7 +29,7 @@ function render() {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  getCaseChat.mockResolvedValue(caseChat("a", "idle", [message("a", 1, "user", "สวัสดี")]));
+  getCaseChat.mockResolvedValue(caseChat("a", [message("a", 1, "user", "สวัสดี")]));
 });
 
 describe("whether a send is in flight", () => {
@@ -95,7 +95,7 @@ describe("whether a send is in flight", () => {
       gap_key: "topic:incident-time",
       message_kind: "followup_question" as const,
     };
-    getCaseChat.mockResolvedValue(caseChat("a", "answered", [question]));
+    getCaseChat.mockResolvedValue(caseChat("a", [question]));
     const pending = deferred<ReturnType<typeof chatResponse>>();
     createCaseChatMessage.mockReturnValue(pending.promise);
     const { result, wrapper } = render();

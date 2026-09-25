@@ -59,7 +59,7 @@ class CaseSource(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_case_sources"),
         CheckConstraint(
-            "source_kind IN ('document', 'narrative', 'followup_answer')",
+            "source_kind IN ('document', 'narrative')",
             name="ck_case_sources_kind",
         ),
         Index("ix_case_sources_case_id_created_at", "case_id", "created_at"),
@@ -88,7 +88,6 @@ class CaseSource(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     case: Mapped[Case] = relationship("Case", back_populates="sources")
     document: Mapped[CaseDocument | None] = relationship(back_populates="sources")
@@ -96,6 +95,14 @@ class CaseSource(Base):
     @property
     def filename(self) -> str | None:
         return self.document.filename if self.document is not None else None
+
+    @property
+    def mime_type(self) -> str | None:
+        return self.document.mime_type if self.document is not None else None
+
+    @property
+    def size_bytes(self) -> int | None:
+        return self.document.size_bytes if self.document is not None else None
 
 
 __all__ = [

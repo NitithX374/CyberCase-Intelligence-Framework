@@ -58,7 +58,6 @@ function caseSource(overrides: Partial<CaseSourceRead> = {}): CaseSourceRead {
     provenance_json: {},
     source_metadata_json: {},
     created_at: "2026-09-11T00:00:00Z",
-    archived_at: null,
     ...overrides,
   };
 }

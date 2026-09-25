@@ -81,7 +81,6 @@ describe("TechnicalContextView", () => {
       mitre_associations: [],
       retrieval_context_id: null,
     };
-    projection.result.retrieval_context_id = null;
     projection.result.external_context_json = {
       technical_augmentation: {
         version: "case_mitre_augmentation_v1",
