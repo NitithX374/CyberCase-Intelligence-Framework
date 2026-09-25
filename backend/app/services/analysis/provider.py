@@ -10,6 +10,7 @@ from typing import TypeVar
 
 import httpx
 import tiktoken
+from fastapi import status
 from pydantic import BaseModel, ValidationError
 
 from app.services.analysis.contracts import CaseAnalysisFailure
@@ -101,11 +102,13 @@ def validate_response_payload(response: httpx.Response) -> dict[str, object]:
         raise CaseAnalysisFailure(
             "analysis_provider_timeout",
             "The post-answer analysis provider timed out",
+            status.HTTP_504_GATEWAY_TIMEOUT,
         )
     if response.status_code >= 500:
         raise CaseAnalysisFailure(
             "analysis_provider_down",
             "The post-answer analysis provider is unavailable",
+            status.HTTP_502_BAD_GATEWAY,
         )
     if response.status_code in {401, 403}:
         raise CaseAnalysisFailure(
@@ -124,12 +127,14 @@ def validate_response_payload(response: httpx.Response) -> dict[str, object]:
         raise CaseAnalysisFailure(
             "analysis_invalid_response",
             "The post-answer analysis provider response was invalid",
+            status.HTTP_502_BAD_GATEWAY,
         ) from error
 
     if not isinstance(response_payload, dict):
         raise CaseAnalysisFailure(
             "analysis_invalid_response",
             "The post-answer analysis provider response was invalid",
+            status.HTTP_502_BAD_GATEWAY,
         )
 
     log_response_shape(response.status_code, response_payload)
@@ -138,17 +143,15 @@ def validate_response_payload(response: httpx.Response) -> dict[str, object]:
         raise CaseAnalysisFailure(
             "analysis_provider_error",
             "The post-answer analysis provider returned an error",
+            status.HTTP_502_BAD_GATEWAY,
         )
 
-    if response_payload.get("stop_reason") in {
-        "refusal",
-        "max_tokens",
-        "length",
-        "pause_turn",
-    }:
+    stop_reason = response_payload.get("stop_reason")
+    if stop_reason in {"refusal", "max_tokens", "length", "pause_turn"}:
         raise CaseAnalysisFailure(
             "analysis_incomplete",
             "The post-answer analysis provider did not complete",
+            status.HTTP_409_CONFLICT if stop_reason == "refusal" else status.HTTP_502_BAD_GATEWAY,
         )
 
     content = response_payload.get("content")
@@ -156,6 +159,7 @@ def validate_response_payload(response: httpx.Response) -> dict[str, object]:
         raise CaseAnalysisFailure(
             "analysis_invalid_response",
             "The post-answer analysis provider response was invalid",
+            status.HTTP_502_BAD_GATEWAY,
         )
 
     return response_payload
@@ -274,11 +278,13 @@ async def request_stage(
         receipt["status"] = "completed"
         return result
     except httpx.TimeoutException as error:
-        raise CaseAnalysisFailure(f"{stage}_timeout", "Analysis stage timed out") from error
+        raise CaseAnalysisFailure(
+            f"{stage}_timeout", "Analysis stage timed out", status.HTTP_504_GATEWAY_TIMEOUT
+        ) from error
     except httpx.RequestError as error:
         logger.warning("Analysis stage %s transport failed: %r", stage, error)
         raise CaseAnalysisFailure(
-            f"{stage}_transport", "Analysis stage transport failed"
+            f"{stage}_transport", "Analysis stage transport failed", status.HTTP_502_BAD_GATEWAY
         ) from error
     except ValidationError as error:
         logger.warning(
@@ -290,7 +296,7 @@ async def request_stage(
             ),
         )
         raise CaseAnalysisFailure(
-            f"{stage}_invalid", "Analysis stage violated its schema"
+            f"{stage}_invalid", "Analysis stage violated its schema", status.HTTP_502_BAD_GATEWAY
         ) from error
     finally:
         receipt["elapsed_ms"] = round((time.monotonic() - started) * 1000)

@@ -12,7 +12,10 @@ from app.services.analysis.contracts import (
     CaseSourceCitation,
 )
 from app.services.analysis.steps.quotes import (
+    MAX_QUOTE_CHARS,
+    IndexedText,
     find_aligned_quote,
+    indexed,
     looks_like_a_paraphrase,
     quote_occurrences,
     resolve_document_locator,
@@ -50,10 +53,11 @@ def resolve_case_trace(
     registry = {source.source_id: source for source in source_bundle.sources}
     registry.update({item.source_id: item for item in followup_registry_items(followup_history)})
     document_context = build_document_source_context(source_bundle)
+    search = QuoteSearch(registry)
 
     claims = deduplicated_claims(trace.claims)
     known_claim_ids = {claim.claim_id for claim in claims}
-    resolved_claims = [resolve_claim(claim, registry, document_context) for claim in claims]
+    resolved_claims = [resolve_claim(claim, registry, document_context, search) for claim in claims]
 
     associations, outside_context, without_claim = kept_associations(
         trace.mitre_associations,
@@ -76,6 +80,7 @@ def resolve_case_trace(
                 claims,
                 resolved_claims,
                 registry,
+                search=search,
                 associations_outside_context=outside_context,
                 associations_without_claim=without_claim,
                 claims_dropped=len(trace.claims) - len(claims),
@@ -142,10 +147,13 @@ def grounding_report(
     kept: list[CaseAnalysisClaim],
     registry: dict[str, CaseSourceItem],
     *,
+    search: QuoteSearch | None = None,
     associations_outside_context: int = 0,
     associations_without_claim: int = 0,
     claims_dropped: int = 0,
 ) -> CaseGroundingReport:
+    search = search or QuoteSearch(registry)
+
     def all_citations(claims: list[CaseAnalysisClaim]) -> list[CaseSourceCitation]:
         return [
             c
@@ -159,12 +167,11 @@ def grounding_report(
     paraphrased = 0
     unfound = 0
     for citation in claimed:
-        source = registry.get(citation.source_id)
-        if source is None:
+        if citation.source_id not in registry:
             unfound += 1
-        elif located_quote(source.text, citation.exact_quote) is not None:
+        elif search.located(citation.source_id, citation.exact_quote) is not None:
             located += 1
-        elif looks_like_a_paraphrase(source.text, citation.exact_quote):
+        elif search.paraphrased(citation.source_id, citation.exact_quote):
             paraphrased += 1
         else:
             unfound += 1
@@ -189,9 +196,13 @@ def resolve_claim(
     claim: CaseAnalysisClaim,
     registry: dict[str, CaseSourceItem],
     document_context: object,
+    search: QuoteSearch | None = None,
 ) -> CaseAnalysisClaim:
-    supporting = resolved_citations(claim.supporting_citations, registry, document_context)
-    contradicting = resolved_citations(claim.contradicting_citations, registry, document_context)
+    search = search or QuoteSearch(registry)
+    supporting = resolved_citations(claim.supporting_citations, registry, document_context, search)
+    contradicting = resolved_citations(
+        claim.contradicting_citations, registry, document_context, search
+    )
     return claim.model_copy(
         update={
             "supporting_source_ids": role_source_ids(
@@ -215,24 +226,41 @@ def role_source_ids(
     return sorted(source_id for source_id in named if source_id in registry)
 
 
-def located_quote(content: str, quote: str) -> str | None:
-    if quote_occurrences(content, quote):
-        return quote
-    return find_aligned_quote(content, quote)
+def located_quote(source: str | IndexedText, quote: str) -> str | None:
+    source = indexed(source)
+    found = quote if quote_occurrences(source.text, quote) else find_aligned_quote(source, quote)
+    return found if found is not None and len(found) <= MAX_QUOTE_CHARS else None
+
+
+class QuoteSearch:
+    def __init__(self, registry: Mapping[str, CaseSourceItem]) -> None:
+        self.texts = {source_id: IndexedText(source.text) for source_id, source in registry.items()}
+        self.found: dict[tuple[str, str], str | None] = {}
+
+    def located(self, source_id: str, quote: str) -> str | None:
+        key = (source_id, quote)
+        if key not in self.found:
+            self.found[key] = located_quote(self.texts[source_id], quote)
+        return self.found[key]
+
+    def paraphrased(self, source_id: str, quote: str) -> bool:
+        return looks_like_a_paraphrase(self.texts[source_id], quote)
 
 
 def resolved_citations(
     citations: list[CaseSourceCitation],
     registry: dict[str, CaseSourceItem],
     document_context: object,
+    search: QuoteSearch | None = None,
 ) -> list[CaseSourceCitation]:
+    search = search or QuoteSearch(registry)
     resolved: list[CaseSourceCitation] = []
     seen: set[tuple[str, str]] = set()
     for citation in citations:
         source = registry.get(citation.source_id)
         if source is None:
             continue
-        exact_quote = located_quote(source.text, citation.exact_quote)
+        exact_quote = search.located(source.source_id, citation.exact_quote)
         if exact_quote is None:
             continue
         canonical = CaseSourceCitation(

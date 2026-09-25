@@ -13,8 +13,14 @@ from app.services.analysis.mitre_gate.llm import (
     build_mitre_applicability_prompt,
     evaluate_mitre_applicability,
 )
+from app.services.document_ingestion.contracts import (
+    DocumentPage,
+    ExtractionMethod,
+    IngestedDocument,
+)
 from app.services.llm.core_llm import CoreLlmTarget
 from app.services.sources.case_source_bundle import CaseSourceItem
+from app.services.sources.source_service import document_provenance
 
 
 @pytest.fixture
@@ -175,3 +181,75 @@ def test_the_record_says_when_the_gate_read_only_part_of_a_source(
     assert evaluated("A laptop was taken.").input_truncated is False
     long_source = "A laptop was taken. " + "x" * MITRE_APPLICABILITY_SOURCE_MAX_CHARS
     assert evaluated(long_source).input_truncated is True
+
+
+def test_the_gate_reads_a_document_once_and_not_again_page_by_page() -> None:
+    pages = [f"หน้า {number} " + "ข้อความในเอกสาร " * 200 for number in range(1, 51)]
+    ingested = IngestedDocument(
+        filename="scan.pdf",
+        media_type="application/pdf",
+        extraction_method=ExtractionMethod.DOCUMENT_RECOGNITION,
+        pages=[
+            DocumentPage(
+                page_number=number, text=text, text_method="ocr", verification_status="machine_read"
+            )
+            for number, text in enumerate(pages, 1)
+        ],
+        full_text="\n\n".join(pages),
+    )
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="document",
+        text=ingested.full_text,
+        document_id=str(uuid4()),
+        filename="scan.pdf",
+        provenance=document_provenance(ingested),
+    )
+
+    prompt = build_mitre_applicability_prompt([source])
+
+    assert len(prompt) < MITRE_APPLICABILITY_SOURCE_MAX_CHARS + 1_000
+    assert pages[-1] not in prompt
+    [read] = json.loads(prompt.splitlines()[2])["case_sources"]
+    assert read["content"] == ingested.full_text[:MITRE_APPLICABILITY_SOURCE_MAX_CHARS]
+    [document] = read["document_sources"]
+    assert document["pages"] == [
+        {"page_number": number, "text_method": "ocr", "verification_status": "machine_read"}
+        for number in (1, 2)
+    ], "only the pages the gate can see, and only how they were read"
+
+
+def test_the_gate_still_hears_how_a_page_without_offsets_was_read() -> None:
+    ingested = IngestedDocument(
+        filename="scan.pdf",
+        media_type="application/pdf",
+        extraction_method=ExtractionMethod.DOCUMENT_RECOGNITION,
+        pages=[
+            DocumentPage(
+                page_number=1, text="", text_method="ocr", verification_status="needs_review"
+            ),
+            DocumentPage(
+                page_number=2,
+                text="A laptop was taken.",
+                text_method="ocr",
+                verification_status="machine_read",
+            ),
+        ],
+        full_text="A laptop was taken.",
+    )
+    source = CaseSourceItem(
+        source_id=str(uuid4()),
+        source_kind="document",
+        text=ingested.full_text,
+        document_id=str(uuid4()),
+        filename="scan.pdf",
+        provenance=document_provenance(ingested),
+    )
+
+    [read] = json.loads(build_mitre_applicability_prompt([source]).splitlines()[2])["case_sources"]
+
+    [document] = read["document_sources"]
+    assert document["pages"] == [
+        {"page_number": 1, "text_method": "ocr", "verification_status": "needs_review"},
+        {"page_number": 2, "text_method": "ocr", "verification_status": "machine_read"},
+    ]

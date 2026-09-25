@@ -83,13 +83,7 @@ async def record_question(
     client_request_id: str | None,
     session_factory: Callable,
 ) -> None:
-    question_text = content.strip()
-    if not question_text:
-        raise CaseWorkflowError(
-            "case_chat_content_empty",
-            "Case Chat message is empty",
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        )
+    question_text = message_text(content)
     async with session_factory() as db, db.begin():
         case = await owned_case(db, case_id, user_id, lock=True)
         db.add(
@@ -104,6 +98,17 @@ async def record_question(
                 client_request_id=client_request_id,
             )
         )
+
+
+def message_text(content: str) -> str:
+    text = content.replace("\x00", "").strip()
+    if not text:
+        raise CaseWorkflowError(
+            "case_chat_content_empty",
+            "Case Chat message is empty",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+    return text
 
 
 async def reply_to(
@@ -178,4 +183,5 @@ __all__ = [
     "answer_history",
     "answer_recorded_question",
     "being_answered",
+    "message_text",
 ]

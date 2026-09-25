@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -33,6 +34,7 @@ from app.services.workflow.answer_question import (
     answer_case_question,
     answer_recorded_question,
     being_answered,
+    message_text,
 )
 from app.services.workflow.run_analysis import (
     AnalysisStep,
@@ -40,6 +42,8 @@ from app.services.workflow.run_analysis import (
     run_case_analysis,
 )
 from app.services.workflow.shared import next_ordinal
+
+SEND_KEY_INDEX = "ux_chat_messages_case_id_client_request_id"
 
 
 @dataclass(frozen=True)
@@ -112,6 +116,28 @@ async def post_case_message(
     request: ChatMessageCreate,
     session_factory: Callable = async_session,
 ) -> tuple[list[ChatMessage], AnalysisStep | None]:
+    try:
+        return await record_or_replay(
+            case_id=case_id, user_id=user_id, request=request, session_factory=session_factory
+        )
+    except IntegrityError as error:
+        if not repeated_send(error):
+            raise
+    sent = await sent_message(session_factory, case_id, user_id, request.client_request_id)
+    return await messages_from(session_factory, case_id, sent.ordinal), None
+
+
+def repeated_send(error: IntegrityError) -> bool:
+    return getattr(error.orig.__cause__, "constraint_name", None) == SEND_KEY_INDEX
+
+
+async def record_or_replay(
+    *,
+    case_id: UUID,
+    user_id: UUID | None,
+    request: ChatMessageCreate,
+    session_factory: Callable,
+) -> tuple[list[ChatMessage], AnalysisStep | None]:
     if (
         sent := await sent_message(session_factory, case_id, user_id, request.client_request_id)
     ) is not None:
@@ -178,6 +204,7 @@ async def record_answer_and_ask_next(
     request: ChatMessageCreate,
     session_factory: Callable,
 ) -> RecordedFollowup | None:
+    content = message_text(request.content)
     async with session_factory() as db, db.begin():
         case = await owned_case(db, case_id, user_id, lock=True)
         question = await pending_question(db, case.id)
@@ -186,7 +213,7 @@ async def record_answer_and_ask_next(
         answer = answer_message(
             case_id=case.id,
             ordinal=await next_ordinal(db, case.id),
-            content=request.content.strip(),
+            content=content,
             question=question,
             client_request_id=request.client_request_id,
         )

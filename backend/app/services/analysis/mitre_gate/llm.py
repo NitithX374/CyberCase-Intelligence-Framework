@@ -22,6 +22,7 @@ MitreApplicabilityDecision = Literal["SKIP", "RETRIEVE"]
 MITRE_APPLICABILITY_INPUT_MAX_CHARS = 20_000
 MITRE_APPLICABILITY_SOURCE_MAX_CHARS = 4_000
 MITRE_APPLICABILITY_OUTPUT_TOKENS = 1_024
+PAGE_QUALITY_KEYS = ("page_number", "text_method", "verification_status")
 
 MITRE_APPLICABILITY_SYSTEM_PROMPT = """
 You are the conservative MITRE ATT&CK applicability gate for CyberCase.
@@ -99,7 +100,7 @@ def build_mitre_applicability_prompt(
             {
                 "source_message_id": source.source_id,
                 "content": source.text[:limit],
-                "document_sources": document_source_metadata(source),
+                "document_sources": document_source_metadata(source, limit),
             }
             for source in case_sources
         ]
@@ -112,7 +113,7 @@ def build_mitre_applicability_prompt(
     )
 
 
-def document_source_metadata(source: CaseSourceItem) -> list[dict[str, object]]:
+def document_source_metadata(source: CaseSourceItem, limit: int) -> list[dict[str, object]]:
     if not source.document_id or not source.filename:
         return []
     pages = source.provenance.get("pages")
@@ -120,7 +121,12 @@ def document_source_metadata(source: CaseSourceItem) -> list[dict[str, object]]:
         {
             "document_id": source.document_id,
             "filename": source.filename,
-            "page_spans": pages if isinstance(pages, list) else [],
+            "pages": [
+                {key: page[key] for key in PAGE_QUALITY_KEYS if key in page}
+                for page in (pages if isinstance(pages, list) else [])
+                if isinstance(page, dict)
+                and (not isinstance(page.get("start_offset"), int) or page["start_offset"] < limit)
+            ],
         }
     ]
 

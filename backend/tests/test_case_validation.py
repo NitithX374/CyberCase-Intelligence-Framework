@@ -19,12 +19,18 @@ from app.services.analysis.steps.quotes import (
     find_aligned_quote,
     resolve_document_locator,
 )
+from app.services.document_ingestion.contracts import (
+    DocumentPage,
+    ExtractionMethod,
+    IngestedDocument,
+)
 from app.services.document_ingestion.provenance import bind_exact_page_spans
 from app.services.sources.case_source_bundle import (
     CaseSourceBundle,
     CaseSourceItem,
     case_source_bundle_for_analysis,
 )
+from app.services.sources.source_service import document_provenance
 
 
 def _source(
@@ -341,6 +347,53 @@ def test_a_quote_spanning_more_pages_than_a_citation_holds_keeps_no_page_locator
     citation = validated.claims[0].supporting_citations[0]
     assert citation.exact_quote == quote
     assert citation.page_numbers == []
+
+
+def test_a_blank_page_does_not_cost_the_pages_after_it_their_numbers():
+    ingested = IngestedDocument(
+        filename="scan.pdf",
+        media_type="application/pdf",
+        extraction_method=ExtractionMethod.DOCUMENT_RECOGNITION,
+        pages=[
+            DocumentPage(
+                page_number=number, text=text, text_method="ocr", verification_status=status
+            )
+            for number, text, status in (
+                (1, "first page", "machine_read"),
+                (2, "", "needs_review"),
+                (3, "third page", "machine_read"),
+            )
+        ],
+        full_text="first page\n\nthird page",
+    )
+    source = CaseSourceItem(
+        source_id="s1",
+        source_kind="document",
+        text=ingested.full_text,
+        document_id="d1",
+        filename="scan.pdf",
+        provenance=document_provenance(ingested),
+    )
+    claims = [
+        CaseAnalysisClaim(
+            claim_id=claim_id,
+            claim_type="reported",
+            text="A page was quoted.",
+            epistemic_status="reported",
+            supporting_source_ids=["s1"],
+            supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote=quote)],
+        )
+        for claim_id, quote in (("A-01", "first page"), ("A-02", "third page"))
+    ]
+
+    validated = resolve_case_trace(
+        CaseAnalysisTrace(analysis_mode="case_overview", summary="Pages.", claims=claims),
+        CaseSourceBundle(revision=1, sources=(source,)),
+    )
+
+    first, third = (claim.supporting_citations[0] for claim in validated.claims)
+    assert (first.document_id, first.page_numbers) == ("d1", [1])
+    assert (third.document_id, third.page_numbers) == ("d1", [3])
 
 
 def test_case_provider_analysis_carries_material_gaps_from_main_analysis():

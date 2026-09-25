@@ -1,9 +1,11 @@
 import re
 import unicodedata
 from collections.abc import Mapping
+from functools import cached_property
 
 MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
+MAX_QUOTE_CHARS = 2_000
 PARAPHRASE_TRIGRAM_SHARE = 0.6
 
 
@@ -22,11 +24,28 @@ def trigrams(text: str) -> set[str]:
     return {stripped[i : i + 3] for i in range(len(stripped) - 2)}
 
 
-def looks_like_a_paraphrase(content: str, quote: str) -> bool:
+class IndexedText:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    @cached_property
+    def folded(self) -> tuple[str, list[int]]:
+        return folded(self.text)
+
+    @cached_property
+    def trigrams(self) -> set[str]:
+        return trigrams(self.text)
+
+
+def indexed(content: str | IndexedText) -> IndexedText:
+    return content if isinstance(content, IndexedText) else IndexedText(content)
+
+
+def looks_like_a_paraphrase(content: str | IndexedText, quote: str) -> bool:
     wanted = trigrams(quote)
     if not wanted:
         return False
-    return len(wanted & trigrams(content)) / len(wanted) >= PARAPHRASE_TRIGRAM_SHARE
+    return len(wanted & indexed(content).trigrams) / len(wanted) >= PARAPHRASE_TRIGRAM_SHARE
 
 
 def resolve_document_locator(
@@ -110,6 +129,8 @@ def validate_page_spans(value: object, content: str) -> list[tuple[int, int, int
         page = item.get("page_number")
         start = item.get("start_offset")
         end = item.get("end_offset")
+        if isinstance(page, int) and start is None and end is None:
+            continue
         if not all(isinstance(part, int) for part in (page, start, end)):
             break
         if (
@@ -137,14 +158,16 @@ def quote_occurrences(content: str, quote: str) -> list[int]:
     return occurrences
 
 
-def find_aligned_quote(content: str, quote: str) -> str | None:
+def find_aligned_quote(source: str | IndexedText, quote: str) -> str | None:
+    source = indexed(source)
+    content = source.text
     occurrences = quote_occurrences(content, quote)
     if len(occurrences) == 1:
         return quote
     if len(occurrences) > 1:
         return None
 
-    compatibility_aligned = find_folded_quote(content, quote)
+    compatibility_aligned = find_folded_quote(source, quote)
     if compatibility_aligned is not None:
         return compatibility_aligned
 
@@ -185,8 +208,10 @@ def find_aligned_quote(content: str, quote: str) -> str | None:
     return None
 
 
-def find_folded_quote(content: str, quote: str) -> str | None:
-    folded_content, index = folded(content)
+def find_folded_quote(source: str | IndexedText, quote: str) -> str | None:
+    source = indexed(source)
+    content = source.text
+    folded_content, index = source.folded
     folded_quote, _ = folded(quote)
     if not folded_quote:
         return None
@@ -231,7 +256,9 @@ def expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
 
 
 __all__ = [
+    "IndexedText",
     "MAX_PAGE_SPANS_PER_QUOTE",
+    "MAX_QUOTE_CHARS",
     "looks_like_a_paraphrase",
     "MAX_SUPPORTED_DOCUMENT_PAGES",
     "extract_documents_for_source",

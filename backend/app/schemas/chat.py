@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.analysis import CaseAnalysisResultRead
 from app.schemas.message_metadata import MessageMetadata
@@ -16,6 +16,13 @@ MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 class ChatMessageCreate(BaseModel):
     content: str = Field(default="")
     client_request_id: str | None = Field(default=None, max_length=255)
+
+    @field_validator("client_request_id")
+    @classmethod
+    def refuse_nul(cls, value: str | None) -> str | None:
+        if value is not None and "\x00" in value:
+            raise ValueError("client_request_id cannot contain NUL")
+        return value
 
 
 class ChatMessageRead(BaseModel):

@@ -7,18 +7,19 @@ from app.services.analysis.contracts import (
     CaseAnalysisTrace,
     CaseSourceCitation,
 )
+from app.services.analysis.steps import quotes
 from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 TEXT = "Filenames had been changed and a text file demanded contact by email."
 
 
-def bundle_and_id() -> tuple[CaseSourceBundle, str]:
+def bundle_and_id(text: str = TEXT) -> tuple[CaseSourceBundle, str]:
     source_id = str(uuid4())
     return (
         CaseSourceBundle(
             revision=1,
-            sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=TEXT),),
+            sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=text),),
         ),
         source_id,
     )
@@ -195,3 +196,61 @@ def test_a_repeated_quote_is_kept_once_and_counted_as_a_duplicate():
     assert trace.grounding.citations_verified == 1
     assert trace.grounding.citations_duplicated == 1
     assert_counts_add_up(trace)
+
+
+def test_an_elided_quote_that_widens_past_a_citation_is_dropped_and_counted():
+    head = "The attacker logged in to the VPN gateway."
+    tail = "The attacker exfiltrated the payroll archive."
+    filler = " ".join(f"Routine log line {n} recorded nothing unusual." for n in range(80))
+    bundle, source_id = bundle_and_id(f"{head} {filler} {tail}")
+
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", f"{head} ... {tail}"),
+            claim(source_id, "A-02", head),
+        ),
+        bundle,
+    )
+
+    assert trace.claims[0].supporting_citations == []
+    assert [c.exact_quote for c in trace.claims[1].supporting_citations] == [head]
+    assert trace.grounding.citations_verified == 1
+    assert trace.grounding.citations_duplicated == 0
+    assert_counts_add_up(trace)
+
+
+def test_a_quote_the_markdown_match_widens_past_a_citation_is_dropped_and_counted():
+    words = [f"tok{n:03d}" for n in range(250)]
+    bundle, source_id = bundle_and_id("\n\n".join(f"**{word}**" for word in words))
+
+    trace = resolve_case_trace(trace_of(claim(source_id, "A-01", " ".join(words))), bundle)
+
+    assert trace.claims[0].supporting_citations == []
+    assert trace.grounding.citations_verified == 0
+    assert trace.grounding.citations_duplicated == 0
+    assert_counts_add_up(trace)
+
+
+def test_a_source_is_folded_and_split_once_however_many_quotes_are_sought_in_it(monkeypatch):
+    folded: list[str] = []
+    split: list[str] = []
+    fold, split_into_trigrams = quotes.folded, quotes.trigrams
+    monkeypatch.setattr(quotes, "folded", lambda text: folded.append(text) or fold(text))
+    monkeypatch.setattr(
+        quotes, "trigrams", lambda text: split.append(text) or split_into_trigrams(text)
+    )
+    bundle, source_id = bundle_and_id()
+    loose = [
+        "Filenames were changed and a text file demanded contact",
+        "Filenames were altered and a text file demanded contact",
+        "Filenames had changed and the text file demanded contact",
+    ]
+
+    trace = resolve_case_trace(
+        trace_of(*(claim(source_id, f"A-0{n}", quote) for n, quote in enumerate(loose, 1))),
+        bundle,
+    )
+
+    assert trace.grounding.citations_paraphrased == 3
+    assert folded.count(TEXT) == 1
+    assert split.count(TEXT) == 1

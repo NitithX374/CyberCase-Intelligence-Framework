@@ -16,6 +16,7 @@ from pydantic import (
 
 from app.services.analysis.steps.quotes import (
     MAX_PAGE_SPANS_PER_QUOTE,
+    MAX_QUOTE_CHARS,
     MAX_SUPPORTED_DOCUMENT_PAGES,
 )
 
@@ -80,7 +81,7 @@ class CaseSourceCitation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source_id: str = Field(min_length=1, max_length=160)
-    exact_quote: str = Field(default="", max_length=2_000)
+    exact_quote: str = Field(default="", max_length=MAX_QUOTE_CHARS)
     document_id: str | None = Field(default=None, min_length=1, max_length=160)
     filename: str | None = Field(default=None, min_length=1, max_length=255)
     page_numbers: list[int] = Field(default_factory=list, max_length=MAX_PAGE_SPANS_PER_QUOTE)
@@ -119,7 +120,7 @@ class CaseProviderCitation(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     source_id: str = Field(min_length=1, max_length=160)
-    exact_quote: str = Field(min_length=1, max_length=2_000)
+    exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
 
 
 class CaseGeneratedUnit(BaseModel):
@@ -223,7 +224,7 @@ def normalized_citation(data: object) -> dict[str, object] | None:
         return None
     source_id = source_id.strip()
     quote = quote.strip()
-    if not source_id or not quote or len(source_id) > 160 or len(quote) > 2_000:
+    if not source_id or not quote or len(source_id) > 160 or len(quote) > MAX_QUOTE_CHARS:
         return None
     return {
         "source_id": source_id,

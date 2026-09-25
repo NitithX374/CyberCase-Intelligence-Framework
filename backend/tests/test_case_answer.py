@@ -11,8 +11,10 @@ import app.services.chat.case_answer as module
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
+    CaseFollowupExchange,
     CaseGeneratedUnit,
     CaseSourceCitation,
+    followup_snapshot,
 )
 from app.services.chat.case_answer import (
     CaseAnswerResponse,
@@ -42,11 +44,12 @@ def analysed_case() -> tuple[CaseSourceBundle, CaseAnalysisTrace]:
     return bundle, trace
 
 
-def stored_analysis(trace: CaseAnalysisTrace):
+def stored_analysis(trace: CaseAnalysisTrace, external_context: dict | None = None):
     return SimpleNamespace(
         id=uuid4(),
         summary=trace.summary,
         trace_json=trace.model_dump(mode="json"),
+        external_context_json=external_context or {},
     )
 
 
@@ -204,3 +207,55 @@ def test_a_general_reply_must_carry_its_text():
 def test_only_a_general_reply_carries_that_text():
     with pytest.raises(ValidationError):
         CaseAnswerResponse(outcome="not_in_analysis", units=[], general_answer="Two.")
+
+
+REPLY = CaseFollowupExchange(
+    qa_id="QA-01", gap_key="topic:time", question="When did it begin?", answer="At two."
+)
+
+
+def resting_on_the_reply(external_context: dict):
+    claim = CaseAnalysisClaim(
+        claim_id="A-01",
+        claim_type="reported",
+        text="It began at two.",
+        epistemic_status="reported",
+        supporting_source_ids=["QA-01"],
+        supporting_citations=[CaseSourceCitation(source_id="QA-01", exact_quote="At two.")],
+    )
+    trace = CaseAnalysisTrace(analysis_mode="case_overview", summary=claim.text, claims=[claim])
+    return stored_analysis(trace, external_context)
+
+
+def answered_from_the_reply(monkeypatch, external_context: dict):
+    output, _ = answered_with(
+        monkeypatch,
+        CaseAnswerResponse(
+            outcome="answered", units=[CaseGeneratedUnit(text="At two.", claim_ids=["A-01"])]
+        ),
+        result=resting_on_the_reply(external_context),
+    )
+    return output
+
+
+def test_a_claim_resting_on_a_follow_up_answer_keeps_it_in_the_chat(monkeypatch):
+    output = answered_from_the_reply(monkeypatch, {"followup_history": followup_snapshot([REPLY])})
+
+    [claim] = output.trace.claims
+    assert claim.supporting_source_ids == ["QA-01"]
+    assert [citation.source_id for citation in claim.supporting_citations] == ["QA-01"]
+    assert output.trace.grounding.citations_unfound == 0
+
+
+def test_an_unreadable_follow_up_record_does_not_cost_the_answer(monkeypatch):
+    output = answered_from_the_reply(monkeypatch, {"followup_history": {"items": "unreadable"}})
+
+    assert output.answer == "At two."
+    assert output.trace.claims[0].supporting_source_ids == []
+
+
+def test_an_answer_longer_than_a_summary_is_refused_by_its_contract():
+    unit = CaseGeneratedUnit(text="x" * 3_900, claim_ids=["A-01"])
+
+    with pytest.raises(ValidationError):
+        CaseAnswerResponse(outcome="answered", units=[unit] * 7)

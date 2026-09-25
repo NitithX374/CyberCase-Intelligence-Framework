@@ -249,6 +249,16 @@ def test_unsupported_file_type_fails_cleanly() -> None:
     assert raised.value.code == "unsupported_document_type"
 
 
+def test_a_nul_in_an_uploaded_filename_is_dropped() -> None:
+    result = asyncio.run(
+        _service(RecordingRecognizer()).ingest(
+            _docx_bytes("รายละเอียดคดี"), "case" + chr(0) + ".docx"
+        )
+    )
+
+    assert result.filename == "case.docx"
+
+
 def test_a_page_that_could_not_be_read_is_a_warning_when_others_were() -> None:
     native_text = "Native page one contains a complete criminal investigation narrative. " * 5
     result = asyncio.run(

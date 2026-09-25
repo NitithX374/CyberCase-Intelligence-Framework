@@ -117,22 +117,43 @@ async def latest_question(db: AsyncSession, case_id: UUID) -> tuple[ChatMessage 
     return question, reply is not None
 
 
+async def analysed_since(db: AsyncSession, case_id: UUID, ordinal: int) -> bool:
+    analysis = await db.scalar(
+        select(ChatMessage.id)
+        .join(CaseAnalysisResult, ChatMessage.analysis_result_id == CaseAnalysisResult.id)
+        .where(
+            ChatMessage.case_id == case_id,
+            ChatMessage.ordinal > ordinal,
+            ChatMessage.role == "assistant",
+            ChatMessage.message_kind == "conversation",
+            ChatMessage.in_reply_to_message_id.is_(None),
+            CaseAnalysisResult.status == "validated",
+        )
+        .limit(1)
+    )
+    return analysis is not None
+
+
 async def pending_question(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
     question, answered = await latest_question(db, case_id)
-    return None if answered else question
+    if question is None or answered or await analysed_since(db, case_id, question.ordinal):
+        return None
+    return question
 
 
 async def last_question_awaiting_analysis(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
-    question, answered = await latest_question(db, case_id)
-    if question is None or not answered or question.analysis_result_id is None:
+    question, _ = await latest_question(db, case_id)
+    if question is None or question.analysis_result_id is None:
         return None
-    latest = await db.scalar(
-        select(CaseAnalysisResult.id)
-        .where(CaseAnalysisResult.case_id == case_id)
-        .order_by(CaseAnalysisResult.created_at.desc(), CaseAnalysisResult.id.desc())
+    answer = await db.scalar(
+        select(ChatMessage)
+        .where(ChatMessage.in_reply_to_message_id == question.id)
+        .order_by(ChatMessage.ordinal)
         .limit(1)
     )
-    return question if latest == question.analysis_result_id else None
+    if answer is None or await analysed_since(db, case_id, answer.ordinal):
+        return None
+    return question
 
 
 def answer_message(

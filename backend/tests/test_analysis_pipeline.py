@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from uuid import uuid4
 
 import pytest
@@ -220,6 +221,27 @@ def test_binding_is_what_writes_the_grounding_report():
     assert unbound.trace.grounding is None
     assert bound.trace.grounding is not None
     assert bound.trace.grounding.citations_verified == 1
+
+
+def test_binding_runs_off_the_event_loop(monkeypatch):
+    bound_on: list[int] = []
+    resolve = pipeline_module.resolve_case_trace
+
+    def recording(*args, **kwargs):
+        bound_on.append(threading.get_ident())
+        return resolve(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline_module, "resolve_case_trace", recording)
+    bundle, trace = case_with_one_narrative()
+
+    async def bind() -> int:
+        await bind_to_case(AnalysisInput(sources=bundle), AnalysisArtifacts(trace=trace))
+        return threading.get_ident()
+
+    loop_thread = asyncio.run(bind())
+
+    assert len(bound_on) == 1
+    assert bound_on[0] != loop_thread, "binding a large source would stall every other request"
 
 
 def test_the_analysis_needs_no_case_row_to_run():

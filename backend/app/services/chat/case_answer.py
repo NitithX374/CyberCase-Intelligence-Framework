@@ -11,8 +11,11 @@ from app.services.analysis.contracts import (
     CaseAnalysisFailure,
     CaseAnalysisOutput,
     CaseAnalysisTrace,
+    CaseFollowupExchange,
     CaseGeneratedUnit,
+    followup_history_of_snapshot,
 )
+from app.services.analysis.contracts.trace import MAX_SUMMARY_CHARS
 from app.services.analysis.language import ResponseLanguage
 from app.services.analysis.provider import request_stage
 from app.services.analysis.settings import configured_pipeline
@@ -64,7 +67,23 @@ class CaseAnswerResponse(BaseModel):
             raise ValueError("An answer about the case needs claims; the other outcomes have none")
         if (self.outcome == "general") != bool(self.general_answer.strip()):
             raise ValueError("A general reply needs its text, and only a general reply has it")
+        if len(joined_units(self.units)) > MAX_SUMMARY_CHARS:
+            raise ValueError("The answer is longer than one summary can hold")
         return self
+
+
+def joined_units(units: list[CaseGeneratedUnit]) -> str:
+    return "\n\n".join(unit.text for unit in units)
+
+
+def recorded_followups(result: CaseAnalysisResult) -> tuple[CaseFollowupExchange, ...]:
+    context = result.external_context_json
+    if not isinstance(context, dict) or "followup_history" not in context:
+        return ()
+    try:
+        return followup_history_of_snapshot(context["followup_history"])
+    except ValueError:
+        return ()
 
 
 class GeneralCaseAnswerResponse(BaseModel):
@@ -138,7 +157,7 @@ async def generate_case_answer(
             "case_answer_unknown_claim", "Chat answer references a claim outside its analysis"
         )
     if response.outcome == "answered":
-        answer = "\n\n".join(unit.text for unit in response.units)
+        answer = joined_units(response.units)
     elif response.outcome == "general":
         answer = response.general_answer.strip()
     else:
@@ -150,6 +169,7 @@ async def generate_case_answer(
             claims=[deepcopy(known[claim_id]) for claim_id in selected],
         ),
         sources,
+        followup_history=recorded_followups(result),
     )
     return CaseAnalysisOutput(answer=answer, trace=answer_trace)
 

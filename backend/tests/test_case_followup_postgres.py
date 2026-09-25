@@ -21,14 +21,14 @@ from app.services.analysis.clarification import Ask
 from app.services.analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace, CaseAssessmentTrace
 from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.services.chat.case_chat import get_case_chat, post_case_message, send_case_message
-from app.services.chat.followup import pending_question
+from app.services.chat.followup import analysis_result_message, pending_question
 from app.services.reports.display import clarification_limitation
 from app.services.workflow.run_analysis import (
     analysing,
     get_latest_case_analysis,
     run_case_analysis,
 )
-from app.services.workflow.shared import CaseWorkflowError
+from app.services.workflow.shared import CaseWorkflowError, next_ordinal
 
 pytestmark = pytest.mark.asyncio
 
@@ -54,14 +54,22 @@ async def answer_the_question(
 
 async def analysed_after_the_round(session_factory, case_id: uuid.UUID) -> None:
     async with session_factory() as db, db.begin():
+        result = CaseAnalysisResult(
+            case_id=case_id,
+            source_revision=1,
+            summary="Analysed after the round.",
+            trace_json=TRACE,
+            pipeline_config={},
+            external_context_json={},
+        )
+        db.add(result)
+        await db.flush()
         db.add(
-            CaseAnalysisResult(
+            analysis_result_message(
                 case_id=case_id,
-                source_revision=1,
-                summary="Analysed after the round.",
-                trace_json=TRACE,
-                pipeline_config={},
-                external_context_json={},
+                ordinal=await next_ordinal(db, case_id),
+                trace=CaseAnalysisTrace.model_validate(TRACE),
+                analysis_result_id=result.id,
             )
         )
 
@@ -91,7 +99,6 @@ def production_pipeline(monkeypatch, gaps: list[CaseAnalysisGap], seen: list | N
     monkeypatch.setattr(pipeline_module, "assess_gaps", assess)
     monkeypatch.setattr(pipeline_module, "retrieve_technical_context", unchanged)
     monkeypatch.setattr(pipeline_module, "write_analysis", write)
-    monkeypatch.setattr(pipeline_module, "bind_to_case", unchanged)
 
 
 async def bare_analysis(_data):
@@ -509,10 +516,12 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good(monkeypatch):
         )
 
         assert asked_again.needs_followup, "the reader's own analysis may ask again"
-        assert asked_again.question.id == standing.id, (
-            "and it re-offers the standing question rather than adding one"
+        assert asked_again.question.id != standing.id, (
+            "the analysis stored since then retired the standing question"
         )
-        assert (await gap_questions(session_factory, case_id))[-1].id == standing.id
+        async with session_factory() as db:
+            outstanding = await pending_question(db, case_id)
+        assert outstanding.id == asked_again.question.id, "one question is outstanding at a time"
 
 
 async def test_a_second_analysis_does_not_strand_the_standing_question(monkeypatch):

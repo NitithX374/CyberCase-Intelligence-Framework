@@ -1,19 +1,30 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from app.schemas.analysis import AnalysisFreshness
 
 
+def without_nul(title: str) -> str:
+    title = title.replace("\x00", "")
+    if not title:
+        raise ValueError("A case title needs at least one character")
+    return title
+
+
+CaseTitle = Annotated[str, Field(min_length=1, max_length=255), AfterValidator(without_nul)]
+
+
 class CaseCreate(BaseModel):
-    title: str = Field(default="New case", min_length=1, max_length=255)
+    title: CaseTitle = "New case"
 
 
 class CaseUpdate(BaseModel):
-    title: str = Field(min_length=1, max_length=255)
+    title: CaseTitle
 
 
 class CaseRead(BaseModel):

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+from functools import partial
 
 import pytest
-from case_chat_support import seeded_case
+from case_chat_support import SETTLED, seeded_case
 from isolated_database import isolated_database
 from sqlalchemy import select, text
 
@@ -132,3 +133,76 @@ async def test_an_answer_waits_for_a_case_write_in_flight_and_takes_the_next_ord
         question, answer = await answering
 
         assert (question.ordinal, answer.ordinal) == (2, 4)
+
+
+async def sent_together(monkeypatch, session_factory, case_id, user_id):
+    looked_up = asyncio.Barrier(2)
+    lookups = 0
+    sent_message = case_chat.sent_message
+
+    async def looked_up_together(*args, **kwargs):
+        nonlocal lookups
+        found = await sent_message(*args, **kwargs)
+        lookups += 1
+        if lookups <= 2:
+            await looked_up.wait()
+        return found
+
+    monkeypatch.setattr(case_chat, "sent_message", looked_up_together)
+    send = ChatMessageCreate(content="Around two in the morning.", client_request_id="send-1")
+    return await asyncio.gather(
+        *(
+            post_case_message(
+                case_id=case_id, user_id=user_id, request=send, session_factory=session_factory
+            )
+            for _ in range(2)
+        )
+    )
+
+
+async def stored_kinds(session_factory, case_id) -> list[str]:
+    async with session_factory() as db:
+        rows = await db.scalars(
+            select(ChatMessage).where(ChatMessage.case_id == case_id).order_by(ChatMessage.ordinal)
+        )
+        return [message.message_kind for message in rows]
+
+
+async def test_one_question_sent_twice_at_once_is_asked_once(monkeypatch):
+    async with isolated_database() as session_factory:
+        case_id, user_id, _ = await seeded_case(
+            session_factory, trace=SETTLED, asking=False, with_source=False
+        )
+        asked: list[str] = []
+
+        async def answer(**kwargs):
+            asked.append(kwargs["question"])
+            return CaseAnalysisOutput(answer="Answered once.", trace=None)
+
+        monkeypatch.setattr(
+            case_chat, "answer_case_question", partial(answer_case_question, answer_request=answer)
+        )
+        replies = await sent_together(monkeypatch, session_factory, case_id, user_id)
+
+        assert [step for _, step in replies] == [None, None]
+        assert asked == ["Around two in the morning."]
+        assert await stored_kinds(session_factory, case_id) == ["conversation", "conversation"]
+
+
+async def test_one_answer_sent_twice_at_once_is_recorded_and_analysed_once(monkeypatch):
+    async with isolated_database() as session_factory:
+        case_id, user_id, _ = await seeded_case(session_factory, with_source=False)
+        analyses: list[bool] = []
+
+        async def analysed(**kwargs):
+            analyses.append(kwargs["continuing_followup"])
+
+        monkeypatch.setattr(case_chat, "run_case_analysis", analysed)
+        replies = await sent_together(monkeypatch, session_factory, case_id, user_id)
+
+        assert len(replies) == 2
+        assert analyses == [True]
+        assert await stored_kinds(session_factory, case_id) == [
+            "followup_question",
+            "followup_answer",
+        ]
