@@ -29,7 +29,7 @@ A feature may import another feature's hooks or types (Analysis reads sources); 
 
 `src/lib/api/generated/openapi.ts` is generated from the backend's OpenAPI schema, and `src/lib/api/types.ts` names the schemas the UI uses. Regenerate it with `npm run generate:api-types` after a backend schema change; `npm run check:api-types` fails when it is stale. Both export the schema through Python (`env_mitre`, or the interpreter in `CYBERCASE_PYTHON`) and need no running backend. The UI must distinguish native Case sources, follow-up answers, analysis, optional technical context, and report status according to the current response schemas.
 
-The Sources and Overview views may project answered follow-up messages alongside native sources for reader navigation. That display projection does not make a follow-up answer a persisted `CaseSource`.
+The Sources and Analysis views may project answered follow-up messages alongside native sources for reader navigation: Sources reads them from the chat (`features/sources/useCaseSourceRows.ts`), and Analysis reads the ones the analysis recorded (`features/analysis/analysisRecord.ts`). That display projection does not make a follow-up answer a persisted `CaseSource`.
 
 ## Commands
 

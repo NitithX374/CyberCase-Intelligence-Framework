@@ -1,6 +1,6 @@
 # CyberCase logo
 
-2026-09-07: generated with the built-in imagegen tool. Final asset: `frontend/public/cybercase-mark.png`. Black C/case-folder/evidence-link symbol; generated output has transparency. Used by the shared `CyberCaseLogo` component and browser icon metadata. Previous favicon preserved as `frontend/public/cybercase-legacy-favicon.ico`.
+2026-09-07: generated with the built-in imagegen tool. Final asset: `frontend/public/cybercase-mark.png`. Black C/case-folder/evidence-link symbol; generated output has transparency. Used by the shared `CyberCaseLogo` component and browser icon metadata.
 
 Generation prompt:
 

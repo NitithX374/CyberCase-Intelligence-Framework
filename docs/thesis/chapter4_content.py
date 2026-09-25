@@ -93,18 +93,19 @@ def structure(ch: Chapter) -> None:
     ch.plain("backend/app/", bold=True)
     ch.bullets(
         [
-            "routers/ - one file per resource; errors.py turns a service error into an HTTP response",
-            "schemas/ - request and response contracts, all declared with extra=forbid",
+            "errors.py - AppError, the one service error; one handler in main.py turns it into an HTTP response",
+            "routers/ - one file per resource",
+            "schemas/ - request and response contracts",
             "models/ - the SQLAlchemy tables",
             "services/auth/ - sessions, password hashing, the guard every browser request passes",
-            "services/document_ingestion/ - upload to text: format routing, parsers, OCR, provenance",
+            "services/cases/ - case CRUD, and the ownership check every case route uses",
+            "services/document_ingestion/ - upload to text: format detection, parsers, OCR, provenance",
             "services/sources/ - documents, and the one bundle an analysis reads from",
-            "services/case_analysis/ - the analysis itself: prompts, provider call, binding, and the gate",
-            "services/technical_context/ - the MITRE retrieval a pipeline stage asks for",
-            "services/case_workflow/ - running an analysis, and answering a question about one",
+            "services/analysis/ - the analysis itself: the preflight, the MITRE gate, the technical context, the write call, binding, prompts and the provider call",
+            "services/workflow/ - running an analysis, and answering a chat question from the latest analysis or, before there is one, from the sources",
             "services/chat/ - the case conversation and the follow-up it carries",
-            "services/reports/ - contracts, content, assembly, HTML and PDF rendering",
-            "services/llm/ - provider routing and the model registry",
+            "services/reports/ - contracts, the stored display snapshot, projection, persistence, HTML and PDF rendering",
+            "services/llm/ - the OpenRouter target, the model registry, and the structured-output schema",
             "services/clients/ - the HTTP client for the RAG service",
         ]
     )
@@ -122,7 +123,7 @@ def structure(ch: Chapter) -> None:
             ["GET /auth/session", "The signed-in user, or none"],
             ["GET, POST /cases", "List and create cases"],
             ["GET, PATCH, DELETE /cases/{case_id}", "Read, rename and delete one case"],
-            ["GET, POST /cases/{case_id}/documents", "Upload a document, list what was uploaded"],
+            ["POST /cases/{case_id}/documents", "Upload a document"],
             ["GET /cases/{case_id}/documents/{id}/content", "Read a document back"],
             ["GET, POST /cases/{case_id}/sources", "What the case is analysed from"],
             ["GET, POST /cases/{case_id}/analysis", "Read the latest analysis, or run one"],

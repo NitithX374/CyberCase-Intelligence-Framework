@@ -1,8 +1,8 @@
 # CyberCase Current Project Direction
 
-**Status:** current product and thesis boundary as of 2026-09-22.
+**Status:** current product and thesis boundary as of 2026-09-25.
 
-This document describes the runtime that is currently in the checkout and separates implemented behavior from optional integrations and research proposals. Dated audits, migration receipts, and experiment plans remain historical records; they are not used to override the current code path.
+This document describes the runtime that is currently in the checkout and separates implemented behavior from optional integrations and research proposals. Dated research notes and experiment plans are historical records; they do not override the current code path.
 
 ## 1. Confirmed product scope
 
@@ -26,20 +26,20 @@ Read CaseSourceBundle + follow-up history
 Gap-only assessment (case_assessment_v1)
               ↓
 Deterministic follow-up policy
-       ┌──────┴──────────┐
-       │                 │
-       Ask               Proceed
-       │                 ↓
-Persist assessment       Optional MITRE augmentation
-and focused question             ↓
-       │                Main structured analysis
-       │                 (main_case_analysis_v1)
-       │                          ↓
-       └──────────────→ Deterministic source binding
-                                  ↓
-                         Validated analysis result
-                                  ↓
-                    Deterministic template-first report
+       ┌──────┴──────┐
+       │             │
+       Ask           Proceed
+       ↓             ↓
+Persist assessment   Optional MITRE augmentation
+and focused question ↓
+(request ends)       Main structured analysis
+                     (case_analysis_trace_v1)
+                     ↓
+                     Deterministic source binding
+                     ↓
+                     Validated analysis result
+                     ↓
+                     Deterministic template-first report
 ```
 
 The core workflow without `rag_service` is:
@@ -65,8 +65,8 @@ An askable gap stops the request before the full main-analysis call and source b
 ### Language-model responsibilities
 
 - Assess unresolved factual gaps using the strict `case_assessment_v1` contract.
-- Produce the structured `main_case_analysis_v1` result when the deterministic policy permits full analysis.
-- Answer ordinary Case Ask questions using the selected analysis context.
+- Produce the structured `case_analysis_trace_v1` result when the deterministic policy permits full analysis.
+- Answer ordinary Case Ask questions from the latest analysis, or from the Case sources when no analysis exists yet.
 - Optionally classify MITRE applicability when the external augmentation path is enabled.
 
 ### Deterministic backend responsibilities
@@ -77,29 +77,29 @@ An askable gap stops the request before the full main-analysis call and source b
 - Resolve source identifiers and verify literal quotations against native sources or answered follow-up records.
 - Persist assessment and validated results with explicit statuses.
 - Reject a result if the native Case source revision changed during model work.
-- Assemble and validate the preliminary report and render HTML/PDF.
+- Assemble the preliminary report once per analysis from what that analysis recorded, store it as a display snapshot, and render HTML/PDF from the stored copy.
 
 The analysis steps do not access the database. The workflow reads the Case in a short transaction, performs model or external-service work without holding that transaction, and stores the result in a second short transaction. There is no `CaseRun` table, run-status endpoint, job queue, or frontend polling loop.
 
 ## 4. Source roles and trust boundary
 
-Only native Case sources support incident facts, timelines, parties, impacts, and findings. A follow-up answer is information supplied by the reader and is carried separately from the native source bundle. Assistant output and external MITRE/RAG context are not admitted Case facts.
+Native Case sources and answered follow-ups support incident facts, timelines, parties, impacts, and findings. A claim cites a follow-up answer by its `QA-nn` id the same way it cites a source id, and binding checks its quote against the answer text (`MAIN_CASE_ANALYSIS_SYSTEM_PROMPT` in `backend/app/services/analysis/prompts.py`, `followup_registry_items` in `backend/app/services/analysis/steps/bind.py`). A follow-up answer is still not a `CaseSource`: it stays a chat message, outside the native source bundle, and does not move `source_revision`. Assistant output and external MITRE/RAG context cannot support claims.
 
-The system preserves reported, suspected, contradicted, unknown, and not-established distinctions where the analysis contract provides them. A valid exact quote is evidence that a string occurs in a source; it is not by itself proof that the model's larger claim is semantically correct.
+The system preserves reported, suspected, contradicted, unknown, and not-established distinctions where the analysis contract provides them. A valid exact quote shows that a string occurs in a source; it is not by itself proof that the model's larger claim is semantically correct.
 
 ## 5. Current code contracts
 
 | Concern | Current contract or boundary |
 |---|---|
-| Analysis pipeline | `raw_direct` / `main_case_analysis_v1` |
+| Analysis pipeline | `advance_case`; the model returns `case_analysis_trace_v1` |
 | Pre-analysis assessment | `case_assessment_v1` |
 | Native input | `CaseSourceBundle(revision, sources)` |
 | Follow-up state | `ChatMessage` history, gap keys, round budget |
 | Full-analysis output | `CaseAnalysisTrace` with summary, claims, timeline, parties, impacts, gaps, grounding, and optional technical associations |
-| Report | Deterministic structured report from a validated analysis |
+| Report | Deterministic `CaseReportContent` snapshot, one per validated analysis |
 | Technical context | Optional external augmentation, isolated from Case facts |
 
-The production configuration currently exposes `raw_direct` only. Claim-anchored, split, revise, event-structured, and other alternative compositions belong to experiment or planning areas unless a separate implementation receipt explicitly promotes one to production.
+Production runs one composition, `advance_case`, and there is no setting that selects another. The `direct`, `verify`, `revise` and `split` arms live in `backend/experiments/analysis_arms.py` and `backend/experiments/split_analysis.py`. Claim-anchored and event-structured variants are not implemented in `backend/app/`.
 
 ## 6. Thesis scope that is supportable now
 
@@ -145,5 +145,5 @@ No current implementation receipt is a substitute for human semantic evaluation.
 - Document ingestion: `backend/app/services/document_ingestion/`
 - Native source bundle: `backend/app/services/sources/`
 - Source binding: `backend/app/services/analysis/steps/bind.py`
-- Report assembly: `backend/app/services/reports/`
+- Report assembly: `backend/app/services/reports/` (`display.py` builds the stored snapshot)
 - Route boundary: `backend/tests/test_route_surface.py`
