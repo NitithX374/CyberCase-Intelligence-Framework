@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { refusal, timeoutError } from "@/test/httpErrors";
-import { toUserFacingError } from "./userFacingError";
+import { toUserFacingError } from "@/lib/userFacingError";
 
 describe("whether the reader is offered a retry", () => {
   it.each([
