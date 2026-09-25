@@ -3,7 +3,6 @@ import {
   getCaseAnalysis,
   startCaseAnalysis,
   type AnalysisStepRead,
-  type CaseAnalysisCreate,
   type CaseAnalysisResultRead,
 } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
@@ -42,9 +41,9 @@ export function useStartCaseAnalysis(caseId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: caseId ? caseQueryKeys.analysisRun(caseId) : UNRUNNABLE_ANALYSIS_KEY,
-    mutationFn: (request: CaseAnalysisCreate) => {
+    mutationFn: () => {
       if (!caseId) throw new Error("Case ID is required to start analysis.");
-      return startCaseAnalysis(caseId, request);
+      return startCaseAnalysis(caseId);
     },
     onSuccess: (step: AnalysisStepRead) => {
       if (!caseId) return;

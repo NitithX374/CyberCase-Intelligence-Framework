@@ -174,8 +174,6 @@ function statusMessage(data: TechnicalContextData): string {
     not_applicable: "Not applicable — the case has no technical indicators.",
     insufficient_context: "No supported ATT&CK context was found.",
     retrieved_with_matches: "",
-    retrieved_without_supported_match:
-      "Techniques were retrieved, but none is supported by the case sources.",
     retrieved_from_rag: "Suggested by the knowledge base. Not tied to a case source.",
     failed: `The ATT&CK lookup failed${stage}.`,
     invalid_trace: "The saved ATT&CK context could not be verified, so it is not shown.",

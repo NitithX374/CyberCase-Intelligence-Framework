@@ -4,13 +4,15 @@ import { CaseOverviewView } from "./CaseOverviewView";
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
 import { useCaseSources } from "@/features/sources/queries";
-import { useCaseChatMessages, useIsFollowupPending } from "@/features/chat/useCaseChat";
+import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 import {
   analysisResult,
   caseId,
   claim,
+  followupHistory,
   narrativeSource,
   pagedDocumentSource,
+  sourcesRead,
   trace,
 } from "@/test/fixtures";
 
@@ -33,7 +35,6 @@ vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
 }));
 vi.mock("@/features/sources/queries", () => ({ useCaseSources: vi.fn() }));
 vi.mock("@/features/chat/useCaseChat", () => ({
-  useCaseChatMessages: vi.fn(),
   useIsFollowupPending: vi.fn(),
 }));
 
@@ -76,7 +77,10 @@ function caseProjection(options: { page?: boolean; stale?: boolean } = {}): {
         },
       ],
     }),
-    external_context_json: { technical_augmentation: { status: "not_applicable" } },
+    external_context_json: {
+      technical_augmentation: { status: "not_applicable" },
+      sources_read: sourcesRead(source.id),
+    },
     freshness: options.stale ? "stale" : "current",
   });
   return { result, sources: [source] };
@@ -109,7 +113,6 @@ function configureAndRender(overrides: MockOverrides = {}) {
     isLoadingError: overrides.sourcesFailed ?? false,
     refetch: state.refetchSources,
   } as never);
-  vi.mocked(useCaseChatMessages).mockReturnValue({ data: [], isLoading: false } as never);
   vi.mocked(useIsCaseAnalysisRunning).mockReturnValue(overrides.analysisRunning ?? false);
   vi.mocked(useIsFollowupPending).mockReturnValue(overrides.followupPending ?? false);
 
@@ -158,6 +161,26 @@ describe("CaseOverviewView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Analysis record" }));
     expect(screen.getByText("Documents").nextElementSibling).toHaveTextContent("statement.pdf");
+  });
+
+  it("counts the sources the analysis read, not the ones added after it", () => {
+    const projection = caseProjection({ page: true });
+    projection.result.external_context_json = {
+      ...projection.result.external_context_json,
+      followup_history: followupHistory("When was the transfer?", "At noon."),
+    };
+    const later = narrativeSource("Added after the analysis.", {
+      id: "33333333-3333-4333-8333-333333333333",
+      filename: "later.pdf",
+    });
+    configureAndRender({
+      analysisResult: projection.result,
+      sources: [...projection.sources, later],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Analysis record" }));
+    expect(screen.getByText("Sources").nextElementSibling).toHaveTextContent("2 · 1 cited");
+    expect(screen.getByText("Documents").nextElementSibling).toHaveTextContent(/^statement\.pdf$/);
   });
 
   it("says the analysis is being updated while a run is in flight", () => {

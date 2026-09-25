@@ -3,12 +3,13 @@
 import { useMemo, type ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import { plural } from "@/lib/format";
-import { fetchCaseDocumentContent, type CaseDocumentRead, type CaseSourceRead } from "@/lib/api";
+import { fetchCaseDocumentContent, type CaseSourceRead } from "@/lib/api";
 import { useBlobUrl } from "@/lib/useBlobUrl";
-import { followupQuestion } from "./followupSources";
 import { itemTitle, type RailItem } from "./SourceRail";
 
 export type PreviewMode = "original" | "ocr" | "split";
+
+type FileItem = Extract<RailItem, { kind: "file" }>;
 
 interface SourceViewportProps {
   caseId: string;
@@ -18,15 +19,10 @@ interface SourceViewportProps {
 }
 
 export function SourceViewport({ caseId, item, mode, onModeChange }: SourceViewportProps) {
-  const read = item?.kind === "file" ? item.source : null;
-  const pageCount = read ? documentPages(read).length : 0;
-
   const subtitle = !item
     ? null
     : item.kind === "file"
-      ? [fileKind(item.document), pageCount > 0 ? plural(pageCount, "page") : null]
-          .filter(Boolean)
-          .join(" · ")
+      ? [fileKind(item.source), plural(documentPages(item.source).length, "page")].join(" · ")
       : item.kind === "followup_answer"
         ? "Follow-up answer"
         : "Case narrative";
@@ -66,19 +62,21 @@ export function SourceViewport({ caseId, item, mode, onModeChange }: SourceViewp
       <div className="min-h-0 flex-1 bg-canvas">
         {!item ? (
           <ViewportMessage title="Select a source to read it." />
-        ) : item.kind !== "file" ? (
-          <TextSourcePreview source={item.source} />
+        ) : item.kind === "followup_answer" ? (
+          <TextSourcePreview question={item.followup.question} text={item.followup.answer} />
+        ) : item.kind === "narrative" ? (
+          <TextSourcePreview question={null} text={item.source.exact_text} />
         ) : mode === "original" ? (
-          <OriginalFilePreview caseId={caseId} document={item.document} />
+          <OriginalFilePreview caseId={caseId} item={item} />
         ) : mode === "ocr" ? (
-          <ExtractedTextPreview source={read} />
+          <ExtractedTextPreview source={item.source} />
         ) : (
           <div className="flex h-full min-h-0 flex-col divide-y divide-line lg:flex-row lg:divide-x lg:divide-y-0">
             <div className="h-1/2 min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full">
-              <OriginalFilePreview caseId={caseId} document={item.document} />
+              <OriginalFilePreview caseId={caseId} item={item} />
             </div>
             <div className="h-1/2 min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full">
-              <ExtractedTextPreview source={read} />
+              <ExtractedTextPreview source={item.source} />
             </div>
           </div>
         )}
@@ -123,8 +121,7 @@ function Paper({ label, children }: { label?: string; children: ReactNode }) {
   );
 }
 
-function TextSourcePreview({ source }: { source: CaseSourceRead }) {
-  const question = followupQuestion(source);
+function TextSourcePreview({ question, text }: { question: string | null; text: string }) {
   return (
     <div className="h-full overflow-auto p-4 sm:p-8">
       <div className="mx-auto max-w-3xl">
@@ -140,14 +137,12 @@ function TextSourcePreview({ source }: { source: CaseSourceRead }) {
               <div>
                 <dt className="text-xs font-medium text-ink-muted">Answer</dt>
                 <dd className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
-                  {source.exact_text}
+                  {text}
                 </dd>
               </div>
             </dl>
           ) : (
-            <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
-              {source.exact_text}
-            </p>
+            <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">{text}</p>
           )}
         </Paper>
       </div>
@@ -155,9 +150,12 @@ function TextSourcePreview({ source }: { source: CaseSourceRead }) {
   );
 }
 
-function OriginalFilePreview({ caseId, document }: { caseId: string; document: CaseDocumentRead }) {
-  const file = useBlobUrl(["case-document-content", caseId, document.id], (signal) =>
-    fetchCaseDocumentContent(caseId, document.id, signal),
+function OriginalFilePreview({ caseId, item }: { caseId: string; item: FileItem }) {
+  const { documentId } = item;
+  const filename = item.source.filename ?? "";
+  const mimeType = item.source.mime_type ?? "";
+  const file = useBlobUrl(["case-document-content", caseId, documentId], (signal) =>
+    fetchCaseDocumentContent(caseId, documentId, signal),
   );
   const objectUrl = file.url;
 
@@ -186,12 +184,11 @@ function OriginalFilePreview({ caseId, document }: { caseId: string; document: C
     );
   }
 
-  const canEmbed =
-    document.mime_type === "application/pdf" || document.mime_type.startsWith("image/");
+  const canEmbed = mimeType === "application/pdf" || mimeType.startsWith("image/");
   if (!canEmbed) {
     return (
       <ViewportMessage title="This file type has no preview.">
-        <a href={objectUrl} download={document.filename} className="btn-primary mt-4">
+        <a href={objectUrl} download={filename} className="btn-primary mt-4">
           <Icon name="download" className="h-4 w-4" />
           Download file
         </a>
@@ -202,7 +199,7 @@ function OriginalFilePreview({ caseId, document }: { caseId: string; document: C
   return (
     <iframe
       src={objectUrl}
-      title={`Original file: ${document.filename}`}
+      title={`Original file: ${filename}`}
       className="h-full min-h-[28rem] w-full border-0 bg-surface"
     />
   );
@@ -246,11 +243,8 @@ function documentPages(source: CaseSourceRead): ExtractionPage[] {
 
 const PAGE_JUMP_THRESHOLD = 4;
 
-function ExtractedTextPreview({ source }: { source: CaseSourceRead | null }) {
-  const pages = useMemo(() => (source ? documentPages(source) : []), [source]);
-
-  if (!source) return <ViewportMessage title="No text was extracted from this file." />;
-
+function ExtractedTextPreview({ source }: { source: CaseSourceRead }) {
+  const pages = useMemo(() => documentPages(source), [source]);
   const recorded = source.provenance_json?.warnings;
   const warnings = Array.isArray(recorded) ? recorded.length : 0;
 
@@ -316,9 +310,10 @@ function ViewportMessage({ title, children }: { title: string; children?: ReactN
   );
 }
 
-function fileKind(document: CaseDocumentRead): string {
-  const extension = document.filename.split(".").pop()?.toUpperCase();
-  if (document.mime_type === "application/pdf") return "PDF";
-  if (document.mime_type.startsWith("image/")) return extension ?? "Image";
+function fileKind(source: CaseSourceRead): string {
+  const extension = source.filename?.split(".").pop()?.toUpperCase();
+  const mimeType = source.mime_type ?? "";
+  if (mimeType === "application/pdf") return "PDF";
+  if (mimeType.startsWith("image/")) return extension ?? "Image";
   return extension ?? "File";
 }

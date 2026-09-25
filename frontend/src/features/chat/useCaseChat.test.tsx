@@ -95,7 +95,7 @@ describe("whether a send is in flight", () => {
       gap_key: "topic:incident-time",
       message_kind: "followup_question" as const,
     };
-    getCaseChat.mockResolvedValue(caseChat("a", [question]));
+    getCaseChat.mockResolvedValue(caseChat("a", [question], question.id));
     const pending = deferred<ReturnType<typeof chatResponse>>();
     createCaseChatMessage.mockReturnValue(pending.promise);
     const { result, wrapper } = render();
@@ -154,6 +154,58 @@ describe("whether a send is in flight", () => {
     const second = render();
     expect(second.result.current.isSending).toBe(false);
     expect(second.result.current.queryError).toBeNull();
+  });
+});
+
+describe("the question the analysis is waiting on", () => {
+  const question = {
+    ...message("a", 2, "assistant", "When did this happen?"),
+    gap_key: "topic:incident-time",
+    message_kind: "followup_question" as const,
+    qa_id: "QA-01",
+  };
+
+  it("is the one the backend names, not one guessed from the messages", async () => {
+    getCaseChat.mockResolvedValue(caseChat("a", [question], null));
+    const { result } = render();
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+
+    expect(result.current.pendingQuestionId).toBeNull();
+  });
+
+  it("moves to the question the send returns, and clears once none is left", async () => {
+    getCaseChat.mockResolvedValue(caseChat("a", [question], question.id));
+    const answer = {
+      ...message("a", 3, "user", "ตอนตีสอง"),
+      message_kind: "followup_answer" as const,
+      in_reply_to_message_id: question.id,
+      qa_id: "QA-01",
+    };
+    const next = {
+      ...message("a", 4, "assistant", "Which account was used?"),
+      gap_key: "topic:account",
+      message_kind: "followup_question" as const,
+      qa_id: "QA-02",
+    };
+    createCaseChatMessage.mockResolvedValueOnce({
+      ...chatResponse(answer, next),
+      pending_question_id: next.id,
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.pendingQuestionId).toBe(question.id));
+
+    act(() => result.current.submitContent("ตอนตีสอง"));
+    await waitFor(() => expect(result.current.pendingQuestionId).toBe(next.id));
+
+    createCaseChatMessage.mockResolvedValueOnce(
+      chatResponse({
+        ...message("a", 5, "user", "บัญชีผู้ดูแล"),
+        message_kind: "followup_answer" as const,
+        in_reply_to_message_id: next.id,
+      }),
+    );
+    act(() => result.current.submitContent("บัญชีผู้ดูแล"));
+    await waitFor(() => expect(result.current.pendingQuestionId).toBeNull());
   });
 });
 

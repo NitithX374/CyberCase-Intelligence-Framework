@@ -5,14 +5,13 @@ import {
   association,
   caseId,
   claim,
-  followupExchange,
+  followupHistory,
   narrativeSource,
   trace,
 } from "@/test/fixtures";
 import CaseAnalysisPage from "./page";
 
 const answer = "The attacker came in through the web server.";
-const messages = followupExchange("How did the attacker get in?", answer, "topic:initial-access");
 
 const analysis = analysisResult({
   summary: answer,
@@ -29,6 +28,7 @@ const analysis = analysisResult({
   }),
   retrieval_context_id: "retrieval-1",
   external_context_json: {
+    followup_history: followupHistory("How did the attacker get in?", answer),
     technical_augmentation: {
       version: "case_mitre_augmentation_v1",
       status: "retrieved_with_matches",
@@ -46,33 +46,32 @@ const analysis = analysisResult({
   },
 });
 
-const chatState = vi.hoisted(() => ({ failed: false }));
+const sourcesState = vi.hoisted(() => ({ failed: false }));
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ caseId }) }));
 vi.mock("@/features/analysis/queries", () => ({
   useCaseAnalysis: () => ({ data: analysis, isLoading: false }),
 }));
 vi.mock("@/features/sources/queries", () => ({
-  useCaseSources: () => ({
-    data: [narrativeSource("Payroll files were encrypted overnight.")],
-    isLoading: false,
-  }),
+  useCaseSources: () =>
+    sourcesState.failed
+      ? { data: undefined, isLoading: false, isLoadingError: true }
+      : { data: [narrativeSource("Payroll files were encrypted overnight.")], isLoading: false },
 }));
 vi.mock("@/features/chat/useCaseChat", () => ({
-  useCaseChatMessages: () =>
-    chatState.failed
-      ? { data: undefined, isLoading: false, isLoadingError: true }
-      : { data: messages, isLoading: false },
+  useCaseChatQuery: () => {
+    throw new Error("The analysis page does not read the live chat.");
+  },
 }));
 vi.mock("@/features/analysis/CaseOverviewView", () => ({ CaseOverviewView: () => null }));
 vi.mock("@/features/reports/CaseReportView", () => ({ CaseReportView: () => null }));
 
 beforeEach(() => {
-  chatState.failed = false;
+  sourcesState.failed = false;
 });
 
 describe("CaseAnalysisPage", () => {
-  it("shows ATT&CK context that rests on a follow-up answer", () => {
+  it("shows ATT&CK context that rests on the follow-up answer the analysis recorded", () => {
     render(<CaseAnalysisPage />);
 
     expect(
@@ -82,8 +81,8 @@ describe("CaseAnalysisPage", () => {
     expect(screen.getByText("Follow-up answer QA-01")).toBeInTheDocument();
   });
 
-  it("withholds ATT&CK context while the answers it rests on cannot be loaded", () => {
-    chatState.failed = true;
+  it("withholds ATT&CK context while the case sources cannot be loaded", () => {
+    sourcesState.failed = true;
     render(<CaseAnalysisPage />);
 
     expect(

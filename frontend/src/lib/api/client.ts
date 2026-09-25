@@ -1,7 +1,6 @@
 import axios from "axios";
 import type {
   AnalysisStepRead,
-  CaseAnalysisCreate,
   CaseAnalysisResultRead,
   CaseChatRead,
   CaseChatResponse,
@@ -25,13 +24,6 @@ http.interceptors.request.use((config) => {
   config.baseURL = getApiBaseUrl();
   return config;
 });
-
-export type ResponseLanguage = "thai" | "english";
-
-export function detectResponseLanguage(text: string): ResponseLanguage {
-  if (/[\u0e00-\u0e7f]/u.test(text)) return "thai";
-  return "english";
-}
 
 function getApiBaseUrl(): string {
   let url = process.env.NEXT_PUBLIC_API_URL;
@@ -102,23 +94,12 @@ export async function createCaseChatMessage(
   content: string,
   idempotencyKey: string,
 ): Promise<CaseChatResponse> {
-  const request = {
-    content,
-    client_request_id: idempotencyKey,
-    response_language: detectResponseLanguage(content),
-  };
+  const request = { content, client_request_id: idempotencyKey };
   return (
     await http.post<CaseChatResponse>(caseUrl(caseId, "chat", "messages"), request, {
       timeout: ANALYSIS_REQUEST_TIMEOUT_MS,
     })
   ).data;
-}
-
-export async function listCaseDocuments(
-  caseId: string,
-  signal?: AbortSignal,
-): Promise<CaseDocumentRead[]> {
-  return (await http.get<CaseDocumentRead[]>(caseUrl(caseId, "documents"), { signal })).data;
 }
 
 export async function uploadCaseDocument(caseId: string, file: File): Promise<CaseDocumentRead> {
@@ -153,14 +134,13 @@ export async function addCaseSource(
   return (await http.post<CaseSourceRead>(caseUrl(caseId, "sources"), request)).data;
 }
 
-export async function startCaseAnalysis(
-  caseId: string,
-  request: CaseAnalysisCreate,
-): Promise<AnalysisStepRead> {
+export async function startCaseAnalysis(caseId: string): Promise<AnalysisStepRead> {
   return (
-    await http.post<AnalysisStepRead>(caseUrl(caseId, "analysis"), request, {
-      timeout: ANALYSIS_REQUEST_TIMEOUT_MS,
-    })
+    await http.post<AnalysisStepRead>(
+      caseUrl(caseId, "analysis"),
+      {},
+      { timeout: ANALYSIS_REQUEST_TIMEOUT_MS },
+    )
   ).data;
 }
 

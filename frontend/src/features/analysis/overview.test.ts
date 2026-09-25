@@ -3,14 +3,13 @@ import type { CaseAnalysisResultRead, CaseSourceCitation } from "@/lib/api";
 import {
   analysisResult,
   claim,
-  followupExchange,
+  followupHistory,
   narrativeSource,
   pagedDocumentSource,
   sourceId,
   trace,
 } from "@/test/fixtures";
 import { buildCaseOverview } from "./overview";
-import { mergeCaseSourceRows } from "@/features/sources/followupSources";
 
 const quote = "The witness saw a blue vehicle.";
 
@@ -103,23 +102,34 @@ describe("Case overview projection", () => {
     expect(overview.findings[0].supportingSources).toEqual([]);
   });
 
-  it("keeps valid follow-up answers as finding sources", () => {
-    const [question, answer] = followupExchange(
-      "When did the incident occur?",
-      "The incident occurred at 02:00.",
-    );
-    const followupResult = result(
-      answer.content,
-      { source_id: "QA-01", exact_quote: answer.content },
-      "QA-01",
-    );
-    const overview = buildCaseOverview(followupResult, mergeCaseSourceRows([], [question, answer]));
+  it("cites a follow-up answer from the exchange the analysis recorded", () => {
+    const answer = "The incident occurred at 02:00.";
+    const followupResult = {
+      ...result(answer, { source_id: "QA-02", exact_quote: answer }, "QA-02"),
+      external_context_json: {
+        followup_history: followupHistory("When did the incident occur?", answer, "QA-02"),
+      },
+    };
+
+    const overview = buildCaseOverview(followupResult, []);
 
     expect(overview.findings[0].supportingSources[0]).toMatchObject({
-      id: "QA-01",
-      label: "Follow-up answer QA-01",
+      id: "QA-02",
+      label: "Follow-up answer QA-02",
       question: "When did the incident occur?",
+      exactQuote: answer,
     });
+  });
+
+  it("does not cite a follow-up answer the analysis did not record", () => {
+    const answer = "The incident occurred at 02:00.";
+    const overview = buildCaseOverview(
+      result(answer, { source_id: "QA-01", exact_quote: answer }, "QA-01"),
+      [],
+    );
+
+    expect(overview.hasAnalysis).toBe(true);
+    expect(overview.findings[0].supportingSources).toEqual([]);
   });
 
   it("lists parties, timeline and impacts with the sources of the claims they cite", () => {

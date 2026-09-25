@@ -189,4 +189,19 @@ describe("CaseReportView", () => {
     expect(await screen.findByRole("article", { name: "Persisted report" })).toBeInTheDocument();
     expect(list).toHaveBeenCalledTimes(2);
   });
+
+  it("says in Thai when a stored report is in a format that can no longer be shown", async () => {
+    vi.spyOn(api, "listCaseReports").mockRejectedValue(
+      refusal(
+        409,
+        "case_report_outdated",
+        "This report was stored in an older format and can no longer be shown",
+      ),
+    );
+    renderView();
+
+    expect(
+      await screen.findByText("รายงานนี้ถูกบันทึกในรูปแบบเก่า จึงไม่สามารถแสดงได้อีกต่อไป"),
+    ).toBeInTheDocument();
+  });
 });

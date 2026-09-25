@@ -20,8 +20,11 @@ vi.mock("./useCaseChat", () => ({
   }),
 }));
 vi.mock("@/features/analysis/queries", () => ({ useCaseAnalysis: () => ({ data: null }) }));
-vi.mock("@/features/sources/useCaseSourceRows", () => ({
-  useCaseSourceRows: () => ({ caseSources: [], rows: [], isError: state.sourcesFailed }),
+vi.mock("@/features/sources/queries", () => ({
+  useCaseSources: () =>
+    state.sourcesFailed
+      ? { data: undefined, isLoadingError: true }
+      : { data: [], isLoadingError: false },
 }));
 
 function renderPanel() {

@@ -8,7 +8,7 @@ import { buildCaseOverview } from "./overview";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
-import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
+import { useCaseSources } from "@/features/sources/queries";
 import { useSourceDrawer } from "@/features/sources/useSourceDrawer";
 import { casePath } from "@/features/workspace/routes";
 import { CaseFindingsSection } from "./CaseFindingsSection";
@@ -25,8 +25,8 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
   const runAnalysis = useRunCaseAnalysis(caseId);
 
   const analysisQuery = useCaseAnalysis(caseId);
-  const sourceRows = useCaseSourceRows(caseId);
-  const { caseSources, rows: sources, isLoading: sourcesLoading } = sourceRows;
+  const sourcesQuery = useCaseSources(caseId);
+  const sources = sourcesQuery.data ?? null;
   const drawer = useSourceDrawer();
 
   const isAnalysisRunning = useIsCaseAnalysisRunning(caseId);
@@ -41,11 +41,11 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
 
   const navigateToSources = () => router.push(casePath(caseId, "sources"));
 
-  if ((analysisQuery.isLoading && !analysisResult) || (sourcesLoading && analysisResult)) {
+  if ((analysisQuery.isLoading && !analysisResult) || (sourcesQuery.isLoading && analysisResult)) {
     return <CaseOverviewSkeleton />;
   }
 
-  if (analysisQuery.isLoadingError || sourceRows.isError) {
+  if (analysisQuery.isLoadingError || sourcesQuery.isLoadingError) {
     return (
       <CaseOverviewState
         title="Analysis could not be loaded"
@@ -57,7 +57,7 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
         actionLabel="Try again"
         onAction={() => {
           if (analysisQuery.isLoadingError) void analysisQuery.refetch();
-          if (sourceRows.isError) sourceRows.refetch();
+          if (sourcesQuery.isLoadingError) void sourcesQuery.refetch();
         }}
       />
     );
@@ -85,7 +85,7 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
   }
 
   if (!overview.hasAnalysis) {
-    const hasSources = caseSources.length > 0;
+    const hasSources = Boolean(sources?.length);
     return (
       <CaseOverviewState
         title="Not analyzed yet"
@@ -150,7 +150,7 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
             <AnalysisMeta
               overview={overview}
               result={analysisResult}
-              sources={sources}
+              sources={sources ?? []}
               onReanalyze={isStale || isUpdating ? undefined : runAnalysis}
             />
           }

@@ -1,9 +1,4 @@
-import type {
-  CaseAnalysisResultRead,
-  CaseAnalysisTrace,
-  CaseMitreAssociation,
-  CaseSourceRead,
-} from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseMitreAssociation, CaseSourceRead } from "@/lib/api";
 import type { SourceMessageRef } from "@/features/sources/types";
 import type { CaseFinding } from "@/features/analysis/types";
 import { asArray, asRecord, asString } from "@/lib/parse";
@@ -14,7 +9,6 @@ export type TechnicalContextStatus =
   | "insufficient_context"
   | "retrieved_from_rag"
   | "retrieved_with_matches"
-  | "retrieved_without_supported_match"
   | "failed"
   | "invalid_trace"
   | "unavailable";
@@ -33,7 +27,6 @@ export interface TechnicalContextCard {
   fullTechnicalDefinition: string;
   whyRelevantHere: string;
   caseBasisSources: SourceMessageRef[];
-  isExternalReference: true;
 }
 
 export interface RetrievedTechnicalContextCard {
@@ -41,7 +34,6 @@ export interface RetrievedTechnicalContextCard {
   techniqueName: string;
   tactic: string;
   fullTechnicalDefinition: string;
-  isExternalReference: true;
 }
 
 export interface TechnicalContextData {
@@ -49,13 +41,19 @@ export interface TechnicalContextData {
   hasContext: boolean;
   techniques: TechnicalContextCard[];
   retrievedOnlyTechniques: RetrievedTechnicalContextCard[];
-  totalCount: number;
-  retrievedOnlyCount: number;
   failureCode: string | null;
   failureStage: TechnicalFailureStage | null;
 }
 
 type AugmentationStatus = Exclude<TechnicalContextStatus, "invalid_trace" | "unavailable">;
+
+const augmentationStatuses: ReadonlySet<string> = new Set<AugmentationStatus>([
+  "not_applicable",
+  "insufficient_context",
+  "retrieved_from_rag",
+  "retrieved_with_matches",
+  "failed",
+]);
 
 interface MitreRow {
   id: string;
@@ -64,14 +62,6 @@ interface MitreRow {
   description: string;
   retrievalScore: number | null;
   retrievedBy: "vector" | "graph";
-}
-
-interface TechnicalAugmentation {
-  status: AugmentationStatus;
-  rows: MitreRow[];
-  retrievalContextId: string | null;
-  associationIds: string[];
-  failureCode: string | null;
 }
 
 export function buildTechnicalContext(
@@ -83,90 +73,37 @@ export function buildTechnicalContext(
   const trace = result.trace_json;
   if (!overview.hasAnalysis || !trace)
     return emptyTechnicalContext("invalid_trace", "invalid_trace");
-  const associations = trace.mitre_associations ?? [];
-
-  const augmentationRecord = asRecord(result.external_context_json?.technical_augmentation);
-  if (!augmentationRecord) {
+  const augmentation = asRecord(result.external_context_json?.technical_augmentation);
+  if (!augmentation) {
     return emptyTechnicalContext("unavailable", "technical_augmentation_unavailable", "metadata");
   }
-
-  try {
-    const augmentation = parseTechnicalAugmentation(augmentationRecord, trace);
-    const findings = new Map(overview.findings.map((finding) => [finding.id, finding]));
-    const rowsById = new Map(augmentation.rows.map((row) => [row.id, row]));
-    const mappedIds = new Set(associations.map((association) => association.technique_id));
-    const techniques = associations.flatMap((association) => {
-      const row = rowsById.get(association.technique_id);
-      return row ? [mappedCard(association, row, findings)] : [];
-    });
-    const retrievedOnlyTechniques = augmentation.rows
-      .filter((row) => !mappedIds.has(row.id))
-      .map(retrievedOnlyCard);
-    return contextData(
-      augmentation.status,
-      techniques,
-      retrievedOnlyTechniques,
-      augmentation.failureCode,
-    );
-  } catch {
+  const status = asString(augmentation.status);
+  if (!isAugmentationStatus(status)) {
     return emptyTechnicalContext("invalid_trace", "invalid_technical_augmentation", "metadata");
   }
-}
 
-function parseTechnicalAugmentation(
-  value: Record<string, unknown>,
-  trace: CaseAnalysisTrace,
-): TechnicalAugmentation {
+  const retrieved = mitreRows(augmentation.mitre_table);
   const associations = trace.mitre_associations ?? [];
-  const rawStatus = asString(value.status);
-  if (!isAugmentationStatus(rawStatus))
-    throw new Error("Technical augmentation status is invalid.");
-  const rows = augmentationRows(value);
-  const retrievalContextId = asString(value.retrieval_context_id) || null;
-  const associationIds = asArray(value.association_ids).map(asString).filter(Boolean);
-  const traceAssociationIds = associations.map((association) => association.association_id);
-  if (
-    associationIds.length !== traceAssociationIds.length ||
-    associationIds.some((id, index) => id !== traceAssociationIds[index])
-  ) {
-    throw new Error("Technical augmentation associations are not bound to the analysis trace.");
-  }
-  const boundRetrievalId = rawStatus === "insufficient_context" ? null : retrievalContextId;
-  if (boundRetrievalId !== (trace.retrieval_context_id ?? null))
-    throw new Error("Retrieval context is not bound to the analysis trace.");
-  if (rawStatus === "retrieved_with_matches" && (!retrievalContextId || !associations.length))
-    throw new Error("Technical augmentation match status is incomplete.");
-  if (
-    rawStatus === "retrieved_from_rag" &&
-    (!retrievalContextId || !rows.length || associations.length)
-  )
-    throw new Error("Technical augmentation RAG status is incomplete.");
-  if (rawStatus === "retrieved_without_supported_match" && associations.length)
-    throw new Error("Technical augmentation no-match status has associations.");
-  if (rawStatus === "failed" && (!asString(value.failure_code) || associations.length))
-    throw new Error("Technical augmentation failure status is incomplete.");
-  if (rawStatus === "not_applicable" && (rows.length || retrievalContextId || associations.length))
-    throw new Error("Non-applicable technical augmentation has retrieved context.");
-  if (rawStatus === "insufficient_context" && associations.length)
-    throw new Error("Insufficient technical context has associations.");
-  return {
-    status: rawStatus,
-    rows,
-    retrievalContextId,
-    associationIds,
-    failureCode: asString(value.failure_code) || null,
-  };
+  const findings = new Map(overview.findings.map((finding) => [finding.id, finding]));
+  const rowsById = new Map(retrieved.map((row) => [row.id, row]));
+  const mappedIds = new Set(associations.map((association) => association.technique_id));
+  const techniques = associations.flatMap((association) => {
+    const row = rowsById.get(association.technique_id);
+    return row ? [mappedCard(association, row, findings)] : [];
+  });
+  const retrievedOnlyTechniques = retrieved
+    .filter((row) => !mappedIds.has(row.id))
+    .map(retrievedOnlyCard);
+  return contextData(
+    status,
+    techniques,
+    retrievedOnlyTechniques,
+    asString(augmentation.failure_code) || null,
+  );
 }
 
-function isAugmentationStatus(value: string): value is AugmentationStatus {
-  return (
-    value === "not_applicable" ||
-    value === "insufficient_context" ||
-    value === "retrieved_from_rag" ||
-    value === "retrieved_with_matches" ||
-    value === "retrieved_without_supported_match" ||
-    value === "failed"
-  );
+function isAugmentationStatus(status: string): status is AugmentationStatus {
+  return augmentationStatuses.has(status);
 }
 
 function mappedCard(
@@ -187,7 +124,6 @@ function mappedCard(
     caseBasisSources: caseBasis(
       association.claim_ids.flatMap((claimId) => findings.get(claimId)?.supportingSources ?? []),
     ),
-    isExternalReference: true,
   };
 }
 
@@ -205,7 +141,6 @@ function retrievedOnlyCard(row: MitreRow): RetrievedTechnicalContextCard {
     techniqueName: row.name || row.id,
     tactic: row.tactic,
     fullTechnicalDefinition: attackDescription(row.description),
-    isExternalReference: true,
   };
 }
 
@@ -229,10 +164,6 @@ function mitreRows(value: unknown): MitreRow[] {
   return rows;
 }
 
-function augmentationRows(value: Record<string, unknown>): MitreRow[] {
-  return mitreRows(value.mitre_table);
-}
-
 function contextData(
   status: TechnicalContextStatus,
   techniques: TechnicalContextCard[],
@@ -247,8 +178,6 @@ function contextData(
       (status !== "insufficient_context" && status !== "unavailable"),
     techniques,
     retrievedOnlyTechniques,
-    totalCount: techniques.length,
-    retrievedOnlyCount: retrievedOnlyTechniques.length,
     failureCode,
     failureStage: failureStageForCode(failureCode),
   };
@@ -264,8 +193,6 @@ function emptyTechnicalContext(
     hasContext: false,
     techniques: [],
     retrievedOnlyTechniques: [],
-    totalCount: 0,
-    retrievedOnlyCount: 0,
     failureCode,
     failureStage: failureStage ?? failureStageForCode(failureCode),
   };
@@ -283,5 +210,3 @@ function failureStageForCode(code: string | null): TechnicalFailureStage | null 
 function attackDescription(description: string): string {
   return description.replace(/^[A-Za-z][A-Za-z ]{0,30}: [^.]{1,120}\.\s+/, "").trim();
 }
-
-export { emptyTechnicalContext };

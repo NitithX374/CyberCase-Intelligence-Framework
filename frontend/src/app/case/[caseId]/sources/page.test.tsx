@@ -19,10 +19,9 @@ vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
   useRunCaseAnalysis: () => vi.fn(),
 }));
 vi.mock("@/features/chat/useCaseChat", () => ({
-  useCaseChatMessages: () => ({ data: [], isLoading: false }),
+  useCaseChatQuery: () => ({ data: { case_id: caseId, messages: [] }, isLoading: false }),
 }));
 vi.mock("@/features/sources/queries", () => ({
-  useCaseDocuments: () => ({ data: [], isLoading: false }),
   useCaseSources: () =>
     state.sourcesFailed
       ? { data: undefined, isLoading: false, isLoadingError: true, refetch: state.refetchSources }

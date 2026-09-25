@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AnalysisStepRead } from "@/lib/api";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { deferred } from "@/features/chat/chatTestSupport";
-import { analysisResult, caseId, narrativeSource } from "@/test/fixtures";
+import { analysisResult, caseId } from "@/test/fixtures";
 import { httpError, refusal } from "@/test/httpErrors";
 import CaseShellLayout from "./layout";
 
@@ -31,9 +31,6 @@ vi.mock("@/features/cases/queries", () => ({
     createMutation: { isPending: false, mutateAsync: state.createCase },
     updateMutation: { isPending: false, mutateAsync: vi.fn() },
   }),
-}));
-vi.mock("@/features/sources/queries", () => ({
-  useCaseSources: () => ({ data: [narrativeSource("ไฟล์เงินเดือนถูกเข้ารหัส")] }),
 }));
 vi.mock("@/features/workspace/WorkspaceHeader", () => ({
   WorkspaceHeader: ({ activeView, onNewCase }: { activeView: string; onNewCase: () => void }) => (
@@ -115,14 +112,14 @@ describe("CaseShellLayout", () => {
 });
 
 describe("an analysis run started from a page", () => {
-  it("goes to the analysis once it is written, in the language of the sources", async () => {
+  it("goes to the analysis once it is written, and leaves the language to the backend", async () => {
     state.start.mockResolvedValue({ status: "completed", result: analysisResult() });
     renderLayout(<AnalyzeButton />);
 
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
 
     await waitFor(() => expect(state.push).toHaveBeenCalledWith(`/case/${caseId}/analysis`));
-    expect(state.start).toHaveBeenCalledWith(caseId, { response_language: "thai" });
+    expect(state.start).toHaveBeenCalledWith(caseId);
   });
 
   it("says in Thai why it failed, after the reader has left the page that started it", async () => {

@@ -8,7 +8,7 @@ import { useCaseChat } from "./useCaseChat";
 import { useCaseAnalysis } from "@/features/analysis/queries";
 import { toUserFacingError } from "@/lib/userFacingError";
 import { ChatTranscript } from "./ChatTranscript";
-import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
+import { useCaseSources } from "@/features/sources/queries";
 
 interface WorkspaceChatPanelProps {
   caseId: string | null;
@@ -27,7 +27,9 @@ export function WorkspaceChatPanel({
 }: WorkspaceChatPanelProps) {
   const chat = useCaseChat({ caseId });
   const analysisQuery = useCaseAnalysis(caseId);
-  const { caseSources, rows: sources, isError: sourcesFailed } = useCaseSourceRows(caseId);
+  const sourcesQuery = useCaseSources(caseId);
+  const sources = sourcesQuery.data ?? null;
+  const sourcesFailed = sourcesQuery.isLoadingError;
 
   const leadResult = analysisQuery.data ?? null;
   const messages = chat.messages;
@@ -51,7 +53,7 @@ export function WorkspaceChatPanel({
     });
   };
 
-  const hasSources = caseSources.length > 0;
+  const hasSources = Boolean(sources?.length);
 
   return (
     <aside

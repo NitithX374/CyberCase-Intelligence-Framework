@@ -4,9 +4,10 @@ import { casePath } from "@/features/workspace/routes";
 export type CaseLibrarySort = "recent" | "oldest" | "title";
 export type CaseLibraryViewMode = "grid" | "list";
 
-const statusLabels: Record<CaseRead["status"], string> = {
-  idle: "Not analyzed",
-  answered: "Analyzed",
+const freshnessLabels: Record<CaseRead["analysis_freshness"], string> = {
+  missing: "Not analyzed",
+  current: "Analyzed",
+  stale: "Out of date",
 };
 
 export function caseDestination(caseRecord: CaseRead): string {
@@ -14,8 +15,7 @@ export function caseDestination(caseRecord: CaseRead): string {
 }
 
 export function caseStatusLabel(caseRecord: CaseRead): string {
-  if (caseRecord.analysis_freshness === "stale") return "Out of date";
-  return statusLabels[caseRecord.status];
+  return freshnessLabels[caseRecord.analysis_freshness];
 }
 
 export function sortCases(cases: CaseRead[], sort: CaseLibrarySort): CaseRead[] {

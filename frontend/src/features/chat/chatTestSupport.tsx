@@ -19,8 +19,12 @@ export function message(
   };
 }
 
-export function caseChat(caseId = "a", messages: ChatMessageRead[] = []): CaseChatRead {
-  return { case_id: caseId, messages };
+export function caseChat(
+  caseId = "a",
+  messages: ChatMessageRead[] = [],
+  pendingQuestionId: string | null = null,
+): CaseChatRead {
+  return { case_id: caseId, messages, pending_question_id: pendingQuestionId };
 }
 
 export function chatResponse(...messages: ChatMessageRead[]): CaseChatResponse {

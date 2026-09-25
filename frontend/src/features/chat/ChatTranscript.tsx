@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type {
-  CaseAnalysisClaim,
-  CaseAnalysisResultRead,
-  CaseSourceRead,
-  ChatMessageRead,
-} from "@/lib/api";
-import type { SourceMessageRef } from "@/features/sources/types";
-import { asArray, asRecord } from "@/lib/parse";
+import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
+import type { CaseSourceRef, SourceMessageRef } from "@/features/sources/types";
 import { claimRefs, parseCaseSources } from "@/features/sources/sourceRefs";
+import { chatFollowups } from "@/features/sources/followupSources";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { SourceDrawer } from "@/features/sources/SourceDrawer";
 import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
@@ -88,6 +83,7 @@ function Messages({
   isAnsweringQuestion: boolean;
   sources: CaseSourceRead[];
 }) {
+  const citable = parseCaseSources(sources, chatFollowups(messages));
   return (
     <div className="space-y-6 px-5 py-6">
       {messages.map((message) => {
@@ -116,7 +112,7 @@ function Messages({
         return (
           <article key={message.id}>
             <ChatMessageMarkdown content={message.content} />
-            <AnalysisSourceReferences analysisMessage={message} sources={sources} />
+            <AnalysisSourceReferences analysisMessage={message} sources={citable} />
           </article>
         );
       })}
@@ -137,16 +133,11 @@ interface AnalysisSourceReference {
 
 function sourceReferencesForAnalysisMessage(
   analysisMessage: ChatMessageRead,
-  rows: CaseSourceRead[],
+  sources: CaseSourceRef[],
 ): AnalysisSourceReference[] {
   if (analysisMessage.role !== "assistant") return [];
-  const trace = asRecord(analysisMessage.metadata_json.analysis_trace);
-
-  if (trace?.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated")
-    return [];
-
-  const sources = parseCaseSources(rows);
-  const references = (asArray(trace.claims) as CaseAnalysisClaim[]).flatMap((claim) => {
+  const claims = analysisMessage.metadata_json.analysis_trace?.claims ?? [];
+  const references = claims.flatMap((claim) => {
     const cited = claimRefs(claim, sources);
     return [
       ...cited.supporting.map((source) => ({ role: "supporting" as const, source })),
@@ -170,7 +161,7 @@ function AnalysisSourceReferences({
   sources,
 }: {
   analysisMessage: ChatMessageRead;
-  sources: CaseSourceRead[];
+  sources: CaseSourceRef[];
 }) {
   const references = sourceReferencesForAnalysisMessage(analysisMessage, sources);
   const [active, setActive] = useState<{

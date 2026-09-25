@@ -54,6 +54,7 @@ const REFUSAL_MESSAGES = new Map<string, string>([
   ["document_not_found", "ไม่พบเอกสารนี้"],
   ["report_not_found", "ไม่พบรายงานนี้"],
   ["report_generation_disabled", "ระบบปิดการสร้างรายงานไว้ในขณะนี้"],
+  ["case_report_outdated", "รายงานนี้ถูกบันทึกในรูปแบบเก่า จึงไม่สามารถแสดงได้อีกต่อไป"],
   ["case_analysis_missing", "ยังไม่มีผลการวิเคราะห์ของคดีนี้ กรุณาวิเคราะห์ก่อนสร้างรายงาน"],
   [
     "analysis_source_snapshot_missing",

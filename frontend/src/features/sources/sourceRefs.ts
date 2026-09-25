@@ -1,7 +1,6 @@
 import type { CaseAnalysisClaim, CaseSourceCitation, CaseSourceRead } from "@/lib/api";
 import { asArray } from "@/lib/parse";
-import { followupQuestion } from "./followupSources";
-import type { CaseSourceRef, SourceMessageRef, SourcePage } from "./types";
+import type { CaseSourceRef, FollowupAnswer, SourceMessageRef, SourcePage } from "./types";
 
 interface ProvenancePage {
   page_number: number;
@@ -14,9 +13,12 @@ export function formatPageReference(pageNumbers: number[]): string {
   return `pp. ${formatPageList(pageNumbers)}`;
 }
 
-export function parseCaseSources(rows: CaseSourceRead[]): CaseSourceRef[] {
+export function parseCaseSources(
+  rows: CaseSourceRead[],
+  followups: FollowupAnswer[],
+): CaseSourceRef[] {
   const counts = new Map<string, number>();
-  return rows.map((row) => {
+  const read = rows.map((row): CaseSourceRef => {
     const ordinal = (counts.get(row.source_kind) ?? 0) + 1;
     counts.set(row.source_kind, ordinal);
     return {
@@ -26,9 +28,19 @@ export function parseCaseSources(rows: CaseSourceRead[]): CaseSourceRef[] {
       text: row.exact_text,
       pages: sourcePages(row),
       filename: row.filename ?? null,
-      question: followupQuestion(row) || null,
+      question: null,
     };
   });
+  const answered = followups.map((followup, index): CaseSourceRef => ({
+    id: followup.qaId,
+    kind: "followup_answer",
+    ordinal: index + 1,
+    text: followup.answer,
+    pages: [],
+    filename: null,
+    question: followup.question,
+  }));
+  return [...read, ...answered];
 }
 
 export function claimRefs(

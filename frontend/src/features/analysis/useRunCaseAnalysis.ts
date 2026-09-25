@@ -6,20 +6,16 @@ import {
   useQueryClient,
   type MutationCacheNotifyEvent,
 } from "@tanstack/react-query";
-import { detectResponseLanguage, type AnalysisStepRead } from "@/lib/api";
+import type { AnalysisStepRead } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
-import { useCaseSources } from "@/features/sources/queries";
 import { useIsCaseAnalysisRunning, useStartCaseAnalysis } from "./queries";
 
 export function useRunCaseAnalysis(caseId: string) {
-  const sourcesQuery = useCaseSources(caseId);
   const startAnalysis = useStartCaseAnalysis(caseId);
   const isRunning = useIsCaseAnalysisRunning(caseId);
 
   return () => {
-    if (isRunning) return;
-    const text = (sourcesQuery.data ?? []).map((source) => source.exact_text).join("\n");
-    startAnalysis.mutate({ response_language: detectResponseLanguage(text) });
+    if (!isRunning) startAnalysis.mutate();
   };
 }
 

@@ -42,7 +42,7 @@ describe("starting an analysis", () => {
     const { result } = renderHook(() => useStartCaseAnalysis("a"), { wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync({ response_language: "english" });
+      await result.current.mutateAsync();
     });
 
     expect(queryClient.getQueryData(caseQueryKeys.analysis("a"))).toBeUndefined();
@@ -54,12 +54,24 @@ describe("starting an analysis", () => {
     const { result } = renderHook(() => useStartCaseAnalysis("a"), { wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync({ response_language: "english" });
+      await result.current.mutateAsync();
     });
 
     await waitFor(() =>
       expect(queryClient.getQueryData(caseQueryKeys.analysis("a"))).toEqual(RESULT),
     );
+  });
+
+  it("sends no language, because the backend decides it from the sources", async () => {
+    startCaseAnalysis.mockResolvedValue(FINISHED);
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useStartCaseAnalysis("a"), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
+
+    expect(startCaseAnalysis).toHaveBeenCalledWith("a");
   });
 });
 
@@ -74,7 +86,7 @@ describe("whether an analysis is running", () => {
 
     expect(watcher.result.current).toBe(false);
     act(() => {
-      starter.result.current.mutate({ response_language: "english" });
+      starter.result.current.mutate();
     });
     await waitFor(() => expect(watcher.result.current).toBe(true));
 
@@ -102,7 +114,7 @@ describe("whether an analysis is running", () => {
     const other = renderHook(() => useIsCaseAnalysisRunning("b"), { wrapper });
 
     act(() => {
-      starter.result.current.mutate({ response_language: "english" });
+      starter.result.current.mutate();
     });
     await waitFor(() => expect(running.result.current).toBe(true));
     expect(other.result.current).toBe(false);
