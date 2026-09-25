@@ -16,8 +16,8 @@ from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.schemas.rag import LegalReferenceResult
-from app.services.analysis.clarification import Ask
-from app.services.analysis.contracts import CaseAnalysisFailure
+from app.services.analysis.clarification import Ask, Proceed
+from app.services.analysis.contracts import CaseAnalysisFailure, CaseAssessmentTrace
 from app.services.analysis.language import case_language
 from app.services.analysis.pipeline import (
     AnalysisAdvance,
@@ -31,8 +31,9 @@ from app.services.analysis.steps.technical_context import (
 )
 from app.services.chat.followup import (
     asked_gap_keys,
+    case_messages,
+    followup_history_from,
     last_question_awaiting_analysis,
-    load_followup_history,
     rounds_asked,
 )
 from app.services.sources.case_source_bundle import load_case_source_bundle
@@ -79,14 +80,16 @@ async def run_case_analysis(
             continuing_followup=continuing_followup,
         )
         outcome = await think(pipeline, started)
-        return await store_outcome(
-            session_factory, started, outcome, continuing_followup=started.continuing_followup
-        )
+        return await store_outcome(session_factory, started, outcome)
 
 
-async def think(pipeline: Callable, started: CaseUnderAnalysis):
+class UnassessedAdvance(AnalysisAdvance):
+    pass
+
+
+async def think(pipeline: Callable, started: CaseUnderAnalysis) -> AnalysisAdvance:
     try:
-        return await pipeline(
+        outcome = await pipeline(
             AnalysisInput(
                 sources=started.source_bundle,
                 response_language=case_language(started.source_bundle),
@@ -100,44 +103,28 @@ async def think(pipeline: Callable, started: CaseUnderAnalysis):
         )
     except CaseAnalysisFailure as error:
         raise CaseWorkflowError(error.code, error.message) from error
+    if isinstance(outcome, AnalysisArtifacts):
+        return UnassessedAdvance(CaseAssessmentTrace(gaps=[]), Proceed("no_eligible_gap"), outcome)
+    return outcome
 
 
 async def store_outcome(
     session_factory: Callable,
     started: CaseUnderAnalysis,
-    outcome: object,
-    *,
-    continuing_followup: bool,
+    outcome: AnalysisAdvance,
 ) -> AnalysisStep:
-    if isinstance(outcome, AnalysisAdvance):
-        if isinstance(outcome.decision, Ask):
-            return await store_assessment(
-                session_factory,
-                started,
-                outcome.assessment,
-                outcome.decision,
-                continuing_followup=continuing_followup,
-            )
-        if outcome.artifacts is None:
-            raise CaseWorkflowError(
-                "analysis_trace_missing", "Case analysis did not produce a validated trace"
-            )
-        return await store_analysis(
-            session_factory,
-            started,
-            outcome.artifacts,
-            continuing_followup=continuing_followup,
-            decision=outcome.decision,
-        )
-
-    if not isinstance(outcome, AnalysisArtifacts):
+    if not isinstance(outcome, AnalysisAdvance):
         raise CaseWorkflowError("analysis_result_invalid", "Analysis pipeline result is invalid")
-    return await store_analysis(
-        session_factory,
-        started,
-        outcome,
-        continuing_followup=continuing_followup,
-    )
+    if isinstance(outcome.decision, Ask):
+        return await store_assessment(
+            session_factory, started, outcome.assessment, outcome.decision
+        )
+    if outcome.artifacts is None or outcome.artifacts.trace is None:
+        raise CaseWorkflowError(
+            "analysis_trace_missing", "Case analysis did not produce a validated trace"
+        )
+    stop_reason = None if isinstance(outcome, UnassessedAdvance) else outcome.decision.reason
+    return await store_analysis(session_factory, started, outcome.artifacts, stop_reason)
 
 
 async def read_case_for_analysis(
@@ -153,7 +140,8 @@ async def read_case_for_analysis(
             bundle = await load_case_source_bundle(db, case_id=case.id, user_id=user_id)
         except SourceError as error:
             raise CaseWorkflowError(error.code, error.message, error.status_code) from error
-        history = await load_followup_history(db, case.id)
+        chat = await case_messages(db, case.id)
+        history = followup_history_from(chat)
         continuing = continuing_followup or (
             await last_question_awaiting_analysis(db, case.id) is not None
         )
@@ -164,9 +152,8 @@ async def read_case_for_analysis(
             reused_context=await reusable_context(
                 db, case.id, technical_context_key(bundle.revision, history)
             ),
-            asked_gap_keys=frozenset(await asked_gap_keys(db, case.id) if continuing else set()),
-            rounds_spent=(await rounds_asked(db, case.id) if continuing else 0) + 1,
-            continuing_followup=continuing,
+            asked_gap_keys=asked_gap_keys(chat) if continuing else frozenset(),
+            rounds_spent=(rounds_asked(chat) if continuing else 0) + 1,
         )
 
 
@@ -236,6 +223,7 @@ def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
 
 __all__ = [
     "AnalysisStep",
+    "UnassessedAdvance",
     "analysing",
     "analysis_freshness",
     "analysis_running",

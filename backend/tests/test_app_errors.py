@@ -63,7 +63,7 @@ def test_each_service_error_carries_its_status(error: AppError, status_code: int
     ("router", "entry", "path", "body"),
     [
         (analysis, "run_case_analysis", "analysis", {}),
-        (chat, "post_case_message", "chat/messages", {"content": "What happened?"}),
+        (chat, "send_case_message", "chat/messages", {"content": "What happened?"}),
     ],
 )
 def test_an_analysis_failure_reaches_the_client_as_a_coded_conflict(

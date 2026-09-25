@@ -1,22 +1,28 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 
 import pytest
+from case_chat_support import GAP, TRACE, numbered_gaps, seeded_case
 from isolated_database import isolated_database
 from sqlalchemy import select
 
+import app.services.analysis.pipeline as pipeline_module
+import app.services.chat.case_chat as case_chat
 from app.config import settings
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
-from app.models.user import User
-from app.schemas.chat import ChatMessageCreate
-from app.services.analysis.clarification import Ask, Proceed, decide_followup
-from app.services.analysis.contracts import CaseAnalysisTrace, CaseAssessmentTrace
+from app.schemas.chat import ChatMessageCreate, ChatMessageRead
+from app.schemas.message_metadata import MessageAnalysisTrace
+from app.services.analysis.clarification import Ask
+from app.services.analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace, CaseAssessmentTrace
 from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
-from app.services.chat.case_chat import post_case_message
+from app.services.chat.case_chat import get_case_chat, post_case_message, send_case_message
+from app.services.chat.followup import pending_question
+from app.services.reports.content import clarification_limitation
 from app.services.workflow.run_analysis import (
     analysing,
     get_latest_case_analysis,
@@ -24,73 +30,7 @@ from app.services.workflow.run_analysis import (
 )
 from app.services.workflow.shared import CaseWorkflowError
 
-GAP = {
-    "gap_id": "G-01",
-    "gap_key": "topic:incident-time",
-    "topic": "Incident time",
-    "status": "NOT_PROVIDED",
-    "description": "The incident time is missing.",
-    "reason": "Timing fixes the chronology.",
-    "priority": "high",
-    "askable": True,
-    "clarification_question": "When did the incident happen?",
-}
-TRACE = {
-    "version": "case_analysis_trace_v1",
-    "analysis_mode": "case_overview",
-    "validation_status": "validated",
-    "summary": "Files on the shared drive were reported encrypted.",
-    "claims": [],
-    "gaps": [GAP],
-    "mitre_associations": [],
-}
-
-
-async def case_with_a_question(
-    session_factory, trace: dict | None = None
-) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
-    trace = trace or TRACE
-
-    async with session_factory() as db, db.begin():
-        user = User(
-            email="followup@example.com",
-            name="Analyst",
-            password_hash="x",
-        )
-        db.add(user)
-        await db.flush()
-        case = Case(user_id=user.id, title="Follow-up case", source_revision=1)
-        db.add(case)
-        await db.flush()
-        db.add(
-            CaseSource(
-                case_id=case.id,
-                source_kind="narrative",
-                exact_text="Files on the shared drive were reported encrypted.",
-            )
-        )
-        analysis = CaseAnalysisResult(
-            case_id=case.id,
-            source_revision=1,
-            summary="Files were encrypted.",
-            trace_json=trace,
-            pipeline_config={"version": "case_analysis_v1"},
-            external_context_json={},
-        )
-        db.add(analysis)
-        await db.flush()
-        case.latest_analysis_result_id = analysis.id
-        question = ChatMessage(
-            case_id=case.id,
-            ordinal=1,
-            role="assistant",
-            content=trace["gaps"][0]["clarification_question"],
-            gap_key=trace["gaps"][0]["gap_key"],
-            analysis_result_id=analysis.id,
-        )
-        db.add(question)
-        await db.flush()
-        return case.id, user.id, question.id
+pytestmark = pytest.mark.asyncio
 
 
 async def answer_the_question(
@@ -126,157 +66,102 @@ async def analysed_after_the_round(session_factory, case_id: uuid.UUID) -> None:
         )
 
 
-def three_gaps() -> CaseAnalysisTrace:
-    return CaseAnalysisTrace.model_validate(
-        {
-            **TRACE,
-            "gaps": [
-                {
-                    **GAP,
-                    "gap_id": f"G-0{n}",
-                    "gap_key": f"topic:{n}",
-                    "clarification_question": f"Question {n}?",
-                }
-                for n in (1, 2, 3, 4)
-            ],
-        }
-    )
+async def gap_questions(session_factory, case_id: uuid.UUID) -> list[ChatMessage]:
+    async with session_factory() as db:
+        rows = await db.scalars(
+            select(ChatMessage)
+            .where(ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None))
+            .order_by(ChatMessage.ordinal)
+        )
+        return list(rows)
 
 
-def decide(trace: CaseAnalysisTrace, *, asked=(), this_round=0, rounds=1):
-    return decide_followup(
-        gaps=trace.gaps,
-        asked_gap_keys=asked,
-        asked_this_round=this_round,
-        rounds_spent=rounds,
-        max_rounds=settings.chat_followup_max_rounds,
-        gaps_per_round=settings.chat_followup_gaps_per_round,
-    )
+def production_pipeline(monkeypatch, gaps: list[CaseAnalysisGap], seen: list | None = None):
+    async def assess(data):
+        if seen is not None:
+            seen.append((data.asked_gap_keys, data.rounds_spent))
+        return CaseAssessmentTrace(gaps=gaps)
+
+    async def unchanged(_data, so_far):
+        return so_far
+
+    async def write(_data, so_far):
+        return replace(so_far, trace=CaseAnalysisTrace.model_validate(TRACE))
+
+    monkeypatch.setattr(pipeline_module, "assess_gaps", assess)
+    monkeypatch.setattr(pipeline_module, "retrieve_technical_context", unchanged)
+    monkeypatch.setattr(pipeline_module, "write_analysis", write)
+    monkeypatch.setattr(pipeline_module, "bind_to_case", unchanged)
 
 
-def test_a_round_walks_the_gaps_one_at_a_time():
-    trace = three_gaps()
-    assert decide(trace).gap.gap_key == "topic:1"
-    assert decide(trace, asked={"topic:1"}, this_round=1).gap.gap_key == "topic:2"
-    assert decide(trace, asked={"topic:1", "topic:2"}, this_round=2).gap.gap_key == "topic:3"
+async def bare_analysis(_data):
+    return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
 
 
-def test_a_round_stops_at_three_even_with_more_gaps():
-    spent = decide(three_gaps(), asked={"topic:1", "topic:2", "topic:3"}, this_round=3)
-    assert spent == Proceed("round_budget_spent")
-
-
-def test_the_rounds_run_out():
-    exhausted = decide(three_gaps(), rounds=settings.chat_followup_max_rounds + 1)
-    assert exhausted == Proceed("max_rounds_reached")
-
-
-def test_a_gap_already_asked_is_not_asked_again_in_a_later_round():
-    trace = CaseAnalysisTrace.model_validate({**TRACE, "gaps": [GAP]})
-    assert decide(trace, asked={GAP["gap_key"]}, rounds=2) == Proceed("gaps_exhausted")
-
-
-def test_a_gap_with_no_question_is_never_asked():
-    trace = CaseAnalysisTrace.model_validate(
-        {**TRACE, "gaps": [{**GAP, "clarification_question": None}]}
-    )
-    assert decide(trace) == Proceed("no_eligible_gap")
-
-
-def test_nothing_to_ask_and_everything_asked_are_told_apart():
-    settled = CaseAnalysisTrace.model_validate({**TRACE, "gaps": []})
-    assert decide(settled) == Proceed("no_eligible_gap")
-    assert decide(three_gaps(), asked={f"topic:{n}" for n in (1, 2, 3, 4)}) == Proceed(
-        "gaps_exhausted"
-    )
-
-
-@pytest.mark.asyncio
-async def test_replying_to_the_question_stays_conversation():
+async def test_replying_to_the_question_stays_conversation(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        case_id, user_id, question_id = await seeded_case(session_factory)
         analyses: list[str] = []
 
         async def fake_analysis(**kwargs):
             analyses.append(str(kwargs.get("case_id")))
             raise RuntimeError("stop after admission")
 
-        import app.services.chat.case_chat as module
-
-        original = module.run_case_analysis
-        module.run_case_analysis = fake_analysis
-        try:
-            with pytest.raises(RuntimeError):
-                await post_case_message(
-                    case_id=case_id,
-                    user_id=user_id,
-                    request=ChatMessageCreate(content="Around two in the morning."),
-                    session_factory=session_factory,
-                )
-        finally:
-            module.run_case_analysis = original
+        monkeypatch.setattr(case_chat, "run_case_analysis", fake_analysis)
+        with pytest.raises(RuntimeError):
+            await post_case_message(
+                case_id=case_id,
+                user_id=user_id,
+                request=ChatMessageCreate(content="Around two in the morning."),
+                session_factory=session_factory,
+            )
 
         assert analyses == [str(case_id)]
         async with session_factory() as db:
             answer = await db.scalar(
                 select(ChatMessage).where(ChatMessage.in_reply_to_message_id == question_id)
             )
-            source = await db.scalar(
-                select(CaseSource).where(CaseSource.source_kind == "followup_answer")
+            sources = list(
+                await db.scalars(select(CaseSource).where(CaseSource.case_id == case_id))
             )
             case = await db.get(Case, case_id)
         assert answer.role == "user"
         assert answer.content == "Around two in the morning."
         assert answer.message_kind == "followup_answer"
-        assert source is None, "a reply is conversation, not case material"
+        assert [source.source_kind for source in sources] == ["narrative"], (
+            "a reply is conversation, not case material"
+        )
         assert case.source_revision == 1, "answering does not revise the case"
 
 
-@pytest.mark.asyncio
 async def test_a_question_that_was_answered_is_no_longer_pending():
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
-        async with session_factory() as db, db.begin():
-            db.add(
-                ChatMessage(
-                    case_id=case_id,
-                    ordinal=2,
-                    role="user",
-                    content="Around two in the morning.",
-                    in_reply_to_message_id=question_id,
-                )
-            )
-
-        from app.services.chat.followup import pending_question
+        case_id, _, question_id = await seeded_case(session_factory)
+        async with session_factory() as db:
+            assert (await pending_question(db, case_id)).id == question_id
+        await answer_the_question(session_factory, case_id, question_id)
 
         async with session_factory() as db:
             assert await pending_question(db, case_id) is None
 
 
-@pytest.mark.asyncio
-async def test_the_round_asks_the_next_gap_before_spending_an_analysis():
+async def test_the_round_asks_the_next_gap_before_spending_an_analysis(monkeypatch):
     async with isolated_database() as session_factory:
-        trace = three_gaps().model_dump(mode="json")
-        case_id, user_id, first_id = await case_with_a_question(session_factory, trace)
+        trace = numbered_gaps(4).model_dump(mode="json")
+        case_id, user_id, first_id = await seeded_case(session_factory, trace=trace)
         analyses: list[str] = []
 
         async def fake_analysis(**kwargs):
             analyses.append(str(kwargs.get("case_id")))
             raise RuntimeError("the round was not finished")
 
-        import app.services.chat.case_chat as module
-
-        original = module.run_case_analysis
-        module.run_case_analysis = fake_analysis
-        try:
-            produced, analysis = await post_case_message(
-                case_id=case_id,
-                user_id=user_id,
-                request=ChatMessageCreate(content="Around two in the morning."),
-                session_factory=session_factory,
-            )
-        finally:
-            module.run_case_analysis = original
+        monkeypatch.setattr(case_chat, "run_case_analysis", fake_analysis)
+        produced, analysis = await post_case_message(
+            case_id=case_id,
+            user_id=user_id,
+            request=ChatMessageCreate(content="Around two in the morning."),
+            session_factory=session_factory,
+        )
 
         assert analyses == [], "the second question should come before another analysis"
         assert analysis is None
@@ -286,11 +171,35 @@ async def test_the_round_asks_the_next_gap_before_spending_an_analysis():
         assert produced[1].gap_key == "topic:2"
 
 
-@pytest.mark.asyncio
+async def test_the_chat_names_each_follow_up_by_its_qa_id_and_the_question_still_open():
+    async with isolated_database() as session_factory:
+        trace = numbered_gaps(4).model_dump(mode="json")
+        case_id, user_id, first_id = await seeded_case(session_factory, trace=trace)
+
+        sent = await send_case_message(
+            case_id=case_id,
+            user_id=user_id,
+            request=ChatMessageCreate(content="Around two in the morning."),
+            session_factory=session_factory,
+        )
+        answer, second = sent.messages
+        async with session_factory() as db:
+            chat = await get_case_chat(db, case_id=case_id, user_id=user_id)
+
+        assert (answer.qa_id, second.qa_id) == ("QA-01", "QA-02")
+        assert sent.pending_question_id == second.id
+        assert [(message.id, message.qa_id) for message in chat.messages] == [
+            (first_id, "QA-01"),
+            (answer.id, "QA-01"),
+            (second.id, "QA-02"),
+        ]
+        assert chat.pending_question_id == second.id
+
+
 async def test_a_retried_send_gets_what_it_already_produced():
     async with isolated_database() as session_factory:
-        trace = three_gaps().model_dump(mode="json")
-        case_id, user_id, _ = await case_with_a_question(session_factory, trace)
+        trace = numbered_gaps(4).model_dump(mode="json")
+        case_id, user_id, _ = await seeded_case(session_factory, trace=trace)
         send = ChatMessageCreate(content="Around two.", client_request_id="send-1")
 
         first, _ = await post_case_message(
@@ -308,10 +217,9 @@ async def test_a_retried_send_gets_what_it_already_produced():
         assert case.source_revision == 1, "and no reply revises the case"
 
 
-@pytest.mark.asyncio
 async def test_a_retried_answer_runs_the_analysis_its_first_attempt_lost(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        case_id, user_id, question_id = await seeded_case(session_factory)
         send = ChatMessageCreate(content="Around two in the morning.", client_request_id="send-1")
         continuing: list[bool] = []
         finished = object()
@@ -324,16 +232,14 @@ async def test_a_retried_answer_runs_the_analysis_its_first_attempt_lost(monkeyp
             continuing.append(kwargs["continuing_followup"])
             return finished
 
-        import app.services.chat.case_chat as module
-
-        monkeypatch.setattr(module, "run_case_analysis", lost)
+        monkeypatch.setattr(case_chat, "run_case_analysis", lost)
         with pytest.raises(CaseWorkflowError) as failure:
             await post_case_message(
                 case_id=case_id, user_id=user_id, request=send, session_factory=session_factory
             )
         assert failure.value.code == "case_assessment_transport"
 
-        monkeypatch.setattr(module, "run_case_analysis", analysed)
+        monkeypatch.setattr(case_chat, "run_case_analysis", analysed)
         produced, step = await post_case_message(
             case_id=case_id, user_id=user_id, request=send, session_factory=session_factory
         )
@@ -350,10 +256,9 @@ async def test_a_retried_answer_runs_the_analysis_its_first_attempt_lost(monkeyp
         assert len(answers) == 1, "the retry must not record the answer twice"
 
 
-@pytest.mark.asyncio
 async def test_a_retried_answer_whose_analysis_ran_is_not_analysed_again(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        case_id, user_id, question_id = await seeded_case(session_factory)
         await answer_the_question(session_factory, case_id, question_id, sent="send-1")
         await analysed_after_the_round(session_factory, case_id)
         analyses: list[uuid.UUID] = []
@@ -361,9 +266,7 @@ async def test_a_retried_answer_whose_analysis_ran_is_not_analysed_again(monkeyp
         async def analysed(**kwargs):
             analyses.append(kwargs["case_id"])
 
-        import app.services.chat.case_chat as module
-
-        monkeypatch.setattr(module, "run_case_analysis", analysed)
+        monkeypatch.setattr(case_chat, "run_case_analysis", analysed)
         produced, step = await post_case_message(
             case_id=case_id,
             user_id=user_id,
@@ -378,19 +281,16 @@ async def test_a_retried_answer_whose_analysis_ran_is_not_analysed_again(monkeyp
         assert produced[0].in_reply_to_message_id == question_id
 
 
-@pytest.mark.asyncio
 async def test_a_retry_while_the_round_is_being_analysed_does_not_start_another(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        case_id, user_id, question_id = await seeded_case(session_factory)
         await answer_the_question(session_factory, case_id, question_id, sent="send-1")
         analyses: list[uuid.UUID] = []
 
         async def analysed(**kwargs):
             analyses.append(kwargs["case_id"])
 
-        import app.services.chat.case_chat as module
-
-        monkeypatch.setattr(module, "run_case_analysis", analysed)
+        monkeypatch.setattr(case_chat, "run_case_analysis", analysed)
         with analysing(case_id):
             produced, step = await post_case_message(
                 case_id=case_id,
@@ -406,32 +306,26 @@ async def test_a_retry_while_the_round_is_being_analysed_does_not_start_another(
         assert produced[0].in_reply_to_message_id == question_id
 
 
-@pytest.mark.asyncio
-async def test_analysing_again_continues_a_round_whose_analysis_never_ran():
+async def test_analysing_again_continues_a_round_whose_analysis_never_ran(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        case_id, user_id, question_id = await seeded_case(session_factory)
         await answer_the_question(session_factory, case_id, question_id)
-        seen = []
-
-        async def pipeline(data):
-            seen.append((data.asked_gap_keys, data.rounds_spent))
-            return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
+        seen: list = []
+        production_pipeline(monkeypatch, [CaseAnalysisGap.model_validate(GAP)], seen)
 
         step = await run_case_analysis(
-            case_id=case_id,
-            user_id=user_id,
-            session_factory=session_factory,
-            pipeline=pipeline,
+            case_id=case_id, user_id=user_id, session_factory=session_factory
         )
 
         assert seen == [(frozenset({GAP["gap_key"]}), 2)]
-        assert step.question is None, "the gap that was answered is not asked again"
+        assert not step.needs_followup, "the gap that was answered is not asked again"
+        assert step.result.trace_json["stop_reason"] == "gaps_exhausted"
+        assert len(await gap_questions(session_factory, case_id)) == 1
 
 
-@pytest.mark.asyncio
 async def test_analysing_again_after_the_round_was_analysed_starts_afresh():
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        case_id, user_id, question_id = await seeded_case(session_factory)
         await answer_the_question(session_factory, case_id, question_id)
         await analysed_after_the_round(session_factory, case_id)
         seen = []
@@ -450,10 +344,41 @@ async def test_analysing_again_after_the_round_was_analysed_starts_afresh():
         assert seen == [(frozenset(), 1)]
 
 
-@pytest.mark.asyncio
+async def test_a_pipeline_that_returns_only_an_analysis_stores_it_and_asks_nothing():
+    async with isolated_database() as session_factory:
+        case_id, user_id, _ = await seeded_case(session_factory, asking=False)
+
+        step = await run_case_analysis(
+            case_id=case_id,
+            user_id=user_id,
+            session_factory=session_factory,
+            pipeline=bare_analysis,
+        )
+
+        assert not step.needs_followup
+        assert step.result.status == "validated"
+        assert step.result.trace_json["stop_reason"] is None, (
+            "the clarification policy never ran, so the analysis cannot say why it stopped asking"
+        )
+        assert (
+            clarification_limitation(CaseAnalysisTrace.model_validate(step.result.trace_json))
+            is None
+        ), "a report would otherwise claim that no outstanding gap was worth asking about"
+        assert await gap_questions(session_factory, case_id) == []
+        async with session_factory() as db:
+            summary = await db.scalar(
+                select(ChatMessage).where(ChatMessage.analysis_result_id == step.result.id)
+            )
+        assert summary.content == TRACE["summary"]
+        assert set(summary.metadata_json) == {"analysis_trace"}
+        stored_trace = ChatMessageRead.model_validate(summary).metadata_json["analysis_trace"]
+        assert isinstance(stored_trace, MessageAnalysisTrace)
+        assert stored_trace.summary == TRACE["summary"]
+
+
 async def test_an_analysis_records_the_answers_it_read_and_not_later_ones():
     async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
+        case_id, user_id, question_id = await seeded_case(session_factory)
         await answer_the_question(session_factory, case_id, question_id)
 
         async def pipeline(data):
@@ -504,10 +429,9 @@ async def test_an_analysis_records_the_answers_it_read_and_not_later_ones():
         }, "the answer given while the model was thinking was never read"
 
 
-@pytest.mark.asyncio
 async def test_an_analysis_records_the_sources_it_read_and_not_later_ones():
     async with isolated_database() as session_factory:
-        case_id, user_id, _ = await case_with_a_question(session_factory)
+        case_id, user_id, _ = await seeded_case(session_factory)
         async with session_factory() as db:
             read = await db.scalar(select(CaseSource.id).where(CaseSource.case_id == case_id))
 
@@ -537,26 +461,19 @@ async def test_an_analysis_records_the_sources_it_read_and_not_later_ones():
         }, "the source added while the model was thinking was never read"
 
 
-@pytest.mark.asyncio
-async def test_a_spent_budget_does_not_silence_the_case_for_good():
-    from app.services.analysis.contracts import CaseAnalysisTrace
-    from app.services.analysis.pipeline import AnalysisArtifacts
-    from app.services.sources.case_source_bundle import load_case_source_bundle
-    from app.services.workflow.run_analysis import store_analysis
-    from app.services.workflow.shared import CaseUnderAnalysis
-
+async def test_a_spent_budget_does_not_silence_the_case_for_good(monkeypatch):
     async with isolated_database() as session_factory:
-        trace_json = three_gaps().model_dump(mode="json")
-        case_id, user_id, _ = await case_with_a_question(session_factory, trace_json)
+        gaps = numbered_gaps(4)
+        case_id, user_id, _ = await seeded_case(session_factory, trace=gaps.model_dump(mode="json"))
         async with session_factory() as db, db.begin():
             for extra in range(settings.chat_followup_max_rounds):
                 other = CaseAnalysisResult(
                     case_id=case_id,
                     source_revision=1,
                     summary="Earlier.",
-                    trace_json=trace_json,
+                    status="assessment",
+                    trace_json=CaseAssessmentTrace(gaps=gaps.gaps).model_dump(mode="json"),
                     pipeline_config={},
-                    external_context_json={},
                 )
                 db.add(other)
                 await db.flush()
@@ -566,100 +483,57 @@ async def test_a_spent_budget_does_not_silence_the_case_for_good():
                         ordinal=9 + extra,
                         role="assistant",
                         content="An earlier question.",
+                        message_kind="followup_question",
                         gap_key=f"topic:spent-{extra}",
                         analysis_result_id=other.id,
                     )
                 )
+        standing = (await gap_questions(session_factory, case_id))[-1]
+        production_pipeline(monkeypatch, gaps.gaps)
 
-        async def questions() -> int:
-            async with session_factory() as db:
-                rows = await db.scalars(
-                    select(ChatMessage.id).where(
-                        ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None)
-                    )
-                )
-                return len(list(rows))
-
-        async def store(*, continuing: bool):
-            async with session_factory() as db:
-                bundle = await load_case_source_bundle(db, case_id=case_id, user_id=user_id)
-            before = await questions()
-            step = await store_analysis(
-                session_factory,
-                CaseUnderAnalysis(case_id=case_id, source_bundle=bundle),
-                AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(trace_json)),
-                continuing_followup=continuing,
-            )
-            return await questions() - before, step
-
-        asked, step = await store(continuing=True)
-        assert asked == 0, "a reply must respect the spent budget"
-        assert step.stop_reason == "max_rounds_reached"
-        assert step.result.trace_json["stop_reason"] == "max_rounds_reached", (
-            "the stored analysis has to say why it stopped asking"
-        )
-
-        asked, step = await store(continuing=False)
-        assert step.stop_reason is None
-        assert step.question is not None, "the reader's own analysis may ask again"
-        assert asked == 0, "and it re-offers the standing question rather than adding one"
-
-
-@pytest.mark.asyncio
-async def test_a_second_analysis_does_not_strand_the_standing_question():
-    async with isolated_database() as session_factory:
-        case_id, user_id, question_id = await case_with_a_question(session_factory)
-
-        async def pipeline(data):
-            return AnalysisArtifacts(trace=CaseAnalysisTrace.model_validate(TRACE))
-
-        step = await run_case_analysis(
+        replied = await run_case_analysis(
             case_id=case_id,
             user_id=user_id,
             session_factory=session_factory,
-            pipeline=pipeline,
+            continuing_followup=True,
         )
 
-        assert step.question is not None
-        assert step.question.id == question_id, "asked a new question over the standing one"
-        assert step.gap is not None and step.gap.gap_key == GAP["gap_key"]
+        assert not replied.needs_followup, "a reply must respect the spent budget"
+        assert replied.result.trace_json["stop_reason"] == "max_rounds_reached", (
+            "the stored analysis has to say why it stopped asking"
+        )
+        assert (await gap_questions(session_factory, case_id))[-1].id == standing.id
 
-        async with session_factory() as db:
-            asked = list(
-                await db.scalars(
-                    select(ChatMessage).where(
-                        ChatMessage.case_id == case_id,
-                        ChatMessage.gap_key.is_not(None),
-                    )
-                )
-            )
+        asked_again = await run_case_analysis(
+            case_id=case_id, user_id=user_id, session_factory=session_factory
+        )
+
+        assert asked_again.needs_followup, "the reader's own analysis may ask again"
+        assert asked_again.question.id == standing.id, (
+            "and it re-offers the standing question rather than adding one"
+        )
+        assert (await gap_questions(session_factory, case_id))[-1].id == standing.id
+
+
+async def test_a_second_analysis_does_not_strand_the_standing_question(monkeypatch):
+    async with isolated_database() as session_factory:
+        case_id, user_id, question_id = await seeded_case(session_factory)
+        production_pipeline(monkeypatch, [CaseAnalysisGap.model_validate(GAP)])
+
+        step = await run_case_analysis(
+            case_id=case_id, user_id=user_id, session_factory=session_factory
+        )
+
+        assert step.needs_followup
+        assert step.result.status == "assessment"
+        assert step.question.id == question_id, "asked a new question over the standing one"
+        asked = await gap_questions(session_factory, case_id)
         assert len(asked) == 1, f"{len(asked)} questions outstanding, expected 1"
 
 
-@pytest.mark.asyncio
 async def test_assessment_row_asks_without_becoming_the_latest_analysis():
     async with isolated_database() as session_factory:
-        async with session_factory() as db, db.begin():
-            user = User(
-                email="assessment@example.com",
-                name="Analyst",
-                password_hash="x",
-            )
-            db.add(user)
-            await db.flush()
-            case = Case(user_id=user.id, title="Assessment case", source_revision=1)
-            db.add(case)
-            await db.flush()
-            db.add(
-                CaseSource(
-                    case_id=case.id,
-                    source_kind="narrative",
-                    exact_text="Files were reported encrypted.",
-                )
-            )
-            case_id = case.id
-            user_id = user.id
-
+        case_id, user_id, _ = await seeded_case(session_factory, trace=None)
         assessment = CaseAssessmentTrace.model_validate({"gaps": [GAP]})
 
         async def pipeline(_data):
@@ -686,17 +560,15 @@ async def test_assessment_row_asks_without_becoming_the_latest_analysis():
         assert latest is None
 
 
-@pytest.mark.asyncio
 async def test_assessment_round_keeps_serving_its_remaining_gaps():
     async with isolated_database() as session_factory:
-        trace = CaseAssessmentTrace(gaps=three_gaps().gaps).model_dump(mode="json")
-        case_id, user_id, first_id = await case_with_a_question(session_factory, trace)
+        trace = CaseAssessmentTrace(gaps=numbered_gaps(4).gaps).model_dump(mode="json")
+        case_id, user_id, first_id = await seeded_case(session_factory, trace=trace)
         async with session_factory() as db, db.begin():
             result = await db.scalar(
                 select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_id)
             )
             result.status = "assessment"
-            result.schema_version = "case_assessment_v1"
             case = await db.get(Case, case_id)
             case.latest_analysis_result_id = None
 

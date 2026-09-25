@@ -15,27 +15,11 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   startCaseAnalysis: (...args: unknown[]) => startCaseAnalysis(...args),
 }));
 
-const PAUSED: AnalysisStepRead = {
-  status: "need_followup",
-  round: 1,
-  max_rounds: 3,
-  question: {
-    message_id: "m1",
-    gap_id: "G-01",
-    gap_key: "topic:incident-time",
-    question: "When did the incident happen?",
-  },
-};
+const PAUSED: AnalysisStepRead = { status: "need_followup" };
 
 const RESULT = analysisResult({ id: "r1", case_id: "a" });
 
-const FINISHED: AnalysisStepRead = {
-  status: "completed",
-  round: 2,
-  max_rounds: 3,
-  stop_reason: "gaps_exhausted",
-  result: RESULT,
-};
+const FINISHED: AnalysisStepRead = { status: "completed", result: RESULT };
 
 function setup() {
   const queryClient = new QueryClient({

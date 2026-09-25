@@ -36,10 +36,7 @@ class CaseSourceBundle:
 def source_label(source: CaseSourceItem) -> str:
     if source.filename:
         return f"DOCUMENT {source.filename}"
-    return {
-        "narrative": "CASE NARRATIVE",
-        "followup_answer": "FOLLOW-UP ANSWER",
-    }.get(source.source_kind, "CASE SOURCE")
+    return "CASE NARRATIVE" if source.source_kind == "narrative" else "CASE SOURCE"
 
 
 def case_source_item(source: CaseSource) -> CaseSourceItem:
@@ -55,13 +52,10 @@ def case_source_item(source: CaseSource) -> CaseSourceItem:
 
 
 def case_source_bundle_from_case(case: Case) -> CaseSourceBundle:
-    active_sources = sorted(
-        (source for source in case.sources if source.archived_at is None),
-        key=lambda source: (source.created_at, str(source.id)),
-    )
+    sources = sorted(case.sources, key=lambda source: (source.created_at, str(source.id)))
     return CaseSourceBundle(
         revision=case.source_revision,
-        sources=tuple(case_source_item(source) for source in active_sources),
+        sources=tuple(case_source_item(source) for source in sources),
     )
 
 
@@ -129,16 +123,6 @@ def build_document_source_context(bundle: CaseSourceBundle) -> list[dict[str, ob
             "filename": source.filename,
             "page_spans": pages,
         }
-        for quality_key in (
-            "extraction_method",
-            "provider",
-            "verification_status",
-            "confidence_status",
-            "minimum_confidence",
-            "warnings",
-        ):
-            if quality_key in source.provenance:
-                document[quality_key] = source.provenance[quality_key]
         context.append({"source_id": source.source_id, "documents": [document]})
     return context
 

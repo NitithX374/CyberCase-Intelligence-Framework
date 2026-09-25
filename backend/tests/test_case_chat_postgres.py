@@ -6,6 +6,7 @@ from functools import partial
 from types import SimpleNamespace
 
 import pytest
+from case_chat_support import SETTLED, seeded_case
 from httpx import ASGITransport, AsyncClient
 from isolated_database import isolated_database
 from sqlalchemy import select
@@ -14,11 +15,8 @@ import app.routers.chat as chat_router
 import app.services.chat.case_chat as case_chat
 from app.errors import AppError
 from app.main import app
-from app.models.analysis import CaseAnalysisResult
-from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
-from app.models.user import User
 from app.schemas.chat import ChatMessageCreate
 from app.services.analysis.contracts import CaseAnalysisFailure, CaseAnalysisOutput
 from app.services.auth.dependencies import get_current_user
@@ -26,54 +24,15 @@ from app.services.workflow.answer_question import answer_case_question, answer_r
 
 pytestmark = pytest.mark.asyncio
 
-TRACE = {
-    "version": "case_analysis_trace_v1",
-    "analysis_mode": "case_overview",
-    "validation_status": "validated",
-    "summary": "Files on the shared drive were reported encrypted.",
-    "claims": [],
-    "gaps": [],
-    "mitre_associations": [],
-}
 
-
-async def seeded_case(session_factory) -> tuple[uuid.UUID, uuid.UUID]:
-    async with session_factory() as db, db.begin():
-        user = User(
-            email="chat@example.com",
-            name="Analyst",
-            password_hash="x",
-        )
-        db.add(user)
-        await db.flush()
-        case = Case(user_id=user.id, title="Chat case", source_revision=1)
-        db.add(case)
-        await db.flush()
-        db.add(
-            CaseSource(
-                case_id=case.id,
-                source_kind="narrative",
-                exact_text="Files on the shared drive were reported encrypted.",
-            )
-        )
-        await db.flush()
-        analysis = CaseAnalysisResult(
-            case_id=case.id,
-            source_revision=1,
-            summary="Files were encrypted.",
-            trace_json=TRACE,
-            pipeline_config={"version": "case_analysis_v1"},
-            external_context_json={},
-        )
-        db.add(analysis)
-        await db.flush()
-        case.latest_analysis_result_id = analysis.id
-        return case.id, user.id
+async def settled_case(session_factory):
+    case_id, user_id, _ = await seeded_case(session_factory, trace=SETTLED, asking=False)
+    return case_id, user_id
 
 
 async def test_asking_a_question_stores_both_messages():
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
+        case_id, user_id = await settled_case(session_factory)
 
         async def fake_answer(**_kwargs):
             return CaseAnalysisOutput(answer="Only the encryption is recorded.", trace=None)
@@ -108,18 +67,7 @@ async def test_asking_a_question_stores_both_messages():
 
 async def test_asking_question_without_analysis_stores_messages():
     async with isolated_database() as session_factory:
-        async with session_factory() as db, db.begin():
-            user = User(
-                email="no-analysis@example.com",
-                name="Analyst",
-                password_hash="x",
-            )
-            db.add(user)
-            await db.flush()
-            case = Case(user_id=user.id, title="Unanalysed case", source_revision=1)
-            db.add(case)
-            await db.flush()
-            case_id, user_id = case.id, user.id
+        case_id, user_id, _ = await seeded_case(session_factory, trace=None, with_source=False)
 
         async def fake_answer(**kwargs):
             assert kwargs["result"] is None
@@ -168,7 +116,7 @@ async def stored_roles(session_factory, case_id: uuid.UUID) -> list[str]:
 
 async def test_retrying_the_same_send_returns_the_first_exchange(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
+        case_id, user_id = await settled_case(session_factory)
         calls: list[str] = []
 
         async def fake_answer(**kwargs):
@@ -190,7 +138,7 @@ async def test_retrying_the_same_send_returns_the_first_exchange(monkeypatch):
 
 async def test_a_failed_answer_is_answered_when_the_send_is_retried(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
+        case_id, user_id = await settled_case(session_factory)
         calls: list[str] = []
 
         async def flaky_answer(**kwargs):
@@ -222,7 +170,7 @@ async def test_a_failed_answer_is_answered_when_the_send_is_retried(monkeypatch)
 
 async def test_a_failed_answer_is_a_coded_bad_gateway_that_the_same_send_answers(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
+        case_id, user_id = await settled_case(session_factory)
         calls: list[str] = []
 
         async def flaky_answer(**kwargs):
@@ -234,8 +182,8 @@ async def test_a_failed_answer_is_a_coded_bad_gateway_that_the_same_send_answers
         answering_with(monkeypatch, flaky_answer)
         monkeypatch.setattr(
             chat_router,
-            "post_case_message",
-            partial(case_chat.post_case_message, session_factory=session_factory),
+            "send_case_message",
+            partial(case_chat.send_case_message, session_factory=session_factory),
         )
         fastapi_app = app.app
         fastapi_app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=user_id)
@@ -254,17 +202,21 @@ async def test_a_failed_answer_is_a_coded_bad_gateway_that_the_same_send_answers
             "detail": {"code": "chat_answer_timeout", "message": "Analysis stage timed out"}
         }
         assert retried.status_code == 200
-        question, answer = retried.json()["messages"]
+        body = retried.json()
+        question, answer = body["messages"]
         assert question["content"] == "What do we know so far?"
         assert answer["content"] == "Answered on the retry."
         assert answer["in_reply_to_message_id"] == question["id"]
+        assert (question["qa_id"], answer["qa_id"]) == (None, None)
+        assert body["pending_question_id"] is None
+        assert answer["metadata_json"] == {}
         assert len(calls) == 2
         assert await stored_roles(session_factory, case_id) == ["user", "assistant"]
 
 
 async def test_a_retry_while_the_answer_is_pending_does_not_ask_twice(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
+        case_id, user_id = await settled_case(session_factory)
         asked = asyncio.Event()
         release = asyncio.Event()
         calls: list[str] = []
@@ -297,7 +249,7 @@ async def test_a_retry_while_the_answer_is_pending_does_not_ask_twice(monkeypatc
 
 async def test_a_reply_without_letters_is_answered_in_the_case_language():
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
+        case_id, user_id = await settled_case(session_factory)
         async with session_factory() as db, db.begin():
             db.add(
                 CaseSource(

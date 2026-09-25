@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 from uuid import uuid4
 
+import pytest
 from case_mitre_test_support import _fixtures
 
 from app.services.analysis import pipeline as pipeline_module
+from app.services.analysis.clarification import Proceed
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
@@ -14,6 +16,7 @@ from app.services.analysis.contracts import (
 )
 from app.services.analysis.mitre_gate.llm import skipped_mitre_applicability
 from app.services.analysis.pipeline import (
+    AnalysisAdvance,
     AnalysisArtifacts,
     AnalysisInput,
     advance_case,
@@ -22,8 +25,8 @@ from app.services.analysis.pipeline import (
 )
 from app.services.analysis.steps.technical_context import CaseMitreAugmentation
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
-from app.services.workflow.run_analysis import think
-from app.services.workflow.shared import CaseUnderAnalysis
+from app.services.workflow.run_analysis import UnassessedAdvance, store_outcome, think
+from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError
 from experiments import analysis_arms
 
 
@@ -259,3 +262,29 @@ def test_the_analysis_language_comes_from_the_case_sources():
     assert language_the_pipeline_is_given("Server log 10.0.0.5", "ผู้เสียหายแจ้งความ") == "thai", (
         "one Thai source makes the case Thai"
     )
+
+
+def test_an_analysis_from_a_substituted_pipeline_is_stored_as_one_that_asks_nothing():
+    bundle, trace = case_with_one_narrative()
+    artifacts = AnalysisArtifacts(trace=trace)
+
+    async def arm(_data):
+        return artifacts
+
+    outcome = asyncio.run(think(arm, CaseUnderAnalysis(case_id=uuid4(), source_bundle=bundle)))
+
+    assert outcome == UnassessedAdvance(
+        CaseAssessmentTrace(gaps=[]), Proceed("no_eligible_gap"), artifacts
+    )
+    assert isinstance(outcome, AnalysisAdvance)
+
+
+def test_only_an_advance_with_a_trace_is_stored():
+    bundle, _ = case_with_one_narrative()
+    started = CaseUnderAnalysis(case_id=uuid4(), source_bundle=bundle)
+    untraced = AnalysisAdvance(CaseAssessmentTrace(gaps=[]), Proceed("no_eligible_gap"))
+
+    for outcome, code in ((None, "analysis_result_invalid"), (untraced, "analysis_trace_missing")):
+        with pytest.raises(CaseWorkflowError) as refused:
+            asyncio.run(store_outcome(None, started, outcome))
+        assert refused.value.code == code

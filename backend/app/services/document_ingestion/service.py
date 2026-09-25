@@ -24,7 +24,6 @@ from app.services.document_ingestion.parsers import (
     inspect_pdf,
     parse_docx,
 )
-from app.services.document_ingestion.provenance import build_document_id
 from app.services.document_ingestion.recognition import DocumentRecognizer, RenderedPage
 
 
@@ -52,12 +51,6 @@ class DocumentIngestionService:
         if hasattr(self._recognizer, "aclose"):
             await self._recognizer.aclose()
 
-    async def __aenter__(self) -> "DocumentIngestionService":
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.aclose()
-
     async def ingest(
         self,
         content: bytes,
@@ -65,21 +58,19 @@ class DocumentIngestionService:
     ) -> IngestedDocument:
         self.validate_content(content)
         detected = detect_document(content)
-        document_id = build_document_id(content)
         safe_filename = self.safe_filename(filename)
 
         if detected.kind == DocumentKind.DOCX:
-            pages, warnings = parse_docx(content, document_id)
+            pages, warnings = parse_docx(content)
             method = ExtractionMethod.NATIVE_DOCX
         elif detected.kind == DocumentKind.PDF:
-            pages, warnings, method = await self.ingest_pdf(content, document_id)
+            pages, warnings, method = await self.ingest_pdf(content)
         else:
-            pages, warnings = await self.ingest_image(content, document_id)
+            pages, warnings = await self.ingest_image(content)
             method = ExtractionMethod.DOCUMENT_RECOGNITION
 
         full_text = "\n\n".join(page.text for page in pages if page.text)
         return IngestedDocument(
-            document_id=document_id,
             filename=safe_filename,
             media_type=detected.media_type,
             extraction_method=method,
@@ -100,7 +91,6 @@ class DocumentIngestionService:
     async def ingest_pdf(
         self,
         content: bytes,
-        document_id: str,
     ) -> tuple[list[DocumentPage], list[str], ExtractionMethod]:
         inspection = inspect_pdf(
             content,
@@ -136,7 +126,6 @@ class DocumentIngestionService:
                     self._limits.render_longest_edge,
                 )
                 rendered = RenderedPage(
-                    document_id=document_id,
                     page_number=inspected_page.page_number,
                     image_bytes=image_bytes,
                 )
@@ -162,14 +151,13 @@ class DocumentIngestionService:
     async def ingest_image(
         self,
         content: bytes,
-        document_id: str,
     ) -> tuple[list[DocumentPage], list[str]]:
         image_bytes = normalize_image(
             content,
             self._limits.render_longest_edge,
             self._limits.max_image_pixels,
         )
-        page, warnings = await self.process_rendered_page(RenderedPage(document_id, 1, image_bytes))
+        page, warnings = await self.process_rendered_page(RenderedPage(1, image_bytes))
         return [page], warnings
 
     async def process_rendered_page(

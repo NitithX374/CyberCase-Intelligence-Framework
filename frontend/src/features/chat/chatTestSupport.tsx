@@ -19,12 +19,8 @@ export function message(
   };
 }
 
-export function caseChat(
-  caseId = "a",
-  status: CaseChatRead["status"] = "idle",
-  messages: ChatMessageRead[] = [],
-): CaseChatRead {
-  return { case_id: caseId, status, messages };
+export function caseChat(caseId = "a", messages: ChatMessageRead[] = []): CaseChatRead {
+  return { case_id: caseId, messages };
 }
 
 export function chatResponse(...messages: ChatMessageRead[]): CaseChatResponse {

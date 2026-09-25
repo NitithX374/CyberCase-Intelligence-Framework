@@ -14,21 +14,32 @@ class ExtractionMethod(StrEnum):
     HYBRID = "hybrid"
 
 
+VerificationStatus = Literal["native", "machine_read", "needs_review"]
+
+
 class DocumentPage(BaseModel):
     page_number: int = Field(ge=1)
     text: str
     text_method: Literal["native", "ocr"]
-    verification_status: Literal["native", "machine_read", "needs_review"]
+    verification_status: VerificationStatus
 
 
 class IngestedDocument(BaseModel):
-    document_id: str
     filename: str
     media_type: str
     extraction_method: ExtractionMethod
     pages: list[DocumentPage]
     full_text: str
     warnings: list[str] = Field(default_factory=list)
+
+    @property
+    def verification_status(self) -> VerificationStatus:
+        statuses = {page.verification_status for page in self.pages}
+        if "needs_review" in statuses:
+            return "needs_review"
+        if "machine_read" in statuses:
+            return "machine_read"
+        return "native"
 
 
 class DocumentIngestionError(AppError):

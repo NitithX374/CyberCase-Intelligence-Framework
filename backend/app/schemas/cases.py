@@ -6,7 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CaseAnalysisFreshness = Literal["missing", "current", "stale"]
+from app.schemas.analysis import AnalysisFreshness
+
 CaseStatus = Literal["idle", "answered"]
 
 
@@ -27,13 +28,12 @@ class CaseRead(BaseModel):
     status: CaseStatus
     source_revision: int = 0
     latest_analysis_result_id: UUID | None = None
-    analysis_freshness: CaseAnalysisFreshness = "missing"
+    analysis_freshness: AnalysisFreshness = "missing"
     created_at: datetime
     updated_at: datetime
 
 
 __all__ = [
-    "CaseAnalysisFreshness",
     "CaseCreate",
     "CaseRead",
     "CaseStatus",

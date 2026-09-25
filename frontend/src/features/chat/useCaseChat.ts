@@ -151,7 +151,7 @@ function beingSent(
     message_kind: "conversation",
     analysis_result_id: null,
     in_reply_to_message_id: null,
-    metadata_json: { action: "conversation" },
+    metadata_json: {},
     created_at: new Date().toISOString(),
   };
 }

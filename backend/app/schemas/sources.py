@@ -33,11 +33,12 @@ class CaseSourceRead(BaseModel):
     source_kind: str
     document_id: UUID | None
     filename: str | None = None
+    mime_type: str | None = None
+    size_bytes: int | None = None
     exact_text: str
     provenance_json: dict[str, object] = Field(default_factory=dict)
     source_metadata_json: dict[str, object] = Field(default_factory=dict)
     created_at: datetime
-    archived_at: datetime | None
 
 
 __all__ = [

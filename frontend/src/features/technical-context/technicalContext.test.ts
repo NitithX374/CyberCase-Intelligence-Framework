@@ -120,7 +120,6 @@ describe("buildTechnicalContext", () => {
   it("reads a retrieval that came back empty as no supported context", () => {
     const fixture = technicalContextFixture("insufficient_context", []);
     fixture.result.trace_json!.retrieval_context_id = null;
-    fixture.result.retrieval_context_id = null;
     const result = buildTechnicalContext(fixture.result, fixture.sources);
     expect(result.status).toBe("insufficient_context");
   });

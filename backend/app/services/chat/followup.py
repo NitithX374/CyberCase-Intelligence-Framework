@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.analysis import CaseAnalysisResult
@@ -17,66 +17,71 @@ from app.services.analysis.contracts import (
 )
 
 
-async def rounds_asked(db: AsyncSession, case_id: UUID) -> int:
-    return await db.scalar(
-        select(func.count(func.distinct(ChatMessage.analysis_result_id))).where(
-            ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None)
-        )
-    )
-
-
-async def asked_this_round(db: AsyncSession, analysis_result_id: UUID) -> set[str]:
+async def case_messages(db: AsyncSession, case_id: UUID) -> list[ChatMessage]:
     rows = await db.scalars(
-        select(ChatMessage.gap_key).where(
-            ChatMessage.analysis_result_id == analysis_result_id,
-            ChatMessage.gap_key.is_not(None),
-        )
+        select(ChatMessage).where(ChatMessage.case_id == case_id).order_by(ChatMessage.ordinal)
     )
-    return set(rows)
+    return list(rows)
 
 
-async def asked_gap_keys(db: AsyncSession, case_id: UUID) -> set[str]:
-    rows = await db.scalars(
-        select(ChatMessage.gap_key).where(
-            ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None)
-        )
+def asked_gap_keys(messages: Sequence[ChatMessage]) -> frozenset[str]:
+    return frozenset(message.gap_key for message in messages if message.gap_key)
+
+
+def rounds_asked(messages: Sequence[ChatMessage]) -> int:
+    return len(
+        {
+            message.analysis_result_id
+            for message in messages
+            if message.gap_key and message.analysis_result_id is not None
+        }
     )
-    return {key for key in rows if key}
 
 
-async def load_followup_history(
-    db: AsyncSession, case_id: UUID
-) -> tuple[CaseFollowupExchange, ...]:
-    return followup_history_from(
-        list(
-            await db.scalars(
-                select(ChatMessage)
-                .where(ChatMessage.case_id == case_id)
-                .order_by(ChatMessage.ordinal)
-            )
-        )
+def asked_in_round(messages: Sequence[ChatMessage], analysis_result_id: UUID) -> int:
+    return sum(
+        1
+        for message in messages
+        if message.gap_key and message.analysis_result_id == analysis_result_id
     )
+
+
+def numbered_questions(messages: Sequence[ChatMessage]) -> list[tuple[str, ChatMessage]]:
+    questions = [
+        message
+        for message in sorted(messages, key=lambda message: message.ordinal)
+        if message.gap_key
+    ]
+    return [(followup_qa_id(index), question) for index, question in enumerate(questions, 1)]
 
 
 def followup_history_from(
     messages: Sequence[ChatMessage],
 ) -> tuple[CaseFollowupExchange, ...]:
-    messages = sorted(messages, key=lambda message: message.ordinal)
     replies = {
         message.in_reply_to_message_id: message
         for message in messages
         if message.in_reply_to_message_id is not None
     }
-    questions = [message for message in messages if message.gap_key]
     return tuple(
         CaseFollowupExchange(
-            qa_id=followup_qa_id(index),
+            qa_id=qa_id,
             gap_key=question.gap_key or "",
             question=question.content,
             answer=reply.content if (reply := replies.get(question.id)) else None,
         )
-        for index, question in enumerate(questions, start=1)
+        for qa_id, question in numbered_questions(messages)
     )
+
+
+def followup_qa_ids(messages: Sequence[ChatMessage]) -> dict[UUID, str]:
+    questions = {question.id: qa_id for qa_id, question in numbered_questions(messages)}
+    replies = {
+        message.id: questions[message.in_reply_to_message_id]
+        for message in messages
+        if message.in_reply_to_message_id in questions
+    }
+    return questions | replies
 
 
 def question_message(
@@ -97,33 +102,29 @@ def question_message(
     )
 
 
-async def pending_question(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
-    question = await db.scalar(
-        select(ChatMessage)
-        .where(ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None))
-        .order_by(ChatMessage.ordinal.desc())
-    )
-    if question is None:
-        return None
-    reply = await db.scalar(
-        select(ChatMessage.id).where(ChatMessage.in_reply_to_message_id == question.id)
-    )
-    return None if reply else question
-
-
-async def last_question_awaiting_analysis(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
+async def latest_question(db: AsyncSession, case_id: UUID) -> tuple[ChatMessage | None, bool]:
     question = await db.scalar(
         select(ChatMessage)
         .where(ChatMessage.case_id == case_id, ChatMessage.gap_key.is_not(None))
         .order_by(ChatMessage.ordinal.desc())
         .limit(1)
     )
-    if question is None or question.analysis_result_id is None:
-        return None
+    if question is None:
+        return None, False
     reply = await db.scalar(
-        select(ChatMessage.id).where(ChatMessage.in_reply_to_message_id == question.id)
+        select(ChatMessage.id).where(ChatMessage.in_reply_to_message_id == question.id).limit(1)
     )
-    if reply is None:
+    return question, reply is not None
+
+
+async def pending_question(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
+    question, answered = await latest_question(db, case_id)
+    return None if answered else question
+
+
+async def last_question_awaiting_analysis(db: AsyncSession, case_id: UUID) -> ChatMessage | None:
+    question, answered = await latest_question(db, case_id)
+    if question is None or not answered or question.analysis_result_id is None:
         return None
     latest = await db.scalar(
         select(CaseAnalysisResult.id)
@@ -168,20 +169,21 @@ def analysis_result_message(
         content=trace.summary,
         message_kind="conversation",
         analysis_result_id=analysis_result_id,
-        metadata_json=serialize_message_metadata(
-            {"action": "conversation", "analysis_trace": message_trace(trace)}
-        ),
+        metadata_json=serialize_message_metadata({"analysis_trace": message_trace(trace)}),
     )
 
 
 __all__ = [
+    "analysis_result_message",
     "answer_message",
     "asked_gap_keys",
-    "analysis_result_message",
+    "asked_in_round",
+    "case_messages",
     "followup_history_from",
-    "asked_this_round",
+    "followup_qa_ids",
     "last_question_awaiting_analysis",
-    "load_followup_history",
+    "latest_question",
+    "numbered_questions",
     "pending_question",
     "question_message",
     "rounds_asked",

@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import uuid
 
 import pytest
+from case_chat_support import seeded_case
 from isolated_database import isolated_database
 from sqlalchemy import select, text
 
-from app.models.analysis import CaseAnalysisResult
+import app.services.chat.case_chat as case_chat
 from app.models.case import Case
 from app.models.chat import ChatMessage
-from app.models.user import User
 from app.schemas.chat import ChatMessageCreate
 from app.services.analysis.contracts import CaseAnalysisOutput
 from app.services.chat.case_chat import post_case_message
@@ -20,79 +19,17 @@ from app.services.workflow.shared import next_ordinal
 pytestmark = pytest.mark.asyncio
 
 
-TRACE = {
-    "version": "case_analysis_trace_v1",
-    "analysis_mode": "case_overview",
-    "validation_status": "validated",
-    "summary": "The incident time is not established.",
-    "claims": [],
-    "gaps": [
-        {
-            "gap_id": "G-01",
-            "gap_key": "topic:incident-time",
-            "topic": "Incident time",
-            "status": "NOT_PROVIDED",
-            "description": "The incident time is missing.",
-            "reason": "Timing fixes the chronology.",
-            "priority": "high",
-            "askable": True,
-            "clarification_question": "When did the incident happen?",
-        }
-    ],
-    "mitre_associations": [],
-}
-
-
-async def seeded_case(session_factory) -> tuple[uuid.UUID, uuid.UUID]:
-    async with session_factory() as db, db.begin():
-        user = User(
-            email="chat-race@example.com",
-            name="Analyst",
-            password_hash="x",
-        )
-        db.add(user)
-        await db.flush()
-        case = Case(user_id=user.id, title="Concurrent chat case", source_revision=1)
-        db.add(case)
-        await db.flush()
-        analysis = CaseAnalysisResult(
-            case_id=case.id,
-            source_revision=1,
-            summary="The incident time is not established.",
-            trace_json=TRACE,
-            pipeline_config={},
-            external_context_json={},
-        )
-        db.add(analysis)
-        await db.flush()
-        db.add(
-            ChatMessage(
-                case_id=case.id,
-                ordinal=1,
-                role="assistant",
-                content="When did the incident happen?",
-                message_kind="followup_question",
-                gap_key="topic:incident-time",
-                analysis_result_id=analysis.id,
-            )
-        )
-        return case.id, user.id
-
-
 async def test_concurrent_sends_record_one_followup_answer(monkeypatch):
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
-        dispatches = asyncio.Barrier(2)
+        case_id, user_id, _ = await seeded_case(session_factory, with_source=False)
+        both_arrived = asyncio.Barrier(2)
         ordinary_replies = 0
+        original_owned_case = case_chat.owned_case
 
-        import app.services.chat.case_chat as module
-
-        original_standing_question = module.standing_question
-
-        async def synchronized_dispatch(*args, **kwargs):
-            question = await original_standing_question(*args, **kwargs)
-            await dispatches.wait()
-            return question
+        async def owned_case_together(*args, lock=False, **kwargs):
+            if lock:
+                await both_arrived.wait()
+            return await original_owned_case(*args, lock=lock, **kwargs)
 
         async def ordinary_reply(**kwargs):
             nonlocal ordinary_replies
@@ -111,9 +48,9 @@ async def test_concurrent_sends_record_one_followup_answer(monkeypatch):
         async def no_analysis(**_kwargs):
             return None
 
-        monkeypatch.setattr(module, "standing_question", synchronized_dispatch)
-        monkeypatch.setattr(module, "answer_case_question", ordinary_reply)
-        monkeypatch.setattr(module, "run_case_analysis", no_analysis)
+        monkeypatch.setattr(case_chat, "owned_case", owned_case_together)
+        monkeypatch.setattr(case_chat, "answer_case_question", ordinary_reply)
+        monkeypatch.setattr(case_chat, "run_case_analysis", no_analysis)
 
         await asyncio.gather(
             *(
@@ -160,7 +97,7 @@ async def blocked_by(session_factory, blocker: int) -> None:
 
 async def test_an_answer_waits_for_a_case_write_in_flight_and_takes_the_next_ordinal():
     async with isolated_database() as session_factory:
-        case_id, user_id = await seeded_case(session_factory)
+        case_id, user_id, _ = await seeded_case(session_factory, with_source=False)
         asked = asyncio.Event()
         release = asyncio.Event()
 

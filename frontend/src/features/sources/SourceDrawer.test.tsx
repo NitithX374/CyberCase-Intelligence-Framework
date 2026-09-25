@@ -17,7 +17,6 @@ function caseSource(id: string, kind: "narrative" | "document", filename?: strin
     provenance_json: {},
     source_metadata_json: {},
     created_at: "2026-09-24T13:00:00Z",
-    archived_at: null,
   };
 }
 

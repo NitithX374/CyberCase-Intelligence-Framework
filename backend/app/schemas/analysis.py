@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.services.analysis.contracts import CaseAnalysisTrace
 
@@ -21,30 +21,23 @@ class CaseAnalysisResultRead(BaseModel):
     id: UUID
     case_id: UUID
     source_revision: int
-    schema_version: str
+    schema_version: Literal["case_analysis_trace_v1"] = "case_analysis_trace_v1"
     status: Literal["validated"]
     summary: str
     trace_json: CaseAnalysisTrace | None
-    retrieval_context_id: str | None
     pipeline_config: dict[str, object]
     external_context_json: dict[str, object] = Field(default_factory=dict)
     created_at: datetime
     freshness: AnalysisFreshness = "current"
 
-
-class FollowupQuestionRead(BaseModel):
-    message_id: UUID
-    gap_id: str
-    gap_key: str
-    question: str
+    @computed_field
+    @property
+    def retrieval_context_id(self) -> str | None:
+        return self.trace_json.retrieval_context_id if self.trace_json is not None else None
 
 
 class AnalysisStepRead(BaseModel):
     status: Literal["need_followup", "completed"]
-    round: int
-    max_rounds: int
-    stop_reason: str | None = None
-    question: FollowupQuestionRead | None = None
     result: CaseAnalysisResultRead | None = None
 
 
@@ -53,5 +46,4 @@ __all__ = [
     "AnalysisStepRead",
     "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
-    "FollowupQuestionRead",
 ]
