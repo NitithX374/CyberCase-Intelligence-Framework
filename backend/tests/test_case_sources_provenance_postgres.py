@@ -1,10 +1,16 @@
 import asyncio
 from uuid import uuid4
 
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from isolated_database import isolated_database
 
-from app.models import Case
+from app.config import settings
+from app.database import get_db
+from app.main import app
+from app.models import Case, User
 from app.schemas.sources import CaseSourceRead
+from app.services.auth.credentials import create_access_token
 from app.services.sources.source_service import SourceService
 
 
@@ -76,5 +82,45 @@ def test_a_source_names_the_file_it_was_read_from():
                     source.source_kind: CaseSourceRead.model_validate(source).filename
                     for source in listed
                 } == {"document": "statement.pdf", "narrative": None}
+
+    asyncio.run(exercise())
+
+
+def test_a_signed_in_write_opens_its_own_transaction(monkeypatch):
+    monkeypatch.setattr(settings, "jwt_secret_key", "test-secret-for-request-sessions-1234567890")
+    fastapi_app = app
+    while not isinstance(fastapi_app, FastAPI):
+        fastapi_app = fastapi_app.app
+
+    async def exercise():
+        async with isolated_database() as factory:
+            async with factory() as db, db.begin():
+                user = User(email="sources@example.com", name="Analyst", password_hash="x")
+                db.add(user)
+                await db.flush()
+                case = Case(user_id=user.id, title="Sources over HTTP")
+                db.add(case)
+                await db.flush()
+                user_id, case_id = user.id, case.id
+
+            async def request_session():
+                async with factory() as session:
+                    yield session
+
+            fastapi_app.dependency_overrides[get_db] = request_session
+            try:
+                async with AsyncClient(
+                    transport=ASGITransport(app=app),
+                    base_url="http://test/api/v1",
+                    cookies={settings.jwt_cookie_name: create_access_token(user_id, user.email)},
+                ) as client:
+                    response = await client.post(
+                        f"/cases/{case_id}/sources", json={"exact_text": "What happened."}
+                    )
+            finally:
+                fastapi_app.dependency_overrides.clear()
+
+            assert response.status_code == 201
+            assert response.json()["exact_text"] == "What happened."
 
     asyncio.run(exercise())

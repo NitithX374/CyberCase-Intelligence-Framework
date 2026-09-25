@@ -104,7 +104,6 @@ class AuthConfig(BaseModel):
     jwt_cookie_name: str = "cybercase_auth_token"
     jwt_cookie_secure: bool = False
     frontend_base_url: str = "http://localhost:3000"
-    auth_dev_login_enabled: bool = False
 
 
 class Settings(

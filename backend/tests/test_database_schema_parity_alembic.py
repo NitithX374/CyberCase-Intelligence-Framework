@@ -22,6 +22,9 @@ EXPECTED_CANONICAL_TABLES = {
     "case_analysis_results",
     "case_reports",
 }
+DROPPED_FROM_MODELS_BEFORE_SQUASH = {
+    "users": {"email_verified_at", "oauth_provider", "oauth_subject_id"},
+}
 
 
 def _load_migration_modules():
@@ -83,8 +86,11 @@ def test_alembic_baseline_upgrade_matches_base_metadata():
 
                     for table_name in EXPECTED_CANONICAL_TABLES:
                         orm_table = Base.metadata.tables[table_name]
+                        dropped = DROPPED_FROM_MODELS_BEFORE_SQUASH.get(table_name, set())
                         db_columns = {
-                            c["name"]: c for c in inspector.get_columns(table_name, schema=schema)
+                            c["name"]: c
+                            for c in inspector.get_columns(table_name, schema=schema)
+                            if c["name"] not in dropped
                         }
                         assert set(db_columns) == set(orm_table.c.keys())
                         for orm_col_name, orm_col in orm_table.c.items():

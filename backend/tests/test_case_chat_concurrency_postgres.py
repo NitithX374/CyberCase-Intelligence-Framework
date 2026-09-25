@@ -5,14 +5,17 @@ import uuid
 
 import pytest
 from isolated_database import isolated_database
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.user import User
 from app.schemas.chat import ChatMessageCreate
+from app.services.analysis.contracts import CaseAnalysisOutput
 from app.services.chat.case_chat import post_case_message
+from app.services.workflow.answer_question import answer_case_question
+from app.services.workflow.shared import next_ordinal
 
 pytestmark = pytest.mark.asyncio
 
@@ -46,8 +49,6 @@ async def seeded_case(session_factory) -> tuple[uuid.UUID, uuid.UUID]:
             email="chat-race@example.com",
             name="Analyst",
             password_hash="x",
-            oauth_provider="password",
-            oauth_subject_id="chat-race@example.com",
         )
         db.add(user)
         await db.flush()
@@ -140,3 +141,57 @@ async def test_concurrent_sends_record_one_followup_answer(monkeypatch):
 
         assert len(answers) == 1
         assert ordinary_replies == 1
+
+
+async def blocked_by(session_factory, blocker: int) -> None:
+    for _ in range(400):
+        async with session_factory() as observer:
+            waiting = await observer.scalar(
+                text(
+                    "SELECT count(*) FROM pg_stat_activity WHERE :pid = ANY(pg_blocking_pids(pid))"
+                ),
+                {"pid": blocker},
+            )
+        if waiting:
+            return
+        await asyncio.sleep(0.025)
+    raise AssertionError("the answer write never waited for the case")
+
+
+async def test_an_answer_waits_for_a_case_write_in_flight_and_takes_the_next_ordinal():
+    async with isolated_database() as session_factory:
+        case_id, user_id = await seeded_case(session_factory)
+        asked = asyncio.Event()
+        release = asyncio.Event()
+
+        async def slow_answer(**_kwargs):
+            asked.set()
+            await release.wait()
+            return CaseAnalysisOutput(answer="Answered.", trace=None)
+
+        answering = asyncio.create_task(
+            answer_case_question(
+                case_id=case_id,
+                user_id=user_id,
+                content="What happened?",
+                session_factory=session_factory,
+                answer_request=slow_answer,
+            )
+        )
+        await asked.wait()
+        async with session_factory() as db, db.begin():
+            await db.scalar(select(Case).where(Case.id == case_id).with_for_update())
+            db.add(
+                ChatMessage(
+                    case_id=case_id,
+                    ordinal=await next_ordinal(db, case_id),
+                    role="assistant",
+                    content="Written by an analysis while the answer was pending.",
+                )
+            )
+            await db.flush()
+            release.set()
+            await blocked_by(session_factory, await db.scalar(text("SELECT pg_backend_pid()")))
+        question, answer = await answering
+
+        assert (question.ordinal, answer.ordinal) == (2, 4)

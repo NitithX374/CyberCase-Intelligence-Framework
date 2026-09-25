@@ -6,13 +6,13 @@ from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.sources import CaseSource
+from app.services.cases.ownership import owned_case
 from app.services.sources.source_service import SourceError
 
 
@@ -95,22 +95,20 @@ def case_source_bundle_for_analysis(
     )
 
 
+WITH_SOURCES = (selectinload(Case.sources).selectinload(CaseSource.document),)
+
+
 async def load_case_source_bundle(
     db: AsyncSession,
     *,
     case_id: UUID,
     user_id: UUID | None,
 ) -> CaseSourceBundle:
-    result = await db.execute(
-        select(Case)
-        .options(selectinload(Case.sources).selectinload(CaseSource.document))
-        .where(Case.id == case_id)
-        .with_for_update()
-    )
-    case = result.scalar_one_or_none()
-    if case is None or (user_id is not None and case.user_id != user_id):
-        raise SourceError("case_not_found", "Case not found", 404)
+    case = await owned_case(db, case_id, user_id, lock=True, options=WITH_SOURCES)
+    return analysable_bundle(case)
 
+
+def analysable_bundle(case: Case) -> CaseSourceBundle:
     bundle = case_source_bundle_from_case(case)
     for source in bundle.sources:
         if not source.text.strip():
@@ -153,9 +151,11 @@ def build_rag_query(bundle: CaseSourceBundle) -> str:
 
 
 __all__ = [
+    "WITH_SOURCES",
     "CaseSourceBundle",
     "CaseSourceItem",
     "SourcesRead",
+    "analysable_bundle",
     "build_document_source_context",
     "build_rag_query",
     "case_source_bundle_for_analysis",

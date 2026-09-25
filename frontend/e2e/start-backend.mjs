@@ -33,7 +33,6 @@ const child = spawn(
       CASE_ANALYSIS_PIPELINE: "raw_direct",
       CORS_ORIGINS: "http://127.0.0.1:3100,http://localhost:3100",
       FRONTEND_BASE_URL: "http://127.0.0.1:3100",
-      AUTH_DEV_LOGIN_ENABLED: "true",
       RAG_SERVICE_URL: "http://127.0.0.1:8001",
       PYTHONUNBUFFERED: "1",
     },

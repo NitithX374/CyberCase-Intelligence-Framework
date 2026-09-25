@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.database import commit_dependency_transaction, get_db
+from app.database import get_db
 from app.models.user import User
 from app.schemas.analysis import (
     AnalysisStepRead,
@@ -21,16 +21,8 @@ from app.services.workflow.run_analysis import (
     get_latest_case_analysis,
     run_case_analysis,
 )
-from app.services.workflow.shared import CaseWorkflowError
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-analysis"])
-
-
-def workflow_http_error(error: CaseWorkflowError) -> HTTPException:
-    return HTTPException(
-        status_code=error.status_code,
-        detail={"code": error.code, "message": error.message},
-    )
 
 
 def analysis_step_read(step: AnalysisStep) -> AnalysisStepRead:
@@ -61,14 +53,9 @@ def analysis_step_read(step: AnalysisStep) -> AnalysisStepRead:
 async def analyse_case(
     case_id: UUID,
     request: CaseAnalysisCreate,
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    await commit_dependency_transaction(db)
-    try:
-        step = await run_case_analysis(case_id=case_id, user_id=user.id)
-    except CaseWorkflowError as error:
-        raise workflow_http_error(error) from error
+    step = await run_case_analysis(case_id=case_id, user_id=user.id)
     return analysis_step_read(step)
 
 
@@ -78,10 +65,7 @@ async def get_latest_analysis(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    try:
-        case, result = await get_latest_case_analysis(db, case_id=case_id, user_id=user.id)
-    except CaseWorkflowError as error:
-        raise workflow_http_error(error) from error
+    case, result = await get_latest_case_analysis(db, case_id=case_id, user_id=user.id)
     if result is None:
         return None
     return CaseAnalysisResultRead.model_validate(result).model_copy(

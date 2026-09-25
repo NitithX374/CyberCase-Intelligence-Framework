@@ -12,6 +12,7 @@ from app.models.case import Case
 from app.models.report import CaseReport
 from app.models.sources import CaseSource
 from app.schemas.reports import CaseReportCreate, CaseReportRead, StructuredReport
+from app.services.cases.ownership import owned_case
 from app.services.reports.content import build_case_report
 from app.services.reports.contracts import (
     CaseReportInput,
@@ -39,7 +40,7 @@ class CaseReportService:
                 "Report generation is disabled by backend configuration.",
             )
         async with self.db.begin():
-            case = await self.locked_case(case_id, user_id)
+            case = await self.owned_case(case_id, user_id, lock=True)
             result = await self.selected_result(case, request.analysis_result_id)
             existing = await self.report_for_analysis(result.id)
             if existing is not None:
@@ -98,28 +99,14 @@ class CaseReportService:
             report,
         )
 
-    async def locked_case(self, case_id: UUID, user_id: UUID | None) -> Case:
-        result = await self.db.execute(
-            select(Case)
-            .options(selectinload(Case.sources).selectinload(CaseSource.document))
-            .where(Case.id == case_id)
-            .with_for_update()
+    async def owned_case(self, case_id: UUID, user_id: UUID | None, *, lock: bool = False) -> Case:
+        return await owned_case(
+            self.db,
+            case_id,
+            user_id,
+            lock=lock,
+            options=(selectinload(Case.sources).selectinload(CaseSource.document),),
         )
-        case = result.scalar_one_or_none()
-        if case is None or case.user_id != user_id:
-            raise ReportNotFound("case_not_found", "Case not found")
-        return case
-
-    async def owned_case(self, case_id: UUID, user_id: UUID | None) -> Case:
-        result = await self.db.execute(
-            select(Case)
-            .options(selectinload(Case.sources).selectinload(CaseSource.document))
-            .where(Case.id == case_id)
-        )
-        case = result.scalar_one_or_none()
-        if case is None or case.user_id != user_id:
-            raise ReportNotFound("case_not_found", "Case not found")
-        return case
 
     async def selected_result(
         self, case: Case, analysis_result_id: UUID | None

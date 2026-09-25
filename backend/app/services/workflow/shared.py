@@ -3,25 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from fastapi import status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.errors import AppError
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.services.analysis.contracts import CaseFollowupExchange
 from app.services.analysis.steps.technical_context import CaseRagContextPayload
+from app.services.cases import ownership
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
 
-class CaseWorkflowError(Exception):
-    def __init__(
-        self, code: str, message: str, status_code: int = status.HTTP_409_CONFLICT
-    ) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.status_code = status_code
+class CaseWorkflowError(AppError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -40,10 +35,7 @@ class CaseUnderAnalysis:
 
 
 async def owned_case(db: AsyncSession, case_id: UUID, user_id: UUID | None) -> Case:
-    case = await db.scalar(select(Case).where(Case.id == case_id).with_for_update())
-    if case is None or case.user_id != user_id:
-        raise CaseWorkflowError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
-    return case
+    return await ownership.owned_case(db, case_id, user_id, lock=True)
 
 
 async def next_ordinal(db: AsyncSession, case_id: UUID) -> int:
