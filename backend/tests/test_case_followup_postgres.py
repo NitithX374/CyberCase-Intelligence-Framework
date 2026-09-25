@@ -22,7 +22,7 @@ from app.services.analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace, 
 from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.services.chat.case_chat import get_case_chat, post_case_message, send_case_message
 from app.services.chat.followup import pending_question
-from app.services.reports.content import clarification_limitation
+from app.services.reports.display import clarification_limitation
 from app.services.workflow.run_analysis import (
     analysing,
     get_latest_case_analysis,

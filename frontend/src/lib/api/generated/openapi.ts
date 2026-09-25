@@ -389,6 +389,24 @@ export interface components {
             created_at: string;
             updated_at: string;
         };
+        CaseReportContent: {
+            version: "case_report_content_v1";
+            title: string;
+            analysed?: string | null;
+            summary: string;
+            parties?: components["schemas"]["ReportParty"][];
+            timeline?: components["schemas"]["ReportEvent"][];
+            impacts?: components["schemas"]["ReportImpact"][];
+            findings?: components["schemas"]["ReportFinding"][];
+            techniques?: components["schemas"]["ReportTechnique"][];
+            techniques_matched: boolean;
+            mapping_note?: string | null;
+            rationale_note?: string | null;
+            gaps?: components["schemas"]["ReportGap"][];
+            recommendations?: string[];
+            limitations?: string[];
+            sources?: components["schemas"]["ReportSource"][];
+        };
         CaseReportCreate: {
             analysis_result_id?: string | null;
         };
@@ -397,7 +415,7 @@ export interface components {
             version_number: number;
             case_id: string;
             analysis_result_id: string;
-            report: components["schemas"]["StructuredReport"];
+            report: components["schemas"]["CaseReportContent"];
             created_at: string;
         };
         CaseSourceCitation: {
@@ -484,27 +502,51 @@ export interface components {
             password: string;
             name: string;
         };
-        ReportClaim: {
-            claim_id: string;
-            section_id: "case_summary" | "case_evidence" | "mitre_attack_mapping" | "mapping_rationale" | "evidence_to_examine" | "preliminary_recommendations" | "system_limitations";
+        ReportEvent: {
+            time: string;
+            event: string;
+            references?: string[];
+        };
+        ReportFinding: {
+            ordinal: number;
             text: string;
-            support_type: "user_reported" | "analytical_inference" | "unknown";
-            source_ids?: string[];
-            mitre_technique_ids?: string[];
+            status: string;
+            is_inference: boolean;
+            source_labels?: string[];
+            contradicting_source_labels?: string[];
+            supporting_quotes?: string[];
+            contradicting_quotes?: string[];
+            reasoning_summary?: string | null;
         };
-        ReportSection: {
-            section_id: "case_summary" | "case_evidence" | "mitre_attack_mapping" | "mapping_rationale" | "evidence_to_examine" | "preliminary_recommendations" | "system_limitations";
-            heading: string;
-            paragraphs?: string[];
-            items?: string[];
+        ReportGap: {
+            topic: string;
+            priority: string;
+            status: string;
+            description: string;
+            reason: string;
         };
-        StructuredReport: {
-            report_version: "preliminary_analysis_report_v1";
-            status: "provisional_unverified";
-            title: string;
-            sections: components["schemas"]["ReportSection"][];
-            claims?: components["schemas"]["ReportClaim"][];
-            limitations?: string[];
+        ReportImpact: {
+            description: string;
+            references?: string[];
+        };
+        ReportParty: {
+            name: string;
+            role: string;
+            references?: string[];
+        };
+        ReportSource: {
+            label: string;
+            kind: string;
+            detail: string;
+        };
+        ReportTechnique: {
+            technique_id: string;
+            name: string;
+            tactic: string;
+            meaning: string;
+            reason: string;
+            findings?: number[];
+            references?: string[];
         };
         UserRead: {
             id: string;

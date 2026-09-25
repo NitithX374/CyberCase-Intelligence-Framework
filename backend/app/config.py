@@ -73,7 +73,7 @@ class LLMProviderConfig(BaseModel):
 
 class CaseAnalysisConfig(BaseModel):
     mitre_gate_mode: Literal["llm", "encoder", "never"] = "llm"
-    mitre_gate_model_path: str = "research/mitre_gate/model"
+    mitre_gate_model_path: str = "xlmr_ladder_best/xlmr_ladder_best"
     chat_followup_max_rounds: int = Field(default=3, ge=0)
     chat_followup_gaps_per_round: int = Field(default=3, ge=1)
 

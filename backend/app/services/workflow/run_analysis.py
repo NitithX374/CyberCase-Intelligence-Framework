@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from uuid import UUID
 
 from fastapi import status
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -27,6 +27,7 @@ from app.services.analysis.pipeline import (
 )
 from app.services.analysis.steps.technical_context import (
     CaseRagContextPayload,
+    CaseTechnicalAugmentation,
     technical_context_key,
 )
 from app.services.chat.followup import (
@@ -157,6 +158,12 @@ async def read_case_for_analysis(
         )
 
 
+class RecordedRetrieval(BaseModel):
+    context: str = Field(min_length=1)
+    technical_augmentation: CaseTechnicalAugmentation
+    legal_relevance: LegalReferenceResult
+
+
 async def reusable_context(
     db: AsyncSession,
     case_id: UUID,
@@ -174,27 +181,20 @@ async def reusable_context(
     stored = row.retrieval_context_json if row is not None else None
     if not isinstance(stored, dict) or stored.get("context_key") != key:
         return None
-    context = stored.get("context")
-    context_id = stored.get("retrieval_context_id")
-    if (
-        not isinstance(context, str)
-        or not context
-        or not isinstance(context_id, str)
-        or not context_id.strip()
-    ):
-        return None
-    table = stored.get("mitre_table")
-    if not isinstance(table, list):
-        return None
     try:
-        legal_relevance = LegalReferenceResult.model_validate(stored.get("legal_relevance"))
+        recorded = RecordedRetrieval.model_validate(
+            {**row.external_context_json, "context": stored.get("context")}
+        )
     except ValidationError:
         return None
+    augmentation = recorded.technical_augmentation
+    if not augmentation.retrieval_context_id:
+        return None
     return CaseRagContextPayload(
-        retrieval_context_id=context_id,
-        context=context,
-        mitre_table=tuple(table),
-        legal_relevance=legal_relevance,
+        retrieval_context_id=augmentation.retrieval_context_id,
+        context=recorded.context,
+        mitre_table=tuple(augmentation.mitre_table),
+        legal_relevance=recorded.legal_relevance,
     )
 
 

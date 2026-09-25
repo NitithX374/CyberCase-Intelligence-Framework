@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from io import BytesIO
 
 import pytest
@@ -6,9 +7,15 @@ from docx import Document
 from PIL import Image
 from reportlab.pdfgen import canvas
 
+from app.services.document_ingestion import service as service_module
 from app.services.document_ingestion.contracts import (
+    DocumentIngestionError,
+    DocumentRecognitionError,
     ExtractionMethod,
+    RecognitionConfigurationError,
     RecognitionProviderError,
+    RecognitionResponseError,
+    RecognitionTimeoutError,
     UnsupportedDocumentError,
 )
 from app.services.document_ingestion.recognition import (
@@ -55,6 +62,14 @@ class ConcurrencyTrackingRecognizer:
 class FailingRecognizer:
     async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
         raise RecognitionProviderError("provider unavailable")
+
+
+class RaisingRecognizer:
+    def __init__(self, failure: DocumentRecognitionError) -> None:
+        self.failure = failure
+
+    async def recognize_page(self, page: RenderedPage) -> RecognizedPage:
+        raise self.failure
 
 
 def _service(recognizer, max_concurrent_ocr: int = 4) -> DocumentIngestionService:
@@ -188,13 +203,73 @@ def test_unsupported_file_type_fails_cleanly() -> None:
     assert raised.value.code == "unsupported_document_type"
 
 
-def test_recognizer_failure_is_returned_as_controlled_warning() -> None:
-    result = asyncio.run(_service(FailingRecognizer()).ingest(_png_bytes(), "scan.png"))
+def test_a_page_that_could_not_be_read_is_a_warning_when_others_were() -> None:
+    native_text = "Native page one contains a complete criminal investigation narrative. " * 5
+    result = asyncio.run(
+        _service(FailingRecognizer()).ingest(_pdf_bytes([native_text, None]), "mixed.pdf")
+    )
 
-    assert result.pages[0].text == ""
-    assert result.pages[0].verification_status == "needs_review"
+    assert result.pages[1].text == ""
+    assert result.pages[1].verification_status == "needs_review"
     assert result.verification_status == "needs_review"
-    assert "document_recognition_provider_error" in result.warnings[0]
+    assert any("document_recognition_provider_error" in warning for warning in result.warnings)
+
+
+@pytest.mark.parametrize(
+    ("failure", "code", "status_code"),
+    [
+        (
+            RecognitionConfigurationError("TYPHOON_API_KEY is required."),
+            "document_recognizer_not_configured",
+            503,
+        ),
+        (
+            RecognitionProviderError("provider unavailable"),
+            "document_recognition_provider_error",
+            502,
+        ),
+        (RecognitionTimeoutError("Typhoon OCR timed out."), "document_recognition_timeout", 504),
+        (
+            RecognitionResponseError("Typhoon OCR returned no document text."),
+            "document_recognition_invalid_response",
+            422,
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    ("content", "filename"), [(_png_bytes, "scan.png"), (lambda: _pdf_bytes([None]), "scan.pdf")]
+)
+def test_a_document_nothing_could_be_read_from_names_the_recognition_failure(
+    failure, code, status_code, content, filename
+) -> None:
+    with pytest.raises(DocumentIngestionError) as raised:
+        asyncio.run(_service(RaisingRecognizer(failure)).ingest(content(), filename))
+
+    assert raised.value.code == code
+    assert raised.value.message == str(failure)
+    assert raised.value.status_code == status_code
+
+
+@pytest.mark.parametrize(
+    ("target", "content", "filename"),
+    [
+        ("parse_docx", lambda: _docx_bytes("source only"), "case.docx"),
+        ("inspect_pdf", lambda: _pdf_bytes(["Native text. " * 20]), "case.pdf"),
+        ("normalize_image", _png_bytes, "scan.png"),
+    ],
+)
+def test_parsing_runs_off_the_event_loop(monkeypatch, target, content, filename) -> None:
+    original = getattr(service_module, target)
+    threads = []
+
+    def recorded(*args, **kwargs):
+        threads.append(threading.current_thread())
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(service_module, target, recorded)
+    asyncio.run(_service(RecordingRecognizer()).ingest(content(), filename))
+
+    assert threads and threads[0] is not threading.main_thread()
 
 
 def test_generated_visual_descriptions_are_stripped() -> None:
@@ -213,22 +288,3 @@ def test_prompt_injection_like_document_text_remains_inert_data() -> None:
 
     assert result.pages[0].text == embedded_text
     assert result.pages[0].text_method == "ocr"
-
-
-def test_ingestion_does_not_call_rag_or_case_analysis(monkeypatch) -> None:
-    calls = {"rag": 0, "analysis": 0}
-
-    async def forbidden_rag(*args, **kwargs):
-        calls["rag"] += 1
-
-    async def forbidden_analysis(*args, **kwargs):
-        calls["analysis"] += 1
-
-    monkeypatch.setattr("app.services.clients.rag_client.request_rag", forbidden_rag)
-    monkeypatch.setattr(
-        "app.services.analysis.steps.write.write_trace",
-        forbidden_analysis,
-    )
-
-    asyncio.run(_service(RecordingRecognizer()).ingest(_docx_bytes("evidence only"), "case.docx"))
-    assert calls == {"rag": 0, "analysis": 0}

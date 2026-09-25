@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น เรื่อง {{ display.subject }}</title>
+  <title>รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น เรื่อง {{ report.title }}</title>
   <style>
     @page {
       size: A4;
@@ -14,7 +14,7 @@
         font-size: 8.5pt; color: #3f3f46;
       }
       @bottom-left {
-        content: "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น{% if display.issue %} ฉบับที่ {{ display.issue.version_number }}{% endif %}";
+        content: "รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น{% if issue %} ฉบับที่ {{ issue.version_number }}{% endif %}";
         font-family: "Noto Looped Thai", "Noto Sans", "Leelawadee UI", "Tahoma", sans-serif;
         font-size: 8.5pt; color: #3f3f46;
         border-top: 0.5pt solid #52525b; padding-top: 3pt; vertical-align: top;
@@ -100,20 +100,19 @@
 </head>
 <body>
   {% set tables = namespace(n=0) %}
-  {% set sections = display.sections %}
   <article class="document">
     <header class="title-block">
       <p class="issuer">CyberCase Intelligence Framework</p>
       <h1>รายงานสรุปผลการวิเคราะห์คดีเบื้องต้น</h1>
-      <p class="subject"><span class="label">เรื่อง</span>{{ display.subject }}</p>
+      <p class="subject"><span class="label">เรื่อง</span>{{ report.title }}</p>
     </header>
 
     <table class="doc-info">
       <tr>
         <th scope="row">ฉบับที่</th>
-        <td>{{ display.issue.version_number if display.issue else "-" }}</td>
+        <td>{{ issue.version_number if issue else "-" }}</td>
         <th scope="row">วันที่จัดทำ</th>
-        <td class="nowrap">{{ display.issued or "-" }}</td>
+        <td class="nowrap">{{ issued or "-" }}</td>
       </tr>
       <tr>
         <th scope="row">สถานะเอกสาร</th>
@@ -123,9 +122,9 @@
       </tr>
       <tr>
         <th scope="row">ผลการวิเคราะห์</th>
-        <td>{{ "ลงวันที่ " ~ display.analysed if display.analysed else "-" }}</td>
+        <td>{{ "ลงวันที่ " ~ report.analysed if report.analysed else "-" }}</td>
         <th scope="row">หลักฐานประกอบ</th>
-        <td>{{ display.sources | length }} รายการ (ภาคผนวก ก)</td>
+        <td>{{ report.sources | length }} รายการ (ภาคผนวก ก)</td>
       </tr>
     </table>
 
@@ -133,12 +132,12 @@
 
     <main>
       <section id="case_summary">
-        <h2>1. {{ display.titles.case_summary }}</h2>
+        <h2>1. สรุปข้อเท็จจริงของคดี</h2>
         {% set sub = namespace(n=1) %}
         <h3>1.1 ภาพรวมของเหตุการณ์</h3>
-        <p class="body">{{ display.summary | clean_report_text }}</p>
+        <p class="body">{{ report.summary | clean_report_text }}</p>
 
-        {% if display.parties %}
+        {% if report.parties %}
           {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
           <h3>1.{{ sub.n }} บุคคลและหน่วยงานที่เกี่ยวข้อง</h3>
           <p class="caption">ตารางที่ {{ tables.n }} บุคคลและหน่วยงานที่เกี่ยวข้องในคดี</p>
@@ -146,7 +145,7 @@
             <colgroup><col style="width: 9%"><col style="width: 33%"><col style="width: 44%"><col style="width: 14%"></colgroup>
             <thead><tr><th>ลำดับ</th><th>ชื่อ</th><th>บทบาทหรือความเกี่ยวข้อง</th><th>อ้างอิง</th></tr></thead>
             <tbody>
-              {% for party in display.parties %}
+              {% for party in report.parties %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ party.name }}</td>
@@ -158,7 +157,7 @@
           </table>
         {% endif %}
 
-        {% if display.timeline %}
+        {% if report.timeline %}
           {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
           <h3>1.{{ sub.n }} ลำดับเหตุการณ์</h3>
           <p class="caption">ตารางที่ {{ tables.n }} ลำดับเหตุการณ์ตามที่ปรากฏในหลักฐาน</p>
@@ -166,7 +165,7 @@
             <colgroup><col style="width: 9%"><col style="width: 22%"><col style="width: 55%"><col style="width: 14%"></colgroup>
             <thead><tr><th>ลำดับ</th><th>วันและเวลา</th><th>เหตุการณ์</th><th>อ้างอิง</th></tr></thead>
             <tbody>
-              {% for event in display.timeline %}
+              {% for event in report.timeline %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ event.time }}</td>
@@ -178,7 +177,7 @@
           </table>
         {% endif %}
 
-        {% if display.impacts %}
+        {% if report.impacts %}
           {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
           <h3>1.{{ sub.n }} ความเสียหายและผลกระทบ</h3>
           <p class="caption">ตารางที่ {{ tables.n }} ความเสียหายและผลกระทบที่ปรากฏ</p>
@@ -186,7 +185,7 @@
             <colgroup><col style="width: 9%"><col style="width: 77%"><col style="width: 14%"></colgroup>
             <thead><tr><th>ลำดับ</th><th>ความเสียหายหรือผลกระทบ</th><th>อ้างอิง</th></tr></thead>
             <tbody>
-              {% for impact in display.impacts %}
+              {% for impact in report.impacts %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ impact.description | clean_report_text }}</td>
@@ -197,14 +196,14 @@
           </table>
         {% endif %}
 
-        {% if not (display.parties or display.timeline or display.impacts) %}
+        {% if not (report.parties or report.timeline or report.impacts) %}
           <p class="note">ผลการวิเคราะห์ยังไม่ระบุผู้เกี่ยวข้อง ลำดับเหตุการณ์ หรือผลกระทบของคดี</p>
         {% endif %}
       </section>
 
       <section id="case_evidence">
-        <h2>2. {{ display.titles.case_evidence }}</h2>
-        {% if display.claims %}
+        <h2>2. ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ</h2>
+        {% if report.findings %}
           {% set tables.n = tables.n + 1 %}
           <p class="body">ตารางต่อไปนี้แสดงข้อเท็จจริงและตัวบ่งชี้ที่ปรากฏในหลักฐาน พร้อมสถานะการยืนยันและรหัสอ้างอิงหลักฐานตามภาคผนวก ก</p>
           <p class="caption">ตารางที่ {{ tables.n }} ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ</p>
@@ -212,28 +211,28 @@
             <colgroup><col style="width: 7%"><col style="width: 63%"><col style="width: 16%"><col style="width: 14%"></colgroup>
             <thead><tr><th>ข้อ</th><th>ข้อเท็จจริงหรือตัวบ่งชี้</th><th>สถานะ</th><th>อ้างอิง</th></tr></thead>
             <tbody>
-              {% for claim in display.claims %}
+              {% for finding in report.findings %}
               <tr>
-                <td class="n">{{ claim.ordinal }}</td>
+                <td class="n">{{ finding.ordinal }}</td>
                 <td>
-                  {{ claim.text | clean_report_text }}
-                  {% for quote in claim.supporting_quotes %}
+                  {{ finding.text | clean_report_text }}
+                  {% for quote in finding.supporting_quotes %}
                     <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> “{{ quote }}”</div>
                   {% endfor %}
-                  {% for quote in claim.contradicting_quotes %}
+                  {% for quote in finding.contradicting_quotes %}
                     <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> “{{ quote }}”</div>
                   {% endfor %}
-                  {% if claim.reasoning_summary %}
-                    <div class="quote"><span class="quote-label">เหตุผลเชิงวิเคราะห์:</span> {{ claim.reasoning_summary | clean_report_text }}</div>
+                  {% if finding.reasoning_summary %}
+                    <div class="quote"><span class="quote-label">เหตุผลเชิงวิเคราะห์:</span> {{ finding.reasoning_summary | clean_report_text }}</div>
                   {% endif %}
                 </td>
                 <td>
-                  {{ claim.epistemic_label }}
-                  {% if claim.is_inference %}<span class="minor">ข้อสันนิษฐานเชิงวิเคราะห์</span>{% endif %}
+                  {{ finding.status }}
+                  {% if finding.is_inference %}<span class="minor">ข้อสันนิษฐานเชิงวิเคราะห์</span>{% endif %}
                 </td>
                 <td class="ref">
-                  {{ claim.source_labels | join(", ") or "-" }}
-                  {% if claim.contradicting_source_labels %}<span class="minor">ขัดแย้ง: {{ claim.contradicting_source_labels | join(", ") }}</span>{% endif %}
+                  {{ finding.source_labels | join(", ") or "-" }}
+                  {% if finding.contradicting_source_labels %}<span class="minor">ขัดแย้ง: {{ finding.contradicting_source_labels | join(", ") }}</span>{% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -245,19 +244,17 @@
       </section>
 
       <section id="mitre_attack_mapping">
-        <h2>3. {{ display.titles.mitre_attack_mapping }}</h2>
-        {% for paragraph in sections.mitre_attack_mapping.paragraphs %}
-          <p class="body">{{ paragraph | clean_report_text }}</p>
-        {% endfor %}
-        {% if display.techniques %}
+        <h2>3. การจำแนกพฤติกรรมตามกรอบ MITRE ATT&amp;CK</h2>
+        <p class="body">MITRE ATT&amp;CK เป็นข้อมูลภายนอกเพื่อช่วยจัดหมวดพฤติกรรมทางเทคนิค ไม่ใช่หลักฐานของคดี</p>
+        {% if report.techniques %}
           {% set tables.n = tables.n + 1 %}
-          {% if display.techniques_matched %}
+          {% if report.techniques_matched %}
             <p class="caption">ตารางที่ {{ tables.n }} เทคนิคที่เชื่อมโยงกับข้อเท็จจริงของคดี</p>
             <table class="formal">
               <colgroup><col style="width: 13%"><col style="width: 27%"><col style="width: 44%"><col style="width: 16%"></colgroup>
               <thead><tr><th>รหัสเทคนิค</th><th>ชื่อเทคนิค</th><th>ความหมายโดยสังเขป</th><th>ตัวบ่งชี้ที่เกี่ยวข้อง</th></tr></thead>
               <tbody>
-                {% for technique in display.techniques %}
+                {% for technique in report.techniques %}
                 <tr>
                   <td class="n">{{ technique.technique_id }}</td>
                   <td>{{ technique.name or "-" }}{% if technique.tactic %}<span class="minor">กลยุทธ์: {{ technique.tactic }}</span>{% endif %}</td>
@@ -274,7 +271,7 @@
               <colgroup><col style="width: 9%"><col style="width: 18%"><col style="width: 45%"><col style="width: 28%"></colgroup>
               <thead><tr><th>ลำดับ</th><th>รหัส</th><th>ชื่อเทคนิค</th><th>กลยุทธ์</th></tr></thead>
               <tbody>
-                {% for technique in display.techniques %}
+                {% for technique in report.techniques %}
                 <tr>
                   <td class="n">{{ loop.index }}</td>
                   <td>{{ technique.technique_id }}</td>
@@ -285,49 +282,41 @@
               </tbody>
             </table>
           {% endif %}
-        {% else %}
-          {% for item in sections.mitre_attack_mapping.items %}
-            <p class="body">{{ item | strip_reference_text }}</p>
-          {% endfor %}
+        {% elif report.mapping_note %}
+          <p class="body">{{ report.mapping_note | clean_report_text }}</p>
         {% endif %}
       </section>
 
       <section id="mapping_rationale">
-        <h2>4. {{ display.titles.mapping_rationale }}</h2>
-        {% for paragraph in sections.mapping_rationale.paragraphs %}
-          <p class="body">{{ paragraph | clean_report_text }}</p>
-        {% endfor %}
-        {% if display.techniques_matched %}
+        <h2>4. เหตุผลประกอบการจำแนกพฤติกรรม</h2>
+        <p class="body">เหตุผลต่อไปนี้อธิบายการเชื่อมโยงเชิงเทคนิคกับตัวบ่งชี้ของคดี ไม่ใช่การยืนยันว่ามีการใช้เทคนิคนั้นจริง</p>
+        {% if report.techniques_matched %}
           <ol class="numbered">
-            {% for technique in display.techniques %}
+            {% for technique in report.techniques %}
             <li>
               <span class="n">4.{{ loop.index }}</span>
               <span><strong>{{ technique.technique_id }}{% if technique.name %} {{ technique.name }}{% endif %}</strong> {{ technique.reason | clean_report_text }}{% if technique.references %} (อ้างอิง {{ technique.references | join(", ") }}){% endif %}</span>
             </li>
             {% endfor %}
           </ol>
-        {% elif display.techniques %}
+        {% elif report.techniques %}
           <p class="body">เทคนิคในส่วนที่ 3 ยังไม่ได้วิเคราะห์ความเชื่อมโยงกับข้อเท็จจริงรายข้อ จึงไม่มีเหตุผลประกอบเป็นรายเทคนิค และใช้เป็นบริบทประกอบเท่านั้น</p>
-        {% else %}
-          {% for item in sections.mapping_rationale.items %}
-            <p class="body">{{ item | strip_reference_text }}</p>
-          {% endfor %}
+        {% elif report.rationale_note %}
+          <p class="body">{{ report.rationale_note | clean_report_text }}</p>
         {% endif %}
       </section>
 
       <section id="evidence_to_examine">
-        <h2>5. {{ display.titles.evidence_to_examine }}</h2>
-        {% for paragraph in sections.evidence_to_examine.paragraphs %}
-          <p class="body">{{ paragraph | clean_report_text }}</p>
-        {% endfor %}
-        {% if display.gaps %}
+        <h2>5. ประเด็นที่ต้องตรวจสอบเพิ่มเติม</h2>
+        <p class="body">รายการนี้สรุปช่องว่างหรือความขัดแย้งที่ควรตรวจสอบเพิ่มเติมก่อนใช้ประกอบการพิจารณาคดี</p>
+        {% if report.gaps %}
           {% set tables.n = tables.n + 1 %}
           <p class="caption">ตารางที่ {{ tables.n }} ประเด็นที่ต้องตรวจสอบเพิ่มเติม</p>
           <table class="formal">
             <colgroup><col style="width: 7%"><col style="width: 24%"><col style="width: 12%"><col style="width: 15%"><col style="width: 42%"></colgroup>
             <thead><tr><th>ข้อ</th><th>ประเด็น</th><th>ความสำคัญ</th><th>สถานะข้อมูล</th><th>รายละเอียด</th></tr></thead>
             <tbody>
-              {% for gap in display.gaps %}
+              {% for gap in report.gaps %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ gap.topic }}</td>
@@ -343,19 +332,24 @@
         {% endif %}
       </section>
 
-      {% for section_id, number in (("preliminary_recommendations", 6), ("system_limitations", 7)) %}
-      <section id="{{ section_id }}">
-        <h2>{{ number }}. {{ display.titles[section_id] }}</h2>
-        {% for paragraph in sections[section_id].paragraphs %}
-          <p class="body">{{ paragraph | clean_report_text }}</p>
-        {% endfor %}
+      <section id="preliminary_recommendations">
+        <h2>6. ข้อเสนอแนะเบื้องต้น</h2>
+        <p class="body">คำแนะนำมุ่งที่การยืนยันข้อเท็จจริง การรักษาหลักฐาน และการลดความไม่แน่นอนของคดี</p>
         <ol class="numbered">
-          {% for item in sections[section_id].items %}
-          <li><span class="n">{{ number }}.{{ loop.index }}</span><span>{{ item | strip_reference_text }}</span></li>
+          {% for item in report.recommendations %}
+          <li><span class="n">6.{{ loop.index }}</span><span>{{ item | clean_report_text }}</span></li>
           {% endfor %}
         </ol>
       </section>
-      {% endfor %}
+
+      <section id="system_limitations">
+        <h2>7. ข้อจำกัดและข้อสงวนของรายงาน</h2>
+        <ol class="numbered">
+          {% for item in report.limitations %}
+          <li><span class="n">7.{{ loop.index }}</span><span>{{ item | clean_report_text }}</span></li>
+          {% endfor %}
+        </ol>
+      </section>
 
       <section class="signoff">
         <p>ผู้จัดทำ: ระบบ CyberCase Intelligence Framework (จัดทำโดยอัตโนมัติ)</p>
@@ -376,7 +370,7 @@
           <colgroup><col style="width: 12%"><col style="width: 26%"><col style="width: 62%"></colgroup>
           <thead><tr><th>รหัส</th><th>ประเภท</th><th>รายละเอียด</th></tr></thead>
           <tbody>
-            {% for source in display.sources %}
+            {% for source in report.sources %}
             <tr>
               <td class="n">{{ source.label }}</td>
               <td>{{ source.kind }}</td>

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
+from pydantic import ValidationError
+
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.report import CaseReport
-from app.schemas.reports import CaseReportRead, StructuredReport
+from app.schemas.reports import CaseReportContent, CaseReportRead
 from app.services.analysis.contracts import (
     CaseAnalysisTrace,
     CaseFollowupExchange,
     followup_history_of_snapshot,
 )
-from app.services.reports.contracts import (
-    CaseReportInput,
-    CaseReportTechnicalAugmentation,
-    ReportGenerationConflict,
-)
+from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
+from app.services.reports.contracts import CaseReportInput, ReportGenerationConflict
 from app.services.sources.case_source_bundle import (
     CaseSourceBundle,
     case_source_bundle_for_analysis,
@@ -27,9 +26,19 @@ def serialize_case_report(report: CaseReport) -> CaseReportRead:
         version_number=report.version_number,
         case_id=report.case_id,
         analysis_result_id=report.analysis_result_id,
-        report=StructuredReport.model_validate(report.structured_report),
+        report=stored_content(report),
         created_at=report.created_at,
     )
+
+
+def stored_content(report: CaseReport) -> CaseReportContent:
+    try:
+        return CaseReportContent.model_validate(report.structured_report)
+    except ValidationError as error:
+        raise ReportGenerationConflict(
+            "case_report_outdated",
+            "This report was stored in an older format and can no longer be shown",
+        ) from error
 
 
 def build_case_report_input(
@@ -57,9 +66,8 @@ def build_case_report_input(
         analysis_created_at=result.created_at,
         source_bundle=source_bundle,
         analysis_summary=result.summary,
-        analysis_trace=trace.model_dump(mode="json"),
-        technical_augmentation=technical_augmentation_input(result, trace),
-        unresolved_issues=[gap.description for gap in trace.gaps],
+        analysis_trace=trace,
+        technical_augmentation=recorded_augmentation(result),
         followup_history=recorded_followup_history(result),
     )
 
@@ -120,72 +128,17 @@ def validated_trace(
         ) from error
 
 
-def technical_augmentation_input(
-    result: CaseAnalysisResult,
-    trace: CaseAnalysisTrace,
-) -> CaseReportTechnicalAugmentation | None:
-    metadata = (
-        result.external_context_json if isinstance(result.external_context_json, dict) else {}
-    )
-    raw = metadata.get("technical_augmentation")
+def recorded_augmentation(result: CaseAnalysisResult) -> CaseTechnicalAugmentation | None:
+    raw = recorded(result).get("technical_augmentation")
     if raw is None:
         return None
     try:
-        augmentation = CaseReportTechnicalAugmentation.model_validate(raw)
-    except Exception as error:
+        return CaseTechnicalAugmentation.model_validate(raw)
+    except ValidationError as error:
         raise ReportGenerationConflict(
             "case_technical_augmentation_invalid",
             "The persisted Case technical augmentation outcome is invalid",
         ) from error
-    if augmentation.association_ids != [item.association_id for item in trace.mitre_associations]:
-        raise ReportGenerationConflict(
-            "case_technical_augmentation_invalid",
-            "The persisted technical associations are not bound to the analysis trace",
-        )
-    validate_augmentation_outcome(augmentation, trace)
-    return augmentation
 
 
-def validate_augmentation_outcome(
-    augmentation: CaseReportTechnicalAugmentation,
-    trace: CaseAnalysisTrace,
-) -> None:
-    has_context = bool(augmentation.retrieval_context_id)
-    has_rows = bool(augmentation.mitre_table)
-    has_associations = bool(trace.mitre_associations)
-    if augmentation.status == "not_applicable":
-        valid = (
-            augmentation.applicability.decision == "SKIP"
-            and not has_context
-            and not has_rows
-            and not has_associations
-        )
-    elif augmentation.status == "insufficient_context":
-        valid = augmentation.applicability.decision == "RETRIEVE" and not has_associations
-    elif (
-        augmentation.status == "retrieved_from_rag"
-        or augmentation.status == "retrieved_without_supported_match"
-    ):
-        valid = (
-            augmentation.applicability.decision == "RETRIEVE"
-            and has_context
-            and has_rows
-            and not has_associations
-        )
-    elif augmentation.status == "retrieved_with_matches":
-        valid = (
-            augmentation.applicability.decision == "RETRIEVE"
-            and has_context
-            and has_rows
-            and has_associations
-        )
-    else:
-        valid = bool(augmentation.failure_code) and not has_associations
-    if not valid:
-        raise ReportGenerationConflict(
-            "case_technical_augmentation_invalid",
-            "The persisted technical augmentation outcome is internally inconsistent",
-        )
-
-
-__all__ = ["build_case_report_input", "serialize_case_report"]
+__all__ = ["build_case_report_input", "serialize_case_report", "stored_content"]

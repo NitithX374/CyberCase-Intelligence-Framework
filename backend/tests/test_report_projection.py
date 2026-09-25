@@ -187,7 +187,7 @@ def test_an_analysis_whose_retrieval_found_no_technique_still_reports(retrieval_
         return {
             "sources_read": sources_read(read),
             "followup_history": NO_ANSWERS,
-            "technical_augmentation": augmentation.to_metadata(),
+            "technical_augmentation": augmentation.recorded([]).model_dump(mode="json"),
         }
 
     case, result = case_and_analysis(record)
@@ -197,3 +197,29 @@ def test_an_analysis_whose_retrieval_found_no_technique_still_reports(retrieval_
     assert outcomes[0].status == "insufficient_context"
     assert report_input.technical_augmentation.status == "insufficient_context"
     assert report_input.technical_augmentation.retrieval_context_id == retrieval_context_id
+
+
+def test_a_stored_augmentation_the_model_cannot_read_is_refused():
+    case, result = case_and_analysis(
+        lambda read: {
+            "sources_read": sources_read(read),
+            "followup_history": NO_ANSWERS,
+            "technical_augmentation": {"status": "retrieved_without_supported_match"},
+        }
+    )
+
+    with pytest.raises(ReportGenerationConflict) as refused:
+        build_case_report_input(case, result)
+
+    assert refused.value.code == "case_technical_augmentation_invalid"
+
+
+def test_the_report_input_carries_the_validated_trace():
+    case, result = case_and_analysis(
+        lambda read: {"sources_read": sources_read(read), "followup_history": NO_ANSWERS}
+    )
+
+    report_input = build_case_report_input(case, result)
+
+    assert report_input.analysis_trace.summary == TRACE["summary"]
+    assert report_input.technical_augmentation is None
