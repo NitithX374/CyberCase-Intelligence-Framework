@@ -8,14 +8,14 @@ import {
 } from "@tanstack/react-query";
 import type { AnalysisStepRead } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
-import { useIsCaseAnalysisRunning, useStartCaseAnalysis } from "./queries";
+import { useIsAnalysisUpdating, useStartCaseAnalysis } from "./queries";
 
 export function useRunCaseAnalysis(caseId: string) {
   const startAnalysis = useStartCaseAnalysis(caseId);
-  const isRunning = useIsCaseAnalysisRunning(caseId);
+  const isUpdating = useIsAnalysisUpdating(caseId);
 
   return () => {
-    if (!isRunning) startAnalysis.mutate();
+    if (!isUpdating) startAnalysis.mutate();
   };
 }
 

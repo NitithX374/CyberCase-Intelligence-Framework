@@ -74,12 +74,16 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
     );
   }
 
-  if (!overview.hasAnalysis && isAnalysisRunning) {
+  if (!overview.hasAnalysis && (isAnalysisRunning || isFollowupPending)) {
     return (
       <CaseOverviewState
         processing
         title="Analyzing…"
-        description="Reading the case sources. This can take a minute."
+        description={
+          isFollowupPending
+            ? "Reading the case sources with your answer. This can take a minute."
+            : "Reading the case sources. This can take a minute."
+        }
       />
     );
   }

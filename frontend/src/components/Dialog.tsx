@@ -43,6 +43,9 @@ export function Dialog({
         event.preventDefault();
         if (canDismiss) onDismiss();
       }}
+      onClose={() => {
+        if (isOpen && !canDismiss) onDismiss();
+      }}
       className={`m-auto rounded-2xl border border-line bg-surface p-6 text-ink shadow-xl shadow-black/10 backdrop:bg-ink/30 ${className}`}
     >
       {children}

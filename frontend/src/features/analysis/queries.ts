@@ -46,14 +46,24 @@ export function useStartCaseAnalysis(caseId: string | null) {
       return startCaseAnalysis(caseId);
     },
     onSuccess: (step: AnalysisStepRead) => {
-      if (!caseId) return;
-      if (step.status === "completed" && step.result) {
+      if (caseId && step.status === "completed" && step.result) {
         queryClient.setQueryData(caseQueryKeys.analysis(caseId), step.result);
       }
+    },
+    onSettled: (_step, error) => {
+      if (!caseId) return;
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
         queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true }),
+        ...(error
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: caseQueryKeys.analysis(caseId),
+                exact: true,
+              }),
+            ]
+          : []),
       ]);
     },
   });

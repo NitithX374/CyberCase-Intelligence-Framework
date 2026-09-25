@@ -218,6 +218,20 @@ describe("CaseOverviewView", () => {
     expect(state.runAnalysis).toHaveBeenCalledOnce();
   });
 
+  it("waits for a follow-up answer before a first analysis, and offers no second one", () => {
+    const projection = caseProjection();
+    configureAndRender({
+      analysisResult: null,
+      sources: projection.sources,
+      followupPending: true,
+    });
+
+    expect(screen.getByRole("heading", { name: "Analyzing…" })).toBeInTheDocument();
+    expect(screen.getByText(/with your answer/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Not analyzed yet" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Analyze" })).not.toBeInTheDocument();
+  });
+
   it("offers to load a failed analysis again, never to run a new one", () => {
     configureAndRender({ analysisFailed: true });
 

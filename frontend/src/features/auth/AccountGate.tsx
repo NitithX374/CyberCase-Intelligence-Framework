@@ -31,7 +31,7 @@ export function AccountGate({ children }: { children: ReactNode }) {
 
   if (isAuthPage) return <>{children}</>;
 
-  if (sessionError) {
+  if (sessionError && !user) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-surface p-10 text-center text-ink">
         <p className="text-base font-semibold text-ink">Unable to check your session.</p>

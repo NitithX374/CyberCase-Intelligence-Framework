@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type QueryKey } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useCallback } from "react";
 
 export function useBlobUrl(queryKey: QueryKey, fetchBlob: (signal: AbortSignal) => Promise<Blob>) {
   const query = useQuery({
@@ -10,17 +10,17 @@ export function useBlobUrl(queryKey: QueryKey, fetchBlob: (signal: AbortSignal) 
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-  const url = useMemo(() => {
-    if (!query.data || typeof URL.createObjectURL !== "function") return null;
-    return URL.createObjectURL(query.data);
-  }, [query.data]);
-
-  useEffect(
-    () => () => {
-      if (url) URL.revokeObjectURL(url);
+  const blob = query.data;
+  const attach = useCallback(
+    (element: HTMLAnchorElement | HTMLIFrameElement | null) => {
+      if (!element || !blob || typeof URL.createObjectURL !== "function") return;
+      const url = URL.createObjectURL(blob);
+      if (element instanceof HTMLAnchorElement) element.href = url;
+      else element.src = url;
+      return () => URL.revokeObjectURL(url);
     },
-    [url],
+    [blob],
   );
 
-  return { url, isLoading: query.isLoading, error: query.error, refetch: query.refetch };
+  return { blob, attach, isLoading: query.isLoading, error: query.error, refetch: query.refetch };
 }

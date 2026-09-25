@@ -205,22 +205,28 @@ function downloadPdf(blob: Blob, versionNumber: number): void {
 
 function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportRead }) {
   const [isModalDismissed, setIsModalDismissed] = useState(false);
-  const html = useBlobUrl(["case-report-html-blob", caseId, report.report_id], () =>
+  const {
+    blob,
+    attach,
+    isLoading,
+    error: loadError,
+    refetch,
+  } = useBlobUrl(["case-report-html-blob", caseId, report.report_id], () =>
     downloadCaseReportHtml(caseId, report.report_id),
   );
   const error = useMemo(
     () =>
-      html.error ? toUserFacingError(html.error, { actionLabel: "โหลดตัวอย่างรายงานใหม่" }) : null,
-    [html.error],
+      loadError ? toUserFacingError(loadError, { actionLabel: "โหลดตัวอย่างรายงานใหม่" }) : null,
+    [loadError],
   );
   const reload = () => {
     setIsModalDismissed(false);
-    void html.refetch();
+    void refetch();
   };
 
   return (
     <article aria-label="Persisted report" className="mt-4">
-      {html.isLoading ? (
+      {isLoading ? (
         <div
           role="status"
           aria-label="Loading report preview"
@@ -228,7 +234,7 @@ function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportR
         >
           <Icon name="spinner" className="h-6 w-6" />
         </div>
-      ) : html.error || !html.url ? (
+      ) : loadError || !blob ? (
         <>
           <div
             aria-label="Report Preview Unavailable"
@@ -252,7 +258,7 @@ function ReportPreview({ caseId, report }: { caseId: string; report: CaseReportR
           className="overflow-hidden rounded-xl border border-line bg-canvas"
         >
           <iframe
-            src={html.url}
+            ref={attach}
             title={`Case report: ${report.report.title}`}
             className="h-[820px] w-full border-0 bg-canvas"
           />
