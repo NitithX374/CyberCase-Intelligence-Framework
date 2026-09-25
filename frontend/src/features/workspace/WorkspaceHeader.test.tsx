@@ -15,7 +15,6 @@ vi.mock("@/features/auth/useAuth", () => ({
 const sampleCase: CaseRead = {
   id: "case-1",
   title: "Payment Review",
-  status: "answered",
   source_revision: 3,
   analysis_freshness: "current",
   created_at: "2026-09-14T08:00:00Z",

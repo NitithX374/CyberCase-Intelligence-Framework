@@ -143,22 +143,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cases/{case_id}/documents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_case_documents_api_v1_cases__case_id__documents_get"];
-        put?: never;
-        post: operations["add_case_document_api_v1_cases__case_id__documents_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/cases/{case_id}/documents/{document_id}/content": {
         parameters: {
             query?: never;
@@ -169,6 +153,22 @@ export interface paths {
         get: operations["get_case_document_content_api_v1_cases__case_id__documents__document_id__content_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases/{case_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_case_document_api_v1_cases__case_id__documents_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -277,9 +277,6 @@ export interface components {
             contradicting_citations?: components["schemas"]["CaseSourceCitation"][];
             reasoning_summary?: string | null;
         };
-        CaseAnalysisCreate: {
-            response_language: "thai" | "english";
-        };
         CaseAnalysisGap: {
             gap_id: string;
             gap_key: string;
@@ -382,7 +379,6 @@ export interface components {
             id: string;
             user_id?: string | null;
             title: string;
-            status: "idle" | "answered";
             source_revision: number;
             latest_analysis_result_id?: string | null;
             analysis_freshness: "missing" | "current" | "stale";
@@ -463,7 +459,6 @@ export interface components {
         ChatMessageCreate: {
             content: string;
             client_request_id?: string | null;
-            response_language: "thai" | "english";
         };
         ChatMessageRead: {
             id: string;
@@ -892,12 +887,13 @@ export interface operations {
             };
         };
     };
-    list_case_documents_api_v1_cases__case_id__documents_get: {
+    get_case_document_content_api_v1_cases__case_id__documents__document_id__content_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 case_id: string;
+                document_id: string;
             };
             cookie?: never;
         };
@@ -907,9 +903,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["CaseDocumentRead"][];
-                };
+                content?: never;
             };
             422: {
                 headers: {
@@ -943,34 +937,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CaseDocumentRead"];
                 };
-            };
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_case_document_content_api_v1_cases__case_id__documents__document_id__content_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                case_id: string;
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             422: {
                 headers: {
@@ -1082,11 +1048,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CaseAnalysisCreate"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

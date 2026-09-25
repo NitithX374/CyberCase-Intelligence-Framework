@@ -7,9 +7,9 @@ The FastAPI backend owns authentication, Case CRUD, document intake, Case source
 All application routes use `/api/v1`, one router per resource in `app/routers/`. `tests/test_route_surface.py` asserts the exact surface; it is the authority when this list and the code disagree.
 
 - `/health` — service and database health;
-- `/auth/register`, `/login`, `/logout`, `/dev-login`, `/me`, `/session` — cookie session;
+- `/auth/register`, `/login`, `/logout`, `/session` — cookie session;
 - `/cases`, `/cases/{case_id}` — Case lifecycle;
-- `/cases/{case_id}/documents`, `/documents/{document_id}/content` — document upload, listing, and extracted content;
+- `POST /cases/{case_id}/documents`, `GET /documents/{document_id}/content` — document upload and the original file; documents are listed through their sources;
 - `/cases/{case_id}/sources` — native sources used for analysis;
 - `/cases/{case_id}/analysis` — read the latest validated analysis or start a request-scoped analysis;
 - `/cases/{case_id}/chat`, `/chat/messages` — Case Ask/Chat and clarification answers;

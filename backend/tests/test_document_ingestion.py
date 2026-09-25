@@ -1,12 +1,16 @@
 import asyncio
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
+from types import SimpleNamespace
 
 import pytest
 from docx import Document
 from PIL import Image
 from reportlab.pdfgen import canvas
 
+from app.services.document_ingestion import files
 from app.services.document_ingestion import service as service_module
 from app.services.document_ingestion.contracts import (
     DocumentIngestionError,
@@ -194,6 +198,48 @@ def test_concurrent_ocr_is_bounded_by_semaphore() -> None:
     assert [p.page_number for p in result.pages] == [1, 2, 3, 4, 5, 6]
     assert recognizer.max_observed_concurrency <= 2
     assert recognizer.max_observed_concurrency > 0
+
+
+def test_pdf_pages_are_rendered_one_at_a_time(monkeypatch) -> None:
+    guard = threading.Lock()
+    rendering = 0
+    most_at_once = 0
+
+    class Page:
+        def get_size(self):
+            return 100, 200
+
+        def render(self, scale):
+            nonlocal rendering, most_at_once
+            with guard:
+                rendering += 1
+                most_at_once = max(most_at_once, rendering)
+            time.sleep(0.02)
+            with guard:
+                rendering -= 1
+            return SimpleNamespace(to_pil=lambda: Image.new("RGB", (10, 20), "white"))
+
+        def close(self):
+            pass
+
+    class PdfDocument:
+        def __init__(self, content):
+            pass
+
+        def __getitem__(self, index):
+            return Page()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(files, "pdfium", SimpleNamespace(PdfDocument=PdfDocument))
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        rendered = list(
+            pool.map(lambda page: files.render_pdf_page(b"%PDF-", page, 100), range(1, 7))
+        )
+
+    assert len(rendered) == 6
+    assert most_at_once == 1
 
 
 def test_unsupported_file_type_fails_cleanly() -> None:

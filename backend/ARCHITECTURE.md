@@ -190,12 +190,16 @@ empty is also accepted.
 mitigations (`M1026`) and software (`S0008`) as they come back from retrieval.
 Anything that renders "the techniques" should say which kinds it means.
 
-**Commit the dependency's transaction before slow work, not after.**
-`get_current_user` runs a `SELECT`, which opens a transaction on the
-request-scoped session. Any route that then does something slow must call
-`commit_dependency_transaction(db)` *first* — `routers/analysis.py` is the
-pattern. When `routers/documents.py` called it last, the transaction stayed open
-across the upload and the OCR, and a cancelled upload left Postgres logging
+**No transaction stays open across slow work.** `get_optional_user` runs a
+`SELECT` on the request-scoped session and commits straight after it, so a route
+starts with no transaction open. A route that writes opens `async with
+db.begin()` only around the write: `routers/documents.py` reads the upload and
+runs the OCR first and begins the transaction after, and `routers/sources.py`
+wraps only the insert. `POST /analysis` and `POST /chat/messages` take
+no request session at all; `run_case_analysis` and `send_case_message` open
+their own short sessions around each read and each write, and none is open
+during a model call. When `routers/documents.py` kept its transaction open
+across the upload and the OCR, a cancelled upload left Postgres logging
 `unexpected EOF on client connection with an open transaction`.
 
 **`monkeypatch.setattr` targets written as strings fail silently on a rename.**
@@ -204,11 +208,11 @@ and similar. A rename that misses one of these does not fail at import; it fails
 as a test that quietly hits the real provider. Grep for the old module path after
 any move.
 
-**`analysis_instruction()` is not a prompt.** It turns `response_language` into
-a short sentence so that `resolve_response_language()` can read the language back
-out of it by looking for Thai codepoints. The sentence never reaches the model —
-`execute_analysis_pipeline` takes `language`, not the message. The real prompts
-are in `analysis/prompts.py`.
+**No request carries a language; the backend decides it.** `analysis/language.py`
+reads it from the case: `case_language()` is Thai when any source has a Thai
+character, and `question_language()` answers a chat question in its own
+language, keeping the case's language when the question has no letters (a reply
+such as `02:00`). The real prompts are in `analysis/prompts.py`.
 
 ---
 

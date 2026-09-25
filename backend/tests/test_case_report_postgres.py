@@ -10,16 +10,17 @@ from app.models.analysis import CaseAnalysisResult
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportCreate
 from app.services.analysis.contracts import followup_snapshot
+from app.services.cases.ownership import owned_case
 from app.services.reports import persistence
 from app.services.reports.contracts import ReportGenerationConflict
 from app.services.reports.persistence import CaseReportService
-from app.services.sources.case_source_bundle import load_case_source_bundle, sources_read
+from app.services.sources.case_source_bundle import WITH_SOURCES, analysable_bundle, sources_read
 
 
 async def reported_case(session_factory):
     case_id, user_id, _ = await seeded_case(session_factory, trace=SETTLED, asking=False)
     async with session_factory() as db, db.begin():
-        bundle = await load_case_source_bundle(db, case_id=case_id, user_id=user_id)
+        bundle = analysable_bundle(await owned_case(db, case_id, user_id, options=WITH_SOURCES))
         analysis = await db.scalar(
             select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_id)
         )

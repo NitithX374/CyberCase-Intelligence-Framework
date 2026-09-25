@@ -1,3 +1,4 @@
+import threading
 import warnings
 from dataclasses import dataclass
 from enum import StrEnum
@@ -8,6 +9,8 @@ import pypdfium2 as pdfium
 from PIL import Image
 
 from app.services.document_ingestion.contracts import InvalidDocumentError, UnsupportedDocumentError
+
+PDFIUM_LOCK = threading.Lock()
 
 
 class DocumentKind(StrEnum):
@@ -53,22 +56,23 @@ def encode_png(image: Image.Image) -> bytes:
 
 
 def render_pdf_page(content: bytes, page_number: int, longest_edge: int) -> bytes:
-    document = None
-    page = None
-    try:
-        document = pdfium.PdfDocument(content)
-        page = document[page_number - 1]
-        width, height = page.get_size()
-        scale = longest_edge / max(width, height)
-        image = page.render(scale=scale).to_pil()
-        return encode_png(image)
-    except Exception as error:
-        raise InvalidDocumentError(f"PDF page {page_number} could not be rendered.") from error
-    finally:
-        if page is not None:
-            page.close()
-        if document is not None:
-            document.close()
+    with PDFIUM_LOCK:
+        document = None
+        page = None
+        try:
+            document = pdfium.PdfDocument(content)
+            page = document[page_number - 1]
+            width, height = page.get_size()
+            scale = longest_edge / max(width, height)
+            image = page.render(scale=scale).to_pil()
+            return encode_png(image)
+        except Exception as error:
+            raise InvalidDocumentError(f"PDF page {page_number} could not be rendered.") from error
+        finally:
+            if page is not None:
+                page.close()
+            if document is not None:
+                document.close()
 
 
 def normalize_image(content: bytes, longest_edge: int, max_pixels: int) -> bytes:

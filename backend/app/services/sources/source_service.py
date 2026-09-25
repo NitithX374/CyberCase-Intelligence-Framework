@@ -57,15 +57,6 @@ class SourceService:
         await self.db.flush()
         return document
 
-    async def list_documents(self, case_id: UUID, user_id: UUID | None) -> list[CaseDocument]:
-        await owned_case(self.db, case_id, user_id)
-        result = await self.db.execute(
-            select(CaseDocument)
-            .where(CaseDocument.case_id == case_id)
-            .order_by(CaseDocument.created_at, CaseDocument.id)
-        )
-        return list(result.scalars().all())
-
     async def document_content(
         self, case_id: UUID, document_id: UUID, user_id: UUID | None
     ) -> CaseDocument:

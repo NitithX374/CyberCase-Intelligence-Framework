@@ -11,10 +11,6 @@ from app.services.analysis.contracts import CaseAnalysisTrace
 AnalysisFreshness = Literal["missing", "current", "stale"]
 
 
-class CaseAnalysisCreate(BaseModel):
-    response_language: Literal["thai", "english"] = "english"
-
-
 class CaseAnalysisResultRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -44,6 +40,5 @@ class AnalysisStepRead(BaseModel):
 __all__ = [
     "AnalysisFreshness",
     "AnalysisStepRead",
-    "CaseAnalysisCreate",
     "CaseAnalysisResultRead",
 ]

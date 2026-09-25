@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.analysis import AnalysisFreshness
-
-CaseStatus = Literal["idle", "answered"]
 
 
 class CaseCreate(BaseModel):
@@ -25,7 +22,6 @@ class CaseRead(BaseModel):
     id: UUID
     user_id: UUID | None = None
     title: str
-    status: CaseStatus
     source_revision: int = 0
     latest_analysis_result_id: UUID | None = None
     analysis_freshness: AnalysisFreshness = "missing"
@@ -36,6 +32,5 @@ class CaseRead(BaseModel):
 __all__ = [
     "CaseCreate",
     "CaseRead",
-    "CaseStatus",
     "CaseUpdate",
 ]

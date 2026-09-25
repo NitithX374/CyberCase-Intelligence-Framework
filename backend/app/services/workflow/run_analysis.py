@@ -5,7 +5,6 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from uuid import UUID
 
-from fastapi import status
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +29,7 @@ from app.services.analysis.steps.technical_context import (
     CaseTechnicalAugmentation,
     technical_context_key,
 )
+from app.services.cases.ownership import owned_case
 from app.services.chat.followup import (
     asked_gap_keys,
     case_messages,
@@ -37,7 +37,7 @@ from app.services.chat.followup import (
     last_question_awaiting_analysis,
     rounds_asked,
 )
-from app.services.sources.case_source_bundle import load_case_source_bundle
+from app.services.sources.case_source_bundle import WITH_SOURCES, analysable_bundle
 from app.services.sources.source_service import SourceError
 from app.services.workflow.analysis_storage import (
     AnalysisStep,
@@ -45,7 +45,7 @@ from app.services.workflow.analysis_storage import (
     store_analysis,
     store_assessment,
 )
-from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError, owned_case
+from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError
 
 _running: Counter[UUID] = Counter()
 
@@ -136,9 +136,9 @@ async def read_case_for_analysis(
     continuing_followup: bool = False,
 ) -> CaseUnderAnalysis:
     async with session_factory() as db, db.begin():
-        case = await owned_case(db, case_id, user_id)
+        case = await owned_case(db, case_id, user_id, lock=True, options=WITH_SOURCES)
         try:
-            bundle = await load_case_source_bundle(db, case_id=case.id, user_id=user_id)
+            bundle = analysable_bundle(case)
         except SourceError as error:
             raise CaseWorkflowError(error.code, error.message, error.status_code) from error
         chat = await case_messages(db, case.id)
@@ -204,13 +204,9 @@ async def get_latest_case_analysis(
     case_id: UUID,
     user_id: UUID | None,
 ) -> tuple[Case, CaseAnalysisResult | None]:
-    case = await db.scalar(
-        select(Case)
-        .options(selectinload(Case.latest_analysis_result))
-        .where(Case.id == case_id, Case.user_id == user_id)
+    case = await owned_case(
+        db, case_id, user_id, options=(selectinload(Case.latest_analysis_result),)
     )
-    if case is None:
-        raise CaseWorkflowError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
     result = case.latest_analysis_result
     return case, result if result is None or result.status == "validated" else None
 

@@ -16,7 +16,6 @@ MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 class ChatMessageCreate(BaseModel):
     content: str = Field(default="")
     client_request_id: str | None = Field(default=None, max_length=255)
-    response_language: Literal["thai", "english"] = "english"
 
 
 class ChatMessageRead(BaseModel):
