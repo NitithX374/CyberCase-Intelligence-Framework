@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+
+from fastapi import status
+from pydantic import ValidationError
 
 from app.services.analysis.clarification import (
     FollowupDecision,
@@ -9,6 +14,7 @@ from app.services.analysis.clarification import (
     decide_followup,
 )
 from app.services.analysis.contracts import (
+    CaseAnalysisFailure,
     CaseAnalysisTrace,
     CaseAssessmentTrace,
     CaseFollowupExchange,
@@ -25,6 +31,8 @@ from app.services.analysis.steps.technical_context import (
 from app.services.analysis.steps.write import write_trace
 from app.services.clients.rag_client import request_rag
 from app.services.sources.case_source_bundle import CaseSourceBundle
+
+logger = logging.getLogger("app.case_analysis")
 
 
 @dataclass(frozen=True)
@@ -131,7 +139,16 @@ async def write_analysis(
 
 
 async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
-    return replace(so_far, trace=bound_trace(data, so_far, so_far.trace))
+    try:
+        trace = await asyncio.to_thread(bound_trace, data, so_far, so_far.trace)
+    except ValidationError as error:
+        logger.exception("Binding the analysis to the case built an invalid trace")
+        raise CaseAnalysisFailure(
+            "case_bind_invalid",
+            "The analysis could not be bound to the case sources",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from error
+    return replace(so_far, trace=trace)
 
 
 def bound_trace(

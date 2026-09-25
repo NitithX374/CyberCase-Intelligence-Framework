@@ -18,7 +18,7 @@ UNIQUE_VIOLATION = "23505"
 
 
 async def register_user(db: AsyncSession, payload: RegisterRequest) -> User:
-    name = payload.name.strip()
+    name = payload.name.replace("\x00", "").strip()
     if not name:
         raise AppError(
             "display_name_required",

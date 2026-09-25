@@ -201,7 +201,7 @@ class DocumentIngestionService:
 
     @staticmethod
     def safe_filename(filename: str) -> str:
-        safe_filename = filename.replace("\\", "/").split("/")[-1].strip()
+        safe_filename = filename.replace("\x00", "").replace("\\", "/").split("/")[-1].strip()
         return (safe_filename or "document")[:255]
 
 

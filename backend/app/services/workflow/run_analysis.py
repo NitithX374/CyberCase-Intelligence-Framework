@@ -103,7 +103,7 @@ async def think(pipeline: Callable, started: CaseUnderAnalysis) -> AnalysisAdvan
             )
         )
     except CaseAnalysisFailure as error:
-        raise CaseWorkflowError(error.code, error.message) from error
+        raise CaseWorkflowError(error.code, error.message, error.status_code) from error
     if isinstance(outcome, AnalysisArtifacts):
         return UnassessedAdvance(CaseAssessmentTrace(gaps=[]), Proceed("no_eligible_gap"), outcome)
     return outcome

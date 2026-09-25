@@ -107,12 +107,24 @@ inside a round, always uses the case-wide counts.
 
 `post_case_message` in `chat/case_chat.py` makes the message paths explicit. A
 new message with no question pending is ordinary chat and goes through
-`answer_case_question`. A reply to the pending question is stored, and the next
-question of the round is written in the same transaction. A reply that spends
-the round closes that transaction before calling `run_case_analysis`. A retried
-send, matched by `client_request_id`, runs the round's analysis if that
-analysis was lost, answers a chat question whose answer was lost, and otherwise
-returns the messages already stored.
+`answer_case_question`. A question stops being pending once an analysis has been
+stored after it (`pending_question` in `chat/followup.py`), so a message sent
+after that analysis is not taken as its answer. A reply to the pending question
+is stored, and the next question of the round is written in the same
+transaction. A reply that spends the round closes that transaction before
+calling `run_case_analysis`. A retried send, matched by `client_request_id`,
+runs the round's analysis if that analysis was lost, answers a chat question
+whose answer was lost, and otherwise returns the messages already stored. Two
+sends with the same key at the same moment both pass that lookup; the one the
+unique index refuses returns what the other stored and starts nothing.
+
+A provider that fails for now (timeout, dropped connection, a 5xx, or a reply
+that cannot be read, stops short of its end or breaks the stage's schema)
+reaches the client as 502 or 504, which the frontend offers to retry: the model
+is not deterministic, so asking again often succeeds. A refusal that retrying
+cannot fix, such as an input over budget, rejected credentials, a model that
+declines, or a changed case, stays a 4xx. A trace that binding cannot store is
+our own fault and a coded 500 (`case_bind_invalid`), logged with its cause.
 
 This is why the loop was **not** built with a state machine library. There is no
 state to machine — each step reads the world, decides once, and writes.

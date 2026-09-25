@@ -40,3 +40,26 @@ async def test_a_column_the_model_does_not_fill_is_not_reported_as_an_existing_a
                 await register_user(db, registration("analyst@example.com"))
 
         assert failure.value.orig.sqlstate == "23502"
+
+
+async def test_nul_in_a_display_name_is_dropped():
+    async with isolated_database() as session_factory:
+        async with session_factory() as db:
+            user = await register_user(
+                db,
+                RegisterRequest(
+                    email="analyst@example.com", name="Ana\u0000lyst", password="correct horse"
+                ),
+            )
+
+        async with session_factory() as db:
+            with pytest.raises(AppError) as refusal:
+                await register_user(
+                    db,
+                    RegisterRequest(
+                        email="other@example.com", name="\u0000", password="correct horse"
+                    ),
+                )
+
+        assert user.name == "Analyst"
+        assert (refusal.value.code, refusal.value.status_code) == ("display_name_required", 422)

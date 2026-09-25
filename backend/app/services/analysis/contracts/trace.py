@@ -14,6 +14,8 @@ from app.services.analysis.contracts.claims import (
     normalize_identifier,
 )
 
+MAX_SUMMARY_CHARS = 24_000
+
 
 class CaseInvolvedParty(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -107,7 +109,7 @@ class CaseAnalysisTrace(BaseModel):
     version: Literal["case_analysis_trace_v1"] = "case_analysis_trace_v1"
     validation_status: Literal["validated"] = "validated"
     analysis_mode: CaseAnalysisMode
-    summary: str = Field(min_length=1, max_length=24_000)
+    summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
     involved_parties: list[CaseInvolvedParty] = Field(default_factory=list, max_length=64)
     timeline: list[CaseTimelineItem] = Field(default_factory=list, max_length=64)
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
@@ -123,7 +125,7 @@ class CaseProviderAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: Literal["case_analysis_trace_v1"]
-    summary: str = Field(min_length=1, max_length=24_000)
+    summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
     involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
     timeline: list[CaseTimelineItem] = Field(max_length=64)
     claims: list[CaseProviderClaim] = Field(max_length=64)

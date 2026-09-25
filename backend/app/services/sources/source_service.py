@@ -82,7 +82,7 @@ class SourceService:
     ) -> CaseSource:
         if source_kind != "narrative":
             raise SourceError("source_kind_invalid", "Unsupported native source kind")
-        normalized_text = text.strip()
+        normalized_text = text.replace("\x00", "").strip()
         if not normalized_text:
             raise SourceError("source_text_empty", "The case source text is empty")
         case = await owned_case(self.db, case_id, user_id, lock=True)
