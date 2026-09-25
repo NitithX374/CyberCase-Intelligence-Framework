@@ -12,7 +12,7 @@ longer existed. Two descriptions of one system always drift. There is now one.
 | `CLAUDE.md` | the whole system — services, endpoints, layout, configuration, commands |
 | `backend/ARCHITECTURE.md` | how to read the backend: the one rule behind the file layout, the five files to start with, and the traps |
 | `backend/README.md` | the backend's HTTP boundary and persistence |
-| `DESIGN.md` | the UI design language; new production styling conforms to it |
+| `frontend/README.md` | the frontend's folders and its generated API types |
 
 If something here and the code disagree, the code wins — and fix the document
 in the same change rather than leaving the next person to discover it.
@@ -35,11 +35,19 @@ in the same change rather than leaving the next person to discover it.
    SQLAlchemy's async session. Never block the event loop — CPU-bound work
    (PDF rasterising, image encoding) goes through `asyncio.to_thread`.
 2. **Type-safe boundaries.** Every request and response is a Pydantic model.
-3. **Sessions come from `get_db`.** And if the route then does something slow —
-   a model call, an upload, OCR — call `commit_dependency_transaction(db)`
-   **first**. `get_current_user` runs a `SELECT`, which opens a transaction on
-   the request's session; leaving it open across slow work holds it for the
-   whole duration. `routers/analysis.py` is the pattern.
+3. **Sessions come from `get_db`, and no transaction stays open across slow
+   work.** `get_optional_user` runs a `SELECT` and commits straight after it,
+   so a route starts with no transaction open. A route that writes after slow
+   work — a model call, an upload, OCR — does the slow part first and opens
+   `async with db.begin()` only around the write. Follow `routers/documents.py`
+   for a new route. The other writes are shaped differently and still hold no
+   transaction across slow work: the case routes and registration make one
+   short write and call `db.commit()` in the service
+   (`services/cases/case_service.py`, `services/auth/auth_service.py`, which
+   hashes the password before the write), and report generation opens
+   `db.begin()` inside `CaseReportService.generate_report`. `POST /analysis` and
+   `POST /chat/messages` declare no session; the workflow opens its own short
+   ones.
 4. **Read short, think free, write short.** One short transaction to read, the
    slow work with no connection held, another short transaction to write. This
    is the rule most of `services/` is shaped by; `backend/ARCHITECTURE.md`
@@ -48,6 +56,12 @@ in the same change rather than leaving the next person to discover it.
    WeasyPrint loads Pango and Cairo through ctypes at import time and raises if
    they are missing; at module level that breaks every import of the package
    around it.
+6. **One error type, one ownership check.** A service error is `AppError`
+   from `app/errors.py`, or a subclass of it, carrying a code, a message and a
+   status; the one handler in `app/main.py` turns it into
+   `{"detail": {"code": ..., "message": ...}}`. Load a case through
+   `owned_case` in `services/cases/ownership.py`, which answers 404 for a case
+   the user does not own.
 
 ### LangGraph agentic loops (`rag_service/`)
 
@@ -66,13 +80,16 @@ in the same change rather than leaving the next person to discover it.
    return value — the generated types in `src/lib/api/generated/` are the
    contract with the backend.
 3. **Server state belongs to TanStack Query, not to `useState`.** State that
-   describes something the server is doing — an analysis in flight, a question
-   outstanding — must survive the component unmounting. `useCaseQueries.ts` has
-   both patterns; the mutation-cache one is there because the local-state one
-   was wrong.
+   describes something the server is doing — an analysis in flight, an answer
+   being sent — must survive the component unmounting. `features/analysis/queries.ts`
+   reads a running analysis from the mutation cache by its key
+   (`useMutationState`), and `useIsFollowupPending` in
+   `features/chat/useCaseChat.ts` does the same for an answer.
 
 ### Tests
 
+- The test tools are in `backend/requirements-dev.txt`, which also pulls in
+  `requirements.txt`.
 - `cd backend && python -m pytest tests -q` skips the PostgreSQL tests
   **silently** unless `CYBERCASE_TEST_DATABASE_URL` is set. Check the count,
   not just the colour.
