@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.analysis import AnalysisStepRead, CaseAnalysisCreate, CaseAnalysisResultRead
+from app.schemas.analysis import AnalysisStepRead, CaseAnalysisResultRead
 from app.services.auth.dependencies import get_current_user
 from app.services.workflow.run_analysis import (
     AnalysisStep,
@@ -33,7 +33,6 @@ def analysis_step_read(step: AnalysisStep) -> AnalysisStepRead:
 @router.post("/analysis", response_model=AnalysisStepRead)
 async def analyse_case(
     case_id: UUID,
-    request: CaseAnalysisCreate,
     user: User = Depends(get_current_user),
 ):
     step = await run_case_analysis(case_id=case_id, user_id=user.id)

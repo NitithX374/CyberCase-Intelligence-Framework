@@ -66,14 +66,7 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
             "document_id": source.document_id,
             "filename": source.filename,
         }
-        for quality_key in (
-            "extraction_method",
-            "provider",
-            "verification_status",
-            "confidence_status",
-            "minimum_confidence",
-            "warnings",
-        ):
+        for quality_key in ("extraction_method", "verification_status", "warnings"):
             if quality_key in source.provenance:
                 document[quality_key] = source.provenance[quality_key]
         payload["document"] = document

@@ -32,7 +32,6 @@ function caseRecord(overrides: Partial<CaseRead> = {}): CaseRead {
     id: "case-1",
     user_id: "user-1",
     title: "Police Investigation Report",
-    status: "answered",
     source_revision: 2,
     latest_analysis_result_id: "analysis-1",
     analysis_freshness: "current",
@@ -77,7 +76,6 @@ describe("CaseLibraryPage", () => {
         title: "SpeedFood System Architecture",
         updated_at: "2026-09-12T10:00:00Z",
         latest_analysis_result_id: null,
-        status: "idle",
         analysis_freshness: "missing",
       }),
     ]);

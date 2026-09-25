@@ -46,7 +46,6 @@ PRIORITY_LABELS = {
 SOURCE_KINDS = {
     "document": "เอกสาร",
     "narrative": "คำบรรยายเหตุการณ์",
-    "followup_answer": "คำตอบติดตามผล",
 }
 
 CLARIFICATION_LIMITATIONS = {

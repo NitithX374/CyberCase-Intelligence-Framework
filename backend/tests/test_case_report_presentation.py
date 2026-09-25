@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from pypdf import PdfReader
 
+from app.models.sources import CaseSource
 from app.schemas.reports import CaseReportContent
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
@@ -25,7 +26,7 @@ from app.services.analysis.mitre_gate.llm import (
 )
 from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput
-from app.services.reports.display import build_case_report_content, thai_date
+from app.services.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
 from app.services.reports.render import (
     ReportIssue,
     render_case_report_html,
@@ -383,3 +384,12 @@ def test_a_case_without_techniques_says_why_in_sections_three_and_four(
     section_four = html.split('id="mapping_rationale"')[1].split('id="evidence_to_examine"')[0]
     assert mapping in section_three
     assert rationale in section_four
+
+
+def test_the_source_register_names_exactly_the_kinds_a_case_source_can_have() -> None:
+    [constraint] = [
+        constraint
+        for constraint in CaseSource.__table__.constraints
+        if constraint.name == "ck_case_sources_kind"
+    ]
+    assert set(SOURCE_KINDS) == set(re.findall(r"'(\w+)'", str(constraint.sqltext)))

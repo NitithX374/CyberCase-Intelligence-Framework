@@ -14,13 +14,11 @@ WITH_LATEST_ANALYSIS = (selectinload(Case.latest_analysis_result),)
 
 
 def serialize_case(case: Case) -> CaseRead:
-    status_value = "answered" if case.latest_analysis_result is not None else "idle"
     freshness = analysis_freshness(case, case.latest_analysis_result)
     return CaseRead(
         id=case.id,
         user_id=case.user_id,
         title=case.title,
-        status=status_value,
         source_revision=case.source_revision,
         latest_analysis_result_id=case.latest_analysis_result_id,
         analysis_freshness=freshness,

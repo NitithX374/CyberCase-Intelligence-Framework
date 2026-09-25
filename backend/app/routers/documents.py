@@ -17,15 +17,6 @@ from app.services.sources.source_service import SourceService
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-documents"])
 
 
-@router.get("/documents", response_model=list[CaseDocumentRead])
-async def list_case_documents(
-    case_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    return await SourceService(db).list_documents(case_id, user.id)
-
-
 @router.get("/documents/{document_id}/content", response_class=Response)
 async def get_case_document_content(
     case_id: UUID,
