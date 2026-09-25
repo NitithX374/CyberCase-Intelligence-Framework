@@ -119,7 +119,7 @@ def structure(ch: Chapter) -> None:
         [
             ["GET /health", "Backend and database health"],
             ["POST /auth/register, /auth/login, /auth/logout", "Cookie session lifecycle"],
-            ["GET /auth/me, /auth/session", "The signed-in user, required and optional"],
+            ["GET /auth/session", "The signed-in user, or none"],
             ["GET, POST /cases", "List and create cases"],
             ["GET, PATCH, DELETE /cases/{case_id}", "Read, rename and delete one case"],
             ["GET, POST /cases/{case_id}/documents", "Upload a document, list what was uploaded"],
