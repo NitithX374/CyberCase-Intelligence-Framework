@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
+from collections.abc import Collection
 from copy import deepcopy
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from fastapi import status
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
@@ -45,6 +48,8 @@ Do not infer missing facts from the absence of claims. Do not retrieve external 
 about this case.
 """
 
+logger = logging.getLogger(__name__)
+
 NOT_IN_ANALYSIS = {
     "thai": ("ผลวิเคราะห์คดีนี้ยังไม่มีข้อมูลสำหรับตอบคำถามนี้ ลองเพิ่มข้อมูลที่หน้า Sources แล้ววิเคราะห์ใหม่"),
     "english": (
@@ -70,6 +75,63 @@ class CaseAnswerResponse(BaseModel):
         if len(joined_units(self.units)) > MAX_SUMMARY_CHARS:
             raise ValueError("The answer is longer than one summary can hold")
         return self
+
+
+class CaseProviderAnswerUnit(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    text: str = ""
+    claim_ids: list[str] = Field(default_factory=list)
+
+
+class CaseProviderAnswer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    outcome: Literal["answered", "not_in_analysis", "general"]
+    units: list[CaseProviderAnswerUnit] = Field(default_factory=list)
+    general_answer: str = ""
+
+
+def settled_unit(unit, known: Collection[str]) -> CaseGeneratedUnit | None:
+    claim_ids = [claim_id for claim_id in unit.claim_ids if str(claim_id).strip()]
+    try:
+        parsed = CaseGeneratedUnit(text=unit.text, claim_ids=claim_ids)
+    except ValidationError:
+        return None
+    kept = tuple(dict.fromkeys(claim_id for claim_id in parsed.claim_ids if claim_id in known))
+    return parsed.model_copy(update={"claim_ids": kept}) if kept else None
+
+
+def settled_answer(
+    response: CaseProviderAnswer | CaseAnswerResponse, known: Collection[str]
+) -> CaseAnswerResponse:
+    units = [unit for unit in (settled_unit(item, known) for item in response.units) if unit]
+    general = response.general_answer.strip()
+    outcome = response.outcome
+    if outcome == "answered" and not units:
+        outcome = "general" if general else "not_in_analysis"
+    elif outcome == "general" and not general:
+        outcome = "answered" if units else "not_in_analysis"
+    if outcome != response.outcome or len(units) != len(response.units):
+        logger.warning(
+            "Chat answer settled: outcome %s -> %s, %d of %d units kept",
+            response.outcome,
+            outcome,
+            len(units),
+            len(response.units),
+        )
+    try:
+        return CaseAnswerResponse(
+            outcome=outcome,
+            units=units if outcome == "answered" else [],
+            general_answer=general if outcome == "general" else "",
+        )
+    except ValidationError as error:
+        raise CaseAnalysisFailure(
+            "chat_answer_invalid",
+            "The chat answer could not be used",
+            status.HTTP_502_BAD_GATEWAY,
+        ) from error
 
 
 def joined_units(units: list[CaseGeneratedUnit]) -> str:
@@ -125,7 +187,7 @@ async def generate_case_answer(
         return await pre_analysis_answer(question, conversation, sources, language)
 
     trace = CaseAnalysisTrace.model_validate(result.trace_json)
-    response = await request_stage(
+    provided = await request_stage(
         config=configured_pipeline(),
         stage="chat_answer",
         system=ANSWER_PROMPT,
@@ -146,16 +208,13 @@ async def generate_case_answer(
             ],
             "conversation_history": conversation,
         },
-        schema=CaseAnswerResponse,
+        schema=CaseProviderAnswer,
     )
     known = {claim.claim_id: claim for claim in trace.claims}
+    response = settled_answer(provided, known)
     selected = list(
         dict.fromkeys(claim_id for unit in response.units for claim_id in unit.claim_ids)
     )
-    if any(claim_id not in known for claim_id in selected):
-        raise CaseAnalysisFailure(
-            "case_answer_unknown_claim", "Chat answer references a claim outside its analysis"
-        )
     if response.outcome == "answered":
         answer = joined_units(response.units)
     elif response.outcome == "general":
@@ -205,6 +264,8 @@ async def pre_analysis_answer(
 
 __all__ = [
     "CaseAnswerResponse",
+    "CaseProviderAnswer",
     "GeneralCaseAnswerResponse",
     "generate_case_answer",
+    "settled_answer",
 ]
