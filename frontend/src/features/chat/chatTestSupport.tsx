@@ -1,4 +1,4 @@
-import type { CaseChatRead, CaseChatResponse, ChatMessageRead } from "@/lib/api";
+import type { CaseChatRead, CaseChatResponse, ChatMessageRead } from "@/lib/api/types";
 
 export function message(
   caseId: string,

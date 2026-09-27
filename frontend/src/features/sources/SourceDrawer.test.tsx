@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api/types";
 import { caseId, followupExchange } from "@/test/fixtures";
 import { chatFollowups } from "./followupSources";
 import { claimRefs, parseCaseSources } from "./sourceRefs";

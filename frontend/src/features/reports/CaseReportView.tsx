@@ -7,9 +7,8 @@ import {
   downloadCaseReportPdf,
   generateCaseReport,
   listCaseReports,
-  type CaseAnalysisResultRead,
-  type CaseReportRead,
-} from "@/lib/api";
+} from "./api";
+import type { CaseAnalysisResultRead, CaseReportRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { useBlobUrl } from "@/lib/useBlobUrl";
 import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";

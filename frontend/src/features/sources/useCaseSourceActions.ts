@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { addCaseSource } from "@/lib/api";
+import { addCaseSource } from "./api";
 import { refreshAfterSourceChange, useUploadCaseDocument } from "@/features/sources/queries";
 import { useQueryClient } from "@tanstack/react-query";
 

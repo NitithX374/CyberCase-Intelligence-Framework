@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CaseAnalysisClaim, ChatAnswerUnit, ChatMessageRead } from "@/lib/api";
+import type { CaseAnalysisClaim, ChatAnswerUnit, ChatMessageRead } from "@/lib/api/types";
 import {
   analysisResult,
   followupExchange,

@@ -6,7 +6,7 @@ import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { Icon } from "@/components/icons";
-import type { CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api/types";
 import { detailMessage } from "@/lib/userFacingError";
 import { useCaseMutations, useCases } from "@/features/cases/queries";
 import { CaseCard } from "./CaseCard";

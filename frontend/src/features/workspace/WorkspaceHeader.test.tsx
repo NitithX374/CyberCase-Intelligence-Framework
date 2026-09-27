@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceHeader } from "./WorkspaceHeader";
-import type { CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api/types";
 
 vi.mock("@/features/auth/useAuth", () => ({
   useAuth: () => ({

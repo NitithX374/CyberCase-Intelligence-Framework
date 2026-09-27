@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
-import type { CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api/types";
 import { NarrativeDialog } from "./NarrativeDialog";
 import { SourceRail, railGroups } from "./SourceRail";
 import { SourceViewport, type PreviewMode } from "./SourceViewport";

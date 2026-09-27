@@ -2,13 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api/types";
 import { narrativeSource } from "@/test/fixtures";
 import type { RailItem } from "./SourceRail";
 import { SourceViewport, type PreviewMode } from "./SourceViewport";
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("./api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api")>()),
   fetchCaseDocumentContent: async () => new Blob(["original"]),
 }));
 

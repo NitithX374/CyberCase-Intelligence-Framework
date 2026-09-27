@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CaseAnalysisResultRead, CaseSourceCitation } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceCitation } from "@/lib/api/types";
 import {
   analysisResult,
   claim,

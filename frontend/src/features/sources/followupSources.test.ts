@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatMessageRead } from "@/lib/api";
+import type { ChatMessageRead } from "@/lib/api/types";
 import { followupExchange } from "@/test/fixtures";
 import { chatFollowups } from "./followupSources";
 

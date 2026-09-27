@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { Icon } from "@/components/icons";
 import { AccountMenu } from "@/features/auth/AccountMenu";
-import type { CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api/types";
 import { workspaceViewDescriptions, type WorkspaceView } from "./routes";
 
 interface WorkspaceHeaderProps {

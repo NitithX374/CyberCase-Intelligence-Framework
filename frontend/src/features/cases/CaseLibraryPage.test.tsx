@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api/types";
 import { CaseLibraryPage } from "./CaseLibraryPage";
 import { useCaseMutations, useCases } from "@/features/cases/queries";
 import { refusal } from "@/test/httpErrors";

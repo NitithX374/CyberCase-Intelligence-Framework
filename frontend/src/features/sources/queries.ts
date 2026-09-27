@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { listCaseSources, uploadCaseDocument, type CaseSourceRead } from "@/lib/api";
+import { listCaseSources, uploadCaseDocument } from "./api";
+import type { CaseSourceRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
 export function useCaseSources(caseId: string | null) {

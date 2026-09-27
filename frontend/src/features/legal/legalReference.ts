@@ -1,4 +1,4 @@
-import type { CaseAnalysisResultRead } from "@/lib/api";
+import type { CaseAnalysisResultRead } from "@/lib/api/types";
 import { asArray, asRecord, asString } from "@/lib/parse";
 
 export interface LegalProvision {

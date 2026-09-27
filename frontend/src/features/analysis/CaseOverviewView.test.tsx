@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { CaseOverviewView } from "./CaseOverviewView";
-import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
 import { useCaseSources } from "@/features/sources/queries";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";

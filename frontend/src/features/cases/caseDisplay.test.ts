@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api/types";
 import { caseStatusLabel } from "./caseDisplay";
 
 function caseRecord(analysisFreshness: CaseRead["analysis_freshness"]): CaseRead {

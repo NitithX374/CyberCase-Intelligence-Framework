@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { useDismiss } from "@/lib/useDismiss";
 import { formatBytes, formatDate } from "@/lib/format";
-import type { CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api/types";
 import type { SourcesAnalysis } from "./CaseSourcesView";
 import type { FollowupAnswer } from "./types";
 

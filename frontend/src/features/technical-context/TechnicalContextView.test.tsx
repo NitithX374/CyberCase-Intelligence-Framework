@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { TechnicalContextView } from "./TechnicalContextView";
-import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { analysisResult, association, claim, narrativeSource, trace } from "@/test/fixtures";
 
 const exactQuote = "The report records PowerShell network activity.";

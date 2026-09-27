@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createCaseChatMessage, http, startCaseAnalysis, uploadCaseDocument } from "./client";
+import { startCaseAnalysis } from "@/features/analysis/api";
+import { createCaseChatMessage } from "@/features/chat/api";
+import { uploadCaseDocument } from "@/features/sources/api";
+import { http } from "./http";
 
 afterEach(() => {
   vi.restoreAllMocks();
