@@ -8,7 +8,6 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analysis.clarification import Ask, Proceed
 from app.analysis.language import case_language
 from app.analysis.latest import recorded_technical_context
 from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts, AnalysisInput, advance_case
@@ -22,16 +21,17 @@ from app.analysis.store import (
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.retrieve import technical_context_key
 from app.cases.ownership import owned_case
-from app.chat.followup import (
+from app.config import settings
+from app.database import async_session
+from app.errors import CaseAnalysisFailure, CaseWorkflowError
+from app.followup.clarification import Ask, Proceed
+from app.followup.conversation import (
     asked_gap_keys,
     case_messages,
     followup_history_from,
     last_question_awaiting_analysis,
     rounds_asked,
 )
-from app.config import settings
-from app.database import async_session
-from app.errors import CaseAnalysisFailure, CaseWorkflowError
 from app.models.analysis_result import CaseAnalysisResult
 from app.sources.bundle import WITH_SOURCES, analysable_bundle
 from app.sources.service import SourceError

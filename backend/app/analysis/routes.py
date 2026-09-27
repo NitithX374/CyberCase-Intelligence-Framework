@@ -5,10 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analysis.latest import analysis_freshness, get_latest_case_analysis
+from app.analysis.latest import get_latest_case_analysis
 from app.analysis.run import AnalysisStep, run_case_analysis
 from app.analysis.schemas import AnalysisStepRead, CaseAnalysisResultRead
 from app.auth.guard import get_current_user
+from app.cases.service import analysis_freshness
 from app.database import get_db
 from app.models.user import User
 

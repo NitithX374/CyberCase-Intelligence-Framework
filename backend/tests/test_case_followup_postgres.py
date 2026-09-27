@@ -10,21 +10,22 @@ from sqlalchemy import select
 
 import app.analysis.pipeline as pipeline_module
 import app.chat.reply as case_chat
-from app.analysis.clarification import Ask
 from app.analysis.latest import get_latest_case_analysis
 from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.analysis.run import analysing, run_case_analysis
-from app.chat.followup import analysis_result_message, next_ordinal, pending_question
 from app.chat.reply import get_case_chat, post_case_message, send_case_message
-from app.chat.schemas import ChatMessageCreate, ChatMessageRead, MessageAnalysisTrace
+from app.chat.schemas import ChatMessageCreate, ChatMessageRead
 from app.config import settings
 from app.errors import CaseWorkflowError
+from app.followup.clarification import Ask
+from app.followup.conversation import analysis_result_message, next_ordinal, pending_question
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
 from app.reports.display import clarification_limitation
 from app.trace.claims import CaseAnalysisGap, CaseAssessmentTrace
+from app.trace.messages import MessageAnalysisTrace
 from app.trace.trace import CaseAnalysisTrace
 
 pytestmark = pytest.mark.asyncio

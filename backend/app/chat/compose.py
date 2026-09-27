@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from app.analysis.language import ResponseLanguage
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.write import write_request
-from app.chat.contracts import CaseAnalysisOutput, ChatAnswerUnit
+from app.chat.contracts import CaseAnalysisOutput
 from app.chat.prompts import CHAT_PROMPT
 from app.errors import CaseAnalysisFailure
 from app.llm.request import request_stage
@@ -32,6 +32,7 @@ from app.trace.claims import (
     CaseSourceCitation,
     normalize_identifier,
 )
+from app.trace.messages import ChatAnswerUnit
 from app.trace.trace import MAX_SUMMARY_CHARS, CaseAnalysisTrace
 
 logger = logging.getLogger(__name__)

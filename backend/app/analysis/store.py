@@ -7,17 +7,17 @@ from uuid import UUID
 from fastapi import status
 from sqlalchemy import select
 
-from app.analysis.clarification import Ask, ProceedReason
 from app.analysis.pipeline import AnalysisArtifacts
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.retrieve import technical_context_key
-from app.chat.followup import (
+from app.errors import CaseAnalysisFailure, CaseWorkflowError
+from app.followup.clarification import Ask, ProceedReason
+from app.followup.conversation import (
     analysis_result_message,
     next_ordinal,
     pending_question,
     question_message,
 )
-from app.errors import CaseAnalysisFailure, CaseWorkflowError
 from app.llm.settings import configured_pipeline
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
