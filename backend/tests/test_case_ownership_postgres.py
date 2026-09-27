@@ -10,16 +10,17 @@ from sqlalchemy import event, func, inspect, select
 
 from app.analysis.latest import get_latest_case_analysis
 from app.analysis.run import read_case_for_analysis
+from app.cases.ownership import owned_case
+from app.cases.schemas import CaseUpdate
+from app.cases.service import CaseService
 from app.errors import AppError
-from app.models.analysis import CaseAnalysisResult
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
-from app.models.chat import ChatMessage
+from app.models.chat_message import ChatMessage
+from app.models.document import CaseDocument
 from app.models.report import CaseReport
-from app.models.sources import CaseDocument, CaseSource
+from app.models.source import CaseSource
 from app.models.user import User
-from app.schemas.cases import CaseUpdate
-from app.services.cases.case_service import CaseService
-from app.services.cases.ownership import owned_case
 
 pytestmark = pytest.mark.asyncio
 

@@ -1,8 +1,13 @@
 from uuid import uuid4
 
-from app.analysis.technical_context.contracts import CaseRagContextPayload, MitreApplicabilityRecord
-from app.schemas.rag import LegalReferenceResult, MitreTableRow, QueryResponse
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.analysis.technical_context.contracts import (
+    CaseRagContextPayload,
+    LegalReferenceResult,
+    MitreApplicabilityRecord,
+    MitreTableRow,
+    QueryResponse,
+)
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
 

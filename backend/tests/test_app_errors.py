@@ -6,18 +6,19 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.analysis import routes as analysis
+from app.auth.guard import get_current_user
+from app.chat import routes as chat
 from app.database import get_db
 from app.errors import AppError, CaseAnalysisFailure, CaseWorkflowError
 from app.main import app
-from app.routers import analysis, chat
-from app.services.auth.dependencies import get_current_user
-from app.services.document_ingestion.contracts import (
+from app.reports.contracts import ReportGenerationConflict, ReportNotFound
+from app.sources.ingestion.contracts import (
     DocumentLimitError,
     InvalidDocumentError,
     UnsupportedDocumentError,
 )
-from app.services.reports.contracts import ReportGenerationConflict, ReportNotFound
-from app.services.sources.source_service import SourceError
+from app.sources.service import SourceError
 
 
 def _fastapi_app() -> FastAPI:

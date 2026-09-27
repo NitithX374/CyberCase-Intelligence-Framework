@@ -20,7 +20,7 @@ from app.analysis.technical_context.retrieve import (
 from app.analysis.write import write_trace
 from app.errors import CaseAnalysisFailure
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
-from app.services.sources.case_source_bundle import CaseSourceBundle
+from app.sources.bundle import CaseSourceBundle
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace

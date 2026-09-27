@@ -11,9 +11,12 @@ from app.analysis.clarification import Proceed
 from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.analysis.run import reusable_context, run_case_analysis
 from app.analysis.store import external_context, retrieval_context_row
-from app.analysis.technical_context.contracts import skipped_mitre_applicability
+from app.analysis.technical_context.contracts import (
+    LegalReferenceResult,
+    QueryResponse,
+    skipped_mitre_applicability,
+)
 from app.analysis.technical_context.retrieve import CaseMitreAugmentation
-from app.schemas.rag import LegalReferenceResult, QueryResponse
 from app.trace.claims import CaseAssessmentTrace
 from app.trace.trace import CaseMitreAssociation
 

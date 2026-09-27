@@ -16,15 +16,14 @@ from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.analysis.run import analysing, run_case_analysis
 from app.chat.followup import analysis_result_message, next_ordinal, pending_question
 from app.chat.reply import get_case_chat, post_case_message, send_case_message
+from app.chat.schemas import ChatMessageCreate, ChatMessageRead, MessageAnalysisTrace
 from app.config import settings
 from app.errors import CaseWorkflowError
-from app.models.analysis import CaseAnalysisResult
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
-from app.models.chat import ChatMessage
-from app.models.sources import CaseSource
-from app.schemas.chat import ChatMessageCreate, ChatMessageRead
-from app.schemas.message_metadata import MessageAnalysisTrace
-from app.services.reports.display import clarification_limitation
+from app.models.chat_message import ChatMessage
+from app.models.source import CaseSource
+from app.reports.display import clarification_limitation
 from app.trace.claims import CaseAnalysisGap, CaseAssessmentTrace
 from app.trace.trace import CaseAnalysisTrace
 

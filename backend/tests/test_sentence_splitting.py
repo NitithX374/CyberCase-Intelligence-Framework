@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.analysis.technical_context.sentences import split_sources, split_text
-from app.services.sources.case_source_bundle import CaseSourceItem
+from app.sources.bundle import CaseSourceItem
 
 THAI_REPORT = """เมื่อวันที่ 4 พฤศจิกายน 2563 ผู้เสียหายเข้าแจ้งความ
 ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น.

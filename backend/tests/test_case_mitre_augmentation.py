@@ -9,9 +9,9 @@ from app.analysis.pipeline import (
     write_analysis,
 )
 from app.analysis.run import external_context
+from app.analysis.technical_context.contracts import LegalReferenceResult, QueryResponse
 from app.analysis.technical_context.rag_client import RagCallFailure
 from app.analysis.technical_context.retrieve import run_case_mitre_augmentation
-from app.schemas.rag import LegalReferenceResult, QueryResponse
 from app.trace.trace import CaseMitreAssociation
 
 

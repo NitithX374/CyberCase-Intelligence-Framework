@@ -17,7 +17,7 @@ from app.analysis.write import write_request, write_trace, written_trace
 from app.errors import CaseAnalysisFailure
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
-from app.services.sources.case_source_bundle import CaseSourceBundle
+from app.sources.bundle import CaseSourceBundle
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
 from experiments.split_analysis import (

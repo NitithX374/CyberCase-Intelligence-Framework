@@ -7,14 +7,13 @@ from uuid import uuid4
 import pytest
 
 import app.chat.compose as module
-from app.analysis.technical_context.contracts import CaseRagContextPayload
+from app.analysis.technical_context.contracts import CaseRagContextPayload, LegalReferenceResult
 from app.chat.answer import answer_metadata
 from app.chat.compose import CHAT_OUTPUT_TOKENS, UNANSWERED, generate_case_answer
 from app.config import settings
 from app.errors import CaseAnalysisFailure
 from app.llm.settings import configured_pipeline
-from app.schemas.rag import LegalReferenceResult
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,

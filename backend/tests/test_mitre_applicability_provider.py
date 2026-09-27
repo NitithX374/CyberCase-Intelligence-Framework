@@ -15,13 +15,9 @@ from app.analysis.technical_context.gate_llm import (
 from app.llm import request as provider
 from app.llm.openrouter import CoreLlmTarget
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.document_ingestion.contracts import (
-    DocumentPage,
-    ExtractionMethod,
-    IngestedDocument,
-)
-from app.services.sources.case_source_bundle import CaseSourceItem
-from app.services.sources.source_service import document_provenance
+from app.sources.bundle import CaseSourceItem
+from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
+from app.sources.service import document_provenance
 
 
 @pytest.fixture

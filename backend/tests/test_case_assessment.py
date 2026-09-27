@@ -10,7 +10,7 @@ from app.analysis.prompts import (
     case_system_prompt,
 )
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
 
 

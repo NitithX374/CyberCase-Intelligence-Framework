@@ -11,6 +11,8 @@ from sqlalchemy.orm import selectinload
 
 from app.analysis.clarification import Ask, decide_followup
 from app.analysis.run import AnalysisStep, analysis_running, run_case_analysis
+from app.analysis.schemas import CaseAnalysisResultRead
+from app.cases.ownership import owned_case
 from app.chat.answer import (
     answer_case_question,
     answer_recorded_question,
@@ -29,14 +31,12 @@ from app.chat.followup import (
     question_message,
     rounds_asked,
 )
+from app.chat.schemas import CaseChatRead, CaseChatResponse, ChatMessageCreate, ChatMessageRead
 from app.config import settings
 from app.database import async_session
-from app.models.analysis import CaseAnalysisResult
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
-from app.models.chat import ChatMessage
-from app.schemas.analysis import CaseAnalysisResultRead
-from app.schemas.chat import CaseChatRead, CaseChatResponse, ChatMessageCreate, ChatMessageRead
-from app.services.cases.ownership import owned_case
+from app.models.chat_message import ChatMessage
 from app.trace.claims import CaseAssessmentTrace
 from app.trace.trace import CaseAnalysisTrace
 

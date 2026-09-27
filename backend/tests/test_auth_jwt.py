@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pytest
 
+from app.auth.credentials import create_access_token, decode_access_token
 from app.config import settings
-from app.services.auth.credentials import create_access_token, decode_access_token
 
 
 def test_create_and_decode_valid_access_token():

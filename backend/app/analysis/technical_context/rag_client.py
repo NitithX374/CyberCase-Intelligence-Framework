@@ -3,8 +3,8 @@ from __future__ import annotations
 import httpx
 from pydantic import ValidationError
 
+from app.analysis.technical_context.contracts import QueryRequest, QueryResponse
 from app.config import settings
-from app.schemas.rag import QueryRequest, QueryResponse
 
 RAG_HTTP_TIMEOUT_SECONDS = 300.0
 transport: httpx.AsyncBaseTransport | None = None

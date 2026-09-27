@@ -6,7 +6,7 @@ from app.analysis.prompts import case_system_prompt
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, followup_payload
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
 

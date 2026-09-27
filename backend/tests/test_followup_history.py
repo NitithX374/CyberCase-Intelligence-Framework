@@ -15,9 +15,9 @@ from app.chat.followup import (
     rounds_asked,
 )
 from app.models.case import Case
-from app.models.chat import ChatMessage
+from app.models.chat_message import ChatMessage
 from app.models.user import User
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import followup_registry_items, resolve_case_trace
 from app.trace.claims import CaseFollowupExchange, followup_payload
 from app.trace.trace import CaseAnalysisTrace

@@ -10,7 +10,7 @@ from case_mitre_test_support import _gate
 from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, write_analysis
 from app.analysis.prompts import case_system_prompt
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseProviderCitation,

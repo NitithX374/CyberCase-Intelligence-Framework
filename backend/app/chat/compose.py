@@ -17,13 +17,9 @@ from app.chat.prompts import CHAT_PROMPT
 from app.errors import CaseAnalysisFailure
 from app.llm.request import request_stage
 from app.llm.settings import configured_pipeline
-from app.models.analysis import CaseAnalysisResult
-from app.models.chat import ChatMessage
-from app.services.sources.case_source_bundle import (
-    CaseSourceBundle,
-    CaseSourceItem,
-    build_document_source_context,
-)
+from app.models.analysis_result import CaseAnalysisResult
+from app.models.chat_message import ChatMessage
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
 from app.trace.bind import (
     QuoteSearch,
     followup_registry_items,

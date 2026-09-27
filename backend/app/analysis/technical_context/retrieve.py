@@ -9,12 +9,12 @@ from app.analysis.technical_context.contracts import (
     CaseTechnicalAugmentation,
     CaseTechnicalAugmentationStatus,
     MitreApplicabilityRecord,
+    QueryResponse,
     skipped_mitre_applicability,
 )
 from app.analysis.technical_context.gate import mitre_gate
 from app.analysis.technical_context.rag_client import RagCallFailure, request_rag
-from app.schemas.rag import QueryResponse
-from app.services.sources.case_source_bundle import CaseSourceBundle, build_rag_query
+from app.sources.bundle import CaseSourceBundle, build_rag_query
 from app.trace.claims import CaseFollowupExchange
 
 logger = logging.getLogger(__name__)

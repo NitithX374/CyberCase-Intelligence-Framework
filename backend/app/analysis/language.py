@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from app.services.sources.case_source_bundle import CaseSourceBundle
+from app.sources.bundle import CaseSourceBundle
 
 ResponseLanguage = Literal["thai", "english"]
 
