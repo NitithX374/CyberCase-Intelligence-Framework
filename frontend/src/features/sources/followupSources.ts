@@ -1,4 +1,4 @@
-import type { ChatMessageRead } from "@/lib/api";
+import type { ChatMessageRead } from "@/lib/api/types";
 import type { FollowupAnswer } from "./types";
 
 export function chatFollowups(messages: ChatMessageRead[]): FollowupAnswer[] {

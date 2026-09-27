@@ -1,17 +1,21 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, useMutation } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import type { CaseChatResponse } from "@/lib/api";
+import type { CaseChatResponse } from "@/lib/api/types";
 import { useCaseChat } from "@/features/chat/useCaseChat";
 import { caseChat, chatResponse, deferred, message } from "@/features/chat/chatTestSupport";
 import { useAnalysisRunOutcome, useRunCaseAnalysis } from "./useRunCaseAnalysis";
 
 const api = vi.hoisted(() => ({ getChat: vi.fn(), send: vi.fn(), start: vi.fn() }));
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("@/features/chat/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/chat/api")>()),
   getCaseChat: (...args: unknown[]) => api.getChat(...args),
   createCaseChatMessage: (...args: unknown[]) => api.send(...args),
+}));
+
+vi.mock("./api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api")>()),
   startCaseAnalysis: (...args: unknown[]) => api.start(...args),
 }));
 

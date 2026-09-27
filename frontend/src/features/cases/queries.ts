@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { createCase, deleteCase, getCase, listCases, updateCase, type CaseRead } from "@/lib/api";
+import { createCase, deleteCase, getCase, listCases, updateCase } from "./api";
+import type { CaseRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
 export function useCase(caseId: string | null) {

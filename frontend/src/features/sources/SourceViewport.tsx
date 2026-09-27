@@ -3,7 +3,8 @@
 import { useMemo, type ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import { plural } from "@/lib/format";
-import { fetchCaseDocumentContent, type CaseSourceRead } from "@/lib/api";
+import { fetchCaseDocumentContent } from "./api";
+import type { CaseSourceRead } from "@/lib/api/types";
 import { useBlobUrl } from "@/lib/useBlobUrl";
 import { itemTitle, type RailItem } from "./SourceRail";
 

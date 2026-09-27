@@ -6,7 +6,7 @@ import type {
   CaseSourceRead,
   ChatAnswerUnit,
   ChatMessageRead,
-} from "@/lib/api";
+} from "@/lib/api/types";
 import type { CaseSourceRef, SourceMessageRef } from "@/features/sources/types";
 import { claimRefs, parseCaseSources } from "@/features/sources/sourceRefs";
 import { chatFollowups } from "@/features/sources/followupSources";

@@ -1,4 +1,4 @@
-import type { CaseAnalysisClaim, CaseSourceCitation, CaseSourceRead } from "@/lib/api";
+import type { CaseAnalysisClaim, CaseSourceCitation, CaseSourceRead } from "@/lib/api/types";
 import { asArray } from "@/lib/parse";
 import type { CaseSourceRef, FollowupAnswer, SourceMessageRef, SourcePage } from "./types";
 

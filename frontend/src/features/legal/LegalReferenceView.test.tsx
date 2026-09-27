@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LegalReferenceView } from "./LegalReferenceView";
-import type { CaseAnalysisResultRead } from "@/lib/api";
+import type { CaseAnalysisResultRead } from "@/lib/api/types";
 
 const ACCESS_SECTION = "พระราชบัญญัติว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์ พ.ศ. 2550 มาตรา 5";
 const FRAUD_SECTION = "ประมวลกฎหมายอาญา มาตรา 341";

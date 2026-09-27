@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CaseAnalysisResultRead, CaseAnalysisTrace, CaseSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseAnalysisTrace, CaseSourceRead } from "@/lib/api/types";
 import { analysisResult, association, claim, narrativeSource, trace } from "@/test/fixtures";
 import { buildTechnicalContext } from "./technicalContext";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 import { SourceDrawer } from "@/features/sources/SourceDrawer";

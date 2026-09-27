@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import type { CaseOverviewData } from "@/features/analysis/types";
 import { Icon } from "@/components/icons";
 import { useDismiss } from "@/lib/useDismiss";

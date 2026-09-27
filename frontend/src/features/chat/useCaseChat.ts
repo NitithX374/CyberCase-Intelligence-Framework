@@ -2,13 +2,8 @@
 
 import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState, type FormEvent } from "react";
-import {
-  createCaseChatMessage,
-  getCaseChat,
-  type CaseChatRead,
-  type CaseRead,
-  type ChatMessageRead,
-} from "@/lib/api";
+import { createCaseChatMessage, getCaseChat } from "./api";
+import type { CaseChatRead, CaseRead, ChatMessageRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
 interface Submission {

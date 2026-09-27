@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
-import type { CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api/types";
 import { formatDate } from "@/lib/format";
 import { caseDestination, caseStatusLabel, type CaseLibraryViewMode } from "./caseDisplay";
 

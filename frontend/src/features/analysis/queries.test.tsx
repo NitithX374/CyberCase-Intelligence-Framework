@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { act, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AnalysisStepRead } from "@/lib/api";
+import type { AnalysisStepRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { analysisResult } from "@/test/fixtures";
 import { deferred } from "@/features/chat/chatTestSupport";
@@ -10,8 +10,8 @@ import { useIsCaseAnalysisRunning, useStartCaseAnalysis } from "./queries";
 
 const startCaseAnalysis = vi.fn();
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("./api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api")>()),
   startCaseAnalysis: (...args: unknown[]) => startCaseAnalysis(...args),
 }));
 

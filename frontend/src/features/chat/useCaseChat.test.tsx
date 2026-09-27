@@ -10,8 +10,8 @@ import { caseChat, chatResponse, deferred, message } from "./chatTestSupport";
 const getCaseChat = vi.fn();
 const createCaseChatMessage = vi.fn();
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("./api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api")>()),
   getCaseChat: (...args: unknown[]) => getCaseChat(...args),
   createCaseChatMessage: (...args: unknown[]) => createCaseChatMessage(...args),
 }));

@@ -3,10 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import { CaseSourcesView } from "./CaseSourcesView";
-import type { CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api/types";
 
-vi.mock("@/lib/api", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/api")>();
+vi.mock("./api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./api")>();
   return {
     ...actual,
     fetchCaseDocumentContent: vi.fn().mockResolvedValue(new Blob(["original"])),

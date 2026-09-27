@@ -6,7 +6,7 @@ import {
   useQueryClient,
   type MutationCacheNotifyEvent,
 } from "@tanstack/react-query";
-import type { AnalysisStepRead } from "@/lib/api";
+import type { AnalysisStepRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { useIsAnalysisUpdating, useStartCaseAnalysis } from "./queries";
 

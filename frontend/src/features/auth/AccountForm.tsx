@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import Link from "next/link";
-import { login, register as registerAccount } from "@/lib/api";
+import { login, register as registerAccount } from "./api";
 import { detailMessage } from "@/lib/userFacingError";
 import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { Icon } from "@/components/icons";

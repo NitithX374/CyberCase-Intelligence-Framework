@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getSession, logout } from "@/lib/api";
+import { getSession, logout } from "./api";
 
 export const authQueryKeys = {
   all: ["auth"] as const,

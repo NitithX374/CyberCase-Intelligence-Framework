@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CaseAnalysisResultRead } from "@/lib/api";
+import type { CaseAnalysisResultRead } from "@/lib/api/types";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DisclosureToggle } from "@/components/Disclosure";
 import { EmptyState } from "@/components/EmptyState";

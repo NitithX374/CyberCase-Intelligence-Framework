@@ -1,4 +1,4 @@
-import type { CaseRead } from "@/lib/api";
+import type { CaseRead } from "@/lib/api/types";
 import { casePath } from "@/features/workspace/routes";
 
 export type CaseLibrarySort = "recent" | "oldest" | "title";

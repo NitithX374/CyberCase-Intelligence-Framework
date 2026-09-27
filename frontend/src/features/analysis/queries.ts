@@ -1,10 +1,6 @@
 import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  getCaseAnalysis,
-  startCaseAnalysis,
-  type AnalysisStepRead,
-  type CaseAnalysisResultRead,
-} from "@/lib/api";
+import { getCaseAnalysis, startCaseAnalysis } from "./api";
+import type { AnalysisStepRead, CaseAnalysisResultRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 

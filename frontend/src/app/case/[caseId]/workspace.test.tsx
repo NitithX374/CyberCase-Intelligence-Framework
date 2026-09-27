@@ -8,7 +8,7 @@ import type {
   CaseRead,
   CaseSourceRead,
   ChatMessageRead,
-} from "@/lib/api";
+} from "@/lib/api/types";
 import { deferred } from "@/features/chat/chatTestSupport";
 import { networkError, refusal, timeoutError } from "@/test/httpErrors";
 import {
@@ -61,23 +61,43 @@ function freshness(): CaseRead["analysis_freshness"] {
   return backend.analysis.source_revision === backend.revision ? "current" : "stale";
 }
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("@/features/auth/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/auth/api")>()),
   getSession: async () => ({ id: "user-1", email: "analyst@example.com", name: "Analyst" }),
+}));
+
+vi.mock("@/features/cases/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/cases/api")>()),
   getCase: async () => storedCase(),
   updateCase: async (_caseId: string, title: string) => {
     backend.title = title;
     return storedCase();
   },
+}));
+
+vi.mock("@/features/chat/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/chat/api")>()),
   getCaseChat: async () => backend.chat,
+  createCaseChatMessage: (...args: unknown[]) => backend.send(...args),
+}));
+
+vi.mock("@/features/analysis/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/analysis/api")>()),
   getCaseAnalysis: async () =>
     backend.analysis ? { ...backend.analysis, freshness: freshness() } : null,
+  startCaseAnalysis: (...args: unknown[]) => backend.start(...args),
+}));
+
+vi.mock("@/features/sources/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/sources/api")>()),
   listCaseSources: async () => [...backend.sources],
-  listCaseReports: async () => [],
   addCaseSource: (...args: unknown[]) => backend.add(...args),
   uploadCaseDocument: (...args: unknown[]) => backend.upload(...args),
-  createCaseChatMessage: (...args: unknown[]) => backend.send(...args),
-  startCaseAnalysis: (...args: unknown[]) => backend.start(...args),
+}));
+
+vi.mock("@/features/reports/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/reports/api")>()),
+  listCaseReports: async () => [],
 }));
 
 const narrative = "Payroll files were encrypted overnight.";

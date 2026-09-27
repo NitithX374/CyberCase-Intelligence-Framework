@@ -3,8 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CaseReportView } from "./CaseReportView";
-import type { CaseReportRead } from "@/lib/api";
-import * as api from "@/lib/api";
+import type { CaseReportRead } from "@/lib/api/types";
+import { http } from "@/lib/api/http";
+import * as api from "./api";
 import { analysisResult } from "@/test/fixtures";
 import { blobRefusal, networkError, refusal, timeoutError } from "@/test/httpErrors";
 
@@ -147,7 +148,7 @@ describe("CaseReportView", () => {
   it("says in Thai why a PDF download was refused", async () => {
     vi.spyOn(api, "listCaseReports").mockResolvedValue([report(1)]);
     const get = vi
-      .spyOn(api.http, "get")
+      .spyOn(http, "get")
       .mockRejectedValue(
         blobRefusal(
           409,

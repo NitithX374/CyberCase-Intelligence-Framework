@@ -11,8 +11,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: state.replace }),
   usePathname: () => "/case/abc/sources",
 }));
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("./api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api")>()),
   getSession: (...args: unknown[]) => state.getSession(...args),
 }));
 

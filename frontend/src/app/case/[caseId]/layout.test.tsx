@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AnalysisStepRead } from "@/lib/api";
+import type { AnalysisStepRead } from "@/lib/api/types";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { deferred } from "@/features/chat/chatTestSupport";
 import { analysisResult, caseId } from "@/test/fixtures";
@@ -21,8 +21,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: state.push, replace: vi.fn() }),
   useSelectedLayoutSegment: () => state.segment,
 }));
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("@/features/analysis/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/analysis/api")>()),
   startCaseAnalysis: (...args: unknown[]) => state.start(...args),
 }));
 vi.mock("@/features/cases/queries", () => ({

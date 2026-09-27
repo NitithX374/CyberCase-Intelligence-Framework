@@ -1,4 +1,4 @@
-import type { CaseAnalysisResultRead } from "@/lib/api";
+import type { CaseAnalysisResultRead } from "@/lib/api/types";
 import type { FollowupAnswer } from "@/features/sources/types";
 import { asArray, asRecord, asString } from "@/lib/parse";
 
