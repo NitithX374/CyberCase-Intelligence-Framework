@@ -9,7 +9,7 @@ import type {
   CaseSourceRead,
   ChatMessageRead,
 } from "@/lib/api/types";
-import { deferred } from "@/features/chat/chatTestSupport";
+import { deferred } from "@/test/chat";
 import { networkError, refusal, timeoutError } from "@/test/httpErrors";
 import {
   analysisResult,

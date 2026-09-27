@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCaseChat, useIsFollowupPending } from "./useCaseChat";
 import { caseQueryKeys } from "@/lib/queryKeys";
-import { caseChat, chatResponse, deferred, message } from "./chatTestSupport";
+import { caseChat, chatResponse, deferred, message } from "@/test/chat";
 
 const getCaseChat = vi.fn();
 const createCaseChatMessage = vi.fn();

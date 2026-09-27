@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { CaseOverviewView } from "@/features/analysis/CaseOverviewView";
-import { TechnicalContextView } from "@/features/technical-context/TechnicalContextView";
+import { TechnicalContextView } from "@/features/analysis/technical-context/TechnicalContextView";
 import { CaseReportView } from "@/features/reports/CaseReportView";
 import { useCaseAnalysis } from "@/features/analysis/queries";
 import { useCaseSources } from "@/features/sources/queries";
