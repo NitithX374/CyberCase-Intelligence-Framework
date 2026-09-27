@@ -54,7 +54,6 @@ export function useAuth({ enabled = true }: { enabled?: boolean } = {}) {
     sessionError: sessionQuery.error,
     user: sessionQuery.data ?? null,
     isLoading: sessionQuery.isLoading,
-    isAuthenticated: Boolean(sessionQuery.data),
     logout: logoutMutation.mutateAsync,
     isLoggingOut: logoutMutation.isPending,
     refetchSession: sessionQuery.refetch,

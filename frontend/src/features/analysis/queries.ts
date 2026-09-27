@@ -3,10 +3,10 @@ import {
   getCaseAnalysis,
   startCaseAnalysis,
   type AnalysisStepRead,
-  type CaseAnalysisCreate,
   type CaseAnalysisResultRead,
 } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
+import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 
 export function useCaseAnalysis(caseId: string | null) {
   return useQuery<CaseAnalysisResultRead | null>({
@@ -31,23 +31,39 @@ export function useIsCaseAnalysisRunning(caseId: string | null): boolean {
   return running.length > 0;
 }
 
+export function useIsAnalysisUpdating(caseId: string | null): boolean {
+  const running = useIsCaseAnalysisRunning(caseId);
+  const answering = useIsFollowupPending(caseId);
+  return running || answering;
+}
+
 export function useStartCaseAnalysis(caseId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: caseId ? caseQueryKeys.analysisRun(caseId) : UNRUNNABLE_ANALYSIS_KEY,
-    mutationFn: (request: CaseAnalysisCreate) => {
+    mutationFn: () => {
       if (!caseId) throw new Error("Case ID is required to start analysis.");
-      return startCaseAnalysis(caseId, request);
+      return startCaseAnalysis(caseId);
     },
     onSuccess: (step: AnalysisStepRead) => {
-      if (!caseId) return;
-      if (step.status === "completed" && step.result) {
+      if (caseId && step.status === "completed" && step.result) {
         queryClient.setQueryData(caseQueryKeys.analysis(caseId), step.result);
       }
+    },
+    onSettled: (_step, error) => {
+      if (!caseId) return;
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
         queryClient.refetchQueries({ queryKey: caseQueryKeys.chat(caseId), exact: true }),
+        ...(error
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: caseQueryKeys.analysis(caseId),
+                exact: true,
+              }),
+            ]
+          : []),
       ]);
     },
   });

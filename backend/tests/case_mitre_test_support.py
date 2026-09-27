@@ -1,7 +1,6 @@
-from types import SimpleNamespace
 from uuid import uuid4
 
-from app.schemas.rag import LegalReferenceResult
+from app.schemas.rag import LegalReferenceResult, MitreTableRow, QueryResponse
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisTrace,
@@ -41,17 +40,17 @@ def _fixtures():
         retrieval_context_id="retrieval-case-1",
         context="PowerShell execution is external technical context.",
         mitre_table=(
-            {
-                "technique_id": "T1059.001",
-                "name": "PowerShell",
-                "description": "Command and scripting interpreter.",
-            },
-            {
-                "technique_id": "S0096",
-                "name": "Systeminfo",
-                "entity_type": "Software",
-                "description": "System information utility.",
-            },
+            MitreTableRow(
+                technique_id="T1059.001",
+                name="PowerShell",
+                description="Command and scripting interpreter.",
+            ).model_dump(mode="json"),
+            MitreTableRow(
+                technique_id="S0096",
+                name="Systeminfo",
+                entity_type="Software",
+                description="System information utility.",
+            ).model_dump(mode="json"),
         ),
         legal_relevance=LegalReferenceResult(
             provider="thanoy",
@@ -69,7 +68,8 @@ def _gate(record):
 
 
 def _response(context):
-    return SimpleNamespace(
+    return QueryResponse(
+        status="completed",
         retrieval_context_id=context.retrieval_context_id,
         context=context.context,
         mitre_table=list(context.mitre_table),

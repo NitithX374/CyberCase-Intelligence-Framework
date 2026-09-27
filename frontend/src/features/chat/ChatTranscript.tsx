@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { CaseAnalysisResultRead, CaseSourceRead, ChatMessageRead } from "@/lib/api";
-import type { SourceMessageRef } from "@/features/sources/types";
-import { asArray, asRecord, asStringArray } from "@/lib/parse";
-import { parseCaseCitations, parseCaseSources, sourceRefs } from "@/features/sources/sourceRefs";
+import { useEffect, useRef, useState } from "react";
+import type {
+  CaseAnalysisResultRead,
+  CaseSourceRead,
+  ChatAnswerUnit,
+  ChatMessageRead,
+} from "@/lib/api";
+import type { CaseSourceRef, SourceMessageRef } from "@/features/sources/types";
+import { claimRefs, parseCaseSources } from "@/features/sources/sourceRefs";
+import { chatFollowups } from "@/features/sources/followupSources";
 import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 import { SourceDrawer } from "@/features/sources/SourceDrawer";
 import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
@@ -15,7 +20,6 @@ interface ChatTranscriptProps {
   isAnsweringQuestion?: boolean;
   leadResult?: CaseAnalysisResultRead | null;
   sources?: CaseSourceRead[] | null;
-  onNavigateToSource?: (messageId: string) => void;
 }
 
 export function ChatTranscript({
@@ -24,16 +28,11 @@ export function ChatTranscript({
   isAnsweringQuestion = false,
   leadResult,
   sources,
-  onNavigateToSource,
 }: ChatTranscriptProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
   const initialMessageIdsRef = useRef<Set<string> | null>(null);
   const leadResultIdRef = useRef<string | null>(leadResult?.id ?? null);
-  const uniqueSources = useMemo(
-    () => [...new Map((sources ?? []).map((source) => [source.id, source])).values()],
-    [sources],
-  );
 
   useEffect(() => {
     if (leadResultIdRef.current !== (leadResult?.id ?? null)) {
@@ -71,8 +70,7 @@ export function ChatTranscript({
           messages={messages}
           isProcessing={isProcessing}
           isAnsweringQuestion={isAnsweringQuestion}
-          sources={uniqueSources}
-          onNavigateToSource={onNavigateToSource}
+          sources={sources ?? []}
         />
       )}
     </div>
@@ -84,14 +82,13 @@ function Messages({
   isProcessing,
   isAnsweringQuestion,
   sources,
-  onNavigateToSource,
 }: {
   messages: ChatMessageRead[];
   isProcessing: boolean;
   isAnsweringQuestion: boolean;
   sources: CaseSourceRead[];
-  onNavigateToSource?: (messageId: string) => void;
 }) {
+  const citable = parseCaseSources(sources, chatFollowups(messages));
   return (
     <div className="space-y-6 px-5 py-6">
       {messages.map((message) => {
@@ -117,14 +114,23 @@ function Messages({
           );
         }
 
+        const units = message.metadata_json.answer_units ?? [];
         return (
           <article key={message.id}>
-            <ChatMessageMarkdown content={message.content} />
-            <AnalysisSourceReferences
-              analysisMessage={message}
-              sources={sources}
-              onNavigateToSource={onNavigateToSource}
-            />
+            {units.length > 0 ? (
+              <AnswerUnits units={units} sources={citable} />
+            ) : (
+              <>
+                <ChatMessageMarkdown content={message.content} />
+                <SourceReferences
+                  references={sourceReferences(
+                    message.metadata_json.analysis_trace?.claims ?? [],
+                    citable,
+                  )}
+                />
+              </>
+            )}
+            <SuggestionLine suggestion={message.metadata_json.suggestion} />
           </article>
         );
       })}
@@ -138,38 +144,49 @@ function Messages({
   );
 }
 
+const PRELIMINARY_NOTE = "เป็นการตีความเบื้องต้น ยังไม่ได้ผ่านการวิเคราะห์";
+
+const SUGGESTION_LINES: Record<string, string> = {
+  add_source: "ถ้าต้องการให้ข้อมูลนี้ถูกนำไปวิเคราะห์ ให้เพิ่มเป็น source ที่หน้า Sources",
+  run_analysis: "กด Analyze เพื่อวิเคราะห์เคสอีกครั้ง",
+};
+
+function AnswerUnits({ units, sources }: { units: ChatAnswerUnit[]; sources: CaseSourceRef[] }) {
+  return (
+    <div className="space-y-3">
+      {units.map((unit, index) => (
+        <div key={index}>
+          <ChatMessageMarkdown content={unit.text} />
+          {unit.basis === "interpretation" && (
+            <p className="mt-1 text-xs text-ink-muted">{PRELIMINARY_NOTE}</p>
+          )}
+          <SourceReferences references={sourceReferences([unit], sources)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SuggestionLine({ suggestion }: { suggestion?: string }) {
+  const line = suggestion ? SUGGESTION_LINES[suggestion] : undefined;
+  if (!line) return null;
+  return <p className="mt-3 text-[13px] text-ink-muted">{line}</p>;
+}
+
 interface AnalysisSourceReference {
   role: "supporting" | "conflicting";
   source: SourceMessageRef;
 }
 
-function sourceReferencesForAnalysisMessage(
-  analysisMessage: ChatMessageRead,
-  rows: CaseSourceRead[],
+function sourceReferences(
+  items: Parameters<typeof claimRefs>[0][],
+  sources: CaseSourceRef[],
 ): AnalysisSourceReference[] {
-  if (analysisMessage.role !== "assistant") return [];
-  const trace = asRecord(analysisMessage.metadata_json.analysis_trace);
-
-  if (trace?.version !== "case_analysis_trace_v1" || trace.validation_status !== "validated")
-    return [];
-
-  const sources = parseCaseSources(rows);
-  const references = asArray(trace.claims).flatMap((value) => {
-    const claim = asRecord(value);
-    if (!claim) return [];
-    const supportingIds = asStringArray(claim.supporting_source_ids);
-    const contradictingIds = asStringArray(claim.contradicting_source_ids);
+  const references = items.flatMap((item) => {
+    const cited = claimRefs(item, sources);
     return [
-      ...sourceRefs(
-        supportingIds,
-        parseCaseCitations(claim.supporting_citations, supportingIds, sources),
-        sources,
-      ).map((source) => ({ role: "supporting" as const, source })),
-      ...sourceRefs(
-        contradictingIds,
-        parseCaseCitations(claim.contradicting_citations, contradictingIds, sources),
-        sources,
-      ).map((source) => ({ role: "conflicting" as const, source })),
+      ...cited.supporting.map((source) => ({ role: "supporting" as const, source })),
+      ...cited.contradicting.map((source) => ({ role: "conflicting" as const, source })),
     ];
   });
   const unique = new Map<string, AnalysisSourceReference>();
@@ -184,16 +201,7 @@ function sourceReferencesForAnalysisMessage(
   return [...unique.values()].slice(0, 12);
 }
 
-function AnalysisSourceReferences({
-  analysisMessage,
-  sources,
-  onNavigateToSource,
-}: {
-  analysisMessage: ChatMessageRead;
-  sources: CaseSourceRead[];
-  onNavigateToSource?: (messageId: string) => void;
-}) {
-  const references = sourceReferencesForAnalysisMessage(analysisMessage, sources);
+function SourceReferences({ references }: { references: AnalysisSourceReference[] }) {
   const [active, setActive] = useState<{
     key: string;
     source: SourceMessageRef;
@@ -229,7 +237,6 @@ function AnalysisSourceReferences({
           anchorElement={active.anchor}
           onClose={() => setActive(null)}
           citationRole={active.role}
-          onNavigateToSource={onNavigateToSource}
         />
       )}
     </div>

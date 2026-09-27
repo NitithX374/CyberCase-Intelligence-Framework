@@ -4,12 +4,11 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.analysis import CaseAnalysisResultRead
 from app.schemas.message_metadata import MessageMetadata
 
-CaseChatStatus = Literal["idle", "answered"]
 MessageRole = Literal["user", "assistant"]
 MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 
@@ -17,7 +16,13 @@ MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 class ChatMessageCreate(BaseModel):
     content: str = Field(default="")
     client_request_id: str | None = Field(default=None, max_length=255)
-    response_language: Literal["thai", "english"] = "english"
+
+    @field_validator("client_request_id")
+    @classmethod
+    def refuse_nul(cls, value: str | None) -> str | None:
+        if value is not None and "\x00" in value:
+            raise ValueError("client_request_id cannot contain NUL")
+        return value
 
 
 class ChatMessageRead(BaseModel):
@@ -30,6 +35,7 @@ class ChatMessageRead(BaseModel):
     content: str
     message_kind: MessageKind
     gap_key: str | None = None
+    qa_id: str | None = None
     analysis_result_id: UUID | None
     in_reply_to_message_id: UUID | None = None
     metadata_json: MessageMetadata
@@ -38,19 +44,19 @@ class ChatMessageRead(BaseModel):
 
 class CaseChatRead(BaseModel):
     case_id: UUID
-    status: CaseChatStatus = "idle"
     messages: list[ChatMessageRead] = Field(default_factory=list)
+    pending_question_id: UUID | None = None
 
 
 class CaseChatResponse(BaseModel):
     messages: list[ChatMessageRead]
+    pending_question_id: UUID | None = None
     analysis: CaseAnalysisResultRead | None = None
 
 
 __all__ = [
     "CaseChatResponse",
     "CaseChatRead",
-    "CaseChatStatus",
     "ChatMessageCreate",
     "ChatMessageRead",
     "MessageKind",

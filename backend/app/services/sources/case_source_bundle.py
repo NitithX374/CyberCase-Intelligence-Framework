@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from uuid import UUID
+from typing import Literal
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import selectinload
 
 from app.models.analysis import CaseAnalysisResult
@@ -33,10 +33,7 @@ class CaseSourceBundle:
 def source_label(source: CaseSourceItem) -> str:
     if source.filename:
         return f"DOCUMENT {source.filename}"
-    return {
-        "narrative": "CASE NARRATIVE",
-        "followup_answer": "FOLLOW-UP ANSWER",
-    }.get(source.source_kind, "CASE SOURCE")
+    return "CASE NARRATIVE" if source.source_kind == "narrative" else "CASE SOURCE"
 
 
 def case_source_item(source: CaseSource) -> CaseSourceItem:
@@ -52,66 +49,47 @@ def case_source_item(source: CaseSource) -> CaseSourceItem:
 
 
 def case_source_bundle_from_case(case: Case) -> CaseSourceBundle:
-    active_sources = sorted(
-        (source for source in case.sources if source.archived_at is None),
-        key=lambda source: (source.created_at, str(source.id)),
-    )
+    sources = sorted(case.sources, key=lambda source: (source.created_at, str(source.id)))
     return CaseSourceBundle(
         revision=case.source_revision,
-        sources=tuple(case_source_item(source) for source in active_sources),
+        sources=tuple(case_source_item(source) for source in sources),
     )
 
 
-def case_source_bundle_for_analysis(case: Case, result: CaseAnalysisResult) -> CaseSourceBundle:
-    referenced_source_ids: set[str] = set()
-    if isinstance(result.trace_json, dict):
-        claims = result.trace_json.get("claims")
-        if isinstance(claims, list):
-            for claim in claims:
-                if isinstance(claim, dict):
-                    supporting = claim.get("supporting_source_ids")
-                    if isinstance(supporting, list):
-                        referenced_source_ids.update(str(s) for s in supporting)
-                    contradicting = claim.get("contradicting_source_ids")
-                    if isinstance(contradicting, list):
-                        referenced_source_ids.update(str(s) for s in contradicting)
+class SourcesRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-    if referenced_source_ids:
-        analysis_sources = [
-            source for source in case.sources if str(source.id) in referenced_source_ids
-        ]
-    else:
-        analysis_sources = [
-            source
-            for source in case.sources
-            if (
-                source.created_at <= result.created_at
-                and (source.archived_at is None or source.archived_at > result.created_at)
-            )
-        ]
-    analysis_sources.sort(key=lambda source: (source.created_at, str(source.id)))
+    version: Literal["sources_read_v1"] = "sources_read_v1"
+    source_ids: list[str]
+
+
+def sources_read(bundle: CaseSourceBundle) -> dict[str, object]:
+    return SourcesRead(source_ids=[source.source_id for source in bundle.sources]).model_dump(
+        mode="json"
+    )
+
+
+def source_ids_of_sources_read(value: object) -> tuple[str, ...]:
+    return tuple(SourcesRead.model_validate(value).source_ids)
+
+
+def case_source_bundle_for_analysis(
+    case: Case, result: CaseAnalysisResult, source_ids: Sequence[str]
+) -> CaseSourceBundle:
+    by_id = {str(source.id): source for source in case.sources}
+    missing = [source_id for source_id in source_ids if source_id not in by_id]
+    if missing:
+        raise ValueError(f"The case no longer has sources the analysis read: {missing}")
     return CaseSourceBundle(
         revision=result.source_revision,
-        sources=tuple(case_source_item(source) for source in analysis_sources),
+        sources=tuple(case_source_item(by_id[source_id]) for source_id in source_ids),
     )
 
 
-async def load_case_source_bundle(
-    db: AsyncSession,
-    *,
-    case_id: UUID,
-    user_id: UUID | None,
-) -> CaseSourceBundle:
-    result = await db.execute(
-        select(Case)
-        .options(selectinload(Case.sources).selectinload(CaseSource.document))
-        .where(Case.id == case_id)
-        .with_for_update()
-    )
-    case = result.scalar_one_or_none()
-    if case is None or (user_id is not None and case.user_id != user_id):
-        raise SourceError("case_not_found", "Case not found", 404)
+WITH_SOURCES = (selectinload(Case.sources).selectinload(CaseSource.document),)
 
+
+def analysable_bundle(case: Case) -> CaseSourceBundle:
     bundle = case_source_bundle_from_case(case)
     for source in bundle.sources:
         if not source.text.strip():
@@ -132,16 +110,6 @@ def build_document_source_context(bundle: CaseSourceBundle) -> list[dict[str, ob
             "filename": source.filename,
             "page_spans": pages,
         }
-        for quality_key in (
-            "extraction_method",
-            "provider",
-            "verification_status",
-            "confidence_status",
-            "minimum_confidence",
-            "warnings",
-        ):
-            if quality_key in source.provenance:
-                document[quality_key] = source.provenance[quality_key]
         context.append({"source_id": source.source_id, "documents": [document]})
     return context
 
@@ -154,13 +122,17 @@ def build_rag_query(bundle: CaseSourceBundle) -> str:
 
 
 __all__ = [
+    "WITH_SOURCES",
     "CaseSourceBundle",
     "CaseSourceItem",
+    "SourcesRead",
+    "analysable_bundle",
     "build_document_source_context",
     "build_rag_query",
     "case_source_bundle_for_analysis",
     "case_source_bundle_from_case",
     "case_source_item",
-    "load_case_source_bundle",
+    "source_ids_of_sources_read",
     "source_label",
+    "sources_read",
 ]

@@ -1,6 +1,6 @@
 # Thesis chapter readiness
 
-**Status:** updated 2026-09-22 against the current checkout.
+**Status:** updated 2026-09-25 against the current checkout.
 
 This note distinguishes what can be written from the implemented CyberCase system, what still needs an experiment, and what must remain a limitation. The core thesis scope in this note excludes `rag_service`; MITRE retrieval may be mentioned as an optional external boundary but is not used as evidence for the core contribution.
 
@@ -21,7 +21,7 @@ Deterministic gap and round policy
    ┌────┴────┐
    Ask      Proceed
    │          ↓
- Persist      main_case_analysis_v1
+ Persist      case_analysis_trace_v1
  question     ↓
         schema validation + source binding
                     ↓
@@ -85,9 +85,9 @@ The LLM performs semantic assessment and analysis. The backend owns routing, sto
 3. **Case-source model** — narrative/document sources, `source_revision`, source bundle construction, and the separation of follow-up chat history.
 4. **Pre-gap assessment** — `case_assessment_v1`, persisted assessment results, and the hand-off to deterministic policy.
 5. **Follow-up workflow** — askable gaps, priority and round limits, chat routing, and re-analysis after a round is spent.
-6. **Structured main analysis** — `main_case_analysis_v1`, provider validation, trace fields, and failure behavior.
+6. **Structured main analysis** — the `case_analysis_trace_v1` contract the model returns, provider validation, trace fields, and failure behavior.
 7. **Source binding and traceability** — source IDs, exact quotes, QA references, grounding metadata, and unresolved-reference handling.
-8. **Report generation and interface** — validated-analysis precondition, deterministic report sections, HTML/PDF rendering, and Case workspace views.
+8. **Report generation and interface** — validated-analysis precondition, one stored report snapshot per analysis built from what the analysis recorded, HTML/PDF rendering from that snapshot, and Case workspace views.
 
 Do not make technical knowledge retrieval a required core section. If it is included for system completeness, label it as an optional external boundary and keep it separate from the non-RAG thesis method.
 
@@ -110,4 +110,4 @@ Before final submission, record the exact branch, commit, dirty-worktree status,
 
 The current English Chapter 3 and Chapter 4 DOCX deliverables are recorded in `deliverables/thesis-chapter3-2026-09-21/` and `deliverables/thesis-chapter4-2026-09-21/`. Their claims should follow this readiness note and the current implementation references.
 
-Files under `docs/research/event-analysis-2026-09-19/`, `PHASE1_CLAIM_ANCHORED_PLAN.md`, and older migration or attribute-first notes are dated research/design or historical implementation records. They must not be cited as the current production flow without rechecking the code.
+Other dated research files, such as `research/attribute_first_pilot/` and `docs/research/OCR_SUMMARIZATION_EXPERIMENT.md`, are research or design records. They must not be cited as the current production flow without rechecking the code.

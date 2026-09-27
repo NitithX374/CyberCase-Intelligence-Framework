@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "./useAuth";
 import { useDismiss } from "@/lib/useDismiss";
 import { Icon, type IconName } from "@/components/icons";
-import { SignOutDialog } from "@/features/auth/SignOutDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function AccountMenu({ actions = [] }: { actions?: AccountMenuAction[] }) {
   const { user } = useAuth();
@@ -145,11 +145,16 @@ export function UserProfileMenu({
           {error}
         </span>
       )}
-      <SignOutDialog
+      <ConfirmDialog
         isOpen={isSignOutDialogOpen}
-        isSigningOut={isLoggingOut}
+        title="Sign out of CyberCase?"
+        confirmLabel="Sign out"
+        confirmLoadingLabel="Signing out…"
+        isProcessing={isLoggingOut}
         onCancel={() => setIsSignOutDialogOpen(false)}
         onConfirm={() => void handleSignOut()}
+        titleId="signout-dialog-title"
+        descriptionId="signout-dialog-description"
       />
     </div>
   );

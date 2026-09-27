@@ -3,18 +3,20 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+from case_mitre_test_support import _fixtures
 
 from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseProviderAnalysis,
-    CaseSourceCitation,
+    CaseProviderCitation,
+    CaseProviderClaim,
 )
-from app.services.analysis.prompts import case_system_prompt
+from app.services.analysis.contracts.claims import MAX_CLARIFICATION_QUESTION_CHARS
+from app.services.analysis.prompts import case_assessment_prompt, case_system_prompt
 from app.services.analysis.provider import validate_response_payload
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps.quotes import find_aligned_quote
-from app.services.analysis.steps.write import execute_analysis_pipeline
+from app.services.analysis.steps.write import write_trace
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
@@ -23,6 +25,11 @@ def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
 
     assert "a source ID may appear in only one role" in prompt
     assert "create separate attributed claims or a conflict gap" in prompt
+
+
+@pytest.mark.parametrize("prompt", [case_assessment_prompt, case_system_prompt])
+def test_the_gap_instructions_state_the_question_limit(prompt) -> None:
+    assert f"at most {MAX_CLARIFICATION_QUESTION_CHARS} characters" in " ".join(prompt().split())
 
 
 def test_ellipsis_citation_is_expanded_to_one_exact_source_span() -> None:
@@ -52,11 +59,11 @@ def test_quote_alignment_preserves_source_text_when_ocr_wraps_a_word() -> None:
 
 
 def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
-    citation = CaseSourceCitation(
+    citation = CaseProviderCitation(
         source_id="s1",
         exact_quote="The report",
     )
-    claim = CaseAnalysisClaim(
+    claim = CaseProviderClaim(
         claim_id="A-01",
         claim_type="reported",
         text="The report was submitted.",
@@ -88,29 +95,24 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
         )
         observed: dict[str, object] = {}
 
-        async def request_stage(*args, **kwargs):
-            observed["content"] = args[4]
+        async def request_stage(**kwargs):
+            observed.update(kwargs)
             return provider_result(contradicting=False)
 
-        with patch(
-            "app.services.analysis.steps.write.request_analysis_stage",
-            new=request_stage,
-        ):
-            await execute_analysis_pipeline(
-                CaseSourceBundle(revision=1, sources=(source,)),
-                "english",
-                AnalysisPipelineConfig(),
-                object(),
-                receipt={"calls": []},
-                mode="case_overview",
+        with patch("app.services.analysis.steps.write.request_stage", new=request_stage):
+            await write_trace(
+                sources=CaseSourceBundle(revision=1, sources=(source,)),
+                language="english",
+                config=AnalysisPipelineConfig(),
             )
 
+        self.assertEqual(observed["stage"], "case_direct")
+        self.assertIs(observed["schema"], CaseProviderAnalysis)
         content = observed["content"]
         self.assertEqual(
             content,
             {
                 "response_language": "english",
-                "analysis_mode": "case_overview",
                 "case_sources": [
                     {
                         "source_id": "s1",
@@ -125,18 +127,6 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
                 ],
                 "followup_history": [],
                 "technical_context": None,
-                "question": None,
-            },
-        )
-        self.assertEqual(
-            set(content),
-            {
-                "response_language",
-                "analysis_mode",
-                "case_sources",
-                "followup_history",
-                "technical_context",
-                "question",
             },
         )
 
@@ -146,31 +136,46 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             source_kind="narrative",
             text="The report was submitted.",
         )
-        calls: list[tuple[str, str]] = []
+        calls: list[str] = []
 
-        async def request_stage(*args, **kwargs):
-            calls.append((args[2], args[3]))
+        async def request_stage(**kwargs):
+            calls.append(kwargs["stage"])
             return provider_result(contradicting=len(calls) == 1)
 
-        with patch(
-            "app.services.analysis.steps.write.request_analysis_stage",
-            new=request_stage,
-        ):
-            result = await execute_analysis_pipeline(
-                CaseSourceBundle(revision=1, sources=(source,)),
-                "english",
-                AnalysisPipelineConfig(),
-                object(),
-                receipt={"calls": []},
-                mode="case_overview",
+        with patch("app.services.analysis.steps.write.request_stage", new=request_stage):
+            trace = await write_trace(
+                sources=CaseSourceBundle(revision=1, sources=(source,)),
+                language="english",
+                config=AnalysisPipelineConfig(),
             )
 
-        self.assertIsNotNone(result.trace)
-        self.assertEqual([stage for stage, _ in calls], ["direct"])
-        self.assertNotIn("validation_retry", result.execution_receipt)
-        claim = result.trace.claims[0]
+        self.assertEqual(calls, ["case_direct"])
+        claim = trace.claims[0]
         self.assertEqual(claim.supporting_source_ids, ["s1"])
         self.assertEqual(claim.contradicting_source_ids, ["s1"])
+
+    async def test_retrieved_context_is_shown_and_its_id_bound_to_the_trace(self) -> None:
+        _, _, bundle, _, context = _fixtures()
+        observed: dict[str, object] = {}
+
+        async def request_stage(**kwargs):
+            observed.update(kwargs)
+            return provider_result(contradicting=False)
+
+        with patch("app.services.analysis.steps.write.request_stage", new=request_stage):
+            trace = await write_trace(
+                sources=bundle,
+                language="thai",
+                technical_context=context,
+                config=AnalysisPipelineConfig(),
+            )
+
+        self.assertEqual(observed["content"]["response_language"], "thai")
+        self.assertEqual(
+            observed["content"]["technical_context"],
+            {"context": context.context, "mitre_table": list(context.mitre_table)},
+        )
+        self.assertEqual(trace.retrieval_context_id, context.retrieval_context_id)
 
 
 @pytest.mark.parametrize(

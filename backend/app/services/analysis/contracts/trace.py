@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -8,8 +8,13 @@ from app.services.analysis.contracts.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisMode,
+    CaseProviderClaim,
+    ClaimIds,
+    clipped,
     normalize_identifier,
 )
+
+MAX_SUMMARY_CHARS = 24_000
 
 
 class CaseInvolvedParty(BaseModel):
@@ -17,7 +22,7 @@ class CaseInvolvedParty(BaseModel):
 
     name: str = Field(min_length=1, max_length=500)
     role: str = Field(min_length=1, max_length=500)
-    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+    claim_ids: ClaimIds = Field(default_factory=list)
 
     @field_validator("name", "role")
     @classmethod
@@ -27,28 +32,13 @@ class CaseInvolvedParty(BaseModel):
             raise ValueError("party text values must be non-empty")
         return normalized
 
-    @field_validator("claim_ids", mode="before")
-    @classmethod
-    def normalize_claim_ids(cls, value: object) -> object:
-        if isinstance(value, (list, tuple)):
-            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
-        return value
-
-    @field_validator("claim_ids")
-    @classmethod
-    def unique_claim_ids(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip() for item in value]
-        if len(set(normalized)) != len(normalized):
-            raise ValueError("claim IDs must be unique")
-        return normalized
-
 
 class CaseTimelineItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     time: str = Field(min_length=1, max_length=500)
     event: str = Field(min_length=1, max_length=2_000)
-    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+    claim_ids: ClaimIds = Field(default_factory=list)
 
     @field_validator("time", "event")
     @classmethod
@@ -58,27 +48,12 @@ class CaseTimelineItem(BaseModel):
             raise ValueError("timeline text values must be non-empty")
         return normalized
 
-    @field_validator("claim_ids", mode="before")
-    @classmethod
-    def normalize_claim_ids(cls, value: object) -> object:
-        if isinstance(value, (list, tuple)):
-            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
-        return value
-
-    @field_validator("claim_ids")
-    @classmethod
-    def unique_claim_ids(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip() for item in value]
-        if len(set(normalized)) != len(normalized):
-            raise ValueError("claim IDs must be unique")
-        return normalized
-
 
 class CaseImpactItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = Field(min_length=1, max_length=2_000)
-    claim_ids: list[str] = Field(default_factory=list, max_length=64)
+    claim_ids: ClaimIds = Field(default_factory=list)
 
     @field_validator("description")
     @classmethod
@@ -88,30 +63,15 @@ class CaseImpactItem(BaseModel):
             raise ValueError("impact text values must be non-empty")
         return normalized
 
-    @field_validator("claim_ids", mode="before")
-    @classmethod
-    def normalize_claim_ids(cls, value: object) -> object:
-        if isinstance(value, (list, tuple)):
-            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
-        return value
-
-    @field_validator("claim_ids")
-    @classmethod
-    def unique_claim_ids(cls, value: list[str]) -> list[str]:
-        normalized = [item.strip() for item in value]
-        if len(set(normalized)) != len(normalized):
-            raise ValueError("claim IDs must be unique")
-        return normalized
-
 
 class CaseMitreAssociation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     association_id: str = Field(pattern=r"^MA-\d{2,}$", max_length=80)
-    technique_id: str = Field(pattern=r"^T\d{4}(?:\.\d{3})?$", max_length=9)
-    claim_ids: list[str] = Field(min_length=1, max_length=64)
+    technique_id: str
+    claim_ids: ClaimIds
     reason: str = Field(min_length=1, max_length=4_000)
-    plain_meaning: str = Field(default="", max_length=600)
+    plain_meaning: Annotated[str, clipped(600)] = Field(default="", max_length=600)
     status: Literal["candidate_only"]
     support_role: Literal["external_technical_context"]
 
@@ -120,12 +80,10 @@ class CaseMitreAssociation(BaseModel):
     def normalize_association_id(cls, value: object) -> object:
         return normalize_identifier(value, "MA", "MA|assoc|association")
 
-    @field_validator("claim_ids", mode="before")
+    @field_validator("technique_id", mode="before")
     @classmethod
-    def normalize_claim_ids(cls, value: object) -> object:
-        if isinstance(value, (list, tuple)):
-            return [normalize_identifier(item, "A", "A|claim|c") for item in value]
-        return value
+    def normalize_technique_id(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
 
 class CaseGroundingReport(BaseModel):
@@ -138,7 +96,9 @@ class CaseGroundingReport(BaseModel):
     citations_unfound: int = 0
     claims_without_citation: int = 0
     claims_duplicated: int = 0
+    citations_duplicated: int = 0
     associations_outside_context: int = 0
+    associations_without_claim: int = 0
     sources_cited: int = 0
     sources_total: int = 0
 
@@ -149,7 +109,7 @@ class CaseAnalysisTrace(BaseModel):
     version: Literal["case_analysis_trace_v1"] = "case_analysis_trace_v1"
     validation_status: Literal["validated"] = "validated"
     analysis_mode: CaseAnalysisMode
-    summary: str = Field(min_length=1, max_length=24_000)
+    summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
     involved_parties: list[CaseInvolvedParty] = Field(default_factory=list, max_length=64)
     timeline: list[CaseTimelineItem] = Field(default_factory=list, max_length=64)
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
@@ -165,50 +125,21 @@ class CaseProviderAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: Literal["case_analysis_trace_v1"]
-    summary: str = Field(min_length=1, max_length=24_000)
-    involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
-    timeline: list[CaseTimelineItem] = Field(max_length=64)
-    claims: list[CaseAnalysisClaim] = Field(max_length=64)
-    impacts: list[CaseImpactItem] = Field(max_length=64)
-    gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
-    mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
-
-
-class CaseProviderReading(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_analysis_trace_v1"]
-    claims: list[CaseAnalysisClaim] = Field(max_length=64)
+    claims: list[CaseProviderClaim] = Field(max_length=64)
+    summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
     involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
     timeline: list[CaseTimelineItem] = Field(max_length=64)
     impacts: list[CaseImpactItem] = Field(max_length=64)
-
-
-class CaseProviderJudgement(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_analysis_trace_v1"]
-    summary: str = Field(min_length=1, max_length=24_000)
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
-
-
-class CaseAnalysisFailureMetadata(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_analysis_trace_v1"] = "case_analysis_trace_v1"
-    validation_status: Literal["unavailable"] = "unavailable"
-    failure_code: str = Field(min_length=1, max_length=120)
 
 
 __all__ = [
-    "CaseAnalysisFailureMetadata",
     "CaseAnalysisTrace",
+    "CaseGroundingReport",
     "CaseInvolvedParty",
     "CaseImpactItem",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
-    "CaseProviderJudgement",
-    "CaseProviderReading",
     "CaseTimelineItem",
 ]

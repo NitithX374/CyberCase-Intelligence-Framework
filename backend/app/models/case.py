@@ -89,7 +89,6 @@ class Case(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="ChatMessage.ordinal",
-        lazy="selectin",
     )
 
     user: Mapped[User | None] = relationship(

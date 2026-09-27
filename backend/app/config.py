@@ -59,9 +59,9 @@ class CORSConfig(BaseModel):
 
 class LLMProviderConfig(BaseModel):
     openrouter_cybercase: str = ""
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_messages_url: str = "https://openrouter.ai/api/v1/messages"
     case_analysis_model: str = Field(default=DEFAULT_CASE_ANALYSIS_MODEL, min_length=1)
+    case_analysis_providers: str = ""
     rag_service_url: str = "http://rag-service:8001"
 
     @field_validator("case_analysis_model")
@@ -74,10 +74,9 @@ class LLMProviderConfig(BaseModel):
 
 class CaseAnalysisConfig(BaseModel):
     mitre_gate_mode: Literal["llm", "encoder", "never"] = "llm"
-    mitre_gate_model_path: str = "research/mitre_gate/model"
+    mitre_gate_model_path: str = "xlmr_ladder_best/xlmr_ladder_best"
     chat_followup_max_rounds: int = Field(default=3, ge=0)
     chat_followup_gaps_per_round: int = Field(default=3, ge=1)
-    chat_ask_timeout_seconds: float = 120.0
 
 
 class ReportConfig(BaseModel):
@@ -106,7 +105,6 @@ class AuthConfig(BaseModel):
     jwt_cookie_name: str = "cybercase_auth_token"
     jwt_cookie_secure: bool = False
     frontend_base_url: str = "http://localhost:3000"
-    auth_dev_login_enabled: bool = False
 
 
 class Settings(

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import { CaseSourcesView } from "./CaseSourcesView";
-import type { CaseDocumentRead, CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api";
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
@@ -13,16 +13,21 @@ vi.mock("@/lib/api", async (importOriginal) => {
   };
 });
 
-const document: CaseDocumentRead = {
+interface DocumentFacts {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
+const document: DocumentFacts = {
   id: "document-1",
-  case_id: "case-1",
   filename: "statement.pdf",
   mime_type: "application/pdf",
   size_bytes: 2048,
-  created_at: "2026-09-11T00:00:00Z",
 };
 
-const secondDocument: CaseDocumentRead = {
+const secondDocument: DocumentFacts = {
   ...document,
   id: "document-2",
   filename: "account-log.png",
@@ -30,7 +35,7 @@ const secondDocument: CaseDocumentRead = {
 };
 
 function documentSource(
-  owner: CaseDocumentRead,
+  owner: DocumentFacts,
   text: string,
   provenance: Record<string, unknown> = {},
 ): CaseSourceRead {
@@ -38,13 +43,15 @@ function documentSource(
     id: `source-${owner.id}`,
     source_kind: "document",
     document_id: owner.id,
+    filename: owner.filename,
+    mime_type: owner.mime_type,
+    size_bytes: owner.size_bytes,
     exact_text: text,
     provenance_json: provenance,
   });
 }
 
 const statement = {
-  documents: [document],
   sources: [documentSource(document, "Received statement")],
 };
 
@@ -58,7 +65,6 @@ function caseSource(overrides: Partial<CaseSourceRead> = {}): CaseSourceRead {
     provenance_json: {},
     source_metadata_json: {},
     created_at: "2026-09-11T00:00:00Z",
-    archived_at: null,
     ...overrides,
   };
 }
@@ -66,8 +72,8 @@ function caseSource(overrides: Partial<CaseSourceRead> = {}): CaseSourceRead {
 function renderSources(overrides: Partial<React.ComponentProps<typeof CaseSourcesView>> = {}) {
   const props: React.ComponentProps<typeof CaseSourcesView> = {
     caseId: "case-1",
-    documents: [],
     sources: [],
+    followups: [],
     isUploading: false,
     isAddingNarrative: false,
     onUploadDocument: vi.fn(),
@@ -89,9 +95,9 @@ function pagedDocument(pageCount: number) {
     text: `Page ${index + 1} content`,
     text_method: index % 2 === 0 ? "native" : "ocr",
   }));
-  const paged: CaseDocumentRead = { ...document, id: "document-multi", filename: "multi-page.pdf" };
+  const paged: DocumentFacts = { ...document, id: "document-multi", filename: "multi-page.pdf" };
   const text = pages.map((page) => page.text).join("\n\n");
-  return { documents: [paged], sources: [documentSource(paged, text, { pages })] };
+  return { sources: [documentSource(paged, text, { pages })] };
 }
 
 describe("CaseSourcesView", () => {
@@ -110,16 +116,15 @@ describe("CaseSourcesView", () => {
     expect(screen.queryByText("Received statement")).not.toBeInTheDocument();
   });
 
-  it("marks a file whose text has not arrived yet", () => {
-    renderSources({ documents: [document] });
-    expect(screen.getByText("2 KB · Pending")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
-    expect(screen.getByText("No text was extracted from this file.")).toBeInTheDocument();
+  it("reads the file's name, type and size from its source, with no document list", () => {
+    renderSources(statement);
+    expect(screen.getByRole("heading", { level: 2, name: "statement.pdf" })).toBeInTheDocument();
+    expect(screen.getByText("PDF · 1 page")).toBeInTheDocument();
+    expect(screen.getByText("2 KB")).toBeInTheDocument();
   });
 
   it("counts the warnings recorded when the file was read", () => {
     renderSources({
-      documents: [document],
       sources: [
         documentSource(document, "Received statement", {
           warnings: ["Page 1: recognition confidence was low."],
@@ -132,7 +137,6 @@ describe("CaseSourcesView", () => {
 
   it("switches the preview when a different source is selected", () => {
     renderSources({
-      documents: [document, secondDocument],
       sources: [
         documentSource(document, "Received statement"),
         documentSource(secondDocument, "Recognized account log"),
@@ -146,15 +150,9 @@ describe("CaseSourcesView", () => {
 
   it("lists files, narratives and follow-up answers together", () => {
     renderSources({
-      documents: [document],
-      sources: [
-        documentSource(document, "Received statement"),
-        caseSource(),
-        caseSource({
-          id: "source-2",
-          source_kind: "followup_answer",
-          exact_text: "The backups were offline.",
-        }),
+      sources: [documentSource(document, "Received statement"), caseSource()],
+      followups: [
+        { qaId: "QA-01", question: "Were backups kept?", answer: "The backups were offline." },
       ],
     });
 
@@ -166,20 +164,19 @@ describe("CaseSourcesView", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Sources 3" })).toBeInTheDocument();
   });
 
-  it("reads a follow-up answer in the preview", () => {
+  it("reads a follow-up answer beside the question it answers", () => {
     renderSources({
-      sources: [
-        caseSource({
-          id: "source-2",
-          source_kind: "followup_answer",
-          exact_text: "The backups were offline.",
-        }),
-      ],
+      followups: [{ qaId: "QA-01", question: "มีหมายจับหรือไม่", answer: "ไม่มี" }],
     });
 
     expect(screen.getByText("Follow-up answer")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "The backups were offline." })).toBeInTheDocument();
-    expect(screen.getAllByText("The backups were offline.")).toHaveLength(3);
+
+    expect(screen.getByRole("heading", { level: 2, name: "มีหมายจับหรือไม่" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /มีหมายจับหรือไม่\s*ไม่มี/ })).toBeInTheDocument();
+    const terms = screen.getAllByRole("term").map((term) => term.textContent);
+    const definitions = screen.getAllByRole("definition").map((item) => item.textContent);
+    expect(terms).toEqual(["Question", "Answer"]);
+    expect(definitions).toEqual(["มีหมายจับหรือไม่", "ไม่มี"]);
   });
 
   it("adds a case narrative from the plus menu", async () => {

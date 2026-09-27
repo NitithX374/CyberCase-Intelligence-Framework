@@ -16,10 +16,8 @@ import {
 } from "./technicalContext";
 
 interface TechnicalContextViewProps {
-  analysisResult: CaseAnalysisResultRead | null;
+  analysisResult: CaseAnalysisResultRead;
   sources: CaseSourceRead[] | null;
-  onOpenSources?: () => void;
-  onNavigateToSource?: (messageId: string) => void;
 }
 
 const SCORE_EXPLANATION =
@@ -53,6 +51,12 @@ function TechnicalItem({
 
       {item.shortPlainMeaning && (
         <p className="mt-1 text-sm leading-6 text-ink-secondary">{item.shortPlainMeaning}</p>
+      )}
+
+      {item.caseBasisSources.length === 0 && (
+        <p className="mt-2 text-xs text-ink-muted">
+          No case source is recorded for this technique.
+        </p>
       )}
 
       {item.caseBasisSources.length > 0 && (
@@ -170,8 +174,6 @@ function statusMessage(data: TechnicalContextData): string {
     not_applicable: "Not applicable — the case has no technical indicators.",
     insufficient_context: "No supported ATT&CK context was found.",
     retrieved_with_matches: "",
-    retrieved_without_supported_match:
-      "Techniques were retrieved, but none is supported by the case sources.",
     retrieved_from_rag: "Suggested by the knowledge base. Not tied to a case source.",
     failed: `The ATT&CK lookup failed${stage}.`,
     invalid_trace: "The saved ATT&CK context could not be verified, so it is not shown.",
@@ -180,12 +182,7 @@ function statusMessage(data: TechnicalContextData): string {
   return messages[data.status];
 }
 
-export function TechnicalContextView({
-  analysisResult,
-  sources,
-  onOpenSources,
-  onNavigateToSource,
-}: TechnicalContextViewProps) {
+export function TechnicalContextView({ analysisResult, sources }: TechnicalContextViewProps) {
   const contextData = buildTechnicalContext(analysisResult, sources);
   const drawer = useSourceDrawer();
   const handleSelectSource = (
@@ -219,15 +216,9 @@ export function TechnicalContextView({
         </header>
 
         {!contextData.hasContext ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 py-5" role="status">
-            <p className="text-sm text-ink-muted">{message}</p>
-            {onOpenSources && !analysisResult && (
-              <button type="button" onClick={onOpenSources} className="btn-secondary h-8 px-3">
-                <Icon name="sources" className="h-3.5 w-3.5" />
-                Go to sources
-              </button>
-            )}
-          </div>
+          <p className="py-5 text-sm text-ink-muted" role="status">
+            {message}
+          </p>
         ) : (
           <>
             {message && (
@@ -293,7 +284,6 @@ export function TechnicalContextView({
           sourceRef={drawer.open.sourceRef}
           anchorElement={drawer.open.anchorElement}
           onClose={drawer.close}
-          onNavigateToSource={onNavigateToSource}
         />
       )}
     </section>

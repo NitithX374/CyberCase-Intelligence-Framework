@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef } from "react";
 import type { SourceMessageRef } from "@/features/sources/types";
-import { formatSourceCitationText } from "@/features/sources/sourceRefs";
 import { Icon } from "@/components/icons";
 
 export function SourceDrawer({
@@ -10,20 +9,15 @@ export function SourceDrawer({
   anchorElement,
   citationRole,
   onClose,
-  onNavigateToSource,
 }: {
   sourceRef: SourceMessageRef;
   anchorElement: HTMLElement;
   citationRole?: "supporting" | "conflicting";
   onClose: () => void;
-  onNavigateToSource?: (id: string) => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const citation = formatSourceCitationText(sourceRef);
-  const sourceTitle =
-    sourceRef.filename ??
-    (sourceRef.sourceType === "case_description" ? citation : `${citation} #${sourceRef.ordinal}`);
+  const sourceTitle = sourceRef.filename ?? sourceRef.label;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -69,8 +63,8 @@ export function SourceDrawer({
               <span className="sr-only">Source: </span>
               {sourceTitle}
             </h2>
-            {sourceRef.filename && citation !== sourceTitle && (
-              <p className="text-[13px] text-ink-muted">{citation}</p>
+            {sourceRef.label !== sourceTitle && (
+              <p className="text-[13px] text-ink-muted">{sourceRef.label}</p>
             )}
           </div>
           <button type="button" onClick={onClose} aria-label="Close source" className="icon-btn">
@@ -84,21 +78,6 @@ export function SourceDrawer({
         >
           <SourceContent sourceRef={sourceRef} />
         </div>
-        {onNavigateToSource && (
-          <footer className="border-t border-line px-3 py-2.5 sm:px-4">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onNavigateToSource(sourceRef.id);
-              }}
-              className="btn-ghost h-8 px-2.5"
-            >
-              Open in Sources
-              <Icon name="chevron-right" className="h-4 w-4" />
-            </button>
-          </footer>
-        )}
       </div>
     </dialog>
   );
@@ -107,6 +86,25 @@ export function SourceDrawer({
 function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
   const pages = sourceRef.sourcePages;
   const content = sourceRef.displayContent || sourceRef.excerpt;
+
+  if (sourceRef.question) {
+    return (
+      <dl className="space-y-6">
+        <div>
+          <dt className="mb-2 text-xs font-medium text-ink-muted">Question</dt>
+          <dd className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-secondary [overflow-wrap:anywhere]">
+            {sourceRef.question}
+          </dd>
+        </div>
+        <div>
+          <dt className="mb-2 text-xs font-medium text-ink-muted">Answer</dt>
+          <dd className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+            {content || "(No text content)"}
+          </dd>
+        </div>
+      </dl>
+    );
+  }
 
   return (
     <div className="space-y-6">

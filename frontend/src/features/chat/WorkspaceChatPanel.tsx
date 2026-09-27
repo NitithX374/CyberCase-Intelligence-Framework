@@ -8,7 +8,7 @@ import { useCaseChat } from "./useCaseChat";
 import { useCaseAnalysis } from "@/features/analysis/queries";
 import { toUserFacingError } from "@/lib/userFacingError";
 import { ChatTranscript } from "./ChatTranscript";
-import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
+import { useCaseSources } from "@/features/sources/queries";
 
 interface WorkspaceChatPanelProps {
   caseId: string | null;
@@ -16,7 +16,6 @@ interface WorkspaceChatPanelProps {
   onOpenChat: () => void;
   onCloseChat: () => void;
   onViewChange: (view: WorkspaceView) => void;
-  onActivityChange: (isAnsweringQuestion: boolean) => void;
 }
 
 export function WorkspaceChatPanel({
@@ -25,20 +24,17 @@ export function WorkspaceChatPanel({
   onOpenChat,
   onCloseChat,
   onViewChange,
-  onActivityChange,
 }: WorkspaceChatPanelProps) {
   const chat = useCaseChat({ caseId });
   const analysisQuery = useCaseAnalysis(caseId);
-  const { caseSources, rows: sources } = useCaseSourceRows(caseId);
+  const sourcesQuery = useCaseSources(caseId);
+  const sources = sourcesQuery.data ?? null;
+  const sourcesFailed = sourcesQuery.isLoadingError;
 
   const leadResult = analysisQuery.data ?? null;
   const messages = chat.messages;
   const isSending = chat.isSending;
   const isAnsweringQuestion = chat.isAnsweringQuestion;
-
-  useEffect(() => {
-    onActivityChange(isAnsweringQuestion);
-  }, [isAnsweringQuestion, onActivityChange]);
 
   const pendingQuestionId = chat.pendingQuestionId;
   const announcedQuestionRef = useRef<string | null>(null);
@@ -57,7 +53,7 @@ export function WorkspaceChatPanel({
     });
   };
 
-  const hasSources = caseSources.length > 0;
+  const hasSources = Boolean(sources?.length);
 
   return (
     <aside
@@ -79,7 +75,7 @@ export function WorkspaceChatPanel({
         </button>
       </div>
 
-      {messages.length === 0 && !hasSources && (
+      {messages.length === 0 && !hasSources && !sourcesFailed && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-2.5 text-[13px]">
           <p className="text-ink-muted">This case has no sources yet.</p>
           <button
@@ -98,7 +94,6 @@ export function WorkspaceChatPanel({
         isAnsweringQuestion={isAnsweringQuestion}
         leadResult={leadResult}
         sources={sources}
-        onNavigateToSource={() => onViewChange("sources")}
       />
 
       <div className="shrink-0 px-4 pt-2 pb-4">
@@ -113,9 +108,7 @@ export function WorkspaceChatPanel({
 
       <MeaningfulErrorModal
         isOpen={Boolean(chat.queryError)}
-        error={
-          chat.queryError ? toUserFacingError(chat.queryError, { isUncertain: isSending }) : null
-        }
+        error={chat.queryError ? toUserFacingError(chat.queryError) : null}
         onClose={chat.clearQueryError}
         onRetry={chat.retryQuery}
       />
