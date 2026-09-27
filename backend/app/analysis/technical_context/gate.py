@@ -8,7 +8,7 @@ from app.analysis.technical_context.contracts import (
 )
 from app.analysis.technical_context.gate_llm import evaluate_mitre_applicability
 from app.config import settings
-from app.services.sources.case_source_bundle import CaseSourceItem
+from app.sources.bundle import CaseSourceItem
 
 
 async def never_applicable(*, case_sources: Sequence[CaseSourceItem]) -> MitreApplicabilityRecord:

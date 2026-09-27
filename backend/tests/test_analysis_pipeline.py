@@ -22,7 +22,7 @@ from app.analysis.store import CaseUnderAnalysis
 from app.analysis.technical_context.contracts import skipped_mitre_applicability
 from app.analysis.technical_context.retrieve import CaseMitreAugmentation
 from app.errors import CaseWorkflowError
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import CaseAnalysisClaim, CaseAssessmentTrace, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
 from experiments import analysis_arms

@@ -9,11 +9,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app import health
+from app.analysis import routes as analysis
+from app.auth import routes as auth
+from app.auth.guard import get_current_user, guard_browser_request
+from app.cases import routes as cases
+from app.chat import routes as chat
 from app.config import settings
 from app.database import engine
 from app.errors import AppError
-from app.routers import analysis, auth, cases, chat, documents, health, reports, sources
-from app.services.auth.dependencies import get_current_user, guard_browser_request
+from app.reports import routes as reports
+from app.sources import routes as sources
 
 
 @asynccontextmanager
@@ -63,7 +69,9 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(cases.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
-app.include_router(documents.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
+app.include_router(
+    sources.document_router, prefix="/api/v1", dependencies=[Depends(get_current_user)]
+)
 app.include_router(sources.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(analysis.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 app.include_router(reports.router, prefix="/api/v1", dependencies=[Depends(get_current_user)])

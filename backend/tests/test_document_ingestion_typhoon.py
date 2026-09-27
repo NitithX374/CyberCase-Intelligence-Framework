@@ -2,12 +2,9 @@ import asyncio
 
 import pytest
 
-from app.services.document_ingestion.contracts import RecognitionResponseError
-from app.services.document_ingestion.recognition import (
-    TyphoonDocumentRecognizer,
-    TyphoonRecognizerConfig,
-)
-from app.services.document_ingestion.service import build_document_recognizer
+from app.sources.ingestion.contracts import RecognitionResponseError
+from app.sources.ingestion.recognition import TyphoonDocumentRecognizer, TyphoonRecognizerConfig
+from app.sources.ingestion.service import build_document_recognizer
 
 NUL_LINE = "OCR line" + chr(0) + "one"
 
@@ -28,7 +25,7 @@ def test_recognizer_rejects_length_terminated_output(monkeypatch):
         )
     )
     monkeypatch.setattr(
-        "app.services.document_ingestion.recognition.prepare_messages",
+        "app.sources.ingestion.recognition.prepare_messages",
         lambda image_bytes, target_image_dimension: [],
     )
 
@@ -62,7 +59,7 @@ def test_recognized_text_never_carries_a_nul_the_database_would_refuse(monkeypat
         )
     )
     monkeypatch.setattr(
-        "app.services.document_ingestion.recognition.prepare_messages",
+        "app.sources.ingestion.recognition.prepare_messages",
         lambda image_bytes, target_image_dimension: [],
     )
 

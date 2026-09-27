@@ -7,11 +7,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
+from app.auth.credentials import create_access_token, hash_password
 from app.config import settings
 from app.database import get_db
 from app.main import app
 from app.models.user import User
-from app.services.auth.credentials import create_access_token, hash_password
 
 
 def _fastapi_app() -> FastAPI:

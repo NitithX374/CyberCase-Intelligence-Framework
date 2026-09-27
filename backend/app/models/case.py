@@ -21,10 +21,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
-    from app.models.analysis import CaseAnalysisResult
-    from app.models.chat import ChatMessage
+    from app.models.analysis_result import CaseAnalysisResult
+    from app.models.chat_message import ChatMessage
+    from app.models.document import CaseDocument
     from app.models.report import CaseReport
-    from app.models.sources import CaseDocument, CaseSource
+    from app.models.source import CaseSource
     from app.models.user import User
 
 

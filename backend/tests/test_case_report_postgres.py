@@ -6,14 +6,14 @@ from case_chat_support import NARRATIVE, SETTLED, seeded_case
 from isolated_database import isolated_database
 from sqlalchemy import select
 
-from app.models.analysis import CaseAnalysisResult
+from app.cases.ownership import owned_case
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.report import CaseReport
-from app.schemas.reports import CaseReportCreate
-from app.services.cases.ownership import owned_case
-from app.services.reports import persistence
-from app.services.reports.contracts import ReportGenerationConflict
-from app.services.reports.persistence import CaseReportService
-from app.services.sources.case_source_bundle import WITH_SOURCES, analysable_bundle, sources_read
+from app.reports import generate as persistence
+from app.reports.contracts import ReportGenerationConflict
+from app.reports.generate import CaseReportService
+from app.reports.schemas import CaseReportCreate
+from app.sources.bundle import WITH_SOURCES, analysable_bundle, sources_read
 from app.trace.claims import followup_snapshot
 
 

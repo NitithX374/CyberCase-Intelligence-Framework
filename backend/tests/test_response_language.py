@@ -1,7 +1,7 @@
 import pytest
 
 from app.analysis.language import case_language, question_language
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 
 
 def bundle_of(*texts: str) -> CaseSourceBundle:

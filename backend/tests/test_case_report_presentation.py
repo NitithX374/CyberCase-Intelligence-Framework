@@ -12,12 +12,12 @@ from app.analysis.technical_context.contracts import (
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
-from app.models.sources import CaseSource
-from app.schemas.reports import CaseReportContent
-from app.services.reports.contracts import CaseReportInput
-from app.services.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
-from app.services.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.models.source import CaseSource
+from app.reports.contracts import CaseReportInput
+from app.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
+from app.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf
+from app.reports.schemas import CaseReportContent
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,

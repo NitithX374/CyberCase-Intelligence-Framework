@@ -11,7 +11,7 @@ from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.write import provider_source_payload, write_request
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.sources.case_source_bundle import CaseSourceBundle
+from app.sources.bundle import CaseSourceBundle
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,

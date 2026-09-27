@@ -9,11 +9,11 @@ from sqlalchemy.orm import selectinload
 from app.analysis.technical_context.contracts import (
     CaseRagContextPayload,
     CaseTechnicalAugmentation,
+    LegalReferenceResult,
 )
-from app.models.analysis import CaseAnalysisResult
+from app.cases.ownership import owned_case
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
-from app.schemas.rag import LegalReferenceResult
-from app.services.cases.ownership import owned_case
 
 
 class RecordedRetrieval(BaseModel):

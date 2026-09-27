@@ -3,11 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 
-from app.services.sources.case_source_bundle import (
-    CaseSourceBundle,
-    CaseSourceItem,
-    build_document_source_context,
-)
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
 from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
 from app.trace.quotes import (
     MAX_QUOTE_CHARS,

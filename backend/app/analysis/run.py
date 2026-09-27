@@ -21,6 +21,7 @@ from app.analysis.store import (
 )
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.retrieve import technical_context_key
+from app.cases.ownership import owned_case
 from app.chat.followup import (
     asked_gap_keys,
     case_messages,
@@ -31,10 +32,9 @@ from app.chat.followup import (
 from app.config import settings
 from app.database import async_session
 from app.errors import CaseAnalysisFailure, CaseWorkflowError
-from app.models.analysis import CaseAnalysisResult
-from app.services.cases.ownership import owned_case
-from app.services.sources.case_source_bundle import WITH_SOURCES, analysable_bundle
-from app.services.sources.source_service import SourceError
+from app.models.analysis_result import CaseAnalysisResult
+from app.sources.bundle import WITH_SOURCES, analysable_bundle
+from app.sources.service import SourceError
 from app.trace.claims import CaseAssessmentTrace
 
 _running: Counter[UUID] = Counter()

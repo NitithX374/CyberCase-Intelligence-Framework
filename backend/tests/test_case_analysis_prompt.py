@@ -10,7 +10,7 @@ from app.analysis.write import write_trace
 from app.errors import CaseAnalysisFailure
 from app.llm.request import validate_response_payload
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
     MAX_CLARIFICATION_QUESTION_CHARS,
     CaseProviderCitation,

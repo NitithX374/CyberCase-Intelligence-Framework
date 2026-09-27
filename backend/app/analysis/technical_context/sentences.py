@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from pythainlp.tokenize import sent_tokenize
 
-from app.services.sources.case_source_bundle import CaseSourceItem
+from app.sources.bundle import CaseSourceItem
 
 MIN_SENTENCE_CHARS = 25
 

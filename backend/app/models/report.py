@@ -20,7 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
-    from app.models.analysis import CaseAnalysisResult
+    from app.models.analysis_result import CaseAnalysisResult
     from app.models.case import Case
 
 

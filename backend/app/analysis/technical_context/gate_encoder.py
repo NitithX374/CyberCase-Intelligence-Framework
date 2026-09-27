@@ -15,7 +15,7 @@ from app.analysis.technical_context.contracts import (
 )
 from app.analysis.technical_context.sentences import split_sources
 from app.config import settings
-from app.services.sources.case_source_bundle import CaseSourceItem
+from app.sources.bundle import CaseSourceItem
 
 logger = logging.getLogger(__name__)
 

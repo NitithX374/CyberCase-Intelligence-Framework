@@ -19,10 +19,10 @@ from app.chat.followup import (
 )
 from app.errors import CaseAnalysisFailure, CaseWorkflowError
 from app.llm.settings import configured_pipeline
-from app.models.analysis import CaseAnalysisResult
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
-from app.models.chat import ChatMessage
-from app.services.sources.case_source_bundle import CaseSourceBundle, sources_read
+from app.models.chat_message import ChatMessage
+from app.sources.bundle import CaseSourceBundle, sources_read
 from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange, followup_snapshot
 
 

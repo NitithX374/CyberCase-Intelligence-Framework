@@ -12,15 +12,15 @@ from isolated_database import isolated_database
 from sqlalchemy import select
 
 import app.chat.reply as case_chat
-import app.routers.chat as chat_router
+import app.chat.routes as chat_router
+from app.auth.guard import get_current_user
 from app.chat.answer import answer_case_question, answer_recorded_question
 from app.chat.contracts import CaseAnalysisOutput
+from app.chat.schemas import ChatMessageCreate
 from app.errors import AppError, CaseAnalysisFailure
 from app.main import app
-from app.models.chat import ChatMessage
-from app.models.sources import CaseSource
-from app.schemas.chat import ChatMessageCreate
-from app.services.auth.dependencies import get_current_user
+from app.models.chat_message import ChatMessage
+from app.models.source import CaseSource
 
 pytestmark = pytest.mark.asyncio
 

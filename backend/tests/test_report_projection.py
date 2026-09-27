@@ -5,12 +5,11 @@ from uuid import uuid4
 
 import pytest
 
-from app.analysis.technical_context.contracts import MitreApplicabilityRecord
+from app.analysis.technical_context.contracts import MitreApplicabilityRecord, QueryResponse
 from app.analysis.technical_context.retrieve import run_case_mitre_augmentation
-from app.schemas.rag import QueryResponse
-from app.services.reports.contracts import ReportGenerationConflict
-from app.services.reports.projection import build_case_report_input
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.reports.contracts import ReportGenerationConflict
+from app.reports.generate import build_case_report_input
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 
 CASE_ID = uuid4()
 TRACE = {

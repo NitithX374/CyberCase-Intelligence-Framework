@@ -10,7 +10,7 @@ from app.analysis.technical_context.gate_llm import (
     validate_mitre_applicability,
 )
 from app.config import settings
-from app.services.sources.case_source_bundle import CaseSourceItem
+from app.sources.bundle import CaseSourceItem
 
 CYBER = "ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น."
 PLAIN = "พนักงานสอบสวนได้ยึดโทรศัพท์มือถือของผู้ต้องหาไว้เป็นของกลาง"
