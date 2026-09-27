@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.analysis.prompts import case_system_prompt
+from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.analysis.prompts import case_system_prompt
-from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, followup_payload
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis

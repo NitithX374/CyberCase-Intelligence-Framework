@@ -6,10 +6,7 @@ from types import SimpleNamespace
 import pytest
 from isolated_database import isolated_database
 
-from app.models.case import Case
-from app.models.chat import ChatMessage
-from app.models.user import User
-from app.services.chat.followup import (
+from app.chat.followup import (
     asked_gap_keys,
     asked_in_round,
     case_messages,
@@ -17,6 +14,9 @@ from app.services.chat.followup import (
     followup_qa_ids,
     rounds_asked,
 )
+from app.models.case import Case
+from app.models.chat import ChatMessage
+from app.models.user import User
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import followup_registry_items, resolve_case_trace
 from app.trace.claims import CaseFollowupExchange, followup_payload

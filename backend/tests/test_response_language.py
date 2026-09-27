@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.analysis.language import case_language, question_language
+from app.analysis.language import case_language, question_language
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 

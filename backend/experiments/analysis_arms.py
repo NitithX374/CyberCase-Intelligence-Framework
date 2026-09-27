@@ -3,10 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 
-from app.errors import CaseAnalysisFailure
-from app.llm.request import request_stage
-from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
-from app.services.analysis.pipeline import (
+from app.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
     bind_to_case,
@@ -14,9 +11,12 @@ from app.services.analysis.pipeline import (
     retrieve_technical_context,
     write_analysis,
 )
-from app.services.analysis.prompts import case_system_prompt
-from app.services.analysis.steps.write import write_request, write_trace, written_trace
-from app.services.analysis.technical_context_contracts import CaseRagContextPayload
+from app.analysis.prompts import case_system_prompt
+from app.analysis.technical_context.contracts import CaseRagContextPayload
+from app.analysis.write import write_request, write_trace, written_trace
+from app.errors import CaseAnalysisFailure
+from app.llm.request import request_stage
+from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.services.sources.case_source_bundle import CaseSourceBundle
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis

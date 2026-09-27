@@ -6,9 +6,9 @@ from uuid import uuid4
 import pytest
 from case_mitre_test_support import _fixtures, _gate, _response
 
+from app.analysis.pipeline import AnalysisInput
+from app.analysis.technical_context.retrieve import CaseMitreAugmentation
 from app.errors import CaseAnalysisFailure
-from app.services.analysis.pipeline import AnalysisInput
-from app.services.analysis.steps.technical_context import CaseMitreAugmentation
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation

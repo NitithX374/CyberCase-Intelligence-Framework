@@ -2,22 +2,42 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from uuid import UUID
 
 from fastapi import status
 from sqlalchemy import select
 
+from app.analysis.clarification import Ask, ProceedReason
+from app.analysis.pipeline import AnalysisArtifacts
+from app.analysis.technical_context.contracts import CaseRagContextPayload
+from app.analysis.technical_context.retrieve import technical_context_key
+from app.chat.followup import (
+    analysis_result_message,
+    next_ordinal,
+    pending_question,
+    question_message,
+)
 from app.errors import CaseAnalysisFailure, CaseWorkflowError
 from app.llm.settings import configured_pipeline
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat import ChatMessage
-from app.services.analysis.clarification import Ask, ProceedReason
-from app.services.analysis.pipeline import AnalysisArtifacts
-from app.services.analysis.steps.technical_context import technical_context_key
-from app.services.chat.followup import analysis_result_message, pending_question, question_message
-from app.services.sources.case_source_bundle import sources_read
-from app.services.workflow.shared import CaseUnderAnalysis, next_ordinal
-from app.trace.claims import CaseAssessmentTrace, followup_snapshot
+from app.services.sources.case_source_bundle import CaseSourceBundle, sources_read
+from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange, followup_snapshot
+
+
+@dataclass(frozen=True)
+class CaseUnderAnalysis:
+    case_id: UUID
+    source_bundle: CaseSourceBundle
+    followup_history: tuple[CaseFollowupExchange, ...] = ()
+    reused_context: CaseRagContextPayload | None = None
+    asked_gap_keys: frozenset[str] = frozenset()
+    rounds_spent: int = 1
+
+    @property
+    def source_revision(self) -> int:
+        return self.source_bundle.revision
 
 
 @dataclass(frozen=True)
@@ -152,6 +172,7 @@ def external_context(artifacts: AnalysisArtifacts) -> dict[str, object]:
 
 __all__ = [
     "AnalysisStep",
+    "CaseUnderAnalysis",
     "external_context",
     "store_analysis",
     "store_assessment",

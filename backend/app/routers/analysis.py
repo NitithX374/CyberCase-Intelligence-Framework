@@ -5,12 +5,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.latest import analysis_freshness, get_latest_case_analysis
+from app.analysis.run import AnalysisStep, run_case_analysis
 from app.database import get_db
 from app.models.user import User
 from app.schemas.analysis import AnalysisStepRead, CaseAnalysisResultRead
-from app.services.analysis.latest import analysis_freshness, get_latest_case_analysis
 from app.services.auth.dependencies import get_current_user
-from app.services.workflow.run_analysis import AnalysisStep, run_case_analysis
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["case-analysis"])
 

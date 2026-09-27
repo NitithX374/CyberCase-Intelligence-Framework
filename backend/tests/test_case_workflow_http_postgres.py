@@ -14,6 +14,8 @@ from sqlalchemy import select
 
 import app.routers.analysis as analysis_router
 import app.routers.chat as chat_router
+from app.analysis.run import run_case_analysis
+from app.chat.reply import send_case_message
 from app.config import settings
 from app.database import get_db
 from app.llm import request as provider
@@ -22,8 +24,6 @@ from app.main import app
 from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.services.auth.dependencies import get_current_user
-from app.services.chat.case_chat import send_case_message
-from app.services.workflow.run_analysis import run_case_analysis
 from app.trace import bind
 from app.trace.quotes import MAX_QUOTE_CHARS
 

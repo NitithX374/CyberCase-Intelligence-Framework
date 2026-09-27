@@ -6,15 +6,15 @@ from uuid import uuid4
 
 import pytest
 
-import app.services.chat.case_answer as module
+import app.chat.compose as module
+from app.analysis.technical_context.contracts import CaseRagContextPayload
+from app.chat.answer import answer_metadata
+from app.chat.compose import CHAT_OUTPUT_TOKENS, UNANSWERED, generate_case_answer
 from app.config import settings
 from app.errors import CaseAnalysisFailure
 from app.llm.settings import configured_pipeline
 from app.schemas.rag import LegalReferenceResult
-from app.services.analysis.technical_context_contracts import CaseRagContextPayload
-from app.services.chat.case_answer import CHAT_OUTPUT_TOKENS, UNANSWERED, generate_case_answer
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
-from app.services.workflow.answer_question import answer_metadata
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,

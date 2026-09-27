@@ -7,15 +7,15 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from app.errors import CaseAnalysisFailure
-from app.llm.request import request_stage
-from app.llm.settings import AnalysisPipelineConfig
-from app.services.analysis.technical_context_contracts import (
+from app.analysis.technical_context.contracts import (
     MITRE_APPLICABILITY_GATE_VERSION,
     MitreApplicabilityDecision,
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
+from app.errors import CaseAnalysisFailure
+from app.llm.request import request_stage
+from app.llm.settings import AnalysisPipelineConfig
 from app.services.sources.case_source_bundle import CaseSourceItem
 
 logger = logging.getLogger(__name__)

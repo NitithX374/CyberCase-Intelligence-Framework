@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 import pytest
 
+from app.analysis.write import write_trace
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.analysis.steps.write import write_trace
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import (
@@ -155,7 +155,7 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
         async def fake_request_stage(**kwargs):
             return provider_output
 
-        with patch("app.services.analysis.steps.write.request_stage", new=fake_request_stage):
+        with patch("app.analysis.write.request_stage", new=fake_request_stage):
             trace = await write_trace(
                 sources=CaseSourceBundle(revision=1, sources=(source,)),
                 language="english",

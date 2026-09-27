@@ -9,12 +9,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from app.config import settings
-from app.services.analysis.mitre_gate.sentences import split_sources
-from app.services.analysis.technical_context_contracts import (
+from app.analysis.technical_context.contracts import (
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
+from app.analysis.technical_context.sentences import split_sources
+from app.config import settings
 from app.services.sources.case_source_bundle import CaseSourceItem
 
 logger = logging.getLogger(__name__)

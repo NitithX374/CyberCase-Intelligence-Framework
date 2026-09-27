@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
+from app.analysis.technical_context.contracts import CaseTechnicalAugmentation
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportContent, CaseReportRead
-from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput, ReportGenerationConflict
 from app.services.sources.case_source_bundle import (
     CaseSourceBundle,

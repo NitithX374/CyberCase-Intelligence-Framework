@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.analysis import CaseAnalysisResult
@@ -190,6 +190,15 @@ def analysis_result_message(
     )
 
 
+async def next_ordinal(db: AsyncSession, case_id: UUID) -> int:
+    highest = await db.scalar(
+        select(func.coalesce(func.max(ChatMessage.ordinal), 0)).where(
+            ChatMessage.case_id == case_id
+        )
+    )
+    return int(highest) + 1
+
+
 __all__ = [
     "analysis_result_message",
     "answer_message",
@@ -200,6 +209,7 @@ __all__ = [
     "followup_qa_ids",
     "last_question_awaiting_analysis",
     "latest_question",
+    "next_ordinal",
     "numbered_questions",
     "pending_question",
     "question_message",

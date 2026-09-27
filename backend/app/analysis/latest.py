@@ -6,13 +6,13 @@ from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.analysis import CaseAnalysisResult
-from app.models.case import Case
-from app.schemas.rag import LegalReferenceResult
-from app.services.analysis.technical_context_contracts import (
+from app.analysis.technical_context.contracts import (
     CaseRagContextPayload,
     CaseTechnicalAugmentation,
 )
+from app.models.analysis import CaseAnalysisResult
+from app.models.case import Case
+from app.schemas.rag import LegalReferenceResult
 from app.services.cases.ownership import owned_case
 
 

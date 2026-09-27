@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import asyncio
 
-from app.llm.settings import AnalysisPipelineConfig
-from app.services.analysis.prompts import (
+from app.analysis import assess as assess_module
+from app.analysis.assess import assess_case
+from app.analysis.prompts import (
     GAP_IDENTIFICATION_INSTRUCTIONS,
     case_assessment_prompt,
     case_system_prompt,
 )
-from app.services.analysis.steps import assess as assess_module
-from app.services.analysis.steps.assess import assess_case
+from app.llm.settings import AnalysisPipelineConfig
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
 

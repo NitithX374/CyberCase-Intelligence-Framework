@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.services.analysis.latest import analysis_freshness
+from app.analysis.latest import analysis_freshness
 from app.services.cases.case_service import serialize_case
 
 

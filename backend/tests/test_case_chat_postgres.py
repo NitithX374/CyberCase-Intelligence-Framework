@@ -11,16 +11,16 @@ from httpx import ASGITransport, AsyncClient
 from isolated_database import isolated_database
 from sqlalchemy import select
 
+import app.chat.reply as case_chat
 import app.routers.chat as chat_router
-import app.services.chat.case_chat as case_chat
+from app.chat.answer import answer_case_question, answer_recorded_question
+from app.chat.contracts import CaseAnalysisOutput
 from app.errors import AppError, CaseAnalysisFailure
 from app.main import app
 from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.schemas.chat import ChatMessageCreate
 from app.services.auth.dependencies import get_current_user
-from app.services.chat.contracts import CaseAnalysisOutput
-from app.services.workflow.answer_question import answer_case_question, answer_recorded_question
 
 pytestmark = pytest.mark.asyncio
 
