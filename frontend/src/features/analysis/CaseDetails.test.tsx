@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CaseDetails } from "./CaseDetails";
-import type { SourceMessageRef } from "@/features/sources/types";
+import type { SourceMessageRef } from "@/features/citations/types";
 
 const statement: SourceMessageRef = {
   id: "source-1",

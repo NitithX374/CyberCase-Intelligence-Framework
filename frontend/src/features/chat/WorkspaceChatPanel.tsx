@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { Icon } from "@/components/icons";
-import type { WorkspaceView } from "@/features/workspace/routes";
+import type { WorkspaceView } from "@/lib/casePaths";
 import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
 import { useCaseChat } from "./useCaseChat";
 import { useCaseAnalysis } from "@/features/analysis/queries";

@@ -1,6 +1,6 @@
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
-import { claimRefs, parseCaseSources } from "@/features/sources/sourceRefs";
-import type { SourceMessageRef } from "@/features/sources/types";
+import { claimRefs, parseCaseSources } from "@/features/citations/sourceRefs";
+import type { SourceMessageRef } from "@/features/citations/types";
 import { analysisFollowups } from "./analysisRecord";
 import type { CaseFinding, CaseOverviewData, ClaimType } from "./types";
 

@@ -7,7 +7,7 @@ import type { CaseSourceRead } from "@/lib/api/types";
 import { NarrativeDialog } from "./NarrativeDialog";
 import { SourceRail, railGroups } from "./SourceRail";
 import { SourceViewport, type PreviewMode } from "./SourceViewport";
-import type { FollowupAnswer } from "./types";
+import type { FollowupAnswer } from "@/features/citations/types";
 
 export interface NarrativeSubmission {
   text: string;

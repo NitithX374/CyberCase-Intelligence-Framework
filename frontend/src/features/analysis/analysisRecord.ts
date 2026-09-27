@@ -1,5 +1,5 @@
 import type { CaseAnalysisResultRead } from "@/lib/api/types";
-import type { FollowupAnswer } from "@/features/sources/types";
+import type { FollowupAnswer } from "@/features/citations/types";
 import { asArray, asRecord, asString } from "@/lib/parse";
 
 export function analysisFollowups(result: CaseAnalysisResultRead): FollowupAnswer[] {

@@ -6,7 +6,7 @@ import { CyberCaseLogo } from "@/components/CyberCaseLogo";
 import { Icon } from "@/components/icons";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import type { CaseRead } from "@/lib/api/types";
-import { workspaceViewDescriptions, type WorkspaceView } from "./routes";
+import type { WorkspaceView } from "@/lib/casePaths";
 
 interface WorkspaceHeaderProps {
   activeCase: CaseRead | null;
@@ -20,6 +20,12 @@ interface WorkspaceHeaderProps {
   isChatOpen?: boolean;
   onToggleChat?: () => void;
 }
+
+const workspaceViewDescriptions: Record<WorkspaceView, string> = {
+  sources: "What the case knows: narratives, documents and clarification answers",
+  analysis: "Findings, the ATT&CK context behind them, and the report",
+  legal: "Thai provisions that may bear on the case, from an external legal service",
+};
 
 const workspaceTabs: Array<{ view: WorkspaceView; label: string }> = [
   { view: "sources", label: "Sources" },

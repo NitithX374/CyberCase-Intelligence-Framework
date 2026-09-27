@@ -1,4 +1,4 @@
-import type { SourceMessageRef } from "@/features/sources/types";
+import type { SourceMessageRef } from "@/features/citations/types";
 
 export type ClaimType = "reported" | "analytical_inference" | "unknown";
 
