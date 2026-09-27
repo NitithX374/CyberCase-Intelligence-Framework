@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.errors import AppError
 from app.services.analysis.contracts import CaseAnalysisTrace, CaseFollowupExchange
-from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
+from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
 

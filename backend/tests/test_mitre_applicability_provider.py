@@ -7,13 +7,13 @@ import pytest
 
 from app.services.analysis import provider
 from app.services.analysis.mitre_gate.llm import (
-    MITRE_APPLICABILITY_GATE_VERSION,
     MITRE_APPLICABILITY_SOURCE_MAX_CHARS,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
     build_mitre_applicability_prompt,
     evaluate_mitre_applicability,
 )
 from app.services.analysis.settings import AnalysisPipelineConfig
+from app.services.analysis.technical_context_contracts import MITRE_APPLICABILITY_GATE_VERSION
 from app.services.document_ingestion.contracts import (
     DocumentPage,
     ExtractionMethod,

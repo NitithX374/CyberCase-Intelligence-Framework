@@ -15,7 +15,6 @@ from app.services.analysis.contracts import (
     CaseAssessmentTrace,
     CaseSourceCitation,
 )
-from app.services.analysis.mitre_gate.llm import skipped_mitre_applicability
 from app.services.analysis.pipeline import (
     AnalysisAdvance,
     AnalysisArtifacts,
@@ -25,6 +24,7 @@ from app.services.analysis.pipeline import (
     write_analysis,
 )
 from app.services.analysis.steps.technical_context import CaseMitreAugmentation
+from app.services.analysis.technical_context_contracts import skipped_mitre_applicability
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.services.workflow.run_analysis import UnassessedAdvance, store_outcome, think
 from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError

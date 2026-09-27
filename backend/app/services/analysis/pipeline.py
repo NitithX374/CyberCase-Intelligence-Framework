@@ -25,10 +25,10 @@ from app.services.analysis.steps.assess import assess_case
 from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.analysis.steps.technical_context import (
     CaseMitreAugmentation,
-    CaseRagContextPayload,
     run_case_mitre_augmentation,
 )
 from app.services.analysis.steps.write import write_trace
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.clients.rag_client import request_rag
 from app.services.sources.case_source_bundle import CaseSourceBundle
 

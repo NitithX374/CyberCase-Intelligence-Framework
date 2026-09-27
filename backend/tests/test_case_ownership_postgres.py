@@ -16,9 +16,10 @@ from app.models.report import CaseReport
 from app.models.sources import CaseDocument, CaseSource
 from app.models.user import User
 from app.schemas.cases import CaseUpdate
+from app.services.analysis.latest import get_latest_case_analysis
 from app.services.cases.case_service import CaseService
 from app.services.cases.ownership import owned_case
-from app.services.workflow.run_analysis import get_latest_case_analysis, read_case_for_analysis
+from app.services.workflow.run_analysis import read_case_for_analysis
 
 pytestmark = pytest.mark.asyncio
 

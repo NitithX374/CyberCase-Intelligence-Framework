@@ -20,8 +20,8 @@ from app.services.analysis.contracts import (
 from app.services.analysis.prompts import GAP_IDENTIFICATION_INSTRUCTIONS
 from app.services.analysis.provider import request_stage
 from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.analysis.steps.technical_context import CaseRagContextPayload
 from app.services.analysis.steps.write import provider_source_payload, write_request
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
 CASE_READING_PROMPT_VERSION = "case_reading_v1"

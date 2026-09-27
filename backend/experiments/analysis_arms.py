@@ -20,8 +20,8 @@ from app.services.analysis.pipeline import (
 from app.services.analysis.prompts import case_system_prompt
 from app.services.analysis.provider import request_stage
 from app.services.analysis.settings import AnalysisPipelineConfig, configured_pipeline
-from app.services.analysis.steps.technical_context import CaseRagContextPayload
 from app.services.analysis.steps.write import write_request, write_trace, written_trace
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import CaseSourceBundle
 from experiments.split_analysis import (
     CaseProviderReading,
