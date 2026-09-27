@@ -5,7 +5,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.schemas.rag import QueryResponse
-from app.services.analysis.contracts import CaseFollowupExchange
 from app.services.analysis.mitre_gate import mitre_gate
 from app.services.analysis.technical_context_contracts import (
     CaseRagContextPayload,
@@ -16,6 +15,7 @@ from app.services.analysis.technical_context_contracts import (
 )
 from app.services.clients.rag_client import RagCallFailure, request_rag
 from app.services.sources.case_source_bundle import CaseSourceBundle, build_rag_query
+from app.trace.claims import CaseFollowupExchange
 
 logger = logging.getLogger(__name__)
 

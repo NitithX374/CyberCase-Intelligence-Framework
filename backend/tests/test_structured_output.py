@@ -1,5 +1,5 @@
-from app.services.analysis.contracts import CaseProviderAnalysis
-from app.services.llm.structured_output import structured_output_schema
+from app.llm.schema import structured_output_schema
+from app.trace.trace import CaseProviderAnalysis
 
 
 def test_case_provider_analysis_schema_exposes_grounded_claim_roles() -> None:

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from app.services.analysis.contracts import CaseAnalysisTrace
+from app.trace.trace import CaseAnalysisTrace
 
 AnalysisFreshness = Literal["missing", "current", "stale"]
 

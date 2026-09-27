@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.services.analysis.contracts.claims import (
+from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisMode,

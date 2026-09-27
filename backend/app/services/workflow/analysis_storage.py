@@ -6,29 +6,18 @@ from datetime import UTC, datetime
 from fastapi import status
 from sqlalchemy import select
 
+from app.errors import CaseAnalysisFailure, CaseWorkflowError
+from app.llm.settings import configured_pipeline
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.services.analysis.clarification import Ask, ProceedReason
-from app.services.analysis.contracts import (
-    CaseAnalysisFailure,
-    CaseAssessmentTrace,
-    followup_snapshot,
-)
 from app.services.analysis.pipeline import AnalysisArtifacts
-from app.services.analysis.settings import configured_pipeline
 from app.services.analysis.steps.technical_context import technical_context_key
-from app.services.chat.followup import (
-    analysis_result_message,
-    pending_question,
-    question_message,
-)
+from app.services.chat.followup import analysis_result_message, pending_question, question_message
 from app.services.sources.case_source_bundle import sources_read
-from app.services.workflow.shared import (
-    CaseUnderAnalysis,
-    CaseWorkflowError,
-    next_ordinal,
-)
+from app.services.workflow.shared import CaseUnderAnalysis, next_ordinal
+from app.trace.claims import CaseAssessmentTrace, followup_snapshot
 
 
 @dataclass(frozen=True)

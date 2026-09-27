@@ -9,17 +9,6 @@ from pypdf import PdfReader
 
 from app.models.sources import CaseSource
 from app.schemas.reports import CaseReportContent
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisGap,
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    CaseImpactItem,
-    CaseInvolvedParty,
-    CaseMitreAssociation,
-    CaseSourceCitation,
-    CaseTimelineItem,
-)
 from app.services.analysis.technical_context_contracts import (
     CaseTechnicalAugmentation,
     MitreApplicabilityRecord,
@@ -27,12 +16,21 @@ from app.services.analysis.technical_context_contracts import (
 )
 from app.services.reports.contracts import CaseReportInput
 from app.services.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
-from app.services.reports.render import (
-    ReportIssue,
-    render_case_report_html,
-    render_case_report_pdf,
-)
+from app.services.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseAnalysisGap,
+    CaseFollowupExchange,
+    CaseSourceCitation,
+)
+from app.trace.trace import (
+    CaseAnalysisTrace,
+    CaseImpactItem,
+    CaseInvolvedParty,
+    CaseMitreAssociation,
+    CaseTimelineItem,
+)
 
 ISSUE = ReportIssue(version_number=2, created_at=datetime(2026, 9, 24, 6, 22, tzinfo=UTC))
 SOURCE_TEXT = "พบการใช้ PowerShell.exe เชื่อมต่อไปยัง 198.51.100.23"

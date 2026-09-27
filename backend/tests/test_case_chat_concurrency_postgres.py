@@ -12,8 +12,8 @@ import app.services.chat.case_chat as case_chat
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.schemas.chat import ChatMessageCreate
-from app.services.analysis.contracts import CaseAnalysisOutput
 from app.services.chat.case_chat import post_case_message
+from app.services.chat.contracts import CaseAnalysisOutput
 from app.services.workflow.answer_question import answer_case_question
 from app.services.workflow.shared import next_ordinal
 

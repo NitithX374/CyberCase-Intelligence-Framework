@@ -3,15 +3,13 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    CaseGroundingReport,
-    CaseMitreAssociation,
-    CaseSourceCitation,
+from app.services.sources.case_source_bundle import (
+    CaseSourceBundle,
+    CaseSourceItem,
+    build_document_source_context,
 )
-from app.services.analysis.steps.quotes import (
+from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
+from app.trace.quotes import (
     MAX_QUOTE_CHARS,
     IndexedText,
     find_aligned_quote,
@@ -20,11 +18,7 @@ from app.services.analysis.steps.quotes import (
     quote_occurrences,
     resolve_document_locator,
 )
-from app.services.sources.case_source_bundle import (
-    CaseSourceBundle,
-    CaseSourceItem,
-    build_document_source_context,
-)
+from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport, CaseMitreAssociation
 
 ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
 

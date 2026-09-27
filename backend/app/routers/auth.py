@@ -9,11 +9,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import PasswordLoginRequest, RegisterRequest, UserRead
-from app.services.auth.auth_service import (
-    authenticate,
-    build_auth_cookie_options,
-    register_user,
-)
+from app.services.auth.auth_service import authenticate, build_auth_cookie_options, register_user
 from app.services.auth.credentials import create_access_token
 from app.services.auth.dependencies import get_optional_user
 

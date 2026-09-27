@@ -24,10 +24,7 @@ if TYPE_CHECKING:
     from app.models.analysis import CaseAnalysisResult
     from app.models.chat import ChatMessage
     from app.models.report import CaseReport
-    from app.models.sources import (
-        CaseDocument,
-        CaseSource,
-    )
+    from app.models.sources import CaseDocument, CaseSource
     from app.models.user import User
 
 

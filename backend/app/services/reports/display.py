@@ -13,13 +13,10 @@ from app.schemas.reports import (
     ReportSource,
     ReportTechnique,
 )
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisTrace,
-    CaseSourceCitation,
-)
 from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput
+from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
+from app.trace.trace import CaseAnalysisTrace
 
 EPISTEMIC_STATUS_LABELS = {
     "reported": "ปรากฏในหลักฐาน",

@@ -4,7 +4,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from app.services.analysis.contracts import CaseAnalysisGap
+from app.trace.claims import CaseAnalysisGap
 
 ProceedReason = Literal[
     "no_eligible_gap",

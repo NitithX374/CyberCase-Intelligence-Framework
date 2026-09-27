@@ -8,21 +8,11 @@ from dataclasses import dataclass, replace
 from fastapi import status
 from pydantic import ValidationError
 
-from app.services.analysis.clarification import (
-    FollowupDecision,
-    Proceed,
-    decide_followup,
-)
-from app.services.analysis.contracts import (
-    CaseAnalysisFailure,
-    CaseAnalysisTrace,
-    CaseAssessmentTrace,
-    CaseFollowupExchange,
-)
+from app.errors import CaseAnalysisFailure
+from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
+from app.services.analysis.clarification import FollowupDecision, Proceed, decide_followup
 from app.services.analysis.mitre_gate import mitre_gate
-from app.services.analysis.settings import AnalysisPipelineConfig, configured_pipeline
 from app.services.analysis.steps.assess import assess_case
-from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.analysis.steps.technical_context import (
     CaseMitreAugmentation,
     run_case_mitre_augmentation,
@@ -31,6 +21,9 @@ from app.services.analysis.steps.write import write_trace
 from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.clients.rag_client import request_rag
 from app.services.sources.case_source_bundle import CaseSourceBundle
+from app.trace.bind import resolve_case_trace
+from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
+from app.trace.trace import CaseAnalysisTrace
 
 logger = logging.getLogger("app.case_analysis")
 

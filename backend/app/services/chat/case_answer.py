@@ -9,35 +9,33 @@ from typing import Literal
 from fastapi import status
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from app.errors import CaseAnalysisFailure
+from app.llm.request import request_stage
+from app.llm.settings import configured_pipeline
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisFailure,
-    CaseAnalysisOutput,
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    CaseSourceCitation,
-    ChatAnswerUnit,
-)
-from app.services.analysis.contracts.claims import normalize_identifier
-from app.services.analysis.contracts.trace import MAX_SUMMARY_CHARS
 from app.services.analysis.language import ResponseLanguage
-from app.services.analysis.provider import request_stage
-from app.services.analysis.settings import configured_pipeline
-from app.services.analysis.steps.bind import (
-    QuoteSearch,
-    followup_registry_items,
-    resolve_case_trace,
-    resolved_citations,
-)
 from app.services.analysis.steps.write import write_request
 from app.services.analysis.technical_context_contracts import CaseRagContextPayload
+from app.services.chat.contracts import CaseAnalysisOutput, ChatAnswerUnit
 from app.services.sources.case_source_bundle import (
     CaseSourceBundle,
     CaseSourceItem,
     build_document_source_context,
 )
+from app.trace.bind import (
+    QuoteSearch,
+    followup_registry_items,
+    resolve_case_trace,
+    resolved_citations,
+)
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseFollowupExchange,
+    CaseSourceCitation,
+    normalize_identifier,
+)
+from app.trace.trace import MAX_SUMMARY_CHARS, CaseAnalysisTrace
 
 logger = logging.getLogger(__name__)
 

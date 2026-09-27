@@ -3,21 +3,23 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.analysis.contracts import (
+from app.llm.settings import AnalysisPipelineConfig
+from app.services.analysis.steps.write import write_trace
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.bind import resolve_case_trace
+from app.trace.claims import (
     CaseAnalysisClaim,
+    CaseProviderCitation,
+    CaseProviderClaim,
+    CaseSourceCitation,
+)
+from app.trace.trace import (
     CaseAnalysisTrace,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderAnalysis,
-    CaseProviderCitation,
-    CaseProviderClaim,
-    CaseSourceCitation,
     CaseTimelineItem,
 )
-from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.analysis.steps.write import write_trace
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
 def test_case_overview_models_construct_and_normalize_claim_ids() -> None:

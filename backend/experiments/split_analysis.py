@@ -6,23 +6,25 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.services.analysis.contracts import (
+from app.llm.request import request_stage
+from app.llm.settings import AnalysisPipelineConfig
+from app.services.analysis.prompts import GAP_IDENTIFICATION_INSTRUCTIONS
+from app.services.analysis.steps.write import provider_source_payload, write_request
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
+from app.services.sources.case_source_bundle import CaseSourceBundle
+from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
-    CaseAnalysisTrace,
     CaseFollowupExchange,
+    followup_payload,
+)
+from app.trace.trace import (
+    CaseAnalysisTrace,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
     CaseTimelineItem,
-    followup_payload,
 )
-from app.services.analysis.prompts import GAP_IDENTIFICATION_INSTRUCTIONS
-from app.services.analysis.provider import request_stage
-from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.analysis.steps.write import provider_source_payload, write_request
-from app.services.analysis.technical_context_contracts import CaseRagContextPayload
-from app.services.sources.case_source_bundle import CaseSourceBundle
 
 CASE_READING_PROMPT_VERSION = "case_reading_v1"
 CASE_JUDGEMENT_PROMPT_VERSION = "case_judgement_v1"

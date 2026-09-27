@@ -17,7 +17,6 @@ from app.models.chat import ChatMessage
 from app.schemas.analysis import CaseAnalysisResultRead
 from app.schemas.chat import CaseChatRead, CaseChatResponse, ChatMessageCreate, ChatMessageRead
 from app.services.analysis.clarification import Ask, decide_followup
-from app.services.analysis.contracts import CaseAnalysisTrace, CaseAssessmentTrace
 from app.services.cases.ownership import owned_case
 from app.services.chat.followup import (
     answer_message,
@@ -36,12 +35,10 @@ from app.services.workflow.answer_question import (
     being_answered,
     message_text,
 )
-from app.services.workflow.run_analysis import (
-    AnalysisStep,
-    analysis_running,
-    run_case_analysis,
-)
+from app.services.workflow.run_analysis import AnalysisStep, analysis_running, run_case_analysis
 from app.services.workflow.shared import next_ordinal
+from app.trace.claims import CaseAssessmentTrace
+from app.trace.trace import CaseAnalysisTrace
 
 SEND_KEY_INDEX = "ux_chat_messages_case_id_client_request_id"
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.config import Settings, settings
-from app.services.llm.model_registry import resolve_openrouter_model
+from app.llm.registry import resolve_openrouter_model
 
 
 class CoreLlmConfigurationError(RuntimeError):

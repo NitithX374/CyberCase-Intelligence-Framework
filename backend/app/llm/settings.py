@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.config import settings
-from app.services.llm.model_registry import resolve_openrouter_model
+from app.llm.registry import resolve_openrouter_model
 
 MIN_THINKING_TOKENS = 1_024
 

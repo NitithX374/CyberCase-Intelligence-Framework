@@ -6,18 +6,6 @@ import app.models  # noqa: F401
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.sources import CaseSource
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisGap,
-    CaseAnalysisTrace,
-    CaseProviderAnalysis,
-    CaseSourceCitation,
-)
-from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.analysis.steps.quotes import (
-    find_aligned_quote,
-    resolve_document_locator,
-)
 from app.services.document_ingestion.contracts import (
     DocumentPage,
     ExtractionMethod,
@@ -30,6 +18,10 @@ from app.services.sources.case_source_bundle import (
     case_source_bundle_for_analysis,
 )
 from app.services.sources.source_service import document_provenance
+from app.trace.bind import resolve_case_trace
+from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
+from app.trace.quotes import find_aligned_quote, resolve_document_locator
+from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
 
 
 def _source(

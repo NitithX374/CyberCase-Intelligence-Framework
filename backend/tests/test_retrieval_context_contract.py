@@ -9,12 +9,13 @@ from pydantic import ValidationError
 
 from app.schemas.rag import LegalReferenceResult, QueryResponse
 from app.services.analysis.clarification import Proceed
-from app.services.analysis.contracts import CaseAssessmentTrace, CaseMitreAssociation
 from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.services.analysis.steps.technical_context import CaseMitreAugmentation
 from app.services.analysis.technical_context_contracts import skipped_mitre_applicability
 from app.services.workflow.analysis_storage import external_context, retrieval_context_row
 from app.services.workflow.run_analysis import reusable_context, run_case_analysis
+from app.trace.claims import CaseAssessmentTrace
+from app.trace.trace import CaseMitreAssociation
 
 KEY = {"source_revision": 1, "followup_answers": 0}
 STARTED = SimpleNamespace(source_revision=1, followup_history=())
