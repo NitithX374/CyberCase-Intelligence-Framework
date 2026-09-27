@@ -9,7 +9,6 @@ from fastapi import status
 from pydantic import ValidationError
 
 from app.analysis.assess import assess_case
-from app.analysis.clarification import FollowupDecision, Proceed, decide_followup
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.gate import mitre_gate
 from app.analysis.technical_context.rag_client import request_rag
@@ -19,6 +18,7 @@ from app.analysis.technical_context.retrieve import (
 )
 from app.analysis.write import write_trace
 from app.errors import CaseAnalysisFailure
+from app.followup.clarification import FollowupDecision, Proceed, decide_followup
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.sources.bundle import CaseSourceBundle
 from app.trace.bind import resolve_case_trace

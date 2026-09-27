@@ -8,7 +8,6 @@ import pytest
 from case_mitre_test_support import _fixtures
 
 from app.analysis import pipeline as pipeline_module
-from app.analysis.clarification import Proceed
 from app.analysis.pipeline import (
     AnalysisAdvance,
     AnalysisArtifacts,
@@ -22,6 +21,7 @@ from app.analysis.store import CaseUnderAnalysis
 from app.analysis.technical_context.contracts import skipped_mitre_applicability
 from app.analysis.technical_context.retrieve import CaseMitreAugmentation
 from app.errors import CaseWorkflowError
+from app.followup.clarification import Proceed
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import CaseAnalysisClaim, CaseAssessmentTrace, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
