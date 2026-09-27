@@ -13,6 +13,7 @@ from app.services.analysis.mitre_gate.llm import (
     build_mitre_applicability_prompt,
     evaluate_mitre_applicability,
 )
+from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.document_ingestion.contracts import (
     DocumentPage,
     ExtractionMethod,
@@ -75,7 +76,7 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
     assert captured["model"] == "vendor/custom-model"
     assert captured["system"] == MITRE_APPLICABILITY_SYSTEM_PROMPT
     assert captured["temperature"] == 0.0
-    assert captured["max_tokens"] == 1024
+    assert captured["max_tokens"] == 1024 + AnalysisPipelineConfig().thinking_tokens
     assert captured["messages"][0]["content"] == build_mitre_applicability_prompt([source])
     schema = captured["output_config"]["format"]["schema"]
     assert schema["additionalProperties"] is False

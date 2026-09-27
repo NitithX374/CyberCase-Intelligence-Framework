@@ -251,9 +251,9 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
         (off_schema, 502, "case_direct_invalid"),
         (unreadable, 502, "analysis_invalid_response"),
         (erring, 502, "analysis_provider_error"),
-        (cut_short, 502, "analysis_incomplete"),
+        (cut_short, 502, "case_direct_incomplete"),
         (refused, 409, "analysis_provider_unauthorized"),
-        (declined, 409, "analysis_incomplete"),
+        (declined, 409, "case_direct_incomplete"),
         (rejected, 409, "analysis_provider_error"),
     ],
 )

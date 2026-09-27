@@ -74,7 +74,25 @@ def extract_visible_text(payload: Mapping[str, object]) -> str:
     return extract_text_value(output)
 
 
-def log_response_shape(status_code: int, payload: Mapping[str, object]) -> None:
+def token_or_none(value: object) -> int | None:
+    return value if isinstance(value, int) else None
+
+
+def usage_summary(payload: Mapping[str, object]) -> dict[str, int | None]:
+    usage = payload.get("usage")
+    if not isinstance(usage, Mapping):
+        usage = {}
+    details = usage.get("output_tokens_details")
+    if not isinstance(details, Mapping):
+        details = {}
+    return {
+        "input_tokens": token_or_none(usage.get("input_tokens")),
+        "output_tokens": token_or_none(usage.get("output_tokens")),
+        "thinking_tokens": token_or_none(details.get("thinking_tokens")),
+    }
+
+
+def log_response_shape(stage: str, payload: Mapping[str, object]) -> None:
     content = payload.get("content")
     block_types = []
     if isinstance(content, list):
@@ -83,42 +101,40 @@ def log_response_shape(status_code: int, payload: Mapping[str, object]) -> None:
             for block in content
             if isinstance(block, Mapping) and block.get("type") is not None
         ]
-    usage = payload.get("usage")
-    usage_keys = sorted(usage.keys()) if isinstance(usage, Mapping) else []
     logger.info(
-        "Main Case Analysis provider response status=%s keys=%s "
-        "content_type=%s block_types=%s stop_reason=%s usage_keys=%s",
-        status_code,
+        "Analysis stage %s provider response keys=%s "
+        "content_type=%s block_types=%s stop_reason=%s usage=%s",
+        stage,
         sorted(str(key) for key in payload),
         type(content).__name__,
         block_types,
         payload.get("stop_reason"),
-        usage_keys,
+        usage_summary(payload),
     )
 
 
-def validate_response_payload(response: httpx.Response) -> dict[str, object]:
+def decode_response(response: httpx.Response) -> dict[str, object]:
     if response.status_code in {408, 429, 504}:
         raise CaseAnalysisFailure(
             "analysis_provider_timeout",
-            "The post-answer analysis provider timed out",
+            "The analysis provider timed out",
             status.HTTP_504_GATEWAY_TIMEOUT,
         )
     if response.status_code >= 500:
         raise CaseAnalysisFailure(
             "analysis_provider_down",
-            "The post-answer analysis provider is unavailable",
+            "The analysis provider is unavailable",
             status.HTTP_502_BAD_GATEWAY,
         )
     if response.status_code in {401, 403}:
         raise CaseAnalysisFailure(
             "analysis_provider_unauthorized",
-            "The post-answer analysis provider credentials are invalid",
+            "The analysis provider credentials are invalid",
         )
     if response.status_code != 200:
         raise CaseAnalysisFailure(
             "analysis_provider_error",
-            "The post-answer analysis provider returned an error",
+            "The analysis provider returned an error",
         )
 
     try:
@@ -126,31 +142,34 @@ def validate_response_payload(response: httpx.Response) -> dict[str, object]:
     except (TypeError, ValueError) as error:
         raise CaseAnalysisFailure(
             "analysis_invalid_response",
-            "The post-answer analysis provider response was invalid",
+            "The analysis provider response was invalid",
             status.HTTP_502_BAD_GATEWAY,
         ) from error
 
     if not isinstance(response_payload, dict):
         raise CaseAnalysisFailure(
             "analysis_invalid_response",
-            "The post-answer analysis provider response was invalid",
+            "The analysis provider response was invalid",
             status.HTTP_502_BAD_GATEWAY,
         )
+    return response_payload
 
-    log_response_shape(response.status_code, response_payload)
+
+def check_response_payload(response_payload: Mapping[str, object], *, stage: str) -> None:
+    log_response_shape(stage, response_payload)
 
     if isinstance(response_payload.get("error"), dict):
         raise CaseAnalysisFailure(
             "analysis_provider_error",
-            "The post-answer analysis provider returned an error",
+            "The analysis provider returned an error",
             status.HTTP_502_BAD_GATEWAY,
         )
 
     stop_reason = response_payload.get("stop_reason")
     if stop_reason in {"refusal", "max_tokens", "length", "pause_turn"}:
         raise CaseAnalysisFailure(
-            "analysis_incomplete",
-            "The post-answer analysis provider did not complete",
+            f"{stage}_incomplete",
+            "Analysis stage did not complete",
             status.HTTP_409_CONFLICT if stop_reason == "refusal" else status.HTTP_502_BAD_GATEWAY,
         )
 
@@ -158,10 +177,16 @@ def validate_response_payload(response: httpx.Response) -> dict[str, object]:
     if content is not None and not isinstance(content, (list, str)):
         raise CaseAnalysisFailure(
             "analysis_invalid_response",
-            "The post-answer analysis provider response was invalid",
+            "The analysis provider response was invalid",
             status.HTTP_502_BAD_GATEWAY,
         )
 
+
+def validate_response_payload(
+    response: httpx.Response, *, stage: str = "analysis"
+) -> dict[str, object]:
+    response_payload = decode_response(response)
+    check_response_payload(response_payload, stage=stage)
     return response_payload
 
 
@@ -181,8 +206,14 @@ def token_count(value: object) -> int:
 def input_budget(config: AnalysisPipelineConfig) -> int:
     return min(
         config.input_tokens,
-        config.context_tokens - config.output_tokens - config.safety_tokens,
+        config.context_tokens - config.max_tokens - config.safety_tokens,
     )
+
+
+def thinking_option(config: AnalysisPipelineConfig) -> dict[str, object]:
+    if config.thinking_tokens == 0:
+        return {"type": "disabled"}
+    return {"type": "enabled", "budget_tokens": config.thinking_tokens}
 
 
 def stage_payload(
@@ -195,7 +226,8 @@ def stage_payload(
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "model": config.model,
-        "max_tokens": config.output_tokens,
+        "max_tokens": config.max_tokens,
+        "thinking": thinking_option(config),
         "system": system,
         "messages": [
             {
@@ -214,6 +246,8 @@ def stage_payload(
     }
     if temperature is not None:
         payload["temperature"] = temperature
+    if config.providers:
+        payload["provider"] = {"order": list(config.providers), "allow_fallbacks": False}
     return payload
 
 
@@ -273,7 +307,9 @@ async def request_stage(
     started = time.monotonic()
     try:
         response = await post_stage(target, payload, stage=stage, timeout=config.timeout_seconds)
-        decoded = validate_response_payload(response)
+        decoded = decode_response(response)
+        receipt.update(usage_summary(decoded))
+        check_response_payload(decoded, stage=stage)
         result = schema.model_validate_json(extract_visible_text(decoded))
         receipt["status"] = "completed"
         return result
@@ -305,6 +341,8 @@ async def request_stage(
 
 
 __all__ = [
+    "check_response_payload",
+    "decode_response",
     "extract_text_value",
     "extract_visible_text",
     "input_budget",
@@ -312,6 +350,8 @@ __all__ = [
     "post_stage",
     "request_stage",
     "stage_payload",
+    "thinking_option",
     "token_count",
+    "usage_summary",
     "validate_response_payload",
 ]
