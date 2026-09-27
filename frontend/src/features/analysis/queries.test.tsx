@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AnalysisStepRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { analysisResult } from "@/test/fixtures";
-import { deferred } from "@/features/chat/chatTestSupport";
+import { deferred } from "@/test/chat";
 import { useIsCaseAnalysisRunning, useStartCaseAnalysis } from "./queries";
 
 const startCaseAnalysis = vi.fn();

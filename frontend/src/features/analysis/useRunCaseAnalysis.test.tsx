@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, useMutation } from "@tanstack/react-q
 import { describe, expect, it, vi } from "vitest";
 import type { CaseChatResponse } from "@/lib/api/types";
 import { useCaseChat } from "@/features/chat/useCaseChat";
-import { caseChat, chatResponse, deferred, message } from "@/features/chat/chatTestSupport";
+import { caseChat, chatResponse, deferred, message } from "@/test/chat";
 import { useAnalysisRunOutcome, useRunCaseAnalysis } from "./useRunCaseAnalysis";
 
 const api = vi.hoisted(() => ({ getChat: vi.fn(), send: vi.fn(), start: vi.fn() }));

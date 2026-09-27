@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AnalysisStepRead } from "@/lib/api/types";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
-import { deferred } from "@/features/chat/chatTestSupport";
+import { deferred } from "@/test/chat";
 import { analysisResult, caseId } from "@/test/fixtures";
 import { httpError, refusal } from "@/test/httpErrors";
 import { CaseWorkspace } from "./CaseWorkspace";
