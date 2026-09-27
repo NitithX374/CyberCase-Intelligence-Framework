@@ -7,22 +7,17 @@ from uuid import uuid4
 import pytest
 from case_mitre_test_support import _gate
 
-from app.services.analysis.contracts import (
+from app.llm.settings import AnalysisPipelineConfig
+from app.services.analysis.pipeline import AnalysisArtifacts, AnalysisInput, write_analysis
+from app.services.analysis.prompts import case_system_prompt
+from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.claims import (
     CaseAnalysisClaim,
-    CaseAnalysisTrace,
-    CaseProviderAnalysis,
     CaseProviderCitation,
     CaseProviderClaim,
     CaseSourceCitation,
 )
-from app.services.analysis.pipeline import (
-    AnalysisArtifacts,
-    AnalysisInput,
-    write_analysis,
-)
-from app.services.analysis.prompts import case_system_prompt
-from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
 from experiments import analysis_arms
 from experiments.analysis_arms import revise, write_revision
 

@@ -1,10 +1,7 @@
 import unittest
 
 from app.config import Settings
-from app.services.llm.core_llm import (
-    CoreLlmConfigurationError,
-    resolve_core_llm_target,
-)
+from app.llm.openrouter import CoreLlmConfigurationError, resolve_core_llm_target
 
 
 class CoreLlmProviderTests(unittest.TestCase):

@@ -8,7 +8,7 @@ from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.models.user import User
-from app.services.analysis.contracts import CaseAnalysisTrace
+from app.trace.trace import CaseAnalysisTrace
 
 NARRATIVE = "Files on the shared drive were reported encrypted."
 GAP = {

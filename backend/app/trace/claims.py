@@ -5,20 +5,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Annotated, Literal
 
-from pydantic import (
-    BaseModel,
-    BeforeValidator,
-    ConfigDict,
-    Field,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
 
-from app.services.analysis.steps.quotes import (
-    MAX_PAGE_SPANS_PER_QUOTE,
-    MAX_QUOTE_CHARS,
-    MAX_SUPPORTED_DOCUMENT_PAGES,
-)
+from app.trace.quotes import MAX_PAGE_SPANS_PER_QUOTE, MAX_QUOTE_CHARS, MAX_SUPPORTED_DOCUMENT_PAGES
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 
@@ -121,26 +110,6 @@ class CaseProviderCitation(BaseModel):
 
     source_id: str = Field(min_length=1, max_length=160)
     exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
-
-
-ChatUnitBasis = Literal["case_fact", "interpretation", "technical", "general"]
-ChatSuggestion = Literal["none", "add_source", "run_analysis"]
-
-
-class ChatAnswerUnit(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    text: str = Field(min_length=1)
-    basis: ChatUnitBasis
-    claim_ids: list[str] = Field(default_factory=list)
-    supporting_source_ids: list[str] = Field(default_factory=list)
-    supporting_citations: list[CaseSourceCitation] = Field(default_factory=list)
-    contradicting_source_ids: list[str] = Field(default_factory=list)
-    contradicting_citations: list[CaseSourceCitation] = Field(default_factory=list)
-
-    @property
-    def cited(self) -> bool:
-        return bool(self.supporting_citations or self.contradicting_citations)
 
 
 class CaseClaimFields(BaseModel):

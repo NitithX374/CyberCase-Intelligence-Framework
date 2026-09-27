@@ -6,15 +6,10 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.errors import AppError
 from app.models.chat import ChatMessage
-from app.services.analysis.contracts import CaseFollowupExchange
 from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import CaseSourceBundle
-
-
-class CaseWorkflowError(AppError):
-    pass
+from app.trace.claims import CaseFollowupExchange
 
 
 @dataclass(frozen=True)
@@ -42,6 +37,5 @@ async def next_ordinal(db: AsyncSession, case_id: UUID) -> int:
 
 __all__ = [
     "CaseUnderAnalysis",
-    "CaseWorkflowError",
     "next_ordinal",
 ]

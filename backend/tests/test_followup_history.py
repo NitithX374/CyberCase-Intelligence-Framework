@@ -9,12 +9,6 @@ from isolated_database import isolated_database
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.models.user import User
-from app.services.analysis.contracts import (
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    followup_payload,
-)
-from app.services.analysis.steps.bind import followup_registry_items, resolve_case_trace
 from app.services.chat.followup import (
     asked_gap_keys,
     asked_in_round,
@@ -24,6 +18,9 @@ from app.services.chat.followup import (
     rounds_asked,
 )
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.bind import followup_registry_items, resolve_case_trace
+from app.trace.claims import CaseFollowupExchange, followup_payload
+from app.trace.trace import CaseAnalysisTrace
 
 ANSWER = "The incident happened at 23:30 on 12 May."
 

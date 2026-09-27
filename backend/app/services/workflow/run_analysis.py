@@ -10,9 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session
+from app.errors import CaseAnalysisFailure, CaseWorkflowError
 from app.models.analysis import CaseAnalysisResult
 from app.services.analysis.clarification import Ask, Proceed
-from app.services.analysis.contracts import CaseAnalysisFailure, CaseAssessmentTrace
 from app.services.analysis.language import case_language
 from app.services.analysis.latest import recorded_technical_context
 from app.services.analysis.pipeline import (
@@ -39,7 +39,8 @@ from app.services.workflow.analysis_storage import (
     store_analysis,
     store_assessment,
 )
-from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError
+from app.services.workflow.shared import CaseUnderAnalysis
+from app.trace.claims import CaseAssessmentTrace
 
 _running: Counter[UUID] = Counter()
 

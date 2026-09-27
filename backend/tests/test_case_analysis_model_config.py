@@ -2,8 +2,8 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import DEFAULT_CASE_ANALYSIS_MODEL, Settings
-from app.services.analysis.settings import AnalysisPipelineConfig, configured_pipeline
-from app.services.llm.model_registry import DEFAULT_OPENROUTER_MODEL
+from app.llm.registry import DEFAULT_OPENROUTER_MODEL
+from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 
 
 def test_backend_case_analysis_has_one_exact_default_model(monkeypatch):
@@ -40,7 +40,7 @@ def test_blank_model_selector_fails_instead_of_using_the_registry_default():
 )
 def test_the_configured_pipeline_follows_the_model_setting(monkeypatch, selector, model):
     monkeypatch.setattr(
-        "app.services.analysis.settings.settings.case_analysis_model",
+        "app.llm.settings.settings.case_analysis_model",
         selector,
     )
 

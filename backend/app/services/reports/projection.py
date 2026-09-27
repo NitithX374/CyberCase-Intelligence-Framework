@@ -6,11 +6,6 @@ from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportContent, CaseReportRead
-from app.services.analysis.contracts import (
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    followup_history_of_snapshot,
-)
 from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput, ReportGenerationConflict
 from app.services.sources.case_source_bundle import (
@@ -18,6 +13,8 @@ from app.services.sources.case_source_bundle import (
     case_source_bundle_for_analysis,
     source_ids_of_sources_read,
 )
+from app.trace.claims import CaseFollowupExchange, followup_history_of_snapshot
+from app.trace.trace import CaseAnalysisTrace
 
 
 def serialize_case_report(report: CaseReport) -> CaseReportRead:

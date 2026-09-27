@@ -21,11 +21,7 @@ from app.services.reports.projection import (
     serialize_case_report,
     stored_content,
 )
-from app.services.reports.render import (
-    ReportIssue,
-    render_case_report_html,
-    render_case_report_pdf,
-)
+from app.services.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf
 
 
 class CaseReportService:

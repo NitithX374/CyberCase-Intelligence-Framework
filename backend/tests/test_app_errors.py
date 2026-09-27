@@ -7,10 +7,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.database import get_db
-from app.errors import AppError
+from app.errors import AppError, CaseAnalysisFailure, CaseWorkflowError
 from app.main import app
 from app.routers import analysis, chat
-from app.services.analysis.contracts import CaseAnalysisFailure
 from app.services.auth.dependencies import get_current_user
 from app.services.document_ingestion.contracts import (
     DocumentLimitError,
@@ -19,7 +18,6 @@ from app.services.document_ingestion.contracts import (
 )
 from app.services.reports.contracts import ReportGenerationConflict, ReportNotFound
 from app.services.sources.source_service import SourceError
-from app.services.workflow.shared import CaseWorkflowError
 
 
 def _fastapi_app() -> FastAPI:

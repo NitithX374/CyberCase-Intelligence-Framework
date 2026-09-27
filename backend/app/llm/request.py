@@ -13,10 +13,10 @@ import tiktoken
 from fastapi import status
 from pydantic import BaseModel, ValidationError
 
-from app.services.analysis.contracts import CaseAnalysisFailure
-from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.llm.core_llm import CoreLlmTarget, resolve_core_llm_target
-from app.services.llm.structured_output import structured_output_schema
+from app.errors import CaseAnalysisFailure
+from app.llm.openrouter import CoreLlmTarget, resolve_core_llm_target
+from app.llm.schema import structured_output_schema
+from app.llm.settings import AnalysisPipelineConfig
 
 logger = logging.getLogger("app.case_analysis")
 _VISIBLE_TEXT_BLOCK_TYPES = frozenset({"text", "output_text", "message", None})

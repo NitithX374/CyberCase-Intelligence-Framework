@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.analysis.contracts.claims import MAX_CLARIFICATION_QUESTION_CHARS
+from app.trace.claims import MAX_CLARIFICATION_QUESTION_CHARS
 
 GAP_IDENTIFICATION_INSTRUCTIONS = f"""
 Gaps:

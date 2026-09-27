@@ -9,12 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
 from app.schemas.message_metadata import message_trace, serialize_message_metadata
-from app.services.analysis.contracts import (
-    CaseAnalysisGap,
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    followup_qa_id,
-)
+from app.trace.claims import CaseAnalysisGap, CaseFollowupExchange, followup_qa_id
+from app.trace.trace import CaseAnalysisTrace
 
 
 async def case_messages(db: AsyncSession, case_id: UUID) -> list[ChatMessage]:

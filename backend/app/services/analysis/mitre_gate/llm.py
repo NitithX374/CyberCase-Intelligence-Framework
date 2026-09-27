@@ -7,9 +7,9 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from app.services.analysis.contracts import CaseAnalysisFailure
-from app.services.analysis.provider import request_stage
-from app.services.analysis.settings import AnalysisPipelineConfig
+from app.errors import CaseAnalysisFailure
+from app.llm.request import request_stage
+from app.llm.settings import AnalysisPipelineConfig
 from app.services.analysis.technical_context_contracts import (
     MITRE_APPLICABILITY_GATE_VERSION,
     MitreApplicabilityDecision,

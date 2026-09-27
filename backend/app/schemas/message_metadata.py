@@ -3,14 +3,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 from typing_extensions import TypedDict
 
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisMode,
-    CaseAnalysisTrace,
-    CaseGroundingReport,
-    ChatAnswerUnit,
-    ChatSuggestion,
-)
+from app.services.chat.contracts import ChatAnswerUnit, ChatSuggestion
+from app.trace.claims import CaseAnalysisClaim, CaseAnalysisMode
+from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport
 
 
 class MessageAnalysisTrace(BaseModel):

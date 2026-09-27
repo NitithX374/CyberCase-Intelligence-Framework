@@ -2,20 +2,16 @@ import asyncio
 
 from case_mitre_test_support import _fixtures, _gate
 
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisTrace,
-    CaseMitreAssociation,
-    CaseSourceCitation,
-)
 from app.services.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
     retrieve_technical_context,
     write_analysis,
 )
-from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.clients.rag_client import RagCallFailure
+from app.trace.bind import resolve_case_trace
+from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
+from app.trace.trace import CaseAnalysisTrace, CaseMitreAssociation
 
 
 def association(technique_id: str, claim_ids: list[str]) -> CaseMitreAssociation:

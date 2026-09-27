@@ -8,20 +8,20 @@ import pytest
 
 import app.services.chat.case_answer as module
 from app.config import settings
+from app.errors import CaseAnalysisFailure
+from app.llm.settings import configured_pipeline
 from app.schemas.rag import LegalReferenceResult
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisFailure,
-    CaseAnalysisGap,
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    CaseSourceCitation,
-)
-from app.services.analysis.settings import configured_pipeline
 from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.chat.case_answer import CHAT_OUTPUT_TOKENS, UNANSWERED, generate_case_answer
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.services.workflow.answer_question import answer_metadata
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseAnalysisGap,
+    CaseFollowupExchange,
+    CaseSourceCitation,
+)
+from app.trace.trace import CaseAnalysisTrace
 
 NARRATIVE_ID = "narrative-1"
 DOCUMENT_ID = "statement-1"

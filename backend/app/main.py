@@ -12,16 +12,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import engine
 from app.errors import AppError
-from app.routers import (
-    analysis,
-    auth,
-    cases,
-    chat,
-    documents,
-    health,
-    reports,
-    sources,
-)
+from app.routers import analysis, auth, cases, chat, documents, health, reports, sources
 from app.services.auth.dependencies import get_current_user, guard_browser_request
 
 

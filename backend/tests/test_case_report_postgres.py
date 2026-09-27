@@ -9,12 +9,12 @@ from sqlalchemy import select
 from app.models.analysis import CaseAnalysisResult
 from app.models.report import CaseReport
 from app.schemas.reports import CaseReportCreate
-from app.services.analysis.contracts import followup_snapshot
 from app.services.cases.ownership import owned_case
 from app.services.reports import persistence
 from app.services.reports.contracts import ReportGenerationConflict
 from app.services.reports.persistence import CaseReportService
 from app.services.sources.case_source_bundle import WITH_SOURCES, analysable_bundle, sources_read
+from app.trace.claims import followup_snapshot
 
 
 async def reported_case(session_factory):
