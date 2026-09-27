@@ -26,12 +26,10 @@ def test_health_case_and_nested_report_api_routes_are_registered() -> None:
 
     assert api_routes == {
         ("GET", "/api/v1/health"),
-        ("GET", "/api/v1/auth/me"),
         ("POST", "/api/v1/auth/register"),
         ("POST", "/api/v1/auth/login"),
         ("GET", "/api/v1/auth/session"),
         ("POST", "/api/v1/auth/logout"),
-        ("POST", "/api/v1/auth/dev-login"),
         ("GET", "/api/v1/cases"),
         ("POST", "/api/v1/cases"),
         ("GET", "/api/v1/cases/{case_id}"),
@@ -39,7 +37,6 @@ def test_health_case_and_nested_report_api_routes_are_registered() -> None:
         ("DELETE", "/api/v1/cases/{case_id}"),
         ("GET", "/api/v1/cases/{case_id}/chat"),
         ("POST", "/api/v1/cases/{case_id}/chat/messages"),
-        ("GET", "/api/v1/cases/{case_id}/documents"),
         ("POST", "/api/v1/cases/{case_id}/documents"),
         ("GET", "/api/v1/cases/{case_id}/documents/{document_id}/content"),
         ("GET", "/api/v1/cases/{case_id}/sources"),
@@ -51,6 +48,25 @@ def test_health_case_and_nested_report_api_routes_are_registered() -> None:
         ("GET", "/api/v1/cases/{case_id}/reports/{report_id}/pdf"),
         ("GET", "/api/v1/cases/{case_id}/reports/{report_id}/html"),
     }
+
+
+def test_the_backend_decides_the_language_and_sends_no_derived_case_status() -> None:
+    openapi = _fastapi_app().openapi()
+    schemas = openapi["components"]["schemas"]
+
+    assert "requestBody" not in openapi["paths"]["/api/v1/cases/{case_id}/analysis"]["post"]
+    assert "CaseAnalysisCreate" not in schemas
+    assert "response_language" not in schemas["ChatMessageCreate"]["properties"]
+    assert "status" not in schemas["CaseRead"]["properties"]
+    assert "status" not in schemas["CaseChatRead"]["properties"]
+
+
+def test_documents_are_listed_through_their_sources() -> None:
+    documents = _fastapi_app().openapi()["paths"]["/api/v1/cases/{case_id}/documents"]
+    source = _fastapi_app().openapi()["components"]["schemas"]["CaseSourceRead"]
+
+    assert set(documents) == {"post"}
+    assert {"filename", "mime_type", "size_bytes"} <= set(source["properties"])
 
 
 def test_legacy_route_prefixes_return_not_found_without_startup() -> None:

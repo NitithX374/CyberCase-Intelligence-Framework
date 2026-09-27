@@ -38,22 +38,20 @@ beforeEach(() => {
 });
 
 describe("a visitor who is not signed in", () => {
-  it("is sent to login, with where they were going", async () => {
+  it("is sent to login", async () => {
     pathname = "/case/abc/overview";
     signedOut();
 
     render(<AccountGate>workspace</AccountGate>);
 
-    await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith("/login?redirect=%2Fcase%2Fabc%2Foverview"),
-    );
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
     expect(screen.queryByText("workspace")).not.toBeInTheDocument();
   });
 
   it("is sent to login from the case library too", async () => {
     signedOut();
     render(<AccountGate>workspace</AccountGate>);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login?redirect=%2Fcase"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
   });
 
   it("can still reach the login page itself", () => {

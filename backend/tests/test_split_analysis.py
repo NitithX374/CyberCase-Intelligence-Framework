@@ -4,27 +4,25 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from case_mitre_test_support import _fixtures, _gate, _response
 
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisFailure,
     CaseAnalysisGap,
-    CaseAnalysisOutput,
     CaseMitreAssociation,
-    CaseProviderJudgement,
-    CaseProviderReading,
     CaseSourceCitation,
 )
-from app.services.analysis.pipeline import (
-    AnalysisArtifacts,
-    AnalysisInput,
-    merged_receipt,
-)
+from app.services.analysis.pipeline import AnalysisInput
 from app.services.analysis.steps.bind import resolve_case_trace
+from app.services.analysis.steps.technical_context import CaseMitreAugmentation
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from experiments import analysis_arms
-from experiments.analysis_arms import judge_reading, split
+from experiments.analysis_arms import ArmArtifacts, judge_reading, split
 from experiments.split_analysis import (
+    CaseJudgementOutput,
+    CaseProviderJudgement,
+    CaseProviderReading,
     CaseReadingOutput,
     reading_payload,
     split_trace,
@@ -73,29 +71,36 @@ def judgement(**overrides) -> CaseProviderJudgement:
     )
 
 
-def split_stages(*, seen: list[dict], reading: CaseProviderReading, technical_context=None):
+def split_stages(*, seen: list[dict], reading: CaseProviderReading):
     async def fake_reading(**kwargs):
         seen.append({"stage": "reading", **kwargs})
-        return CaseReadingOutput(
-            reading=reading,
-            execution_receipt={"calls": [{"stage": "case_reading"}]},
-        )
+        return CaseReadingOutput(reading=reading, calls=({"stage": "case_reading"},))
 
     async def fake_judgement(**kwargs):
         seen.append({"stage": "judgement", **kwargs})
+        context = kwargs["technical_context"]
         trace = split_trace(
             kwargs["reading"],
             judgement(),
-            mode=kwargs["mode"],
-            retrieval_context_id=kwargs["retrieval_context_id"] if technical_context else None,
+            retrieval_context_id=context.retrieval_context_id if context else None,
         )
-        return CaseAnalysisOutput(
-            answer=trace.summary,
-            trace=trace,
-            execution_receipt={"calls": [{"stage": "case_judgement"}]},
-        )
+        return CaseJudgementOutput(trace=trace, calls=({"stage": "case_judgement"},))
 
     return {"reading_request": fake_reading, "judgement_request": fake_judgement}
+
+
+def skip_the_gate(monkeypatch):
+    original = analysis_arms.retrieve_technical_context
+
+    async def skipped(data, so_far):
+        return await original(
+            data,
+            so_far,
+            gate=_gate({"decision": "SKIP", "source_message_ids": [], "trigger_text": []}),
+            rag=_response,
+        )
+
+    monkeypatch.setattr(analysis_arms, "retrieve_technical_context", skipped)
 
 
 def test_the_split_arm_is_two_calls_where_the_direct_arm_is_one(monkeypatch):
@@ -115,15 +120,20 @@ def test_the_split_arm_is_two_calls_where_the_direct_arm_is_one(monkeypatch):
     assert called == ["retrieve_technical_context", "read_sources", "judge_reading", "bind_to_case"]
 
 
-def test_the_reading_call_is_never_shown_the_technical_context():
+def test_the_reading_call_is_never_shown_the_technical_context(monkeypatch):
     bundle = case_with_one_narrative()
+    _, _, _, applicability, context = _fixtures()
     seen: list[dict] = []
-    context = {"context": "T1486 encrypts data.", "mitre_table": [{"technique_id": "T1486"}]}
 
-    asyncio.run(
+    async def retrieved(data, so_far, **_kwargs):
+        augmentation = CaseMitreAugmentation("retrieved_from_rag", applicability, context)
+        return ArmArtifacts(augmentation=augmentation)
+
+    monkeypatch.setattr(analysis_arms, "retrieve_technical_context", retrieved)
+    artifacts = asyncio.run(
         split(
             AnalysisInput(sources=bundle),
-            **split_stages(seen=seen, reading=reading_of(bundle), technical_context=context),
+            **split_stages(seen=seen, reading=reading_of(bundle)),
         )
     )
 
@@ -131,15 +141,16 @@ def test_the_reading_call_is_never_shown_the_technical_context():
     judgement_call = next(call for call in seen if call["stage"] == "judgement")
 
     assert "technical_context" not in reading_call
-    assert "retrieval_context_id" not in reading_call
-    assert "technical_context" in judgement_call
+    assert judgement_call["technical_context"] == context
+    assert artifacts.trace.retrieval_context_id == context.retrieval_context_id
 
 
-def test_the_judgement_call_receives_the_claims_the_reading_wrote():
+def test_the_judgement_call_receives_the_claims_the_reading_wrote(monkeypatch):
     bundle = case_with_one_narrative()
     seen: list[dict] = []
     reading = reading_of(bundle)
 
+    skip_the_gate(monkeypatch)
     asyncio.run(split(AnalysisInput(sources=bundle), **split_stages(seen=seen, reading=reading)))
 
     judgement_call = next(call for call in seen if call["stage"] == "judgement")
@@ -147,25 +158,14 @@ def test_the_judgement_call_receives_the_claims_the_reading_wrote():
     assert [claim.claim_id for claim in judgement_call["reading"].claims] == ["A-01"]
 
 
-def test_an_arm_that_costs_two_calls_does_not_come_back_looking_like_one():
+def test_an_arm_that_costs_two_calls_does_not_come_back_looking_like_one(monkeypatch):
     bundle = case_with_one_narrative()
+    skip_the_gate(monkeypatch)
     artifacts = asyncio.run(
         split(AnalysisInput(sources=bundle), **split_stages(seen=[], reading=reading_of(bundle)))
     )
-    assert [call["stage"] for call in artifacts.receipt["calls"]] == [
-        "case_reading",
-        "case_judgement",
-    ]
-
-
-def test_merging_receipts_keeps_every_call_and_the_last_of_everything_else():
-    merged = merged_receipt(
-        {"calls": [{"stage": "case_reading"}], "source_reference_type": "case_source"},
-        {"calls": [{"stage": "case_judgement"}], "failure_code": "none"},
-    )
-    assert [call["stage"] for call in merged["calls"]] == ["case_reading", "case_judgement"]
-    assert merged["source_reference_type"] == "case_source"
-    assert merged["failure_code"] == "none"
+    assert [call["stage"] for call in artifacts.calls] == ["case_reading", "case_judgement"]
+    assert artifacts.trace.grounding is not None, "the split trace is bound like a direct one"
 
 
 def test_judging_needs_something_to_judge():
@@ -176,7 +176,7 @@ def test_judging_needs_something_to_judge():
 
     with pytest.raises(CaseAnalysisFailure) as failure:
         asyncio.run(
-            judge_reading(AnalysisInput(sources=bundle), AnalysisArtifacts(), request=unreachable)
+            judge_reading(AnalysisInput(sources=bundle), ArmArtifacts(), request=unreachable)
         )
     assert failure.value.code == "analysis_reading_missing"
 
@@ -184,11 +184,7 @@ def test_judging_needs_something_to_judge():
 def test_the_trace_takes_its_claims_from_the_reading_and_its_summary_from_the_judgement():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
-    trace = split_trace(
-        reading,
-        judgement(summary="Overnight encryption of a file share."),
-        mode="case_overview",
-    )
+    trace = split_trace(reading, judgement(summary="Overnight encryption of a file share."))
 
     assert [claim.claim_id for claim in trace.claims] == ["A-01"]
     assert trace.summary == "Overnight encryption of a file share."
@@ -226,7 +222,6 @@ def test_a_split_trace_is_bound_to_the_case_the_same_way_a_direct_one_is():
                 )
             ],
         ),
-        mode="case_overview",
     )
 
     bound = resolve_case_trace(trace, bundle, mitre_table=[{"technique_id": "T1486"}])

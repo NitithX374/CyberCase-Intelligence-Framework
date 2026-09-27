@@ -29,6 +29,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 pytest*
+!backend/pytest.ini
 
 # Environments
 .env
@@ -165,13 +166,17 @@ deliverables/**/*.pdf
 *.sqlite3
 *.db
 /pgdata/
+/backups/
 /postgres-data/
 /db-data/
 
 # ==============================================================================
 # Experiments & Research Benchmarks
 # ==============================================================================
-backend/experiments/
+backend/experiments/*
+!backend/experiments/__init__.py
+!backend/experiments/analysis_arms.py
+!backend/experiments/split_analysis.py
 /evaluation/
 
 # The offline semantic-verification fixture is intentionally versioned.

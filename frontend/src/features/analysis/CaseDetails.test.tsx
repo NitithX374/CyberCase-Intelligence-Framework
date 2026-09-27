@@ -5,18 +5,14 @@ import type { SourceMessageRef } from "@/features/sources/types";
 
 const statement: SourceMessageRef = {
   id: "source-1",
-  ordinal: 1,
-  label: "statement.pdf",
+  label: "statement.pdf · p. 4",
   excerpt: "received 52,000 baht",
-  sourceType: "case_description",
-  sourceTypeLabel: "Case narrative",
-  fullContent: "received 52,000 baht",
   displayContent: "received 52,000 baht",
   exactQuote: "received 52,000 baht",
-  documentId: "doc-1",
   filename: "statement.pdf",
   pageNumbers: [4],
-  sourcePages: [],
+  sourcePages: [{ pageNumber: 4, text: "received 52,000 baht" }],
+  question: null,
 };
 
 const events = (count: number) =>
@@ -59,7 +55,7 @@ describe("CaseDetails", () => {
       "52,000 baht left the account",
     );
 
-    fireEvent.click(within(timeline).getByRole("button", { name: "p. 4" }));
+    fireEvent.click(within(timeline).getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(onSelectSource).toHaveBeenCalledWith(
       statement,
       expect.any(HTMLElement),
