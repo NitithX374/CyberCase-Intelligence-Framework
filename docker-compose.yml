@@ -36,7 +36,8 @@ services:
     # Secrets, the database login it shares with `db`, and the model switch.
     # Everything else is the default in backend/app/config.py.
     environment:
-      CASE_ANALYSIS_MODEL: ${CASE_ANALYSIS_MODEL:-deepseek/deepseek-v4.1-flash}
+      CASE_ANALYSIS_MODEL: ${CASE_ANALYSIS_MODEL:-google/gemma-4-26b-a4b-it}
+      CASE_ANALYSIS_PROVIDERS: ${CASE_ANALYSIS_PROVIDERS:-coreweave/bf16,nextbit/bf16}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
