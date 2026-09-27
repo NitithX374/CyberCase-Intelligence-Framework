@@ -52,20 +52,13 @@ Return the requested case_analysis_trace_v1 JSON. Write summary, claim text,
 gap text, clarification questions, association reasons, and reasoning in the requested
 language. Keep identifiers and schema values unchanged. Do not make legal conclusions.
 
-Case Structure:
-- summary: concise high-level overview of the case based on Case sources, written the way
-  an investigator would brief a colleague. Technical interpretation may be mentioned only
-  when supported by explicit Case evidence and relevant supplied technical context.
-  Carry no schema values into it: no status words, no ATT&CK identifiers, no disclaimers
-  about what the analysis is or is not. Those belong to the fields that hold them.
-- involved_parties: list known persons, entities, or accounts as objects with "name",
-  "role", and "claim_ids" referencing supporting claims. Do not invent roles or legal guilt.
-- timeline: list chronologically anchored events as objects with "time", "event",
-  and "claim_ids" referencing supporting claims. Do not invent chronology when time is unknown.
-- impacts: list tangible impacts, losses, or scope as objects with "description"
-  and "claim_ids" referencing supporting claims.
+Write the fields in the order the schema lists them. Claims come first, and every later
+field is built from the claims already written above it.
 
 Claims:
+- Write a claim for every case fact that the summary, involved_parties, timeline, or
+  impacts will state: each person and their role, each dated event, each amount, and each
+  impact. A fact without a claim cannot appear in those fields.
 - Use sequential claim IDs A-01 through A-64.
 - Distinguish reported facts, qualified analytical inferences, and unknowns.
 - Reported facts and analytical inferences must be grounded in supplied Case sources.
@@ -80,6 +73,22 @@ Claims:
   list that source in both supporting_source_ids and contradicting_source_ids.
 - Preserve attribution, conflicts, and material OCR uncertainty. Never invent facts.
 - Document extraction metadata and OCR warnings provide source provenance, not Case facts.
+
+Case Structure, written after the claims:
+- summary: concise high-level overview of the case, written the way an investigator would
+  brief a colleague. State only facts that the claims above state. Technical
+  interpretation may be mentioned only when supported by explicit Case evidence and
+  relevant supplied technical context. Carry no schema values into it: no status words,
+  no ATT&CK identifiers, no disclaimers about what the analysis is or is not. Those
+  belong to the fields that hold them.
+- involved_parties: list known persons, entities, or accounts as objects with "name",
+  "role", and "claim_ids" naming the claims above that support them. Do not invent roles
+  or legal guilt.
+- timeline: list chronologically anchored events as objects with "time", "event",
+  and "claim_ids" naming the claims above that support them. Do not invent chronology
+  when time is unknown.
+- impacts: list tangible impacts, losses, or scope as objects with "description"
+  and "claim_ids" naming the claims above that support them.
 
 MITRE ATT&CK Associations:
 - If technical_context is absent, empty, or insufficient, return an empty
