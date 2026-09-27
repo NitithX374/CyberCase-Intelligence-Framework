@@ -133,6 +133,21 @@ class HybridRetriever:
         vector_results.sort(key=lambda r: r.score, reverse=True)
         return vector_results
 
+    def _search_pooled(self, texts: list[str], top_k: int) -> list:
+        """Vector candidates for every text, pooled and deduplicated by stix_id.
+
+        The pool is not trimmed back to ``top_k``: with two texts it holds up to
+        twice as many candidates, and the reranker decides between them.
+        """
+        pooled: list = []
+        seen: set[str] = set()
+        for text in texts:
+            for vr in self.vector_retriever.search_all(text, top_k=top_k):
+                if vr.stix_id not in seen:
+                    seen.add(vr.stix_id)
+                    pooled.append(vr)
+        return pooled
+
     @staticmethod
     def _graph_seeds(vector_results: list, limit: int) -> dict[str, float]:
         """Graph seed STIX IDs in relevance order → score of the hit that seeded them.
@@ -162,11 +177,13 @@ class HybridRetriever:
         node_label_filter: Optional[str] = None,
         expand_graph: bool = True,
         graph_seed_k: Optional[int] = None,
+        search_texts: Optional[list[str]] = None,
     ) -> GraphRAGResult:
         """Execute the full GraphRAG retrieval pipeline.
 
         Args:
             query: The search query (should be in English for best results).
+                Also the query the reranker scores candidates against.
             top_k: Number of vector results to retrieve.
             node_label_filter: Optional filter for entity types.
             expand_graph: When False, skip Neo4j graph expansion and return
@@ -175,6 +192,11 @@ class HybridRetriever:
             graph_seed_k: How many top-ranked vector results may seed the graph
                 expansion (default FINAL_TOP_K). Quota retrieval passes its own
                 quota here so the graph never expands a hit the quota discards.
+            search_texts: Texts to run the vector search with, when they are
+                not ``query`` itself (default ``[query]``). Candidates from
+                every text are pooled, deduplicated by stix_id, and reranked
+                against ``query`` — how a HyDE passage searches while the
+                reranker still judges relevance.
 
         Returns:
             GraphRAGResult with combined vector + graph context.
@@ -182,7 +204,7 @@ class HybridRetriever:
         print(f"[RETRIEVE] Query: {query[:80]}...")
 
         # ── Step 1: Vector search ─────────────────────────────────────────
-        vector_results = self.vector_retriever.search_all(query, top_k=top_k)
+        vector_results = self._search_pooled(search_texts or [query], top_k)
 
         print(f"[RETRIEVE] Vector search: {len(vector_results)} results (pre-rerank)")
 
@@ -303,6 +325,8 @@ class HybridRetriever:
         max_vector: int = 15,
         max_graph: int = 8,
         node_label_filter: Optional[str] = None,
+        search_texts: Optional[list[Optional[list[str]]]] = None,
+        expand_graph: bool = True,
     ) -> "GraphRAGResult":
         """Multi-query retrieval with a PER-QUERY QUOTA.
 
@@ -319,6 +343,12 @@ class HybridRetriever:
             max_vector:   Hard cap on merged vector results (fits the LLM ctx).
             max_graph:    Hard cap on merged subgraphs, filled technique-first
                           and round-robin across sub-queries.
+            search_texts: Optional, parallel to ``queries``: the texts each
+                          slot searches with (see ``retrieve``). ``None`` for a
+                          slot, or for the whole argument, searches with the
+                          query itself.
+            expand_graph: False skips Neo4j. The vector list is unaffected, so
+                          a retrieval ablation scored only on it can skip it.
 
         The quota binds BOTH modalities: each sub-query seeds the graph from
         the same ``per_query_k`` hits it contributes to the vector list, so a
@@ -338,6 +368,8 @@ class HybridRetriever:
                 top_k=top_k,
                 node_label_filter=node_label_filter,
                 graph_seed_k=per_query_k,
+                expand_graph=expand_graph,
+                search_texts=search_texts[i - 1] if search_texts else None,
             )
             per_query_vectors.append(result.vector_results[:per_query_k])
 
