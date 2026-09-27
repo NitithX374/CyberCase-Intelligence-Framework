@@ -3,10 +3,10 @@ import unittest
 
 import httpx
 
+from app.analysis.technical_context import rag_client
+from app.analysis.technical_context.rag_client import RagCallFailure, request_rag
+from app.analysis.technical_context.retrieve import validated_case_rag_context
 from app.schemas.rag import QueryResponse
-from app.services.analysis.steps.technical_context import validated_case_rag_context
-from app.services.clients import rag_client
-from app.services.clients.rag_client import RagCallFailure, request_rag
 
 
 async def request_rag_through(handler) -> QueryResponse:

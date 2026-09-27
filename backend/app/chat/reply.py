@@ -9,6 +9,26 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.analysis.clarification import Ask, decide_followup
+from app.analysis.run import AnalysisStep, analysis_running, run_case_analysis
+from app.chat.answer import (
+    answer_case_question,
+    answer_recorded_question,
+    being_answered,
+    message_text,
+)
+from app.chat.followup import (
+    answer_message,
+    asked_gap_keys,
+    asked_in_round,
+    case_messages,
+    followup_qa_ids,
+    last_question_awaiting_analysis,
+    next_ordinal,
+    pending_question,
+    question_message,
+    rounds_asked,
+)
 from app.config import settings
 from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
@@ -16,27 +36,7 @@ from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.schemas.analysis import CaseAnalysisResultRead
 from app.schemas.chat import CaseChatRead, CaseChatResponse, ChatMessageCreate, ChatMessageRead
-from app.services.analysis.clarification import Ask, decide_followup
 from app.services.cases.ownership import owned_case
-from app.services.chat.followup import (
-    answer_message,
-    asked_gap_keys,
-    asked_in_round,
-    case_messages,
-    followup_qa_ids,
-    last_question_awaiting_analysis,
-    pending_question,
-    question_message,
-    rounds_asked,
-)
-from app.services.workflow.answer_question import (
-    answer_case_question,
-    answer_recorded_question,
-    being_answered,
-    message_text,
-)
-from app.services.workflow.run_analysis import AnalysisStep, analysis_running, run_case_analysis
-from app.services.workflow.shared import next_ordinal
 from app.trace.claims import CaseAssessmentTrace
 from app.trace.trace import CaseAnalysisTrace
 

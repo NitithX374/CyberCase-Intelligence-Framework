@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 from typing_extensions import TypedDict
 
-from app.services.chat.contracts import ChatAnswerUnit, ChatSuggestion
+from app.chat.contracts import ChatAnswerUnit, ChatSuggestion
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisMode
 from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport
 

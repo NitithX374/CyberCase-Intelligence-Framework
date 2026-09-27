@@ -4,12 +4,12 @@ import asyncio
 
 import pytest
 
-from app.config import settings
-from app.services.analysis.mitre_gate import chosen_gate, mitre_gate, never_applicable
-from app.services.analysis.mitre_gate.llm import (
+from app.analysis.technical_context.gate import chosen_gate, mitre_gate, never_applicable
+from app.analysis.technical_context.gate_llm import (
     evaluate_mitre_applicability,
     validate_mitre_applicability,
 )
+from app.config import settings
 from app.services.sources.case_source_bundle import CaseSourceItem
 
 CYBER = "ตรวจพบ PowerShell.exe เชื่อมต่อออกไปยังไอพี 198.51.100.23 เมื่อเวลา 03.00 น."
@@ -46,7 +46,7 @@ def test_never_skips_without_asking_anything(mode, sources):
 
 
 def test_the_encoder_gate_quotes_the_sentence_it_fired_on(mode, monkeypatch, sources):
-    from app.services.analysis.mitre_gate import encoder
+    from app.analysis.technical_context import gate_encoder as encoder
 
     mode("encoder")
     monkeypatch.setattr(
@@ -65,7 +65,7 @@ def test_the_encoder_gate_quotes_the_sentence_it_fired_on(mode, monkeypatch, sou
 
 
 def test_what_the_encoder_returns_passes_the_grounding_check(mode, monkeypatch, sources):
-    from app.services.analysis.mitre_gate import encoder
+    from app.analysis.technical_context import gate_encoder as encoder
 
     mode("encoder")
     monkeypatch.setattr(
@@ -88,7 +88,7 @@ def test_what_the_encoder_returns_passes_the_grounding_check(mode, monkeypatch, 
 
 
 def test_nothing_above_the_threshold_is_a_skip(mode, monkeypatch, sources):
-    from app.services.analysis.mitre_gate import encoder
+    from app.analysis.technical_context import gate_encoder as encoder
 
     mode("encoder")
     monkeypatch.setattr(
@@ -106,7 +106,7 @@ def test_a_case_with_no_readable_text_is_a_skip(mode):
 
 
 def test_only_the_sources_actually_quoted_are_cited(mode, monkeypatch):
-    from app.services.analysis.mitre_gate import encoder
+    from app.analysis.technical_context import gate_encoder as encoder
 
     mode("encoder")
     sources = [

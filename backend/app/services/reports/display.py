@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
+from app.analysis.technical_context.contracts import CaseTechnicalAugmentation
 from app.schemas.reports import (
     CaseReportContent,
     ReportEvent,
@@ -13,7 +14,6 @@ from app.schemas.reports import (
     ReportSource,
     ReportTechnique,
 )
-from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace

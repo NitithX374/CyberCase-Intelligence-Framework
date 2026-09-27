@@ -7,13 +7,13 @@ from uuid import uuid4
 import pytest
 from pypdf import PdfReader
 
-from app.models.sources import CaseSource
-from app.schemas.reports import CaseReportContent
-from app.services.analysis.technical_context_contracts import (
+from app.analysis.technical_context.contracts import (
     CaseTechnicalAugmentation,
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
+from app.models.sources import CaseSource
+from app.schemas.reports import CaseReportContent
 from app.services.reports.contracts import CaseReportInput
 from app.services.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
 from app.services.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf

@@ -7,9 +7,9 @@ from uuid import uuid4
 import pytest
 from case_mitre_test_support import _gate
 
+from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, write_analysis
+from app.analysis.prompts import case_system_prompt
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.analysis.pipeline import AnalysisArtifacts, AnalysisInput, write_analysis
-from app.services.analysis.prompts import case_system_prompt
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -160,7 +160,7 @@ def test_a_revision_is_the_direct_prompt_with_the_correction_appended():
         )
 
     with (
-        patch("app.services.analysis.steps.write.request_stage", new=request_stage),
+        patch("app.analysis.write.request_stage", new=request_stage),
         patch.object(analysis_arms, "request_stage", new=request_stage),
     ):
         for revision in (None, "GROUNDING CORRECTION"):

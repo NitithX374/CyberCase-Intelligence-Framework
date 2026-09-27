@@ -8,8 +8,14 @@ from case_chat_support import GAP, TRACE, numbered_gaps, seeded_case
 from isolated_database import isolated_database
 from sqlalchemy import select
 
-import app.services.analysis.pipeline as pipeline_module
-import app.services.chat.case_chat as case_chat
+import app.analysis.pipeline as pipeline_module
+import app.chat.reply as case_chat
+from app.analysis.clarification import Ask
+from app.analysis.latest import get_latest_case_analysis
+from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
+from app.analysis.run import analysing, run_case_analysis
+from app.chat.followup import analysis_result_message, next_ordinal, pending_question
+from app.chat.reply import get_case_chat, post_case_message, send_case_message
 from app.config import settings
 from app.errors import CaseWorkflowError
 from app.models.analysis import CaseAnalysisResult
@@ -18,14 +24,7 @@ from app.models.chat import ChatMessage
 from app.models.sources import CaseSource
 from app.schemas.chat import ChatMessageCreate, ChatMessageRead
 from app.schemas.message_metadata import MessageAnalysisTrace
-from app.services.analysis.clarification import Ask
-from app.services.analysis.latest import get_latest_case_analysis
-from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
-from app.services.chat.case_chat import get_case_chat, post_case_message, send_case_message
-from app.services.chat.followup import analysis_result_message, pending_question
 from app.services.reports.display import clarification_limitation
-from app.services.workflow.run_analysis import analysing, run_case_analysis
-from app.services.workflow.shared import next_ordinal
 from app.trace.claims import CaseAnalysisGap, CaseAssessmentTrace
 from app.trace.trace import CaseAnalysisTrace
 

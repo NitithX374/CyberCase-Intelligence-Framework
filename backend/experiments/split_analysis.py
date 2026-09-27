@@ -6,11 +6,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.analysis.prompts import GAP_IDENTIFICATION_INSTRUCTIONS
+from app.analysis.technical_context.contracts import CaseRagContextPayload
+from app.analysis.write import provider_source_payload, write_request
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
-from app.services.analysis.prompts import GAP_IDENTIFICATION_INSTRUCTIONS
-from app.services.analysis.steps.write import provider_source_payload, write_request
-from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import CaseSourceBundle
 from app.trace.claims import (
     CaseAnalysisClaim,

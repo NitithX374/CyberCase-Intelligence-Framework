@@ -8,24 +8,23 @@ from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.language import case_language, question_language
+from app.analysis.latest import analysis_freshness, recorded_technical_context
+from app.chat.compose import generate_case_answer
+from app.chat.contracts import CaseAnalysisOutput
+from app.chat.followup import case_messages, followup_history_from, next_ordinal
 from app.database import async_session
 from app.errors import CaseAnalysisFailure, CaseWorkflowError
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
 from app.schemas.message_metadata import MessageMetadata, message_trace, serialize_message_metadata
-from app.services.analysis.language import case_language, question_language
-from app.services.analysis.latest import analysis_freshness, recorded_technical_context
 from app.services.cases.ownership import owned_case
-from app.services.chat.case_answer import generate_case_answer
-from app.services.chat.contracts import CaseAnalysisOutput
-from app.services.chat.followup import case_messages, followup_history_from
 from app.services.sources.case_source_bundle import (
     WITH_SOURCES,
     CaseSourceBundle,
     analysable_bundle,
 )
 from app.services.sources.source_service import SourceError
-from app.services.workflow.shared import next_ordinal
 
 _answering: set[UUID] = set()
 

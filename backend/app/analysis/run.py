@@ -8,38 +8,33 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.database import async_session
-from app.errors import CaseAnalysisFailure, CaseWorkflowError
-from app.models.analysis import CaseAnalysisResult
-from app.services.analysis.clarification import Ask, Proceed
-from app.services.analysis.language import case_language
-from app.services.analysis.latest import recorded_technical_context
-from app.services.analysis.pipeline import (
-    AnalysisAdvance,
-    AnalysisArtifacts,
-    AnalysisInput,
-    advance_case,
+from app.analysis.clarification import Ask, Proceed
+from app.analysis.language import case_language
+from app.analysis.latest import recorded_technical_context
+from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts, AnalysisInput, advance_case
+from app.analysis.store import (
+    AnalysisStep,
+    CaseUnderAnalysis,
+    external_context,
+    store_analysis,
+    store_assessment,
 )
-from app.services.analysis.steps.technical_context import technical_context_key
-from app.services.analysis.technical_context_contracts import CaseRagContextPayload
-from app.services.cases.ownership import owned_case
-from app.services.chat.followup import (
+from app.analysis.technical_context.contracts import CaseRagContextPayload
+from app.analysis.technical_context.retrieve import technical_context_key
+from app.chat.followup import (
     asked_gap_keys,
     case_messages,
     followup_history_from,
     last_question_awaiting_analysis,
     rounds_asked,
 )
+from app.config import settings
+from app.database import async_session
+from app.errors import CaseAnalysisFailure, CaseWorkflowError
+from app.models.analysis import CaseAnalysisResult
+from app.services.cases.ownership import owned_case
 from app.services.sources.case_source_bundle import WITH_SOURCES, analysable_bundle
 from app.services.sources.source_service import SourceError
-from app.services.workflow.analysis_storage import (
-    AnalysisStep,
-    external_context,
-    store_analysis,
-    store_assessment,
-)
-from app.services.workflow.shared import CaseUnderAnalysis
 from app.trace.claims import CaseAssessmentTrace
 
 _running: Counter[UUID] = Counter()

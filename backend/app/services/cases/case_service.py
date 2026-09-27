@@ -4,10 +4,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.analysis.latest import analysis_freshness
 from app.models.case import Case
 from app.models.report import CaseReport
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
-from app.services.analysis.latest import analysis_freshness
 from app.services.cases.ownership import owned_case
 
 WITH_LATEST_ANALYSIS = (selectinload(Case.latest_analysis_result),)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.analysis.mitre_gate.sentences import split_sources, split_text
+from app.analysis.technical_context.sentences import split_sources, split_text
 from app.services.sources.case_source_bundle import CaseSourceItem
 
 THAI_REPORT = """เมื่อวันที่ 4 พฤศจิกายน 2563 ผู้เสียหายเข้าแจ้งความ

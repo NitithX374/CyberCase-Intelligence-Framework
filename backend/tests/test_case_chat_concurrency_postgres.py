@@ -8,14 +8,14 @@ from case_chat_support import SETTLED, seeded_case
 from isolated_database import isolated_database
 from sqlalchemy import select, text
 
-import app.services.chat.case_chat as case_chat
+import app.chat.reply as case_chat
+from app.chat.answer import answer_case_question
+from app.chat.contracts import CaseAnalysisOutput
+from app.chat.followup import next_ordinal
+from app.chat.reply import post_case_message
 from app.models.case import Case
 from app.models.chat import ChatMessage
 from app.schemas.chat import ChatMessageCreate
-from app.services.chat.case_chat import post_case_message
-from app.services.chat.contracts import CaseAnalysisOutput
-from app.services.workflow.answer_question import answer_case_question
-from app.services.workflow.shared import next_ordinal
 
 pytestmark = pytest.mark.asyncio
 

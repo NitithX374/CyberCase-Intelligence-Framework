@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.analysis.mitre_gate.llm import validate_mitre_applicability
+from app.analysis.technical_context.gate_llm import validate_mitre_applicability
 from app.services.sources.case_source_bundle import CaseSourceItem
 
 SEMANTIC_FIXTURES = [

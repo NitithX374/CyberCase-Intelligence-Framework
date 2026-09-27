@@ -5,16 +5,16 @@ from uuid import uuid4
 import httpx
 import pytest
 
-from app.llm import request as provider
-from app.llm.openrouter import CoreLlmTarget
-from app.llm.settings import AnalysisPipelineConfig
-from app.services.analysis.mitre_gate.llm import (
+from app.analysis.technical_context.contracts import MITRE_APPLICABILITY_GATE_VERSION
+from app.analysis.technical_context.gate_llm import (
     MITRE_APPLICABILITY_SOURCE_MAX_CHARS,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
     build_mitre_applicability_prompt,
     evaluate_mitre_applicability,
 )
-from app.services.analysis.technical_context_contracts import MITRE_APPLICABILITY_GATE_VERSION
+from app.llm import request as provider
+from app.llm.openrouter import CoreLlmTarget
+from app.llm.settings import AnalysisPipelineConfig
 from app.services.document_ingestion.contracts import (
     DocumentPage,
     ExtractionMethod,

@@ -4,16 +4,16 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from app.schemas.rag import QueryResponse
-from app.services.analysis.mitre_gate import mitre_gate
-from app.services.analysis.technical_context_contracts import (
+from app.analysis.technical_context.contracts import (
     CaseRagContextPayload,
     CaseTechnicalAugmentation,
     CaseTechnicalAugmentationStatus,
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
-from app.services.clients.rag_client import RagCallFailure, request_rag
+from app.analysis.technical_context.gate import mitre_gate
+from app.analysis.technical_context.rag_client import RagCallFailure, request_rag
+from app.schemas.rag import QueryResponse
 from app.services.sources.case_source_bundle import CaseSourceBundle, build_rag_query
 from app.trace.claims import CaseFollowupExchange
 

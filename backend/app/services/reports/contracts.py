@@ -6,8 +6,8 @@ from uuid import UUID
 from fastapi import status
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.analysis.technical_context.contracts import CaseTechnicalAugmentation
 from app.errors import AppError
-from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.sources.case_source_bundle import CaseSourceBundle
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace
