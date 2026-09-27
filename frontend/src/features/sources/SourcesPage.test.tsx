@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { refusal } from "@/test/httpErrors";
-import SourcesPage from "./page";
+import { SourcesPage } from "./SourcesPage";
 
 const caseId = "22222222-2222-4222-8222-222222222222";
 

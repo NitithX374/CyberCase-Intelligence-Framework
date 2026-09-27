@@ -7,7 +7,7 @@ import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { deferred } from "@/features/chat/chatTestSupport";
 import { analysisResult, caseId } from "@/test/fixtures";
 import { httpError, refusal } from "@/test/httpErrors";
-import CaseShellLayout from "./layout";
+import { CaseWorkspace } from "./CaseWorkspace";
 
 const state = vi.hoisted(() => ({
   createCase: vi.fn(),
@@ -71,7 +71,7 @@ function renderLayout(page: ReactNode = <p>workspace</p>) {
   });
   const layout = (children: ReactNode) => (
     <QueryClientProvider client={queryClient}>
-      <CaseShellLayout>{children}</CaseShellLayout>
+      <CaseWorkspace>{children}</CaseWorkspace>
     </QueryClientProvider>
   );
   const view = render(layout(page));
@@ -88,7 +88,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe("CaseShellLayout", () => {
+describe("CaseWorkspace", () => {
   it("tells the reader when a new case could not be created, and remembers the closed chat", async () => {
     state.createCase.mockRejectedValue(httpError(500, "Internal Server Error"));
     renderLayout();

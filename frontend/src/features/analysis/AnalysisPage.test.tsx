@@ -9,7 +9,7 @@ import {
   narrativeSource,
   trace,
 } from "@/test/fixtures";
-import CaseAnalysisPage from "./page";
+import { AnalysisPage } from "./AnalysisPage";
 
 const answer = "The attacker came in through the web server.";
 
@@ -70,9 +70,9 @@ beforeEach(() => {
   sourcesState.failed = false;
 });
 
-describe("CaseAnalysisPage", () => {
+describe("AnalysisPage", () => {
   it("shows ATT&CK context that rests on the follow-up answer the analysis recorded", () => {
-    render(<CaseAnalysisPage />);
+    render(<AnalysisPage />);
 
     expect(
       screen.getByRole("heading", { name: "Exploit Public-Facing Application" }),
@@ -83,7 +83,7 @@ describe("CaseAnalysisPage", () => {
 
   it("withholds ATT&CK context while the case sources cannot be loaded", () => {
     sourcesState.failed = true;
-    render(<CaseAnalysisPage />);
+    render(<AnalysisPage />);
 
     expect(
       screen.queryByRole("heading", { name: "Exploit Public-Facing Application" }),
