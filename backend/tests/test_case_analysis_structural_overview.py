@@ -9,12 +9,14 @@ from app.services.analysis.contracts import (
     CaseImpactItem,
     CaseInvolvedParty,
     CaseProviderAnalysis,
+    CaseProviderCitation,
+    CaseProviderClaim,
     CaseSourceCitation,
     CaseTimelineItem,
 )
 from app.services.analysis.settings import AnalysisPipelineConfig
 from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.analysis.steps.write import execute_analysis_pipeline
+from app.services.analysis.steps.write import write_trace
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 
@@ -77,15 +79,25 @@ def test_resolve_case_trace_accepts_valid_parties_timeline_and_impacts() -> None
     assert len(validated.impacts) == 1
 
 
-def test_resolve_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
+@pytest.mark.parametrize(
+    ("section", "item"),
+    [
+        (
+            "involved_parties",
+            CaseInvolvedParty(name="Unknown Actor", role="Attacker", claim_ids=["A-99"]),
+        ),
+        (
+            "timeline",
+            CaseTimelineItem(time="Tuesday", event="Lateral movement", claim_ids=["A-05"]),
+        ),
+        ("impacts", CaseImpactItem(description="Financial loss", claim_ids=["A-99"])),
+    ],
+)
+def test_resolve_case_trace_drops_an_unknown_claim_id(section, item) -> None:
     source = CaseSourceItem(
         source_id="s1",
         source_kind="narrative",
         text="Server breached.",
-    )
-    citation = CaseSourceCitation(
-        source_id="s1",
-        exact_quote="Server breached.",
     )
     claim = CaseAnalysisClaim(
         claim_id="A-01",
@@ -93,74 +105,16 @@ def test_resolve_case_trace_rejects_unknown_claim_in_involved_parties() -> None:
         text="Server breached.",
         epistemic_status="reported",
         supporting_source_ids=["s1"],
-        supporting_citations=[citation],
+        supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote="Server breached.")],
     )
     trace = CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary="Breach occurred.",
-        involved_parties=[
-            CaseInvolvedParty(name="Unknown Actor", role="Attacker", claim_ids=["A-99"])
-        ],
         claims=[claim],
+        **{section: [item]},
     )
     validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert validated.involved_parties[0].claim_ids == []
-
-
-def test_resolve_case_trace_rejects_unknown_claim_in_timeline() -> None:
-    source = CaseSourceItem(
-        source_id="s1",
-        source_kind="narrative",
-        text="Server breached.",
-    )
-    citation = CaseSourceCitation(
-        source_id="s1",
-        exact_quote="Server breached.",
-    )
-    claim = CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="Server breached.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        supporting_citations=[citation],
-    )
-    trace = CaseAnalysisTrace(
-        analysis_mode="case_overview",
-        summary="Breach occurred.",
-        timeline=[CaseTimelineItem(time="Tuesday", event="Lateral movement", claim_ids=["A-05"])],
-        claims=[claim],
-    )
-    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert validated.timeline[0].claim_ids == []
-
-
-def test_resolve_case_trace_rejects_unknown_claim_in_impacts() -> None:
-    source = CaseSourceItem(
-        source_id="s1",
-        source_kind="narrative",
-        text="Server breached.",
-    )
-    citation = CaseSourceCitation(
-        source_id="s1",
-        exact_quote="Server breached.",
-    )
-    claim = CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="Server breached.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        supporting_citations=[citation],
-    )
-    trace = CaseAnalysisTrace(
-        analysis_mode="case_overview",
-        summary="Breach occurred.",
-        impacts=[CaseImpactItem(description="Financial loss", claim_ids=["A-99"])],
-        claims=[claim],
-    )
-    validated = resolve_case_trace(trace, CaseSourceBundle(revision=1, sources=(source,)), [])
-    assert validated.impacts[0].claim_ids == []
+    assert getattr(validated, section)[0].claim_ids == []
 
 
 class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
@@ -171,11 +125,11 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             source_kind="narrative",
             text=raw_text,
         )
-        citation = CaseSourceCitation(
+        citation = CaseProviderCitation(
             source_id="s1",
             exact_quote=raw_text,
         )
-        claim = CaseAnalysisClaim(
+        claim = CaseProviderClaim(
             claim_id="A-01",
             claim_type="reported",
             text="Company ACME was targeted by unauthorized access on Monday.",
@@ -196,31 +150,26 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
 
-        async def fake_request_stage(*args, **kwargs):
+        async def fake_request_stage(**kwargs):
             return provider_output
 
-        with patch(
-            "app.services.analysis.steps.write.request_analysis_stage",
-            new=fake_request_stage,
-        ):
-            result = await execute_analysis_pipeline(
-                CaseSourceBundle(revision=1, sources=(source,)),
-                "english",
-                AnalysisPipelineConfig(),
-                None,
-                receipt={"calls": []},
-                mode="case_overview",
+        with patch("app.services.analysis.steps.write.request_stage", new=fake_request_stage):
+            trace = await write_trace(
+                sources=CaseSourceBundle(revision=1, sources=(source,)),
+                language="english",
+                config=AnalysisPipelineConfig(),
             )
 
-        assert result.trace is not None
-        assert isinstance(result.trace, CaseAnalysisTrace)
-        assert len(result.trace.involved_parties) == 1
-        assert result.trace.involved_parties[0].name == "ACME"
-        assert result.trace.involved_parties[0].claim_ids == ["A-01"]
-        assert len(result.trace.timeline) == 1
-        assert result.trace.timeline[0].event == "Unauthorized access"
-        assert len(result.trace.impacts) == 1
-        assert result.trace.impacts[0].description == "Unauthorized access to systems"
+        assert isinstance(trace, CaseAnalysisTrace)
+        assert trace.analysis_mode == "case_overview"
+        assert trace.retrieval_context_id is None
+        assert len(trace.involved_parties) == 1
+        assert trace.involved_parties[0].name == "ACME"
+        assert trace.involved_parties[0].claim_ids == ["A-01"]
+        assert len(trace.timeline) == 1
+        assert trace.timeline[0].event == "Unauthorized access"
+        assert len(trace.impacts) == 1
+        assert trace.impacts[0].description == "Unauthorized access to systems"
 
 
 def test_case_overview_models_allow_empty_claim_ids() -> None:

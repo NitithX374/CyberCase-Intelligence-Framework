@@ -31,4 +31,4 @@ def test_case_serialization_reports_result_freshness_without_snapshot_state() ->
     serialized = serialize_case(case)
 
     assert serialized.analysis_freshness == "current"
-    assert serialized.status == "answered"
+    assert "status" not in serialized.model_dump()

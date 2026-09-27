@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { addCaseSource, getApiErrorMessage } from "@/lib/api";
-import { caseQueryKeys } from "@/lib/queryKeys";
-import { useUploadCaseDocument } from "@/features/sources/queries";
+import { addCaseSource } from "@/lib/api";
+import { refreshAfterSourceChange, useUploadCaseDocument } from "@/features/sources/queries";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface UseCaseSourceActionsOptions {
@@ -13,7 +12,7 @@ interface UseCaseSourceActionsOptions {
 export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
   const queryClient = useQueryClient();
   const uploadMutation = useUploadCaseDocument(caseId);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
   const [isAddingNarrative, setIsAddingNarrative] = useState(false);
 
   const uploadDocument = useCallback(
@@ -23,7 +22,7 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
       try {
         await uploadMutation.mutateAsync(file);
       } catch (error) {
-        setActionError(getApiErrorMessage(error, "The document could not be saved."));
+        setActionError(error);
       }
     },
     [caseId, uploadMutation],
@@ -41,13 +40,10 @@ export function useCaseSourceActions({ caseId }: UseCaseSourceActionsOptions) {
           provenance_json: { interface: "case_sources" },
           source_metadata_json: { interface: "case_sources" },
         });
-        void Promise.all([
-          queryClient.invalidateQueries({ queryKey: caseQueryKeys.sources(caseId) }),
-          queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
-        ]);
+        void refreshAfterSourceChange(queryClient, caseId);
         return true;
       } catch (error) {
-        setActionError(getApiErrorMessage(error, "The case narrative could not be saved."));
+        setActionError(error);
         return false;
       } finally {
         setIsAddingNarrative(false);

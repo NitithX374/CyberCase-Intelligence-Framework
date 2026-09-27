@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from types import SimpleNamespace
 
 import pytest
 from isolated_database import isolated_database
@@ -14,7 +15,14 @@ from app.services.analysis.contracts import (
     followup_payload,
 )
 from app.services.analysis.steps.bind import followup_registry_items, resolve_case_trace
-from app.services.chat.followup import load_followup_history
+from app.services.chat.followup import (
+    asked_gap_keys,
+    asked_in_round,
+    case_messages,
+    followup_history_from,
+    followup_qa_ids,
+    rounds_asked,
+)
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 ANSWER = "The incident happened at 23:30 on 12 May."
@@ -98,8 +106,6 @@ async def test_history_is_read_from_the_conversation_in_order():
                 email="history@example.com",
                 name="Analyst",
                 password_hash="x",
-                oauth_provider="password",
-                oauth_subject_id="history@example.com",
             )
             db.add(user)
             await db.flush()
@@ -139,9 +145,38 @@ async def test_history_is_read_from_the_conversation_in_order():
             case_id: uuid.UUID = case.id
 
         async with session_factory() as db:
-            history = await load_followup_history(db, case_id)
+            chat = await case_messages(db, case_id)
+        history = followup_history_from(chat)
 
     assert [item.qa_id for item in history] == ["QA-01", "QA-02"]
     assert history[0].answer == ANSWER
     assert history[0].gap_key == "topic:time"
     assert history[1].answer is None, "the outstanding question has no reply yet"
+    first, answer, second = chat
+    assert followup_qa_ids(chat) == {first.id: "QA-01", answer.id: "QA-01", second.id: "QA-02"}
+
+
+def test_the_round_state_is_read_from_the_questions_in_the_chat():
+    round_one, round_two = uuid.uuid4(), uuid.uuid4()
+
+    def said(ordinal, *, gap_key=None, asked_by=None):
+        return SimpleNamespace(
+            id=uuid.uuid4(),
+            ordinal=ordinal,
+            gap_key=gap_key,
+            analysis_result_id=asked_by,
+            in_reply_to_message_id=None,
+        )
+
+    chat = [
+        said(1, gap_key="topic:time", asked_by=round_one),
+        said(2, asked_by=round_one),
+        said(3, gap_key="topic:owner", asked_by=round_one),
+        said(4, gap_key="topic:host", asked_by=round_two),
+        said(5, gap_key="topic:orphaned"),
+    ]
+
+    assert asked_gap_keys(chat) == {"topic:time", "topic:owner", "topic:host", "topic:orphaned"}
+    assert rounds_asked(chat) == 2
+    assert asked_in_round(chat, round_one) == 2
+    assert asked_in_round(chat, round_two) == 1

@@ -24,7 +24,6 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_users"),
-        UniqueConstraint("oauth_provider", "oauth_subject_id", name="uq_users_provider_subject"),
         UniqueConstraint("email", name="uq_users_email"),
     )
 
@@ -37,20 +36,8 @@ class User(Base):
         String(255),
         nullable=False,
     )
-    email_verified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
     password_hash: Mapped[str | None] = mapped_column(String(512), nullable=True)
     name: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
-    )
-    oauth_provider: Mapped[str] = mapped_column(
-        String(32),
-        nullable=False,
-        default="google",
-    )
-    oauth_subject_id: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
     )

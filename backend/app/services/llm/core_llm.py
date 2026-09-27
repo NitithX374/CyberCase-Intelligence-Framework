@@ -15,8 +15,6 @@ class CoreLlmConfigurationError(RuntimeError):
 @dataclass(frozen=True)
 class CoreLlmTarget:
     model: str
-    api_key: str
-    base_url: str
     messages_url: str
     headers: dict[str, str]
 
@@ -24,17 +22,14 @@ class CoreLlmTarget:
 def resolve_core_llm_target(
     feature_model: str,
     *,
-    require_key: bool = True,
     configured_settings: Settings | None = None,
 ) -> CoreLlmTarget:
     active_settings = configured_settings or settings
     api_key = active_settings.openrouter_cybercase.strip()
-    if require_key and not api_key:
+    if not api_key:
         raise CoreLlmConfigurationError("OPENROUTER_CYBERCASE")
     return CoreLlmTarget(
         model=resolve_openrouter_model(feature_model),
-        api_key=api_key,
-        base_url=active_settings.openrouter_base_url.rstrip("/"),
         messages_url=active_settings.openrouter_messages_url,
         headers={
             "Authorization": f"Bearer {api_key}",

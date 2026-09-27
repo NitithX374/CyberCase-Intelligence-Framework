@@ -6,7 +6,9 @@ import type { CaseGap } from "@/features/analysis/types";
 import type { SourceMessageRef } from "@/features/sources/types";
 import { buildCaseOverview } from "./overview";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
-import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
+import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
+import { useIsFollowupPending } from "@/features/chat/useCaseChat";
+import { useCaseSources } from "@/features/sources/queries";
 import { useSourceDrawer } from "@/features/sources/useSourceDrawer";
 import { casePath } from "@/features/workspace/routes";
 import { CaseFindingsSection } from "./CaseFindingsSection";
@@ -17,44 +19,48 @@ import { ChatMessageMarkdown } from "@/features/chat/ChatMessageMarkdown";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 import { EmptyState } from "@/components/EmptyState";
-import { useWorkspaceActivity } from "@/features/workspace/WorkspaceActivityContext";
 
-interface CaseOverviewViewProps {
-  caseId: string | null;
-}
-
-export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
+export function CaseOverviewView({ caseId }: { caseId: string }) {
   const router = useRouter();
+  const runAnalysis = useRunCaseAnalysis(caseId);
 
   const analysisQuery = useCaseAnalysis(caseId);
-  const { caseSources, rows: sources, isLoading: sourcesLoading } = useCaseSourceRows(caseId);
+  const sourcesQuery = useCaseSources(caseId);
+  const sources = sourcesQuery.data ?? null;
   const drawer = useSourceDrawer();
 
   const isAnalysisRunning = useIsCaseAnalysisRunning(caseId);
 
   const analysisResult = analysisQuery.data ?? null;
-  const { isFollowupPending, runAnalysis } = useWorkspaceActivity();
+  const isFollowupPending = useIsFollowupPending(caseId);
   const [overviewTab, setOverviewTab] = useState<"findings" | "questions">("findings");
   const overview = useMemo(
     () => buildCaseOverview(analysisResult, sources),
     [analysisResult, sources],
   );
 
-  const navigateToSources = () => {
-    if (caseId) router.push(casePath(caseId, "sources"));
-  };
+  const navigateToSources = () => router.push(casePath(caseId, "sources"));
 
-  if (!caseId) {
-    return (
-      <CaseOverviewState
-        title="No case material yet"
-        description="Add a narrative or a file to begin."
-      />
-    );
+  if ((analysisQuery.isLoading && !analysisResult) || (sourcesQuery.isLoading && analysisResult)) {
+    return <CaseOverviewSkeleton />;
   }
 
-  if ((analysisQuery.isLoading && !analysisResult) || (sourcesLoading && analysisResult)) {
-    return <CaseOverviewSkeleton />;
+  if (analysisQuery.isLoadingError || sourcesQuery.isLoadingError) {
+    return (
+      <CaseOverviewState
+        title="Analysis could not be loaded"
+        description={
+          analysisQuery.isLoadingError
+            ? "The saved analysis could not be read. Nothing was changed."
+            : "The case sources could not be read, so the findings cannot be shown with their sources."
+        }
+        actionLabel="Try again"
+        onAction={() => {
+          if (analysisQuery.isLoadingError) void analysisQuery.refetch();
+          if (sourcesQuery.isLoadingError) void sourcesQuery.refetch();
+        }}
+      />
+    );
   }
 
   if (overview.unavailableReason) {
@@ -68,18 +74,22 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
     );
   }
 
-  if (!overview.hasAnalysis && isAnalysisRunning) {
+  if (!overview.hasAnalysis && (isAnalysisRunning || isFollowupPending)) {
     return (
       <CaseOverviewState
         processing
         title="Analyzing…"
-        description="Reading the case sources. This can take a minute."
+        description={
+          isFollowupPending
+            ? "Reading the case sources with your answer. This can take a minute."
+            : "Reading the case sources. This can take a minute."
+        }
       />
     );
   }
 
   if (!overview.hasAnalysis) {
-    const hasSources = caseSources.length > 0;
+    const hasSources = Boolean(sources?.length);
     return (
       <CaseOverviewState
         title="Not analyzed yet"
@@ -144,7 +154,7 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
             <AnalysisMeta
               overview={overview}
               result={analysisResult}
-              sources={sources}
+              sources={sources ?? []}
               onReanalyze={isStale || isUpdating ? undefined : runAnalysis}
             />
           }
@@ -190,7 +200,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
             <CaseFindingsSection
               key={analysisKey}
               findings={overview.findings}
-              onNavigateToSource={navigateToSources}
               onSelectSource={handleSelectSource}
               activeSourceKey={drawer.openKey}
             />
@@ -212,7 +221,6 @@ export function CaseOverviewView({ caseId }: CaseOverviewViewProps) {
           sourceRef={drawer.open.sourceRef}
           anchorElement={drawer.open.anchorElement}
           onClose={drawer.close}
-          onNavigateToSource={navigateToSources}
           citationRole={drawer.open.citationRole}
         />
       )}

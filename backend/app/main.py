@@ -4,12 +4,14 @@ from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
+from app.errors import AppError
 from app.routers import (
     analysis,
     auth,
@@ -50,6 +52,13 @@ def validate_single_process_runtime() -> None:
             )
 
 
+async def app_error_response(_request: Request, error: AppError) -> JSONResponse:
+    return JSONResponse(
+        {"detail": {"code": error.code, "message": error.message}},
+        status_code=error.status_code,
+    )
+
+
 app = FastAPI(
     title="Cybercase Framework API",
     description="Case-owned analysis, chat, sources, and report APIs",
@@ -57,6 +66,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_exception_handler(AppError, app_error_response)
 app.middleware("http")(guard_browser_request)
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")

@@ -1,95 +1,48 @@
 import { describe, expect, it } from "vitest";
-import type {
-  CaseAnalysisResultRead,
-  CaseAnalysisTrace,
-  CaseMitreAssociation,
-  CaseSourceRead,
-} from "@/lib/api";
+import type { CaseAnalysisResultRead, CaseAnalysisTrace, CaseSourceRead } from "@/lib/api";
+import { analysisResult, association, claim, narrativeSource, trace } from "@/test/fixtures";
 import { buildTechnicalContext } from "./technicalContext";
 
-const sourceId = "11111111-1111-4111-8111-111111111111";
-const caseId = "22222222-2222-4222-8222-222222222222";
 const exactQuote = "The report records PowerShell network activity.";
+
+interface AssociationInput {
+  association_id: string;
+  technique_id: string;
+  claim_ids: string[];
+  reason: string;
+  plain_meaning: string;
+}
 
 function technicalContextFixture(
   status: string,
   rows: Record<string, string>[],
-  associations: Omit<CaseMitreAssociation, "status" | "support_role">[] = [],
+  associations: AssociationInput[] = [],
   failureCode?: string,
 ): { result: CaseAnalysisResultRead; sources: CaseSourceRead[] } {
-  const sources: CaseSourceRead[] = [
-    {
-      id: sourceId,
-      case_id: caseId,
-      source_kind: "narrative",
-      document_id: null,
-      exact_text: exactQuote,
-      provenance_json: {},
-      source_metadata_json: {},
-      created_at: "2026-09-10T00:00:00Z",
-      archived_at: null,
-    },
-  ];
   const retrievalContextId = status === "not_applicable" ? null : "retrieval-native-1";
-  const traceAssociations: CaseMitreAssociation[] = associations.map((association) => ({
-    association_id: association.association_id,
-    technique_id: association.technique_id,
-    claim_ids: association.claim_ids,
-    reason: association.reason,
-    plain_meaning: association.plain_meaning,
-    status: "candidate_only" as const,
-    support_role: "external_technical_context" as const,
-  }));
-  const result: CaseAnalysisResultRead = {
-    id: "44444444-4444-4444-8444-444444444444",
-    case_id: caseId,
-    source_revision: 1,
-    schema_version: "case_analysis_trace_v1",
-    status: "validated",
+  const result = analysisResult({
     summary: exactQuote,
-    trace_json: {
-      version: "case_analysis_trace_v1",
-      validation_status: "validated",
-      analysis_mode: "case_overview",
+    trace_json: trace({
       summary: exactQuote,
-      claims: [
-        {
-          claim_id: "A-01",
-          claim_type: "reported",
-          text: exactQuote,
-          epistemic_status: "reported",
-          reasoning_summary: null,
-          supporting_source_ids: [sourceId],
-          contradicting_source_ids: [],
-          supporting_citations: [{ source_id: sourceId, exact_quote: exactQuote }],
-          contradicting_citations: [],
-        },
-      ],
-      gaps: [],
-      mitre_associations: traceAssociations,
+      claims: [claim(exactQuote)],
+      mitre_associations: associations.map(({ technique_id, ...rest }) =>
+        association(technique_id, rest),
+      ),
       retrieval_context_id: retrievalContextId,
-    },
+    }),
     retrieval_context_id: retrievalContextId,
-    pipeline_config: {},
     external_context_json: {
       technical_augmentation: {
         version: "case_mitre_augmentation_v1",
         status,
-        applicability: {
-          decision: "RETRIEVE",
-          source_message_ids: [sourceId],
-          trigger_text: [exactQuote],
-        },
         retrieval_context_id: retrievalContextId,
         mitre_table: rows,
-        association_ids: associations.map((association) => association.association_id),
+        association_ids: associations.map((item) => item.association_id),
         ...(failureCode ? { failure_code: failureCode } : {}),
       },
     },
-    created_at: "2026-09-10T00:00:00Z",
-    freshness: "current",
-  };
-  return { result, sources };
+  });
+  return { result, sources: [narrativeSource(exactQuote)] };
 }
 
 describe("buildTechnicalContext", () => {
@@ -106,13 +59,6 @@ describe("buildTechnicalContext", () => {
     expect(result.status).toBe("failed");
     expect(result.failureStage).toBe("mapping");
     expect(result.retrievedOnlyTechniques).toHaveLength(1);
-  });
-
-  it("distinguishes retrieval with no supported Case match", () => {
-    const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
-    const result = buildTechnicalContext(fixture.result, fixture.sources);
-    expect(result.status).toBe("retrieved_without_supported_match");
-    expect(result.retrievedOnlyCount).toBe(1);
   });
 
   it("accepts every RAG row without creating Case mappings", () => {
@@ -132,7 +78,6 @@ describe("buildTechnicalContext", () => {
       "T1059.001",
       "S0096",
     ]);
-    expect(result.retrievedOnlyCount).toBe(2);
   });
 
   it("renders only the source-bound mapped subset", () => {
@@ -167,19 +112,48 @@ describe("buildTechnicalContext", () => {
   it("reads a retrieval that came back empty as no supported context", () => {
     const fixture = technicalContextFixture("insufficient_context", []);
     fixture.result.trace_json!.retrieval_context_id = null;
-    fixture.result.retrieval_context_id = null;
     const result = buildTechnicalContext(fixture.result, fixture.sources);
     expect(result.status).toBe("insufficient_context");
   });
 
-  it("withholds an empty retrieval that the trace claims to have used", () => {
-    const fixture = technicalContextFixture("insufficient_context", []);
+  it("reads the stored augmentation as written, without re-checking it against the trace", () => {
+    const fixture = technicalContextFixture(
+      "retrieved_with_matches",
+      [row],
+      [
+        {
+          association_id: "MA-01",
+          technique_id: "T1059.001",
+          claim_ids: ["A-01"],
+          reason: "The claim describes PowerShell activity.",
+          plain_meaning: "Someone ran commands through PowerShell.",
+        },
+      ],
+    );
+    fixture.result.external_context_json = {
+      technical_augmentation: {
+        status: "retrieved_with_matches",
+        retrieval_context_id: "another-retrieval",
+        mitre_table: [row],
+        association_ids: [],
+      },
+    };
+
     const result = buildTechnicalContext(fixture.result, fixture.sources);
-    expect(result.status).toBe("invalid_trace");
+
+    expect(result.status).toBe("retrieved_with_matches");
+    expect(result.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001"]);
   });
 
-  it("withholds context when the persisted trace binding is invalid", () => {
-    const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
+  it("reads an empty retrieval as no supported context, whatever the trace binds", () => {
+    const fixture = technicalContextFixture("insufficient_context", []);
+    const result = buildTechnicalContext(fixture.result, fixture.sources);
+    expect(result.status).toBe("insufficient_context");
+    expect(result.hasContext).toBe(false);
+  });
+
+  it("withholds context when the saved trace is not a validated case overview", () => {
+    const fixture = technicalContextFixture("retrieved_from_rag", [row]);
     fixture.result.trace_json = {
       ...fixture.result.trace_json!,
       validation_status: "failed",
@@ -187,6 +161,84 @@ describe("buildTechnicalContext", () => {
     const result = buildTechnicalContext(fixture.result, fixture.sources);
     expect(result.status).toBe("invalid_trace");
     expect(result.failureCode).toBe("invalid_trace");
+  });
+
+  it("withholds a stored augmentation whose status the page does not know", () => {
+    const fixture = technicalContextFixture("retrieved_without_supported_match", [row]);
+    const result = buildTechnicalContext(fixture.result, fixture.sources);
+    expect(result.status).toBe("invalid_trace");
+    expect(result.failureCode).toBe("invalid_technical_augmentation");
+    expect(result.failureStage).toBe("metadata");
+    expect(result.hasContext).toBe(false);
+    expect(result.retrievedOnlyTechniques).toHaveLength(0);
+  });
+});
+
+describe("an association the page cannot tie to a case source", () => {
+  const powershell = {
+    technique_id: "T1059.001",
+    name: "PowerShell",
+    tactic: "Execution",
+    description: "Command and scripting interpreter.",
+  };
+  const transfer = {
+    technique_id: "T1105",
+    name: "Ingress Tool Transfer",
+    tactic: "Command and Control",
+    description: "Transfer tools into the environment.",
+  };
+  const associations = [
+    {
+      association_id: "MA-01",
+      technique_id: "T1059.001",
+      claim_ids: ["A-01"],
+      reason: "The claim describes PowerShell activity.",
+      plain_meaning: "Someone ran commands through PowerShell.",
+    },
+    {
+      association_id: "MA-02",
+      technique_id: "T1105",
+      claim_ids: ["A-02"],
+      reason: "A tool was downloaded.",
+      plain_meaning: "Someone brought a tool in.",
+    },
+  ];
+
+  it("keeps every other technique, and shows this one without a case basis", () => {
+    const { result, sources } = technicalContextFixture(
+      "retrieved_with_matches",
+      [powershell, transfer],
+      associations,
+    );
+    const claims = result.trace_json!.claims;
+    claims.push({
+      ...claims[0],
+      claim_id: "A-02",
+      supporting_source_ids: ["QA-01"],
+      supporting_citations: [{ source_id: "QA-01", exact_quote: "I downloaded a tool." }],
+    });
+
+    const context = buildTechnicalContext(result, sources);
+
+    expect(context.status).toBe("retrieved_with_matches");
+    expect(context.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001", "T1105"]);
+    expect(context.techniques[0].caseBasisSources).toHaveLength(1);
+    expect(context.techniques[1].caseBasisSources).toEqual([]);
+  });
+
+  it("leaves out an association whose technique was not retrieved, and keeps the rest", () => {
+    const { result, sources } = technicalContextFixture(
+      "retrieved_with_matches",
+      [powershell],
+      associations,
+    );
+    const claims = result.trace_json!.claims;
+    claims.push({ ...claims[0], claim_id: "A-02" });
+
+    const context = buildTechnicalContext(result, sources);
+
+    expect(context.status).toBe("retrieved_with_matches");
+    expect(context.techniques.map((item) => item.techniqueId)).toEqual(["T1059.001"]);
   });
 });
 

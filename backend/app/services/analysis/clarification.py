@@ -13,10 +13,6 @@ ProceedReason = Literal[
     "round_budget_spent",
 ]
 
-TERMINAL_REASONS: frozenset[str] = frozenset(
-    {"no_eligible_gap", "gaps_exhausted", "max_rounds_reached"}
-)
-
 
 @dataclass(frozen=True)
 class Ask:
@@ -26,10 +22,6 @@ class Ask:
 @dataclass(frozen=True)
 class Proceed:
     reason: ProceedReason
-
-    @property
-    def is_terminal(self) -> bool:
-        return self.reason in TERMINAL_REASONS
 
 
 FollowupDecision = Ask | Proceed
@@ -78,7 +70,6 @@ __all__ = [
     "FollowupDecision",
     "Proceed",
     "ProceedReason",
-    "TERMINAL_REASONS",
     "decide_followup",
     "eligible_gaps",
 ]

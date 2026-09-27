@@ -1,4 +1,4 @@
-import type { CaseCitation, SourceMessageRef } from "@/features/sources/types";
+import type { SourceMessageRef } from "@/features/sources/types";
 
 export type ClaimType = "reported" | "analytical_inference" | "unknown";
 
@@ -6,15 +6,6 @@ export type EpistemicStatus =
   "reported" | "suspected" | "contradicted" | "not_established" | "unknown" | "not_confirmed";
 
 export type GapStatus = "NOT_PROVIDED" | "EXPLICITLY_UNKNOWN" | "AMBIGUOUS" | "CONFLICTING";
-
-export type GapPriority = "high" | "medium" | "low";
-
-export interface MitreTechniqueRef {
-  techniqueId: string;
-  techniqueName: string;
-  reason: string;
-  description: string;
-}
 
 export interface CaseFinding {
   id: string;
@@ -24,7 +15,7 @@ export interface CaseFinding {
   reasoningSummary: string | null;
   supportingSources: SourceMessageRef[];
   contradictingSources: SourceMessageRef[];
-  mitreTechniques: MitreTechniqueRef[];
+  techniqueIds: string[];
 }
 
 export interface CaseGap {
@@ -32,11 +23,8 @@ export interface CaseGap {
   topic: string;
   status: GapStatus;
   description: string;
-  affectedClaimIds: string[];
   reason: string;
-  priority: GapPriority;
   askable: boolean;
-  clarificationQuestion: string | null;
 }
 
 interface ClaimBacked {
@@ -67,32 +55,4 @@ export interface CaseOverviewData {
   timeline: CaseTimelineEvent[];
   impacts: CaseImpact[];
   unavailableReason?: string;
-}
-
-export interface CaseTraceClaim {
-  claimId: string;
-  claimType: ClaimType;
-  text: string;
-  epistemicStatus: EpistemicStatus;
-  reasoningSummary: string | null;
-  supportingIds: string[];
-  contradictingIds: string[];
-  supportingCitations: CaseCitation[];
-  contradictingCitations: CaseCitation[];
-}
-
-export interface CaseTraceAssociation {
-  id: string;
-  techniqueId: string;
-  claimIds: string[];
-  reason: string;
-  plainMeaning: string;
-}
-
-export interface ParsedCaseTrace {
-  summary: string;
-  claims: CaseTraceClaim[];
-  gaps: CaseGap[];
-  associations: CaseTraceAssociation[];
-  retrievalContextId: string | null;
 }

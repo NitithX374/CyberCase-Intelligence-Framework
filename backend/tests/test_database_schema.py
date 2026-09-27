@@ -15,20 +15,6 @@ def test_schema_contains_only_product_runtime_tables() -> None:
     }
 
 
-def test_run_and_retrieval_tables_are_gone() -> None:
-    assert "case_runs" not in Base.metadata.tables
-    assert "rag_contexts" not in Base.metadata.tables
-    assert "run_id" not in Base.metadata.tables["case_analysis_results"].c
-
-
-def test_case_state_tables_are_absent() -> None:
-    assert "case_state_versions" not in Base.metadata.tables
-    assert "case_clarifications" not in Base.metadata.tables
-    assert "chat_threads" not in Base.metadata.tables
-    assert "case_evidence_revisions" not in Base.metadata.tables
-    assert "case_evidence_snapshots" not in Base.metadata.tables
-
-
 def test_case_owns_chat_messages() -> None:
     messages = Base.metadata.tables["chat_messages"]
     cases = Base.metadata.tables["cases"]
@@ -75,11 +61,21 @@ def test_report_stores_content_and_nothing_else() -> None:
     )
 
 
-def test_retrieval_context_id_points_at_no_table() -> None:
-    table = Base.metadata.tables["case_analysis_results"]
-    assert table.c["retrieval_context_id"].foreign_keys == set()
+def test_an_analysis_keeps_its_retrieval_and_version_inside_its_trace() -> None:
+    columns = Base.metadata.tables["case_analysis_results"].c
+    assert "retrieval_context_id" not in columns
+    assert "schema_version" not in columns
+    assert "run_id" not in columns
+
+
+def test_a_case_source_is_a_document_or_a_narrative_and_is_never_archived() -> None:
+    table = Base.metadata.tables["case_sources"]
+    kinds = next(
+        constraint for constraint in table.constraints if constraint.name == "ck_case_sources_kind"
+    )
+    assert str(kinds.sqltext) == "source_kind IN ('document', 'narrative')"
+    assert "archived_at" not in table.c
 
 
 def test_chat_message_does_not_own_retrieval_identity() -> None:
-    assert "retrieval_context_id" not in Base.metadata.tables["chat_messages"].c
     assert "retrieval_context_id" not in ChatMessageRead.model_fields

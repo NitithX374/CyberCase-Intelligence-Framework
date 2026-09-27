@@ -3,10 +3,11 @@
 import { useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
-import type { CaseDocumentRead, CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api";
 import { NarrativeDialog } from "./NarrativeDialog";
 import { SourceRail, railGroups } from "./SourceRail";
 import { SourceViewport, type PreviewMode } from "./SourceViewport";
+import type { FollowupAnswer } from "./types";
 
 export interface NarrativeSubmission {
   text: string;
@@ -20,8 +21,8 @@ export interface SourcesAnalysis {
 
 interface CaseSourcesViewProps {
   caseId: string;
-  documents: CaseDocumentRead[];
   sources: CaseSourceRead[];
+  followups: FollowupAnswer[];
   isUploading: boolean;
   uploadingFilename?: string | null;
   isAddingNarrative: boolean;
@@ -34,8 +35,8 @@ const ACCEPTED_FILES = ".pdf,.docx,.png,.jpg,.jpeg";
 
 export function CaseSourcesView({
   caseId,
-  documents,
   sources,
+  followups,
   isUploading,
   uploadingFilename,
   isAddingNarrative,
@@ -48,7 +49,7 @@ export function CaseSourcesView({
   const [isNarrativeOpen, setIsNarrativeOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const groups = useMemo(() => railGroups(documents, sources), [documents, sources]);
+  const groups = useMemo(() => railGroups(sources, followups), [sources, followups]);
   const items = useMemo(() => groups.flatMap((group) => group.items), [groups]);
   const selected = items.find((item) => item.id === selectedId) ?? items[0] ?? null;
   const isEmpty = items.length === 0 && !isUploading;

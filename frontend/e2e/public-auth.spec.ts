@@ -10,6 +10,6 @@ test.describe("public authentication boundary", () => {
 
     await page.goto("/case");
     await page.waitForTimeout(1500);
-    await expect(page).toHaveURL(/\/login\?redirect=%2Fcase$/);
+    await expect(page).toHaveURL(/\/login$/);
   });
 });

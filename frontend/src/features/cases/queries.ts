@@ -3,12 +3,6 @@ import { useCallback } from "react";
 import { createCase, deleteCase, getCase, listCases, updateCase, type CaseRead } from "@/lib/api";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
-function sortCases(cases: CaseRead[]): CaseRead[] {
-  return [...cases].sort(
-    (left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at),
-  );
-}
-
 export function useCase(caseId: string | null) {
   return useQuery<CaseRead>({
     queryKey: caseQueryKeys.case(caseId ?? "none"),
@@ -31,15 +25,11 @@ export function useCaseMutations() {
 
   const upsertCase = useCallback(
     (caseRecord: CaseRead) => {
-      queryClient.setQueryData<CaseRead[]>(caseQueryKeys.cases(), (current) =>
-        sortCases([
-          {
-            ...current?.find((item) => item.id === caseRecord.id),
-            ...caseRecord,
-          },
-          ...(current ?? []).filter((item) => item.id !== caseRecord.id),
-        ]),
-      );
+      queryClient.setQueryData<CaseRead[]>(caseQueryKeys.cases(), (current) => [
+        caseRecord,
+        ...(current ?? []).filter((item) => item.id !== caseRecord.id),
+      ]);
+      queryClient.setQueryData(caseQueryKeys.case(caseRecord.id), caseRecord);
     },
     [queryClient],
   );
@@ -62,5 +52,5 @@ export function useCaseMutations() {
     },
   });
 
-  return { createMutation, updateMutation, deleteMutation, upsertCase };
+  return { createMutation, updateMutation, deleteMutation };
 }

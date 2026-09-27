@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
+from app.errors import AppError
 from app.services.analysis.contracts.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
@@ -11,57 +11,43 @@ from app.services.analysis.contracts.claims import (
     CaseClaimType,
     CaseEpistemicStatus,
     CaseFollowupExchange,
-    CaseGeneratedUnit,
+    CaseProviderCitation,
+    CaseProviderClaim,
     CaseSourceCitation,
+    ChatAnswerUnit,
+    ChatSuggestion,
+    ChatUnitBasis,
+    followup_history_of_snapshot,
     followup_payload,
     followup_qa_id,
+    followup_snapshot,
 )
 from app.services.analysis.contracts.trace import (
-    CaseAnalysisFailureMetadata,
     CaseAnalysisTrace,
     CaseGroundingReport,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
     CaseProviderAnalysis,
-    CaseProviderJudgement,
-    CaseProviderReading,
     CaseTimelineItem,
 )
 
 
-class CaseAnalysisFailure(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-
-
-ResponseLanguage = Literal["thai", "english"]
-
-
-def resolve_response_language(user_message: object) -> ResponseLanguage:
-    if not isinstance(user_message, str) or not user_message.strip():
-        raise ValueError("User message must be a non-empty string")
-    if any("\u0e00" <= character <= "\u0e7f" for character in user_message):
-        return "thai"
-    if any(character.isascii() and character.isalpha() for character in user_message):
-        return "english"
-    raise ValueError("User message language must be Thai or English")
+class CaseAnalysisFailure(AppError):
+    pass
 
 
 @dataclass(frozen=True)
 class CaseAnalysisOutput:
     answer: str
     trace: CaseAnalysisTrace | None
-    trace_failure: CaseAnalysisFailureMetadata | None = None
-    execution_receipt: dict[str, object] | None = None
+    units: tuple[ChatAnswerUnit, ...] = ()
+    suggestion: ChatSuggestion = "none"
 
 
 __all__ = [
     "CaseAnalysisClaim",
     "CaseAnalysisFailure",
-    "CaseAnalysisFailureMetadata",
     "CaseAnalysisGap",
     "CaseAnalysisMode",
     "CaseAnalysisOutput",
@@ -72,16 +58,18 @@ __all__ = [
     "CaseClaimType",
     "CaseEpistemicStatus",
     "CaseSourceCitation",
-    "CaseGeneratedUnit",
+    "ChatAnswerUnit",
+    "ChatSuggestion",
+    "ChatUnitBasis",
     "CaseImpactItem",
     "CaseInvolvedParty",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
-    "CaseProviderJudgement",
-    "CaseProviderReading",
+    "CaseProviderCitation",
+    "CaseProviderClaim",
     "CaseTimelineItem",
-    "ResponseLanguage",
+    "followup_history_of_snapshot",
     "followup_payload",
     "followup_qa_id",
-    "resolve_response_language",
+    "followup_snapshot",
 ]

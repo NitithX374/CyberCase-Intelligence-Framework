@@ -6,6 +6,7 @@ import type { CaseOverviewData } from "@/features/analysis/types";
 import { Icon } from "@/components/icons";
 import { useDismiss } from "@/lib/useDismiss";
 import { formatDate } from "@/lib/format";
+import { analysisFollowups, analysisSourceIds } from "./analysisRecord";
 
 export function AnalysisMeta({
   overview,
@@ -24,8 +25,14 @@ export function AnalysisMeta({
   useDismiss(containerRef, isOpen, close);
 
   const isStale = result?.freshness === "stale";
+  const readIds = new Set(result ? analysisSourceIds(result) : []);
+  const readCount = readIds.size + (result ? analysisFollowups(result).length : 0);
   const documentNames = [
-    ...new Set(sources.flatMap((source) => (source.filename ? [source.filename] : []))),
+    ...new Set(
+      sources.flatMap((source) =>
+        source.filename && readIds.has(source.id) ? [source.filename] : [],
+      ),
+    ),
   ];
   const citedSourceCount = new Set(
     overview.findings.flatMap((finding) => [
@@ -73,7 +80,7 @@ export function AnalysisMeta({
             label="Source revision"
             value={result ? String(result.source_revision) : "Unavailable"}
           />
-          <RecordRow label="Sources" value={`${sources.length} · ${citedSourceCount} cited`} />
+          <RecordRow label="Sources" value={`${readCount} · ${citedSourceCount} cited`} />
           {documentNames.length > 0 && (
             <RecordRow label="Documents" value={documentNames.join(", ")} />
           )}

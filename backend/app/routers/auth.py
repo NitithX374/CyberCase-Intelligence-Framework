@@ -1,30 +1,21 @@
 from __future__ import annotations
 
-import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import (
-    AuthTokenResponse,
-    DevLoginRequest,
-    PasswordLoginRequest,
-    RegisterRequest,
-    UserRead,
-)
+from app.schemas.auth import PasswordLoginRequest, RegisterRequest, UserRead
 from app.services.auth.auth_service import (
+    authenticate,
     build_auth_cookie_options,
-    get_or_create_dev_user,
+    register_user,
 )
-from app.services.auth.credentials import create_access_token, hash_password, verify_password
-from app.services.auth.dependencies import get_current_user, get_optional_user
+from app.services.auth.credentials import create_access_token
+from app.services.auth.dependencies import get_optional_user
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -42,28 +33,7 @@ async def register(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> UserRead:
-    email = str(payload.email).lower()
-    name = payload.name.strip()
-    if not name:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Display name is required")
-    user = User(
-        id=uuid.uuid4(),
-        email=email,
-        name=name,
-        oauth_provider="password",
-        oauth_subject_id=email,
-        password_hash=await run_in_threadpool(hash_password, payload.password),
-    )
-    db.add(user)
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "An account already exists for this email"
-        ) from error
-    await db.refresh(user)
-    return start_password_session(user, response)
+    return start_password_session(await register_user(db, payload), response)
 
 
 @router.post("/login", response_model=UserRead)
@@ -72,20 +42,7 @@ async def login(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> UserRead:
-    user = await db.scalar(select(User).where(User.email == str(payload.email).lower()))
-    if user is None or not user.password_hash:
-        await run_in_threadpool(hash_password, payload.password)
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
-    if not await run_in_threadpool(verify_password, payload.password, user.password_hash):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
-    return start_password_session(user, response)
-
-
-@router.get("/me", response_model=UserRead, summary="Get current authenticated user")
-async def get_me(
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> UserRead:
-    return UserRead.model_validate(current_user)
+    return start_password_session(await authenticate(db, payload), response)
 
 
 @router.get("/session", response_model=UserRead | None, summary="Get optional session user")
@@ -106,37 +63,3 @@ async def logout(response: Response) -> dict[str, str]:
         samesite="lax",
     )
     return {"message": "Logged out successfully"}
-
-
-@router.post(
-    "/dev-login",
-    response_model=AuthTokenResponse,
-    summary="Local developer login for testing",
-)
-async def dev_login(
-    payload: DevLoginRequest,
-    response: Response,
-    db: AsyncSession = Depends(get_db),
-) -> AuthTokenResponse:
-    if not settings.auth_dev_login_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Developer login is disabled in this environment",
-        )
-
-    user = await get_or_create_dev_user(
-        db,
-        email=payload.email,
-        name=payload.name,
-    )
-    token = create_access_token(user_id=user.id, email=user.email)
-
-    cookie_opts = build_auth_cookie_options()
-    response.set_cookie(value=token, **cookie_opts)
-
-    return AuthTokenResponse(
-        access_token=token,
-        token_type="bearer",
-        expires_in=settings.jwt_expire_minutes * 60,
-        user=UserRead.model_validate(user),
-    )

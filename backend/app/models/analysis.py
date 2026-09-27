@@ -43,18 +43,11 @@ class CaseAnalysisResult(Base):
         nullable=False,
     )
     source_revision: Mapped[int] = mapped_column(Integer, nullable=False)
-    schema_version: Mapped[str] = mapped_column(
-        String(80),
-        nullable=False,
-        default="case_analysis_trace_v1",
-        server_default=text("'case_analysis_trace_v1'"),
-    )
     status: Mapped[str] = mapped_column(
         String(24), nullable=False, default="validated", server_default=text("'validated'")
     )
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     trace_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
-    retrieval_context_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
     retrieval_context_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     pipeline_config: Mapped[dict[str, object]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")

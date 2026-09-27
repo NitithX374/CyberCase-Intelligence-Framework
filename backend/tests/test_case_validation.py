@@ -1,10 +1,15 @@
-from datetime import UTC
+from uuid import UUID
 
+import pytest
+
+import app.models  # noqa: F401
+from app.models.analysis import CaseAnalysisResult
+from app.models.case import Case
+from app.models.sources import CaseSource
 from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisTrace,
-    CaseGeneratedUnit,
     CaseProviderAnalysis,
     CaseSourceCitation,
 )
@@ -13,8 +18,18 @@ from app.services.analysis.steps.quotes import (
     find_aligned_quote,
     resolve_document_locator,
 )
+from app.services.document_ingestion.contracts import (
+    DocumentPage,
+    ExtractionMethod,
+    IngestedDocument,
+)
 from app.services.document_ingestion.provenance import bind_exact_page_spans
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.services.sources.case_source_bundle import (
+    CaseSourceBundle,
+    CaseSourceItem,
+    case_source_bundle_for_analysis,
+)
+from app.services.sources.source_service import document_provenance
 
 
 def _source(
@@ -209,6 +224,177 @@ def test_case_provider_analysis_normalizes_model_claim_ids_from_json():
     assert parsed.mitre_associations[0].claim_ids == ["A-01", "A-09"]
 
 
+def gap_payload(**overrides) -> dict[str, object]:
+    return {
+        "gap_id": "G-01",
+        "gap_key": "incident_time",
+        "topic": "Incident time",
+        "status": "NOT_PROVIDED",
+        "description": "The time is not stated.",
+        "affected_claim_ids": [],
+        "reason": "Timing matters.",
+        "priority": "high",
+        "askable": True,
+        "clarification_question": "When did it happen?",
+        **overrides,
+    }
+
+
+def test_provider_output_is_normalized_instead_of_rejected():
+    parsed = CaseProviderAnalysis.model_validate(
+        {
+            "version": "case_analysis_trace_v1",
+            "summary": "Files were encrypted.",
+            "involved_parties": [
+                {"name": "ACME", "role": "Victim", "claim_ids": ["A-01", "A-1", "claim-1"]}
+            ],
+            "timeline": [],
+            "impacts": [],
+            "claims": [
+                {
+                    "claim_id": "A-01",
+                    "claim_type": "reported",
+                    "text": "Files were encrypted.",
+                    "epistemic_status": "reported",
+                    "supporting_source_ids": ["s1"],
+                    "contradicting_source_ids": [],
+                    "supporting_citations": [
+                        {
+                            "source_id": "s1",
+                            "exact_quote": "Files were encrypted.",
+                            "document_id": "d1",
+                            "filename": "report.pdf",
+                            "page_numbers": list(range(1, 10)),
+                        }
+                    ],
+                    "contradicting_citations": [],
+                    "reasoning_summary": "r" * 1_001,
+                }
+            ],
+            "gaps": [
+                gap_payload(
+                    gap_key="incident\ntime",
+                    topic="Incident\r\ntime",
+                    affected_claim_ids=["A-01", "A-1"],
+                    clarification_question="When did\nit happen?",
+                ),
+                gap_payload(gap_id="G-02", clarification_question="x" * 301),
+            ],
+            "mitre_associations": [
+                {
+                    "association_id": "MA-01",
+                    "technique_id": " S0096 ",
+                    "claim_ids": ["A-01", "A-1"],
+                    "reason": "Copied from the table.",
+                    "plain_meaning": "p" * 601,
+                    "status": "candidate_only",
+                    "support_role": "external_technical_context",
+                }
+            ],
+        }
+    )
+
+    assert parsed.involved_parties[0].claim_ids == ["A-01"]
+    assert parsed.claims[0].supporting_citations[0].model_dump() == {
+        "source_id": "s1",
+        "exact_quote": "Files were encrypted.",
+    }
+    assert parsed.gaps[0].gap_key == "incident time"
+    assert parsed.gaps[0].topic == "Incident time"
+    assert parsed.gaps[0].affected_claim_ids == ["A-01"]
+    assert parsed.gaps[0].clarification_question == "When did it happen?"
+    assert parsed.gaps[1].clarification_question is None
+    assert parsed.mitre_associations[0].technique_id == "S0096"
+    assert parsed.mitre_associations[0].claim_ids == ["A-01"]
+    assert parsed.claims[0].reasoning_summary == "r" * 1_000
+    assert parsed.mitre_associations[0].plain_meaning == "p" * 600
+
+
+def test_a_quote_spanning_more_pages_than_a_citation_holds_keeps_no_page_locator():
+    lines = [f"line {number}" for number in range(1, 11)]
+    content = "\n\n".join(lines)
+    provenance = bind_exact_page_spans(
+        {
+            "pages": [
+                {"page_number": number, "merged_text": line} for number, line in enumerate(lines, 1)
+            ]
+        },
+        content,
+    )
+    quote = "\n\n".join(lines[:9])
+    source = CaseSourceItem(
+        source_id="s1",
+        source_kind="document",
+        text=content,
+        document_id="d1",
+        filename="report.pdf",
+        provenance={"pages": provenance["pages"]},
+    )
+    claim = CaseAnalysisClaim(
+        claim_id="A-01",
+        claim_type="reported",
+        text="Nine pages were quoted.",
+        epistemic_status="reported",
+        supporting_source_ids=["s1"],
+        supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote=quote)],
+    )
+
+    validated = resolve_case_trace(
+        _trace(claim, content), CaseSourceBundle(revision=1, sources=(source,)), []
+    )
+
+    citation = validated.claims[0].supporting_citations[0]
+    assert citation.exact_quote == quote
+    assert citation.page_numbers == []
+
+
+def test_a_blank_page_does_not_cost_the_pages_after_it_their_numbers():
+    ingested = IngestedDocument(
+        filename="scan.pdf",
+        media_type="application/pdf",
+        extraction_method=ExtractionMethod.DOCUMENT_RECOGNITION,
+        pages=[
+            DocumentPage(
+                page_number=number, text=text, text_method="ocr", verification_status=status
+            )
+            for number, text, status in (
+                (1, "first page", "machine_read"),
+                (2, "", "needs_review"),
+                (3, "third page", "machine_read"),
+            )
+        ],
+        full_text="first page\n\nthird page",
+    )
+    source = CaseSourceItem(
+        source_id="s1",
+        source_kind="document",
+        text=ingested.full_text,
+        document_id="d1",
+        filename="scan.pdf",
+        provenance=document_provenance(ingested),
+    )
+    claims = [
+        CaseAnalysisClaim(
+            claim_id=claim_id,
+            claim_type="reported",
+            text="A page was quoted.",
+            epistemic_status="reported",
+            supporting_source_ids=["s1"],
+            supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote=quote)],
+        )
+        for claim_id, quote in (("A-01", "first page"), ("A-02", "third page"))
+    ]
+
+    validated = resolve_case_trace(
+        CaseAnalysisTrace(analysis_mode="case_overview", summary="Pages.", claims=claims),
+        CaseSourceBundle(revision=1, sources=(source,)),
+    )
+
+    first, third = (claim.supporting_citations[0] for claim in validated.claims)
+    assert (first.document_id, first.page_numbers) == ("d1", [1])
+    assert (third.document_id, third.page_numbers) == ("d1", [3])
+
+
 def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
     parsed = CaseProviderAnalysis.model_validate(
         {
@@ -238,13 +424,7 @@ def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
     assert parsed.gaps[0].topic == "Incident time"
 
 
-def test_case_generated_unit_and_gap_identifier_normalization():
-    unit = CaseGeneratedUnit(
-        text="A single generated summary unit.",
-        claim_ids=("C1", "claim-2", "A-03"),
-    )
-    assert unit.claim_ids == ("A-01", "A-02", "A-03")
-
+def test_gap_identifier_normalization():
     gap = CaseAnalysisGap(
         gap_id="gap1",
         gap_key="financial_loss",
@@ -397,65 +577,29 @@ def test_case_reference_lists_drop_invalid_entries_without_rejecting_claim():
     assert claim.supporting_citations[1].filename is None
 
 
-def test_case_source_bundle_for_analysis_fallback_retains_post_archived_sources():
-    from datetime import datetime, timedelta
-    from types import SimpleNamespace
-
-    from app.services.sources.case_source_bundle import case_source_bundle_for_analysis
-
-    t0 = datetime.now(UTC)
-    t_result = t0 + timedelta(minutes=10)
-    t_archived_later = t0 + timedelta(minutes=20)
-
-    s1 = SimpleNamespace(
-        id="00000000-0000-0000-0000-000000000001",
-        source_kind="narrative",
-        exact_text="Source 1 text",
-        document_id=None,
-        provenance_json={},
-        created_at=t0,
-        archived_at=None,
-        source_metadata_json={},
-        document=None,
-        filename=None,
-    )
-    s2 = SimpleNamespace(
-        id="00000000-0000-0000-0000-000000000002",
-        source_kind="narrative",
-        exact_text="Source 2 text",
-        document_id=None,
-        provenance_json={},
-        created_at=t0 + timedelta(minutes=1),
-        archived_at=t_archived_later,
-        source_metadata_json={},
-        document=None,
-        filename=None,
-    )
-    s3 = SimpleNamespace(
-        id="00000000-0000-0000-0000-000000000003",
-        source_kind="narrative",
-        exact_text="Source 3 text",
-        document_id=None,
-        provenance_json={},
-        created_at=t0,
-        archived_at=t0 + timedelta(minutes=5),
-        source_metadata_json={},
-        document=None,
-        filename=None,
-    )
-    case = SimpleNamespace(
-        source_revision=3,
-        sources=[s1, s2, s3],
-    )
-    result = SimpleNamespace(
-        created_at=t_result,
-        source_revision=2,
-        trace_json={},
+def narrative(source_id: str) -> CaseSource:
+    return CaseSource(
+        id=UUID(source_id), source_kind="narrative", exact_text=f"Narrative {source_id}"
     )
 
-    bundle = case_source_bundle_for_analysis(case, result)
+
+def test_a_report_reads_exactly_the_sources_its_analysis_recorded_in_that_order():
+    first = narrative("00000000-0000-0000-0000-000000000001")
+    second = narrative("00000000-0000-0000-0000-000000000002")
+    never_read = narrative("00000000-0000-0000-0000-000000000003")
+    case = Case(source_revision=3, sources=[first, second, never_read])
+    recorded = [str(second.id), str(first.id)]
+
+    bundle = case_source_bundle_for_analysis(case, CaseAnalysisResult(source_revision=2), recorded)
+
     assert bundle.revision == 2
-    bundle_source_ids = {s.source_id for s in bundle.sources}
-    assert s1.id in bundle_source_ids
-    assert s2.id in bundle_source_ids
-    assert s3.id not in bundle_source_ids
+    assert [source.source_id for source in bundle.sources] == recorded
+
+
+def test_a_recorded_source_that_no_longer_exists_is_an_error():
+    case = Case(source_revision=1, sources=[])
+
+    with pytest.raises(ValueError):
+        case_source_bundle_for_analysis(
+            case, CaseAnalysisResult(source_revision=1), ["00000000-0000-0000-0000-00000000000d"]
+        )

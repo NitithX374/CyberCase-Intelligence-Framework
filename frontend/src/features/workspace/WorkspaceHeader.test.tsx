@@ -15,16 +15,11 @@ vi.mock("@/features/auth/useAuth", () => ({
 const sampleCase: CaseRead = {
   id: "case-1",
   title: "Payment Review",
-  status: "answered",
   source_revision: 3,
   analysis_freshness: "current",
   created_at: "2026-09-14T08:00:00Z",
   updated_at: "2026-09-14T08:10:00Z",
 };
-
-function analysisDot() {
-  return screen.getByRole("tab", { name: "Analysis" }).querySelector('[aria-hidden="true"]');
-}
 
 describe("WorkspaceHeader", () => {
   it("keeps every route meaning, and leaves Analyze to the pages", () => {
@@ -55,10 +50,9 @@ describe("WorkspaceHeader", () => {
     expect(onViewChange).toHaveBeenCalledWith("legal");
 
     expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
-    expect(analysisDot()).toBeNull();
   });
 
-  it("marks the Analysis tab when the analysis is behind the sources", () => {
+  it("says on the Analysis tab when the analysis is behind the sources", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
@@ -70,10 +64,10 @@ describe("WorkspaceHeader", () => {
         onNewCase={vi.fn()}
       />,
     );
-    expect(analysisDot()).toHaveClass("bg-unresolved");
+    expect(screen.getByRole("tab", { name: "Analysis out of date" })).toBeInTheDocument();
   });
 
-  it("marks the Analysis tab while an analysis runs, without renaming it", () => {
+  it("says on the Analysis tab while an analysis runs", () => {
     render(
       <WorkspaceHeader
         activeCase={sampleCase}
@@ -85,7 +79,7 @@ describe("WorkspaceHeader", () => {
         onNewCase={vi.fn()}
       />,
     );
-    expect(analysisDot()).toHaveClass("bg-accent");
+    expect(screen.getByRole("tab", { name: "Analysis running" })).toBeInTheDocument();
   });
 
   it("keeps the case library and a new case behind the account menu", () => {
