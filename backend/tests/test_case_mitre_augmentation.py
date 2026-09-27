@@ -2,19 +2,17 @@ import asyncio
 
 from case_mitre_test_support import _fixtures, _gate, _response
 
-from app.schemas.rag import LegalReferenceResult, QueryResponse
-from app.services.analysis.contracts import CaseMitreAssociation
-from app.services.analysis.pipeline import (
+from app.analysis.pipeline import (
     AnalysisArtifacts,
     AnalysisInput,
     retrieve_technical_context,
     write_analysis,
 )
-from app.services.analysis.steps.technical_context import (
-    run_case_mitre_augmentation,
-)
-from app.services.clients.rag_client import RagCallFailure
-from app.services.workflow.run_analysis import external_context
+from app.analysis.run import external_context
+from app.analysis.technical_context.contracts import LegalReferenceResult, QueryResponse
+from app.analysis.technical_context.rag_client import RagCallFailure
+from app.analysis.technical_context.retrieve import run_case_mitre_augmentation
+from app.trace.trace import CaseMitreAssociation
 
 
 def test_nontechnical_case_does_not_call_rag():

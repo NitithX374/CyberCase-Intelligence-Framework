@@ -1,8 +1,8 @@
 from case_chat_support import GAP, SETTLED, TRACE, numbered_gaps
 
+from app.analysis.clarification import Proceed, decide_followup
 from app.config import settings
-from app.services.analysis.clarification import Proceed, decide_followup
-from app.services.analysis.contracts import CaseAnalysisTrace
+from app.trace.trace import CaseAnalysisTrace
 
 
 def decide(trace: CaseAnalysisTrace, *, asked=(), this_round=0, rounds=1):

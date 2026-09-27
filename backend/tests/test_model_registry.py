@@ -1,9 +1,6 @@
 import pytest
 
-from app.services.llm.model_registry import (
-    DEFAULT_OPENROUTER_MODEL,
-    resolve_openrouter_model,
-)
+from app.llm.registry import DEFAULT_OPENROUTER_MODEL, resolve_openrouter_model
 
 
 def test_default_model():

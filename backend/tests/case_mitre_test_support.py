@@ -1,14 +1,15 @@
 from uuid import uuid4
 
-from app.schemas.rag import LegalReferenceResult, MitreTableRow, QueryResponse
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisTrace,
-    CaseSourceCitation,
+from app.analysis.technical_context.contracts import (
+    CaseRagContextPayload,
+    LegalReferenceResult,
+    MitreApplicabilityRecord,
+    MitreTableRow,
+    QueryResponse,
 )
-from app.services.analysis.mitre_gate.llm import MitreApplicabilityRecord
-from app.services.analysis.steps.technical_context import CaseRagContextPayload
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
+from app.trace.trace import CaseAnalysisTrace
 
 
 def _fixtures():

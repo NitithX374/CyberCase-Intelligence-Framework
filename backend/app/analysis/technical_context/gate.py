@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+from app.analysis.technical_context.contracts import (
+    MitreApplicabilityRecord,
+    skipped_mitre_applicability,
+)
+from app.analysis.technical_context.gate_llm import evaluate_mitre_applicability
+from app.config import settings
+from app.sources.bundle import CaseSourceItem
+
+
+async def never_applicable(*, case_sources: Sequence[CaseSourceItem]) -> MitreApplicabilityRecord:
+    return skipped_mitre_applicability()
+
+
+def chosen_gate():
+    if settings.mitre_gate_mode == "never":
+        return never_applicable
+    if settings.mitre_gate_mode == "encoder":
+        from app.analysis.technical_context.gate_encoder import evaluate_mitre_applicability_encoder
+
+        return evaluate_mitre_applicability_encoder
+    return evaluate_mitre_applicability
+
+
+async def mitre_gate(*, case_sources: Sequence[CaseSourceItem]) -> MitreApplicabilityRecord:
+    return await chosen_gate()(case_sources=case_sources)
+
+
+__all__ = ["chosen_gate", "mitre_gate", "never_applicable"]

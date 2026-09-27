@@ -10,9 +10,9 @@ from docx import Document
 from PIL import Image
 from reportlab.pdfgen import canvas
 
-from app.services.document_ingestion import files
-from app.services.document_ingestion import service as service_module
-from app.services.document_ingestion.contracts import (
+from app.sources.ingestion import files
+from app.sources.ingestion import service as service_module
+from app.sources.ingestion.contracts import (
     DocumentIngestionError,
     DocumentRecognitionError,
     ExtractionMethod,
@@ -22,15 +22,12 @@ from app.services.document_ingestion.contracts import (
     RecognitionTimeoutError,
     UnsupportedDocumentError,
 )
-from app.services.document_ingestion.recognition import (
+from app.sources.ingestion.recognition import (
     RecognizedPage,
     RenderedPage,
     strip_generated_visual_descriptions,
 )
-from app.services.document_ingestion.service import (
-    DocumentIngestionLimits,
-    DocumentIngestionService,
-)
+from app.sources.ingestion.service import DocumentIngestionLimits, DocumentIngestionService
 
 
 class RecordingRecognizer:

@@ -5,23 +5,19 @@ from uuid import uuid4
 import httpx
 import pytest
 
-from app.services.analysis import provider
-from app.services.analysis.mitre_gate.llm import (
-    MITRE_APPLICABILITY_GATE_VERSION,
+from app.analysis.technical_context.contracts import MITRE_APPLICABILITY_GATE_VERSION
+from app.analysis.technical_context.gate_llm import (
     MITRE_APPLICABILITY_SOURCE_MAX_CHARS,
     MITRE_APPLICABILITY_SYSTEM_PROMPT,
     build_mitre_applicability_prompt,
     evaluate_mitre_applicability,
 )
-from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.document_ingestion.contracts import (
-    DocumentPage,
-    ExtractionMethod,
-    IngestedDocument,
-)
-from app.services.llm.core_llm import CoreLlmTarget
-from app.services.sources.case_source_bundle import CaseSourceItem
-from app.services.sources.source_service import document_provenance
+from app.llm import request as provider
+from app.llm.openrouter import CoreLlmTarget
+from app.llm.settings import AnalysisPipelineConfig
+from app.sources.bundle import CaseSourceItem
+from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
+from app.sources.service import document_provenance
 
 
 @pytest.fixture
@@ -66,7 +62,7 @@ def test_gate_uses_fixed_prompt_strict_schema_and_deterministic_options(
         return httpx.Response(200, json={"output_text": json.dumps(output)})
 
     monkeypatch.setattr(
-        "app.services.analysis.settings.settings.case_analysis_model",
+        "app.llm.settings.settings.case_analysis_model",
         "openrouter/vendor/custom-model",
     )
     result = gate_answering(monkeypatch, handler, source)

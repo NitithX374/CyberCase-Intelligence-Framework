@@ -23,12 +23,13 @@ step    = await store_outcome(...)           # another short transaction
 ```
 
 **This is why there are three functions where you expected one.** Once you see
-it, most of `services/` stops looking arbitrary: anything that calls a model or
+it, most of the layout stops looking arbitrary: anything that calls a model or
 another service is surrounded by two small database functions.
 
-The corollary is the rule the pipeline lives by: **no step in
-`services/analysis/` touches the database.** Each one is handed what it needs
-and returns what it produced. That is also what lets an experiment run the same
+The corollary is the rule the pipeline lives by: **no step of the pipeline
+touches the database.** `pipeline.py`, `assess.py`, `write.py`,
+`technical_context/` and `trace/` are handed what they need and return what
+they produced; only `run.py`, `store.py` and `latest.py` read or write rows. That is also what lets an experiment run the same
 steps over a dataset file instead of a case row.
 
 ---
@@ -37,11 +38,11 @@ steps over a dataset file instead of a case row.
 
 | # | File | What you learn |
 |---|------|----------------|
-| 1 | `app/services/analysis/pipeline.py` | How a request assesses first, then either asks or runs the three full-analysis steps |
-| 2 | `app/services/workflow/run_analysis.py` | The read/think/write split, and the follow-up loop |
-| 3 | `app/services/analysis/contracts/trace.py` | `CaseAnalysisTrace` — the object everything downstream reads |
-| 4 | `app/services/analysis/clarification.py` | Whether to ask the reader another question. Pure policy, no I/O |
-| 5 | `app/services/reports/display.py` | How a stored trace becomes the report snapshot the HTML and PDF print |
+| 1 | `app/analysis/pipeline.py` | How a request assesses first, then either asks or runs the three full-analysis steps |
+| 2 | `app/analysis/run.py` | The read/think/write split, and the follow-up loop |
+| 3 | `app/trace/trace.py` | `CaseAnalysisTrace` — the object everything downstream reads |
+| 4 | `app/analysis/clarification.py` | Whether to ask the reader another question. Pure policy, no I/O |
+| 5 | `app/reports/display.py` | How a stored trace becomes the report snapshot the HTML and PDF print |
 
 After those five, the rest is plumbing you can read on demand.
 
@@ -68,7 +69,7 @@ the MITRE gate, RAG retrieval, full analysis model, and claim binding. The
 assessment row is stored with `status="assessment"` so its questions retain an
 `analysis_result_id`, but it never moves `Case.latest_analysis_result_id`.
 
-`write_analysis` calls `write_trace` in `analysis/steps/write.py`, the one model
+`write_analysis` calls `write_trace` in `analysis/write.py`, the one model
 call that writes the trace. The `verify` arm in `experiments/analysis_arms.py`
 runs the same three steps without the assessment. There is no arm switch or
 config value. The alternative compositions the thesis measures live in
@@ -76,7 +77,7 @@ config value. The alternative compositions the thesis measures live in
 an `AnalysisInput` directly, with no case row. `run_case_analysis(pipeline=...)`
 also accepts a substitute composition, as `tests/test_case_followup_postgres.py`
 does. When that composition returns bare `AnalysisArtifacts`, `think` in
-`workflow/run_analysis.py` wraps them as a `Proceed` with an empty assessment,
+`analysis/run.py` wraps them as a `Proceed` with an empty assessment,
 so `store_outcome` only ever sees an `AnalysisAdvance`.
 
 **`experiments/` imports `app/`. `app/` never imports `experiments/`.** If that
@@ -101,11 +102,11 @@ re-derived from rows that already exist:
 continues a round: a reply closed the round, or the last question is answered and no
 analysis has been stored since (`last_question_awaiting_analysis` in
 `chat/followup.py`). A fresh Analyze starts at round 1 with no gap marked
-asked (`read_case_for_analysis` in `workflow/run_analysis.py`).
-`next_question_of_round` in `chat/case_chat.py`, which picks the next question
+asked (`read_case_for_analysis` in `analysis/run.py`).
+`next_question_of_round` in `chat/reply.py`, which picks the next question
 inside a round, always uses the case-wide counts.
 
-`post_case_message` in `chat/case_chat.py` makes the message paths explicit. A
+`post_case_message` in `chat/reply.py` makes the message paths explicit. A
 new message with no question pending is ordinary chat and goes through
 `answer_case_question`. A question stops being pending once an analysis has been
 stored after it (`pending_question` in `chat/followup.py`), so a message sent
@@ -130,8 +131,8 @@ This is why the loop was **not** built with a state machine library. There is no
 state to machine — each step reads the world, decides once, and writes.
 
 The only state held in memory is what is in flight inside one request:
-`analysing` in `workflow/run_analysis.py` counts the analyses running per case,
-and `answering` in `workflow/answer_question.py` marks the questions being
+`analysing` in `analysis/run.py` counts the analyses running per case,
+and `answering` in `chat/answer.py` marks the questions being
 answered. A retry reads them so that it returns what is stored instead of
 starting the same work twice. This holds because the backend runs one process.
 
@@ -156,14 +157,14 @@ asked for it.
 ## 5. Where a model is actually called
 
 Four places, and all of them go through `request_stage` in
-`analysis/provider.py`:
+`llm/request.py`:
 
 | Call | File | `stage` |
 |---|---|---|
-| The gap-only assessment | `analysis/steps/assess.py` | `assess` |
-| The analysis | `analysis/steps/write.py` | `case_direct` |
-| A chat answer, before or after an analysis | `chat/case_answer.py` | `chat_answer` |
-| The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/mitre_gate/llm.py` | `mitre_applicability` |
+| The gap-only assessment | `analysis/assess.py` | `assess` |
+| The analysis | `analysis/write.py` | `case_direct` |
+| A chat answer, before or after an analysis | `chat/compose.py` | `chat_answer` |
+| The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/technical_context/gate_llm.py` | `mitre_applicability` |
 
 `request_stage` is the one transport: it checks the input against the token
 budget, posts to OpenRouter's messages endpoint, retries once on a dropped
@@ -176,13 +177,13 @@ A chat answer reads what the analysis reads — the case sources, the answered
 follow-ups and the technical context the latest analysis retrieved — and that
 analysis too when there is one. The model returns units, each with a basis
 (`case_fact`, `interpretation`, `technical` or `general`), the `claim_ids` it
-rests on and exact quotes. `chat/case_answer.py` keeps only claim ids of that
-analysis and quotes found in their source by the matcher `bind.py` uses, then
+rests on and exact quotes. `chat/compose.py` keeps only claim ids of that
+analysis and quotes found in their source by the matcher `trace/bind.py` uses, then
 stores the units on the message; a unit whose citation fails keeps its text
 without the citation. The log line `Chat answer grounding` counts cited and
 uncited case facts per answer.
 
-Retrieval is separate again: **one** call site, `analysis/steps/technical_context.py`,
+Retrieval is separate again: **one** call site, `analysis/technical_context/retrieve.py`,
 over HTTP to the RAG service. The frontend never calls the RAG service.
 
 ---
@@ -193,8 +194,13 @@ over HTTP to the RAG service. The frontend never calls the RAG service.
 import below it. When they re-exported their modules, a router that wanted a
 JWT helper loaded the PDF renderer and the whole analysis pipeline — and one
 broken leaf broke the application. Import from the module that defines the
-name. Only `models/__init__`, `analysis/contracts/__init__` and
-`analysis/mitre_gate/__init__` hold code.
+name. Only `models/__init__` holds code: it registers the tables.
+
+**Data shapes live in contract files, never in a step.** `contracts.py` in a
+feature folder, `trace/claims.py` and `trace/trace.py` hold types only. When the
+technical-context record lived in the retrieval step, a report that only read it
+imported the MITRE gate and the model transport, and case CRUD imported the
+whole pipeline for a three-line freshness check. A type imports no behaviour.
 
 **`app/main.py` refuses to start with more than one worker.** The analysis runs
 inside the request that asked for it. Two workers would mean two analyses of the
@@ -204,7 +210,7 @@ same case racing for the same row.
 `reports/render.py` imports WeasyPrint inside `render_case_report_pdf`, because
 WeasyPrint loads Pango and Cairo through `ctypes` at import time and raises if
 they are missing. At module level, one absent system library would break every
-import of `app.services.reports`. Same reasoning as the empty barrel.
+import of `app.reports`. Same reasoning as the empty barrel.
 
 **The MITRE retrieval is reused when the input has not changed.** The key is
 `{source_revision, followup_answers}`, stored in `retrieval_context_json`
@@ -241,25 +247,25 @@ Anything that renders "the techniques" should say which kinds it means.
 
 **No transaction stays open across slow work.** `get_optional_user` runs a
 `SELECT` on the request-scoped session and commits straight after it, so a route
-starts with no transaction open. `routers/documents.py` reads the upload and
-runs the OCR first and opens `async with db.begin()` only around the write
-after it, and `routers/sources.py` wraps only the insert; a new route that
-writes after slow work follows `routers/documents.py`. The other writes are
+starts with no transaction open. The document route in `sources/routes.py`
+reads the upload and runs the OCR first and opens `async with db.begin()` only
+around the write after it, and the source route beside it wraps only the
+insert; a new route that writes after slow work follows the document route. The other writes are
 shaped differently and still hold no transaction across slow work: `CaseService`
-(`services/cases/case_service.py`) and `register_user`
-(`services/auth/auth_service.py`, which hashes the password before the write)
+(`cases/service.py`) and `register_user`
+(`auth/service.py`, which hashes the password before the write)
 make one short write and call `db.commit()`, and
 `CaseReportService.generate_report` opens `db.begin()` itself rather than in
 the router. `POST /analysis` and `POST /chat/messages`
 declare no request session; `run_case_analysis` and `send_case_message` open
 their own short sessions around each read and each write, and none is open
-during a model call. When `routers/documents.py` kept its transaction open
+during a model call. When the document route kept its transaction open
 across the upload and the OCR, a cancelled upload left Postgres logging
 `unexpected EOF on client connection with an open transaction`.
 
 **Patch targets written as strings fail silently on a rename.**
-Several tests patch `"app.services.analysis.steps.write.request_stage"` or
-`"app.services.analysis.settings.settings.case_analysis_model"`. A rename that
+Several tests patch `"app.analysis.write.request_stage"` or
+`"app.llm.settings.settings.case_analysis_model"`. A rename that
 misses one of these does not fail at import; it fails as a test that quietly
 hits the real provider. Grep for the old module path after any move.
 

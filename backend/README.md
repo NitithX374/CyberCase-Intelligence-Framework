@@ -4,7 +4,7 @@ The FastAPI backend owns authentication, Case CRUD, document intake, Case source
 
 ## Current boundary
 
-All application routes use `/api/v1`, one router per resource in `app/routers/`. `tests/test_route_surface.py` asserts the exact surface; it is the authority when this list and the code disagree.
+All application routes use `/api/v1`, one `routes.py` per feature folder (`app/auth/`, `app/cases/`, `app/sources/`, `app/analysis/`, `app/chat/`, `app/reports/`). `tests/test_route_surface.py` asserts the exact surface; it is the authority when this list and the code disagree.
 
 - `/health` — service and database health;
 - `/auth/register`, `/login`, `/logout`, `/session` — cookie session;
@@ -23,7 +23,7 @@ There is no run resource. An analysis and an answer happen inside the request th
 
 PostgreSQL stores Cases, documents, native Case sources, analysis results, Case-owned messages, optional retrieval context, and Case reports. The SQLAlchemy models in `app/models/` are the authority for the persisted shape. `alembic/versions/0001_initial_schema.py` is the one migration that builds it, and `tests/test_database_schema_parity_alembic.py` checks that the two match.
 
-A report is built once per analysis by `app/services/reports/display.py` and stored as a display snapshot in `case_reports.structured_report`; the HTML and PDF are rendered from that stored copy.
+A report is built once per analysis by `app/reports/display.py` and stored as a display snapshot in `case_reports.structured_report`; the HTML and PDF are rendered from that stored copy.
 
 ## Source flow
 
@@ -31,13 +31,13 @@ A document becomes a `CaseDocument` holding the file and a document `CaseSource`
 
 Clarification answers are different: they are persisted `ChatMessage` rows and loaded as `followup_history` for later analysis. They are not native Case sources and do not change `source_revision`; the binding layer may expose them to the analysis trace through synthetic QA identifiers.
 
-An analysis reads one `CaseSourceBundle(revision, sources)` plus the separate follow-up history. The bundle is passed through assessment, optional technical augmentation, structured analysis, and source binding without database access inside the analysis steps. The workflow stores the result only after model work finishes and refuses to store it if the Case source revision changed meanwhile. The stored result records what it read in `external_context_json`: `sources_read`, the IDs of the sources it read, and `followup_history`, each answered follow-up's QA id, question and answer. The report takes the list of sources from `sources_read` and reads those source rows (`recorded_source_bundle` in `app/services/reports/projection.py`); a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is not re-read from chat.
+An analysis reads one `CaseSourceBundle(revision, sources)` plus the separate follow-up history. The bundle is passed through assessment, optional technical augmentation, structured analysis, and source binding without database access inside the analysis steps. The workflow stores the result only after model work finishes and refuses to store it if the Case source revision changed meanwhile. The stored result records what it read in `external_context_json`: `sources_read`, the IDs of the sources it read, and `followup_history`, each answered follow-up's QA id, question and answer. The report takes the list of sources from `sources_read` and reads those source rows (`recorded_source_bundle` in `app/reports/generate.py`); a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is not re-read from chat.
 
 ## One name per thing
 
 A Case is analysed from **sources**. `case_sources`, `source_revision`, `CaseSource`, `CaseSourceCreate`, `CaseSourceRead`, and `/cases/{case_id}/sources` use the same vocabulary. In prose, “evidence” can describe what a report found, but it is not the identifier for the persisted input object.
 
-The report template's `case_evidence` and `evidence_to_examine` sections (`app/services/reports/templates/case_report.html.j2`) are section ids in the template, not inputs: they print the snapshot's `findings` and its `gaps`, the information that still needs checking.
+The report template's `case_evidence` and `evidence_to_examine` sections (`app/reports/templates/case_report.html.j2`) are section ids in the template, not inputs: they print the snapshot's `findings` and its `gaps`, the information that still needs checking.
 
 ## Run and verify
 

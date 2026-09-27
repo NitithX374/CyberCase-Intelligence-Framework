@@ -6,18 +6,14 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from isolated_database import isolated_database
 
+from app.auth.credentials import create_access_token
 from app.config import settings
 from app.database import get_db
 from app.main import app
 from app.models import Case, User
-from app.schemas.sources import CaseSourceRead
-from app.services.auth.credentials import create_access_token
-from app.services.document_ingestion.contracts import (
-    DocumentPage,
-    ExtractionMethod,
-    IngestedDocument,
-)
-from app.services.sources.source_service import SourceError, SourceService
+from app.sources.ingestion.contracts import DocumentPage, ExtractionMethod, IngestedDocument
+from app.sources.schemas import CaseSourceRead
+from app.sources.service import SourceError, SourceService
 
 
 def ingested(filename: str, *pages: tuple[str, str], warnings: list[str] | None = None):

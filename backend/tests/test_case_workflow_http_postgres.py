@@ -12,20 +12,20 @@ from httpx import ASGITransport, AsyncClient
 from isolated_database import isolated_database
 from sqlalchemy import select
 
-import app.routers.analysis as analysis_router
-import app.routers.chat as chat_router
+import app.analysis.routes as analysis_router
+import app.chat.routes as chat_router
+from app.analysis.run import run_case_analysis
+from app.auth.guard import get_current_user
+from app.chat.reply import send_case_message
 from app.config import settings
 from app.database import get_db
+from app.llm import request as provider
+from app.llm.openrouter import CoreLlmTarget
 from app.main import app
-from app.models.chat import ChatMessage
-from app.models.sources import CaseSource
-from app.services.analysis import provider
-from app.services.analysis.steps import bind
-from app.services.analysis.steps.quotes import MAX_QUOTE_CHARS
-from app.services.auth.dependencies import get_current_user
-from app.services.chat.case_chat import send_case_message
-from app.services.llm.core_llm import CoreLlmTarget
-from app.services.workflow.run_analysis import run_case_analysis
+from app.models.chat_message import ChatMessage
+from app.models.source import CaseSource
+from app.trace import bind
+from app.trace.quotes import MAX_QUOTE_CHARS
 
 pytestmark = pytest.mark.asyncio
 

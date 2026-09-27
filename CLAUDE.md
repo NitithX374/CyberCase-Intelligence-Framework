@@ -150,17 +150,17 @@ The pipeline never pauses for user input.
 
 ### API Endpoints
 
-Backend (`backend/app/routers/`, prefix `/api/v1`), one router per resource. `tests/test_route_surface.py` asserts this exact set, so it is the authority when this list and the code disagree:
+Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_route_surface.py` asserts this exact set, so it is the authority when this list and the code disagree:
 - `GET /health` — backend and database health (`health.py`)
-- `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` — cookie session (`auth.py`)
-- `GET`, `POST /cases`; `GET`, `PATCH`, `DELETE /cases/{case_id}` — case lifecycle (`cases.py`)
-- `GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages` — the Ask/Chat panel (`chat.py`)
-- `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — upload and read back (`documents.py`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
-- `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources.py`)
-- `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis.py`)
-- `POST`, `GET /cases/{case_id}/reports`, `GET /cases/{case_id}/reports/{report_id}/pdf`, `.../html` — report versions and export (`reports.py`)
+- `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` — cookie session (`auth/routes.py`)
+- `GET`, `POST /cases`; `GET`, `PATCH`, `DELETE /cases/{case_id}` — case lifecycle (`cases/routes.py`)
+- `GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages` — the Ask/Chat panel (`chat/routes.py`)
+- `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — upload and read back (`sources/routes.py`, `document_router`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
+- `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`)
+- `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`)
+- `POST`, `GET /cases/{case_id}/reports`, `GET /cases/{case_id}/reports/{report_id}/pdf`, `.../html` — report versions and export (`reports/routes.py`)
 
-Every case route is authenticated and ownership-scoped; ownership is one check, `owned_case` in `services/cases/ownership.py`, which answers 404 for a case the user does not own. There are no top-level `/api/v1/reports`, `/users`, or RAG-proxy routes, and no `/runs/{run_id}` — the analysis happens in the request that asked for it, which is why `main.py` refuses to start with more than one worker.
+Every case route is authenticated and ownership-scoped; ownership is one check, `owned_case` in `cases/ownership.py`, which answers 404 for a case the user does not own. There are no top-level `/api/v1/reports`, `/users`, or RAG-proxy routes, and no `/runs/{run_id}` — the analysis happens in the request that asked for it, which is why `main.py` refuses to start with more than one worker.
 
 RAG service (`rag_service/app/main.py`, port 8001, no prefix): `GET /health`, `POST /query`, `GET /retrieval-contexts/{context_id}`.
 
@@ -169,57 +169,69 @@ RAG service (`rag_service/app/main.py`, port 8001, no prefix): `GET /health`, `P
 ```
 main.py                 the app: one worker only, the browser guard, and the
                         one handler that turns AppError into HTTP
-errors.py               AppError, the one service error (code, message, status)
-routers/                one file per resource
-schemas/                request/response contracts
-models/                 SQLAlchemy tables
-services/
-  __init__.py           deliberately empty — see below
-  auth/                 auth_service (register, log in), credentials
-                        (passwords, JWTs), dependencies (current user, and
-                        the guard every browser request passes)
-  cases/                case CRUD, and ownership.py: owned_case, the one
-                        ownership check
-  document_ingestion/   upload to text: service, files (detect, render pages),
+errors.py               AppError, the one service error (code, message,
+                        status), and its two kinds: CaseAnalysisFailure (a
+                        model stage failed) and CaseWorkflowError
+health.py               GET /health
+models/                 SQLAlchemy tables, one per file: case, source,
+                        document, analysis_result, chat_message, report, user
+llm/                    calling a model
+  request.py            request_stage: the one transport every model call
+                        takes, the LLM gate's included
+  settings.py           model, providers, output and thinking budgets
+  openrouter.py         the OpenRouter target; registry.py (model aliases),
+                        schema.py (the structured-output schema)
+trace/                  what the analysis, chat and reports share
+  claims.py             claims, citations, gaps, a follow-up exchange, what
+                        the preflight returns
+  trace.py              the trace: summary, parties, timeline, impacts, claims
+  quotes.py             finding a quotation in a source
+  bind.py               bind a written trace to the case; count what did not bind
+auth/                   routes, schemas, service (register, log in),
+                        credentials (passwords, JWTs), guard (current user,
+                        and the guard every browser request passes)
+cases/                  routes, schemas, service (case CRUD), and ownership.py:
+                        owned_case, the one ownership check
+sources/                routes (sources and documents), schemas, service, and
+                        bundle.py: the one bundle an analysis reads from
+  ingestion/            upload to text: service, files (detect, render pages),
                         parsers (PDF text, DOCX), recognition (Typhoon OCR),
                         contracts (types and errors), provenance
-  sources/              documents and the one bundle an analysis reads from
-  analysis/             producing an analysis of a case
-    pipeline.py         advance_case(): assess first, then analyse only if
-                        there is nothing worth asking
-    steps/              one file per step, in the order they run
-      assess.py             the cheap gaps-only call that runs first
-      technical_context.py  ask the RAG service, when the gate says to
-      write.py              write_trace: the one model call that writes the trace
-      bind.py               bind the trace to the case; count what did not bind
-      quotes.py             finding a quotation in a source (bind.py's helper)
-    clarification.py    pure policy: ask the reader, or proceed
-    language.py         which language to write in: Thai when any source has
-                        a Thai character; a chat question in its own language
-    contracts/          trace.py, claims.py (claims, citations, gaps, a
-                        follow-up exchange, what the preflight returns)
-    mitre_gate/         whether this case needs ATT&CK at all (__init__ picks
-                        the gate, llm.py and encoder.py are the gates,
-                        sentences.py cuts the case up for the encoder)
-    provider.py         request_stage: the one transport every model call
-                        takes, the LLM gate's included
-    prompts.py          settings.py  (model, token budget)
-  workflow/             the request lifecycle around an analysis
-    run_analysis.py     one step of the bounded loop: read, think, write
-    analysis_storage.py what a step writes — an assessment that asks, or a
+analysis/               producing an analysis of a case; routes, schemas
+  run.py                one step of the bounded loop: read, think, write
+  store.py              what a step writes: an assessment that asks, or a
                         finished analysis
-    answer_question.py  answering a chat question from what the analysis reads
-                        (sources, follow-ups, technical context) and, when
-                        there is one, the latest analysis
-    shared.py           what both need
-  chat/                 the case conversation, and the follow-up it carries
-  reports/              contracts, display (builds the snapshot a report
-                        stores and prints), projection (what the analysis
-                        recorded, and a stored report read back), persistence,
-                        render (HTML and PDF from the Jinja2 template)
-  llm/                  the OpenRouter target, the model registry, and the
-                        structured-output schema
-  clients/              the RAG service client
+  latest.py             the read side: the latest analysis, its freshness and
+                        the technical context it recorded
+  pipeline.py           advance_case(): assess first, then analyse only if
+                        there is nothing worth asking
+  assess.py             the cheap gaps-only call that runs first
+  write.py              write_trace: the one model call that writes the trace
+  clarification.py      pure policy: ask the reader, or proceed
+  language.py           which language to write in: Thai when any source has
+                        a Thai character; a chat question in its own language
+  prompts.py            the analysis prompts
+  technical_context/    whether and how the case gets ATT&CK context
+    contracts.py        the augmentation and applicability records, and the
+                        RAG service's request and response
+    retrieve.py         run the gate, then ask the RAG service when it says to
+    gate.py             picks the gate; gate_llm.py and gate_encoder.py are
+                        the gates, sentences.py cuts the case up for the encoder
+    rag_client.py       the RAG service client
+chat/                   the case conversation; routes, schemas (message
+                        metadata included)
+  reply.py              routes a message: a follow-up answer or a question
+  followup.py           the bounded clarification: asked gaps, rounds, the
+                        answered history, the question and answer messages
+  answer.py             answering a chat question: read the case, compose,
+                        store the reply
+  compose.py            the chat model call: request, verify citations, units
+  prompts.py            CHAT_PROMPT
+  contracts.py          answer units, the suggestion and the answer
+reports/                routes, schemas, contracts, generate.py (one report
+                        per analysis, from what it recorded), display.py (the
+                        snapshot a report stores and prints), render.py (HTML
+                        and PDF from the Jinja2 template in templates/)
 experiments/            ablations — imports app/, never imported by it; only
                         __init__.py and these two files are tracked; the rest
                         is local
@@ -228,19 +240,27 @@ experiments/            ablations — imports app/, never imported by it; only
   split_analysis.py     the two model calls the split arm needs
 ```
 
-Two rules this layout exists to keep:
+Three rules this layout exists to keep:
+
+**One folder per thing the case does.** A feature's routes, schemas and logic
+sit together: open its `routes.py` and follow the function each route calls.
+Only what several features share has a folder of its own: `llm/` and `trace/`.
+
+**Data shapes live in contract files, never in a step.** `contracts.py`,
+`trace/claims.py` and `trace/trace.py` hold types only, so a module that needs a
+type does not import the step that uses it: reports read the technical-context
+record without loading the MITRE gate or the model transport.
 
 **Package `__init__.py` files stay empty.** Python runs one on any import
 below it, so re-exporting there made every import pull the whole package — a
 router wanting a JWT helper loaded the PDF renderer and the whole pipeline, and
 one bad leaf broke the application. Import from the module that defines the
-name. The exceptions hold real code: `models/__init__` registers the tables,
-`analysis/contracts/__init__` and `analysis/mitre_gate/__init__` define things.
+name. The one exception is `models/__init__`, which registers the tables.
 The same reasoning is why `reports/render.py` imports WeasyPrint inside the PDF
 function: WeasyPrint
 loads Pango and Cairo through ctypes at import time and raises if they are
 missing, so at module level one absent system library would break every
-import of `app.services.reports`.
+import of `app.reports`.
 
 **Production runs one path, and the arms are arguments.** That path is
 `advance_case`, which reads top to bottom and has no arm switch:
@@ -278,15 +298,15 @@ composition, as `tests/test_case_followup_postgres.py` does. There is no
 
 Before a case is analysed the backend decides whether ATT&CK is relevant at
 all. `MITRE_GATE_MODE` picks between three gates, which live together in
-`backend/app/services/analysis/mitre_gate/`:
+`backend/app/analysis/technical_context/` (`gate.py` picks one):
 
 | Mode | What decides | Notes |
 |------|--------------|-------|
-| `llm` (default) | one prompt over the case, each source cut to at most 4,000 characters (20,000 across all sources); `input_truncated` on the record says whether anything was cut | `mitre_gate/llm.py`, model from `CASE_ANALYSIS_MODEL`, sent through `request_stage` like every other model call |
-| `encoder` | XLM-R over one sentence at a time | `mitre_gate/encoder.py`; needs `torch`/`transformers`, which are **not** in `backend/requirements.txt` |
+| `llm` (default) | one prompt over the case, each source cut to at most 4,000 characters (20,000 across all sources); `input_truncated` on the record says whether anything was cut | `technical_context/gate_llm.py`, model from `CASE_ANALYSIS_MODEL`, sent through `request_stage` like every other model call |
+| `encoder` | XLM-R over one sentence at a time | `technical_context/gate_encoder.py`; needs `torch`/`transformers`, which are **not** in `backend/requirements.txt` |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
-The `encoder` gate splits its input with PyThaiNLP `crfcut` (`mitre_gate/sentences.py`);
+The `encoder` gate splits its input with PyThaiNLP `crfcut` (`technical_context/sentences.py`);
 every sentence is an exact substring of its source, so the encoder's `trigger_text`
 is grounded by construction. The `llm` gate does not split sentences: it reads each
 source cut to its share of the budget, and the `trigger_text` it returns is checked
@@ -294,14 +314,14 @@ instead. `validate_mitre_applicability` keeps a RETRIEVE only if every trigger, 
 NFKC normalization, is a substring of a source the gate cited and every cited source
 holds a trigger; otherwise it records SKIP with `mitre_applicability_invalid_grounding`.
 The RAG query is not the trigger text alone: `retrieval_query` in
-`steps/technical_context.py` joins the triggers, falls back to the whole source bundle
+`technical_context/retrieve.py` joins the triggers, falls back to the whole source bundle
 (`build_rag_query`) when there are none, and appends each answered follow-up's
 question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 `research/mitre_gate/README.md` has the measurements.
 
 ### Chat Clarification Boundary
 
-The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each; `analysis/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `chat/followup.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/case_chat.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `run_analysis.analysing` tracks the analyses in flight, which holds because the backend runs one process.
+The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each; `analysis/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `chat/followup.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `analysis/run.py` tracks the analyses in flight, which holds because the backend runs one process.
 
 RAG is never called for clarification. It is reached only through the analysis pipeline's technical-context stage, when the MITRE gate says RETRIEVE, and the frontend never calls `rag_service` directly.
 

@@ -7,16 +7,9 @@ from uuid import uuid4
 import pytest
 from case_mitre_test_support import _fixtures
 
-from app.services.analysis import pipeline as pipeline_module
-from app.services.analysis.clarification import Proceed
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisTrace,
-    CaseAssessmentTrace,
-    CaseSourceCitation,
-)
-from app.services.analysis.mitre_gate.llm import skipped_mitre_applicability
-from app.services.analysis.pipeline import (
+from app.analysis import pipeline as pipeline_module
+from app.analysis.clarification import Proceed
+from app.analysis.pipeline import (
     AnalysisAdvance,
     AnalysisArtifacts,
     AnalysisInput,
@@ -24,10 +17,14 @@ from app.services.analysis.pipeline import (
     bind_to_case,
     write_analysis,
 )
-from app.services.analysis.steps.technical_context import CaseMitreAugmentation
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
-from app.services.workflow.run_analysis import UnassessedAdvance, store_outcome, think
-from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError
+from app.analysis.run import UnassessedAdvance, store_outcome, think
+from app.analysis.store import CaseUnderAnalysis
+from app.analysis.technical_context.contracts import skipped_mitre_applicability
+from app.analysis.technical_context.retrieve import CaseMitreAugmentation
+from app.errors import CaseWorkflowError
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.claims import CaseAnalysisClaim, CaseAssessmentTrace, CaseSourceCitation
+from app.trace.trace import CaseAnalysisTrace
 from experiments import analysis_arms
 
 
