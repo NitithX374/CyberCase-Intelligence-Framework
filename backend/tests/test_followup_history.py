@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 from isolated_database import isolated_database
 
-from app.chat.followup import (
+from app.followup.conversation import (
     asked_gap_keys,
     asked_in_round,
     case_messages,

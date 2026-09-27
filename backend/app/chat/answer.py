@@ -9,18 +9,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.language import case_language, question_language
-from app.analysis.latest import analysis_freshness, recorded_technical_context
+from app.analysis.latest import recorded_technical_context
 from app.cases.ownership import owned_case
+from app.cases.service import analysis_freshness
 from app.chat.compose import generate_case_answer
 from app.chat.contracts import CaseAnalysisOutput
-from app.chat.followup import case_messages, followup_history_from, next_ordinal
-from app.chat.schemas import MessageMetadata, message_trace, serialize_message_metadata
 from app.database import async_session
 from app.errors import CaseAnalysisFailure, CaseWorkflowError
+from app.followup.conversation import case_messages, followup_history_from, next_ordinal
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.chat_message import ChatMessage
 from app.sources.bundle import WITH_SOURCES, CaseSourceBundle, analysable_bundle
 from app.sources.service import SourceError
+from app.trace.messages import MessageMetadata, message_trace, serialize_message_metadata
 
 _answering: set[UUID] = set()
 

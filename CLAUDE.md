@@ -187,10 +187,18 @@ trace/                  what the analysis, chat and reports share
   trace.py              the trace: summary, parties, timeline, impacts, claims
   quotes.py             finding a quotation in a source
   bind.py               bind a written trace to the case; count what did not bind
+  messages.py           what a chat message carries: the trace attached to it,
+                        an answer's units and its suggestion
+followup/               the bounded clarification the analysis and chat share
+  clarification.py      pure policy: ask the reader, or proceed
+  conversation.py       what the loop reads from the conversation (asked gaps,
+                        rounds, the answered history, the pending question)
+                        and the messages it writes into it
 auth/                   routes, schemas, service (register, log in),
                         credentials (passwords, JWTs), guard (current user,
                         and the guard every browser request passes)
-cases/                  routes, schemas, service (case CRUD), and ownership.py:
+cases/                  routes, schemas, service (case CRUD and whether the
+                        latest analysis is current), and ownership.py:
                         owned_case, the one ownership check
 sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
@@ -201,13 +209,12 @@ analysis/               producing an analysis of a case; routes, schemas
   run.py                one step of the bounded loop: read, think, write
   store.py              what a step writes: an assessment that asks, or a
                         finished analysis
-  latest.py             the read side: the latest analysis, its freshness and
-                        the technical context it recorded
+  latest.py             the read side: the latest analysis and the technical
+                        context it recorded
   pipeline.py           advance_case(): assess first, then analyse only if
                         there is nothing worth asking
   assess.py             the cheap gaps-only call that runs first
   write.py              write_trace: the one model call that writes the trace
-  clarification.py      pure policy: ask the reader, or proceed
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   prompts.py            the analysis prompts
@@ -218,16 +225,13 @@ analysis/               producing an analysis of a case; routes, schemas
     gate.py             picks the gate; gate_llm.py and gate_encoder.py are
                         the gates, sentences.py cuts the case up for the encoder
     rag_client.py       the RAG service client
-chat/                   the case conversation; routes, schemas (message
-                        metadata included)
+chat/                   the case conversation; routes, schemas
   reply.py              routes a message: a follow-up answer or a question
-  followup.py           the bounded clarification: asked gaps, rounds, the
-                        answered history, the question and answer messages
   answer.py             answering a chat question: read the case, compose,
                         store the reply
   compose.py            the chat model call: request, verify citations, units
   prompts.py            CHAT_PROMPT
-  contracts.py          answer units, the suggestion and the answer
+  contracts.py          the answer compose returns
 reports/                routes, schemas, contracts, generate.py (one report
                         per analysis, from what it recorded), display.py (the
                         snapshot a report stores and prints), render.py (HTML
@@ -244,7 +248,8 @@ Three rules this layout exists to keep:
 
 **One folder per thing the case does.** A feature's routes, schemas and logic
 sit together: open its `routes.py` and follow the function each route calls.
-Only what several features share has a folder of its own: `llm/` and `trace/`.
+Only what several features share has a folder of its own: `llm/`, `trace/` and
+`followup/`. No feature imports another that imports it back.
 
 **Data shapes live in contract files, never in a step.** `contracts.py`,
 `trace/claims.py` and `trace/trace.py` hold types only, so a module that needs a
@@ -321,7 +326,7 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 ### Chat Clarification Boundary
 
-The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each; `analysis/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `chat/followup.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `analysis/run.py` tracks the analyses in flight, which holds because the backend runs one process.
+The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each; `followup/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `followup/conversation.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `analysis/run.py` tracks the analyses in flight, which holds because the backend runs one process.
 
 RAG is never called for clarification. It is reached only through the analysis pipeline's technical-context stage, when the MITRE gate says RETRIEVE, and the frontend never calls `rag_service` directly.
 

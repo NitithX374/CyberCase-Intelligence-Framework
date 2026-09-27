@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
-
-from app.analysis.schemas import AnalysisFreshness
 
 
 def without_nul(title: str) -> str:
@@ -40,7 +38,11 @@ class CaseRead(BaseModel):
     updated_at: datetime
 
 
+AnalysisFreshness = Literal["missing", "current", "stale"]
+
+
 __all__ = [
+    "AnalysisFreshness",
     "CaseCreate",
     "CaseRead",
     "CaseUpdate",

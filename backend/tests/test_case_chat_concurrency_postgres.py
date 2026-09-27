@@ -11,9 +11,9 @@ from sqlalchemy import select, text
 import app.chat.reply as case_chat
 from app.chat.answer import answer_case_question
 from app.chat.contracts import CaseAnalysisOutput
-from app.chat.followup import next_ordinal
 from app.chat.reply import post_case_message
 from app.chat.schemas import ChatMessageCreate
+from app.followup.conversation import next_ordinal
 from app.models.case import Case
 from app.models.chat_message import ChatMessage
 

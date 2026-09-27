@@ -1,5 +1,5 @@
 import type { CaseRead } from "@/lib/api/types";
-import { casePath } from "@/features/workspace/routes";
+import { casePath } from "@/lib/casePaths";
 
 export type CaseLibrarySort = "recent" | "oldest" | "title";
 export type CaseLibraryViewMode = "grid" | "list";
