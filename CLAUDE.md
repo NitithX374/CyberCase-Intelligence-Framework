@@ -91,6 +91,7 @@ npm run generate:api-types  # regenerate src/lib/api/generated/openapi.ts from t
 npm run check:api-types     # fails when that file is stale
 npm run build  # Production build
 ```
+The frontend's folders and the rules they keep are in `frontend/README.md`.
 
 ### Docker
 ```bash
