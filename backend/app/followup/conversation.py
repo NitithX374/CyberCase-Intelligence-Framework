@@ -6,10 +6,10 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chat.schemas import message_trace, serialize_message_metadata
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.chat_message import ChatMessage
 from app.trace.claims import CaseAnalysisGap, CaseFollowupExchange, followup_qa_id
+from app.trace.messages import message_trace, serialize_message_metadata
 from app.trace.trace import CaseAnalysisTrace
 
 

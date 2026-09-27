@@ -1,7 +1,7 @@
 from case_chat_support import GAP, SETTLED, TRACE, numbered_gaps
 
-from app.analysis.clarification import Proceed, decide_followup
 from app.config import settings
+from app.followup.clarification import Proceed, decide_followup
 from app.trace.trace import CaseAnalysisTrace
 
 

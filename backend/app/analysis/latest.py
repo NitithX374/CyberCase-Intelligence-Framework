@@ -56,15 +56,8 @@ async def get_latest_case_analysis(
     return case, result if result is None or result.status == "validated" else None
 
 
-def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
-    if result is None:
-        return "missing"
-    return "current" if result.source_revision == case.source_revision else "stale"
-
-
 __all__ = [
     "RecordedRetrieval",
-    "analysis_freshness",
     "get_latest_case_analysis",
     "recorded_technical_context",
 ]

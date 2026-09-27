@@ -4,9 +4,9 @@ import { useState } from "react";
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
-import { SourceDrawer } from "@/features/sources/SourceDrawer";
-import { useSourceDrawer } from "@/features/sources/useSourceDrawer";
-import type { SourceMessageRef } from "@/features/sources/types";
+import { SourceDrawer } from "@/features/citations/SourceDrawer";
+import { useSourceDrawer } from "@/features/citations/useSourceDrawer";
+import type { SourceMessageRef } from "@/features/citations/types";
 import {
   buildTechnicalContext,
   type RetrievedTechnicalContextCard,

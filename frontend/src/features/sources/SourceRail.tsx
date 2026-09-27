@@ -6,7 +6,7 @@ import { useDismiss } from "@/lib/useDismiss";
 import { formatBytes, formatDate } from "@/lib/format";
 import type { CaseSourceRead } from "@/lib/api/types";
 import type { SourcesAnalysis } from "./CaseSourcesView";
-import type { FollowupAnswer } from "./types";
+import type { FollowupAnswer } from "@/features/citations/types";
 
 export type RailItem =
   | { id: string; kind: "file"; documentId: string; source: CaseSourceRead }

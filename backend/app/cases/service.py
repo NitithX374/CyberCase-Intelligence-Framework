@@ -4,9 +4,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.analysis.latest import analysis_freshness
 from app.cases.ownership import owned_case
 from app.cases.schemas import CaseCreate, CaseRead, CaseUpdate
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
 from app.models.report import CaseReport
 
@@ -81,4 +81,14 @@ class CaseService:
         await self.db.commit()
 
 
-__all__ = ["CaseService", "serialize_case"]
+def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
+    if result is None:
+        return "missing"
+    return "current" if result.source_revision == case.source_revision else "stale"
+
+
+__all__ = [
+    "CaseService",
+    "analysis_freshness",
+    "serialize_case",
+]

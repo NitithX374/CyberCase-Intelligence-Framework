@@ -2,7 +2,7 @@
 
 import { useParams, useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
-import { casePath, type WorkspaceView } from "@/features/workspace/routes";
+import { casePath, type WorkspaceView } from "@/lib/casePaths";
 import { useCase, useCaseMutations } from "@/features/cases/queries";
 import { useIsAnalysisUpdating } from "@/features/analysis/queries";
 import { useAnalysisRunOutcome } from "@/features/analysis/useRunCaseAnalysis";

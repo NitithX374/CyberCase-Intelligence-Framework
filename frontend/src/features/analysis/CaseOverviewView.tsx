@@ -3,19 +3,19 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { CaseGap } from "@/features/analysis/types";
-import type { SourceMessageRef } from "@/features/sources/types";
+import type { SourceMessageRef } from "@/features/citations/types";
 import { buildCaseOverview } from "./overview";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
 import { useRunCaseAnalysis } from "@/features/analysis/useRunCaseAnalysis";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
 import { useCaseSources } from "@/features/sources/queries";
-import { useSourceDrawer } from "@/features/sources/useSourceDrawer";
-import { casePath } from "@/features/workspace/routes";
+import { useSourceDrawer } from "@/features/citations/useSourceDrawer";
+import { casePath } from "@/lib/casePaths";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import { CaseDetails } from "./CaseDetails";
-import { SourceDrawer } from "@/features/sources/SourceDrawer";
+import { SourceDrawer } from "@/features/citations/SourceDrawer";
 import { AnalysisMeta } from "./AnalysisMeta";
-import { ChatMessageMarkdown } from "@/features/chat/ChatMessageMarkdown";
+import { Markdown } from "@/components/Markdown";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 import { EmptyState } from "@/components/EmptyState";
@@ -276,7 +276,7 @@ function OverviewSummarySection({ summary, meta }: { summary: string; meta: Reac
         {meta}
       </div>
       <div className="mt-3 max-w-[68ch] text-ink [overflow-wrap:anywhere] [&_p]:mb-4 [&_p]:text-base [&_p]:leading-8 sm:[&_p]:text-[17px]">
-        <ChatMessageMarkdown content={summary} />
+        <Markdown content={summary} />
       </div>
     </section>
   );

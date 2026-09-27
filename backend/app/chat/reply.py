@@ -9,7 +9,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.analysis.clarification import Ask, decide_followup
 from app.analysis.run import AnalysisStep, analysis_running, run_case_analysis
 from app.analysis.schemas import CaseAnalysisResultRead
 from app.cases.ownership import owned_case
@@ -19,7 +18,11 @@ from app.chat.answer import (
     being_answered,
     message_text,
 )
-from app.chat.followup import (
+from app.chat.schemas import CaseChatRead, CaseChatResponse, ChatMessageCreate, ChatMessageRead
+from app.config import settings
+from app.database import async_session
+from app.followup.clarification import Ask, decide_followup
+from app.followup.conversation import (
     answer_message,
     asked_gap_keys,
     asked_in_round,
@@ -31,9 +34,6 @@ from app.chat.followup import (
     question_message,
     rounds_asked,
 )
-from app.chat.schemas import CaseChatRead, CaseChatResponse, ChatMessageCreate, ChatMessageRead
-from app.config import settings
-from app.database import async_session
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
 from app.models.chat_message import ChatMessage

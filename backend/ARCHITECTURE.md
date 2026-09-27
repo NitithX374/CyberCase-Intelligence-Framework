@@ -41,7 +41,7 @@ steps over a dataset file instead of a case row.
 | 1 | `app/analysis/pipeline.py` | How a request assesses first, then either asks or runs the three full-analysis steps |
 | 2 | `app/analysis/run.py` | The read/think/write split, and the follow-up loop |
 | 3 | `app/trace/trace.py` | `CaseAnalysisTrace` — the object everything downstream reads |
-| 4 | `app/analysis/clarification.py` | Whether to ask the reader another question. Pure policy, no I/O |
+| 4 | `app/followup/clarification.py` | Whether to ask the reader another question. Pure policy, no I/O |
 | 5 | `app/reports/display.py` | How a stored trace becomes the report snapshot the HTML and PDF print |
 
 After those five, the rest is plumbing you can read on demand.
@@ -93,7 +93,7 @@ re-derived from rows that already exist:
 
 | Question | Answered by |
 |---|---|
-| How many rounds have been spent? | the number of distinct `analysis_result_id`s on messages with a `gap_key` (`rounds_asked` in `chat/followup.py`) — one analysis is one round, however many questions it asked |
+| How many rounds have been spent? | the number of distinct `analysis_result_id`s on messages with a `gap_key` (`rounds_asked` in `followup/conversation.py`) — one analysis is one round, however many questions it asked |
 | Which gaps were already asked? | every `gap_key` on the case's messages, as a set |
 | What did the reader answer? | the message whose `in_reply_to_message_id` is that question |
 | Why did it stop? | `trace_json.stop_reason` on the analysis row |
@@ -101,7 +101,7 @@ re-derived from rows that already exist:
 `run_case_analysis` carries the rounds spent and the asked gaps only when it
 continues a round: a reply closed the round, or the last question is answered and no
 analysis has been stored since (`last_question_awaiting_analysis` in
-`chat/followup.py`). A fresh Analyze starts at round 1 with no gap marked
+`followup/conversation.py`). A fresh Analyze starts at round 1 with no gap marked
 asked (`read_case_for_analysis` in `analysis/run.py`).
 `next_question_of_round` in `chat/reply.py`, which picks the next question
 inside a round, always uses the case-wide counts.
@@ -109,7 +109,7 @@ inside a round, always uses the case-wide counts.
 `post_case_message` in `chat/reply.py` makes the message paths explicit. A
 new message with no question pending is ordinary chat and goes through
 `answer_case_question`. A question stops being pending once an analysis has been
-stored after it (`pending_question` in `chat/followup.py`), so a message sent
+stored after it (`pending_question` in `followup/conversation.py`), so a message sent
 after that analysis is not taken as its answer. A reply to the pending question
 is stored, and the next question of the round is written in the same
 transaction. A reply that spends the round closes that transaction before
@@ -136,7 +136,7 @@ and `answering` in `chat/answer.py` marks the questions being
 answered. A retry reads them so that it returns what is stored instead of
 starting the same work twice. This holds because the backend runs one process.
 
-`clarification.py` holds the decision and nothing else: given the gaps, what has
+`followup/clarification.py` holds the decision and nothing else: given the gaps, what has
 been asked, and the budget, return `Ask` or `Proceed`. No database, no settings,
 no model. It is the easiest file in the backend to test and the easiest to
 reason about; keep it that way.

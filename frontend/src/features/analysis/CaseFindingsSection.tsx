@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { groupCaseFindings, claimTypeLabels } from "./overview";
 import type { CaseFinding } from "@/features/analysis/types";
-import type { SourceMessageRef } from "@/features/sources/types";
-import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
+import type { SourceMessageRef } from "@/features/citations/types";
+import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 
