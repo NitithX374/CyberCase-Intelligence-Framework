@@ -17,8 +17,9 @@ from app.services.analysis.contracts import (
     CaseFollowupExchange,
     CaseSourceCitation,
 )
+from app.services.analysis.settings import configured_pipeline
 from app.services.analysis.steps.technical_context import CaseRagContextPayload
-from app.services.chat.case_answer import UNANSWERED, generate_case_answer
+from app.services.chat.case_answer import CHAT_OUTPUT_TOKENS, UNANSWERED, generate_case_answer
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 from app.services.workflow.answer_question import answer_metadata
 
@@ -335,6 +336,13 @@ def test_chat_uses_the_configured_model(monkeypatch):
 
     assert seen["config"].model == "example/configured-model"
     assert seen["schema"].__name__ == "ChatReply"
+
+
+def test_a_chat_answer_has_an_output_budget_far_below_the_analysis(monkeypatch):
+    _, seen = ask(monkeypatch, reply(unit("Hello.", "general")))
+
+    assert seen["config"].output_tokens == CHAT_OUTPUT_TOKENS
+    assert seen["config"].output_tokens < configured_pipeline().output_tokens
 
 
 def test_the_answer_is_written_in_the_language_it_is_given(monkeypatch):

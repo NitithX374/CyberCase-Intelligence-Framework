@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 AnalysisStatus = Literal["none", "current", "stale"]
 BASES = ("case_fact", "interpretation", "technical", "general")
+CHAT_OUTPUT_TOKENS = 4_096
 SUGGESTIONS = ("none", "add_source", "run_analysis")
 
 CHAT_PROMPT = """You answer one question in the chat of an investigative case.
@@ -178,7 +179,7 @@ async def generate_case_answer(
 ) -> CaseAnalysisOutput:
     trace = CaseAnalysisTrace.model_validate(result.trace_json) if result is not None else None
     reply = await request_stage(
-        config=configured_pipeline(),
+        config=configured_pipeline().model_copy(update={"output_tokens": CHAT_OUTPUT_TOKENS}),
         stage="chat_answer",
         system=CHAT_PROMPT,
         content=chat_request(
@@ -381,6 +382,7 @@ def log_grounding(drafts: Sequence[DraftUnit], units: Sequence[ChatAnswerUnit]) 
 
 
 __all__ = [
+    "CHAT_OUTPUT_TOKENS",
     "CHAT_PROMPT",
     "ChatReply",
     "generate_case_answer",
