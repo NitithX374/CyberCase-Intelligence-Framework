@@ -125,10 +125,10 @@ class CaseProviderAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: Literal["case_analysis_trace_v1"]
+    claims: list[CaseProviderClaim] = Field(max_length=64)
     summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
     involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
     timeline: list[CaseTimelineItem] = Field(max_length=64)
-    claims: list[CaseProviderClaim] = Field(max_length=64)
     impacts: list[CaseImpactItem] = Field(max_length=64)
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
