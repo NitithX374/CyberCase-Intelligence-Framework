@@ -10,7 +10,6 @@ from app.services.analysis.contracts import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseAnalysisTrace,
-    CaseGeneratedUnit,
     CaseProviderAnalysis,
     CaseSourceCitation,
 )
@@ -425,13 +424,7 @@ def test_case_provider_analysis_carries_material_gaps_from_main_analysis():
     assert parsed.gaps[0].topic == "Incident time"
 
 
-def test_case_generated_unit_and_gap_identifier_normalization():
-    unit = CaseGeneratedUnit(
-        text="A single generated summary unit.",
-        claim_ids=("C1", "claim-2", "A-03"),
-    )
-    assert unit.claim_ids == ("A-01", "A-02", "A-03")
-
+def test_gap_identifier_normalization():
     gap = CaseAnalysisGap(
         gap_id="gap1",
         gap_key="financial_loss",

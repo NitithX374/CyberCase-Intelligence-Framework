@@ -123,26 +123,24 @@ class CaseProviderCitation(BaseModel):
     exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
 
 
-class CaseGeneratedUnit(BaseModel):
+ChatUnitBasis = Literal["case_fact", "interpretation", "technical", "general"]
+ChatSuggestion = Literal["none", "add_source", "run_analysis"]
+
+
+class ChatAnswerUnit(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    text: str = Field(min_length=1, max_length=4_000)
-    claim_ids: tuple[str, ...] = Field(min_length=1, max_length=64)
+    text: str = Field(min_length=1)
+    basis: ChatUnitBasis
+    claim_ids: list[str] = Field(default_factory=list)
+    supporting_source_ids: list[str] = Field(default_factory=list)
+    supporting_citations: list[CaseSourceCitation] = Field(default_factory=list)
+    contradicting_source_ids: list[str] = Field(default_factory=list)
+    contradicting_citations: list[CaseSourceCitation] = Field(default_factory=list)
 
-    @field_validator("claim_ids", mode="before")
-    @classmethod
-    def normalize_claim_ids(cls, value: object) -> object:
-        if isinstance(value, (list, tuple)):
-            return tuple(normalize_identifier(item, "A", "A|claim|c") for item in value)
-        return value
-
-    @field_validator("text")
-    @classmethod
-    def normalize_text(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("generated text must be non-empty")
-        return normalized
+    @property
+    def cited(self) -> bool:
+        return bool(self.supporting_citations or self.contradicting_citations)
 
 
 class CaseClaimFields(BaseModel):

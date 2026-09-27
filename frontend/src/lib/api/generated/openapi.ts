@@ -456,6 +456,15 @@ export interface components {
         CaseUpdate: {
             title: string;
         };
+        ChatAnswerUnit: {
+            text: string;
+            basis: "case_fact" | "interpretation" | "technical" | "general";
+            claim_ids?: string[];
+            supporting_source_ids?: string[];
+            supporting_citations?: components["schemas"]["CaseSourceCitation"][];
+            contradicting_source_ids?: string[];
+            contradicting_citations?: components["schemas"]["CaseSourceCitation"][];
+        };
         ChatMessageCreate: {
             content: string;
             client_request_id?: string | null;
@@ -487,6 +496,8 @@ export interface components {
         };
         MessageMetadata: {
             analysis_trace?: components["schemas"]["MessageAnalysisTrace"];
+            answer_units?: components["schemas"]["ChatAnswerUnit"][];
+            suggestion?: "none" | "add_source" | "run_analysis";
         };
         PasswordLoginRequest: {
             email: string;

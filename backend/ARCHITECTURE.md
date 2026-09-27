@@ -155,15 +155,14 @@ asked for it.
 
 ## 5. Where a model is actually called
 
-Five places, and all of them go through `request_stage` in
+Four places, and all of them go through `request_stage` in
 `analysis/provider.py`:
 
 | Call | File | `stage` |
 |---|---|---|
 | The gap-only assessment | `analysis/steps/assess.py` | `assess` |
 | The analysis | `analysis/steps/write.py` | `case_direct` |
-| A chat answer about an analysis | `chat/case_answer.py` | `chat_answer` |
-| A chat answer before any analysis | `chat/case_answer.py` | `chat_general_answer` |
+| A chat answer, before or after an analysis | `chat/case_answer.py` | `chat_answer` |
 | The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/mitre_gate/llm.py` | `mitre_applicability` |
 
 `request_stage` is the one transport: it checks the input against the token
@@ -172,6 +171,16 @@ connection, and validates the reply against the stage's schema. A caller that
 passes a `calls` list gets one record per stage (model, estimated input tokens,
 status, elapsed time); production passes none, the experiments do. The encoder
 gate (`MITRE_GATE_MODE=encoder`) runs a local model and calls no provider.
+
+A chat answer reads what the analysis reads — the case sources, the answered
+follow-ups and the technical context the latest analysis retrieved — and that
+analysis too when there is one. The model returns units, each with a basis
+(`case_fact`, `interpretation`, `technical` or `general`), the `claim_ids` it
+rests on and exact quotes. `chat/case_answer.py` keeps only claim ids of that
+analysis and quotes found in their source by the matcher `bind.py` uses, then
+stores the units on the message; a unit whose citation fails keeps its text
+without the citation. The log line `Chat answer grounding` counts cited and
+uncited case facts per answer.
 
 Retrieval is separate again: **one** call site, `analysis/steps/technical_context.py`,
 over HTTP to the RAG service. The frontend never calls the RAG service.

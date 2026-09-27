@@ -17,6 +17,7 @@ export type CaseReportRead = Schemas["CaseReportRead"];
 export type CaseSourceCitation = Schemas["CaseSourceCitation"];
 export type CaseSourceCreate = Schemas["CaseSourceCreate"];
 export type CaseSourceRead = Schemas["CaseSourceRead"];
+export type ChatAnswerUnit = Schemas["ChatAnswerUnit"];
 export type ChatMessageRead = Schemas["ChatMessageRead"];
 export type PasswordLoginRequest = Schemas["PasswordLoginRequest"];
 export type RegisterRequest = Schemas["RegisterRequest"];

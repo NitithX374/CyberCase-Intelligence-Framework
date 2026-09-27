@@ -207,8 +207,9 @@ services/
     run_analysis.py     one step of the bounded loop: read, think, write
     analysis_storage.py what a step writes — an assessment that asks, or a
                         finished analysis
-    answer_question.py  answering a chat question: from the latest analysis,
-                        or from the sources when there is none
+    answer_question.py  answering a chat question from what the analysis reads
+                        (sources, follow-ups, technical context) and, when
+                        there is one, the latest analysis
     shared.py           what both need
   chat/                 the case conversation, and the follow-up it carries
   reports/              contracts, display (builds the snapshot a report

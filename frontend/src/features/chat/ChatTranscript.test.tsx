@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CaseAnalysisClaim, ChatMessageRead } from "@/lib/api";
+import type { CaseAnalysisClaim, ChatAnswerUnit, ChatMessageRead } from "@/lib/api";
 import {
   analysisResult,
   followupExchange,
@@ -191,5 +191,77 @@ describe("ChatTranscript source references", () => {
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Page 4");
     expect(screen.getByRole("dialog")).toHaveTextContent("records the transfer");
+  });
+});
+
+describe("ChatTranscript answer units", () => {
+  function answer(units: ChatAnswerUnit[], suggestion?: "add_source" | "run_analysis") {
+    return message("answer-1", 2, "assistant", units.map((unit) => unit.text).join(" "), {
+      answer_units: units,
+      ...(suggestion ? { suggestion } : {}),
+    });
+  }
+
+  it("gives each statement the source it was quoted from, with its page", () => {
+    const statement = pagedDocumentSource("Page 20 records the transfer to 123-4-56789.", 20);
+    render(
+      <ChatTranscript
+        messages={[
+          answer([
+            {
+              text: "The money went to 123-4-56789.",
+              basis: "case_fact",
+              supporting_source_ids: [statement.id],
+              supporting_citations: [
+                {
+                  source_id: statement.id,
+                  exact_quote: "transfer to 123-4-56789",
+                  document_id: "DOC-1",
+                  filename: "statement.pdf",
+                  page_numbers: [20],
+                },
+              ],
+            },
+            { text: "Nothing names the caller.", basis: "general" },
+          ]),
+        ]}
+        isProcessing={false}
+        sources={[statement]}
+      />,
+    );
+
+    expect(screen.getByText("The money went to 123-4-56789.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing names the caller.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "statement.pdf · p. 20" })).toHaveLength(1);
+  });
+
+  it("marks only an interpretation as preliminary", () => {
+    render(
+      <ChatTranscript
+        messages={[
+          answer([
+            { text: "The caller posed as police.", basis: "case_fact" },
+            { text: "It looks like a call-centre scam.", basis: "interpretation" },
+          ]),
+        ]}
+        isProcessing={false}
+      />,
+    );
+
+    expect(screen.getAllByText("เป็นการตีความเบื้องต้น ยังไม่ได้ผ่านการวิเคราะห์")).toHaveLength(1);
+  });
+
+  it.each([
+    ["add_source", "ถ้าต้องการให้ข้อมูลนี้ถูกนำไปวิเคราะห์ ให้เพิ่มเป็น source ที่หน้า Sources"],
+    ["run_analysis", "กด Analyze เพื่อวิเคราะห์เคสอีกครั้ง"],
+  ] as const)("tells the reader what to do next for %s", (suggestion, line) => {
+    render(
+      <ChatTranscript
+        messages={[answer([{ text: "Noted.", basis: "general" }], suggestion)]}
+        isProcessing={false}
+      />,
+    );
+
+    expect(screen.getByText(line)).toBeInTheDocument();
   });
 });

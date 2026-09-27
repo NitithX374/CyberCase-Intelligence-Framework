@@ -82,15 +82,17 @@ function responseFor(body) {
   if (system.includes("case_assessment_v1")) {
     return { version: "case_assessment_v1", gaps: assessedGaps(asObject(content)) };
   }
-  if (system.includes("Answer only the current question")) {
+  if (system.includes("in the chat of an investigative case")) {
     return {
-      outcome: "answered",
       units: [
         {
           text: "The deterministic test provider answered from the persisted case analysis.",
+          basis: "case_fact",
           claim_ids: ["A-01"],
+          quotes: [],
         },
       ],
+      suggestion: "none",
     };
   }
   const request = asObject(content);
