@@ -96,6 +96,16 @@ yarn-error.log*
 /scratch/
 scratch/
 
+/CONTINUITY.md
+/backups/
+/docs/audits/
+/docs/system/
+/docs/thesis/*.md
+/research/attack_applicability_search/
+/research/casie_clarification/
+/research/report_fidelity/
+/research/structured_output_reliability/
+
 # Local dataset indexes, OCR outputs and rendered inspection artifacts
 /all_pdfs_list*.txt
 /classified_full_dataset.json
