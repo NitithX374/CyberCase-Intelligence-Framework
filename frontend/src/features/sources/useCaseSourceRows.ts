@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useCaseChatQuery } from "@/features/chat/useCaseChat";
-import { chatFollowups } from "./followupSources";
+import { chatFollowups } from "@/features/citations/followupSources";
 import { useCaseSources } from "./queries";
 
 export function useCaseSourceRows(caseId: string | null) {

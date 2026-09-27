@@ -1,5 +1,5 @@
 import type { CaseAnalysisResultRead, CaseMitreAssociation, CaseSourceRead } from "@/lib/api/types";
-import type { SourceMessageRef } from "@/features/sources/types";
+import type { SourceMessageRef } from "@/features/citations/types";
 import type { CaseFinding } from "@/features/analysis/types";
 import { asArray, asRecord, asString } from "@/lib/parse";
 import { buildCaseOverview } from "@/features/analysis/overview";

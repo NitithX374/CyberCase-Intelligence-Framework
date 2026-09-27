@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { casePath } from "@/features/workspace/routes";
+import { casePath } from "@/lib/casePaths";
 
 export default function CaseIndexPage() {
   const params = useParams();

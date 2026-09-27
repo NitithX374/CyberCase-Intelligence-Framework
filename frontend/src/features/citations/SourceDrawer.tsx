@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import type { SourceMessageRef } from "@/features/sources/types";
+import type { SourceMessageRef } from "./types";
 import { Icon } from "@/components/icons";
 
 export function SourceDrawer({

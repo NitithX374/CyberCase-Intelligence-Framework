@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { LegalReferenceView } from "@/features/legal/LegalReferenceView";
 import { useCaseAnalysis } from "@/features/analysis/queries";
-import { casePath } from "@/features/workspace/routes";
+import { casePath } from "@/lib/casePaths";
 
 export function LegalPage() {
   const params = useParams();

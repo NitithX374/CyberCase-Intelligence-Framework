@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import type { SourceMessageRef } from "@/features/sources/types";
-import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
+import type { SourceMessageRef } from "@/features/citations/types";
+import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import type { CaseImpact, CaseParty, CaseTimelineEvent } from "./types";
 
 const VISIBLE_ROWS = 6;

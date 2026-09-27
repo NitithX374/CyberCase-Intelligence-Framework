@@ -3,11 +3,11 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-interface ChatMessageMarkdownProps {
+interface MarkdownProps {
   content: string;
 }
 
-export function ChatMessageMarkdown({ content }: ChatMessageMarkdownProps) {
+export function Markdown({ content }: MarkdownProps) {
   return (
     <div className="markdown-content text-[15px] leading-7 text-ink">
       <ReactMarkdown

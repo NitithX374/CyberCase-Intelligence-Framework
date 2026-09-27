@@ -1,6 +1,6 @@
 "use client";
 
-import type { SourceMessageRef } from "@/features/sources/types";
+import type { SourceMessageRef } from "./types";
 
 interface SourceCitationChipProps {
   sourceRef: SourceMessageRef;

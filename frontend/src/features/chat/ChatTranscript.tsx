@@ -7,12 +7,12 @@ import type {
   ChatAnswerUnit,
   ChatMessageRead,
 } from "@/lib/api/types";
-import type { CaseSourceRef, SourceMessageRef } from "@/features/sources/types";
-import { claimRefs, parseCaseSources } from "@/features/sources/sourceRefs";
-import { chatFollowups } from "@/features/sources/followupSources";
-import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
-import { SourceDrawer } from "@/features/sources/SourceDrawer";
-import { SourceCitationChip } from "@/features/sources/SourceCitationChip";
+import type { CaseSourceRef, SourceMessageRef } from "@/features/citations/types";
+import { claimRefs, parseCaseSources } from "@/features/citations/sourceRefs";
+import { chatFollowups } from "@/features/citations/followupSources";
+import { Markdown } from "@/components/Markdown";
+import { SourceDrawer } from "@/features/citations/SourceDrawer";
+import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 
 interface ChatTranscriptProps {
   messages: ChatMessageRead[];
@@ -109,7 +109,7 @@ function Messages({
           return (
             <article key={message.id}>
               <p className="mb-1 text-xs font-semibold text-unresolved">Question</p>
-              <ChatMessageMarkdown content={message.content} />
+              <Markdown content={message.content} />
             </article>
           );
         }
@@ -121,7 +121,7 @@ function Messages({
               <AnswerUnits units={units} sources={citable} />
             ) : (
               <>
-                <ChatMessageMarkdown content={message.content} />
+                <Markdown content={message.content} />
                 <SourceReferences
                   references={sourceReferences(
                     message.metadata_json.analysis_trace?.claims ?? [],
@@ -156,7 +156,7 @@ function AnswerUnits({ units, sources }: { units: ChatAnswerUnit[]; sources: Cas
     <div className="space-y-3">
       {units.map((unit, index) => (
         <div key={index}>
-          <ChatMessageMarkdown content={unit.text} />
+          <Markdown content={unit.text} />
           {unit.basis === "interpretation" && (
             <p className="mt-1 text-xs text-ink-muted">{PRELIMINARY_NOTE}</p>
           )}
