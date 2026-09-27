@@ -33,7 +33,7 @@ NO_GAPS = {"version": "case_assessment_v1", "gaps": []}
 ASKING = {"version": "case_assessment_v1", "gaps": [GAP]}
 HEAD = "The attacker logged in to the VPN gateway."
 TAIL = "The attacker exfiltrated the payroll archive."
-STAGES = {"outcome": "answer", "answer": "general", "summary": "write", "gaps": "assess"}
+STAGES = {"suggestion": "answer", "summary": "write", "gaps": "assess"}
 
 
 def written(*claims: dict) -> dict:
@@ -63,7 +63,10 @@ def claim(claim_id: str, source_id: str, quote: str) -> dict:
 
 
 def general(text: str) -> dict:
-    return {"outcome": "general", "units": [], "general_answer": text}
+    return {
+        "units": [{"text": text, "basis": "general", "claim_ids": [], "quotes": []}],
+        "suggestion": "none",
+    }
 
 
 def down(_content: dict) -> httpx.Response:
@@ -374,9 +377,15 @@ async def test_a_chat_answer_keeps_the_follow_up_answer_its_claim_rests_on(monke
             write=[cite_the_reply],
             answer=[
                 {
-                    "outcome": "answered",
-                    "units": [{"text": "It began around two.", "claim_ids": ["A-01"]}],
-                    "general_answer": "",
+                    "units": [
+                        {
+                            "text": "It began around two.",
+                            "basis": "case_fact",
+                            "claim_ids": ["A-01"],
+                            "quotes": [],
+                        }
+                    ],
+                    "suggestion": "none",
                 }
             ],
         )
@@ -410,7 +419,7 @@ async def test_an_answer_too_long_to_store_is_a_coded_bad_gateway(monkeypatch, m
         }
         case_id, user_id, _ = await seeded_case(factory, trace=answerable, asking=False)
         unit = {"text": "x" * 3_900, "claim_ids": ["A-01"]}
-        model(answer=[{"outcome": "answered", "units": [unit] * 7, "general_answer": ""}])
+        model(answer=[{"units": [unit] * 7, "suggestion": "none"}])
         async with signed_in(monkeypatch, factory, user_id) as client:
             response = await client.post(
                 f"/cases/{case_id}/chat/messages", json={"content": "What happened?"}
@@ -501,3 +510,44 @@ async def test_nul_in_a_case_title_is_dropped(monkeypatch):
         assert (renamed.status_code, renamed.json()["title"]) == (200, "Drive lock")
         assert emptied.status_code == 422
         assert kept.json()["title"] == "Drive lock"
+
+
+async def test_before_an_analysis_the_chat_quotes_the_source_it_answers_from(monkeypatch, model):
+    async with isolated_database() as factory:
+        case_id, user_id, _ = await seeded_case(factory, trace=None)
+
+        def quote_the_narrative(content: dict) -> dict:
+            [source] = content["case_sources"]
+            return {
+                "units": [
+                    {
+                        "text": "The narrative records it.",
+                        "basis": "case_fact",
+                        "claim_ids": [],
+                        "quotes": [{"source_id": source["source_id"], "exact_quote": NARRATIVE}],
+                    },
+                    {
+                        "text": "It may be ransomware.",
+                        "basis": "interpretation",
+                        "claim_ids": [],
+                        "quotes": [],
+                    },
+                ],
+                "suggestion": "run_analysis",
+            }
+
+        scripted = model(answer=[quote_the_narrative])
+        async with signed_in(monkeypatch, factory, user_id) as client:
+            asked = await client.post(
+                f"/cases/{case_id}/chat/messages", json={"content": "What happened?"}
+            )
+
+        assert asked.status_code == 200, asked.text
+        _, read = scripted.calls[-1]
+        assert read["analysis"] is None
+        assert read["analysis_status"] == "none"
+        metadata = asked.json()["messages"][1]["metadata_json"]
+        fact, reading = metadata["answer_units"]
+        assert [c["exact_quote"] for c in fact["supporting_citations"]] == [NARRATIVE]
+        assert reading["basis"] == "interpretation"
+        assert metadata["suggestion"] == "run_analysis"

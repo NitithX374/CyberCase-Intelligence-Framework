@@ -8,6 +8,8 @@ from app.services.analysis.contracts import (
     CaseAnalysisMode,
     CaseAnalysisTrace,
     CaseGroundingReport,
+    ChatAnswerUnit,
+    ChatSuggestion,
 )
 
 
@@ -23,6 +25,8 @@ class MessageAnalysisTrace(BaseModel):
 class MessageMetadata(TypedDict, total=False):
     __pydantic_config__ = ConfigDict(extra="ignore")
     analysis_trace: MessageAnalysisTrace
+    answer_units: list[ChatAnswerUnit]
+    suggestion: ChatSuggestion
 
 
 _metadata_adapter = TypeAdapter(MessageMetadata)

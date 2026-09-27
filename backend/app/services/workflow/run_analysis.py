@@ -181,6 +181,13 @@ async def reusable_context(
     stored = row.retrieval_context_json if row is not None else None
     if not isinstance(stored, dict) or stored.get("context_key") != key:
         return None
+    return recorded_technical_context(row)
+
+
+def recorded_technical_context(row: CaseAnalysisResult) -> CaseRagContextPayload | None:
+    stored = row.retrieval_context_json
+    if not isinstance(stored, dict) or not isinstance(row.external_context_json, dict):
+        return None
     try:
         recorded = RecordedRetrieval.model_validate(
             {**row.external_context_json, "context": stored.get("context")}
@@ -226,6 +233,7 @@ __all__ = [
     "external_context",
     "get_latest_case_analysis",
     "read_case_for_analysis",
+    "recorded_technical_context",
     "run_case_analysis",
     "store_analysis",
 ]

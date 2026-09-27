@@ -11,17 +11,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
 from app.models.chat import ChatMessage
-from app.schemas.message_metadata import message_trace, serialize_message_metadata
-from app.services.analysis.contracts import CaseAnalysisFailure
+from app.schemas.message_metadata import (
+    MessageMetadata,
+    message_trace,
+    serialize_message_metadata,
+)
+from app.services.analysis.contracts import CaseAnalysisFailure, CaseAnalysisOutput
 from app.services.analysis.language import case_language, question_language
 from app.services.cases.ownership import owned_case
 from app.services.chat.case_answer import generate_case_answer
+from app.services.chat.followup import case_messages, followup_history_from
 from app.services.sources.case_source_bundle import (
     WITH_SOURCES,
     CaseSourceBundle,
     analysable_bundle,
 )
 from app.services.sources.source_service import SourceError
+from app.services.workflow.run_analysis import analysis_freshness, recorded_technical_context
 from app.services.workflow.shared import CaseWorkflowError, next_ordinal
 
 _answering: set[UUID] = set()
@@ -130,6 +136,8 @@ async def reply_to(
                 raise
             bundle = CaseSourceBundle(revision=case.source_revision, sources=())
         history = await answer_history(db, case.id, analysis_id, question.ordinal)
+        followups = followup_history_from(await case_messages(db, case.id))
+        freshness = analysis_freshness(case, result)
 
     try:
         output = await answer_request(
@@ -138,6 +146,9 @@ async def reply_to(
             history=history,
             sources=bundle,
             language=question_language(question.content, case_language(bundle)),
+            followups=followups,
+            technical_context=recorded_technical_context(result) if result is not None else None,
+            analysis_status="none" if freshness == "missing" else freshness,
         )
     except CaseAnalysisFailure as error:
         raise CaseAnalysisFailure(error.code, error.message, status.HTTP_502_BAD_GATEWAY) from error
@@ -152,14 +163,23 @@ async def reply_to(
             message_kind="conversation",
             analysis_result_id=analysis_id,
             in_reply_to_message_id=question_id,
-            metadata_json=serialize_message_metadata(
-                {"analysis_trace": message_trace(output.trace)} if output.trace else {}
-            ),
+            metadata_json=serialize_message_metadata(answer_metadata(output)),
         )
         db.add(answer)
         await db.flush()
         await db.refresh(answer)
         return question, answer
+
+
+def answer_metadata(output: CaseAnalysisOutput) -> MessageMetadata:
+    metadata: MessageMetadata = {}
+    if output.trace is not None:
+        metadata["analysis_trace"] = message_trace(output.trace)
+    if output.units:
+        metadata["answer_units"] = list(output.units)
+    if output.suggestion != "none":
+        metadata["suggestion"] = output.suggestion
+    return metadata
 
 
 async def answer_history(

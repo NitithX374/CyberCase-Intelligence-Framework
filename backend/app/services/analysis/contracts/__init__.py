@@ -11,10 +11,12 @@ from app.services.analysis.contracts.claims import (
     CaseClaimType,
     CaseEpistemicStatus,
     CaseFollowupExchange,
-    CaseGeneratedUnit,
     CaseProviderCitation,
     CaseProviderClaim,
     CaseSourceCitation,
+    ChatAnswerUnit,
+    ChatSuggestion,
+    ChatUnitBasis,
     followup_history_of_snapshot,
     followup_payload,
     followup_qa_id,
@@ -39,6 +41,8 @@ class CaseAnalysisFailure(AppError):
 class CaseAnalysisOutput:
     answer: str
     trace: CaseAnalysisTrace | None
+    units: tuple[ChatAnswerUnit, ...] = ()
+    suggestion: ChatSuggestion = "none"
 
 
 __all__ = [
@@ -54,7 +58,9 @@ __all__ = [
     "CaseClaimType",
     "CaseEpistemicStatus",
     "CaseSourceCitation",
-    "CaseGeneratedUnit",
+    "ChatAnswerUnit",
+    "ChatSuggestion",
+    "ChatUnitBasis",
     "CaseImpactItem",
     "CaseInvolvedParty",
     "CaseMitreAssociation",
