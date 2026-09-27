@@ -224,6 +224,19 @@ def test_an_id_no_exchange_backs_gets_no_reference() -> None:
     assert [source.label for source in report.sources] == ["E-01"]
 
 
+def test_a_source_named_without_a_verified_quote_gets_no_reference() -> None:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    unquoted = trace.model_copy(
+        update={"claims": [trace.claims[0].model_copy(update={"supporting_citations": []})]}
+    )
+    report = build_case_report_content(report_input.model_copy(update={"analysis_trace": unquoted}))
+
+    assert report.findings[0].source_labels == []
+    assert report.parties[0].references == []
+    assert report.impacts[0].references == []
+
+
 def test_the_report_says_why_the_system_stopped_asking() -> None:
     report_input = _input()
     trace = report_input.analysis_trace
