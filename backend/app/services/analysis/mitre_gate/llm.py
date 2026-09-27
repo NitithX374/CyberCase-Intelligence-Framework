@@ -253,7 +253,7 @@ GATE_FAILURE_CODES = {
     "mitre_applicability_timeout": "mitre_applicability_timeout",
     "mitre_applicability_budget_exceeded": "mitre_applicability_budget_exceeded",
     "mitre_applicability_invalid": "mitre_applicability_invalid_output",
-    "analysis_incomplete": "mitre_applicability_invalid_output",
+    "mitre_applicability_incomplete": "mitre_applicability_invalid_output",
     "analysis_invalid_response": "mitre_applicability_invalid_output",
 }
 

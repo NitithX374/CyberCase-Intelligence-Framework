@@ -61,6 +61,7 @@ class LLMProviderConfig(BaseModel):
     openrouter_cybercase: str = ""
     openrouter_messages_url: str = "https://openrouter.ai/api/v1/messages"
     case_analysis_model: str = Field(default=DEFAULT_CASE_ANALYSIS_MODEL, min_length=1)
+    case_analysis_providers: str = ""
     rag_service_url: str = "http://rag-service:8001"
 
     @field_validator("case_analysis_model")
