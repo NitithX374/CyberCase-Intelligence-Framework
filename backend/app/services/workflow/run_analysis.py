@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from uuid import UUID
 
-from fastapi import status
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,8 +15,9 @@ from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
 from app.models.case import Case
 from app.schemas.rag import LegalReferenceResult
-from app.services.analysis.clarification import Ask
-from app.services.analysis.contracts import CaseAnalysisFailure
+from app.services.analysis.clarification import Ask, Proceed
+from app.services.analysis.contracts import CaseAnalysisFailure, CaseAssessmentTrace
+from app.services.analysis.language import case_language
 from app.services.analysis.pipeline import (
     AnalysisAdvance,
     AnalysisArtifacts,
@@ -24,10 +26,18 @@ from app.services.analysis.pipeline import (
 )
 from app.services.analysis.steps.technical_context import (
     CaseRagContextPayload,
+    CaseTechnicalAugmentation,
     technical_context_key,
 )
-from app.services.chat.followup import asked_gap_keys, load_followup_history, rounds_asked
-from app.services.sources.case_source_bundle import load_case_source_bundle
+from app.services.cases.ownership import owned_case
+from app.services.chat.followup import (
+    asked_gap_keys,
+    case_messages,
+    followup_history_from,
+    last_question_awaiting_analysis,
+    rounds_asked,
+)
+from app.services.sources.case_source_bundle import WITH_SOURCES, analysable_bundle
 from app.services.sources.source_service import SourceError
 from app.services.workflow.analysis_storage import (
     AnalysisStep,
@@ -35,36 +45,55 @@ from app.services.workflow.analysis_storage import (
     store_analysis,
     store_assessment,
 )
-from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError, owned_case
+from app.services.workflow.shared import CaseUnderAnalysis, CaseWorkflowError
+
+_running: Counter[UUID] = Counter()
+
+
+@contextmanager
+def analysing(case_id: UUID) -> Iterator[None]:
+    _running[case_id] += 1
+    try:
+        yield
+    finally:
+        _running[case_id] -= 1
+        if _running[case_id] <= 0:
+            del _running[case_id]
+
+
+def analysis_running(case_id: UUID) -> bool:
+    return _running[case_id] > 0
 
 
 async def run_case_analysis(
     *,
     case_id: UUID,
     user_id: UUID | None,
-    response_language: str,
     session_factory: Callable = async_session,
     pipeline: Callable = advance_case,
     continuing_followup: bool = False,
 ) -> AnalysisStep:
-    started = await read_case_for_analysis(
-        session_factory,
-        case_id=case_id,
-        user_id=user_id,
-        continuing_followup=continuing_followup,
-    )
-    outcome = await think(pipeline, started, response_language)
-    return await store_outcome(
-        session_factory, started, outcome, continuing_followup=continuing_followup
-    )
+    with analysing(case_id):
+        started = await read_case_for_analysis(
+            session_factory,
+            case_id=case_id,
+            user_id=user_id,
+            continuing_followup=continuing_followup,
+        )
+        outcome = await think(pipeline, started)
+        return await store_outcome(session_factory, started, outcome)
 
 
-async def think(pipeline: Callable, started: CaseUnderAnalysis, response_language: str):
+class UnassessedAdvance(AnalysisAdvance):
+    pass
+
+
+async def think(pipeline: Callable, started: CaseUnderAnalysis) -> AnalysisAdvance:
     try:
-        return await pipeline(
+        outcome = await pipeline(
             AnalysisInput(
                 sources=started.source_bundle,
-                response_language=response_language,
+                response_language=case_language(started.source_bundle),
                 followup_history=started.followup_history,
                 reused_context=started.reused_context,
                 asked_gap_keys=started.asked_gap_keys,
@@ -74,45 +103,29 @@ async def think(pipeline: Callable, started: CaseUnderAnalysis, response_languag
             )
         )
     except CaseAnalysisFailure as error:
-        raise CaseWorkflowError(error.code, error.message) from error
+        raise CaseWorkflowError(error.code, error.message, error.status_code) from error
+    if isinstance(outcome, AnalysisArtifacts):
+        return UnassessedAdvance(CaseAssessmentTrace(gaps=[]), Proceed("no_eligible_gap"), outcome)
+    return outcome
 
 
 async def store_outcome(
     session_factory: Callable,
     started: CaseUnderAnalysis,
-    outcome: object,
-    *,
-    continuing_followup: bool,
+    outcome: AnalysisAdvance,
 ) -> AnalysisStep:
-    if isinstance(outcome, AnalysisAdvance):
-        if isinstance(outcome.decision, Ask):
-            return await store_assessment(
-                session_factory,
-                started,
-                outcome.assessment,
-                outcome.decision,
-                continuing_followup=continuing_followup,
-            )
-        if outcome.artifacts is None:
-            raise CaseWorkflowError(
-                "analysis_trace_missing", "Case analysis did not produce a validated trace"
-            )
-        return await store_analysis(
-            session_factory,
-            started,
-            outcome.artifacts,
-            continuing_followup=continuing_followup,
-            decision=outcome.decision,
-        )
-
-    if not isinstance(outcome, AnalysisArtifacts):
+    if not isinstance(outcome, AnalysisAdvance):
         raise CaseWorkflowError("analysis_result_invalid", "Analysis pipeline result is invalid")
-    return await store_analysis(
-        session_factory,
-        started,
-        outcome,
-        continuing_followup=continuing_followup,
-    )
+    if isinstance(outcome.decision, Ask):
+        return await store_assessment(
+            session_factory, started, outcome.assessment, outcome.decision
+        )
+    if outcome.artifacts is None or outcome.artifacts.trace is None:
+        raise CaseWorkflowError(
+            "analysis_trace_missing", "Case analysis did not produce a validated trace"
+        )
+    stop_reason = None if isinstance(outcome, UnassessedAdvance) else outcome.decision.reason
+    return await store_analysis(session_factory, started, outcome.artifacts, stop_reason)
 
 
 async def read_case_for_analysis(
@@ -123,12 +136,16 @@ async def read_case_for_analysis(
     continuing_followup: bool = False,
 ) -> CaseUnderAnalysis:
     async with session_factory() as db, db.begin():
-        case = await owned_case(db, case_id, user_id)
+        case = await owned_case(db, case_id, user_id, lock=True, options=WITH_SOURCES)
         try:
-            bundle = await load_case_source_bundle(db, case_id=case.id, user_id=user_id)
+            bundle = analysable_bundle(case)
         except SourceError as error:
             raise CaseWorkflowError(error.code, error.message, error.status_code) from error
-        history = await load_followup_history(db, case.id)
+        chat = await case_messages(db, case.id)
+        history = followup_history_from(chat)
+        continuing = continuing_followup or (
+            await last_question_awaiting_analysis(db, case.id) is not None
+        )
         return CaseUnderAnalysis(
             case_id=case.id,
             source_bundle=bundle,
@@ -136,11 +153,15 @@ async def read_case_for_analysis(
             reused_context=await reusable_context(
                 db, case.id, technical_context_key(bundle.revision, history)
             ),
-            asked_gap_keys=frozenset(
-                await asked_gap_keys(db, case.id) if continuing_followup else set()
-            ),
-            rounds_spent=(await rounds_asked(db, case.id) if continuing_followup else 0) + 1,
+            asked_gap_keys=asked_gap_keys(chat) if continuing else frozenset(),
+            rounds_spent=(rounds_asked(chat) if continuing else 0) + 1,
         )
+
+
+class RecordedRetrieval(BaseModel):
+    context: str = Field(min_length=1)
+    technical_augmentation: CaseTechnicalAugmentation
+    legal_relevance: LegalReferenceResult
 
 
 async def reusable_context(
@@ -160,27 +181,27 @@ async def reusable_context(
     stored = row.retrieval_context_json if row is not None else None
     if not isinstance(stored, dict) or stored.get("context_key") != key:
         return None
-    context = stored.get("context")
-    context_id = stored.get("retrieval_context_id")
-    if (
-        not isinstance(context, str)
-        or not context
-        or not isinstance(context_id, str)
-        or not context_id.strip()
-    ):
-        return None
-    table = stored.get("mitre_table")
-    if not isinstance(table, list):
+    return recorded_technical_context(row)
+
+
+def recorded_technical_context(row: CaseAnalysisResult) -> CaseRagContextPayload | None:
+    stored = row.retrieval_context_json
+    if not isinstance(stored, dict) or not isinstance(row.external_context_json, dict):
         return None
     try:
-        legal_relevance = LegalReferenceResult.model_validate(stored.get("legal_relevance"))
+        recorded = RecordedRetrieval.model_validate(
+            {**row.external_context_json, "context": stored.get("context")}
+        )
     except ValidationError:
         return None
+    augmentation = recorded.technical_augmentation
+    if not augmentation.retrieval_context_id:
+        return None
     return CaseRagContextPayload(
-        retrieval_context_id=context_id,
-        context=context,
-        mitre_table=tuple(table),
-        legal_relevance=legal_relevance,
+        retrieval_context_id=augmentation.retrieval_context_id,
+        context=recorded.context,
+        mitre_table=tuple(augmentation.mitre_table),
+        legal_relevance=recorded.legal_relevance,
     )
 
 
@@ -190,13 +211,9 @@ async def get_latest_case_analysis(
     case_id: UUID,
     user_id: UUID | None,
 ) -> tuple[Case, CaseAnalysisResult | None]:
-    case = await db.scalar(
-        select(Case)
-        .options(selectinload(Case.latest_analysis_result))
-        .where(Case.id == case_id, Case.user_id == user_id)
+    case = await owned_case(
+        db, case_id, user_id, options=(selectinload(Case.latest_analysis_result),)
     )
-    if case is None:
-        raise CaseWorkflowError("case_not_found", "Case not found", status.HTTP_404_NOT_FOUND)
     result = case.latest_analysis_result
     return case, result if result is None or result.status == "validated" else None
 
@@ -209,10 +226,14 @@ def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
 
 __all__ = [
     "AnalysisStep",
+    "UnassessedAdvance",
+    "analysing",
     "analysis_freshness",
+    "analysis_running",
     "external_context",
     "get_latest_case_analysis",
     "read_case_for_analysis",
+    "recorded_technical_context",
     "run_case_analysis",
     "store_analysis",
 ]

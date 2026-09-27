@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CaseFindingsSection } from "./CaseFindingsSection";
 import type { CaseFinding, ClaimType, EpistemicStatus } from "@/features/analysis/types";
 import { groupCaseFindings } from "./overview";
@@ -17,7 +17,7 @@ function finding(
     reasoningSummary: null,
     supportingSources: [],
     contradictingSources: [],
-    mitreTechniques: [],
+    techniqueIds: [],
   };
 }
 
@@ -51,7 +51,9 @@ describe("Grouped case findings", () => {
     const uncertain = Array.from({ length: 7 }, (_, index) =>
       finding(`uncertain-${index}`, "analytical_inference", "not_established"),
     );
-    const { container } = render(<CaseFindingsSection findings={[...reported, ...uncertain]} />);
+    const { container } = render(
+      <CaseFindingsSection findings={[...reported, ...uncertain]} onSelectSource={vi.fn()} />,
+    );
     expect(container.querySelector("article")).toHaveTextContent("Original finding uncertain-0");
     const uncertainty = screen.getByRole("region", { name: "Not established 7" });
     expect(within(uncertainty).getAllByRole("article")).toHaveLength(7);
@@ -71,6 +73,7 @@ describe("Grouped case findings", () => {
           finding("inference", "analytical_inference", "not_established"),
           finding("missing", "unknown", "unknown"),
         ]}
+        onSelectSource={vi.fn()}
       />,
     );
     const inference = screen.getByRole("region", { name: "Not established 1" });
@@ -78,6 +81,5 @@ describe("Grouped case findings", () => {
     expect(screen.getByRole("region", { name: "Unknown 1" })).toHaveTextContent(
       "Original finding missing",
     );
-    expect(screen.queryByText(/Confirmed fact|Supported fact|False/)).not.toBeInTheDocument();
   });
 });

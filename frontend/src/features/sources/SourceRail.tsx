@@ -4,46 +4,51 @@ import { useCallback, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { useDismiss } from "@/lib/useDismiss";
 import { formatBytes, formatDate } from "@/lib/format";
-import type { CaseDocumentRead, CaseSourceRead } from "@/lib/api";
+import type { CaseSourceRead } from "@/lib/api";
 import type { SourcesAnalysis } from "./CaseSourcesView";
+import type { FollowupAnswer } from "./types";
 
 export type RailItem =
-  | { id: string; kind: "file"; document: CaseDocumentRead; source: CaseSourceRead | null }
-  | { id: string; kind: "narrative" | "followup_answer"; source: CaseSourceRead };
+  | { id: string; kind: "file"; documentId: string; source: CaseSourceRead }
+  | { id: string; kind: "narrative"; source: CaseSourceRead }
+  | { id: string; kind: "followup_answer"; followup: FollowupAnswer };
 
 interface RailGroup {
   label: string;
   items: RailItem[];
 }
 
-export function railGroups(documents: CaseDocumentRead[], sources: CaseSourceRead[]): RailGroup[] {
-  const written = (kind: "narrative" | "followup_answer") =>
-    sources
-      .filter((source) => source.source_kind === kind)
-      .map((source): RailItem => ({ id: source.id, kind, source }));
-  const read = new Map(
-    sources
-      .filter((source) => source.source_kind === "document")
-      .map((source) => [source.document_id, source]),
-  );
-
+export function railGroups(sources: CaseSourceRead[], followups: FollowupAnswer[]): RailGroup[] {
   return [
     {
       label: "Files",
-      items: documents.map((document): RailItem => ({
-        id: document.id,
-        kind: "file",
-        document,
-        source: read.get(document.id) ?? null,
+      items: sources.flatMap((source): RailItem[] =>
+        source.source_kind === "document" && source.document_id
+          ? [{ id: source.id, kind: "file", documentId: source.document_id, source }]
+          : [],
+      ),
+    },
+    {
+      label: "Case narrative",
+      items: sources
+        .filter((source) => source.source_kind === "narrative")
+        .map((source): RailItem => ({ id: source.id, kind: "narrative", source })),
+    },
+    {
+      label: "Follow-up answers",
+      items: followups.map((followup): RailItem => ({
+        id: followup.qaId,
+        kind: "followup_answer",
+        followup,
       })),
     },
-    { label: "Case narrative", items: written("narrative") },
-    { label: "Follow-up answers", items: written("followup_answer") },
   ].filter((group) => group.items.length > 0);
 }
 
 export function itemTitle(item: RailItem): string {
-  if (item.kind === "file") return item.document.filename;
+  if (item.kind === "file") return item.source.filename ?? "Untitled file";
+  if (item.kind === "followup_answer")
+    return firstLine(item.followup.question || item.followup.answer);
   return firstLine(item.source.exact_text);
 }
 
@@ -154,13 +159,12 @@ function RailButton({
   selected: boolean;
   onSelect: () => void;
 }) {
-  let detail: string;
-  if (item.kind === "file") {
-    const state = item.source ? null : "Pending";
-    detail = [formatBytes(item.document.size_bytes), state].filter(Boolean).join(" · ");
-  } else {
-    detail = formatDate(item.source.created_at, "day");
-  }
+  const detail =
+    item.kind === "file"
+      ? formatBytes(item.source.size_bytes ?? 0)
+      : item.kind === "followup_answer"
+        ? firstLine(item.followup.answer)
+        : formatDate(item.source.created_at, "day");
 
   return (
     <button
@@ -175,7 +179,7 @@ function RailButton({
     >
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[13px] font-medium">{itemTitle(item)}</span>
-        <span className="mt-0.5 block text-xs text-ink-muted">{detail}</span>
+        <span className="mt-0.5 block truncate text-xs text-ink-muted">{detail}</span>
       </span>
     </button>
   );

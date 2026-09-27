@@ -1,26 +1,24 @@
-export type SourceType = "case_description" | "followup_response";
-
 export interface SourceMessageRef {
   id: string;
-  ordinal: number;
   label: string;
   excerpt: string;
-  sourceType: SourceType;
-  sourceTypeLabel: string;
-  fullContent: string;
   displayContent: string;
   exactQuote: string | null;
-  documentId: string | null;
   filename: string | null;
   pageNumbers: number[];
   sourcePages: SourcePage[];
-  isNativeSource?: boolean;
+  question: string | null;
 }
 
 export interface SourcePage {
   pageNumber: number;
   text: string;
-  exactQuote: string | null;
+}
+
+export interface FollowupAnswer {
+  qaId: string;
+  question: string;
+  answer: string;
 }
 
 export interface CaseSourceRef {
@@ -28,15 +26,7 @@ export interface CaseSourceRef {
   kind: string;
   ordinal: number;
   text: string;
-  provenance: Record<string, unknown>;
-  documentId: string | null;
+  pages: SourcePage[];
   filename: string | null;
-}
-
-export interface CaseCitation {
-  sourceId: string;
-  exactQuote: string;
-  documentId: string | null;
-  filename: string | null;
-  pageNumbers: number[];
+  question: string | null;
 }

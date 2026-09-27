@@ -1,45 +1,26 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { CaseOverviewView } from "@/features/analysis/CaseOverviewView";
 import { TechnicalContextView } from "@/features/technical-context/TechnicalContextView";
 import { CaseReportView } from "@/features/reports/CaseReportView";
-import { useCase } from "@/features/cases/queries";
 import { useCaseAnalysis } from "@/features/analysis/queries";
-import { useCaseSourceRows } from "@/features/sources/useCaseSourceRows";
-import { casePath } from "@/features/workspace/routes";
+import { useCaseSources } from "@/features/sources/queries";
 
 export default function CaseAnalysisPage() {
-  const params = useParams();
-  const router = useRouter();
-  const caseId = (params?.caseId as string) ?? null;
+  const { caseId } = useParams<{ caseId: string }>();
 
-  const caseQuery = useCase(caseId);
-  const analysisQuery = useCaseAnalysis(caseId);
-  const { rows: sources, isLoading: sourcesLoading } = useCaseSourceRows(caseId);
-
-  const activeCase = caseQuery.data ?? null;
-  const analysisResult = analysisQuery.data ?? null;
-  const openSources = () => {
-    if (caseId) router.push(casePath(caseId, "sources"));
-  };
+  const analysisResult = useCaseAnalysis(caseId).data ?? null;
+  const sources = useCaseSources(caseId).data ?? null;
 
   return (
     <>
       <CaseOverviewView caseId={caseId} />
+      {analysisResult && <TechnicalContextView analysisResult={analysisResult} sources={sources} />}
       {analysisResult && (
-        <TechnicalContextView
-          analysisResult={analysisResult}
-          sources={sourcesLoading ? null : sources}
-          onOpenSources={openSources}
-          onNavigateToSource={openSources}
-        />
-      )}
-      {caseId && analysisResult && (
         <CaseReportView
           key={`${caseId}:${analysisResult.id}`}
           caseId={caseId}
-          caseTitle={activeCase?.title || "New case"}
           analysisResult={analysisResult}
         />
       )}

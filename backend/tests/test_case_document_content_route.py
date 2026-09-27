@@ -3,10 +3,10 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 
+from app.errors import AppError
 from app.routers import documents
-from app.services.sources.source_service import SourceError
+from app.services.sources.source_service import SourceError, SourceService
 
 
 def test_document_content_response_preserves_original_bytes(monkeypatch) -> None:
@@ -14,19 +14,15 @@ def test_document_content_response_preserves_original_bytes(monkeypatch) -> None
     document_id = uuid4()
     user_id = uuid4()
 
-    async def get_document(db, **kwargs):
-        assert kwargs == {
-            "case_id": case_id,
-            "document_id": document_id,
-            "user_id": user_id,
-        }
+    async def get_document(self, *args):
+        assert args == (case_id, document_id, user_id)
         return SimpleNamespace(
             content_bytes=b"original-pdf",
             mime_type="application/pdf",
             filename="case file.pdf",
         )
 
-    monkeypatch.setattr(documents, "get_owned_document_content", get_document)
+    monkeypatch.setattr(SourceService, "document_content", get_document)
     response = asyncio.run(
         documents.get_case_document_content(
             case_id,
@@ -43,12 +39,12 @@ def test_document_content_response_preserves_original_bytes(monkeypatch) -> None
 
 
 def test_document_content_route_hides_unowned_documents(monkeypatch) -> None:
-    async def reject_document(db, **kwargs):
+    async def reject_document(self, *args):
         raise SourceError("document_not_found", "Document not found", 404)
 
-    monkeypatch.setattr(documents, "get_owned_document_content", reject_document)
+    monkeypatch.setattr(SourceService, "document_content", reject_document)
 
-    with pytest.raises(HTTPException) as error:
+    with pytest.raises(AppError) as error:
         asyncio.run(
             documents.get_case_document_content(
                 uuid4(),
@@ -59,3 +55,4 @@ def test_document_content_route_hides_unowned_documents(monkeypatch) -> None:
         )
 
     assert error.value.status_code == 404
+    assert error.value.code == "document_not_found"

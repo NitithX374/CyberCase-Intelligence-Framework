@@ -1,7 +1,7 @@
-import axios from "axios";
+import axios, { type AxiosError } from "axios";
+import { asRecord, asString } from "@/lib/parse";
 
-export type ErrorCategory =
-  "timeout" | "network" | "rate_limit" | "server" | "validation" | "unknown";
+export type ErrorCategory = "timeout" | "network" | "rate_limit" | "server" | "refused" | "unknown";
 
 export interface UserFacingError {
   title: string;
@@ -30,8 +30,8 @@ const ERROR_COPY = {
     title: "ระบบไม่สามารถดำเนินการได้",
     message: "เกิดข้อผิดพลาดระหว่างประมวลผลคำขอ กรุณาลองอีกครั้ง",
   },
-  validation: {
-    title: "ข้อมูลไม่ถูกต้องหรือยังไม่สมบูรณ์",
+  refused: {
+    title: "ระบบไม่ดำเนินการตามคำขอนี้",
     message: "กรุณาตรวจสอบข้อมูลที่ระบุแล้วลองอีกครั้ง",
   },
   unknown: {
@@ -40,149 +40,101 @@ const ERROR_COPY = {
   },
 } as const;
 
-function isTimeoutString(str: string): boolean {
-  return /timeout|timed?\s*out|15000ms|gateway\s*timeout|504/i.test(str);
-}
+const REFUSAL_MESSAGES = new Map<string, string>([
+  ["case_not_found", "ไม่พบคดีนี้ หรือคดีถูกลบไปแล้ว"],
+  ["case_sources_missing", "กรุณาเพิ่มแหล่งข้อมูลของคดีก่อนเริ่มการวิเคราะห์"],
+  ["case_sources_changed", "แหล่งข้อมูลของคดีเปลี่ยนไประหว่างการวิเคราะห์ กรุณาวิเคราะห์อีกครั้ง"],
+  ["source_text_empty", "แหล่งข้อมูลนี้ไม่มีข้อความ"],
+  ["extraction_text_empty", "ไม่พบข้อความที่อ่านได้ในเอกสารนี้"],
+  ["extraction_text_missing", "ไม่พบข้อความที่อ่านได้ในเอกสารนี้"],
+  ["unsupported_document_type", "ระบบไม่รองรับไฟล์ประเภทนี้"],
+  ["invalid_document", "ไม่สามารถอ่านไฟล์นี้ได้ ไฟล์อาจเสียหายหรือภาพมีขนาดใหญ่เกินไป"],
+  ["document_size_limit_exceeded", "ไฟล์มีขนาดใหญ่เกินกว่าที่ระบบรองรับ"],
+  ["document_page_limit_exceeded", "เอกสารมีจำนวนหน้ามากเกินกว่าที่ระบบรองรับ"],
+  ["document_not_found", "ไม่พบเอกสารนี้"],
+  ["report_not_found", "ไม่พบรายงานนี้"],
+  ["report_generation_disabled", "ระบบปิดการสร้างรายงานไว้ในขณะนี้"],
+  ["case_report_outdated", "รายงานนี้ถูกบันทึกในรูปแบบเก่า จึงไม่สามารถแสดงได้อีกต่อไป"],
+  ["case_analysis_missing", "ยังไม่มีผลการวิเคราะห์ของคดีนี้ กรุณาวิเคราะห์ก่อนสร้างรายงาน"],
+  [
+    "analysis_source_snapshot_missing",
+    "การวิเคราะห์นี้ไม่ได้บันทึกแหล่งข้อมูลที่ใช้ จึงสร้างรายงานไม่ได้ กรุณาวิเคราะห์คดีอีกครั้ง",
+  ],
+  [
+    "analysis_followup_snapshot_missing",
+    "การวิเคราะห์นี้ไม่ได้บันทึกคำตอบที่ใช้ จึงสร้างรายงานไม่ได้ กรุณาวิเคราะห์คดีอีกครั้ง",
+  ],
+]);
 
-function isNetworkString(str: string): boolean {
-  return /network\s*error|failed\s*to\s*fetch|econnrefused|econnreset|err_network|net::err|connection\s*refused|connection\s*reset/i.test(
-    str,
-  );
-}
-
-function isRateLimitString(str: string): boolean {
-  return /429|too\s*many\s*requests|rate\s*limit/i.test(str);
-}
-
-function isServerErrorString(str: string): boolean {
-  return /500|502|503|internal\s*server\s*error|server\s*error|backend\s*error/i.test(str);
+export function detailMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const detail = responseDetail(error.response?.data);
+    if (detail) return detail;
+  }
+  if (error instanceof Error && error.message.trim()) return error.message.trim();
+  return fallback;
 }
 
 export function toUserFacingError(
-  rawError: unknown,
-  options?: {
-    isUncertain?: boolean;
-    actionLabel?: string;
-  },
+  error: unknown,
+  options?: { actionLabel?: string },
 ): UserFacingError {
-  if (!rawError) {
-    return {
-      title: ERROR_COPY.unknown.title,
-      message: ERROR_COPY.unknown.message,
-      retryable: true,
-      category: "unknown",
-      actionLabel: options?.actionLabel ?? "ลองอีกครั้ง",
-    };
-  }
-
-  let technicalDetail: string | undefined;
-  let category: ErrorCategory = "unknown";
-  let customUserMessage: string | undefined;
-
-  if (axios.isAxiosError(rawError)) {
-    const status = rawError.response?.status;
-    const code = rawError.code;
-    const rawMsg = rawError.message || "";
-    const responseData = rawError.response?.data;
-
-    let responseDetailStr = "";
-    if (typeof responseData === "string" && responseData.trim()) {
-      responseDetailStr = responseData.trim();
-    } else if (responseData && typeof responseData === "object" && "detail" in responseData) {
-      const detail = (responseData as { detail?: unknown }).detail;
-      if (typeof detail === "string") responseDetailStr = detail.trim();
-      else if (Array.isArray(detail) && detail.length > 0) {
-        const first = detail[0];
-        if (typeof first === "string") responseDetailStr = first.trim();
-        else if (first && typeof first === "object" && "msg" in first) {
-          responseDetailStr = String((first as { msg: unknown }).msg).trim();
-        }
-      }
-    }
-
-    technicalDetail = [
-      rawMsg ? `Message: ${rawMsg}` : null,
-      code ? `Code: ${code}` : null,
-      status ? `Status: ${status}` : null,
-      responseDetailStr ? `Detail: ${responseDetailStr}` : null,
-    ]
-      .filter(Boolean)
-      .join(" | ");
-
-    if (
-      code === "ECONNABORTED" ||
-      code === "ETIMEDOUT" ||
-      status === 408 ||
-      status === 504 ||
-      isTimeoutString(rawMsg)
-    ) {
-      category = "timeout";
-    } else if (status === 429 || isRateLimitString(rawMsg)) {
-      category = "rate_limit";
-    } else if (code === "ERR_NETWORK" || !rawError.response || isNetworkString(rawMsg)) {
-      category = "network";
-    } else if (status && status >= 500) {
-      category = "server";
-    } else if (status && status >= 400 && status < 500) {
-      category = "validation";
-      if (
-        responseDetailStr &&
-        !isNetworkString(responseDetailStr) &&
-        !isServerErrorString(responseDetailStr)
-      ) {
-        customUserMessage = responseDetailStr;
-      }
-    } else {
-      category = "unknown";
-    }
-  } else if (rawError instanceof Error) {
-    const msg = rawError.message.trim();
-    technicalDetail = msg;
-
-    if (isTimeoutString(msg)) {
-      category = "timeout";
-    } else if (isNetworkString(msg)) {
-      category = "network";
-    } else if (isRateLimitString(msg)) {
-      category = "rate_limit";
-    } else if (isServerErrorString(msg)) {
-      category = "server";
-    } else {
-      category = "unknown";
-    }
-  } else if (typeof rawError === "string") {
-    const trimmed = rawError.trim();
-    technicalDetail = trimmed;
-
-    if (isTimeoutString(trimmed)) {
-      category = "timeout";
-    } else if (isNetworkString(trimmed)) {
-      category = "network";
-    } else if (isRateLimitString(trimmed)) {
-      category = "rate_limit";
-    } else if (isServerErrorString(trimmed)) {
-      category = "server";
-    } else {
-      category = "unknown";
-    }
-  }
-
-  const baseCopy = ERROR_COPY[category];
-  const retryable = category !== "validation";
-
-  let defaultActionLabel = "ลองอีกครั้ง";
-  if (category === "timeout" && options?.isUncertain) {
-    defaultActionLabel = "ตรวจสอบสถานะ";
-  } else if (!retryable) {
-    defaultActionLabel = "ปิด";
-  }
-
+  const category = axios.isAxiosError(error) ? categoryOf(error) : "unknown";
+  const detail = axios.isAxiosError(error) ? responseDetail(error.response?.data) : "";
+  const code = axios.isAxiosError(error) ? detailCode(error.response?.data) : "";
+  const retryable = category !== "refused";
+  const refusal = category === "refused" ? (REFUSAL_MESSAGES.get(code) ?? detail) : "";
   return {
-    title: baseCopy.title,
-    message: customUserMessage || baseCopy.message,
-    technicalDetail: technicalDetail || undefined,
+    title: ERROR_COPY[category].title,
+    message: refusal || ERROR_COPY[category].message,
+    technicalDetail: technicalDetail(error, code, detail) || undefined,
     retryable,
     category,
-    actionLabel: options?.actionLabel ?? defaultActionLabel,
+    actionLabel: options?.actionLabel ?? (retryable ? "ลองอีกครั้ง" : "ปิด"),
   };
+}
+
+function categoryOf(error: AxiosError): ErrorCategory {
+  const status = error.response?.status;
+  if (
+    error.code === "ECONNABORTED" ||
+    error.code === "ETIMEDOUT" ||
+    status === 408 ||
+    status === 504
+  ) {
+    return "timeout";
+  }
+  if (status === 429) return "rate_limit";
+  if (status === undefined) return "network";
+  if (status >= 500) return "server";
+  if (status >= 400) return "refused";
+  return "unknown";
+}
+
+function responseDetail(data: unknown): string {
+  if (typeof data === "string") return data.trim();
+  const detail = asRecord(data)?.detail;
+  const first = Array.isArray(detail) ? detail[0] : detail;
+  if (typeof first === "string") return first.trim();
+  const record = asRecord(first);
+  return asString(record?.message) || asString(record?.msg);
+}
+
+function detailCode(data: unknown): string {
+  return asString(asRecord(asRecord(data)?.detail)?.code);
+}
+
+function technicalDetail(error: unknown, code: string, detail: string): string {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error.message.trim() : "";
+  }
+  return [
+    error.message ? `Message: ${error.message}` : null,
+    error.code ? `Code: ${error.code}` : null,
+    error.response?.status ? `Status: ${error.response.status}` : null,
+    code ? `Reason: ${code}` : null,
+    detail ? `Detail: ${detail}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
 }

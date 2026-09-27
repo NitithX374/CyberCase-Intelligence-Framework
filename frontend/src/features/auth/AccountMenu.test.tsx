@@ -10,7 +10,6 @@ beforeEach(() => {
     user: null,
     sessionError: null,
     isLoading: false,
-    isAuthenticated: false,
     logout,
     isLoggingOut: false,
     refetchSession: vi.fn(),
@@ -27,7 +26,6 @@ it("confirms before signing out the current account", async () => {
       id: "u1",
       email: "a@example.com",
       name: "Analyst",
-      oauth_provider: "password",
       created_at: "2026-09-09",
     },
   });

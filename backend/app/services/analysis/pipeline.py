@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
+
+from fastapi import status
+from pydantic import ValidationError
 
 from app.services.analysis.clarification import (
     FollowupDecision,
@@ -13,27 +18,27 @@ from app.services.analysis.contracts import (
     CaseAnalysisTrace,
     CaseAssessmentTrace,
     CaseFollowupExchange,
-    CaseProviderReading,
 )
 from app.services.analysis.mitre_gate import mitre_gate
 from app.services.analysis.settings import AnalysisPipelineConfig, configured_pipeline
 from app.services.analysis.steps.assess import assess_case
 from app.services.analysis.steps.bind import resolve_case_trace
 from app.services.analysis.steps.technical_context import (
+    CaseMitreAugmentation,
     CaseRagContextPayload,
     run_case_mitre_augmentation,
 )
-from app.services.analysis.steps.write import request_case_analysis
+from app.services.analysis.steps.write import write_trace
 from app.services.clients.rag_client import request_rag
 from app.services.sources.case_source_bundle import CaseSourceBundle
+
+logger = logging.getLogger("app.case_analysis")
 
 
 @dataclass(frozen=True)
 class AnalysisInput:
     sources: CaseSourceBundle
     response_language: str = "english"
-    mode: str = "case_overview"
-    question: str | None = None
     followup_history: tuple[CaseFollowupExchange, ...] = ()
     reused_context: CaseRagContextPayload | None = None
     asked_gap_keys: frozenset[str] = frozenset()
@@ -44,12 +49,14 @@ class AnalysisInput:
 
 @dataclass(frozen=True)
 class AnalysisArtifacts:
-    answer: str = ""
     trace: CaseAnalysisTrace | None = None
-    reading: CaseProviderReading | None = None
-    technical_context: dict[str, object] | None = None
-    retrieval_context_id: str | None = None
-    receipt: dict[str, object] = field(default_factory=dict)
+    augmentation: CaseMitreAugmentation | None = None
+
+    @property
+    def technical_context(self) -> CaseRagContextPayload | None:
+        if self.augmentation is None or self.augmentation.status != "retrieved_from_rag":
+            return None
+        return self.augmentation.context
 
 
 @dataclass(frozen=True)
@@ -111,99 +118,49 @@ async def retrieve_technical_context(
         reused_context=data.reused_context,
         followup_history=data.followup_history,
     )
-    receipt = {**so_far.receipt, "technical_augmentation": augmentation.to_metadata()}
-    if augmentation.status != "retrieved_from_rag":
-        return replace(so_far, receipt=receipt)
-    return replace(
-        so_far,
-        technical_context={
-            "context": augmentation.context.context,
-            "mitre_table": list(augmentation.context.mitre_table),
-        },
-        retrieval_context_id=augmentation.retrieval_context_id,
-        receipt=receipt,
-    )
+    return replace(so_far, augmentation=augmentation)
 
 
 async def write_analysis(
     data: AnalysisInput,
     so_far: AnalysisArtifacts,
     *,
-    request: Callable = request_case_analysis,
+    request: Callable = write_trace,
     config: Callable[[], AnalysisPipelineConfig] = configured_pipeline,
 ) -> AnalysisArtifacts:
-    output = await request(
-        source_bundle=data.sources,
-        pipeline_config=config().model_dump(mode="json"),
-        question=data.question,
-        user_message=analysis_instruction(data.response_language),
-        mode=data.mode,
-        technical_context=so_far.technical_context,
-        retrieval_context_id=so_far.retrieval_context_id,
+    trace = await request(
+        sources=data.sources,
+        language=data.response_language,
         followup_history=data.followup_history,
+        technical_context=so_far.technical_context,
+        config=config(),
     )
-    if not isinstance(output.trace, CaseAnalysisTrace):
-        raise CaseAnalysisFailure(
-            "analysis_trace_missing", "Case analysis did not produce a validated trace"
-        )
-    return replace(
-        so_far,
-        answer=output.answer.strip(),
-        trace=output.trace,
-        receipt=merged_receipt(so_far.receipt, output.execution_receipt),
-    )
+    return replace(so_far, trace=trace)
 
 
 async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
-    trace = bound_trace(data, so_far, so_far.trace)
-    return replace(
-        so_far,
-        trace=trace,
-        answer=trace.summary,
-        receipt={**so_far.receipt, "verification": {"rounds": [grounding_record(0, trace)]}},
-    )
+    try:
+        trace = await asyncio.to_thread(bound_trace, data, so_far, so_far.trace)
+    except ValidationError as error:
+        logger.exception("Binding the analysis to the case built an invalid trace")
+        raise CaseAnalysisFailure(
+            "case_bind_invalid",
+            "The analysis could not be bound to the case sources",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from error
+    return replace(so_far, trace=trace)
 
 
 def bound_trace(
-    data: AnalysisInput, so_far: AnalysisArtifacts, trace: CaseAnalysisTrace | None
+    data: AnalysisInput, so_far: AnalysisArtifacts, trace: CaseAnalysisTrace
 ) -> CaseAnalysisTrace:
-    if trace is None:
-        raise CaseAnalysisFailure(
-            "analysis_trace_missing", "Verification needs an analysis to check"
-        )
-    table = (so_far.technical_context or {}).get("mitre_table") or []
+    context = so_far.technical_context
     return resolve_case_trace(
         trace,
         data.sources,
-        mitre_table=list(table),
+        mitre_table=list(context.mitre_table) if context is not None else [],
         followup_history=data.followup_history,
     )
-
-
-def merged_receipt(
-    so_far: dict[str, object], produced: dict[str, object] | None
-) -> dict[str, object]:
-    produced = produced or {}
-    merged = {**so_far, **produced}
-    calls = [*(so_far.get("calls") or []), *(produced.get("calls") or [])]
-    if calls:
-        merged["calls"] = calls
-    return merged
-
-
-def grounding_record(attempt: int, trace: CaseAnalysisTrace) -> dict[str, object]:
-    grounding = trace.grounding
-    return {
-        "attempt": attempt,
-        "claims": grounding.claims if grounding else 0,
-        "citations_verified": grounding.citations_verified if grounding else 0,
-        "citations_unfound": grounding.citations_unfound if grounding else 0,
-        "sources_cited": grounding.sources_cited if grounding else 0,
-    }
-
-
-def analysis_instruction(response_language: str) -> str:
-    return "วิเคราะห์คดีนี้" if response_language == "thai" else "Analyze this case."
 
 
 __all__ = [
@@ -212,11 +169,8 @@ __all__ = [
     "AnalysisInput",
     "advance_case",
     "assess_gaps",
-    "analysis_instruction",
     "bind_to_case",
     "bound_trace",
-    "grounding_record",
-    "merged_receipt",
     "retrieve_technical_context",
     "write_analysis",
 ]

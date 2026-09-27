@@ -1,16 +1,20 @@
 import asyncio
 from dataclasses import dataclass
 
-from fastapi import UploadFile
+from fastapi import UploadFile, status
 
 from app.config import settings
 from app.services.document_ingestion.contracts import (
+    DocumentIngestionError,
     DocumentLimitError,
     DocumentPage,
     DocumentRecognitionError,
     ExtractionMethod,
     IngestedDocument,
     InvalidDocumentError,
+    RecognitionConfigurationError,
+    RecognitionProviderError,
+    RecognitionTimeoutError,
 )
 from app.services.document_ingestion.files import (
     DocumentKind,
@@ -24,7 +28,6 @@ from app.services.document_ingestion.parsers import (
     inspect_pdf,
     parse_docx,
 )
-from app.services.document_ingestion.provenance import build_document_id
 from app.services.document_ingestion.recognition import DocumentRecognizer, RenderedPage
 
 
@@ -52,12 +55,6 @@ class DocumentIngestionService:
         if hasattr(self._recognizer, "aclose"):
             await self._recognizer.aclose()
 
-    async def __aenter__(self) -> "DocumentIngestionService":
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.aclose()
-
     async def ingest(
         self,
         content: bytes,
@@ -65,21 +62,22 @@ class DocumentIngestionService:
     ) -> IngestedDocument:
         self.validate_content(content)
         detected = detect_document(content)
-        document_id = build_document_id(content)
         safe_filename = self.safe_filename(filename)
 
+        failures: list[DocumentRecognitionError] = []
         if detected.kind == DocumentKind.DOCX:
-            pages, warnings = parse_docx(content, document_id)
+            pages, warnings = await asyncio.to_thread(parse_docx, content)
             method = ExtractionMethod.NATIVE_DOCX
         elif detected.kind == DocumentKind.PDF:
-            pages, warnings, method = await self.ingest_pdf(content, document_id)
+            pages, warnings, method, failures = await self.ingest_pdf(content)
         else:
-            pages, warnings = await self.ingest_image(content, document_id)
+            pages, warnings, failures = await self.ingest_image(content)
             method = ExtractionMethod.DOCUMENT_RECOGNITION
 
         full_text = "\n\n".join(page.text for page in pages if page.text)
+        if not full_text and failures:
+            raise unreadable_document(failures[0])
         return IngestedDocument(
-            document_id=document_id,
             filename=safe_filename,
             media_type=detected.media_type,
             extraction_method=method,
@@ -100,9 +98,9 @@ class DocumentIngestionService:
     async def ingest_pdf(
         self,
         content: bytes,
-        document_id: str,
-    ) -> tuple[list[DocumentPage], list[str], ExtractionMethod]:
-        inspection = inspect_pdf(
+    ) -> tuple[list[DocumentPage], list[str], ExtractionMethod, list[DocumentRecognitionError]]:
+        inspection = await asyncio.to_thread(
+            inspect_pdf,
             content,
             self._native_text_policy,
             self._limits.max_pages,
@@ -111,7 +109,7 @@ class DocumentIngestionService:
 
         async def process_page(
             inspected_page: PdfPageInspection,
-        ) -> tuple[DocumentPage, list[str]]:
+        ) -> tuple[DocumentPage, list[str], DocumentRecognitionError | None]:
             if inspected_page.usable_native_text:
                 page = DocumentPage(
                     page_number=inspected_page.page_number,
@@ -120,7 +118,7 @@ class DocumentIngestionService:
                     verification_status="native",
                 )
                 warnings = [inspected_page.warning] if inspected_page.warning else []
-                return page, warnings
+                return page, warnings, None
 
             page_warnings: list[str] = [
                 f"Page {inspected_page.page_number}: native text was not usable; document recognition was requested."
@@ -136,18 +134,18 @@ class DocumentIngestionService:
                     self._limits.render_longest_edge,
                 )
                 rendered = RenderedPage(
-                    document_id=document_id,
                     page_number=inspected_page.page_number,
                     image_bytes=image_bytes,
                 )
-                doc_page, ocr_warnings = await self.process_rendered_page(rendered)
+                doc_page, ocr_warnings, failure = await self.process_rendered_page(rendered)
                 page_warnings.extend(ocr_warnings)
-                return doc_page, page_warnings
+                return doc_page, page_warnings, failure
 
         results = await asyncio.gather(*(process_page(page) for page in inspection.pages))
 
-        pages = [page for page, _ in results]
-        warnings = [warning for _, page_warnings in results for warning in page_warnings]
+        pages = [page for page, _, _ in results]
+        warnings = [warning for _, page_warnings, _ in results for warning in page_warnings]
+        failures = [failure for _, _, failure in results if failure is not None]
 
         native_page_count = sum(1 for page in pages if page.text_method == "native")
         if native_page_count == inspection.page_count:
@@ -157,25 +155,25 @@ class DocumentIngestionService:
         else:
             method = ExtractionMethod.DOCUMENT_RECOGNITION
 
-        return pages, warnings, method
+        return pages, warnings, method, failures
 
     async def ingest_image(
         self,
         content: bytes,
-        document_id: str,
-    ) -> tuple[list[DocumentPage], list[str]]:
-        image_bytes = normalize_image(
+    ) -> tuple[list[DocumentPage], list[str], list[DocumentRecognitionError]]:
+        image_bytes = await asyncio.to_thread(
+            normalize_image,
             content,
             self._limits.render_longest_edge,
             self._limits.max_image_pixels,
         )
-        page, warnings = await self.process_rendered_page(RenderedPage(document_id, 1, image_bytes))
-        return [page], warnings
+        page, warnings, failure = await self.process_rendered_page(RenderedPage(1, image_bytes))
+        return [page], warnings, [failure] if failure else []
 
     async def process_rendered_page(
         self,
         rendered_page: RenderedPage,
-    ) -> tuple[DocumentPage, list[str]]:
+    ) -> tuple[DocumentPage, list[str], DocumentRecognitionError | None]:
         try:
             recognized = await self._recognizer.recognize_page(rendered_page)
             return (
@@ -186,6 +184,7 @@ class DocumentIngestionService:
                     verification_status="machine_read",
                 ),
                 [],
+                None,
             )
         except DocumentRecognitionError as error:
             warning = f"Page {rendered_page.page_number} [{error.code}]: {error}"
@@ -197,12 +196,26 @@ class DocumentIngestionService:
                     verification_status="needs_review",
                 ),
                 [warning],
+                error,
             )
 
     @staticmethod
     def safe_filename(filename: str) -> str:
-        safe_filename = filename.replace("\\", "/").split("/")[-1].strip()
+        safe_filename = filename.replace("\x00", "").replace("\\", "/").split("/")[-1].strip()
         return (safe_filename or "document")[:255]
+
+
+RECOGNITION_FAILURE_STATUS: dict[type[DocumentRecognitionError], int] = {
+    RecognitionConfigurationError: status.HTTP_503_SERVICE_UNAVAILABLE,
+    RecognitionProviderError: status.HTTP_502_BAD_GATEWAY,
+    RecognitionTimeoutError: status.HTTP_504_GATEWAY_TIMEOUT,
+}
+
+
+def unreadable_document(failure: DocumentRecognitionError) -> DocumentIngestionError:
+    return DocumentIngestionError(
+        failure.code, str(failure), RECOGNITION_FAILURE_STATUS.get(type(failure))
+    )
 
 
 def build_document_recognizer() -> DocumentRecognizer:

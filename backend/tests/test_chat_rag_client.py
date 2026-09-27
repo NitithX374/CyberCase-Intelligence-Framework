@@ -4,7 +4,18 @@ import unittest
 import httpx
 
 from app.schemas.rag import QueryResponse
-from app.services.clients.rag_client import RagCallFailure, map_rag_response, request_rag
+from app.services.analysis.steps.technical_context import validated_case_rag_context
+from app.services.clients import rag_client
+from app.services.clients.rag_client import RagCallFailure, request_rag
+
+
+async def request_rag_through(handler) -> QueryResponse:
+    original = rag_client.transport
+    rag_client.transport = httpx.MockTransport(handler)
+    try:
+        return await request_rag("inspect this")
+    finally:
+        rag_client.transport = original
 
 
 class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
@@ -25,29 +36,17 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                 },
             )
 
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            response = await request_rag("inspect this", client=client)
+        response = await request_rag_through(handler)
 
         self.assertEqual(
             captured_payload,
             {"query": "inspect this", "use_agent": True},
         )
-        self.assertEqual(
-            map_rag_response(response),
-            {
-                "retrieved_context": "bounded MITRE context",
-                "retrieval_context_id": "retrieval-1",
-                "mitre_table": [],
-                "legal_reference": {
-                    "provisions": [],
-                    "provider": "thanoy",
-                    "query_sent": "inspect this",
-                    "degraded": "",
-                    "disclaimer": "",
-                },
-                "previous_analysis": None,
-            },
-        )
+        self.assertEqual(response.retrieval_context_id, "retrieval-1")
+        self.assertEqual(response.context, "bounded MITRE context")
+        self.assertEqual(response.mitre_table, [])
+        self.assertEqual(response.legal_reference.provider, "thanoy")
+        self.assertEqual(response.legal_reference.query_sent, "inspect this")
 
     async def test_answer_fields_are_rejected(self) -> None:
         for forbidden_field in ("answer", "rag_answer"):
@@ -66,9 +65,8 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                         },
                     )
 
-                async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-                    with self.assertRaises(RagCallFailure) as raised:
-                        await request_rag("inspect this", client=client)
+                with self.assertRaises(RagCallFailure) as raised:
+                    await request_rag_through(handler)
                 self.assertEqual(raised.exception.code, "rag_invalid_response")
 
     async def test_non_completed_response_is_rejected(self) -> None:
@@ -83,9 +81,8 @@ class ChatRagClientTests(unittest.IsolatedAsyncioTestCase):
                 },
             )
 
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            with self.assertRaises(RagCallFailure) as raised:
-                await request_rag("inspect this", client=client)
+        with self.assertRaises(RagCallFailure) as raised:
+            await request_rag_through(handler)
 
         self.assertEqual(raised.exception.code, "rag_invalid_response")
         self.assertEqual(
@@ -108,7 +105,7 @@ class ChatRagResponseMappingTests(unittest.TestCase):
             "mitre_url": "https://attack.mitre.org/techniques/T1059/001/",
         }
 
-        outcome = map_rag_response(
+        context = validated_case_rag_context(
             QueryResponse(
                 status="completed",
                 retrieval_context_id="retrieval-1",
@@ -118,11 +115,8 @@ class ChatRagResponseMappingTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(outcome["mitre_table"], [mitre_row])
-        self.assertEqual(
-            json.loads(json.dumps(outcome)),
-            outcome,
-        )
+        self.assertEqual(list(context.mitre_table), [mitre_row])
+        self.assertEqual(json.loads(json.dumps(list(context.mitre_table))), [mitre_row])
 
     def test_empty_no_hit_context_and_empty_id_sentinel_are_valid(self) -> None:
         response = QueryResponse.model_validate(
@@ -135,7 +129,9 @@ class ChatRagResponseMappingTests(unittest.TestCase):
             }
         )
         self.assertIsNone(response.retrieval_context_id)
-        self.assertEqual(map_rag_response(response)["retrieved_context"], "")
+        context = validated_case_rag_context(response)
+        self.assertIsNone(context.retrieval_context_id)
+        self.assertEqual(context.context, "")
 
 
 if __name__ == "__main__":

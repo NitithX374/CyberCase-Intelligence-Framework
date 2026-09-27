@@ -12,20 +12,7 @@ class UserRead(BaseModel):
     id: uuid.UUID
     email: str
     name: str
-    oauth_provider: str
     created_at: datetime
-
-
-class AuthTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int
-    user: UserRead
-
-
-class DevLoginRequest(BaseModel):
-    email: str = Field(default="dev@cybercase.local", description="Developer user email")
-    name: str = Field(default="Developer User", description="Display name for testing")
 
 
 class PasswordLoginRequest(BaseModel):

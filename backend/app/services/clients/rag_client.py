@@ -7,6 +7,7 @@ from app.config import settings
 from app.schemas.rag import QueryRequest, QueryResponse
 
 RAG_HTTP_TIMEOUT_SECONDS = 300.0
+transport: httpx.AsyncBaseTransport | None = None
 
 
 class RagCallFailure(Exception):
@@ -16,18 +17,11 @@ class RagCallFailure(Exception):
         self.message = message
 
 
-async def request_rag(
-    content: str,
-    *,
-    client: httpx.AsyncClient | None = None,
-) -> QueryResponse:
+async def request_rag(content: str) -> QueryResponse:
     payload = QueryRequest(query=content, use_agent=True).model_dump()
     url = f"{settings.rag_service_url.rstrip('/')}/query"
-    if client is not None:
+    async with httpx.AsyncClient(transport=transport, timeout=RAG_HTTP_TIMEOUT_SECONDS) as client:
         return await post_and_validate(client, url, payload)
-
-    async with httpx.AsyncClient(timeout=RAG_HTTP_TIMEOUT_SECONDS) as owned_client:
-        return await post_and_validate(owned_client, url, payload)
 
 
 async def post_and_validate(
@@ -64,19 +58,8 @@ async def post_and_validate(
         ) from exc
 
 
-def map_rag_response(response: QueryResponse) -> dict[str, object]:
-    return {
-        "retrieved_context": response.context,
-        "retrieval_context_id": response.retrieval_context_id,
-        "mitre_table": [row.model_dump(mode="json") for row in response.mitre_table],
-        "legal_reference": response.legal_reference.model_dump(mode="json"),
-        "previous_analysis": None,
-    }
-
-
 __all__ = [
     "RAG_HTTP_TIMEOUT_SECONDS",
     "RagCallFailure",
-    "map_rag_response",
     "request_rag",
 ]

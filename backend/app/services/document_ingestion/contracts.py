@@ -1,7 +1,10 @@
 from enum import StrEnum
 from typing import Literal
 
+from fastapi import status
 from pydantic import BaseModel, Field
+
+from app.errors import AppError
 
 
 class ExtractionMethod(StrEnum):
@@ -11,15 +14,17 @@ class ExtractionMethod(StrEnum):
     HYBRID = "hybrid"
 
 
+VerificationStatus = Literal["native", "machine_read", "needs_review"]
+
+
 class DocumentPage(BaseModel):
     page_number: int = Field(ge=1)
     text: str
     text_method: Literal["native", "ocr"]
-    verification_status: Literal["native", "machine_read", "needs_review"]
+    verification_status: VerificationStatus
 
 
 class IngestedDocument(BaseModel):
-    document_id: str
     filename: str
     media_type: str
     extraction_method: ExtractionMethod
@@ -27,22 +32,29 @@ class IngestedDocument(BaseModel):
     full_text: str
     warnings: list[str] = Field(default_factory=list)
 
+    @property
+    def verification_status(self) -> VerificationStatus:
+        statuses = {page.verification_status for page in self.pages}
+        if "needs_review" in statuses:
+            return "needs_review"
+        if "machine_read" in statuses:
+            return "machine_read"
+        return "native"
 
-class DocumentIngestionError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
+
+class DocumentIngestionError(AppError):
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 class UnsupportedDocumentError(DocumentIngestionError):
+    status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+
     def __init__(self, message: str) -> None:
         super().__init__("unsupported_document_type", message)
 
 
 class DocumentLimitError(DocumentIngestionError):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(code, message)
+    status_code = status.HTTP_413_CONTENT_TOO_LARGE
 
 
 class InvalidDocumentError(DocumentIngestionError):

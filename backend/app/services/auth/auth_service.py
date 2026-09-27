@@ -1,47 +1,61 @@
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
 from typing import Any
 
+from fastapi import status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
+from app.errors import AppError
 from app.models.user import User
+from app.schemas.auth import PasswordLoginRequest, RegisterRequest
+from app.services.auth.credentials import hash_password, verify_password
+
+UNIQUE_VIOLATION = "23505"
 
 
-async def get_or_create_dev_user(
-    db: AsyncSession,
-    email: str = "dev@cybercase.local",
-    name: str = "Developer User",
-) -> User:
-    normalized_email = email.strip().lower()
-    subject_id = f"dev_{normalized_email}"
-    query = select(User).where(
-        User.oauth_provider == "local_dev",
-        User.oauth_subject_id == subject_id,
-    )
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        user = User(
-            id=uuid.uuid4(),
-            email=normalized_email,
-            email_verified_at=datetime.now(UTC),
-            name=name,
-            oauth_provider="local_dev",
-            oauth_subject_id=subject_id,
+async def register_user(db: AsyncSession, payload: RegisterRequest) -> User:
+    name = payload.name.replace("\x00", "").strip()
+    if not name:
+        raise AppError(
+            "display_name_required",
+            "Display name is required",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
-        db.add(user)
-    else:
-        if name and user.name != name:
-            user.name = name
-
-    await db.commit()
+    user = User(
+        email=str(payload.email).lower(),
+        name=name,
+        password_hash=await run_in_threadpool(hash_password, payload.password),
+    )
+    db.add(user)
+    try:
+        await db.commit()
+    except IntegrityError as error:
+        await db.rollback()
+        if getattr(error.orig, "sqlstate", None) != UNIQUE_VIOLATION:
+            raise
+        raise AppError("account_exists", "An account already exists for this email") from error
     await db.refresh(user)
     return user
+
+
+async def authenticate(db: AsyncSession, payload: PasswordLoginRequest) -> User:
+    user = await db.scalar(select(User).where(User.email == str(payload.email).lower()))
+    if user is None or not user.password_hash:
+        await run_in_threadpool(hash_password, payload.password)
+        raise invalid_credentials()
+    if not await run_in_threadpool(verify_password, payload.password, user.password_hash):
+        raise invalid_credentials()
+    return user
+
+
+def invalid_credentials() -> AppError:
+    return AppError(
+        "credentials_invalid", "Incorrect email or password", status.HTTP_401_UNAUTHORIZED
+    )
 
 
 def build_auth_cookie_options() -> dict[str, Any]:
@@ -56,6 +70,7 @@ def build_auth_cookie_options() -> dict[str, Any]:
 
 
 __all__ = [
+    "authenticate",
     "build_auth_cookie_options",
-    "get_or_create_dev_user",
+    "register_user",
 ]
