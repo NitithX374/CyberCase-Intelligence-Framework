@@ -6,17 +6,13 @@ from uuid import uuid4
 import pytest
 from case_mitre_test_support import _fixtures, _gate, _response
 
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisFailure,
-    CaseAnalysisGap,
-    CaseMitreAssociation,
-    CaseSourceCitation,
-)
-from app.services.analysis.pipeline import AnalysisInput
-from app.services.analysis.steps.bind import resolve_case_trace
-from app.services.analysis.steps.technical_context import CaseMitreAugmentation
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.analysis.pipeline import AnalysisInput
+from app.analysis.technical_context.retrieve import CaseMitreAugmentation
+from app.errors import CaseAnalysisFailure
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.bind import resolve_case_trace
+from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
+from app.trace.trace import CaseMitreAssociation
 from experiments import analysis_arms
 from experiments.analysis_arms import ArmArtifacts, judge_reading, split
 from experiments.split_analysis import (

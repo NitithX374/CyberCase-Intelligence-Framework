@@ -14,4 +14,16 @@ class AppError(Exception):
             self.status_code = status_code
 
 
-__all__ = ["AppError"]
+class CaseAnalysisFailure(AppError):
+    pass
+
+
+class CaseWorkflowError(AppError):
+    pass
+
+
+__all__ = [
+    "AppError",
+    "CaseAnalysisFailure",
+    "CaseWorkflowError",
+]

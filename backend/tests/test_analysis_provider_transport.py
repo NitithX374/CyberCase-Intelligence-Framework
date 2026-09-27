@@ -5,10 +5,10 @@ import httpx
 import pytest
 from pydantic import BaseModel
 
-from app.services.analysis import provider
-from app.services.analysis.contracts import CaseAnalysisFailure
-from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.llm.core_llm import CoreLlmTarget
+from app.errors import CaseAnalysisFailure
+from app.llm import request as provider
+from app.llm.openrouter import CoreLlmTarget
+from app.llm.settings import AnalysisPipelineConfig
 
 
 class Probe(BaseModel):

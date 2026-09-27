@@ -5,19 +5,19 @@ import httpx
 import pytest
 from case_mitre_test_support import _fixtures
 
-from app.services.analysis.contracts import (
-    CaseAnalysisFailure,
-    CaseProviderAnalysis,
+from app.analysis.prompts import case_assessment_prompt, case_system_prompt
+from app.analysis.write import write_trace
+from app.errors import CaseAnalysisFailure
+from app.llm.request import validate_response_payload
+from app.llm.settings import AnalysisPipelineConfig
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.claims import (
+    MAX_CLARIFICATION_QUESTION_CHARS,
     CaseProviderCitation,
     CaseProviderClaim,
 )
-from app.services.analysis.contracts.claims import MAX_CLARIFICATION_QUESTION_CHARS
-from app.services.analysis.prompts import case_assessment_prompt, case_system_prompt
-from app.services.analysis.provider import validate_response_payload
-from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.analysis.steps.quotes import find_aligned_quote
-from app.services.analysis.steps.write import write_trace
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.quotes import find_aligned_quote
+from app.trace.trace import CaseProviderAnalysis
 
 
 def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
@@ -99,7 +99,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             observed.update(kwargs)
             return provider_result(contradicting=False)
 
-        with patch("app.services.analysis.steps.write.request_stage", new=request_stage):
+        with patch("app.analysis.write.request_stage", new=request_stage):
             await write_trace(
                 sources=CaseSourceBundle(revision=1, sources=(source,)),
                 language="english",
@@ -142,7 +142,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             calls.append(kwargs["stage"])
             return provider_result(contradicting=len(calls) == 1)
 
-        with patch("app.services.analysis.steps.write.request_stage", new=request_stage):
+        with patch("app.analysis.write.request_stage", new=request_stage):
             trace = await write_trace(
                 sources=CaseSourceBundle(revision=1, sources=(source,)),
                 language="english",
@@ -162,7 +162,7 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             observed.update(kwargs)
             return provider_result(contradicting=False)
 
-        with patch("app.services.analysis.steps.write.request_stage", new=request_stage):
+        with patch("app.analysis.write.request_stage", new=request_stage):
             trace = await write_trace(
                 sources=bundle,
                 language="thai",

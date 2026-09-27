@@ -1,0 +1,42 @@
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import UUID
+
+from fastapi import status
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.analysis.technical_context.contracts import CaseTechnicalAugmentation
+from app.errors import AppError
+from app.sources.bundle import CaseSourceBundle
+from app.trace.claims import CaseFollowupExchange
+from app.trace.trace import CaseAnalysisTrace
+
+
+class CaseReportInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    case_id: UUID
+    case_title: str = "CyberCase Investigation"
+    analysis_result_id: UUID
+    analysis_created_at: datetime | None = None
+    source_bundle: CaseSourceBundle
+    analysis_summary: str = Field(min_length=1)
+    analysis_trace: CaseAnalysisTrace
+    technical_augmentation: CaseTechnicalAugmentation | None = None
+    followup_history: tuple[CaseFollowupExchange, ...] = ()
+
+
+class ReportGenerationConflict(AppError):
+    pass
+
+
+class ReportNotFound(AppError):
+    status_code = status.HTTP_404_NOT_FOUND
+
+
+__all__ = [
+    "CaseReportInput",
+    "ReportGenerationConflict",
+    "ReportNotFound",
+]

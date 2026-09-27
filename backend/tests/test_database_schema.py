@@ -1,6 +1,6 @@
 import app.models  # noqa: F401
+from app.chat.schemas import ChatMessageRead
 from app.database import Base
-from app.schemas.chat import ChatMessageRead
 
 
 def test_schema_contains_only_product_runtime_tables() -> None:

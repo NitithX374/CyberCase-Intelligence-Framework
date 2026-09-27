@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.services.analysis.steps.write import provider_source_payload
-from app.services.sources.case_source_bundle import CaseSourceItem
+from app.analysis.write import provider_source_payload
+from app.sources.bundle import CaseSourceItem
 
 
 def test_a_document_still_carries_its_extraction_quality():

@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.services.analysis.provider import input_budget
-from app.services.analysis.settings import AnalysisPipelineConfig, provider_order
+from app.llm.request import input_budget
+from app.llm.settings import AnalysisPipelineConfig, provider_order
 
 
 def test_the_request_budget_is_output_plus_thinking() -> None:

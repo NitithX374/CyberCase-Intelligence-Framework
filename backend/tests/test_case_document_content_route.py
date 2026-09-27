@@ -5,8 +5,8 @@ from uuid import uuid4
 import pytest
 
 from app.errors import AppError
-from app.routers import documents
-from app.services.sources.source_service import SourceError, SourceService
+from app.sources import routes
+from app.sources.service import SourceError, SourceService
 
 
 def test_document_content_response_preserves_original_bytes(monkeypatch) -> None:
@@ -24,7 +24,7 @@ def test_document_content_response_preserves_original_bytes(monkeypatch) -> None
 
     monkeypatch.setattr(SourceService, "document_content", get_document)
     response = asyncio.run(
-        documents.get_case_document_content(
+        routes.get_case_document_content(
             case_id,
             document_id,
             db=object(),
@@ -46,7 +46,7 @@ def test_document_content_route_hides_unowned_documents(monkeypatch) -> None:
 
     with pytest.raises(AppError) as error:
         asyncio.run(
-            documents.get_case_document_content(
+            routes.get_case_document_content(
                 uuid4(),
                 uuid4(),
                 db=object(),

@@ -7,32 +7,30 @@ from uuid import uuid4
 import pytest
 from pypdf import PdfReader
 
-from app.models.sources import CaseSource
-from app.schemas.reports import CaseReportContent
-from app.services.analysis.contracts import (
-    CaseAnalysisClaim,
-    CaseAnalysisGap,
-    CaseAnalysisTrace,
-    CaseFollowupExchange,
-    CaseImpactItem,
-    CaseInvolvedParty,
-    CaseMitreAssociation,
-    CaseSourceCitation,
-    CaseTimelineItem,
-)
-from app.services.analysis.mitre_gate.llm import (
+from app.analysis.technical_context.contracts import (
+    CaseTechnicalAugmentation,
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
-from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
-from app.services.reports.contracts import CaseReportInput
-from app.services.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
-from app.services.reports.render import (
-    ReportIssue,
-    render_case_report_html,
-    render_case_report_pdf,
+from app.models.source import CaseSource
+from app.reports.contracts import CaseReportInput
+from app.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
+from app.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf
+from app.reports.schemas import CaseReportContent
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseAnalysisGap,
+    CaseFollowupExchange,
+    CaseSourceCitation,
 )
-from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.trace import (
+    CaseAnalysisTrace,
+    CaseImpactItem,
+    CaseInvolvedParty,
+    CaseMitreAssociation,
+    CaseTimelineItem,
+)
 
 ISSUE = ReportIssue(version_number=2, created_at=datetime(2026, 9, 24, 6, 22, tzinfo=UTC))
 SOURCE_TEXT = "พบการใช้ PowerShell.exe เชื่อมต่อไปยัง 198.51.100.23"

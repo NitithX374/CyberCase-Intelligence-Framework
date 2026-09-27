@@ -5,9 +5,9 @@ from isolated_database import isolated_database
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from app.auth.schemas import RegisterRequest
+from app.auth.service import register_user
 from app.errors import AppError
-from app.schemas.auth import RegisterRequest
-from app.services.auth.auth_service import register_user
 
 pytestmark = pytest.mark.asyncio
 

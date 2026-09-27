@@ -9,7 +9,7 @@ For the current product direction and research boundaries, see [`docs/research/C
 ## Trust boundary and source roles
 
 - **Case sources**: user narratives and extracted text from uploaded documents. Case sources and answered follow-ups (below) are the only inputs that can support case facts, timelines, entities, and findings.
-- **Follow-up history**: answers to clarification questions are persisted as Case chat messages. A later analysis may cite an answer as `QA-nn` to support a claim, the same way it cites a source (`MAIN_CASE_ANALYSIS_SYSTEM_PROMPT` in `backend/app/services/analysis/prompts.py`, `followup_registry_items` in `backend/app/services/analysis/steps/bind.py`). An answer is still not a `CaseSource` row and does not increment `source_revision`.
+- **Follow-up history**: answers to clarification questions are persisted as Case chat messages. A later analysis may cite an answer as `QA-nn` to support a claim, the same way it cites a source (`MAIN_CASE_ANALYSIS_SYSTEM_PROMPT` in `backend/app/analysis/prompts.py`, `followup_registry_items` in `backend/app/trace/bind.py`). An answer is still not a `CaseSource` row and does not increment `source_revision`.
 - **External context**: assistant responses, MITRE descriptions, RAG retrieval, and general model knowledge are not Case sources and cannot establish incident facts.
 - **Traceability**: structured claims may carry source identifiers and exact quotes. The backend verifies those references against the source bundle and the answered follow-ups, and records unresolved bindings.
 

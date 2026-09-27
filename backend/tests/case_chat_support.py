@@ -3,12 +3,12 @@ from __future__ import annotations
 import uuid
 from typing import NamedTuple
 
-from app.models.analysis import CaseAnalysisResult
+from app.models.analysis_result import CaseAnalysisResult
 from app.models.case import Case
-from app.models.chat import ChatMessage
-from app.models.sources import CaseSource
+from app.models.chat_message import ChatMessage
+from app.models.source import CaseSource
 from app.models.user import User
-from app.services.analysis.contracts import CaseAnalysisTrace
+from app.trace.trace import CaseAnalysisTrace
 
 NARRATIVE = "Files on the shared drive were reported encrypted."
 GAP = {
