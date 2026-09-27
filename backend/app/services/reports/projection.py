@@ -11,7 +11,7 @@ from app.services.analysis.contracts import (
     CaseFollowupExchange,
     followup_history_of_snapshot,
 )
-from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
+from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput, ReportGenerationConflict
 from app.services.sources.case_source_bundle import (
     CaseSourceBundle,

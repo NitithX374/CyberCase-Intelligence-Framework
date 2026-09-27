@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.errors import AppError
 from app.models.chat import ChatMessage
 from app.services.analysis.contracts import CaseFollowupExchange
-from app.services.analysis.steps.technical_context import CaseRagContextPayload
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import CaseSourceBundle
 
 

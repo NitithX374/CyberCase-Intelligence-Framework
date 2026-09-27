@@ -5,30 +5,24 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.database import async_session
 from app.models.analysis import CaseAnalysisResult
-from app.models.case import Case
-from app.schemas.rag import LegalReferenceResult
 from app.services.analysis.clarification import Ask, Proceed
 from app.services.analysis.contracts import CaseAnalysisFailure, CaseAssessmentTrace
 from app.services.analysis.language import case_language
+from app.services.analysis.latest import recorded_technical_context
 from app.services.analysis.pipeline import (
     AnalysisAdvance,
     AnalysisArtifacts,
     AnalysisInput,
     advance_case,
 )
-from app.services.analysis.steps.technical_context import (
-    CaseRagContextPayload,
-    CaseTechnicalAugmentation,
-    technical_context_key,
-)
+from app.services.analysis.steps.technical_context import technical_context_key
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.cases.ownership import owned_case
 from app.services.chat.followup import (
     asked_gap_keys,
@@ -158,12 +152,6 @@ async def read_case_for_analysis(
         )
 
 
-class RecordedRetrieval(BaseModel):
-    context: str = Field(min_length=1)
-    technical_augmentation: CaseTechnicalAugmentation
-    legal_relevance: LegalReferenceResult
-
-
 async def reusable_context(
     db: AsyncSession,
     case_id: UUID,
@@ -184,56 +172,13 @@ async def reusable_context(
     return recorded_technical_context(row)
 
 
-def recorded_technical_context(row: CaseAnalysisResult) -> CaseRagContextPayload | None:
-    stored = row.retrieval_context_json
-    if not isinstance(stored, dict) or not isinstance(row.external_context_json, dict):
-        return None
-    try:
-        recorded = RecordedRetrieval.model_validate(
-            {**row.external_context_json, "context": stored.get("context")}
-        )
-    except ValidationError:
-        return None
-    augmentation = recorded.technical_augmentation
-    if not augmentation.retrieval_context_id:
-        return None
-    return CaseRagContextPayload(
-        retrieval_context_id=augmentation.retrieval_context_id,
-        context=recorded.context,
-        mitre_table=tuple(augmentation.mitre_table),
-        legal_relevance=recorded.legal_relevance,
-    )
-
-
-async def get_latest_case_analysis(
-    db: AsyncSession,
-    *,
-    case_id: UUID,
-    user_id: UUID | None,
-) -> tuple[Case, CaseAnalysisResult | None]:
-    case = await owned_case(
-        db, case_id, user_id, options=(selectinload(Case.latest_analysis_result),)
-    )
-    result = case.latest_analysis_result
-    return case, result if result is None or result.status == "validated" else None
-
-
-def analysis_freshness(case: Case, result: CaseAnalysisResult | None) -> str:
-    if result is None:
-        return "missing"
-    return "current" if result.source_revision == case.source_revision else "stale"
-
-
 __all__ = [
     "AnalysisStep",
     "UnassessedAdvance",
     "analysing",
-    "analysis_freshness",
     "analysis_running",
     "external_context",
-    "get_latest_case_analysis",
     "read_case_for_analysis",
-    "recorded_technical_context",
     "run_case_analysis",
     "store_analysis",
 ]

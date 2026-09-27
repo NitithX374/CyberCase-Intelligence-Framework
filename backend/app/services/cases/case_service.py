@@ -7,8 +7,8 @@ from sqlalchemy.orm import selectinload
 from app.models.case import Case
 from app.models.report import CaseReport
 from app.schemas.cases import CaseCreate, CaseRead, CaseUpdate
+from app.services.analysis.latest import analysis_freshness
 from app.services.cases.ownership import owned_case
-from app.services.workflow.run_analysis import analysis_freshness
 
 WITH_LATEST_ANALYSIS = (selectinload(Case.latest_analysis_result),)
 

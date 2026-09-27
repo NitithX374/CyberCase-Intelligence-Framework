@@ -4,20 +4,22 @@ import json
 import logging
 import unicodedata
 from collections.abc import Sequence
-from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from app.services.analysis.contracts import CaseAnalysisFailure
 from app.services.analysis.provider import request_stage
 from app.services.analysis.settings import AnalysisPipelineConfig
+from app.services.analysis.technical_context_contracts import (
+    MITRE_APPLICABILITY_GATE_VERSION,
+    MitreApplicabilityDecision,
+    MitreApplicabilityRecord,
+    skipped_mitre_applicability,
+)
 from app.services.sources.case_source_bundle import CaseSourceItem
 
 logger = logging.getLogger(__name__)
 
-
-MITRE_APPLICABILITY_GATE_VERSION = "mitre_applicability_v1"
-MitreApplicabilityDecision = Literal["SKIP", "RETRIEVE"]
 
 MITRE_APPLICABILITY_INPUT_MAX_CHARS = 20_000
 MITRE_APPLICABILITY_SOURCE_MAX_CHARS = 4_000
@@ -157,38 +159,6 @@ class ProviderMitreApplicability(BaseModel):
         return normalized
 
 
-class MitreApplicabilityRecord(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["mitre_applicability_v1"] = MITRE_APPLICABILITY_GATE_VERSION
-    decision: MitreApplicabilityDecision
-    source_message_ids: list[str] = Field(default_factory=list, max_length=64)
-    trigger_text: list[str] = Field(default_factory=list, max_length=16)
-    failure_code: str | None = Field(default=None, max_length=120)
-    input_truncated: bool = False
-
-    @model_validator(mode="after")
-    def validate_routing_record(self) -> MitreApplicabilityRecord:
-        if self.decision == "SKIP":
-            if self.source_message_ids or self.trigger_text:
-                raise ValueError("SKIP records cannot retain a trigger")
-            return self
-        if not self.source_message_ids or not self.trigger_text or self.failure_code:
-            raise ValueError("RETRIEVE requires a trigger grounded in a source")
-        return self
-
-
-def skipped_mitre_applicability(
-    failure_code: str | None = None,
-) -> MitreApplicabilityRecord:
-    return MitreApplicabilityRecord(
-        decision="SKIP",
-        source_message_ids=[],
-        trigger_text=[],
-        failure_code=failure_code,
-    )
-
-
 def normalize_text(value: str) -> str:
     return unicodedata.normalize("NFKC", value)
 
@@ -282,17 +252,13 @@ async def evaluate_mitre_applicability(
 
 
 __all__ = [
-    "MITRE_APPLICABILITY_GATE_VERSION",
     "MITRE_APPLICABILITY_INPUT_MAX_CHARS",
     "MITRE_APPLICABILITY_OUTPUT_TOKENS",
     "MITRE_APPLICABILITY_SOURCE_MAX_CHARS",
     "MITRE_APPLICABILITY_SYSTEM_PROMPT",
-    "MitreApplicabilityDecision",
-    "MitreApplicabilityRecord",
     "ProviderMitreApplicability",
     "build_mitre_applicability_prompt",
     "evaluate_mitre_applicability",
     "gate_input_truncated",
-    "skipped_mitre_applicability",
     "validate_mitre_applicability",
 ]

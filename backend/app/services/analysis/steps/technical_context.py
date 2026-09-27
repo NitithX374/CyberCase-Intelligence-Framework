@@ -3,14 +3,14 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from app.schemas.rag import LegalReferenceResult, QueryResponse
+from app.schemas.rag import QueryResponse
 from app.services.analysis.contracts import CaseFollowupExchange
 from app.services.analysis.mitre_gate import mitre_gate
-from app.services.analysis.mitre_gate.llm import (
+from app.services.analysis.technical_context_contracts import (
+    CaseRagContextPayload,
+    CaseTechnicalAugmentation,
+    CaseTechnicalAugmentationStatus,
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
@@ -46,38 +46,6 @@ def retrieval_query(
     if not answers:
         return query
     return "\n".join([query, *answers])
-
-
-CASE_MITRE_AUGMENTATION_VERSION = "case_mitre_augmentation_v1"
-
-CaseTechnicalAugmentationStatus = Literal[
-    "not_applicable",
-    "insufficient_context",
-    "retrieved_from_rag",
-    "retrieved_with_matches",
-    "failed",
-]
-
-
-class CaseTechnicalAugmentation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    version: Literal["case_mitre_augmentation_v1"] = CASE_MITRE_AUGMENTATION_VERSION
-    status: CaseTechnicalAugmentationStatus
-    applicability: MitreApplicabilityRecord
-    retrieval_context_id: str | None = None
-    retrieval_context_reused: bool = False
-    mitre_table: list[dict[str, object]] = Field(default_factory=list)
-    association_ids: list[str] = Field(default_factory=list)
-    failure_code: str | None = None
-
-
-@dataclass(frozen=True)
-class CaseRagContextPayload:
-    retrieval_context_id: str | None
-    context: str
-    mitre_table: tuple[dict[str, object], ...]
-    legal_relevance: LegalReferenceResult
 
 
 @dataclass(frozen=True)
@@ -166,11 +134,7 @@ def validated_case_rag_context(response: QueryResponse) -> CaseRagContextPayload
 
 
 __all__ = [
-    "CASE_MITRE_AUGMENTATION_VERSION",
     "CaseMitreAugmentation",
-    "CaseRagContextPayload",
-    "CaseTechnicalAugmentation",
-    "CaseTechnicalAugmentationStatus",
     "run_case_mitre_augmentation",
     "validated_case_rag_context",
 ]

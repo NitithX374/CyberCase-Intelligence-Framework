@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from app.config import settings
-from app.services.analysis.mitre_gate.llm import (
+from app.services.analysis.mitre_gate.llm import evaluate_mitre_applicability
+from app.services.analysis.technical_context_contracts import (
     MitreApplicabilityRecord,
-    evaluate_mitre_applicability,
     skipped_mitre_applicability,
 )
 from app.services.sources.case_source_bundle import CaseSourceItem
@@ -19,9 +19,7 @@ def chosen_gate():
     if settings.mitre_gate_mode == "never":
         return never_applicable
     if settings.mitre_gate_mode == "encoder":
-        from app.services.analysis.mitre_gate.encoder import (
-            evaluate_mitre_applicability_encoder,
-        )
+        from app.services.analysis.mitre_gate.encoder import evaluate_mitre_applicability_encoder
 
         return evaluate_mitre_applicability_encoder
     return evaluate_mitre_applicability

@@ -18,7 +18,7 @@ from app.services.analysis.contracts import (
     CaseAnalysisTrace,
     CaseSourceCitation,
 )
-from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
+from app.services.analysis.technical_context_contracts import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput
 
 EPISTEMIC_STATUS_LABELS = {

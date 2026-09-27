@@ -12,7 +12,7 @@ from app.services.analysis.contracts import (
 from app.services.analysis.prompts import case_system_prompt
 from app.services.analysis.provider import request_stage
 from app.services.analysis.settings import AnalysisPipelineConfig
-from app.services.analysis.steps.technical_context import CaseRagContextPayload
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import CaseSourceBundle, CaseSourceItem
 
 

@@ -31,8 +31,8 @@ from app.services.analysis.steps.bind import (
     resolve_case_trace,
     resolved_citations,
 )
-from app.services.analysis.steps.technical_context import CaseRagContextPayload
 from app.services.analysis.steps.write import write_request
+from app.services.analysis.technical_context_contracts import CaseRagContextPayload
 from app.services.sources.case_source_bundle import (
     CaseSourceBundle,
     CaseSourceItem,

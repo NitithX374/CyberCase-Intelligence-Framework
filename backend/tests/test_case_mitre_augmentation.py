@@ -10,9 +10,7 @@ from app.services.analysis.pipeline import (
     retrieve_technical_context,
     write_analysis,
 )
-from app.services.analysis.steps.technical_context import (
-    run_case_mitre_augmentation,
-)
+from app.services.analysis.steps.technical_context import run_case_mitre_augmentation
 from app.services.clients.rag_client import RagCallFailure
 from app.services.workflow.run_analysis import external_context
 

@@ -19,15 +19,12 @@ from app.schemas.chat import ChatMessageCreate, ChatMessageRead
 from app.schemas.message_metadata import MessageAnalysisTrace
 from app.services.analysis.clarification import Ask
 from app.services.analysis.contracts import CaseAnalysisGap, CaseAnalysisTrace, CaseAssessmentTrace
+from app.services.analysis.latest import get_latest_case_analysis
 from app.services.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
 from app.services.chat.case_chat import get_case_chat, post_case_message, send_case_message
 from app.services.chat.followup import analysis_result_message, pending_question
 from app.services.reports.display import clarification_limitation
-from app.services.workflow.run_analysis import (
-    analysing,
-    get_latest_case_analysis,
-    run_case_analysis,
-)
+from app.services.workflow.run_analysis import analysing, run_case_analysis
 from app.services.workflow.shared import CaseWorkflowError, next_ordinal
 
 pytestmark = pytest.mark.asyncio

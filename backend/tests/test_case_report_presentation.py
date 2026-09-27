@@ -20,11 +20,11 @@ from app.services.analysis.contracts import (
     CaseSourceCitation,
     CaseTimelineItem,
 )
-from app.services.analysis.mitre_gate.llm import (
+from app.services.analysis.technical_context_contracts import (
+    CaseTechnicalAugmentation,
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
-from app.services.analysis.steps.technical_context import CaseTechnicalAugmentation
 from app.services.reports.contracts import CaseReportInput
 from app.services.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
 from app.services.reports.render import (
