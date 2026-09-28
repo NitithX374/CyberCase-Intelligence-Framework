@@ -8,7 +8,7 @@ Starting an analysis and sending a chat message read their answer as a stream on
 
 ## Layout
 
-Code is grouped by flow, so following one means opening one folder. Each folder under `src/features/` holds that flow's page, its components, its calls to the backend (`api.ts`), its hooks (`queries.ts` for the server state it owns), its parsing, and its tests beside the files they test. The folder names follow the backend's feature folders where they share a flow.
+Code is grouped by flow, so following one means opening one folder. Each folder under `src/features/` holds that flow's page, its components, its calls to the backend (`api.ts`), its hooks (`queries.ts` for the server state it owns) and its parsing. The folder names follow the backend's feature folders where they share a flow.
 
 | Folder                | What it owns                                                                                                                                                                                                                                                                                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -24,9 +24,11 @@ Code is grouped by flow, so following one means opening one folder. Each folder 
 | `features/auth/`      | Session, sign-in forms, the account menu.                                                                                                                                                                                                                                                                                                                          |
 | `src/components/`     | Shared UI with no flow of its own: icons, dialogs, empty states, and `Markdown` for the chat and the analysis summary.                                                                                                                                                                                                                                             |
 | `src/lib/`            | Shared non-UI code: the HTTP client and the API contract (`lib/api/`), the case paths (`casePaths.ts`), query keys, formatting, parsing helpers.                                                                                                                                                                                                                   |
-| `src/test/`           | Test support shared across features: fixtures, HTTP errors, chat responses.                                                                                                                                                                                                                                                                                        |
+| `src/test/`           | Every test, at the path of the file it tests, and at its root what tests share: setup, fixtures, HTTP errors, chat responses.                                                                                                                                                                                                                                      |
 
 A feature may import another feature's hooks or types (Analysis reads sources); shared folders import no feature. There are no barrel files: import from the file that defines the name.
+
+Tests live only in `src/test/`, at the path of the file they test: `src/features/chat/useCaseChat.ts` is tested by `src/test/features/chat/useCaseChat.test.tsx`. A test imports through `@/`, never by a relative path, so moving it breaks nothing. `npm run lint` fails on a test file anywhere else.
 
 ## Contracts
 

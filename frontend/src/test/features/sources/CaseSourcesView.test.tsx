@@ -1,0 +1,303 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
+
+import { CaseSourcesView } from "@/features/sources/CaseSourcesView";
+import type { CaseSourceRead } from "@/lib/api/types";
+
+vi.mock("@/features/sources/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/sources/api")>();
+  return {
+    ...actual,
+    fetchCaseDocumentContent: vi.fn().mockResolvedValue(new Blob(["original"])),
+  };
+});
+
+interface DocumentFacts {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
+const document: DocumentFacts = {
+  id: "document-1",
+  filename: "statement.pdf",
+  mime_type: "application/pdf",
+  size_bytes: 2048,
+};
+
+const secondDocument: DocumentFacts = {
+  ...document,
+  id: "document-2",
+  filename: "account-log.png",
+  mime_type: "image/png",
+};
+
+function documentSource(
+  owner: DocumentFacts,
+  text: string,
+  provenance: Record<string, unknown> = {},
+): CaseSourceRead {
+  return caseSource({
+    id: `source-${owner.id}`,
+    source_kind: "document",
+    document_id: owner.id,
+    filename: owner.filename,
+    mime_type: owner.mime_type,
+    size_bytes: owner.size_bytes,
+    exact_text: text,
+    provenance_json: provenance,
+  });
+}
+
+const statement = {
+  sources: [documentSource(document, "Received statement")],
+};
+
+function caseSource(overrides: Partial<CaseSourceRead> = {}): CaseSourceRead {
+  return {
+    id: "source-1",
+    case_id: "case-1",
+    source_kind: "narrative",
+    document_id: null,
+    exact_text: "Files on the shared drive were reported encrypted.",
+    provenance_json: {},
+    source_metadata_json: {},
+    created_at: "2026-09-11T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function renderSources(overrides: Partial<React.ComponentProps<typeof CaseSourcesView>> = {}) {
+  const props: React.ComponentProps<typeof CaseSourcesView> = {
+    caseId: "case-1",
+    sources: [],
+    followups: [],
+    isUploading: false,
+    isAddingNarrative: false,
+    onUploadDocument: vi.fn(),
+    onAddNarrative: vi.fn().mockResolvedValue(true),
+    ...overrides,
+  };
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <CaseSourcesView {...props} />
+    </QueryClientProvider>,
+  );
+  return props;
+}
+
+function pagedDocument(pageCount: number) {
+  const pages = Array.from({ length: pageCount }, (_, index) => ({
+    page_number: index + 1,
+    text: `Page ${index + 1} content`,
+    text_method: index % 2 === 0 ? "native" : "ocr",
+  }));
+  const paged: DocumentFacts = { ...document, id: "document-multi", filename: "multi-page.pdf" };
+  const text = pages.map((page) => page.text).join("\n\n");
+  return { sources: [documentSource(paged, text, { pages })] };
+}
+
+describe("CaseSourcesView", () => {
+  it("switches between a source file and its extracted text", () => {
+    renderSources(statement);
+
+    expect(screen.getAllByText("statement.pdf")).toHaveLength(2);
+    expect(screen.getByRole("tab", { name: "Original" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    expect(screen.getByText("Received statement")).toBeInTheDocument();
+  });
+
+  it("shows the file size without duplicating source text in the rail", () => {
+    renderSources(statement);
+    expect(screen.getByText("2 KB")).toBeInTheDocument();
+    expect(screen.queryByText("Received statement")).not.toBeInTheDocument();
+  });
+
+  it("reads the file's name, type and size from its source, with no document list", () => {
+    renderSources(statement);
+    expect(screen.getByRole("heading", { level: 2, name: "statement.pdf" })).toBeInTheDocument();
+    expect(screen.getByText("PDF · 1 page")).toBeInTheDocument();
+    expect(screen.getByText("2 KB")).toBeInTheDocument();
+  });
+
+  it("counts the warnings recorded when the file was read", () => {
+    renderSources({
+      sources: [
+        documentSource(document, "Received statement", {
+          warnings: ["Page 1: recognition confidence was low."],
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    expect(screen.getByText("1 extraction warning")).toBeInTheDocument();
+  });
+
+  it("switches the preview when a different source is selected", () => {
+    renderSources({
+      sources: [
+        documentSource(document, "Received statement"),
+        documentSource(secondDocument, "Recognized account log"),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: /account-log\.png/i }));
+    expect(screen.getByRole("heading", { name: "account-log.png" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+    expect(screen.getByText("Recognized account log")).toBeInTheDocument();
+  });
+
+  it("lists files, narratives and follow-up answers together", () => {
+    renderSources({
+      sources: [documentSource(document, "Received statement"), caseSource()],
+      followups: [
+        { qaId: "QA-01", question: "Were backups kept?", answer: "The backups were offline." },
+      ],
+    });
+
+    expect(screen.getByRole("heading", { level: 3, name: "Files" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Case narrative" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Follow-up answers" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Sources 3" })).toBeInTheDocument();
+  });
+
+  it("reads a follow-up answer beside the question it answers", () => {
+    renderSources({
+      followups: [{ qaId: "QA-01", question: "มีหมายจับหรือไม่", answer: "ไม่มี" }],
+    });
+
+    expect(screen.getByText("Follow-up answer")).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { level: 2, name: "มีหมายจับหรือไม่" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /มีหมายจับหรือไม่\s*ไม่มี/ })).toBeInTheDocument();
+    const terms = screen.getAllByRole("term").map((term) => term.textContent);
+    const definitions = screen.getAllByRole("definition").map((item) => item.textContent);
+    expect(terms).toEqual(["Question", "Answer"]);
+    expect(definitions).toEqual(["มีหมายจับหรือไม่", "ไม่มี"]);
+  });
+
+  it("adds a case narrative from the plus menu", async () => {
+    const onAddNarrative = vi.fn().mockResolvedValue(true);
+    renderSources({ sources: [caseSource()], onAddNarrative });
+
+    fireEvent.click(screen.getByRole("button", { name: "Add source" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Case narrative" }));
+
+    fireEvent.change(screen.getByLabelText("Narrative"), {
+      target: { value: "Files were encrypted overnight." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add narrative" }));
+
+    await waitFor(() =>
+      expect(onAddNarrative).toHaveBeenCalledWith({ text: "Files were encrypted overnight." }),
+    );
+  });
+
+  it("offers the analysis under the sources until it has read them", () => {
+    const onAnalyze = vi.fn();
+    renderSources({
+      sources: [caseSource()],
+      analysis: { freshness: "missing", isRunning: false, onAnalyze },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
+    expect(onAnalyze).toHaveBeenCalledOnce();
+  });
+
+  it("says when the sources changed since the last analysis", () => {
+    renderSources({
+      sources: [caseSource()],
+      analysis: { freshness: "stale", isRunning: false, onAnalyze: vi.fn() },
+    });
+
+    expect(screen.getByText("Sources changed since the last analysis")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Analyze latest" })).toBeEnabled();
+  });
+
+  it("keeps the rail clear once the analysis is up to date", () => {
+    renderSources({
+      sources: [caseSource()],
+      analysis: { freshness: "current", isRunning: false, onAnalyze: vi.fn() },
+    });
+
+    expect(screen.queryByRole("button", { name: /Analyze/ })).not.toBeInTheDocument();
+  });
+
+  it("shows a run in progress instead of a second button", () => {
+    renderSources({
+      sources: [caseSource()],
+      analysis: { freshness: "current", isRunning: true, onAnalyze: vi.fn() },
+    });
+
+    expect(screen.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
+  });
+
+  it("waits for an upload to finish before analyzing", () => {
+    renderSources({
+      sources: [caseSource()],
+      isUploading: true,
+      uploadingFilename: "statement.pdf",
+      analysis: { freshness: "missing", isRunning: false, onAnalyze: vi.fn() },
+    });
+
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+  });
+
+  it("starts an empty case with a narrative or a file", async () => {
+    const onAddNarrative = vi.fn().mockResolvedValue(true);
+    renderSources({ onAddNarrative });
+
+    expect(screen.getByRole("heading", { name: "No sources yet" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload file" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Write narrative" }));
+    fireEvent.change(screen.getByLabelText("Narrative"), {
+      target: { value: "A phishing email reached payroll." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add narrative" }));
+    await waitFor(() =>
+      expect(onAddNarrative).toHaveBeenCalledWith({ text: "A phishing email reached payroll." }),
+    );
+  });
+
+  it("renders one card per extracted page", () => {
+    renderSources(pagedDocument(2));
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 content")).toBeInTheDocument();
+    expect(screen.getByText("Page 2")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 content")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Page navigation" })).not.toBeInTheDocument();
+  });
+
+  it("offers page links once a document is long enough to need them", () => {
+    renderSources(pagedDocument(5));
+    fireEvent.click(screen.getByRole("tab", { name: "Text" }));
+
+    expect(screen.getByRole("navigation", { name: "Page navigation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go to page 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go to page 5" })).toBeInTheDocument();
+  });
+
+  it("renders side-by-side comparison view with original file and extracted text", async () => {
+    renderSources(pagedDocument(2));
+    fireEvent.click(screen.getByRole("tab", { name: "Side by side" }));
+
+    expect(await screen.findByTitle("Original file: multi-page.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 content")).toBeInTheDocument();
+  });
+
+  it("renders the in-flight pending document item when uploading", () => {
+    renderSources({ isUploading: true, uploadingFilename: "forensic_report.pdf" });
+
+    expect(screen.getByText("forensic_report.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Extracting text…")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Sources 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "No sources yet" })).not.toBeInTheDocument();
+  });
+});
