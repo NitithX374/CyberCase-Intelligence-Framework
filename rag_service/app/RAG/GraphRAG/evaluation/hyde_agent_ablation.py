@@ -236,8 +236,10 @@ def phase_score(samples: list[dict], runs_path: Path, report_path: Path,
     L.append(f"Samples: {len(common)} paired. Model: `{model}`. Commit(s): {', '.join(commits)}.")
     replayed = sum(rows[(sid, "H")].get("replayed_decompositions", 0) for sid in common)
     retrieves_p = sum(rows[(sid, "P")]["n_retrieves"] for sid in common)
-    L.append(f"H replayed {replayed} of P's {retrieves_p} decompositions; "
-             f"the rest ran live (H retrieved more often than P).\n")
+    retrieves_h = sum(rows[(sid, "H")]["n_retrieves"] for sid in common)
+    L.append(f"H replayed {replayed} of its {retrieves_h} decompositions from P "
+             f"(P retrieved {retrieves_p} times); any others ran live. H's latency "
+             f"omits the replayed decomposition calls, so it is understated.\n")
 
     L.append("## Per-arm means\n")
     cols = [("F1", "f1"), ("Precision", "precision"), ("Recall", "recall"),
