@@ -171,6 +171,14 @@ SINGLE_CALL_GENERATION = (
     os.getenv("SINGLE_CALL_GENERATION", "true").lower() == "true"
 )
 
+# HyDE on the agent's retrieval (pipeline/hyde.py): each decomposed sub-query
+# also searches with a hypothetical ATT&CK entry, the two candidate sets are
+# pooled, and the reranker still scores against the sub-query ("hyde_fuse_sub"
+# in evaluation/results/hyde_ablation.md: described-cue StepCoverage@10 +0.057,
+# 15 wins / 1 loss). One extra LLM call per retrieval. Off until the served
+# agent end to end says it helps (evaluation/hyde_agent_ablation.py).
+HYDE_RETRIEVAL = os.getenv("HYDE_RETRIEVAL", "false").lower() == "true"
+
 # Ultrafast mode (--ultrafast): vector-only retrieve (no graph) + terse, capped
 # output. Output-token count dominates LLM latency, so the answer is short.
 ULTRAFAST_MAX_TOKENS = int(os.getenv("ULTRAFAST_MAX_TOKENS", "2048"))

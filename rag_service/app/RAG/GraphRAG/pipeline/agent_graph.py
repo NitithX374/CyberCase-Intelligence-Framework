@@ -45,6 +45,7 @@ from ..config import (
     BROADEN_GRAPH_STEP,
     BROADEN_VECTOR_STEP,
     EMBED_MODEL,
+    HYDE_RETRIEVAL,
     LLM_MAX_TOKENS,
     LLM_MODEL,
     LLM_TEMPERATURE,
@@ -64,6 +65,7 @@ from ..llm_provider import (
 from ..retrieval.hybrid_retriever import HybridRetriever, merge_results
 from .context_builder import build_context, build_generation_prompt
 from .cross_lingual import CrossLingualLayer
+from .hyde import HydeWriter
 from .query_decomposer import QueryDecomposer
 from .evaluator import (
     VERDICT_INSUFFICIENT,
@@ -176,6 +178,9 @@ class GraphRAGAgent:
         self.router = QueryRouter()
         self.evaluator = ContextEvaluator()
         self.decomposer = QueryDecomposer()
+        # None = HyDE off. An attribute rather than a config read in the node,
+        # so an ablation can switch it per run on one loaded agent.
+        self.hyde_writer: Optional[HydeWriter] = HydeWriter() if HYDE_RETRIEVAL else None
 
         # Both LLMs are the same model; the system prompt draws the stage
         # boundary. reasoning_llm and translation_llm are set (and cleared)
@@ -231,6 +236,7 @@ class GraphRAGAgent:
         rag_result = self.retriever.retrieve_multi_quota(
             all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
             max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH,
+            search_texts=self._hyde_search_texts(user_query, sub_queries, all_queries),
         )
         return build_context(
             rag_result, max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH
@@ -590,6 +596,7 @@ class GraphRAGAgent:
         graphrag_result = self.retriever.retrieve_multi_quota(
             all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
             max_vector=max_vector, max_graph=max_graph,
+            search_texts=self._hyde_search_texts(original_query, sub_queries, all_queries),
         )
         if broaden_round and state.get("graphrag_result") is not None:
             graphrag_result = merge_results(state["graphrag_result"], graphrag_result)
@@ -607,6 +614,25 @@ class GraphRAGAgent:
             "graphrag_result": graphrag_result,
             "context": context,
         }
+
+    def _hyde_search_texts(
+        self, incident: str, sub_queries: list[str], all_queries: list[str]
+    ) -> Optional[list[Optional[list[str]]]]:
+        """Per retrieval slot: search with the sub-query AND its HyDE entry.
+
+        Only decomposed sub-queries get an entry. The incident slot and the
+        evaluator's broaden rewrites search as before, and so does a sub-query
+        the writer skipped. The reranker still scores against the sub-query
+        itself, so a wrong guess in an entry can add candidates but cannot
+        decide which ones survive the quota.
+        """
+        if self.hyde_writer is None or sub_queries == [incident]:
+            return None
+        passages = self.hyde_writer.write(incident, sub_queries)
+        entries = {q: p.as_document() for q, p in zip(sub_queries, passages) if p}
+        if not entries:
+            return None
+        return [[q, entries[q]] if q in entries else None for q in all_queries]
 
     def _node_evaluate_context(self, state: AgentState) -> dict:
         """Evaluate whether the retrieved context is sufficient."""
