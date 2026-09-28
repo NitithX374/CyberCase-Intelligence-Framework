@@ -222,7 +222,7 @@ def test_an_id_no_exchange_backs_gets_no_reference() -> None:
     assert [source.label for source in report.sources] == ["E-01"]
 
 
-def test_a_source_named_without_a_verified_quote_gets_no_reference() -> None:
+def test_a_claim_without_a_verified_quote_still_names_its_source() -> None:
     report_input = _input()
     trace = report_input.analysis_trace
     unquoted = trace.model_copy(
@@ -230,9 +230,41 @@ def test_a_source_named_without_a_verified_quote_gets_no_reference() -> None:
     )
     report = build_case_report_content(report_input.model_copy(update={"analysis_trace": unquoted}))
 
-    assert report.findings[0].source_labels == []
-    assert report.parties[0].references == []
-    assert report.impacts[0].references == []
+    assert report.findings[0].source_labels == ["E-01"]
+    assert report.findings[0].supporting_quotes == []
+    assert report.parties[0].references == ["E-01"]
+    assert report.impacts[0].references == ["E-01"]
+
+
+def test_a_quoted_claim_names_only_the_sources_its_quotes_come_from() -> None:
+    report_input = _input()
+    second = CaseSourceItem(source_id=str(uuid4()), source_kind="narrative", text="คำบอกเล่าเพิ่มเติม")
+    bundle = report_input.source_bundle
+    trace = report_input.analysis_trace
+    claim = trace.claims[0]
+    named = trace.model_copy(
+        update={
+            "claims": [
+                claim.model_copy(
+                    update={
+                        "supporting_source_ids": [*claim.supporting_source_ids, second.source_id]
+                    }
+                )
+            ]
+        }
+    )
+    report = build_case_report_content(
+        report_input.model_copy(
+            update={
+                "analysis_trace": named,
+                "source_bundle": CaseSourceBundle(
+                    revision=bundle.revision, sources=(*bundle.sources, second)
+                ),
+            }
+        )
+    )
+
+    assert report.findings[0].source_labels == ["E-01"]
 
 
 def test_the_report_says_why_the_system_stopped_asking() -> None:
