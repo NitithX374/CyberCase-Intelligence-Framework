@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise one grounded model call follows, which the caller waits for — there is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
+**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary, gaps and ATT&CK associations over that reading. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
 
 ## Service Layout
 
@@ -214,7 +214,9 @@ analysis/               producing an analysis of a case; routes, schemas
   pipeline.py           advance_case(): assess first, then analyse only if
                         there is nothing worth asking
   assess.py             the cheap gaps-only call that runs first
-  write.py              write_trace: the one model call that writes the trace
+  write.py              write_trace: a reading call (claims, parties, timeline,
+                        impacts, with quotations), then a judgement call
+                        (summary, gaps, ATT&CK associations) over that reading
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   prompts.py            the analysis prompts
@@ -237,11 +239,12 @@ reports/                routes, schemas, contracts, generate.py (one report
                         snapshot a report stores and prints), render.py (HTML
                         and PDF from the Jinja2 template in templates/)
 experiments/            ablations — imports app/, never imported by it; only
-                        __init__.py and these two files are tracked; the rest
+                        __init__.py and this file are tracked; the rest
                         is local
-  analysis_arms.py      direct / verify / revise / split, built from the same
-                        steps advance_case runs
-  split_analysis.py     the two model calls the split arm needs
+  analysis_arms.py      direct / verify / revise / single, built from the same
+                        steps advance_case runs; single is the one-call writer
+                        production used before the reading/judgement split,
+                        kept as the ablation
 ```
 
 Three rules this layout exists to keep:
@@ -281,7 +284,7 @@ artifacts = await bind_to_case(...)
 ```
 
 A round that ends in a question never calls the MITRE gate, the RAG service,
-the main model call or the binding step. The `verify` arm in
+the reading and judgement calls or the binding step. The `verify` arm in
 `experiments/analysis_arms.py` runs those three expensive steps without the
 preflight.
 The arms in `experiments/analysis_arms.py` take an `AnalysisInput` directly and
