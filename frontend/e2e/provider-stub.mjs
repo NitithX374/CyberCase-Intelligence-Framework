@@ -157,7 +157,7 @@ function responseFor(body) {
         ]
       : [];
 
-  return {
+  const trace = {
     version: "case_analysis_trace_v1",
     summary: `Deterministic E2E summary: ${sourceText}`,
     involved_parties: [],
@@ -167,6 +167,8 @@ function responseFor(body) {
     gaps,
     mitre_associations: [],
   };
+  const asked = Object.keys(body?.output_config?.format?.schema?.properties ?? trace);
+  return Object.fromEntries(Object.entries(trace).filter(([key]) => asked.includes(key)));
 }
 
 const server = http.createServer(async (request, response) => {
