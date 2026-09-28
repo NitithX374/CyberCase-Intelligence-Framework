@@ -259,9 +259,10 @@ experiments/            ablations — imports app/, never imported by it; only
                         steps advance_case runs; single is the one-call writer
                         production used before the reading/judgement split,
                         kept as the ablation
+tests/                  every backend test and the helpers they share
 ```
 
-Three rules this layout exists to keep:
+The rules this layout exists to keep:
 
 **One folder per thing the case does.** A feature's routes, schemas and logic
 sit together: open its `routes.py` and follow the function each route calls.
@@ -283,6 +284,12 @@ function: WeasyPrint
 loads Pango and Cairo through ctypes at import time and raises if they are
 missing, so at module level one absent system library would break every
 import of `app.reports`.
+
+**Tests sit in a test folder, never beside the code they test.** Every backend
+test is in `backend/tests/`, and `tests/test_layout.py` fails when a test file
+appears under `app/`. Every frontend test is in `frontend/src/test/`, at the
+path of the file it tests, and `npm run lint` fails on a test file anywhere
+else.
 
 **Production runs one path, and the arms are arguments.** That path is
 `advance_case`, which reads top to bottom and has no arm switch:
