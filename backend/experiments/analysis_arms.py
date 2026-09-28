@@ -13,18 +13,12 @@ from app.analysis.pipeline import (
 )
 from app.analysis.prompts import case_system_prompt
 from app.analysis.technical_context.contracts import CaseRagContextPayload
-from app.analysis.write import write_request, write_trace, written_trace
-from app.errors import CaseAnalysisFailure
+from app.analysis.write import write_request
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.sources.bundle import CaseSourceBundle
-from app.trace.claims import CaseFollowupExchange
+from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
-from experiments.split_analysis import (
-    CaseProviderReading,
-    request_case_judgement,
-    request_case_reading,
-)
 
 CASE_TRACE_REVISION_PROMPT = """
 GROUNDING CORRECTION
@@ -49,7 +43,6 @@ association must come back as it was.
 
 @dataclass(frozen=True)
 class ArmArtifacts(AnalysisArtifacts):
-    reading: CaseProviderReading | None = None
     calls: tuple[dict[str, object], ...] = ()
     rounds: tuple[dict[str, object], ...] = ()
 
@@ -68,6 +61,49 @@ async def verify(data: AnalysisInput) -> ArmArtifacts:
     return await bind_to_case(data, artifacts)
 
 
+async def single(data: AnalysisInput) -> ArmArtifacts:
+    artifacts = await retrieve_technical_context(data, ArmArtifacts())
+    artifacts = await write_analysis(data, artifacts, request=write_single_call)
+    return await bind_to_case(data, artifacts)
+
+
+async def write_single_call(
+    *,
+    sources: CaseSourceBundle,
+    language: str,
+    followup_history: Sequence[CaseFollowupExchange] = (),
+    technical_context: CaseRagContextPayload | None = None,
+    config: AnalysisPipelineConfig,
+) -> CaseAnalysisTrace:
+    parsed = await request_stage(
+        config=config,
+        stage="case_direct",
+        system=case_system_prompt(),
+        content=write_request(sources, language, followup_history, technical_context),
+        schema=CaseProviderAnalysis,
+    )
+    return written_trace(parsed, technical_context)
+
+
+def written_trace(
+    parsed: CaseProviderAnalysis,
+    technical_context: CaseRagContextPayload | None,
+) -> CaseAnalysisTrace:
+    return CaseAnalysisTrace(
+        analysis_mode="case_overview",
+        summary=parsed.summary,
+        involved_parties=parsed.involved_parties,
+        timeline=parsed.timeline,
+        claims=[CaseAnalysisClaim.model_validate(claim.model_dump()) for claim in parsed.claims],
+        impacts=parsed.impacts,
+        gaps=parsed.gaps,
+        mitre_associations=parsed.mitre_associations,
+        retrieval_context_id=(
+            technical_context.retrieval_context_id if technical_context is not None else None
+        ),
+    )
+
+
 async def write_revision(
     *,
     sources: CaseSourceBundle,
@@ -78,7 +114,7 @@ async def write_revision(
     revision: str | None = None,
 ) -> CaseAnalysisTrace:
     if revision is None:
-        return await write_trace(
+        return await write_single_call(
             sources=sources,
             language=language,
             followup_history=followup_history,
@@ -126,52 +162,6 @@ async def revise(
     return replace(artifacts, trace=trace, rounds=tuple(rounds))
 
 
-async def split(
-    data: AnalysisInput,
-    *,
-    reading_request: Callable = request_case_reading,
-    judgement_request: Callable = request_case_judgement,
-) -> ArmArtifacts:
-    artifacts = await retrieve_technical_context(data, ArmArtifacts())
-    artifacts = await read_sources(data, artifacts, request=reading_request)
-    artifacts = await judge_reading(data, artifacts, request=judgement_request)
-    return await bind_to_case(data, artifacts)
-
-
-async def read_sources(
-    data: AnalysisInput,
-    so_far: ArmArtifacts,
-    *,
-    request: Callable = request_case_reading,
-) -> ArmArtifacts:
-    output = await request(
-        sources=data.sources,
-        language=data.response_language,
-        config=configured_pipeline(),
-        followup_history=data.followup_history,
-    )
-    return replace(so_far, reading=output.reading, calls=(*so_far.calls, *output.calls))
-
-
-async def judge_reading(
-    data: AnalysisInput,
-    so_far: ArmArtifacts,
-    *,
-    request: Callable = request_case_judgement,
-) -> ArmArtifacts:
-    if so_far.reading is None:
-        raise CaseAnalysisFailure("analysis_reading_missing", "Judgement needs a reading to judge")
-    output = await request(
-        sources=data.sources,
-        language=data.response_language,
-        config=configured_pipeline(),
-        reading=so_far.reading,
-        technical_context=so_far.technical_context,
-        followup_history=data.followup_history,
-    )
-    return replace(so_far, trace=output.trace, calls=(*so_far.calls, *output.calls))
-
-
 def grounding_record(attempt: int, trace: CaseAnalysisTrace) -> dict[str, object]:
     grounding = trace.grounding
     return {
@@ -212,7 +202,7 @@ ARMS: dict[str, Arm] = {
     "direct": direct,
     "verify": verify,
     "revise": revise,
-    "split": split,
+    "single": single,
 }
 
 
@@ -223,12 +213,12 @@ __all__ = [
     "CASE_TRACE_REVISION_PROMPT",
     "direct",
     "grounding_record",
-    "judge_reading",
-    "read_sources",
     "revise",
     "revision_note",
-    "split",
+    "single",
     "unbound_citations",
     "verify",
     "write_revision",
+    "write_single_call",
+    "written_trace",
 ]

@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 
-from app.analysis.write import write_trace
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
@@ -20,6 +19,7 @@ from app.trace.trace import (
     CaseProviderAnalysis,
     CaseTimelineItem,
 )
+from experiments.analysis_arms import write_single_call
 
 
 def test_case_overview_models_construct_and_normalize_claim_ids() -> None:
@@ -155,8 +155,8 @@ class DirectAnalysisStructuralOverviewTests(unittest.IsolatedAsyncioTestCase):
         async def fake_request_stage(**kwargs):
             return provider_output
 
-        with patch("app.analysis.write.request_stage", new=fake_request_stage):
-            trace = await write_trace(
+        with patch("experiments.analysis_arms.request_stage", new=fake_request_stage):
+            trace = await write_single_call(
                 sources=CaseSourceBundle(revision=1, sources=(source,)),
                 language="english",
                 config=AnalysisPipelineConfig(),
