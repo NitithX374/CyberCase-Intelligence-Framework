@@ -170,13 +170,21 @@ def reference_labels(
     for claim_id in claim_ids:
         claim = claims_by_id.get(claim_id)
         if claim is not None:
-            source_ids.extend(cited_source_ids(claim.supporting_citations))
-            source_ids.extend(cited_source_ids(claim.contradicting_citations))
+            source_ids.extend(
+                claim_source_ids(claim.supporting_citations, claim.supporting_source_ids)
+            )
+            source_ids.extend(
+                claim_source_ids(claim.contradicting_citations, claim.contradicting_source_ids)
+            )
     return labels_for_sources(source_ids, source_labels)
 
 
 def cited_source_ids(citations: list[CaseSourceCitation]) -> list[str]:
     return [citation.source_id for citation in citations]
+
+
+def claim_source_ids(citations: list[CaseSourceCitation], named: list[str]) -> list[str]:
+    return cited_source_ids(citations) or named
 
 
 def report_findings(
@@ -200,10 +208,12 @@ def report_findings(
                 status=EPISTEMIC_STATUS_LABELS.get(claim.epistemic_status, "ไม่ระบุสถานะ"),
                 is_inference=claim.claim_type == "analytical_inference",
                 source_labels=labels_for_sources(
-                    cited_source_ids(claim.supporting_citations), labels
+                    claim_source_ids(claim.supporting_citations, claim.supporting_source_ids),
+                    labels,
                 ),
                 contradicting_source_labels=labels_for_sources(
-                    cited_source_ids(claim.contradicting_citations), labels
+                    claim_source_ids(claim.contradicting_citations, claim.contradicting_source_ids),
+                    labels,
                 ),
                 supporting_quotes=quotes(claim.supporting_citations),
                 contradicting_quotes=quotes(claim.contradicting_citations),
