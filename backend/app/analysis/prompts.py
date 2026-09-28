@@ -2,13 +2,33 @@ from __future__ import annotations
 
 from app.trace.claims import MAX_CLARIFICATION_QUESTION_CHARS
 
+CASE_CHECKLIST = {
+    "who_affected": "who was affected or targeted",
+    "who_responsible": "who carried out the incident",
+    "what": "what happened, and what was taken, damaged or exposed",
+    "when": "when it happened, began or was discovered",
+    "where": "where it happened",
+    "why": "the motive or purpose",
+    "how": "the method, tool or channel used",
+    "how_much": "its scale in people, records, money or ransom",
+}
+
+CHECKLIST_LINES = "\n".join(f"  {key}: {meaning}" for key, meaning in CASE_CHECKLIST.items())
+
 GAP_IDENTIFICATION_INSTRUCTIONS = f"""
 Gaps:
 - Include only materially unresolved factual issues that affect the current analysis.
 - Use sequential gap IDs G-01 through G-32.
+- Check the case against each question below. When one is materially unanswered,
+  ambiguous or in conflict, record it as a gap whose gap_key is exactly its key:
+{CHECKLIST_LINES}
+- A gap that fits none of these questions, such as whether a log file exists, keeps a
+  short key of its own.
 - Give the same underlying factual gap the same stable, short gap_key every time it
   appears, whether it is found during assessment or full analysis. Base the key on the
   missing fact, not its wording, sequence number, source identifier, or current answer.
+- The follow-up history shows the gap_key each earlier question was asked under. When
+  a gap is the same missing fact, reuse that gap_key.
 - Use statuses NOT_PROVIDED, EXPLICITLY_UNKNOWN, AMBIGUOUS, or CONFLICTING.
 - Link affected claim IDs when applicable. Set askable false for EXPLICITLY_UNKNOWN.
 - Do not create gaps for optional enrichment or information that would merely be useful.
