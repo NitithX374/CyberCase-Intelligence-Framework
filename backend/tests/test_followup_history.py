@@ -60,7 +60,9 @@ def test_an_unanswered_question_is_withheld_from_the_model():
         CaseFollowupExchange(qa_id="QA-01", gap_key="t", question="When?", answer=ANSWER),
         CaseFollowupExchange(qa_id="QA-02", gap_key="u", question="Who?"),
     )
-    assert followup_payload(history) == [{"qa_id": "QA-01", "question": "When?", "answer": ANSWER}]
+    assert followup_payload(history) == [
+        {"qa_id": "QA-01", "gap_key": "t", "question": "When?", "answer": ANSWER}
+    ]
     assert [item.source_id for item in followup_registry_items(history)] == ["QA-01"]
 
 
