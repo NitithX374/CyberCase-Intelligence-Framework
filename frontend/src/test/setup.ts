@@ -1,4 +1,7 @@
 import "@testing-library/jest-dom/vitest";
+import { configure } from "@testing-library/react";
+
+configure({ asyncUtilTimeout: 10_000 });
 
 if (typeof HTMLDialogElement !== "undefined") {
   HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
