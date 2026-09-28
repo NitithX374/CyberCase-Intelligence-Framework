@@ -37,7 +37,7 @@ services:
     # Everything else is the default in backend/app/config.py.
     environment:
       CASE_ANALYSIS_MODEL: ${CASE_ANALYSIS_MODEL:-google/gemma-4-26b-a4b-it}
-      CASE_ANALYSIS_PROVIDERS: ${CASE_ANALYSIS_PROVIDERS:-coreweave/bf16,nextbit/bf16}
+      CASE_ANALYSIS_PROVIDERS: ${CASE_ANALYSIS_PROVIDERS:-nextbit/bf16,coreweave/bf16}
       MITRE_GATE_SHADOW: ${MITRE_GATE_SHADOW:-encoder}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
