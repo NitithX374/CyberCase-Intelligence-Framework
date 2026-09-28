@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
+from app.analysis.progress import announce
 from app.analysis.technical_context.contracts import (
     CaseRagContextPayload,
     CaseTechnicalAugmentation,
@@ -12,7 +14,7 @@ from app.analysis.technical_context.contracts import (
     QueryResponse,
     skipped_mitre_applicability,
 )
-from app.analysis.technical_context.gate import mitre_gate
+from app.analysis.technical_context.gate import mitre_gate, mitre_shadow
 from app.analysis.technical_context.rag_client import RagCallFailure, request_rag
 from app.sources.bundle import CaseSourceBundle, build_rag_query
 from app.trace.claims import CaseFollowupExchange
@@ -55,6 +57,7 @@ class CaseMitreAugmentation:
     context: CaseRagContextPayload | None
     failure_code: str | None = None
     reused: bool = False
+    shadow: MitreApplicabilityRecord | None = None
 
     @property
     def retrieval_context_id(self) -> str | None:
@@ -70,6 +73,7 @@ class CaseMitreAugmentation:
             mitre_table=list(self.context.mitre_table) if self.context else [],
             association_ids=association_ids,
             failure_code=self.failure_code,
+            shadow_applicability=self.shadow,
         )
 
 
@@ -77,10 +81,33 @@ async def run_case_mitre_augmentation(
     *,
     source_bundle: CaseSourceBundle,
     applicability_gate=mitre_gate,
+    shadow_gate=mitre_shadow,
     rag_request=request_rag,
     reused_context: CaseRagContextPayload | None = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseMitreAugmentation:
+    augmentation, shadow = await asyncio.gather(
+        gated_augmentation(
+            source_bundle=source_bundle,
+            applicability_gate=applicability_gate,
+            rag_request=rag_request,
+            reused_context=reused_context,
+            followup_history=followup_history,
+        ),
+        shadow_gate(case_sources=source_bundle.sources),
+    )
+    return replace(augmentation, shadow=shadow)
+
+
+async def gated_augmentation(
+    *,
+    source_bundle: CaseSourceBundle,
+    applicability_gate,
+    rag_request,
+    reused_context: CaseRagContextPayload | None,
+    followup_history: Sequence[CaseFollowupExchange],
+) -> CaseMitreAugmentation:
+    announce("gate")
     applicability = await evaluate_gate(source_bundle.sources, applicability_gate)
     if applicability.failure_code is not None:
         return failed_augmentation(applicability.failure_code, applicability)
@@ -93,6 +120,7 @@ async def run_case_mitre_augmentation(
         is_reused = True
     else:
         rag_query = retrieval_query(source_bundle, applicability.trigger_text, followup_history)
+        announce("retrieve")
         try:
             response = await rag_request(rag_query)
             context = validated_case_rag_context(response)

@@ -2,16 +2,15 @@ import axios from "axios";
 
 export const LONG_REQUEST_TIMEOUT_MS = 120_000;
 export const UPLOAD_REQUEST_TIMEOUT_MS = 15 * 60_000;
-export const ANALYSIS_REQUEST_TIMEOUT_MS = 20 * 60_000;
 
 export const http = axios.create({ withCredentials: true, timeout: 15_000 });
 
 http.interceptors.request.use((config) => {
-  config.baseURL = getApiBaseUrl();
+  config.baseURL = apiBaseUrl();
   return config;
 });
 
-function getApiBaseUrl(): string {
+export function apiBaseUrl(): string {
   let url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     if (typeof window !== "undefined") {

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise one grounded model call follows, which the caller waits for — there is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
+**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary, gaps and ATT&CK associations over that reading. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
 
 ## Service Layout
 
@@ -103,7 +103,7 @@ Neo4j and Qdrant are cloud-hosted — no local containers for them.
 
 ### High-Level Stack
 - **Frontend**: Next.js 16.2.10 + React 19.2.4 + Tailwind CSS 4
-- **Backend API**: FastAPI + SQLAlchemy (async) + PostgreSQL — owns cases, sources, the analysis, the case conversation and the clarification policy; the analysis's technical-context step calls the RAG service via HTTPX. There are no runs, threads or background work: an analysis happens in the request that asked for it
+- **Backend API**: FastAPI + SQLAlchemy (async) + PostgreSQL — owns cases, sources, the analysis, the case conversation and the clarification policy; the analysis's technical-context step calls the RAG service via HTTPX. There are no runs, threads or queues: an analysis starts in the request that asked for it, and when that request streams its progress the analysis runs in a task of its own, which finishes and is stored even if the browser leaves
 - **RAG Engine**: LangGraph for orchestration (the agentic state machine) plus LangChain for the LLM and message abstractions (`langchain_core.messages`, `langchain_anthropic.ChatAnthropic`), hosted in `rag_service`. LangGraph is a separate library, not part of LangChain. No LCEL — the LCEL chain is evaluation-only (`pipeline/chain.py`)
 - **Vector DB**: Qdrant (BGE-M3 embeddings, 1024-dim, FP16)
 - **Graph DB**: Neo4j (MITRE ATT&CK STIX entities + relationships)
@@ -158,6 +158,15 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
 - `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — upload and read back (`sources/routes.py`, `document_router`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
 - `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`)
 - `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`)
+- **Progress stream.** `POST /cases/{case_id}/analysis` and `POST /cases/{case_id}/chat/messages` answer a request sent
+  with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
+  (`analysis/stream.py`):
+  - a `step` event as the analysis reaches each step (`assess`, `gate`, `retrieve` only when the RAG service is asked,
+    `read`, `judge`, `bind`), with the seconds since it began;
+  - a `: heartbeat` comment every 15 seconds of quiet, so the browser can tell a slow step from a lost connection;
+  - then `result`, holding the JSON body a plain request gets, or `error`, holding its status and `detail`.
+  - The analysis runs in a task of its own, so it finishes and is stored even if the browser leaves. Without that
+    header both routes answer exactly as before.
 - `POST`, `GET /cases/{case_id}/reports`, `GET /cases/{case_id}/reports/{report_id}/pdf`, `.../html` — report versions and export (`reports/routes.py`)
 
 Every case route is authenticated and ownership-scoped; ownership is one check, `owned_case` in `cases/ownership.py`, which answers 404 for a case the user does not own. There are no top-level `/api/v1/reports`, `/users`, or RAG-proxy routes, and no `/runs/{run_id}` — the analysis happens in the request that asked for it, which is why `main.py` refuses to start with more than one worker.
@@ -186,7 +195,9 @@ trace/                  what the analysis, chat and reports share
                         the preflight returns
   trace.py              the trace: summary, parties, timeline, impacts, claims
   quotes.py             finding a quotation in a source
-  bind.py               bind a written trace to the case; count what did not bind
+  bind.py               bind a written trace to the case; count what did not bind;
+                        a "reported" claim left with no verified quote becomes
+                        "not_confirmed"
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share
@@ -214,9 +225,14 @@ analysis/               producing an analysis of a case; routes, schemas
   pipeline.py           advance_case(): assess first, then analyse only if
                         there is nothing worth asking
   assess.py             the cheap gaps-only call that runs first
-  write.py              write_trace: the one model call that writes the trace
+  write.py              write_trace: a reading call (claims, parties, timeline,
+                        impacts, with quotations), then a judgement call
+                        (summary, gaps, ATT&CK associations) over that reading
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
+  progress.py           announce(step): the steps write, retrieve and the
+                        pipeline report, heard only by a request that listens
+  stream.py             the progress stream: steps, heartbeats, then the result
   prompts.py            the analysis prompts
   technical_context/    whether and how the case gets ATT&CK context
     contracts.py        the augmentation and applicability records, and the
@@ -237,11 +253,12 @@ reports/                routes, schemas, contracts, generate.py (one report
                         snapshot a report stores and prints), render.py (HTML
                         and PDF from the Jinja2 template in templates/)
 experiments/            ablations — imports app/, never imported by it; only
-                        __init__.py and these two files are tracked; the rest
+                        __init__.py and this file are tracked; the rest
                         is local
-  analysis_arms.py      direct / verify / revise / split, built from the same
-                        steps advance_case runs
-  split_analysis.py     the two model calls the split arm needs
+  analysis_arms.py      direct / verify / revise / single, built from the same
+                        steps advance_case runs; single is the one-call writer
+                        production used before the reading/judgement split,
+                        kept as the ablation
 ```
 
 Three rules this layout exists to keep:
@@ -281,7 +298,7 @@ artifacts = await bind_to_case(...)
 ```
 
 A round that ends in a question never calls the MITRE gate, the RAG service,
-the main model call or the binding step. The `verify` arm in
+the reading and judgement calls or the binding step. The `verify` arm in
 `experiments/analysis_arms.py` runs those three expensive steps without the
 preflight.
 The arms in `experiments/analysis_arms.py` take an `AnalysisInput` directly and
@@ -311,6 +328,19 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
 | `encoder` | XLM-R over one sentence at a time | `technical_context/gate_encoder.py`; needs `torch`/`transformers`, which are **not** in `backend/requirements.txt` |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
+**Shadow gate.** `MITRE_GATE_SHADOW=encoder` runs the XLM-R gate beside the LLM gate, concurrently.
+- Only the LLM gate decides.
+- The encoder's decision is stored on the analysis as `shadow_applicability` in the technical-augmentation record, so
+  the two can be compared later.
+- The shadow runs only when `MITRE_GATE_MODE=llm`.
+- If torch, transformers or the weights are missing, it records `SKIP` with `mitre_shadow_unavailable`, and the
+  analysis carries on.
+- **Where it is on.**
+  - Compose turns it on, installs CPU torch and transformers from `backend/requirements-encoder.txt`, and mounts
+    `backend/xlmr_ladder_best` read-only.
+  - The code default is `off`, so Railway and the tests are unaffected.
+  - `tests/conftest.py` keeps it off whatever the local `.env` says.
+
 The `encoder` gate splits its input with PyThaiNLP `crfcut` (`technical_context/sentences.py`);
 every sentence is an exact substring of its source, so the encoder's `trigger_text`
 is grounded by construction. The `llm` gate does not split sentences: it reads each
@@ -326,7 +356,7 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 ### Chat Clarification Boundary
 
-The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each; `followup/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `followup/conversation.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `analysis/run.py` tracks the analyses in flight, which holds because the backend runs one process.
+The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each. It checks every case against a fixed 5W1H list, `CASE_CHECKLIST` in `analysis/prompts.py` (who was affected, who was responsible, what, when, where, why, how, how much). A gap on that list takes its key as its `gap_key`, and the follow-up history sent to the model carries the `gap_key` each earlier question was asked under. A gap therefore keeps its key from round to round and is not asked twice. `followup/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `followup/conversation.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `analysis/run.py` tracks the analyses in flight, which holds because the backend runs one process.
 
 RAG is never called for clarification. It is reached only through the analysis pipeline's technical-context stage, when the MITRE gate says RETRIEVE, and the frontend never calls `rag_service` directly.
 
@@ -359,7 +389,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
-- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `deepseek/deepseek-v4.1-flash`. The backend calls OpenRouter only — there is no provider switch or provider fallback. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate
+- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `deepseek/deepseek-v4.1-flash`. The backend calls OpenRouter only — there is no provider switch or provider fallback. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
 - RAG service reads `ANTHROPIC_API_KEY`, `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, `OPENROUTER_API_KEY`
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`
 

@@ -1,14 +1,12 @@
-import { ANALYSIS_REQUEST_TIMEOUT_MS, caseUrl, http } from "@/lib/api/http";
+import { caseUrl, http } from "@/lib/api/http";
+import { postWithProgress, type StreamedStep } from "@/lib/api/stream";
 import type { AnalysisStepRead, CaseAnalysisResultRead } from "@/lib/api/types";
 
-export async function startCaseAnalysis(caseId: string): Promise<AnalysisStepRead> {
-  return (
-    await http.post<AnalysisStepRead>(
-      caseUrl(caseId, "analysis"),
-      {},
-      { timeout: ANALYSIS_REQUEST_TIMEOUT_MS },
-    )
-  ).data;
+export async function startCaseAnalysis(
+  caseId: string,
+  onStep: (step: StreamedStep) => void = () => undefined,
+): Promise<AnalysisStepRead> {
+  return postWithProgress<AnalysisStepRead>(caseUrl(caseId, "analysis"), {}, { onStep });
 }
 
 export async function getCaseAnalysis(

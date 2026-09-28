@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.analysis.prompts import case_system_prompt
+from app.analysis.progress import announce
+from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_SYSTEM_PROMPT
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, followup_payload
-from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
+from app.trace.claims import CaseFollowupExchange, followup_payload
+from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReading
 
 
 async def write_trace(
@@ -19,14 +20,38 @@ async def write_trace(
     technical_context: CaseRagContextPayload | None = None,
     config: AnalysisPipelineConfig,
 ) -> CaseAnalysisTrace:
-    parsed = await request_stage(
+    announce("read")
+    reading = await request_stage(
         config=config,
-        stage="case_direct",
-        system=case_system_prompt(),
-        content=write_request(sources, language, followup_history, technical_context),
-        schema=CaseProviderAnalysis,
+        stage="case_reading",
+        system=CASE_READING_SYSTEM_PROMPT,
+        content=reading_request(sources, language, followup_history),
+        schema=CaseProviderReading,
     )
-    return written_trace(parsed, technical_context)
+    announce("judge")
+    judgement = await request_stage(
+        config=config,
+        stage="case_judgement",
+        system=CASE_JUDGEMENT_SYSTEM_PROMPT,
+        content={
+            **write_request(sources, language, followup_history, technical_context),
+            "reading": reading_payload(reading),
+        },
+        schema=CaseProviderJudgement,
+    )
+    return joined_trace(reading, judgement, technical_context)
+
+
+def reading_request(
+    sources: CaseSourceBundle,
+    language: str,
+    followup_history: Sequence[CaseFollowupExchange],
+) -> dict[str, object]:
+    return {
+        "response_language": language,
+        "case_sources": [provider_source_payload(source) for source in sources.sources],
+        "followup_history": followup_payload(followup_history),
+    }
 
 
 def write_request(
@@ -36,9 +61,7 @@ def write_request(
     technical_context: CaseRagContextPayload | None,
 ) -> dict[str, object]:
     return {
-        "response_language": language,
-        "case_sources": [provider_source_payload(source) for source in sources.sources],
-        "followup_history": followup_payload(followup_history),
+        **reading_request(sources, language, followup_history),
         "technical_context": (
             {
                 "context": technical_context.context,
@@ -68,19 +91,29 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
     return payload
 
 
-def written_trace(
-    parsed: CaseProviderAnalysis,
-    technical_context: CaseRagContextPayload | None,
+def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
+    return {
+        "claims": [claim.model_dump(mode="json") for claim in reading.claims],
+        "involved_parties": [party.model_dump(mode="json") for party in reading.involved_parties],
+        "timeline": [item.model_dump(mode="json") for item in reading.timeline],
+        "impacts": [impact.model_dump(mode="json") for impact in reading.impacts],
+    }
+
+
+def joined_trace(
+    reading: CaseProviderReading,
+    judgement: CaseProviderJudgement,
+    technical_context: CaseRagContextPayload | None = None,
 ) -> CaseAnalysisTrace:
     return CaseAnalysisTrace(
         analysis_mode="case_overview",
-        summary=parsed.summary,
-        involved_parties=parsed.involved_parties,
-        timeline=parsed.timeline,
-        claims=[CaseAnalysisClaim.model_validate(claim.model_dump()) for claim in parsed.claims],
-        impacts=parsed.impacts,
-        gaps=parsed.gaps,
-        mitre_associations=parsed.mitre_associations,
+        summary=judgement.summary,
+        involved_parties=reading.involved_parties,
+        timeline=reading.timeline,
+        claims=reading.claims,
+        impacts=reading.impacts,
+        gaps=judgement.gaps,
+        mitre_associations=judgement.mitre_associations,
         retrieval_context_id=(
             technical_context.retrieval_context_id if technical_context is not None else None
         ),
@@ -88,8 +121,10 @@ def written_trace(
 
 
 __all__ = [
+    "joined_trace",
     "provider_source_payload",
+    "reading_payload",
+    "reading_request",
     "write_request",
     "write_trace",
-    "written_trace",
 ]

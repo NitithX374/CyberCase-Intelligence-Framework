@@ -28,6 +28,8 @@ TRANSIENT_TRANSPORT_ERRORS = (
 )
 TRANSPORT_ATTEMPTS = 2
 TRANSPORT_RETRY_DELAY_SECONDS = 2.0
+RUNAWAY_ATTEMPTS = 2
+RUNAWAY_TAIL_CHARS = 2_000
 transport: httpx.AsyncBaseTransport | None = None
 
 
@@ -182,6 +184,13 @@ def check_response_payload(response_payload: Mapping[str, object], *, stage: str
         )
 
 
+def ran_into_whitespace(response_payload: Mapping[str, object]) -> bool:
+    if response_payload.get("stop_reason") not in {"max_tokens", "length"}:
+        return False
+    tail = extract_visible_text(response_payload)[-RUNAWAY_TAIL_CHARS:]
+    return len(tail) == RUNAWAY_TAIL_CHARS and not tail.strip()
+
+
 def validate_response_payload(
     response: httpx.Response, *, stage: str = "analysis"
 ) -> dict[str, object]:
@@ -306,13 +315,21 @@ async def request_stage(
         calls.append(receipt)
     started = time.monotonic()
     try:
-        response = await post_stage(target, payload, stage=stage, timeout=config.timeout_seconds)
-        decoded = decode_response(response)
-        receipt.update(usage_summary(decoded))
-        check_response_payload(decoded, stage=stage)
-        result = schema.model_validate_json(extract_visible_text(decoded))
-        receipt["status"] = "completed"
-        return result
+        for attempt in range(1, RUNAWAY_ATTEMPTS + 1):
+            response = await post_stage(
+                target, payload, stage=stage, timeout=config.timeout_seconds
+            )
+            decoded = decode_response(response)
+            usage = usage_summary(decoded)
+            if attempt < RUNAWAY_ATTEMPTS and ran_into_whitespace(decoded):
+                logger.warning("Analysis stage %s ran into whitespace; asking once more", stage)
+                receipt["runaway_output_tokens"] = usage["output_tokens"]
+                continue
+            receipt.update(usage)
+            check_response_payload(decoded, stage=stage)
+            result = schema.model_validate_json(extract_visible_text(decoded))
+            receipt["status"] = "completed"
+            return result
     except httpx.TimeoutException as error:
         raise CaseAnalysisFailure(
             f"{stage}_timeout", "Analysis stage timed out", status.HTTP_504_GATEWAY_TIMEOUT
@@ -348,6 +365,7 @@ __all__ = [
     "input_budget",
     "log_response_shape",
     "post_stage",
+    "ran_into_whitespace",
     "request_stage",
     "stage_payload",
     "thinking_option",

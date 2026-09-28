@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.latest import get_latest_case_analysis
 from app.analysis.run import AnalysisStep, run_case_analysis
 from app.analysis.schemas import AnalysisStepRead, CaseAnalysisResultRead
+from app.analysis.stream import STREAMED_RESPONSE, progress_response, wants_progress
 from app.auth.guard import get_current_user
 from app.cases.service import analysis_freshness
 from app.database import get_db
@@ -27,13 +28,18 @@ def analysis_step_read(step: AnalysisStep) -> AnalysisStepRead:
     )
 
 
-@router.post("/analysis", response_model=AnalysisStepRead)
+@router.post("/analysis", response_model=AnalysisStepRead, responses=STREAMED_RESPONSE)
 async def analyse_case(
     case_id: UUID,
+    request: Request,
     user: User = Depends(get_current_user),
 ):
-    step = await run_case_analysis(case_id=case_id, user_id=user.id)
-    return analysis_step_read(step)
+    async def analyse() -> AnalysisStepRead:
+        return analysis_step_read(await run_case_analysis(case_id=case_id, user_id=user.id))
+
+    if wants_progress(request):
+        return progress_response(analyse)
+    return await analyse()
 
 
 @router.get("/analysis", response_model=CaseAnalysisResultRead | None)

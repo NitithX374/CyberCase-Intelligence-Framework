@@ -71,7 +71,36 @@ describe("starting an analysis", () => {
       await result.current.mutateAsync();
     });
 
-    expect(startCaseAnalysis).toHaveBeenCalledWith("a");
+    expect(startCaseAnalysis).toHaveBeenCalledWith("a", expect.any(Function));
+  });
+
+  it("keeps the steps the backend reports while it runs, and drops them when it ends", async () => {
+    const call = deferred<AnalysisStepRead>();
+    startCaseAnalysis.mockImplementation((_caseId: string, onStep: (step: unknown) => void) => {
+      onStep({ step: "assess", elapsed: 0.2 });
+      onStep({ step: "read", elapsed: 9.5 });
+      return call.promise;
+    });
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useStartCaseAnalysis("a"), { wrapper });
+
+    act(() => {
+      result.current.mutate();
+    });
+    await waitFor(() =>
+      expect(
+        queryClient
+          .getQueryData<{ step: string }[]>(caseQueryKeys.analysisProgress("a"))
+          ?.map((reached) => reached.step),
+      ).toEqual(["assess", "read"]),
+    );
+
+    await act(async () => {
+      call.resolve(PAUSED);
+    });
+    await waitFor(() =>
+      expect(queryClient.getQueryData(caseQueryKeys.analysisProgress("a"))).toEqual([]),
+    );
   });
 });
 
