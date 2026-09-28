@@ -12,6 +12,7 @@ from app.chat.answer import answer_metadata
 from app.chat.compose import CHAT_OUTPUT_TOKENS, UNANSWERED, generate_case_answer
 from app.config import settings
 from app.errors import CaseAnalysisFailure
+from app.llm.request import thinking_option
 from app.llm.settings import configured_pipeline
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
@@ -342,6 +343,13 @@ def test_a_chat_answer_has_an_output_budget_far_below_the_analysis(monkeypatch):
 
     assert seen["config"].output_tokens == CHAT_OUTPUT_TOKENS
     assert seen["config"].output_tokens < configured_pipeline().output_tokens
+
+
+def test_a_chat_answer_is_written_without_thinking(monkeypatch):
+    _, seen = ask(monkeypatch, reply(unit("Hello.", "general")))
+
+    assert thinking_option(seen["config"]) == {"type": "disabled"}
+    assert configured_pipeline().thinking_tokens > 0
 
 
 def test_the_answer_is_written_in_the_language_it_is_given(monkeypatch):
