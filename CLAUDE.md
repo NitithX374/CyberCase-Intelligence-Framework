@@ -103,7 +103,7 @@ Neo4j and Qdrant are cloud-hosted — no local containers for them.
 
 ### High-Level Stack
 - **Frontend**: Next.js 16.2.10 + React 19.2.4 + Tailwind CSS 4
-- **Backend API**: FastAPI + SQLAlchemy (async) + PostgreSQL — owns cases, sources, the analysis, the case conversation and the clarification policy; the analysis's technical-context step calls the RAG service via HTTPX. There are no runs, threads or background work: an analysis happens in the request that asked for it
+- **Backend API**: FastAPI + SQLAlchemy (async) + PostgreSQL — owns cases, sources, the analysis, the case conversation and the clarification policy; the analysis's technical-context step calls the RAG service via HTTPX. There are no runs, threads or queues: an analysis starts in the request that asked for it, and when that request streams its progress the analysis runs in a task of its own, which finishes and is stored even if the browser leaves
 - **RAG Engine**: LangGraph for orchestration (the agentic state machine) plus LangChain for the LLM and message abstractions (`langchain_core.messages`, `langchain_anthropic.ChatAnthropic`), hosted in `rag_service`. LangGraph is a separate library, not part of LangChain. No LCEL — the LCEL chain is evaluation-only (`pipeline/chain.py`)
 - **Vector DB**: Qdrant (BGE-M3 embeddings, 1024-dim, FP16)
 - **Graph DB**: Neo4j (MITRE ATT&CK STIX entities + relationships)
