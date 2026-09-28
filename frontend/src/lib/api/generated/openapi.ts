@@ -886,6 +886,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseChatResponse"];
+                    "text/event-stream": unknown;
                 };
             };
             422: {
@@ -1067,6 +1068,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalysisStepRead"];
+                    "text/event-stream": unknown;
                 };
             };
             422: {

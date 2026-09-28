@@ -21,6 +21,7 @@ const state = vi.hoisted(() => ({
   runAnalysis: vi.fn(),
   refetchAnalysis: vi.fn(),
   refetchSources: vi.fn(),
+  progress: [] as { step: string; elapsed: number; reachedAt: number }[],
 }));
 
 vi.mock("next/navigation", () => ({
@@ -36,6 +37,10 @@ vi.mock("@/features/analysis/useRunCaseAnalysis", () => ({
 vi.mock("@/features/sources/queries", () => ({ useCaseSources: vi.fn() }));
 vi.mock("@/features/chat/useCaseChat", () => ({
   useIsFollowupPending: vi.fn(),
+}));
+vi.mock("@/features/analysis/progress", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./progress")>()),
+  useAnalysisProgress: () => state.progress,
 }));
 
 function caseProjection(options: { page?: boolean; stale?: boolean } = {}): {
@@ -124,6 +129,7 @@ beforeEach(() => {
   state.runAnalysis.mockClear();
   state.refetchAnalysis.mockClear();
   state.refetchSources.mockClear();
+  state.progress = [];
 });
 
 describe("CaseOverviewView", () => {
@@ -230,6 +236,36 @@ describe("CaseOverviewView", () => {
     expect(screen.getByText(/with your answer/)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Not analyzed yet" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Analyze" })).not.toBeInTheDocument();
+  });
+
+  it("names the step a first analysis is on while it runs", () => {
+    const now = Date.now();
+    state.progress = [
+      { step: "assess", elapsed: 0, reachedAt: now - 30_000 },
+      { step: "read", elapsed: 12, reachedAt: now - 18_000 },
+    ];
+    configureAndRender({ analysisResult: null, analysisRunning: true });
+
+    const list = screen.getByRole("list", { name: "Analysis progress" });
+    expect(list.querySelector('[aria-current="step"]')).toHaveTextContent(
+      "Reading the sources: claims and quotations",
+    );
+  });
+
+  it("names the step while an analysis that is already shown is updated", () => {
+    state.progress = [{ step: "judge", elapsed: 80, reachedAt: Date.now() }];
+    const projection = caseProjection();
+    configureAndRender({
+      analysisResult: projection.result,
+      sources: projection.sources,
+      analysisRunning: true,
+    });
+
+    expect(
+      screen
+        .getByRole("list", { name: "Analysis progress" })
+        .querySelector('[aria-current="step"]'),
+    ).toHaveTextContent("Judging: summary, open questions, ATT&CK");
   });
 
   it("offers to load a failed analysis again, never to run a new one", () => {

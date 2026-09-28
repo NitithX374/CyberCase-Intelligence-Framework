@@ -119,7 +119,7 @@ describe("an analysis run started from a page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
 
     await waitFor(() => expect(state.push).toHaveBeenCalledWith(`/case/${caseId}/analysis`));
-    expect(state.start).toHaveBeenCalledWith(caseId);
+    expect(state.start).toHaveBeenCalledWith(caseId, expect.any(Function));
   });
 
   it("says in Thai why it failed, after the reader has left the page that started it", async () => {

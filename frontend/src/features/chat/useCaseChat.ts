@@ -3,6 +3,7 @@
 import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { createCaseChatMessage, getCaseChat } from "./api";
+import { clearProgress, recordStep } from "@/features/analysis/progress";
 import type { CaseChatRead, CaseRead, ChatMessageRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
@@ -40,7 +41,16 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
   const chatQuery = useCaseChatQuery(caseId);
   const send = useMutation({
     mutationKey: caseQueryKeys.chatSend(caseId ?? "none"),
-    mutationFn: ({ content, key }: Submission) => createCaseChatMessage(caseId!, content, key),
+    mutationFn: ({ content, key, answersQuestion }: Submission) =>
+      createCaseChatMessage(
+        caseId!,
+        content,
+        key,
+        answersQuestion ? (step) => recordStep(queryClient, caseId!, step) : undefined,
+      ),
+    onMutate: ({ answersQuestion }: Submission) => {
+      if (caseId && answersQuestion) clearProgress(queryClient, caseId);
+    },
     onSuccess: (result) => {
       setInput("");
       queryClient.setQueryData<CaseChatRead>(caseQueryKeys.chat(caseId!), (current) =>
@@ -66,8 +76,9 @@ export function useCaseChat({ caseId }: { caseId: string | null }) {
         );
       }
     },
-    onSettled: (_result, error) => {
+    onSettled: (_result, error, submission) => {
       if (!caseId) return;
+      if (submission?.answersQuestion) clearProgress(queryClient, caseId);
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),

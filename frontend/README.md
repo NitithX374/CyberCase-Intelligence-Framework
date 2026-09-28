@@ -4,6 +4,8 @@ The Next.js App Router presents a Case-first workspace. `/case` is the Case Libr
 
 The browser calls the FastAPI backend through each feature's `api.ts`, which share one HTTP client in `src/lib/api/http.ts`, and never calls `rag_service` directly. TanStack Query manages server state; analysis, upload, clarification, and report operations are request-scoped backend requests rather than a frontend run-status or polling workflow.
 
+Starting an analysis and sending a chat message read their answer as a stream on that same request (`src/lib/api/stream.ts`): the backend reports each step the analysis reaches, then the result. `features/analysis/progress.ts` keeps the steps per case in the query cache, and `AnalysisProgress` shows them with how long each took. The browser gives up only after 60 seconds with nothing from the server; the backend sends a heartbeat every 15, so a slow analysis is never cut off while it is still running. An error in the stream becomes the same `AxiosError` a refused request would, so `toUserFacingError` reads both alike.
+
 ## Layout
 
 Code is grouped by flow, so following one means opening one folder. Each folder under `src/features/` holds that flow's page, its components, its calls to the backend (`api.ts`), its hooks (`queries.ts` for the server state it owns), its parsing, and its tests beside the files they test. The folder names follow the backend's feature folders where they share a flow.
