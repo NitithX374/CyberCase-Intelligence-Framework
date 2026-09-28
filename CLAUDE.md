@@ -186,7 +186,9 @@ trace/                  what the analysis, chat and reports share
                         the preflight returns
   trace.py              the trace: summary, parties, timeline, impacts, claims
   quotes.py             finding a quotation in a source
-  bind.py               bind a written trace to the case; count what did not bind
+  bind.py               bind a written trace to the case; count what did not bind;
+                        a "reported" claim left with no verified quote becomes
+                        "not_confirmed"
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share
