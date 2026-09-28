@@ -271,7 +271,12 @@ def followup_qa_id(index: int) -> str:
 
 def followup_payload(history: Sequence[CaseFollowupExchange]) -> list[dict[str, str]]:
     return [
-        {"qa_id": item.qa_id, "question": item.question, "answer": item.answer or ""}
+        {
+            "qa_id": item.qa_id,
+            "gap_key": item.gap_key,
+            "question": item.question,
+            "answer": item.answer or "",
+        }
         for item in history
         if item.is_answered
     ]

@@ -49,6 +49,58 @@ def test_a_quote_that_is_in_the_source_counts_as_verified():
     assert trace.grounding.claims_without_citation == 0
 
 
+def test_a_reported_claim_without_a_verified_quote_is_not_confirmed():
+    bundle, source_id = bundle_and_id()
+    invented = claim(source_id, "A-01", "There were no issues with the finance drive.")
+    suspected = claim(source_id, "A-02", "Nothing else was touched.").model_copy(
+        update={"text": "Other shares may be affected.", "epistemic_status": "suspected"}
+    )
+    trace = resolve_case_trace(
+        trace_of(invented, suspected, claim(source_id, "A-03", TEXT)), bundle
+    )
+
+    assert [c.epistemic_status for c in trace.claims] == ["not_confirmed", "suspected", "reported"]
+
+
+def test_a_quote_cut_with_an_ellipsis_at_either_end_is_found():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "...had been changed and a text file..."),
+            claim(source_id, "A-02", "… demanded contact by email."),
+            claim(source_id, "A-03", "[...] a text file demanded"),
+        ),
+        bundle,
+    )
+
+    assert [c.supporting_citations[0].exact_quote for c in trace.claims] == [
+        "had been changed and a text file",
+        "demanded contact by email.",
+        "a text file demanded",
+    ]
+    assert [c.epistemic_status for c in trace.claims] == ["reported", "reported", "reported"]
+    assert trace.grounding.citations_verified == 3
+    assert trace.grounding.citations_paraphrased == 0
+
+
+def test_a_quote_with_other_quotation_marks_than_the_source_is_found():
+    text = 'Abta said the "vast majority" of the 43,000 people affected had registered.'
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "the 'vast majority' of the 43,000 people affected"),
+            claim(source_id, "A-02", "the “vast majority” of the 43,000"),
+        ),
+        bundle,
+    )
+
+    assert [c.supporting_citations[0].exact_quote for c in trace.claims] == [
+        'the "vast majority" of the 43,000 people affected',
+        'the "vast majority" of the 43,000',
+    ]
+    assert [c.epistemic_status for c in trace.claims] == ["reported", "reported"]
+
+
 def test_an_invented_quote_is_dropped_and_counted():
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(
