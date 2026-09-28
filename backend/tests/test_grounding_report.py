@@ -62,6 +62,27 @@ def test_a_reported_claim_without_a_verified_quote_is_not_confirmed():
     assert [c.epistemic_status for c in trace.claims] == ["not_confirmed", "suspected", "reported"]
 
 
+def test_a_quote_cut_with_an_ellipsis_at_either_end_is_found():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "...had been changed and a text file..."),
+            claim(source_id, "A-02", "… demanded contact by email."),
+            claim(source_id, "A-03", "[...] a text file demanded"),
+        ),
+        bundle,
+    )
+
+    assert [c.supporting_citations[0].exact_quote for c in trace.claims] == [
+        "had been changed and a text file",
+        "demanded contact by email.",
+        "a text file demanded",
+    ]
+    assert [c.epistemic_status for c in trace.claims] == ["reported", "reported", "reported"]
+    assert trace.grounding.citations_verified == 3
+    assert trace.grounding.citations_paraphrased == 0
+
+
 def test_an_invented_quote_is_dropped_and_counted():
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(

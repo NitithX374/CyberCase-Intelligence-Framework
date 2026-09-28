@@ -7,6 +7,7 @@ MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
 MAX_QUOTE_CHARS = 2_000
 PARAPHRASE_TRIGRAM_SHARE = 0.6
+EDGE_ELLIPSIS = re.compile(r"^\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*|\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*$")
 
 
 def folded(text: str) -> tuple[str, list[int]]:
@@ -158,9 +159,15 @@ def quote_occurrences(content: str, quote: str) -> list[int]:
     return occurrences
 
 
+def without_edge_ellipses(quote: str) -> str:
+    trimmed = EDGE_ELLIPSIS.sub("", quote)
+    return trimmed if len(trimmed) >= 2 else quote
+
+
 def find_aligned_quote(source: str | IndexedText, quote: str) -> str | None:
     source = indexed(source)
     content = source.text
+    quote = without_edge_ellipses(quote)
     occurrences = quote_occurrences(content, quote)
     if len(occurrences) == 1:
         return quote
@@ -267,4 +274,5 @@ __all__ = [
     "quote_occurrences",
     "resolve_document_locator",
     "validate_page_spans",
+    "without_edge_ellipses",
 ]
