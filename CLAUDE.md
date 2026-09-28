@@ -313,6 +313,19 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
 | `encoder` | XLM-R over one sentence at a time | `technical_context/gate_encoder.py`; needs `torch`/`transformers`, which are **not** in `backend/requirements.txt` |
 | `never` | nothing — always SKIP | the ablation, for measuring what technical context is worth |
 
+**Shadow gate.** `MITRE_GATE_SHADOW=encoder` runs the XLM-R gate beside the LLM gate, concurrently.
+- Only the LLM gate decides.
+- The encoder's decision is stored on the analysis as `shadow_applicability` in the technical-augmentation record, so
+  the two can be compared later.
+- The shadow runs only when `MITRE_GATE_MODE=llm`.
+- If torch, transformers or the weights are missing, it records `SKIP` with `mitre_shadow_unavailable`, and the
+  analysis carries on.
+- **Where it is on.**
+  - Compose turns it on, installs CPU torch and transformers from `backend/requirements-encoder.txt`, and mounts
+    `backend/xlmr_ladder_best` read-only.
+  - The code default is `off`, so Railway and the tests are unaffected.
+  - `tests/conftest.py` keeps it off whatever the local `.env` says.
+
 The `encoder` gate splits its input with PyThaiNLP `crfcut` (`technical_context/sentences.py`);
 every sentence is an exact substring of its source, so the encoder's `trigger_text`
 is grounded by construction. The `llm` gate does not split sentences: it reads each
@@ -361,7 +374,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
-- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `deepseek/deepseek-v4.1-flash`. The backend calls OpenRouter only — there is no provider switch or provider fallback. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate
+- Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `deepseek/deepseek-v4.1-flash`. The backend calls OpenRouter only — there is no provider switch or provider fallback. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
 - RAG service reads `ANTHROPIC_API_KEY`, `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, `OPENROUTER_API_KEY`
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`
 
