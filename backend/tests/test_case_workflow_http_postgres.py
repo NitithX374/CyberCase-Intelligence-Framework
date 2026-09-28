@@ -33,19 +33,22 @@ NO_GAPS = {"version": "case_assessment_v1", "gaps": []}
 ASKING = {"version": "case_assessment_v1", "gaps": [GAP]}
 HEAD = "The attacker logged in to the VPN gateway."
 TAIL = "The attacker exfiltrated the payroll archive."
-STAGES = {"suggestion": "answer", "summary": "write", "gaps": "assess"}
+STAGES = {"suggestion": "answer", "claims": "read", "summary": "judge", "gaps": "assess"}
+JUDGED = {
+    "version": "case_analysis_trace_v1",
+    "summary": "Files on the shared drive were encrypted.",
+    "gaps": [],
+    "mitre_associations": [],
+}
 
 
-def written(*claims: dict) -> dict:
+def reading(*claims: dict) -> dict:
     return {
         "version": "case_analysis_trace_v1",
-        "summary": "Files on the shared drive were encrypted.",
         "involved_parties": [],
         "timeline": [],
         "claims": list(claims),
         "impacts": [],
-        "gaps": [],
-        "mitre_associations": [],
     }
 
 
@@ -203,7 +206,7 @@ async def long_case(factory) -> tuple:
 def citing_across(long_text: str):
     def cite(content: dict) -> dict:
         [source_id] = [s["source_id"] for s in content["case_sources"] if s["text"] == long_text]
-        return written(claim("A-01", source_id, f"{HEAD} ... {TAIL}"))
+        return reading(claim("A-01", source_id, f"{HEAD} ... {TAIL}"))
 
     return cite
 
@@ -213,7 +216,7 @@ async def test_an_elided_quote_that_spans_too_much_of_a_source_is_dropped_not_a_
 ):
     async with isolated_database() as factory:
         case_id, user_id, long_text = await long_case(factory)
-        model(assess=[NO_GAPS], write=[citing_across(long_text)])
+        model(assess=[NO_GAPS], read=[citing_across(long_text)], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             ran = await client.post(f"/cases/{case_id}/analysis")
             stored = await client.get(f"/cases/{case_id}/analysis")
@@ -231,7 +234,7 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
     async with isolated_database() as factory:
         case_id, user_id, long_text = await long_case(factory)
         monkeypatch.setattr(bind, "MAX_QUOTE_CHARS", 10 * MAX_QUOTE_CHARS)
-        model(assess=[NO_GAPS], write=[citing_across(long_text)])
+        model(assess=[NO_GAPS], read=[citing_across(long_text)], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             ran = await client.post(f"/cases/{case_id}/analysis")
             stored = await client.get(f"/cases/{case_id}/analysis")
@@ -246,14 +249,14 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
     [
         (down, 502, "analysis_provider_down"),
         (slowed, 504, "analysis_provider_timeout"),
-        (timing_out, 504, "case_direct_timeout"),
-        (disconnecting, 502, "case_direct_transport"),
-        (off_schema, 502, "case_direct_invalid"),
+        (timing_out, 504, "case_reading_timeout"),
+        (disconnecting, 502, "case_reading_transport"),
+        (off_schema, 502, "case_reading_invalid"),
         (unreadable, 502, "analysis_invalid_response"),
         (erring, 502, "analysis_provider_error"),
-        (cut_short, 502, "case_direct_incomplete"),
+        (cut_short, 502, "case_reading_incomplete"),
         (refused, 409, "analysis_provider_unauthorized"),
-        (declined, 409, "case_direct_incomplete"),
+        (declined, 409, "case_reading_incomplete"),
         (rejected, 409, "analysis_provider_error"),
     ],
 )
@@ -262,7 +265,7 @@ async def test_a_provider_that_fails_for_now_is_a_server_error_the_client_may_re
 ):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None)
-        model(assess=[NO_GAPS], write=[failure])
+        model(assess=[NO_GAPS], read=[failure], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             response = await client.post(f"/cases/{case_id}/analysis")
 
@@ -275,11 +278,11 @@ async def test_an_answer_whose_round_met_an_outage_is_retryable_and_the_retry_re
 ):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory)
-        scripted = model(assess=[NO_GAPS], write=[down])
+        scripted = model(assess=[NO_GAPS], read=[down], judge=[JUDGED])
         send = {"content": "Around two in the morning.", "client_request_id": "send-1"}
         async with signed_in(monkeypatch, factory, user_id) as client:
             failed = await client.post(f"/cases/{case_id}/chat/messages", json=send)
-            scripted.replies["write"] = [written()]
+            scripted.replies["read"] = [reading()]
             retried = await client.post(f"/cases/{case_id}/chat/messages", json=send)
 
         assert failed.status_code == 502
@@ -293,7 +296,8 @@ async def test_an_analysis_stored_while_a_question_waits_retires_the_question(mo
         case_id, user_id, _ = await seeded_case(factory, trace=None)
         scripted = model(
             assess=[ASKING, NO_GAPS],
-            write=[written()],
+            read=[reading()],
+            judge=[JUDGED],
             answer=[general("T1059 is Command and Scripting Interpreter.")],
         )
         async with signed_in(monkeypatch, factory, user_id) as client:
@@ -313,7 +317,7 @@ async def test_an_analysis_stored_while_a_question_waits_retires_the_question(mo
             "conversation",
         ], "the next message is a question about the case, not an answer to a retired question"
         assert sent.json()["analysis"] is None
-        assert scripted.stages().count("write") == 1
+        assert scripted.stages().count("read") == 1
 
 
 async def asked_twice_then_lost(client, scripted: Model, case_id) -> httpx.Response:
@@ -325,14 +329,14 @@ async def asked_twice_then_lost(client, scripted: Model, case_id) -> httpx.Respo
         json={"content": "Around two in the morning.", "client_request_id": "send-1"},
     )
     assert lost.json()["detail"]["code"] == "analysis_provider_down"
-    scripted.replies["write"] = [written()]
+    scripted.replies["read"] = [reading()]
     return lost
 
 
 async def test_a_round_asked_twice_resumes_when_its_answer_is_sent_again(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None)
-        scripted = model(assess=[ASKING], write=[down])
+        scripted = model(assess=[ASKING], read=[down], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             await asked_twice_then_lost(client, scripted, case_id)
             retried = await client.post(
@@ -342,13 +346,13 @@ async def test_a_round_asked_twice_resumes_when_its_answer_is_sent_again(monkeyp
 
         assert retried.status_code == 200
         assert retried.json()["analysis"] is not None, "the retry must run the round's analysis"
-        assert scripted.stages().count("write") == 2
+        assert scripted.stages().count("read") == 2
 
 
 async def test_a_round_asked_twice_resumes_when_the_case_is_analysed_again(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, _ = await seeded_case(factory, trace=None)
-        scripted = model(assess=[ASKING], write=[down])
+        scripted = model(assess=[ASKING], read=[down], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             await asked_twice_then_lost(client, scripted, case_id)
             analysed = await client.post(f"/cases/{case_id}/analysis")
@@ -368,13 +372,14 @@ async def test_a_chat_answer_keeps_the_follow_up_answer_its_claim_rests_on(monke
         def cite_the_reply(content: dict) -> dict:
             [answered] = content["followup_history"]
             [narrative] = [s["source_id"] for s in content["case_sources"]]
-            return written(
+            return reading(
                 claim("A-01", answered["qa_id"], reply), claim("A-02", narrative, NARRATIVE)
             )
 
         model(
             assess=[NO_GAPS],
-            write=[cite_the_reply],
+            read=[cite_the_reply],
+            judge=[JUDGED],
             answer=[
                 {
                     "units": [
@@ -432,7 +437,7 @@ async def test_an_answer_too_long_to_store_is_a_coded_bad_gateway(monkeypatch, m
 async def test_a_blank_answer_is_refused_and_the_question_still_waits(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, question_id = await seeded_case(factory)
-        scripted = model(assess=[NO_GAPS], write=[written()])
+        scripted = model(assess=[NO_GAPS], read=[reading()], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             refused_answer = await client.post(
                 f"/cases/{case_id}/chat/messages", json={"content": "   "}
@@ -483,7 +488,7 @@ async def test_nul_in_pasted_text_is_dropped_and_in_a_record_is_refused(monkeypa
 async def test_nul_in_an_answer_to_a_question_is_dropped(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id, question_id = await seeded_case(factory)
-        model(assess=[NO_GAPS], write=[written()])
+        model(assess=[NO_GAPS], read=[reading()], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             answered = await client.post(
                 f"/cases/{case_id}/chat/messages", json={"content": "Around\u0000 two."}

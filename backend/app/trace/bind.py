@@ -4,7 +4,12 @@ import re
 from collections.abc import Mapping, Sequence
 
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
-from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseEpistemicStatus,
+    CaseFollowupExchange,
+    CaseSourceCitation,
+)
 from app.trace.quotes import (
     MAX_QUOTE_CHARS,
     IndexedText,
@@ -13,6 +18,7 @@ from app.trace.quotes import (
     looks_like_a_paraphrase,
     quote_occurrences,
     resolve_document_locator,
+    without_edge_ellipses,
 )
 from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport, CaseMitreAssociation
 
@@ -195,6 +201,7 @@ def resolve_claim(
     )
     return claim.model_copy(
         update={
+            "epistemic_status": confirmed_status(claim.epistemic_status, supporting),
             "supporting_source_ids": role_source_ids(
                 claim.supporting_source_ids, supporting, registry
             ),
@@ -205,6 +212,12 @@ def resolve_claim(
             "contradicting_citations": contradicting,
         }
     )
+
+
+def confirmed_status(
+    status: CaseEpistemicStatus, supporting: list[CaseSourceCitation]
+) -> CaseEpistemicStatus:
+    return "not_confirmed" if status == "reported" and not supporting else status
 
 
 def role_source_ids(
@@ -218,6 +231,7 @@ def role_source_ids(
 
 def located_quote(source: str | IndexedText, quote: str) -> str | None:
     source = indexed(source)
+    quote = without_edge_ellipses(quote)
     found = quote if quote_occurrences(source.text, quote) else find_aligned_quote(source, quote)
     return found if found is not None and len(found) <= MAX_QUOTE_CHARS else None
 

@@ -1,5 +1,6 @@
 import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCaseAnalysis, startCaseAnalysis } from "./api";
+import { clearProgress, recordStep } from "./progress";
 import type { AnalysisStepRead, CaseAnalysisResultRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { useIsFollowupPending } from "@/features/chat/useCaseChat";
@@ -39,7 +40,10 @@ export function useStartCaseAnalysis(caseId: string | null) {
     mutationKey: caseId ? caseQueryKeys.analysisRun(caseId) : UNRUNNABLE_ANALYSIS_KEY,
     mutationFn: () => {
       if (!caseId) throw new Error("Case ID is required to start analysis.");
-      return startCaseAnalysis(caseId);
+      return startCaseAnalysis(caseId, (step) => recordStep(queryClient, caseId, step));
+    },
+    onMutate: () => {
+      if (caseId) clearProgress(queryClient, caseId);
     },
     onSuccess: (step: AnalysisStepRead) => {
       if (caseId && step.status === "completed" && step.result) {
@@ -48,6 +52,7 @@ export function useStartCaseAnalysis(caseId: string | null) {
     },
     onSettled: (_step, error) => {
       if (!caseId) return;
+      clearProgress(queryClient, caseId);
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.cases() }),
         queryClient.invalidateQueries({ queryKey: caseQueryKeys.case(caseId), exact: true }),

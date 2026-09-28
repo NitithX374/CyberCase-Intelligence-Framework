@@ -1,4 +1,5 @@
-import { ANALYSIS_REQUEST_TIMEOUT_MS, caseUrl, http } from "@/lib/api/http";
+import { caseUrl, http } from "@/lib/api/http";
+import { postWithProgress, type StreamedStep } from "@/lib/api/stream";
 import type { CaseChatRead, CaseChatResponse } from "@/lib/api/types";
 
 export async function getCaseChat(caseId: string, signal?: AbortSignal): Promise<CaseChatRead> {
@@ -9,11 +10,10 @@ export async function createCaseChatMessage(
   caseId: string,
   content: string,
   idempotencyKey: string,
+  onStep: (step: StreamedStep) => void = () => undefined,
 ): Promise<CaseChatResponse> {
   const request = { content, client_request_id: idempotencyKey };
-  return (
-    await http.post<CaseChatResponse>(caseUrl(caseId, "chat", "messages"), request, {
-      timeout: ANALYSIS_REQUEST_TIMEOUT_MS,
-    })
-  ).data;
+  return postWithProgress<CaseChatResponse>(caseUrl(caseId, "chat", "messages"), request, {
+    onStep,
+  });
 }

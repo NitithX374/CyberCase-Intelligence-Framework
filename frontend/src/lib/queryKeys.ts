@@ -8,4 +8,6 @@ export const caseQueryKeys = {
   analysis: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis"] as const,
   reports: (caseId: string) => [...caseQueryKeys.case(caseId), "reports"] as const,
   analysisRun: (caseId: string) => [...caseQueryKeys.case(caseId), "analysis", "run"] as const,
+  analysisProgress: (caseId: string) =>
+    [...caseQueryKeys.case(caseId), "analysis", "progress"] as const,
 };

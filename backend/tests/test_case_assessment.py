@@ -5,6 +5,7 @@ import asyncio
 from app.analysis import assess as assess_module
 from app.analysis.assess import assess_case
 from app.analysis.prompts import (
+    CASE_CHECKLIST,
     GAP_IDENTIFICATION_INSTRUCTIONS,
     case_assessment_prompt,
     case_system_prompt,
@@ -17,6 +18,12 @@ from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
 def test_assessment_and_full_analysis_share_gap_identity_instructions():
     assert GAP_IDENTIFICATION_INSTRUCTIONS in case_assessment_prompt()
     assert GAP_IDENTIFICATION_INSTRUCTIONS in case_system_prompt()
+
+
+def test_both_prompts_check_the_case_against_every_checklist_key():
+    for prompt in (case_assessment_prompt(), case_system_prompt()):
+        for key, meaning in CASE_CHECKLIST.items():
+            assert f"{key}: {meaning}" in prompt
 
 
 def test_assessment_uses_its_own_stage_and_only_triage_inputs(monkeypatch):
@@ -65,6 +72,7 @@ def test_assessment_uses_its_own_stage_and_only_triage_inputs(monkeypatch):
         "followup_history": [
             {
                 "qa_id": "QA-01",
+                "gap_key": "incident:time",
                 "question": "When did it happen?",
                 "answer": "Around midnight.",
             }

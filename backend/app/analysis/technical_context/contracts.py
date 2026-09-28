@@ -123,6 +123,7 @@ class CaseTechnicalAugmentation(BaseModel):
     mitre_table: list[dict[str, object]] = Field(default_factory=list)
     association_ids: list[str] = Field(default_factory=list)
     failure_code: str | None = None
+    shadow_applicability: MitreApplicabilityRecord | None = None
 
 
 @dataclass(frozen=True)

@@ -43,6 +43,17 @@ def thought_and_answered() -> httpx.Response:
     )
 
 
+def lost_in_whitespace() -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "content": [{"type": "text", "text": '{"ok": true' + " \n" * 2_000}],
+            "stop_reason": "max_tokens",
+            "usage": {"input_tokens": 120, "output_tokens": 40_800},
+        },
+    )
+
+
 def cut_off_while_thinking(stop_reason: str) -> httpx.Response:
     return httpx.Response(
         200,
@@ -138,6 +149,37 @@ async def test_a_timeout_is_not_retried(monkeypatch) -> None:
 
     assert failure.value.code == "probe_timeout"
     assert len(attempts) == 1
+
+
+async def test_an_answer_lost_in_whitespace_is_asked_once_more(monkeypatch) -> None:
+    replies = [lost_in_whitespace(), answered()]
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        return replies[len(attempts) - 1]
+
+    calls: list[dict[str, object]] = []
+    result = await run_stage(monkeypatch, handler, calls)
+
+    assert result == Probe(ok=True)
+    assert len(attempts) == 2
+    assert calls[0]["status"] == "completed"
+    assert calls[0]["runaway_output_tokens"] == 40_800
+
+
+async def test_a_second_runaway_fails_the_stage(monkeypatch) -> None:
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        return lost_in_whitespace()
+
+    with pytest.raises(CaseAnalysisFailure) as failure:
+        await run_stage(monkeypatch, handler, [])
+
+    assert failure.value.code == "probe_incomplete"
+    assert len(attempts) == provider.RUNAWAY_ATTEMPTS
 
 
 async def test_the_stage_asks_for_what_its_config_says(monkeypatch) -> None:

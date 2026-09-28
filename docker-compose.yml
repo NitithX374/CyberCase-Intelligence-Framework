@@ -38,6 +38,7 @@ services:
     environment:
       CASE_ANALYSIS_MODEL: ${CASE_ANALYSIS_MODEL:-google/gemma-4-26b-a4b-it}
       CASE_ANALYSIS_PROVIDERS: ${CASE_ANALYSIS_PROVIDERS:-coreweave/bf16,nextbit/bf16}
+      MITRE_GATE_SHADOW: ${MITRE_GATE_SHADOW:-encoder}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -50,6 +51,7 @@ services:
       - ./backend/app:/app/app
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
+      - ./backend/xlmr_ladder_best:/app/xlmr_ladder_best:ro
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       db:
