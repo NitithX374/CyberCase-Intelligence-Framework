@@ -137,7 +137,9 @@ async def generate_case_answer(
 ) -> CaseAnalysisOutput:
     trace = CaseAnalysisTrace.model_validate(result.trace_json) if result is not None else None
     reply = await request_stage(
-        config=configured_pipeline().model_copy(update={"output_tokens": CHAT_OUTPUT_TOKENS}),
+        config=configured_pipeline().model_copy(
+            update={"output_tokens": CHAT_OUTPUT_TOKENS, "thinking_tokens": 0}
+        ),
         stage="chat_answer",
         system=CHAT_PROMPT,
         content=chat_request(
