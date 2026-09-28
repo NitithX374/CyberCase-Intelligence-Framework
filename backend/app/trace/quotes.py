@@ -8,6 +8,7 @@ MAX_PAGE_SPANS_PER_QUOTE = 8
 MAX_QUOTE_CHARS = 2_000
 PARAPHRASE_TRIGRAM_SHARE = 0.6
 EDGE_ELLIPSIS = re.compile(r"^\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*|\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*$")
+QUOTE_MARK = "[\"'“”‘’]"
 
 
 def folded(text: str) -> tuple[str, list[int]]:
@@ -183,8 +184,7 @@ def find_aligned_quote(source: str | IndexedText, quote: str) -> str | None:
         return ellipsis_aligned
 
     clean_quote = re.sub(r"[*_#`~]", "", quote)
-    clean_quote = re.sub(r'["“”]', '"', clean_quote)
-    clean_quote = re.sub(r"['‘’]", "'", clean_quote)
+    clean_quote = re.sub(QUOTE_MARK, '"', clean_quote)
     words = clean_quote.split()
     if not words:
         return None
@@ -193,9 +193,7 @@ def find_aligned_quote(source: str | IndexedText, quote: str) -> str | None:
         parts: list[str] = []
         for ch in w:
             if ch == '"':
-                parts.append(r'["“”]')
-            elif ch == "'":
-                parts.append(r"['‘’]")
+                parts.append(QUOTE_MARK)
             else:
                 parts.append(re.escape(ch))
         return r"[*_#`~]*\s*".join(parts)
