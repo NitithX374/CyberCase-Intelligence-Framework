@@ -9,10 +9,71 @@ from app.analysis.pipeline import (
     write_analysis,
 )
 from app.analysis.run import external_context
+from app.analysis.technical_context import gate as gate_module
 from app.analysis.technical_context.contracts import LegalReferenceResult, QueryResponse
 from app.analysis.technical_context.rag_client import RagCallFailure
 from app.analysis.technical_context.retrieve import run_case_mitre_augmentation
+from app.config import settings
 from app.trace.trace import CaseMitreAssociation
+
+
+def test_the_shadow_gate_is_recorded_but_does_not_decide():
+    async def exercise():
+        _, _, source_bundle, applicability, _ = _fixtures()
+
+        async def rag(_query):
+            raise AssertionError("the shadow gate must not start a retrieval")
+
+        async def shadow(**kwargs):
+            return applicability
+
+        result = await run_case_mitre_augmentation(
+            source_bundle=source_bundle,
+            applicability_gate=_gate(
+                {"decision": "SKIP", "source_message_ids": [], "trigger_text": []}
+            ),
+            shadow_gate=shadow,
+            rag_request=rag,
+        )
+        assert result.status == "not_applicable"
+        assert result.recorded([]).shadow_applicability == applicability
+
+    asyncio.run(exercise())
+
+
+def test_no_shadow_is_recorded_when_it_is_off():
+    async def exercise():
+        _, _, source_bundle, _, _ = _fixtures()
+        result = await run_case_mitre_augmentation(
+            source_bundle=source_bundle,
+            applicability_gate=_gate(
+                {"decision": "SKIP", "source_message_ids": [], "trigger_text": []}
+            ),
+        )
+        assert result.recorded([]).shadow_applicability is None
+
+    asyncio.run(exercise())
+
+
+def test_an_unavailable_shadow_gate_is_recorded_as_such(monkeypatch):
+    async def broken(**kwargs):
+        raise ImportError("torch")
+
+    monkeypatch.setattr(gate_module, "shadowing_gate", lambda: broken)
+    record = asyncio.run(gate_module.mitre_shadow(case_sources=[]))
+
+    assert record.decision == "SKIP"
+    assert record.failure_code == "mitre_shadow_unavailable"
+
+
+def test_the_shadow_runs_only_beside_the_llm_gate(monkeypatch):
+    monkeypatch.setattr(settings, "mitre_gate_shadow", "encoder")
+    monkeypatch.setattr(settings, "mitre_gate_mode", "never")
+    assert gate_module.shadowing_gate() is None
+    monkeypatch.setattr(settings, "mitre_gate_mode", "llm")
+    assert gate_module.shadowing_gate() is not None
+    monkeypatch.setattr(settings, "mitre_gate_shadow", "off")
+    assert gate_module.shadowing_gate() is None
 
 
 def test_nontechnical_case_does_not_call_rag():
