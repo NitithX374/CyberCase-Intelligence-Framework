@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.analysis.progress import announce
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_SYSTEM_PROMPT
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.llm.request import request_stage
@@ -19,6 +20,7 @@ async def write_trace(
     technical_context: CaseRagContextPayload | None = None,
     config: AnalysisPipelineConfig,
 ) -> CaseAnalysisTrace:
+    announce("read")
     reading = await request_stage(
         config=config,
         stage="case_reading",
@@ -26,6 +28,7 @@ async def write_trace(
         content=reading_request(sources, language, followup_history),
         schema=CaseProviderReading,
     )
+    announce("judge")
     judgement = await request_stage(
         config=config,
         stage="case_judgement",

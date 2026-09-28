@@ -9,6 +9,7 @@ from fastapi import status
 from pydantic import ValidationError
 
 from app.analysis.assess import assess_case
+from app.analysis.progress import announce
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.gate import mitre_gate
 from app.analysis.technical_context.rag_client import request_rag
@@ -89,6 +90,7 @@ async def assess_gaps(
     request: Callable = assess_case,
     config: Callable[[], AnalysisPipelineConfig] = configured_pipeline,
 ) -> CaseAssessmentTrace:
+    announce("assess")
     return await request(
         source_bundle=data.sources,
         followup_history=data.followup_history,
@@ -132,6 +134,7 @@ async def write_analysis(
 
 
 async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
+    announce("bind")
     try:
         trace = await asyncio.to_thread(bound_trace, data, so_far, so_far.trace)
     except ValidationError as error:

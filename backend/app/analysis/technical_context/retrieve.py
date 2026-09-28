@@ -5,6 +5,7 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
+from app.analysis.progress import announce
 from app.analysis.technical_context.contracts import (
     CaseRagContextPayload,
     CaseTechnicalAugmentation,
@@ -106,6 +107,7 @@ async def gated_augmentation(
     reused_context: CaseRagContextPayload | None,
     followup_history: Sequence[CaseFollowupExchange],
 ) -> CaseMitreAugmentation:
+    announce("gate")
     applicability = await evaluate_gate(source_bundle.sources, applicability_gate)
     if applicability.failure_code is not None:
         return failed_augmentation(applicability.failure_code, applicability)
@@ -118,6 +120,7 @@ async def gated_augmentation(
         is_reused = True
     else:
         rag_query = retrieval_query(source_bundle, applicability.trigger_text, followup_history)
+        announce("retrieve")
         try:
             response = await rag_request(rag_query)
             context = validated_case_rag_context(response)

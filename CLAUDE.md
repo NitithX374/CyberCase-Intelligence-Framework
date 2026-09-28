@@ -158,6 +158,15 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
 - `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — upload and read back (`sources/routes.py`, `document_router`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
 - `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`)
 - `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`)
+- **Progress stream.** `POST /cases/{case_id}/analysis` and `POST /cases/{case_id}/chat/messages` answer a request sent
+  with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
+  (`analysis/stream.py`):
+  - a `step` event as the analysis reaches each step (`assess`, `gate`, `retrieve` only when the RAG service is asked,
+    `read`, `judge`, `bind`), with the seconds since it began;
+  - a `: heartbeat` comment every 15 seconds of quiet, so the browser can tell a slow step from a lost connection;
+  - then `result`, holding the JSON body a plain request gets, or `error`, holding its status and `detail`.
+  - The analysis runs in a task of its own, so it finishes and is stored even if the browser leaves. Without that
+    header both routes answer exactly as before.
 - `POST`, `GET /cases/{case_id}/reports`, `GET /cases/{case_id}/reports/{report_id}/pdf`, `.../html` — report versions and export (`reports/routes.py`)
 
 Every case route is authenticated and ownership-scoped; ownership is one check, `owned_case` in `cases/ownership.py`, which answers 404 for a case the user does not own. There are no top-level `/api/v1/reports`, `/users`, or RAG-proxy routes, and no `/runs/{run_id}` — the analysis happens in the request that asked for it, which is why `main.py` refuses to start with more than one worker.
@@ -221,6 +230,9 @@ analysis/               producing an analysis of a case; routes, schemas
                         (summary, gaps, ATT&CK associations) over that reading
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
+  progress.py           announce(step): the steps write, retrieve and the
+                        pipeline report, heard only by a request that listens
+  stream.py             the progress stream: steps, heartbeats, then the result
   prompts.py            the analysis prompts
   technical_context/    whether and how the case gets ATT&CK context
     contracts.py        the augmentation and applicability records, and the
