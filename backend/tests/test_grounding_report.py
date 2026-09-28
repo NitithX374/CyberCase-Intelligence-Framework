@@ -49,6 +49,19 @@ def test_a_quote_that_is_in_the_source_counts_as_verified():
     assert trace.grounding.claims_without_citation == 0
 
 
+def test_a_reported_claim_without_a_verified_quote_is_not_confirmed():
+    bundle, source_id = bundle_and_id()
+    invented = claim(source_id, "A-01", "There were no issues with the finance drive.")
+    suspected = claim(source_id, "A-02", "Nothing else was touched.").model_copy(
+        update={"text": "Other shares may be affected.", "epistemic_status": "suspected"}
+    )
+    trace = resolve_case_trace(
+        trace_of(invented, suspected, claim(source_id, "A-03", TEXT)), bundle
+    )
+
+    assert [c.epistemic_status for c in trace.claims] == ["not_confirmed", "suspected", "reported"]
+
+
 def test_an_invented_quote_is_dropped_and_counted():
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(

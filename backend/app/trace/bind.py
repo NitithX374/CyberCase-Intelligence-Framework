@@ -4,7 +4,12 @@ import re
 from collections.abc import Mapping, Sequence
 
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
-from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
+from app.trace.claims import (
+    CaseAnalysisClaim,
+    CaseEpistemicStatus,
+    CaseFollowupExchange,
+    CaseSourceCitation,
+)
 from app.trace.quotes import (
     MAX_QUOTE_CHARS,
     IndexedText,
@@ -195,6 +200,7 @@ def resolve_claim(
     )
     return claim.model_copy(
         update={
+            "epistemic_status": confirmed_status(claim.epistemic_status, supporting),
             "supporting_source_ids": role_source_ids(
                 claim.supporting_source_ids, supporting, registry
             ),
@@ -205,6 +211,12 @@ def resolve_claim(
             "contradicting_citations": contradicting,
         }
     )
+
+
+def confirmed_status(
+    status: CaseEpistemicStatus, supporting: list[CaseSourceCitation]
+) -> CaseEpistemicStatus:
+    return "not_confirmed" if status == "reported" and not supporting else status
 
 
 def role_source_ids(
