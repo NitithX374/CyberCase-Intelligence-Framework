@@ -83,6 +83,24 @@ def test_a_quote_cut_with_an_ellipsis_at_either_end_is_found():
     assert trace.grounding.citations_paraphrased == 0
 
 
+def test_a_quote_with_other_quotation_marks_than_the_source_is_found():
+    text = 'Abta said the "vast majority" of the 43,000 people affected had registered.'
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "the 'vast majority' of the 43,000 people affected"),
+            claim(source_id, "A-02", "the “vast majority” of the 43,000"),
+        ),
+        bundle,
+    )
+
+    assert [c.supporting_citations[0].exact_quote for c in trace.claims] == [
+        'the "vast majority" of the 43,000 people affected',
+        'the "vast majority" of the 43,000',
+    ]
+    assert [c.epistemic_status for c in trace.claims] == ["reported", "reported"]
+
+
 def test_an_invented_quote_is_dropped_and_counted():
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(
