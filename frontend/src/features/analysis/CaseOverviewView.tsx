@@ -15,6 +15,7 @@ import { CaseFindingsSection } from "./CaseFindingsSection";
 import { CaseDetails } from "./CaseDetails";
 import { SourceDrawer } from "@/features/citations/SourceDrawer";
 import { AnalysisMeta } from "./AnalysisMeta";
+import { AnalysisProgress } from "./AnalysisProgress";
 import { Markdown } from "@/components/Markdown";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
@@ -81,10 +82,12 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
         title="Analyzing…"
         description={
           isFollowupPending
-            ? "Reading the case sources with your answer. This can take a minute."
-            : "Reading the case sources. This can take a minute."
+            ? "Reading the case sources with your answer. This usually takes a few minutes."
+            : "Reading the case sources. This usually takes a few minutes."
         }
-      />
+      >
+        <AnalysisProgress caseId={caseId} className="mt-6" />
+      </CaseOverviewState>
     );
   }
 
@@ -122,16 +125,19 @@ export function CaseOverviewView({ caseId }: { caseId: string }) {
     >
       <div className="mx-auto w-full max-w-[52rem] px-5 pt-8 sm:px-8 sm:pt-12">
         {isUpdating ? (
-          <div
-            role="status"
-            className="mb-8 flex items-center gap-2.5 rounded-lg bg-accent-soft px-3.5 py-2.5 text-[13px] text-accent-strong"
-          >
-            <Icon name="spinner" className="h-4 w-4 shrink-0" />
-            <span className="font-medium">
-              {isFollowupPending
-                ? "Updating the case analysis with your answer…"
-                : "Updating the case analysis…"}
-            </span>
+          <div className="mb-8">
+            <div
+              role="status"
+              className="flex items-center gap-2.5 rounded-lg bg-accent-soft px-3.5 py-2.5 text-[13px] text-accent-strong"
+            >
+              <Icon name="spinner" className="h-4 w-4 shrink-0" />
+              <span className="font-medium">
+                {isFollowupPending
+                  ? "Updating the case analysis with your answer…"
+                  : "Updating the case analysis…"}
+              </span>
+            </div>
+            <AnalysisProgress caseId={caseId} className="mt-3 px-3.5" />
           </div>
         ) : isStale ? (
           <div
@@ -310,12 +316,14 @@ function CaseOverviewState({
   actionLabel,
   onAction,
   processing,
+  children,
 }: {
   title: string;
   description: string;
   actionLabel?: string;
   onAction?: () => void;
   processing?: boolean;
+  children?: ReactNode;
 }) {
   return (
     <EmptyState
@@ -329,6 +337,7 @@ function CaseOverviewState({
           {actionLabel}
         </button>
       )}
+      {children}
     </EmptyState>
   );
 }
