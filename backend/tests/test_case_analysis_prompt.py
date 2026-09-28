@@ -6,7 +6,6 @@ import pytest
 from case_mitre_test_support import _fixtures
 
 from app.analysis.prompts import case_assessment_prompt, case_system_prompt
-from app.analysis.write import write_trace
 from app.errors import CaseAnalysisFailure
 from app.llm.request import validate_response_payload
 from app.llm.settings import AnalysisPipelineConfig
@@ -18,6 +17,7 @@ from app.trace.claims import (
 )
 from app.trace.quotes import find_aligned_quote
 from app.trace.trace import CaseProviderAnalysis
+from experiments.analysis_arms import write_single_call
 
 
 def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
@@ -99,8 +99,8 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             observed.update(kwargs)
             return provider_result(contradicting=False)
 
-        with patch("app.analysis.write.request_stage", new=request_stage):
-            await write_trace(
+        with patch("experiments.analysis_arms.request_stage", new=request_stage):
+            await write_single_call(
                 sources=CaseSourceBundle(revision=1, sources=(source,)),
                 language="english",
                 config=AnalysisPipelineConfig(),
@@ -142,8 +142,8 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             calls.append(kwargs["stage"])
             return provider_result(contradicting=len(calls) == 1)
 
-        with patch("app.analysis.write.request_stage", new=request_stage):
-            trace = await write_trace(
+        with patch("experiments.analysis_arms.request_stage", new=request_stage):
+            trace = await write_single_call(
                 sources=CaseSourceBundle(revision=1, sources=(source,)),
                 language="english",
                 config=AnalysisPipelineConfig(),
@@ -162,8 +162,8 @@ class DirectAnalysisCorrectionTests(unittest.IsolatedAsyncioTestCase):
             observed.update(kwargs)
             return provider_result(contradicting=False)
 
-        with patch("app.analysis.write.request_stage", new=request_stage):
-            trace = await write_trace(
+        with patch("experiments.analysis_arms.request_stage", new=request_stage):
+            trace = await write_single_call(
                 sources=bundle,
                 language="thai",
                 technical_context=context,
