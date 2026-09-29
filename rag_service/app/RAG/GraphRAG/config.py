@@ -237,6 +237,16 @@ AGENT_MAX_VECTOR = 15
 AGENT_MAX_GRAPH = 8
 AGENT_MAX_CONTEXT_CHARS = 10000
 
+# Quota retrieval keeps only hits that can evidence a technique (Technique /
+# Subtechnique nodes, relationships with a technique end) and dedups them by
+# parent technique, so a relationship and the technique it points at share
+# one slot. Group/Software/Campaign hits stay only when the query names them.
+# On the real-CTI held-out split (45 incidents) this raised StepCoverage@15 —
+# the share of attack steps whose technique reaches the context at all —
+# 0.832 → 0.893 with no incident worse (branch sandbox/retrieval-lab,
+# evaluation/results/retrieval_lab/). "false" restores the old pool.
+TECHNIQUE_POOL = os.getenv("TECHNIQUE_POOL", "true").lower() == "true"
+
 # Each broaden round adds this much budget instead of competing for the same
 # space. The first pass already fills the character budget (mean 9258 of 10000
 # over 100 real-CTI incidents), so under a fixed budget a second retrieval can

@@ -14,7 +14,13 @@ from typing import Optional
 
 from FlagEmbedding import BGEM3FlagModel
 
-from ..config import FINAL_TOP_K, RERANKER_MODEL, VECTOR_TOP_K
+from ..config import (
+    FINAL_TOP_K,
+    QDRANT_COLLECTION_ENTITIES,
+    RERANKER_MODEL,
+    TECHNIQUE_POOL,
+    VECTOR_TOP_K,
+)
 from .graph_retriever import GraphRetriever, SubgraphResult
 from .reranker import Reranker
 from .vector_retriever import VectorResult, VectorRetriever
@@ -98,6 +104,32 @@ _TYPE_WEIGHTS = {
 # Subgraph centres ranked ahead of groups/software when the graph cap is filled.
 _STRUCTURAL_LABELS = {"Technique", "Subtechnique", "Tactic"}
 
+# The technique pool (config.TECHNIQUE_POOL). Across 100 served real-CTI runs,
+# Group/Software hits were 7% of the vector list, scored a median 0.07 after
+# reranking, never named in the case file, and no answer attributed the
+# incident to a group — while each took a slot a technique could have used.
+# A group-technique relationship stays (it has a technique end), and so does
+# a Group/Software/Campaign the query names outright ("ใช้ Mimikatz").
+_TECHNIQUE_LABELS = {"Technique", "Subtechnique"}
+_NAMED_ENTITY_LABELS = {"Group", "Software", "Campaign"}
+
+
+def in_technique_pool(vr: VectorResult, query: str) -> bool:
+    """Can this hit evidence a technique for this query?"""
+    md = vr.metadata or {}
+    if md.get("entity_type") == "Relationship":
+        return any(
+            str(md.get(end) or "").startswith("attack-pattern--")
+            for end in ("source_id", "target_id")
+        )
+    label = md.get("node_label", "")
+    if label in _TECHNIQUE_LABELS:
+        return True
+    if label in _NAMED_ENTITY_LABELS:
+        name = (md.get("name") or "").strip().lower()
+        return len(name) >= 4 and name in query.lower()
+    return False
+
 
 class HybridRetriever:
     """Orchestrates Vector + Graph retrieval for GraphRAG."""
@@ -133,6 +165,62 @@ class HybridRetriever:
         vector_results.sort(key=lambda r: r.score, reverse=True)
         return vector_results
 
+    def _attack_id_by_stix(self) -> dict[str, str]:
+        """stix_id → ATT&CK ID of every technique entity, read once from Qdrant.
+
+        A relationship hit carries its endpoints' stix IDs but not their ATT&CK
+        IDs, and without them a relationship to T1566.001 and the T1566 node
+        could not share a slot. Built lazily on the first technique-keyed
+        merge; on failure the key falls back to the stix ID.
+        """
+        cached = getattr(self, "_attack_ids", None)
+        if cached is None:
+            cached = {}
+            try:
+                client, offset = self.vector_retriever.client, None
+                while True:
+                    points, offset = client.scroll(
+                        QDRANT_COLLECTION_ENTITIES, limit=1000, offset=offset,
+                        with_payload=["stix_id", "attack_id"],
+                    )
+                    for p in points:
+                        pl = p.payload or {}
+                        if pl.get("stix_id") and pl.get("attack_id"):
+                            cached[pl["stix_id"]] = pl["attack_id"]
+                    if offset is None:
+                        break
+            except Exception as e:  # noqa: BLE001 — degrade to stix keys
+                print(f"[HYBRID] technique-key map unavailable ({e}); dedup by stix_id")
+            self._attack_ids = cached
+        return cached
+
+    def _technique_key(self, vr: VectorResult) -> str:
+        """The parent technique a hit evidences (T1566 for T1566.001, or for a
+        relationship pointing at either), else the hit's own stix_id."""
+        md = vr.metadata or {}
+        if md.get("entity_type") == "Relationship":
+            for end in ("target_id", "source_id"):
+                sid = str(md.get(end) or "")
+                if sid.startswith("attack-pattern--"):
+                    aid = self._attack_id_by_stix().get(sid)
+                    return aid.split(".")[0] if aid else sid
+            return vr.stix_id
+        aid = md.get("attack_id") or ""
+        if md.get("node_label") in _TECHNIQUE_LABELS and aid:
+            return aid.split(".")[0]
+        return vr.stix_id
+
+    def _dedup_by_technique(self, vector_results: list) -> list:
+        """Keep the best-ranked hit per technique (input is already ranked)."""
+        seen: set[str] = set()
+        kept = []
+        for vr in vector_results:
+            key = self._technique_key(vr)
+            if key not in seen:
+                seen.add(key)
+                kept.append(vr)
+        return kept
+
     @staticmethod
     def _graph_seeds(vector_results: list, limit: int) -> dict[str, float]:
         """Graph seed STIX IDs in relevance order → score of the hit that seeded them.
@@ -162,6 +250,7 @@ class HybridRetriever:
         node_label_filter: Optional[str] = None,
         expand_graph: bool = True,
         graph_seed_k: Optional[int] = None,
+        technique_pool: bool = False,
     ) -> GraphRAGResult:
         """Execute the full GraphRAG retrieval pipeline.
 
@@ -175,6 +264,10 @@ class HybridRetriever:
             graph_seed_k: How many top-ranked vector results may seed the graph
                 expansion (default FINAL_TOP_K). Quota retrieval passes its own
                 quota here so the graph never expands a hit the quota discards.
+            technique_pool: Keep only hits that can evidence a technique
+                (``in_technique_pool``) and one hit per technique. Applied
+                before the graph seeds are taken, so they come from the same
+                list the quota keeps.
 
         Returns:
             GraphRAGResult with combined vector + graph context.
@@ -183,6 +276,8 @@ class HybridRetriever:
 
         # ── Step 1: Vector search ─────────────────────────────────────────
         vector_results = self.vector_retriever.search_all(query, top_k=top_k)
+        if technique_pool:
+            vector_results = [vr for vr in vector_results if in_technique_pool(vr, query)]
 
         print(f"[RETRIEVE] Vector search: {len(vector_results)} results (pre-rerank)")
 
@@ -191,6 +286,8 @@ class HybridRetriever:
 
         # ── Step 1c: Re-weight by node type (techniques first) ─────────────
         vector_results = self._reweight_by_type(vector_results)
+        if technique_pool:
+            vector_results = self._dedup_by_technique(vector_results)
 
         # ── Ultrafast: vector + rerank only, no Neo4j graph expansion ──────
         if not expand_graph:
@@ -303,6 +400,7 @@ class HybridRetriever:
         max_vector: int = 15,
         max_graph: int = 8,
         node_label_filter: Optional[str] = None,
+        technique_pool: Optional[bool] = None,
     ) -> "GraphRAGResult":
         """Multi-query retrieval with a PER-QUERY QUOTA.
 
@@ -319,6 +417,9 @@ class HybridRetriever:
             max_vector:   Hard cap on merged vector results (fits the LLM ctx).
             max_graph:    Hard cap on merged subgraphs, filled technique-first
                           and round-robin across sub-queries.
+            technique_pool: Technique-only pool + one slot per technique, per
+                          sub-query and across them (default
+                          config.TECHNIQUE_POOL).
 
         The quota binds BOTH modalities: each sub-query seeds the graph from
         the same ``per_query_k`` hits it contributes to the vector list, so a
@@ -326,6 +427,10 @@ class HybridRetriever:
         """
         if not queries:
             return GraphRAGResult(vector_results=[], graph_results=[])
+        if technique_pool is None:
+            technique_pool = TECHNIQUE_POOL
+        # Without the pool, slots are per document, as before.
+        slot_key = self._technique_key if technique_pool else (lambda vr: vr.stix_id)
 
         per_query_vectors: list[list] = []
         # center stix_id → (sort key, subgraph); the best key across sub-queries wins
@@ -338,6 +443,7 @@ class HybridRetriever:
                 top_k=top_k,
                 node_label_filter=node_label_filter,
                 graph_seed_k=per_query_k,
+                technique_pool=technique_pool,
             )
             per_query_vectors.append(result.vector_results[:per_query_k])
 
@@ -375,8 +481,9 @@ class HybridRetriever:
             round_hits = [vecs[rank] for vecs in per_query_vectors if rank < len(vecs)]
             round_hits.sort(key=lambda vr: vr.score, reverse=True)
             for vr in round_hits:
-                if vr.stix_id not in seen_vec:
-                    seen_vec.add(vr.stix_id)
+                key = slot_key(vr)
+                if key not in seen_vec:
+                    seen_vec.add(key)
                     merged_vector.append(vr)
             if len(merged_vector) >= max_vector:
                 break
