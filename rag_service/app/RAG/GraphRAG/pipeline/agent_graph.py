@@ -41,6 +41,7 @@ from ..config import (
     AGENT_MAX_CONTEXT_CHARS,
     AGENT_MAX_GRAPH,
     AGENT_MAX_VECTOR,
+    AGENT_PER_QUERY_K,
     BROADEN_CONTEXT_CHARS_STEP,
     BROADEN_GRAPH_STEP,
     BROADEN_VECTOR_STEP,
@@ -229,7 +230,7 @@ class GraphRAGAgent:
         sub_queries = self.decomposer.decompose(incident=user_query, verbose=False)
         all_queries = [user_query] + [q for q in sub_queries if q and q != user_query]
         rag_result = self.retriever.retrieve_multi_quota(
-            all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
+            all_queries, per_query_k=AGENT_PER_QUERY_K, top_k=VECTOR_TOP_K,
             max_vector=AGENT_MAX_VECTOR, max_graph=AGENT_MAX_GRAPH,
         )
         return build_context(
@@ -588,7 +589,7 @@ class GraphRAGAgent:
         max_chars = AGENT_MAX_CONTEXT_CHARS + BROADEN_CONTEXT_CHARS_STEP * broaden_round
 
         graphrag_result = self.retriever.retrieve_multi_quota(
-            all_queries, per_query_k=3, top_k=VECTOR_TOP_K,
+            all_queries, per_query_k=AGENT_PER_QUERY_K, top_k=VECTOR_TOP_K,
             max_vector=max_vector, max_graph=max_graph,
         )
         if broaden_round and state.get("graphrag_result") is not None:
