@@ -105,7 +105,7 @@ Neo4j and Qdrant are cloud-hosted — no local containers for them.
 - **Frontend**: Next.js 16.2.10 + React 19.2.4 + Tailwind CSS 4
 - **Backend API**: FastAPI + SQLAlchemy (async) + PostgreSQL — owns cases, sources, the analysis, the case conversation and the clarification policy; the analysis's technical-context step calls the RAG service via HTTPX. There are no runs, threads or queues: an analysis starts in the request that asked for it, and when that request streams its progress the analysis runs in a task of its own, which finishes and is stored even if the browser leaves
 - **RAG Engine**: LangGraph for orchestration (the agentic state machine) plus LangChain for the LLM and message abstractions (`langchain_core.messages`, `langchain_anthropic.ChatAnthropic`), hosted in `rag_service`. LangGraph is a separate library, not part of LangChain. No LCEL — the LCEL chain is evaluation-only (`pipeline/chain.py`)
-- **Vector DB**: Qdrant (BGE-M3 embeddings, 1024-dim, FP16)
+- **Vector DB**: Qdrant (BGE-M3 embeddings, 1024-dim; FP16 on CUDA only)
 - **Graph DB**: Neo4j (MITRE ATT&CK STIX entities + relationships)
 - **LLMs**: one `CORE_LLM_PROVIDER` drives reasoning, routing, decomposition and evaluation. Default is `openrouter` → `deepseek/deepseek-v4.1-flash`; set `CORE_LLM_PROVIDER=anthropic` for `claude-haiku-4-5`. The served pipeline is cloud-only
 
@@ -127,7 +127,7 @@ User Input (Thai/English)
     ↓
 [HYBRID RETRIEVAL] retrieve_multi_quota — per-query quota, round-robin
     interleaved so every sub-query's technique survives the trim
-    ├── Dense vector search (Qdrant + BGE-M3) + rerank
+    ├── Dense + sparse search fused by Qdrant's RRF (BGE-M3), then rerank
     └── Graph expansion (Neo4j, 1 hop in+out from each seed; seeds come
         only from the hits that survive the per-query quota)
     ↓
@@ -135,7 +135,9 @@ User Input (Thai/English)
     ├── SUFFICIENT → proceed
     └── INSUFFICIENT → BROADEN_SEARCH: the agent rewrites the query itself and
         loops retrieval (max 2x). Budget spent → answer with the best context
-        available, or return the evaluator's ACKNOWLEDGE_LIMIT message.
+        available. ACKNOWLEDGE_LIMIT returns the evaluator's note on its own
+        only on the first pass; after a broaden round the note is appended to
+        the answer.
     ↓
 [REASONING LLM] One call writes the final answer in the query's language
     (Thai for a Thai case file). Nothing is translated. An ACKNOWLEDGE_LIMIT
@@ -377,7 +379,7 @@ nor neutral.
 The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
-- **Embedding model**: `BAAI/bge-m3` (1024-dim, FP16)
+- **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)
 - **Reranker**: `BAAI/bge-reranker-v2-m3` (multilingual incl. Thai)
 - **Core LLM**: `CORE_LLM_PROVIDER` (`openrouter` default → `deepseek/deepseek-v4.1-flash`, or `anthropic` → `claude-haiku-4-5`) — used for reasoning, routing, decomposition and evaluation
 - **Single-call generation**: Thai answers are written in one call; the served agent has no translation stage. Reason-EN-then-translate survives only as an evaluation baseline (`pipeline/chain.py`, `evaluation/crosslingual_generation_benchmark.py`)
@@ -388,14 +390,15 @@ The frontend loads and generates reports through the case-scoped report endpoint
   single-query path), **Graph expansion**: 1 hop, incoming + outgoing, batched
   into 3 Cypher statements per retrieval. There is no `GRAPH_DEPTH` setting;
   `get_multi_hop_path()` (4 hops) is a standalone utility the pipeline never calls.
-  Under `retrieve_multi_quota` the graph seed count is the per-query quota (3),
-  not `FINAL_TOP_K`, so a hit the quota drops cannot return as a subgraph
+  Under `retrieve_multi_quota` the graph seed count is the per-query quota (5
+  with `TECHNIQUE_POOL`, the default; 3 without), not `FINAL_TOP_K`, so a hit
+  the quota drops cannot return as a subgraph
 - **Qdrant collections**: `mitre_entities`, `mitre_relationships`
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
 - Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `deepseek/deepseek-v4.1-flash`. The backend calls OpenRouter only — there is no provider switch or provider fallback. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
-- RAG service reads `ANTHROPIC_API_KEY`, `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, `OPENROUTER_API_KEY`
+- RAG service reads `OPENROUTER_CYBERCASE` (or `ANTHROPIC_API_KEY` when `CORE_LLM_PROVIDER=anthropic`), `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, and `THANOY_API_URL`/`THANOY_API_KEY` for the legal lookup. `OPENROUTER_API_KEY` is read only by the RAGAS evaluation
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`
 
 ## Data Sources

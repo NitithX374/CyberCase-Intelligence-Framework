@@ -65,14 +65,16 @@ async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
 ```
 
 `advance_case` is the production request path. An askable gap stops it before
-the MITRE gate, RAG retrieval, full analysis model, and claim binding. The
+the MITRE gate, RAG retrieval, the two analysis calls, and claim binding. The
 assessment row is stored with `status="assessment"` so its questions retain an
 `analysis_result_id`, but it never moves `Case.latest_analysis_result_id`.
 
-`write_analysis` calls `write_trace` in `analysis/write.py`, the one model
-call that writes the trace. The `verify` arm in `experiments/analysis_arms.py`
-runs the same three steps without the assessment. There is no arm switch or
-config value. The alternative compositions the thesis measures live in
+`write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
+trace in two model calls: `case_reading` writes the claims, parties, timeline
+and impacts with their quotations, and `case_judgement` writes the summary,
+gaps and ATT&CK associations over that reading. The `verify` arm in
+`experiments/analysis_arms.py` runs the same three steps without the
+assessment. There is no arm switch or config value. The alternative compositions the thesis measures live in
 `backend/experiments/analysis_arms.py`; each arm calls these same functions on
 an `AnalysisInput` directly, with no case row. `run_case_analysis(pipeline=...)`
 also accepts a substitute composition, as `tests/test_case_followup_postgres.py`
@@ -156,13 +158,14 @@ asked for it.
 
 ## 5. Where a model is actually called
 
-Four places, and all of them go through `request_stage` in
+Five stages in four files, and all of them go through `request_stage` in
 `llm/request.py`:
 
 | Call | File | `stage` |
 |---|---|---|
 | The gap-only assessment | `analysis/assess.py` | `assess` |
-| The analysis | `analysis/write.py` | `case_direct` |
+| The reading: claims, parties, timeline, impacts | `analysis/write.py` | `case_reading` |
+| The judgement: summary, gaps, ATT&CK associations | `analysis/write.py` | `case_judgement` |
 | A chat answer, before or after an analysis | `chat/compose.py` | `chat_answer` |
 | The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/technical_context/gate_llm.py` | `mitre_applicability` |
 

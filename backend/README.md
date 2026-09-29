@@ -17,7 +17,7 @@ All application routes use `/api/v1`, one `routes.py` per feature folder (`app/a
 
 The browser calls only this backend. Authentication and Case ownership are enforced here. Optional MITRE retrieval is called by the backend only when that augmentation is enabled and applicable; external context is not a Case source.
 
-There is no run resource. An analysis and an answer happen inside the request that asked for them. The analysis request may perform a gap assessment, optional technical augmentation, one structured main-analysis call, and deterministic source binding. `app/main.py` therefore refuses to start with more than one application worker.
+There is no run resource. An analysis and an answer happen inside the request that asked for them. The analysis request may perform a gap assessment, optional technical augmentation, two structured analysis calls (a reading, then a judgement), and deterministic source binding. `app/main.py` therefore refuses to start with more than one application worker.
 
 ## Persistence
 
