@@ -210,3 +210,17 @@ function failureStageForCode(code: string | null): TechnicalFailureStage | null 
 function attackDescription(description: string): string {
   return description.replace(/^[A-Za-z][A-Za-z ]{0,30}: [^.]{1,120}\.\s+/, "").trim();
 }
+
+export function technicalContextMessage(data: TechnicalContextData): string {
+  const stage = data.failureStage ? ` during ${data.failureStage}` : "";
+  const messages: Record<TechnicalContextStatus, string> = {
+    not_applicable: "Not applicable — the case has no technical indicators.",
+    insufficient_context: "No supported ATT&CK context was found.",
+    retrieved_with_matches: "",
+    retrieved_from_rag: "Suggested by the knowledge base. Not tied to a case source.",
+    failed: `The ATT&CK lookup failed${stage}.`,
+    invalid_trace: "The saved ATT&CK context could not be verified, so it is not shown.",
+    unavailable: "No ATT&CK context is available for this analysis.",
+  };
+  return messages[data.status];
+}
