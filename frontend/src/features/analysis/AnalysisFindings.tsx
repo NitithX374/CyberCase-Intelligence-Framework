@@ -51,6 +51,7 @@ export function AnalysisFindings() {
       )}
       <CaseFindingsSection
         key={`${analysisResult.id}:${filtered ? "not_confirmed" : "all"}`}
+        caseId={caseId}
         findings={filtered ? unconfirmed : overview.findings}
         onSelectSource={handleSelectSource}
         activeSourceKey={drawer.openKey}

@@ -4,6 +4,8 @@ import { CaseFindingsSection } from "@/features/analysis/CaseFindingsSection";
 import type { CaseFinding, ClaimType, EpistemicStatus } from "@/features/analysis/types";
 import { groupCaseFindings } from "@/features/analysis/overview";
 
+const caseId = "22222222-2222-4222-8222-222222222222";
+
 function finding(
   id: string,
   claimType: ClaimType = "reported",
@@ -52,7 +54,11 @@ describe("Grouped case findings", () => {
       finding(`uncertain-${index}`, "analytical_inference", "not_established"),
     );
     const { container } = render(
-      <CaseFindingsSection findings={[...reported, ...uncertain]} onSelectSource={vi.fn()} />,
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[...reported, ...uncertain]}
+        onSelectSource={vi.fn()}
+      />,
     );
     expect(container.querySelector("article")).toHaveTextContent("Original finding uncertain-0");
     const uncertainty = screen.getByRole("region", { name: "Not established 7" });
@@ -69,6 +75,7 @@ describe("Grouped case findings", () => {
   it("shows both axes for an inference without established support", () => {
     render(
       <CaseFindingsSection
+        caseId={caseId}
         findings={[
           finding("inference", "analytical_inference", "not_established"),
           finding("missing", "unknown", "unknown"),
@@ -80,6 +87,21 @@ describe("Grouped case findings", () => {
     expect(within(inference).getByRole("article")).toHaveTextContent("Inference");
     expect(screen.getByRole("region", { name: "Unknown 1" })).toHaveTextContent(
       "Original finding missing",
+    );
+  });
+
+  it("links a technique to its entry on the Details page, where the ATT&CK table lives", () => {
+    render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[{ ...finding("phishing"), techniqueIds: ["T1566"] }]}
+        onSelectSource={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "T1566" })).toHaveAttribute(
+      "href",
+      `/case/${caseId}/analysis/details#mitre-T1566`,
     );
   });
 });

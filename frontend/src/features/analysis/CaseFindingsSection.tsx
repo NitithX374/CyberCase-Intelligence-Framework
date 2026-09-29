@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { analysisPath } from "@/lib/casePaths";
 import { groupCaseFindings, claimTypeLabels } from "./overview";
 import type { CaseFinding } from "@/features/analysis/types";
 import type { SourceMessageRef } from "@/features/citations/types";
@@ -28,10 +30,11 @@ const groupTitleClass: Record<string, string> = {
 };
 
 export function FindingRow({
+  caseId,
   finding,
   showClaimType = false,
   ...sourceActions
-}: FindingSourceActions & { finding: CaseFinding; showClaimType?: boolean }) {
+}: FindingSourceActions & { caseId: string; finding: CaseFinding; showClaimType?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const detailsId = `finding-${finding.id}-details`;
 
@@ -59,14 +62,14 @@ export function FindingRow({
           {...sourceActions}
         />
         {finding.techniqueIds.map((techniqueId) => (
-          <a
+          <Link
             key={techniqueId}
-            href={`#mitre-${techniqueId}`}
+            href={`${analysisPath(caseId, "details")}#mitre-${techniqueId}`}
             title={`ATT&CK ${techniqueId}`}
             className="inline-flex h-6 items-center px-1 text-xs font-medium text-ink-secondary underline-offset-2 hover:text-ink hover:underline"
           >
             {techniqueId}
-          </a>
+          </Link>
         ))}
         {finding.reasoningSummary && (
           <DisclosureToggle
@@ -119,9 +122,11 @@ function SourceGroup({
 }
 
 export function CaseFindingsSection({
+  caseId,
   findings,
   ...sourceActions
 }: FindingSourceActions & {
+  caseId: string;
   findings: CaseFinding[];
 }) {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
@@ -156,6 +161,7 @@ export function CaseFindingsSection({
               {visible.map((finding) => (
                 <FindingRow
                   key={finding.id}
+                  caseId={caseId}
                   finding={finding}
                   showClaimType={showClaimType}
                   {...sourceActions}
