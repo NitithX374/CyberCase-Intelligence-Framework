@@ -75,11 +75,11 @@ async def evaluate_mitre_applicability_encoder(
     *,
     case_sources: Sequence[CaseSourceItem],
 ) -> MitreApplicabilityRecord:
-    sentences = split_sources(case_sources)
+    sentences = await asyncio.to_thread(split_sources, case_sources)
     if not sentences:
         return skipped_mitre_applicability()
 
-    threshold = loaded_gate().threshold
+    threshold = (await asyncio.to_thread(loaded_gate)).threshold
     measured = await asyncio.to_thread(scores, [item.text for item in sentences])
 
     triggered = sorted(

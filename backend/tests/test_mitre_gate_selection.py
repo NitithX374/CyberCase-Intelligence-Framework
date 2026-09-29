@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 
 import pytest
 
@@ -9,6 +10,7 @@ from app.analysis.technical_context.gate_llm import (
     evaluate_mitre_applicability,
     validate_mitre_applicability,
 )
+from app.analysis.technical_context.sentences import split_sources
 from app.config import settings
 from app.sources.bundle import CaseSourceItem
 
@@ -62,6 +64,38 @@ def test_the_encoder_gate_quotes_the_sentence_it_fired_on(mode, monkeypatch, sou
     assert record.source_message_ids == ["S1"]
     assert record.trigger_text == [CYBER]
     assert PLAIN not in record.trigger_text
+
+
+def test_the_encoder_gate_keeps_its_heavy_work_off_the_event_loop(mode, monkeypatch, sources):
+    from app.analysis.technical_context import gate_encoder as encoder
+
+    mode("encoder")
+    threads: dict[str, int] = {}
+
+    def split(case_sources):
+        threads["split"] = threading.get_ident()
+        return split_sources(case_sources)
+
+    def loaded():
+        threads["load"] = threading.get_ident()
+        return encoder.Loaded(None, None, None, 1, 0.5, 96)
+
+    def scored(texts):
+        threads["scores"] = threading.get_ident()
+        return [0.9 if CYBER in t else 0.1 for t in texts]
+
+    monkeypatch.setattr(encoder, "split_sources", split)
+    monkeypatch.setattr(encoder, "loaded_gate", loaded)
+    monkeypatch.setattr(encoder, "scores", scored)
+
+    async def gate_on_this_loop():
+        return await mitre_gate(case_sources=sources), threading.get_ident()
+
+    record, loop_thread = asyncio.run(gate_on_this_loop())
+
+    assert record.decision == "RETRIEVE"
+    assert set(threads) == {"split", "load", "scores"}
+    assert loop_thread not in threads.values()
 
 
 def test_what_the_encoder_returns_passes_the_grounding_check(mode, monkeypatch, sources):
