@@ -247,6 +247,13 @@ AGENT_MAX_CONTEXT_CHARS = 10000
 # evaluation/results/retrieval_lab/). "false" restores the old pool.
 TECHNIQUE_POOL = os.getenv("TECHNIQUE_POOL", "true").lower() == "true"
 
+# How many hits each sub-query may contribute to the agent's vector list.
+# Deduping by technique frees slots (some incidents fell to 9–13 of 15), so
+# with the pool each sub-query offers 5 to fill them: held-out
+# StepCoverage@15 0.893 → 0.915, top ranks unchanged. 3 was tested only
+# without the pool, so it stays the value when the pool is off.
+AGENT_PER_QUERY_K = 5 if TECHNIQUE_POOL else 3
+
 # Each broaden round adds this much budget instead of competing for the same
 # space. The first pass already fills the character budget (mean 9258 of 10000
 # over 100 real-CTI incidents), so under a fixed budget a second retrieval can
