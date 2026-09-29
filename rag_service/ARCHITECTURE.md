@@ -46,7 +46,7 @@
 
 | การเปลี่ยนแปลง | ไฟล์ | สาระ |
 |---|---|---|
-| **Single-call generation (variant C)** | `agent_graph._node_reasoning`, `cross_lingual.get_fast_system_prompt`, `config.SINGLE_CALL_GENERATION` | สำหรับ query ไทย: reason บน context อังกฤษ + เขียนคำตอบไทยใน **call เดียว** (ตั้ง `answer_is_final=True` → ข้าม `translate_output`) แทน two-stage reason→translate เดิม พิสูจน์ด้วย benchmark ว่าคุณภาพเท่ากันแต่ latency/ต้นทุนครึ่งเดียว ตั้ง `SINGLE_CALL_GENERATION=false` เพื่อกลับ two-stage |
+| **Single-call generation (variant C)** | `agent_graph._node_reasoning`, `cross_lingual.get_fast_system_prompt` | reason บน context + เขียนคำตอบในภาษาของ query ใน **call เดียว** แทน two-stage reason→translate เดิม พิสูจน์ด้วย benchmark ว่าคุณภาพเท่ากันแต่ latency/ต้นทุนครึ่งเดียว agent ไม่มีขั้นแปลแล้ว (two-stage เหลือเป็น baseline ใน evaluation เท่านั้น) |
 | **🔥 ถอด Follow-up module ออกทั้งหมด** | `agent_graph`, `evaluator`, `routers/rag.py`, ลบ `query_merger.py` | ความสามารถถาม-ตอบย้อนกลับ (pause → ถาม → `resume`) **ถูกย้ายไปเป็นหน้าที่ของ Backend** แล้ว: ลบ `POST /resume`, `GraphRAGAgent.resume()`, session store, slot machinery (`incident_facts`/`asked_slots`/`missing_slot`) — pipeline วิ่งจบรอบเดียวเสมอ (`status` = `completed` ตลอด) INSUFFICIENT ตอนนี้ไปทาง **BROADEN_SEARCH** (agent เขียน query ใหม่เองแล้ววน retrieve, เพดาน 2 รอบ) แทนการถามผู้ใช้ ดูรายละเอียด: `docs/FOLLOWUP_REMOVAL.md` |
 | **Batched Neo4j expansion** | `graph_retriever.expand_batch` | `expand()` เดิมวน `_expand_single` ทีละ seed (3N round-trip) → รวมเป็น 3 Cypher UNWIND ต่อ seed list (เร็ว 3.5× ที่ชั้น expand, ผลเหมือนเดิม) |
 | **Device-aware model loading** | `config.DEVICE`, `config.USE_FP16`, `reranker` | auto GPU/CPU; `USE_FP16 = (DEVICE=="cuda")` — fp16 เฉพาะ GPU (prod Railway = CPU → fp32); override ด้วย `RAG_DEVICE=cpu\|cuda` |
@@ -122,7 +122,7 @@ flowchart TD
 | **Per-query Quota Retrieval** | `hybrid_retriever.retrieve_multi_quota` | เก็บ top-`per_query_k` ของแต่ละ sub-query แล้ว round-robin interleave → ทุก technique ได้พื้นที่ |
 | **Self-reflection / Self-RAG loop** | `pipeline/evaluator.py` + agent edges | LLM ประเมิน context พอหรือไม่ → SUFFICIENT / INSUFFICIENT → **BROADEN_SEARCH** (agent เขียน query ใหม่เอง แล้ววน retrieve ซ้ำ เพดาน `MAX_BROADEN_RETRIES=2`); ไม่มีการหยุดถามผู้ใช้แล้ว |
 | **Retrieval query sanitizer** | `pipeline/query_sanitizer.py` | ตัด markdown + ATT&CK ID token ออกจาก query ที่ LLM เขียน (BROADEN_SEARCH) ก่อนเข้า embedding — กันไปแมตช์ metadata แทน description |
-| **Cross-lingual generation** | `cross_lingual` prompts, `agent_graph._node_reasoning` | **Default (agent, variant C):** call เดียว — reason บน EN context + เขียนไทยเลย (`get_fast_system_prompt`, `answer_is_final=True`). **Fallback (`SINGLE_CALL_GENERATION=false` / chain path):** two-stage — reasoning LLM → EN แล้ว translation LLM → Thai. หมายเหตุ: agent path ไม่แปล query ขาเข้า (ไทยเข้า retrieval ตรงๆ) |
+| **Cross-lingual generation** | `cross_lingual` prompts, `agent_graph._node_reasoning` | **Agent:** call เดียว — query ไทยใช้ `get_fast_system_prompt` เขียนไทยเลย, query อังกฤษใช้ `get_reasoning_system_prompt`; ไม่มีขั้นแปลทั้งขาเข้าและขาออก. **Chain path (evaluation เท่านั้น):** two-stage — reasoning LLM → EN แล้ว translation LLM → Thai |
 | **Faithful MITRE table** | `Backend ReportGenerator` | สร้างตารางจาก entity ที่ retrieve จริง (ไม่ใช่จาก LLM) → ID ไม่ถูก hallucinate |
 | **CJK Thai-only guard** | `Backend ReportGenerator` | ตรวจ token จีน/ญี่ปุ่น/เกาหลีหลุดในรายงาน → re-translate field เป็นไทยล้วน |
 | **Domain filter (mobile กันปน)** | `vector_retriever.search_entities` + `config.ATTACK_DOMAIN_FILTER` | กรอง entity ให้เหลือ domain enterprise หลัง retrieval |
@@ -270,7 +270,7 @@ rag_service/
 
 ### 6.2 `POST /query` (agent)
 `route_query` → `prepare` (ตรวจภาษา) → `retrieve` (decompose → `retrieve_multi_quota` → `build_context`) → `evaluate_context` →
-- **SUFFICIENT** → `reasoning` → END (single-call เขียนไทยเลย) / หรือ → `translate_output` → END (two-stage เมื่อ `SINGLE_CALL_GENERATION=false`)
+- **SUFFICIENT** → `reasoning` → END (เขียนคำตอบสุดท้ายในภาษาของ query)
 - **INSUFFICIENT** + ยังมีโควตา (`broaden_count < MAX_BROADEN_RETRIES=2`) + evaluator ให้ `new_query` ที่ใช้ได้ → `broaden_search` → วน `retrieve`
 - **INSUFFICIENT** แต่หมดโควตา / ไม่มี rewrite ที่ใช้ได้ → `reasoning` (ตอบด้วย context เท่าที่มี; ถ้า strategy = `ACKNOWLEDGE_LIMIT` จะคืนข้อความบอกข้อจำกัดแทน)
 
@@ -284,11 +284,10 @@ flowchart TD
     EVAL -->|SUFFICIENT| REASON["reasoning LLM"]
     EVAL -->|"INSUFFICIENT + มีโควตา + มี new_query"| BRD["broaden_search<br/>(agent เขียน query ใหม่เอง)"] --> RET
     EVAL -->|"INSUFFICIENT + หมดโควตา"| REASON
-    REASON -->|respond_in_thai และไม่ answer_is_final| TR["translate_output"] --> E3([END])
-    REASON -->|single-call / else| E4([END])
+    REASON --> E4([END])
 ```
 
-> **single-call (default):** node `reasoning` เขียนไทยเลย ตั้ง `answer_is_final=True` → ข้าม `translate_output`
+> **single-call:** node `reasoning` เขียนคำตอบสุดท้ายในภาษาของ query; โน้ต ACKNOWLEDGE_LIMIT ส่งตามที่ evaluator เขียน (ถ้า query ไทยแต่โน้ตไม่มีภาษาไทยจะใช้โน้ตภาษาไทยคงที่แทน)
 > **ไม่มี pause แล้ว** — graph วิ่งถึง END ทุกครั้ง `query()` คืน `status="completed"` เสมอ ถ้าต้องการถามผู้ใช้เพิ่ม ผู้เรียก (Backend) จัดการเองแล้วเรียก `/query` ใหม่ด้วยข้อความเหตุการณ์ที่เติมข้อมูลแล้ว
 
 
@@ -317,7 +316,7 @@ flowchart TD
 - **Paths**: `_SCRIPT_DIR`, `_PROJECT_ROOT`, `_STIX_DATA_DIR`, `ENTERPRISE/MOBILE/ICS_ATTACK_DIR`
 - **Embedding**: `EMBED_MODEL="BAAI/bge-m3"`, `EMBED_DIM=1024`
 - **Device (auto)**: `DEVICE` = cuda ถ้ามี GPU ไม่งั้น cpu (`_resolve_device()`, override `RAG_DEVICE=cpu|cuda`); `USE_FP16 = (DEVICE=="cuda")` — fp16 เฉพาะ GPU, prod Railway (CPU) ใช้ fp32
-- **Generation**: `SINGLE_CALL_GENERATION=True` (env) — agent path เขียนไทยใน call เดียว; `false` = two-stage reason→translate
+- **Generation**: agent path เขียนคำตอบใน call เดียว ไม่มีขั้นแปล (flag `SINGLE_CALL_GENERATION` ถูกถอดแล้ว)
 - **Qdrant**: `QDRANT_HOST/PORT/API_KEY/URL`, `QDRANT_COLLECTION_ENTITIES/RELATIONSHIPS`
 - **RRF**: `RRF_K=60`, `DENSE_WEIGHT=1.0`, `SPARSE_WEIGHT=1.0`
 - **Neo4j**: `NEO4J_URI/USER/PASSWORD`
@@ -367,11 +366,9 @@ flowchart TD
 | `._node_retrieve(state)` | full query เป็น channel แรก + decompose sub-queries + rewrites → `retrieve_multi_quota` → `build_context` |
 | `._node_evaluate_context(state)` | เรียก `evaluator.evaluate` พร้อม `retry_count=broaden_count` → set evaluation/strategy/gap/ack |
 | `._node_broaden_search(state)` | sanitize + append `new_query` จาก evaluation, เพิ่ม broaden_count แล้ววน retrieve |
-| `._node_reasoning(state)` | **Single-call (default, query ไทย):** `get_fast_system_prompt` → คำตอบไทยเลย ตั้ง `answer_is_final=True`. **Two-stage (`SINGLE_CALL_GENERATION=false`):** `get_reasoning_system_prompt` → คำตอบอังกฤษ. มี fast-path ACKNOWLEDGE_LIMIT เมื่อ verdict = INSUFFICIENT (การมาถึง node นี้พร้อม verdict นี้แปลว่า broaden หมดโควตาแล้ว); ใช้ `build_generation_prompt` |
-| `._node_translate_output(state)` | translation LLM → ไทย (`get_translation_system_prompt`); **ถูกข้ามเมื่อ `answer_is_final=True`** (single-call เขียนไทยแล้ว) |
+| `._node_reasoning(state)` | query ไทย: `get_fast_system_prompt` → คำตอบไทยเลย; query อังกฤษ: `get_reasoning_system_prompt`. มี fast-path ACKNOWLEDGE_LIMIT เมื่อ verdict = INSUFFICIENT บน pass แรก (answerability gate) — คืนโน้ตของ evaluator ผ่าน `_in_query_language`; ใช้ `build_generation_prompt` |
 | `._edge_after_route(state)` *(static)* | ปัจจุบันคืน "incident" เสมอ (router ถูกปิดชั่วคราว) |
 | `._edge_after_evaluation(state)` *(static)* | SUFFICIENT→reasoning; INSUFFICIENT + `broaden_count<2` + `new_query` ที่ sanitize แล้วไม่ว่าง→broaden; นอกนั้น→reasoning (ตอบด้วยเท่าที่มี) |
-| `._edge_after_reasoning(state)` *(static)* | ถ้า `respond_in_thai` **และไม่ `answer_is_final`** → translate; ไม่งั้น → done (single-call ข้าม translate) |
 
 #### `chain.py` — Linear LCEL pipeline
 
@@ -404,7 +401,7 @@ flowchart TD
 | `CrossLingualLayer.__init__(use_local)` | สร้าง translate LLM (256 tokens) หรือ None ถ้าไม่มี key |
 | `.translate_query(query)` | Thai→EN; ถ้าเป็นอังกฤษอยู่แล้ว/ไม่มี LLM คืนเดิม |
 | `.get_reasoning_system_prompt()` *(static)* | คืน `REASONING_SYSTEM_PROMPT` |
-| `.get_translation_system_prompt()` *(static)* | คืน `TRANSLATE_TO_THAI_SYSTEM_PROMPT` |
+| `.get_translation_system_prompt()` *(static)* | คืน `TRANSLATE_TO_THAI_SYSTEM_PROMPT` — ใช้เฉพาะ baseline two-stage ใน evaluation (`chain.py`, `crosslingual_generation_benchmark.py`) |
 | `.should_respond_in_thai(query)` *(static)* | = `_is_thai(query)` |
 
 #### `query_decomposer.py`

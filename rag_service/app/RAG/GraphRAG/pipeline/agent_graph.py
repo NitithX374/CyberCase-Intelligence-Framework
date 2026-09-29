@@ -19,9 +19,12 @@ The only pipeline serving ``POST /query``. A stateful graph that supports:
                                         ↓             ↓
                                    reasoning     broaden_search
                                         ↓             ↓
-                               translate_output  retrieve_quota (loop)
-                                        ↓      (max 2 broaden iterations,
-                                     output     then answer with what we have)
+                                     output      retrieve_quota (loop)
+                                               (max 2 broaden iterations,
+                                                then answer with what we have)
+
+ ``reasoning`` writes the final answer in the query's language in one call;
+ nothing is translated on the way in or out.
 
  The pipeline never pauses for user input — ``query()`` always returns a
  completed answer. Interactive clarification is owned by the caller
@@ -30,6 +33,7 @@ The only pipeline serving ``POST /query``. A stateful graph that supports:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Optional, TypedDict
 
@@ -49,7 +53,6 @@ from ..config import (
     LLM_MAX_TOKENS,
     LLM_MODEL,
     LLM_TEMPERATURE,
-    SINGLE_CALL_GENERATION,
     ULTRAFAST_MAX_TOKENS,
     ULTRAFAST_TOP_K,
     USE_FP16,
@@ -75,6 +78,24 @@ from .evaluator import (
 from .query_sanitizer import sanitize_retrieval_query
 from .router import QueryRouter
 
+_THAI_CHARS = re.compile(r"[฀-๿]")
+
+# The evaluator is told to write its ACKNOWLEDGE_LIMIT note in the query's
+# language, and a Thai note used to pass through a translation call anyway.
+# With that call gone, a note that comes back without any Thai is replaced by
+# this one rather than breaking the Thai-output contract.
+_THAI_LIMIT_NOTE = (
+    "ข้อมูลในสำนวนหรือในฐานข้อมูล MITRE ATT&CK ยังไม่เพียงพอสำหรับการวิเคราะห์ส่วนนี้ "
+    "โปรดระบุการกระทำของผู้กระทำผิด ช่องทางการเข้าถึง และระบบที่ได้รับผลกระทบให้ละเอียดขึ้น"
+)
+
+
+def _in_query_language(message: str, respond_in_thai: bool) -> str:
+    """The evaluator's note, or the fixed Thai note if a Thai reply got none."""
+    if respond_in_thai and not _THAI_CHARS.search(message or ""):
+        return _THAI_LIMIT_NOTE
+    return message
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # State definition
@@ -95,7 +116,6 @@ class AgentState(TypedDict, total=False):
     # original query verbatim. Renaming it would touch the evaluator contract.
     english_query: str
     respond_in_thai: bool
-    answer_is_final: bool  # single-call generation already produced Thai
 
     # ── Retrieval ─────────────────────────────────────────────────────────
     graphrag_result: Any  # GraphRAGResult
@@ -178,9 +198,8 @@ class GraphRAGAgent:
         self.evaluator = ContextEvaluator()
         self.decomposer = QueryDecomposer()
 
-        # Both LLMs are the same model; the system prompt draws the stage
-        # boundary. reasoning_llm and translation_llm are set (and cleared)
-        # together, so downstream None-checks only ever see both or neither.
+        # One client writes the answer: it reasons over the context and writes
+        # the final text in the query's language in the same call.
         try:
             target = resolve_core_llm_target(LLM_MODEL)
             self.reasoning_llm = create_core_chat_model(
@@ -188,26 +207,10 @@ class GraphRAGAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
             )
-            self.translation_llm = create_core_chat_model(
-                anthropic_model=LLM_MODEL,
-                temperature=LLM_TEMPERATURE,
-                max_tokens=LLM_MAX_TOKENS,
-            )
             print(f"[AGENT] Reasoning LLM : {target.model} ({target.provider})")
-            print(f"[AGENT] Translation LLM: {target.model} ({target.provider})")
         except CoreLlmConfigurationError as exc:
             self.reasoning_llm = None
-            self.translation_llm = None
             print(f"[AGENT] No cloud LLM configured: {exc}")
-
-        print(
-            "[AGENT] Generation    : "
-            + (
-                "single-call (Thai direct, variant C)"
-                if SINGLE_CALL_GENERATION
-                else "two-stage (reason EN -> translate TH)"
-            )
-        )
 
         # Build the LangGraph
         self.graph = self._build_graph()
@@ -425,7 +428,6 @@ class GraphRAGAgent:
         graph.add_node("evaluate_context", self._node_evaluate_context)
         graph.add_node("broaden_search", self._node_broaden_search)
         graph.add_node("reasoning", self._node_reasoning)
-        graph.add_node("translate_output", self._node_translate_output)
 
         # ── Entry point ───────────────────────────────────────────────
         graph.set_entry_point("route_query")
@@ -458,17 +460,8 @@ class GraphRAGAgent:
 
         graph.add_edge("broaden_search", "retrieve")
 
-        # Reasoning → optional translation → END
-        graph.add_conditional_edges(
-            "reasoning",
-            self._edge_after_reasoning,
-            {
-                "translate": "translate_output",
-                "done": END,
-            },
-        )
-
-        graph.add_edge("translate_output", END)
+        # Reasoning writes the final answer
+        graph.add_edge("reasoning", END)
 
         return graph.compile()
 
@@ -654,11 +647,10 @@ class GraphRAGAgent:
         }
 
     def _node_reasoning(self, state: AgentState) -> dict:
-        """Reasoning LLM — synthesize the retrieved context into the answer.
+        """Reasoning LLM — write the final answer from the retrieved context.
 
-        For a Thai query this writes the final Thai directly (single-call) and
-        the translate node is skipped. English queries, and the whole path when
-        SINGLE_CALL_GENERATION is off, produce English for translate_output.
+        One call reasons over the context and writes the answer in the query's
+        language: Thai for a Thai query, English otherwise.
         """
         verbose = state.get("verbose", True)
         strategy = state.get("strategy", "")
@@ -692,17 +684,18 @@ class GraphRAGAgent:
             and verdict == VERDICT_INSUFFICIENT
         )
         if acknowledged and state.get("broaden_count", 0) == 0:
+            message = _in_query_language(ack_message, state.get("respond_in_thai", False))
             if verbose:
                 sep("AGENT — REASONING LLM (ACKNOWLEDGE_LIMIT)")
-                print(ack_message)
-            return {"answer": ack_message}
+                print(message)
+            return {"answer": message}
 
         # ── Standard reasoning ────────────────────────────────────────────
-        # Single-call generation (benchmark variant C): write the final Thai
-        # answer in this call — the translate_output node is skipped via
-        # answer_is_final. Statistically equal quality to the two-stage path
-        # at ~2.3x lower latency (see evaluation/results/).
-        single_call = SINGLE_CALL_GENERATION and state.get("respond_in_thai", False)
+        # One call writes the final answer in the query's language. It replaced
+        # reason-in-English-then-translate after measuring equal quality
+        # (ID-F1 −0.011, CI crossing 0) at 2.3x lower latency
+        # (evaluation/results/crosslingual_generation_report.md).
+        single_call = state.get("respond_in_thai", False)
 
         reasoning_prompt = build_generation_prompt(
             context=state.get("context", ""),
@@ -735,41 +728,13 @@ class GraphRAGAgent:
         # analysis. It is written in the query's language, so it needs no
         # translation stage of its own.
         if acknowledged:
-            answer = f"{answer}\n\n{ack_message}"
+            answer = f"{answer}\n\n{_in_query_language(ack_message, single_call)}"
 
         if verbose:
             sep("ANSWER (Thai, single-call)" if single_call else "ENGLISH ANSWER")
             print(answer)
 
-        return {"answer": answer, "answer_is_final": single_call}
-
-    def _node_translate_output(self, state: AgentState) -> dict:
-        """Stage 3: Translation LLM — render English answer into Thai."""
-        verbose = state.get("verbose", True)
-        simplified = state.get("answer", "")
-
-        if not self.translation_llm:
-            return {"answer": simplified}
-
-        if verbose:
-            sep("AGENT — TRANSLATION LLM (English → Thai)")
-
-        response = self.translation_llm.invoke(
-            [
-                SystemMessage(
-                    content=CrossLingualLayer.get_translation_system_prompt()
-                ),
-                HumanMessage(content=simplified),
-            ]
-        )
-        thai_answer = require_message_text(response, operation="Thai answer translation")
-
-        if verbose:
-            sep("ANSWER (Thai)")
-            print(thai_answer)
-            sep()
-
-        return {"answer": thai_answer}
+        return {"answer": answer}
 
     # ------------------------------------------------------------------
     # Edge routing functions
@@ -818,17 +783,3 @@ class GraphRAGAgent:
             return "broaden"
 
         return "sufficient"
-
-    @staticmethod
-    def _edge_after_reasoning(state: AgentState) -> str:
-        """Decide whether to translate the answer to Thai.
-
-        Skipped when single-call generation already wrote the Thai answer
-        (answer_is_final). The ACKNOWLEDGE_LIMIT fast path never sets that
-        flag, so its (possibly English) message still gets translated.
-        """
-        if state.get("respond_in_thai", False) and not state.get(
-            "answer_is_final", False
-        ):
-            return "translate"
-        return "done"
