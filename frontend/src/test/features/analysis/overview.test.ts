@@ -9,7 +9,7 @@ import {
   sourceId,
   trace,
 } from "@/test/fixtures";
-import { buildCaseOverview } from "@/features/analysis/overview";
+import { buildCaseOverview, gapTopic } from "@/features/analysis/overview";
 
 const quote = "The witness saw a blue vehicle.";
 
@@ -189,5 +189,20 @@ describe("Case overview projection", () => {
     const overview = buildCaseOverview(analysis, [narrativeSource(quote)]);
 
     expect(overview.findings[0].techniqueIds).toEqual(["T1566"]);
+  });
+});
+
+describe("gap topics", () => {
+  it("names a checklist key in words", () => {
+    expect(gapTopic("how_much", "how_much")).toBe("How much");
+    expect(gapTopic("who_responsible", "who_responsible")).toBe("Who carried it out");
+  });
+
+  it("spells out a key of the analysis's own when it stands in for the topic", () => {
+    expect(gapTopic("log_file_exists", "log_file_exists")).toBe("Log file exists");
+  });
+
+  it("keeps a topic that is not its key", () => {
+    expect(gapTopic("มูลค่าทรัพย์สิน", "how_much")).toBe("มูลค่าทรัพย์สิน");
   });
 });

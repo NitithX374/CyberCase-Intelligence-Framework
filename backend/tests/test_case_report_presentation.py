@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from pypdf import PdfReader
 
+from app.analysis.prompts import CASE_CHECKLIST
 from app.analysis.technical_context.contracts import (
     CaseTechnicalAugmentation,
     MitreApplicabilityRecord,
@@ -14,7 +15,12 @@ from app.analysis.technical_context.contracts import (
 )
 from app.models.source import CaseSource
 from app.reports.contracts import CaseReportInput
-from app.reports.display import SOURCE_KINDS, build_case_report_content, thai_date
+from app.reports.display import (
+    CHECKLIST_TOPICS,
+    SOURCE_KINDS,
+    build_case_report_content,
+    thai_date,
+)
 from app.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf
 from app.reports.schemas import CaseReportContent
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
@@ -436,3 +442,21 @@ def test_the_source_register_names_exactly_the_kinds_a_case_source_can_have() ->
         if constraint.name == "ck_case_sources_kind"
     ]
     assert set(SOURCE_KINDS) == set(re.findall(r"'(\w+)'", str(constraint.sqltext)))
+
+
+def test_a_gap_named_by_its_checklist_key_reads_as_words() -> None:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    gap = trace.gaps[0].model_copy(update={"gap_key": "how_much", "topic": "how_much"})
+    report = build_case_report_content(
+        report_input.model_copy(update={"analysis_trace": trace.model_copy(update={"gaps": [gap]})})
+    )
+
+    [row] = report.gaps
+    assert row.topic == "ขอบเขตความเสียหาย"
+    assert report.recommendations[0].startswith("ตรวจสอบเพิ่มเติมในประเด็น ขอบเขตความเสียหาย")
+    assert "how_much" not in report.model_dump_json()
+
+
+def test_every_checklist_key_has_a_report_topic() -> None:
+    assert set(CHECKLIST_TOPICS) == set(CASE_CHECKLIST)
