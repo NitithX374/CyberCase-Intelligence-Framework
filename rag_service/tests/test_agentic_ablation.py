@@ -43,13 +43,11 @@ class _StubAgent:
 
     initial_state = staticmethod(GraphRAGAgent.initial_state)
     _node_prepare = GraphRAGAgent._node_prepare
-    _edge_after_reasoning = staticmethod(GraphRAGAgent._edge_after_reasoning)
 
     def __init__(self, script):
         self.router = SimpleNamespace(llm=_Llm())
         self.evaluator = SimpleNamespace(llm=_Llm())
         self.reasoning_llm = _Llm("branch answer T1190")
-        self.translation_llm = _Llm()
         agent = self
         self.decomposer = SimpleNamespace(llm=_Llm())
         self.decomposer.decompose = lambda incident, verbose=False: [
@@ -72,7 +70,7 @@ class _StubAgent:
             yield {node: update}
 
     def _node_reasoning(self, state):
-        return {"answer": self.reasoning_llm.invoke("q").content, "answer_is_final": True}
+        return {"answer": self.reasoning_llm.invoke("q").content}
 
 
 def _evaluation(verdict, strategy="", new_query="", message=""):
@@ -99,7 +97,7 @@ def test_loop_not_fired_b_is_a():
         ("prepare", {"english_query": "เหตุการณ์", "respond_in_thai": True}),
         ("retrieve", _retrieve("ctx-1")),
         ("evaluate_context", {"evaluation": _evaluation("SUFFICIENT")}),
-        ("reasoning", {"answer": "A answer T1566", "answer_is_final": True}),
+        ("reasoning", {"answer": "A answer T1566"}),
     ])
     assert a["llm_calls"] == 4
     assert a["calls_by_stage"] == {"router": 1, "decompose": 1, "evaluate": 1, "reasoning": 1}
@@ -122,7 +120,7 @@ def test_broaden_fired_b_reasons_on_first_context():
         ("broaden_search", {"rewritten_queries": ["rewrite"], "broaden_count": 1}),
         ("retrieve", _retrieve("ctx-2")),
         ("evaluate_context", {"evaluation": _evaluation("SUFFICIENT")}),
-        ("reasoning", {"answer": "A answer", "answer_is_final": True}),
+        ("reasoning", {"answer": "A answer"}),
     ])
     assert a["calls_by_stage"] == {"router": 1, "decompose": 2, "evaluate": 2, "reasoning": 1}
     assert (a["broaden_rounds"], a["n_retrieves"], a["b_identical"]) == (1, 2, False)
@@ -140,8 +138,7 @@ def test_acknowledge_limit_detected_without_broaden():
         ("prepare", {"english_query": "เหตุการณ์", "respond_in_thai": True}),
         ("retrieve", _retrieve("ctx-1")),
         ("evaluate_context", {"evaluation": _evaluation("INSUFFICIENT", "ACKNOWLEDGE_LIMIT", message="too vague")}),
-        ("reasoning", {"answer": "too vague", "_ack": True}),
-        ("translate_output", {"answer": "คลุมเครือ"}),
+        ("reasoning", {"answer": "คลุมเครือ", "_ack": True}),
     ])
     assert (a["broaden_rounds"], a["ack_limit"], a["b_identical"]) == (0, True, False)
     b = derive_b(agent, meter, a, "เหตุการณ์")

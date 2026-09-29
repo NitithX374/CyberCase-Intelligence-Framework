@@ -376,8 +376,9 @@ def derive_b(agent, meter: _LlmMeter, a_row: dict, query: str) -> dict:
             "output_tokens": sum(t["out"] for t in parts),
         }
 
-    # The loop changed A's answer path: run the served reasoning (and, if the
-    # served edge asks for it, translation) nodes on the first-pass context.
+    # The loop changed A's answer path: run the served reasoning node on the
+    # first-pass context. ("translate_output" in trace filters matches rows
+    # recorded before the translate node was removed.)
     state = dict(agent.initial_state(query, verbose=False))
     state.update(agent._node_prepare(state))
     state["context"] = a_row["first_context"]
@@ -385,8 +386,6 @@ def derive_b(agent, meter: _LlmMeter, a_row: dict, query: str) -> dict:
     mark = len(meter.events)
     t0 = time.perf_counter()
     state.update(agent._node_reasoning(state))
-    if agent._edge_after_reasoning(state) == "translate":
-        state.update(agent._node_translate_output(state))
     branch_ms = (time.perf_counter() - t0) * 1000
     branch = _summarise_events(meter.events[mark:])
 
@@ -478,8 +477,6 @@ def run_ack_fix(agent, meter: _LlmMeter, a_row: dict, query: str) -> dict:
     mark = len(meter.events)
     t0 = time.perf_counter()
     state.update(agent._node_reasoning(state))
-    if agent._edge_after_reasoning(state) == "translate":
-        state.update(agent._node_translate_output(state))
     branch_ms = (time.perf_counter() - t0) * 1000
     branch = _summarise_events(meter.events[mark:])
 
@@ -569,8 +566,6 @@ def run_merge_fix(agent, meter: _LlmMeter, a_row: dict, f_row: dict, query: str)
     mark = len(meter.events)
     t1 = time.perf_counter()
     state.update(agent._node_reasoning(state))
-    if agent._edge_after_reasoning(state) == "translate":
-        state.update(agent._node_translate_output(state))
     answer_ms = (time.perf_counter() - t1) * 1000
     branch = _summarise_events(meter.events[mark:])
 
