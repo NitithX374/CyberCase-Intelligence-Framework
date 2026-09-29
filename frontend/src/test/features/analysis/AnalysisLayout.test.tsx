@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { AnalysisLayout } from "@/features/analysis/AnalysisLayout";
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
@@ -103,7 +104,10 @@ interface MockOverrides {
   analysisRunning?: boolean;
 }
 
-function configureAndRender(overrides: MockOverrides = {}) {
+function configureAndRender(
+  overrides: MockOverrides = {},
+  children: ReactNode = <p>Section content</p>,
+) {
   const projection = caseProjection();
   const result =
     overrides.analysisResult !== undefined ? overrides.analysisResult : projection.result;
@@ -124,11 +128,7 @@ function configureAndRender(overrides: MockOverrides = {}) {
   vi.mocked(useIsCaseAnalysisRunning).mockReturnValue(overrides.analysisRunning ?? false);
   vi.mocked(useIsFollowupPending).mockReturnValue(overrides.followupPending ?? false);
 
-  render(
-    <AnalysisLayout>
-      <p>Section content</p>
-    </AnalysisLayout>,
-  );
+  render(<AnalysisLayout>{children}</AnalysisLayout>);
 }
 
 beforeEach(() => {
@@ -296,6 +296,40 @@ describe("AnalysisLayout", () => {
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(state.refetchAnalysis).toHaveBeenCalledOnce();
     expect(state.runAnalysis).not.toHaveBeenCalled();
+  });
+
+  describe("scrolling", () => {
+    let scrolled: Element[];
+
+    beforeEach(() => {
+      scrolled = [];
+      Object.defineProperty(Element.prototype, "scrollIntoView", {
+        configurable: true,
+        value(this: Element) {
+          scrolled.push(this);
+        },
+      });
+    });
+
+    afterEach(() => {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+      window.location.hash = "";
+    });
+
+    it("brings the top of the section into view when a section opens", () => {
+      state.segment = "details";
+      configureAndRender();
+
+      expect(scrolled).toEqual([screen.getByRole("region", { name: "Case analysis" })]);
+    });
+
+    it("brings a linked ATT&CK entry into view instead of the top of the section", () => {
+      window.location.hash = "#mitre-T1566";
+      state.segment = "details";
+      configureAndRender({}, <article id="mitre-T1566">T1566 Phishing</article>);
+
+      expect(scrolled).toEqual([screen.getByRole("article")]);
+    });
   });
 
   it("does not show findings stripped of their sources when the sources fail to load", () => {

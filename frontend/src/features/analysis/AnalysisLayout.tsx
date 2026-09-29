@@ -25,7 +25,9 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
   const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    panelRef.current?.scrollIntoView?.({ block: "start" });
+    const hash = window.location.hash.slice(1);
+    const target = hash ? document.getElementById(hash) : null;
+    (target ?? panelRef.current)?.scrollIntoView?.({ block: "start" });
   }, [section]);
 
   const navigateToSources = () => router.push(casePath(caseId, "sources"));
