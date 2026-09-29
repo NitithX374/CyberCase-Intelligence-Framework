@@ -51,18 +51,27 @@ test.describe("case lifecycle", () => {
       .toBe("validated");
 
     await page.reload();
+    const sections = page.getByRole("navigation", { name: "Analysis sections" });
     await expect(page.getByRole("heading", { name: "Summary", exact: true })).toBeVisible();
+    await sections.getByRole("link", { name: /^Findings/ }).click();
+    await expect(page).toHaveURL(/\/analysis\/findings$/, { timeout: 60_000 });
     await expect(page.getByText(narrative, { exact: true })).toBeVisible();
 
-    await expect(page.getByRole("region", { name: "Technical Context" })).toBeVisible();
+    await sections.getByRole("link", { name: "Details" }).click();
+    await expect(page.getByRole("region", { name: "Technical Context" })).toBeVisible({
+      timeout: 60_000,
+    });
+    await sections.getByRole("link", { name: "Report" }).click();
     const report = page.getByRole("region", { name: "Case report" });
-    await report.scrollIntoViewIfNeeded();
-    await expect(report.getByRole("heading", { name: "Report", exact: true })).toBeVisible();
+    await expect(report.getByRole("heading", { name: "Report", exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
 
     await page.locator("#workspace-tab-sources").click();
     await expect(page.getByRole("tabpanel", { name: "Case sources" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: "Case narrative" })).toBeVisible();
     await page.locator("#workspace-tab-analysis").click();
+    await sections.getByRole("link", { name: "Report" }).click();
     await page.getByRole("button", { name: "Generate report" }).first().click();
     await expect(page.getByRole("article", { name: "Persisted report" })).toBeVisible({
       timeout: 30_000,

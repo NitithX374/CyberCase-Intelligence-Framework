@@ -20,6 +20,7 @@ import {
   sourcesRead,
   trace,
 } from "@/test/fixtures";
+import CaseAnalysisLayout from "@/app/case/[caseId]/analysis/layout";
 import CaseAnalysisPage from "@/app/case/[caseId]/analysis/page";
 import CaseShellLayout from "@/app/case/[caseId]/layout";
 import SourcesPage from "@/app/case/[caseId]/sources/page";
@@ -201,7 +202,11 @@ describe("the case workspace", () => {
     localStorage.setItem("cybercase:chat-open", "true");
     backend.chat = { case_id: caseId, messages: [question], pending_question_id: question.id };
     backend.send.mockReturnValue(deferred().promise);
-    renderWorkspace(() => <CaseAnalysisPage />);
+    renderWorkspace(() => (
+      <CaseAnalysisLayout>
+        <CaseAnalysisPage />
+      </CaseAnalysisLayout>
+    ));
 
     expect(await screen.findByRole("heading", { name: "Not analyzed yet" })).toBeInTheDocument();
     await screen.findByText(question.content);
@@ -218,7 +223,11 @@ describe("the case workspace", () => {
 
   it("marks the analysis out of date as soon as a source is added", async () => {
     backend.analysis = storedAnalysis();
-    const workspace = renderWorkspace(() => <CaseAnalysisPage />);
+    const workspace = renderWorkspace(() => (
+      <CaseAnalysisLayout>
+        <CaseAnalysisPage />
+      </CaseAnalysisLayout>
+    ));
     expect(await screen.findByText("Up to date")).toBeInTheDocument();
 
     workspace.show("sources", () => <SourcesPage />);
@@ -228,7 +237,11 @@ describe("the case workspace", () => {
       expect(screen.getByRole("tab", { name: /Analysis\s+out of date/ })).toBeInTheDocument(),
     );
 
-    workspace.show("analysis", () => <CaseAnalysisPage />);
+    workspace.show("analysis", () => (
+      <CaseAnalysisLayout>
+        <CaseAnalysisPage />
+      </CaseAnalysisLayout>
+    ));
     await act(async () => {});
 
     expect(await screen.findByText("Out of date")).toBeInTheDocument();
@@ -266,7 +279,11 @@ describe("the case workspace", () => {
       backend.analysis = storedAnalysis();
       throw timeoutError();
     });
-    renderWorkspace(() => <CaseAnalysisPage />);
+    renderWorkspace(() => (
+      <CaseAnalysisLayout>
+        <CaseAnalysisPage />
+      </CaseAnalysisLayout>
+    ));
 
     fireEvent.click(await screen.findByRole("button", { name: "Analyze" }));
 
@@ -328,7 +345,11 @@ describe("the case workspace", () => {
           pending_question_id: null,
         };
       });
-    renderWorkspace(() => <CaseAnalysisPage />);
+    renderWorkspace(() => (
+      <CaseAnalysisLayout>
+        <CaseAnalysisPage />
+      </CaseAnalysisLayout>
+    ));
 
     await screen.findByText(question.content);
     const composer = screen.getByLabelText("Chat message");

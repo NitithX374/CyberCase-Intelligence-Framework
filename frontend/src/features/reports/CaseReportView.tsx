@@ -1,13 +1,9 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import {
-  downloadCaseReportHtml,
-  downloadCaseReportPdf,
-  generateCaseReport,
-  listCaseReports,
-} from "./api";
+import { downloadCaseReportHtml, downloadCaseReportPdf, generateCaseReport } from "./api";
+import { useCaseReports } from "./queries";
 import type { CaseAnalysisResultRead, CaseReportRead } from "@/lib/api/types";
 import { caseQueryKeys } from "@/lib/queryKeys";
 import { useBlobUrl } from "@/lib/useBlobUrl";
@@ -25,11 +21,7 @@ interface CaseReportViewProps {
 export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) {
   const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const reportsQuery = useQuery({
-    queryKey: caseQueryKeys.reports(caseId),
-    queryFn: ({ signal }) => listCaseReports(caseId, signal),
-    retry: false,
-  });
+  const reportsQuery = useCaseReports(caseId);
   const generateMutation = useMutation({
     mutationFn: (resultId: string) => generateCaseReport(caseId, { analysis_result_id: resultId }),
     onSuccess: (report) => {
@@ -73,7 +65,7 @@ export function CaseReportView({ caseId, analysisResult }: CaseReportViewProps) 
       aria-label="Case report"
       className="flex shrink-0 flex-col bg-surface"
     >
-      <div className="mx-auto w-full max-w-[52rem] px-5 pt-16 pb-16 sm:px-8">
+      <div className="mx-auto w-full max-w-[52rem] px-5 pt-8 sm:px-8">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
             <h2 className="text-base font-semibold text-ink">Report</h2>

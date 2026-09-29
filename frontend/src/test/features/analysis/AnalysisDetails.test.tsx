@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   analysisResult,
@@ -9,7 +9,7 @@ import {
   narrativeSource,
   trace,
 } from "@/test/fixtures";
-import { AnalysisPage } from "@/features/analysis/AnalysisPage";
+import { AnalysisDetails } from "@/features/analysis/AnalysisDetails";
 
 const answer = "The attacker came in through the web server.";
 
@@ -18,6 +18,10 @@ const analysis = analysisResult({
   trace_json: trace({
     summary: answer,
     claims: [claim(answer, "QA-01")],
+    timeline: [
+      { time: "Monday night", event: "The web server was breached.", claim_ids: ["A-01"] },
+    ],
+    involved_parties: [{ name: "Acme Ltd", role: "Victim", claim_ids: ["A-01"] }],
     mitre_associations: [
       association("T1190", {
         reason: "The answer describes entry through a public web server.",
@@ -63,33 +67,39 @@ vi.mock("@/features/chat/useCaseChat", () => ({
     throw new Error("The analysis page does not read the live chat.");
   },
 }));
-vi.mock("@/features/analysis/CaseOverviewView", () => ({ CaseOverviewView: () => null }));
-vi.mock("@/features/reports/CaseReportView", () => ({ CaseReportView: () => null }));
 
 beforeEach(() => {
   sourcesState.failed = false;
 });
 
-describe("AnalysisPage", () => {
-  it("shows ATT&CK context that rests on the follow-up answer the analysis recorded", () => {
-    render(<AnalysisPage />);
+describe("AnalysisDetails", () => {
+  it("lists the timeline and parties, then the ATT&CK context below them", () => {
+    render(<AnalysisDetails />);
 
+    const timeline = screen.getByRole("heading", { name: /Timeline/ });
+    const attack = screen.getByRole("heading", { name: "MITRE ATT&CK" });
+    expect(screen.getByText("The web server was breached.")).toBeInTheDocument();
+    expect(screen.getByText("Acme Ltd")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Exploit Public-Facing Application" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(`“${answer}”`)).toBeInTheDocument();
-    expect(screen.getByText("Follow-up answer QA-01")).toBeInTheDocument();
+      timeline.compareDocumentPosition(attack) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it("withholds ATT&CK context while the case sources cannot be loaded", () => {
-    sourcesState.failed = true;
-    render(<AnalysisPage />);
+  it("shows ATT&CK context that rests on the follow-up answer the analysis recorded", () => {
+    render(<AnalysisDetails />);
 
+    const attack = within(screen.getByRole("region", { name: "Technical Context" }));
     expect(
-      screen.queryByRole("heading", { name: "Exploit Public-Facing Application" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("No ATT&CK context is available for this analysis."),
+      attack.getByRole("heading", { name: "Exploit Public-Facing Application" }),
     ).toBeInTheDocument();
+    expect(attack.getByText(`“${answer}”`)).toBeInTheDocument();
+    expect(attack.getByText("Follow-up answer QA-01")).toBeInTheDocument();
+  });
+
+  it("shows nothing of the analysis while the case sources cannot be loaded", () => {
+    sourcesState.failed = true;
+    const { container } = render(<AnalysisDetails />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 });

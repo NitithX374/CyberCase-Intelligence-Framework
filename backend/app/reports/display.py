@@ -15,8 +15,19 @@ from app.reports.schemas import (
     ReportSource,
     ReportTechnique,
 )
-from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
+from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
+
+CHECKLIST_TOPICS = {
+    "who_affected": "ผู้ได้รับผลกระทบ",
+    "who_responsible": "ผู้กระทำ",
+    "what": "สิ่งที่เกิดขึ้น",
+    "when": "เวลาที่เกิดเหตุ",
+    "where": "สถานที่เกิดเหตุ",
+    "why": "มูลเหตุจูงใจ",
+    "how": "วิธีการที่ใช้",
+    "how_much": "ขอบเขตความเสียหาย",
+}
 
 EPISTEMIC_STATUS_LABELS = {
     "reported": "ปรากฏในหลักฐาน",
@@ -122,7 +133,7 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
         rationale_note=rationale_note(augmentation),
         gaps=[
             ReportGap(
-                topic=gap.topic,
+                topic=gap_topic(gap),
                 priority=PRIORITY_LABELS[gap.priority],
                 status=GAP_STATUS_LABELS[gap.status],
                 description=gap.description,
@@ -309,9 +320,15 @@ def rationale_note(augmentation: CaseTechnicalAugmentation | None) -> str | None
     return None
 
 
+def gap_topic(gap: CaseAnalysisGap) -> str:
+    if gap.topic != gap.gap_key:
+        return gap.topic
+    return CHECKLIST_TOPICS.get(gap.gap_key, gap.gap_key.replace("_", " "))
+
+
 def recommendation_items(trace: CaseAnalysisTrace) -> list[str]:
     items = [
-        f"ตรวจสอบเพิ่มเติมในประเด็น {gap.topic}: ดำเนินการสืบสวน/สอบสวนเพื่อคลี่คลายข้อเท็จจริง ({PRIORITY_LABELS[gap.priority]})"
+        f"ตรวจสอบเพิ่มเติมในประเด็น {gap_topic(gap)}: ดำเนินการสืบสวน/สอบสวนเพื่อคลี่คลายข้อเท็จจริง ({PRIORITY_LABELS[gap.priority]})"
         for gap in trace.gaps
     ]
     items.extend(
