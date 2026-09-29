@@ -39,18 +39,18 @@ in the same change rather than leaving the next person to discover it.
    work.** `get_optional_user` runs a `SELECT` and commits straight after it,
    so a route starts with no transaction open. A route that writes after slow
    work — a model call, an upload, OCR — does the slow part first and opens
-   `async with db.begin()` only around the write. Follow `routers/documents.py`
-   for a new route. The other writes are shaped differently and still hold no
+   `async with db.begin()` only around the write. Follow the document upload in
+   `sources/routes.py` for a new route. The other writes are shaped differently and still hold no
    transaction across slow work: the case routes and registration make one
    short write and call `db.commit()` in the service
-   (`services/cases/case_service.py`, `services/auth/auth_service.py`, which
+   (`cases/service.py`, `auth/service.py`, which
    hashes the password before the write), and report generation opens
    `db.begin()` inside `CaseReportService.generate_report`. `POST /analysis` and
    `POST /chat/messages` declare no session; the workflow opens its own short
    ones.
 4. **Read short, think free, write short.** One short transaction to read, the
    slow work with no connection held, another short transaction to write. This
-   is the rule most of `services/` is shaped by; `backend/ARCHITECTURE.md`
+   is the rule most of `backend/app/` is shaped by; `backend/ARCHITECTURE.md`
    section 1 explains it.
 5. **Import heavy native libraries inside the function that needs them.**
    WeasyPrint loads Pango and Cairo through ctypes at import time and raises if
@@ -60,7 +60,7 @@ in the same change rather than leaving the next person to discover it.
    from `app/errors.py`, or a subclass of it, carrying a code, a message and a
    status; the one handler in `app/main.py` turns it into
    `{"detail": {"code": ..., "message": ...}}`. Load a case through
-   `owned_case` in `services/cases/ownership.py`, which answers 404 for a case
+   `owned_case` in `cases/ownership.py`, which answers 404 for a case
    the user does not own.
 
 ### LangGraph agentic loops (`rag_service/`)
