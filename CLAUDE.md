@@ -137,11 +137,9 @@ User Input (Thai/English)
         loops retrieval (max 2x). Budget spent → answer with the best context
         available, or return the evaluator's ACKNOWLEDGE_LIMIT message.
     ↓
-[REASONING LLM] Generate answer (single-call Thai by default)
-    ↓
-[TRANSLATION LLM] Skipped on the normal Thai path (single-call already wrote
-    Thai). Still runs for an ACKNOWLEDGE_LIMIT message, and for the whole
-    answer if SINGLE_CALL_GENERATION=false
+[REASONING LLM] One call writes the final answer in the query's language
+    (Thai for a Thai case file). Nothing is translated. An ACKNOWLEDGE_LIMIT
+    note is returned as the evaluator wrote it (in the query's language)
     ↓
 END → AgentResponse(status="completed", answer)
 ```
@@ -382,7 +380,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 - **Embedding model**: `BAAI/bge-m3` (1024-dim, FP16)
 - **Reranker**: `BAAI/bge-reranker-v2-m3` (multilingual incl. Thai)
 - **Core LLM**: `CORE_LLM_PROVIDER` (`openrouter` default → `deepseek/deepseek-v4.1-flash`, or `anthropic` → `claude-haiku-4-5`) — used for reasoning, routing, decomposition and evaluation
-- **Single-call generation**: `SINGLE_CALL_GENERATION=true` — Thai answers are written in one call; set false to restore reason-EN-then-translate
+- **Single-call generation**: Thai answers are written in one call; the served agent has no translation stage. Reason-EN-then-translate survives only as an evaluation baseline (`pipeline/chain.py`, `evaluation/crosslingual_generation_benchmark.py`)
 - **`DUAL_QUERY_RETRIEVAL`**: read only by `pipeline/chain.py`, which is evaluation-only. The served agent does no input translation
 - **RAGAS eval LLM**: `qwen/qwen-2.5-72b-instruct` via OpenRouter
 - **Local models (`evaluation/` only)**: Ollama `qwen2.5:7b` + `gemma3:4b`, `OLLAMA_BASE_URL` (default `http://localhost:11434`). Not reachable from the service

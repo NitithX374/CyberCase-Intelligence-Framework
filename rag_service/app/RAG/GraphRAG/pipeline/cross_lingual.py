@@ -5,9 +5,13 @@ Language routing for the RAG pipeline. Two halves with different lifetimes:
 
 LIVE — used by the agent, all @staticmethods, no instance needed:
   • should_respond_in_thai()     language detection
-  • get_fast_system_prompt()     the default single-call prompt (Thai direct)
-  • get_reasoning_system_prompt()  English answers, and the two-stage rollback
-  • get_translation_system_prompt()  the translate_output node
+  • get_fast_system_prompt()     the prompt for Thai answers (one call, Thai direct)
+  • get_reasoning_system_prompt()  the prompt for English answers
+
+EVALUATION ONLY — the two-stage translation baseline (chain.py, evaluation/):
+  • get_translation_system_prompt()  English answer → Thai
+The served agent translates nothing: its reasoning node writes the final
+answer in the query's language in one call.
 
 EVALUATION ONLY — the pre-retrieval translation half:
   • __init__ / translate_query()   Thai query → English query
@@ -286,11 +290,11 @@ class CrossLingualLayer:
 
     @staticmethod
     def get_fast_system_prompt(respond_in_thai: bool) -> str:
-        """The DEFAULT production prompt for Thai answers, despite the name.
+        """The production prompt for Thai answers, despite the name.
 
-        Named for --fast, but SINGLE_CALL_GENERATION (on by default) makes the
-        agent's own reasoning node use it too — so this is what most traffic
-        actually hits. Same jargon-simplification + 4-section structure as the
+        Named for --fast, but the agent's own reasoning node uses it for every
+        Thai query — so this is what most traffic hits. Same
+        jargon-simplification + 4-section structure as the
         reasoning stage, but the model writes the FINAL answer directly in the
         response language, folding reasoning + translation into one LLM call.
         """
