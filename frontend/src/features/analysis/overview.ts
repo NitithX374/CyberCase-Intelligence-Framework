@@ -10,6 +10,25 @@ export const claimTypeLabels: Record<ClaimType, string> = {
   unknown: "Unknown information",
 };
 
+const checklistTopics: Record<string, string> = {
+  who_affected: "Who was affected",
+  who_responsible: "Who carried it out",
+  what: "What happened",
+  when: "When it happened",
+  where: "Where it happened",
+  why: "Why it happened",
+  how: "How it was done",
+  how_much: "How much",
+};
+
+export function gapTopic(topic: string, gapKey: string): string {
+  if (topic !== gapKey) return topic;
+  const named = checklistTopics[gapKey];
+  if (named) return named;
+  const words = gapKey.replace(/[_:-]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 const groupDefinitions = [
   { id: "not_established", title: "Not established", collapsible: false },
   { id: "not_confirmed", title: "Not confirmed", collapsible: false },
@@ -76,7 +95,7 @@ export function buildCaseOverview(
     findings,
     gaps: (trace.gaps ?? []).map((gap) => ({
       id: gap.gap_id,
-      topic: gap.topic,
+      topic: gapTopic(gap.topic, gap.gap_key),
       status: gap.status,
       description: gap.description,
       reason: gap.reason,

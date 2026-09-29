@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { CaseOverviewView } from "@/features/analysis/CaseOverviewView";
+import { AnalysisLayout } from "@/features/analysis/AnalysisLayout";
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { useCaseAnalysis, useIsCaseAnalysisRunning } from "@/features/analysis/queries";
 import { useCaseSources } from "@/features/sources/queries";
@@ -21,11 +21,14 @@ const state = vi.hoisted(() => ({
   runAnalysis: vi.fn(),
   refetchAnalysis: vi.fn(),
   refetchSources: vi.fn(),
+  segment: null as string | null,
   progress: [] as { step: string; elapsed: number; reachedAt: number }[],
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: state.routerPush }),
+  useParams: () => ({ caseId: "22222222-2222-4222-8222-222222222222" }),
+  useSelectedLayoutSegment: () => state.segment,
 }));
 vi.mock("@/features/analysis/queries", () => ({
   useCaseAnalysis: vi.fn(),
@@ -121,7 +124,11 @@ function configureAndRender(overrides: MockOverrides = {}) {
   vi.mocked(useIsCaseAnalysisRunning).mockReturnValue(overrides.analysisRunning ?? false);
   vi.mocked(useIsFollowupPending).mockReturnValue(overrides.followupPending ?? false);
 
-  render(<CaseOverviewView caseId={caseId} />);
+  render(
+    <AnalysisLayout>
+      <p>Section content</p>
+    </AnalysisLayout>,
+  );
 }
 
 beforeEach(() => {
@@ -129,19 +136,43 @@ beforeEach(() => {
   state.runAnalysis.mockClear();
   state.refetchAnalysis.mockClear();
   state.refetchSources.mockClear();
+  state.segment = null;
   state.progress = [];
 });
 
-describe("CaseOverviewView", () => {
-  it("renders the canonical Case projection and opens the exact page", () => {
-    const projection = caseProjection({ page: true });
-    configureAndRender({ analysisResult: projection.result, sources: projection.sources });
-    expect(screen.getByRole("heading", { name: "Summary" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Findings/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Open questions/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
-    expect(screen.getByRole("dialog").querySelector("mark")).not.toBeInTheDocument();
+describe("AnalysisLayout", () => {
+  it("links every section of a finished analysis, with the counts that need reading", () => {
+    configureAndRender();
+
+    const nav = screen.getByRole("navigation", { name: "Analysis sections" });
+    const links = Array.from(nav.querySelectorAll("a")).map((link) => [
+      link.textContent,
+      link.getAttribute("href"),
+    ]);
+    const base = `/case/${caseId}/analysis`;
+    expect(links).toEqual([
+      ["Summary", base],
+      ["Findings1", `${base}/findings`],
+      ["Details", `${base}/details`],
+      ["Open questions1", `${base}/questions`],
+      ["Report", `${base}/report`],
+    ]);
+    expect(screen.getByText("Section content")).toBeInTheDocument();
+  });
+
+  it("marks the summary as the section the reader is on when no section is open", () => {
+    configureAndRender();
+
+    expect(screen.getByRole("link", { name: "Summary" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("marks the open section as the one the reader is on", () => {
+    state.segment = "findings";
+    configureAndRender();
+
+    const nav = screen.getByRole("navigation", { name: "Analysis sections" });
+    expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent("Findings");
   });
 
   it("offers reanalysis when the canonical result is stale", () => {
@@ -154,8 +185,7 @@ describe("CaseOverviewView", () => {
   });
 
   it("offers to run an up-to-date analysis again beside its status", () => {
-    const projection = caseProjection();
-    configureAndRender({ analysisResult: projection.result, sources: projection.sources });
+    configureAndRender();
 
     fireEvent.click(screen.getByRole("button", { name: "Analyze again" }));
     expect(state.runAnalysis).toHaveBeenCalledOnce();
@@ -190,12 +220,7 @@ describe("CaseOverviewView", () => {
   });
 
   it("says the analysis is being updated while a run is in flight", () => {
-    const projection = caseProjection();
-    configureAndRender({
-      analysisResult: projection.result,
-      sources: projection.sources,
-      analysisRunning: true,
-    });
+    configureAndRender({ analysisRunning: true });
 
     expect(screen.getByRole("status")).toHaveTextContent("Updating the case analysis…");
     expect(screen.queryByRole("button", { name: "Analyze again" })).not.toBeInTheDocument();
@@ -216,21 +241,17 @@ describe("CaseOverviewView", () => {
   });
 
   it("offers to analyze a case that has sources but no analysis yet", () => {
-    const projection = caseProjection();
-    configureAndRender({ analysisResult: null, sources: projection.sources });
+    configureAndRender({ analysisResult: null });
 
     expect(screen.getByRole("heading", { name: "Not analyzed yet" })).toBeInTheDocument();
+    expect(screen.queryByText("Section content")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Analysis sections" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Analyze" }));
     expect(state.runAnalysis).toHaveBeenCalledOnce();
   });
 
   it("waits for a follow-up answer before a first analysis, and offers no second one", () => {
-    const projection = caseProjection();
-    configureAndRender({
-      analysisResult: null,
-      sources: projection.sources,
-      followupPending: true,
-    });
+    configureAndRender({ analysisResult: null, followupPending: true });
 
     expect(screen.getByRole("heading", { name: "Analyzing…" })).toBeInTheDocument();
     expect(screen.getByText(/with your answer/)).toBeInTheDocument();
@@ -254,12 +275,7 @@ describe("CaseOverviewView", () => {
 
   it("names the step while an analysis that is already shown is updated", () => {
     state.progress = [{ step: "judge", elapsed: 80, reachedAt: Date.now() }];
-    const projection = caseProjection();
-    configureAndRender({
-      analysisResult: projection.result,
-      sources: projection.sources,
-      analysisRunning: true,
-    });
+    configureAndRender({ analysisRunning: true });
 
     expect(
       screen
@@ -288,33 +304,10 @@ describe("CaseOverviewView", () => {
     expect(
       screen.getByRole("heading", { name: "Analysis could not be loaded" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Summary" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Section content")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(state.refetchSources).toHaveBeenCalledOnce();
     expect(state.refetchAnalysis).not.toHaveBeenCalled();
-  });
-
-  it("switches between the Findings and Open questions tabs", () => {
-    const projection = caseProjection();
-    configureAndRender({ analysisResult: projection.result, sources: projection.sources });
-
-    const findingsTab = screen.getByRole("tab", { name: /Findings/i });
-    const questionsTab = screen.getByRole("tab", { name: /Open questions/i });
-
-    expect(findingsTab).toHaveAttribute("aria-selected", "true");
-    expect(questionsTab).toHaveAttribute("aria-selected", "false");
-
-    const findingsPanel = document.getElementById("panel-findings");
-    const questionsPanel = document.getElementById("panel-questions");
-    expect(findingsPanel).toHaveClass("block");
-    expect(questionsPanel).toHaveClass("hidden");
-
-    fireEvent.click(questionsTab);
-
-    expect(findingsTab).toHaveAttribute("aria-selected", "false");
-    expect(questionsTab).toHaveAttribute("aria-selected", "true");
-    expect(findingsPanel).toHaveClass("hidden");
-    expect(questionsPanel).toHaveClass("block");
   });
 });

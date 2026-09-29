@@ -39,7 +39,7 @@ export function CaseDetails({
 
   return (
     <div
-      className={`mt-12 grid gap-10 ${
+      className={`grid gap-10 ${
         timeline.length > 0 && hasSide ? "md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : ""
       }`}
     >

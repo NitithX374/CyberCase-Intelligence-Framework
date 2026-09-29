@@ -24,6 +24,8 @@ Gaps:
 {CHECKLIST_LINES}
 - A gap that fits none of these questions, such as whether a log file exists, keeps a
   short key of its own.
+- topic names the missing fact in a few words, in the requested language. It is never the
+  gap_key.
 - Give the same underlying factual gap the same stable, short gap_key every time it
   appears, whether it is found during assessment or full analysis. Base the key on the
   missing fact, not its wording, sequence number, source identifier, or current answer.
