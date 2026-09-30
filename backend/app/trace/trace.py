@@ -144,6 +144,16 @@ class CaseProviderReading(BaseModel):
     impacts: list[CaseImpactItem] = Field(max_length=64)
 
 
+class CaseProviderReadingReply(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal["case_analysis_trace_v1"]
+    claims: list[CaseProviderClaim] = Field(max_length=64)
+    involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
+    timeline: list[CaseTimelineItem] = Field(max_length=64)
+    impacts: list[CaseImpactItem] = Field(max_length=64)
+
+
 class CaseProviderJudgement(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -162,5 +172,6 @@ __all__ = [
     "CaseProviderAnalysis",
     "CaseProviderJudgement",
     "CaseProviderReading",
+    "CaseProviderReadingReply",
     "CaseTimelineItem",
 ]

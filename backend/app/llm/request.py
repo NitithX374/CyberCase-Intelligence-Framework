@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 from collections.abc import Mapping
 from functools import lru_cache
@@ -30,6 +31,7 @@ TRANSPORT_ATTEMPTS = 2
 TRANSPORT_RETRY_DELAY_SECONDS = 2.0
 RUNAWAY_ATTEMPTS = 2
 RUNAWAY_TAIL_CHARS = 2_000
+JSON_FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$")
 transport: httpx.AsyncBaseTransport | None = None
 
 
@@ -232,6 +234,7 @@ def stage_payload(
     schema: type[BaseModel],
     *,
     temperature: float | None = None,
+    grammar: bool = True,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "model": config.model,
@@ -246,13 +249,14 @@ def stage_payload(
                 else json.dumps(content, ensure_ascii=False),
             }
         ],
-        "output_config": {
+    }
+    if grammar:
+        payload["output_config"] = {
             "format": {
                 "type": "json_schema",
                 "schema": structured_output_schema(schema),
             }
-        },
-    }
+        }
     if temperature is not None:
         payload["temperature"] = temperature
     if config.providers:
@@ -290,6 +294,51 @@ async def post_stage(
                 await asyncio.sleep(TRANSPORT_RETRY_DELAY_SECONDS)
 
 
+def validation_problem(error: ValidationError) -> str:
+    first = error.errors()[0]
+    return f"invalid: {first['type']} at {'.'.join(str(part) for part in first['loc'])}"[:160]
+
+
+async def validated_reply(
+    target: CoreLlmTarget,
+    payload: dict[str, object],
+    *,
+    config: AnalysisPipelineConfig,
+    stage: str,
+    schema: type[ProviderResult],
+    receipt: dict[str, object],
+) -> ProviderResult:
+    problems: list[str] = []
+    for _ in range(RUNAWAY_ATTEMPTS):
+        response = await post_stage(target, payload, stage=stage, timeout=config.timeout_seconds)
+        decoded = decode_response(response)
+        usage = usage_summary(decoded)
+        if decoded.get("stop_reason") in {"max_tokens", "length"}:
+            logger.warning("Analysis stage %s ran to max_tokens; asking again", stage)
+            receipt["runaway_output_tokens"] = usage["output_tokens"]
+            problems.append("ran_to_max_tokens")
+            continue
+        receipt.update(usage)
+        check_response_payload(decoded, stage=stage)
+        text = JSON_FENCE.sub("", extract_visible_text(decoded).strip())
+        try:
+            result = schema.model_validate_json(text)
+        except ValidationError as error:
+            problem = validation_problem(error)
+            logger.warning(
+                "Analysis stage %s reply failed its schema, %s; asking again", stage, problem
+            )
+            receipt["invalid_output_tokens"] = usage["output_tokens"]
+            problems.append(problem)
+            continue
+        receipt["status"] = "completed"
+        return result
+    logger.warning("Analysis stage %s gave no valid reply: %s", stage, "; ".join(problems))
+    raise CaseAnalysisFailure(
+        f"{stage}_invalid", "Analysis stage violated its schema", status.HTTP_502_BAD_GATEWAY
+    )
+
+
 async def request_stage(
     *,
     config: AnalysisPipelineConfig,
@@ -299,9 +348,12 @@ async def request_stage(
     schema: type[ProviderResult],
     calls: list[dict[str, object]] | None = None,
     temperature: float | None = None,
+    grammar: bool = True,
 ) -> ProviderResult:
     target = resolve_core_llm_target(config.model)
-    payload = stage_payload(config, system, content, schema, temperature=temperature)
+    payload = stage_payload(
+        config, system, content, schema, temperature=temperature, grammar=grammar
+    )
     estimated = await asyncio.to_thread(token_count, payload)
     if estimated > input_budget(config):
         raise CaseAnalysisFailure(f"{stage}_budget_exceeded", "Stage input exceeds budget")
@@ -315,6 +367,10 @@ async def request_stage(
         calls.append(receipt)
     started = time.monotonic()
     try:
+        if not grammar:
+            return await validated_reply(
+                target, payload, config=config, stage=stage, schema=schema, receipt=receipt
+            )
         for attempt in range(1, RUNAWAY_ATTEMPTS + 1):
             response = await post_stage(
                 target, payload, stage=stage, timeout=config.timeout_seconds
@@ -372,4 +428,5 @@ __all__ = [
     "token_count",
     "usage_summary",
     "validate_response_payload",
+    "validated_reply",
 ]

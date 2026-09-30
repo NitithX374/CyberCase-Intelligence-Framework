@@ -3,13 +3,18 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from app.analysis.progress import announce
-from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_SYSTEM_PROMPT
+from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_JSON_PROMPT
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.claims import CaseFollowupExchange, followup_payload
-from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReading
+from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, followup_payload
+from app.trace.trace import (
+    CaseAnalysisTrace,
+    CaseProviderJudgement,
+    CaseProviderReading,
+    CaseProviderReadingReply,
+)
 
 
 async def write_trace(
@@ -21,13 +26,15 @@ async def write_trace(
     config: AnalysisPipelineConfig,
 ) -> CaseAnalysisTrace:
     announce("read")
-    reading = await request_stage(
+    reply = await request_stage(
         config=config,
         stage="case_reading",
-        system=CASE_READING_SYSTEM_PROMPT,
+        system=CASE_READING_JSON_PROMPT,
         content=reading_request(sources, language, followup_history),
-        schema=CaseProviderReading,
+        schema=CaseProviderReadingReply,
+        grammar=False,
     )
+    reading = reading_from(reply)
     announce("judge")
     judgement = await request_stage(
         config=config,
@@ -40,6 +47,18 @@ async def write_trace(
         schema=CaseProviderJudgement,
     )
     return joined_trace(reading, judgement, technical_context)
+
+
+def reading_from(reply: CaseProviderReadingReply) -> CaseProviderReading:
+    return CaseProviderReading.model_validate(
+        {
+            **reply.model_dump(),
+            "claims": [
+                CaseAnalysisClaim.model_validate(claim.model_dump()).model_dump()
+                for claim in reply.claims
+            ],
+        }
+    )
 
 
 def reading_request(
@@ -123,6 +142,7 @@ def joined_trace(
 __all__ = [
     "joined_trace",
     "provider_source_payload",
+    "reading_from",
     "reading_payload",
     "reading_request",
     "write_request",
