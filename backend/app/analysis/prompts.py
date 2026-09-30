@@ -192,6 +192,33 @@ Do not return hashes, retrieval_context_id, retrieval bindings, confidence score
 hidden reasoning, or markdown fences around the JSON.
 """
 
+READING_LOCATOR_SENTENCE = (
+    " Leave document_id and filename null and page_numbers empty so the\n"
+    "  backend can attach document locations."
+)
+
+READING_JSON_FORMAT = """
+
+Output format:
+- Reply with one JSON object and nothing else. Write every key below, in exactly this order, even when a list is empty:
+{"version": "case_analysis_trace_v1",
+ "claims": [{"claim_id": "A-01", "claim_type": "reported", "text": "...", "epistemic_status": "reported",
+   "supporting_source_ids": ["SRC-1"], "contradicting_source_ids": [],
+   "reasoning_summary": "...",
+   "supporting_citations": [{"source_id": "SRC-1", "exact_quote": "..."}],
+   "contradicting_citations": []}],
+ "involved_parties": [{"name": "...", "role": "...", "claim_ids": ["A-01"]}],
+ "timeline": [{"time": "...", "event": "...", "claim_ids": ["A-01"]}],
+ "impacts": [{"description": "...", "claim_ids": ["A-01"]}]}
+- claim_type is one of "reported", "analytical_inference", "unknown". epistemic_status is one of "reported",
+  "suspected", "contradicted", "not_established", "unknown".
+- reasoning_summary is one short sentence saying why the quoted text supports the claim, or null.
+- Inside any string, write a double quotation mark as \\" so the JSON stays valid."""
+
+CASE_READING_JSON_PROMPT = (
+    CASE_READING_SYSTEM_PROMPT.replace(READING_LOCATOR_SENTENCE, "") + READING_JSON_FORMAT
+)
+
 CASE_JUDGEMENT_SYSTEM_PROMPT = f"""
 You are the Judgement component of CyberCase. The claims supplied to you were
 already read out of this case. Say what they add up to, for investigators or
@@ -290,7 +317,10 @@ Do not return hidden reasoning or markdown fences around the JSON.
 
 __all__ = [
     "CASE_JUDGEMENT_SYSTEM_PROMPT",
+    "CASE_READING_JSON_PROMPT",
     "CASE_READING_SYSTEM_PROMPT",
+    "READING_JSON_FORMAT",
+    "READING_LOCATOR_SENTENCE",
     "MAIN_CASE_ANALYSIS_SYSTEM_PROMPT",
     "GAP_IDENTIFICATION_INSTRUCTIONS",
     "case_assessment_prompt",

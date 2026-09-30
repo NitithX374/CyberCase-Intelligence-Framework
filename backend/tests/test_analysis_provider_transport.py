@@ -266,3 +266,95 @@ async def test_a_reply_that_stops_early_is_named_after_its_stage(
     assert calls[0]["status"] == "failed"
     assert calls[0]["thinking_tokens"] == 300
     assert "'thinking_tokens': 300" in caplog.text
+
+
+def replied(text: str, stop_reason: str = "end_turn", output_tokens: int = 50) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "content": [{"type": "text", "text": text}],
+            "stop_reason": stop_reason,
+            "usage": {"input_tokens": 120, "output_tokens": output_tokens},
+        },
+    )
+
+
+def scripted(*replies: httpx.Response):
+    sent: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return replies[len(sent) - 1]
+
+    return handler, sent
+
+
+async def test_without_grammar_the_payload_asks_for_no_output_config(monkeypatch) -> None:
+    handler, sent = scripted(replied(json.dumps({"ok": True})))
+    result = await run_stage(monkeypatch, handler, [], grammar=False)
+
+    assert result == Probe(ok=True)
+    assert "output_config" not in sent[0]
+    assert "output_config" in provider.stage_payload(
+        AnalysisPipelineConfig(model="test/model"), "system", {}, Probe
+    )
+
+
+async def test_without_grammar_a_fenced_reply_is_read(monkeypatch) -> None:
+    handler, sent = scripted(replied('```json\n{"ok": true}\n```'))
+    calls: list[dict[str, object]] = []
+    result = await run_stage(monkeypatch, handler, calls, grammar=False)
+
+    assert result == Probe(ok=True)
+    assert len(sent) == 1
+    assert calls[0]["status"] == "completed"
+
+
+async def test_without_grammar_an_invalid_reply_is_asked_once_more(monkeypatch) -> None:
+    handler, sent = scripted(
+        replied('{"ok": "perhaps"}', output_tokens=700), replied(json.dumps({"ok": True}))
+    )
+    calls: list[dict[str, object]] = []
+    result = await run_stage(monkeypatch, handler, calls, grammar=False)
+
+    assert result == Probe(ok=True)
+    assert len(sent) == 2
+    assert calls[0]["status"] == "completed"
+    assert calls[0]["invalid_output_tokens"] == 700
+    assert calls[0]["output_tokens"] == 50
+
+
+async def test_without_grammar_two_invalid_replies_fail_the_stage(monkeypatch, caplog) -> None:
+    handler, sent = scripted(replied("not json at all"), replied('{"ok": "perhaps"}'))
+    calls: list[dict[str, object]] = []
+    with pytest.raises(CaseAnalysisFailure) as failure:
+        await run_stage(monkeypatch, handler, calls, grammar=False)
+
+    assert failure.value.code == "probe_invalid"
+    assert failure.value.status_code == 502
+    assert len(sent) == provider.RUNAWAY_ATTEMPTS
+    assert calls[0]["status"] == "failed"
+    assert "gave no valid reply" in caplog.text
+
+
+async def test_without_grammar_a_reply_cut_at_max_tokens_is_asked_once_more(monkeypatch) -> None:
+    handler, sent = scripted(
+        replied('{"ok": tr', stop_reason="max_tokens", output_tokens=32_608),
+        replied(json.dumps({"ok": True})),
+    )
+    calls: list[dict[str, object]] = []
+    result = await run_stage(monkeypatch, handler, calls, grammar=False)
+
+    assert result == Probe(ok=True)
+    assert len(sent) == 2
+    assert calls[0]["runaway_output_tokens"] == 32_608
+
+
+async def test_without_grammar_a_refusal_is_not_asked_again(monkeypatch) -> None:
+    handler, sent = scripted(replied("", stop_reason="refusal"))
+    with pytest.raises(CaseAnalysisFailure) as failure:
+        await run_stage(monkeypatch, handler, [], grammar=False)
+
+    assert failure.value.code == "probe_incomplete"
+    assert failure.value.status_code == 409
+    assert len(sent) == 1

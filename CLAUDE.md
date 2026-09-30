@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary, gaps and ATT&CK associations over that reading. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
+**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary, gaps and ATT&CK associations over that reading. The reading runs without grammar-constrained decoding: its JSON is described in the prompt, validated after decoding and asked at most twice. Every other call keeps the provider's JSON-schema grammar. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
 
 ## Service Layout
 
@@ -186,7 +186,9 @@ models/                 SQLAlchemy tables, one per file: case, source,
                         document, analysis_result, chat_message, report, user
 llm/                    calling a model
   request.py            request_stage: the one transport every model call
-                        takes, the LLM gate's included
+                        takes, the LLM gate's included. grammar=False (the
+                        reading) sends no output_config: the reply is
+                        validated after decoding, asked at most twice
   settings.py           model, providers, output and thinking budgets
   openrouter.py         the OpenRouter target; registry.py (model aliases),
                         schema.py (the structured-output schema)
@@ -226,8 +228,9 @@ analysis/               producing an analysis of a case; routes, schemas
                         there is nothing worth asking
   assess.py             the cheap gaps-only call that runs first
   write.py              write_trace: a reading call (claims, parties, timeline,
-                        impacts, with quotations), then a judgement call
-                        (summary, gaps, ATT&CK associations) over that reading
+                        impacts, with quotations; JSON from the prompt, no
+                        grammar), then a judgement call (summary, gaps,
+                        ATT&CK associations) over that reading
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   progress.py           announce(step): the steps write, retrieve and the

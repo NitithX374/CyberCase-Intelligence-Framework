@@ -167,7 +167,9 @@ function responseFor(body) {
     gaps,
     mitre_associations: [],
   };
-  const asked = Object.keys(body?.output_config?.format?.schema?.properties ?? trace);
+  const asked = body?.output_config
+    ? Object.keys(body.output_config.format?.schema?.properties ?? trace)
+    : ["version", "claims", "involved_parties", "timeline", "impacts"];
   return Object.fromEntries(Object.entries(trace).filter(([key]) => asked.includes(key)));
 }
 

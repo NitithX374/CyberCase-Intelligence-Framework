@@ -6,12 +6,24 @@ from uuid import uuid4
 
 from case_mitre_test_support import _fixtures
 
-from app.analysis.write import joined_trace, reading_payload, write_trace
+from app.analysis.prompts import (
+    CASE_JUDGEMENT_SYSTEM_PROMPT,
+    CASE_READING_JSON_PROMPT,
+    CASE_READING_SYSTEM_PROMPT,
+    READING_JSON_FORMAT,
+    READING_LOCATOR_SENTENCE,
+)
+from app.analysis.write import joined_trace, reading_from, reading_payload, write_trace
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
-from app.trace.trace import CaseMitreAssociation, CaseProviderJudgement, CaseProviderReading
+from app.trace.trace import (
+    CaseMitreAssociation,
+    CaseProviderJudgement,
+    CaseProviderReading,
+    CaseProviderReadingReply,
+)
 
 SOURCE_TEXT = "The finance share was encrypted overnight."
 
@@ -61,7 +73,9 @@ def written(bundle: CaseSourceBundle, reading: CaseProviderReading, **options):
 
     async def request_stage(**kwargs):
         seen.append(kwargs)
-        return reading if kwargs["stage"] == "case_reading" else judgement()
+        if kwargs["stage"] == "case_reading":
+            return CaseProviderReadingReply.model_validate(reading.model_dump())
+        return judgement()
 
     with patch("app.analysis.write.request_stage", new=request_stage):
         trace = asyncio.run(
@@ -80,9 +94,62 @@ def test_the_analysis_is_a_reading_then_a_judgement():
     trace, seen = written(bundle, reading_of(bundle))
 
     assert [call["stage"] for call in seen] == ["case_reading", "case_judgement"]
-    assert [call["schema"] for call in seen] == [CaseProviderReading, CaseProviderJudgement]
+    assert [call["schema"] for call in seen] == [CaseProviderReadingReply, CaseProviderJudgement]
     assert [claim.claim_id for claim in trace.claims] == ["A-01"]
     assert trace.summary == "A file share was encrypted overnight."
+
+
+def test_the_reading_is_validated_after_decoding_and_the_judgement_keeps_its_grammar():
+    bundle = case_with_one_narrative()
+    _, (reading_call, judgement_call) = written(bundle, reading_of(bundle))
+
+    assert reading_call["grammar"] is False
+    assert reading_call["system"] == CASE_READING_JSON_PROMPT
+    assert "grammar" not in judgement_call
+    assert judgement_call["system"] == CASE_JUDGEMENT_SYSTEM_PROMPT
+
+
+def test_the_reading_prompt_drops_only_the_locator_sentence_and_states_the_json():
+    slim = CASE_READING_SYSTEM_PROMPT.replace(READING_LOCATOR_SENTENCE, "")
+
+    assert READING_LOCATOR_SENTENCE in CASE_READING_SYSTEM_PROMPT
+    assert READING_LOCATOR_SENTENCE not in CASE_READING_JSON_PROMPT
+    assert slim + READING_JSON_FORMAT == CASE_READING_JSON_PROMPT
+    assert READING_JSON_FORMAT.endswith(
+        'write a double quotation mark as \\" so the JSON stays valid.'
+    )
+
+
+def test_a_quote_the_model_cited_becomes_a_citation_the_backend_can_locate():
+    source_id = str(uuid4())
+    reply = CaseProviderReadingReply.model_validate(
+        {
+            "version": "case_analysis_trace_v1",
+            "claims": [
+                {
+                    "claim_id": "A-01",
+                    "claim_type": "reported",
+                    "text": "The finance share was encrypted.",
+                    "epistemic_status": "reported",
+                    "supporting_source_ids": [source_id],
+                    "contradicting_source_ids": [],
+                    "reasoning_summary": None,
+                    "supporting_citations": [{"source_id": source_id, "exact_quote": SOURCE_TEXT}],
+                    "contradicting_citations": [],
+                }
+            ],
+            "involved_parties": [],
+            "timeline": [],
+            "impacts": [],
+        }
+    )
+
+    reading = reading_from(reply)
+
+    assert reading.claims[0].supporting_citations == [
+        CaseSourceCitation(source_id=source_id, exact_quote=SOURCE_TEXT)
+    ]
+    assert reading.claims[0].supporting_citations[0].page_numbers == []
 
 
 def test_the_reading_call_is_never_shown_the_technical_context():

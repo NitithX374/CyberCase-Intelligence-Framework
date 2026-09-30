@@ -33,7 +33,7 @@ NO_GAPS = {"version": "case_assessment_v1", "gaps": []}
 ASKING = {"version": "case_assessment_v1", "gaps": [GAP]}
 HEAD = "The attacker logged in to the VPN gateway."
 TAIL = "The attacker exfiltrated the payroll archive."
-STAGES = {"suggestion": "answer", "claims": "read", "summary": "judge", "gaps": "assess"}
+STAGES = {"suggestion": "answer", "summary": "judge", "gaps": "assess"}
 JUDGED = {
     "version": "case_analysis_trace_v1",
     "summary": "Files on the shared drive were encrypted.",
@@ -123,8 +123,11 @@ class Model:
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
-        properties = payload["output_config"]["format"]["schema"]["properties"]
-        stage = next(name for key, name in STAGES.items() if key in properties)
+        if "output_config" in payload:
+            properties = payload["output_config"]["format"]["schema"]["properties"]
+            stage = next(name for key, name in STAGES.items() if key in properties)
+        else:
+            stage = "read"
         content = json.loads(payload["messages"][0]["content"])
         self.calls.append((stage, content))
         script = self.replies[stage]
@@ -254,7 +257,7 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
         (off_schema, 502, "case_reading_invalid"),
         (unreadable, 502, "analysis_invalid_response"),
         (erring, 502, "analysis_provider_error"),
-        (cut_short, 502, "case_reading_incomplete"),
+        (cut_short, 502, "case_reading_invalid"),
         (refused, 409, "analysis_provider_unauthorized"),
         (declined, 409, "case_reading_incomplete"),
         (rejected, 409, "analysis_provider_error"),

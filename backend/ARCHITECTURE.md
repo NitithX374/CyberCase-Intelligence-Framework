@@ -171,7 +171,11 @@ Five stages in four files, and all of them go through `request_stage` in
 
 `request_stage` is the one transport: it checks the input against the token
 budget, posts to OpenRouter's messages endpoint, retries once on a dropped
-connection, and validates the reply against the stage's schema. A caller that
+connection, and validates the reply against the stage's schema. Every stage
+but the reading sends that schema as a JSON-schema grammar. The reading passes
+`grammar=False`: its prompt describes the JSON, and the reply is fence-stripped
+and validated after decoding, asked again once after a `max_tokens` stop or an
+invalid reply, and failed as `case_reading_invalid` after the second. A caller that
 passes a `calls` list gets one record per stage (model, estimated input tokens,
 status, elapsed time); production passes none, the experiments do. The encoder
 gate (`MITRE_GATE_MODE=encoder`) runs a local model and calls no provider.
