@@ -76,6 +76,7 @@ function refs(
 
 function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): SourceMessageRef {
   const quote = citation?.exact_quote || null;
+  const context = quote ? citation?.context : null;
   const pages = (citation?.page_numbers ?? []).flatMap(
     (pageNumber) => source.pages.find((page) => page.pageNumber === pageNumber) ?? [],
   );
@@ -89,6 +90,14 @@ function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): 
       ? pages.map((page) => page.text).join("\n\n")
       : contextualExcerpt(source.text, quote),
     exactQuote: quote,
+    quoteContext: context
+      ? {
+          before: context.before,
+          after: context.after,
+          cutBefore: context.cut_before,
+          cutAfter: context.cut_after,
+        }
+      : null,
     filename: source.filename,
     pageNumbers,
     sourcePages: pages,

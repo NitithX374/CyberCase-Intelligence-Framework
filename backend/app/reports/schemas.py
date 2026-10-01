@@ -28,6 +28,13 @@ class ReportImpact(ReportRow):
     references: list[str] = Field(default_factory=list)
 
 
+class ReportQuoteContext(ReportRow):
+    before: str = ""
+    after: str = ""
+    cut_before: bool = False
+    cut_after: bool = False
+
+
 class ReportFinding(ReportRow):
     ordinal: int
     text: str
@@ -37,6 +44,8 @@ class ReportFinding(ReportRow):
     contradicting_source_labels: list[str] = Field(default_factory=list)
     supporting_quotes: list[str] = Field(default_factory=list)
     contradicting_quotes: list[str] = Field(default_factory=list)
+    supporting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
+    contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
     reasoning_summary: str | None = None
 
 
@@ -111,6 +120,7 @@ __all__ = [
     "ReportGap",
     "ReportImpact",
     "ReportParty",
+    "ReportQuoteContext",
     "ReportSource",
     "ReportTechnique",
 ]

@@ -13,9 +13,9 @@ from app.analysis.technical_context.contracts import (
     MitreApplicabilityRecord,
     skipped_mitre_applicability,
 )
-from app.analysis.technical_context.sentences import split_sources
 from app.config import settings
 from app.sources.bundle import CaseSourceItem
+from app.trace.sentences import split_sources
 
 logger = logging.getLogger(__name__)
 

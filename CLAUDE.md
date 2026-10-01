@@ -197,6 +197,8 @@ trace/                  what the analysis, chat and reports share
                         the preflight returns
   trace.py              the trace: summary, parties, timeline, impacts, claims
   quotes.py             finding a quotation in a source
+  sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
+                        by line; the encoder gate splits with it too
   bind.py               bind a written trace to the case; count what did not bind;
                         bound_claims checks the reading's quotations before the
                         judgement, and bound_references checks the judgement's
@@ -206,7 +208,8 @@ trace/                  what the analysis, chat and reports share
                         stored as one citation per piece when every piece occurs
                         once in the source, and otherwise as the one span the
                         pieces stretch over; either way it counts as one written
-                        quote
+                        quote; each bound quote keeps the text around it as its
+                        context
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share
@@ -250,7 +253,7 @@ analysis/               producing an analysis of a case; routes, schemas
                         RAG service's request and response
     retrieve.py         run the gate, then ask the RAG service when it says to
     gate.py             picks the gate; gate_llm.py and gate_encoder.py are
-                        the gates, sentences.py cuts the case up for the encoder
+                        the gates
     rag_client.py       the RAG service client
 chat/                   the case conversation; routes, schemas
   reply.py              routes a message: a follow-up answer or a question
@@ -359,7 +362,7 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
   - The code default is `off`, so Railway and the tests are unaffected.
   - `tests/conftest.py` keeps it off whatever the local `.env` says.
 
-The `encoder` gate splits its input with PyThaiNLP `crfcut` (`technical_context/sentences.py`);
+The `encoder` gate splits its input with PyThaiNLP `crfcut` (`trace/sentences.py`, which also cuts the sentence shown around a quotation);
 every sentence is an exact substring of its source, so the encoder's `trigger_text`
 is grounded by construction. The `llm` gate does not split sentences: it reads each
 source cut to its share of the budget, and the `trigger_text` it returns is checked
@@ -387,7 +390,7 @@ answer: one case in the development database holds six analyses at
 pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)

@@ -8,6 +8,7 @@ from app.trace.claims import (
     CaseAnalysisClaim,
     CaseEpistemicStatus,
     CaseFollowupExchange,
+    CaseQuoteContext,
     CaseSourceCitation,
 )
 from app.trace.quotes import (
@@ -20,12 +21,9 @@ from app.trace.quotes import (
     resolve_document_locator,
     without_edge_ellipses,
 )
-from app.trace.trace import (
-    CaseAnalysisTrace,
-    CaseGroundingReport,
-    CaseMitreAssociation,
-    CaseProviderReading,
-)
+
+from app.trace.sentences import SentenceIndex, quote_context
+from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport, CaseMitreAssociation
 
 ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
 
@@ -278,12 +276,22 @@ class QuoteSearch:
     def __init__(self, registry: Mapping[str, CaseSourceItem]) -> None:
         self.texts = {source_id: IndexedText(source.text) for source_id, source in registry.items()}
         self.found: dict[tuple[str, str], tuple[str, ...] | None] = {}
+        self.sentences: dict[str, SentenceIndex] = {}
+        self.contexts: dict[tuple[str, str], CaseQuoteContext | None] = {}
 
     def located(self, source_id: str, quote: str) -> tuple[str, ...] | None:
         key = (source_id, quote)
         if key not in self.found:
             self.found[key] = located_quote(self.texts[source_id], quote)
         return self.found[key]
+
+    def context(self, source_id: str, quote: str) -> CaseQuoteContext | None:
+        key = (source_id, quote)
+        if key not in self.contexts:
+            if source_id not in self.sentences:
+                self.sentences[source_id] = SentenceIndex(self.texts[source_id].text)
+            self.contexts[key] = quote_context(self.sentences[source_id], quote)
+        return self.contexts[key]
 
     def paraphrased(self, source_id: str, quote: str) -> bool:
         return looks_like_a_paraphrase(self.texts[source_id], quote)
@@ -307,6 +315,7 @@ def added_citations(
             canonical = CaseSourceCitation(
                 source_id=source.source_id,
                 exact_quote=exact_quote,
+                context=search.context(source.source_id, exact_quote),
                 **resolve_document_locator(
                     source.source_id, exact_quote, source.text, document_context
                 ),
