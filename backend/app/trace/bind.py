@@ -21,9 +21,13 @@ from app.trace.quotes import (
     resolve_document_locator,
     without_edge_ellipses,
 )
-
 from app.trace.sentences import SentenceIndex, quote_context
-from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport, CaseMitreAssociation
+from app.trace.trace import (
+    CaseAnalysisTrace,
+    CaseGroundingReport,
+    CaseMitreAssociation,
+    CaseProviderReading,
+)
 
 ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
 
