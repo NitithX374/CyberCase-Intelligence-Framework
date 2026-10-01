@@ -16,9 +16,10 @@ from app.analysis.prompts import (
 from app.analysis.write import joined_trace, reading_from, reading_payload, write_trace
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import resolve_case_trace
+from app.trace.bind import bound_claims, bound_references, resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
 from app.trace.trace import (
+    CaseInvolvedParty,
     CaseMitreAssociation,
     CaseProviderJudgement,
     CaseProviderReading,
@@ -167,13 +168,104 @@ def test_the_reading_call_is_never_shown_the_technical_context():
     assert trace.retrieval_context_id == context.retrieval_context_id
 
 
-def test_the_judgement_call_receives_the_claims_the_reading_wrote():
+def test_the_judgement_call_receives_the_claims_after_their_quotes_are_checked():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
     _, (_, judgement_call) = written(bundle, reading)
 
-    assert judgement_call["content"]["reading"] == reading_payload(reading)
+    checked, _ = bound_claims(reading, bundle)
+    assert judgement_call["content"]["reading"] == reading_payload(checked)
     assert judgement_call["content"]["reading"]["claims"][0]["claim_id"] == "A-01"
+
+
+def invented_claim(source_id: str) -> CaseAnalysisClaim:
+    return CaseAnalysisClaim(
+        claim_id="A-02",
+        claim_type="reported",
+        text="The payroll server was wiped.",
+        epistemic_status="reported",
+        supporting_source_ids=[source_id],
+        supporting_citations=[
+            CaseSourceCitation(source_id=source_id, exact_quote="The payroll server was wiped.")
+        ],
+    )
+
+
+def test_the_judgement_sees_a_claim_whose_quote_was_not_found_as_not_confirmed():
+    bundle = case_with_one_narrative()
+    reading = reading_of(bundle)
+    reading = reading.model_copy(
+        update={"claims": [*reading.claims, invented_claim(bundle.sources[0].source_id)]}
+    )
+
+    trace, (_, judgement_call) = written(bundle, reading)
+
+    [found, demoted] = judgement_call["content"]["reading"]["claims"]
+    assert found["epistemic_status"] == "reported"
+    assert [c["exact_quote"] for c in found["supporting_citations"]] == [SOURCE_TEXT]
+    assert demoted["claim_id"] == "A-02"
+    assert demoted["epistemic_status"] == "not_confirmed"
+    assert demoted["supporting_citations"] == []
+    assert trace.grounding.citations_claimed == 2
+    assert trace.grounding.citations_verified == 1
+
+
+def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_it():
+    _, _, _, _, context = _fixtures()
+    bundle = case_with_one_narrative()
+    source_id = bundle.sources[0].source_id
+    reading = reading_of(bundle)
+    [first] = reading.claims
+    reading = reading.model_copy(
+        update={
+            "claims": [first, invented_claim(source_id), first],
+            "involved_parties": [
+                CaseInvolvedParty(name="Finance team", role="Victim", claim_ids=["A-01", "A-77"])
+            ],
+        }
+    )
+    verdict = judgement(
+        gaps=[
+            CaseAnalysisGap(
+                gap_id="G-01",
+                gap_key="who_paid",
+                topic="Payment",
+                status="NOT_PROVIDED",
+                description="No payment record was supplied.",
+                affected_claim_ids=["A-02", "A-77"],
+                reason="The loss cannot be sized without it.",
+                priority="high",
+                askable=True,
+                clarification_question="Was any ransom paid?",
+            )
+        ],
+        mitre_associations=[
+            CaseMitreAssociation(
+                association_id=f"MA-0{n}",
+                technique_id=technique,
+                claim_ids=claim_ids,
+                reason="The share was encrypted.",
+                status="candidate_only",
+                support_role="external_technical_context",
+            )
+            for n, (technique, claim_ids) in enumerate(
+                (("T1486", ["A-01"]), ("T1059.001", ["A-77"]), ("T9999", ["A-01"])), 1
+            )
+        ],
+    )
+    mitre_table = [{"technique_id": "T1486"}, {"technique_id": "T1059.001"}]
+
+    after = resolve_case_trace(
+        joined_trace(reading, verdict, context), bundle, mitre_table=mitre_table
+    )
+    checked, grounding = bound_claims(reading, bundle)
+    before = bound_references(joined_trace(checked, verdict, context, grounding), mitre_table)
+
+    assert before == after
+    assert [claim.epistemic_status for claim in before.claims] == ["reported", "not_confirmed"]
+    assert before.grounding.claims_duplicated == 1
+    assert before.grounding.associations_outside_context == 1
+    assert before.grounding.associations_without_claim == 1
 
 
 def test_each_call_is_given_the_case_sources_as_one_structured_collection():

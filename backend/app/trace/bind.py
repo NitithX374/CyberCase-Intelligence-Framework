@@ -20,7 +20,12 @@ from app.trace.quotes import (
     resolve_document_locator,
     without_edge_ellipses,
 )
-from app.trace.trace import CaseAnalysisTrace, CaseGroundingReport, CaseMitreAssociation
+from app.trace.trace import (
+    CaseAnalysisTrace,
+    CaseGroundingReport,
+    CaseMitreAssociation,
+    CaseProviderReading,
+)
 
 ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
 
@@ -46,40 +51,61 @@ def resolve_case_trace(
     mitre_table: object = None,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> CaseAnalysisTrace:
+    bound, grounding = bound_claims(trace, source_bundle, followup_history)
+    return bound_references(bound.model_copy(update={"grounding": grounding}), mitre_table)
+
+
+def bound_claims(
+    written: CaseAnalysisTrace | CaseProviderReading,
+    source_bundle: CaseSourceBundle,
+    followup_history: Sequence[CaseFollowupExchange] = (),
+) -> tuple[CaseAnalysisTrace | CaseProviderReading, CaseGroundingReport]:
     registry = {source.source_id: source for source in source_bundle.sources}
     registry.update({item.source_id: item for item in followup_registry_items(followup_history)})
     document_context = build_document_source_context(source_bundle)
     search = QuoteSearch(registry)
 
-    claims = deduplicated_claims(trace.claims)
+    claims = deduplicated_claims(written.claims)
     known_claim_ids = {claim.claim_id for claim in claims}
     resolved_claims = [resolve_claim(claim, registry, document_context, search) for claim in claims]
 
+    bound = written.model_copy(
+        update={
+            "claims": resolved_claims,
+            "involved_parties": [
+                bound_to_claims(party, known_claim_ids) for party in written.involved_parties
+            ],
+            "timeline": [bound_to_claims(item, known_claim_ids) for item in written.timeline],
+            "impacts": [bound_to_claims(impact, known_claim_ids) for impact in written.impacts],
+        }
+    )
+    grounding = grounding_report(
+        claims,
+        resolved_claims,
+        registry,
+        search=search,
+        claims_dropped=len(written.claims) - len(claims),
+    )
+    return bound, grounding
+
+
+def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> CaseAnalysisTrace:
+    known_claim_ids = {claim.claim_id for claim in trace.claims}
     associations, outside_context, without_claim = kept_associations(
         trace.mitre_associations,
         known_claim_ids,
         context_technique_ids(mitre_table),
         has_retrieval=trace.retrieval_context_id is not None,
     )
-
     return trace.model_copy(
         update={
-            "claims": resolved_claims,
-            "involved_parties": [
-                bound_to_claims(party, known_claim_ids) for party in trace.involved_parties
-            ],
-            "timeline": [bound_to_claims(item, known_claim_ids) for item in trace.timeline],
-            "impacts": [bound_to_claims(impact, known_claim_ids) for impact in trace.impacts],
             "gaps": [answerable_gap(gap, known_claim_ids) for gap in trace.gaps],
             "mitre_associations": associations,
-            "grounding": grounding_report(
-                claims,
-                resolved_claims,
-                registry,
-                search=search,
-                associations_outside_context=outside_context,
-                associations_without_claim=without_claim,
-                claims_dropped=len(trace.claims) - len(claims),
+            "grounding": trace.grounding.model_copy(
+                update={
+                    "associations_outside_context": outside_context,
+                    "associations_without_claim": without_claim,
+                }
             ),
         }
     )
@@ -317,6 +343,8 @@ def context_technique_ids(value: object) -> set[str]:
 
 
 __all__ = [
+    "bound_claims",
+    "bound_references",
     "context_technique_ids",
     "followup_registry_items",
     "grounding_report",

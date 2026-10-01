@@ -26,7 +26,7 @@ const STEP_LABELS: Record<AnalysisStepName, string> = {
   bind: "Checking the quotations against the sources",
 };
 
-const PLANNED: AnalysisStepName[] = ["assess", "gate", "read", "judge", "bind"];
+const PLANNED: AnalysisStepName[] = ["assess", "gate", "read", "bind", "judge"];
 
 function isStepName(step: string): step is AnalysisStepName {
   return step in STEP_LABELS;

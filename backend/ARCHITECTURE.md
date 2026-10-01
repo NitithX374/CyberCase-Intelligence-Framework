@@ -72,7 +72,24 @@ assessment row is stored with `status="assessment"` so its questions retain an
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
 trace in two model calls: `case_reading` writes the claims, parties, timeline
 and impacts with their quotations, and `case_judgement` writes the summary,
-gaps and ATT&CK associations over that reading. The `verify` arm in
+gaps and ATT&CK associations over that reading.
+
+Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
+against the sources:
+- each quotation is found and located;
+- a `reported` claim left with no verified quotation becomes `not_confirmed`;
+- the grounding counts are taken.
+
+The judgement therefore reads checked claims: their statuses, and only the
+quotations that were found.
+
+`bind_to_case` then checks the judgement's references with `bound_references`:
+- the `affected_claim_ids` of a gap;
+- the claim IDs of each ATT&CK association, and its technique against the
+  retrieved context.
+
+A trace written without the middle step, as the one-call writer in
+`experiments/analysis_arms.py` writes it, is bound in full there. The `verify` arm in
 `experiments/analysis_arms.py` runs the same three steps without the
 assessment. There is no arm switch or config value. The alternative compositions the thesis measures live in
 `backend/experiments/analysis_arms.py`; each arm calls these same functions on

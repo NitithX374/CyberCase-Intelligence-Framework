@@ -20,14 +20,14 @@ describe("the steps an analysis has reached", () => {
       "assess",
       "gate",
       "read",
-      "judge",
       "bind",
+      "judge",
     ]);
     expect(
       progressRows([...reached, { step: "retrieve", elapsed: 29, reachedAt: 30_000 }], 31_000).map(
         (row) => row.step,
       ),
-    ).toEqual(["assess", "gate", "retrieve", "read", "judge", "bind"]);
+    ).toEqual(["assess", "gate", "retrieve", "read", "bind", "judge"]);
   });
 
   it("times a finished step by the server and the current one from when it arrived", () => {
@@ -44,8 +44,8 @@ describe("the steps an analysis has reached", () => {
       { step: "assess", state: "done", seconds: 21 },
       { step: "gate", state: "done", seconds: 8.5 },
       { step: "read", state: "current", seconds: 72 },
-      { step: "judge", state: "waiting", seconds: null },
       { step: "bind", state: "waiting", seconds: null },
+      { step: "judge", state: "waiting", seconds: null },
     ]);
   });
 

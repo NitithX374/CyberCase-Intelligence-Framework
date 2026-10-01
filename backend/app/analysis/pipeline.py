@@ -22,7 +22,7 @@ from app.errors import CaseAnalysisFailure
 from app.followup.clarification import FollowupDecision, Proceed, decide_followup
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.sources.bundle import CaseSourceBundle
-from app.trace.bind import resolve_case_trace
+from app.trace.bind import bound_references, resolve_case_trace
 from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace
 
@@ -134,7 +134,8 @@ async def write_analysis(
 
 
 async def bind_to_case(data: AnalysisInput, so_far: AnalysisArtifacts) -> AnalysisArtifacts:
-    announce("bind")
+    if so_far.trace.grounding is None:
+        announce("bind")
     try:
         trace = await asyncio.to_thread(bound_trace, data, so_far, so_far.trace)
     except ValidationError as error:
@@ -151,10 +152,13 @@ def bound_trace(
     data: AnalysisInput, so_far: AnalysisArtifacts, trace: CaseAnalysisTrace
 ) -> CaseAnalysisTrace:
     context = so_far.technical_context
+    mitre_table = list(context.mitre_table) if context is not None else []
+    if trace.grounding is not None:
+        return bound_references(trace, mitre_table)
     return resolve_case_trace(
         trace,
         data.sources,
-        mitre_table=list(context.mitre_table) if context is not None else [],
+        mitre_table=mitre_table,
         followup_history=data.followup_history,
     )
 
