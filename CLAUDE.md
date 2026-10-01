@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, then a judgement that writes the summary, gaps and ATT&CK associations over that reading. The reading runs without grammar-constrained decoding: its JSON is described in the prompt, validated after decoding and asked at most twice. Every other call keeps the provider's JSON-schema grammar. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
+**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, a check of those quotations against the sources, then a judgement that writes the summary, gaps and ATT&CK associations over the checked claims. The reading runs without grammar-constrained decoding: its JSON is described in the prompt, validated after decoding and asked at most twice. Every other call keeps the provider's JSON-schema grammar. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
 
 ## Service Layout
 
@@ -162,7 +162,7 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
   with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
   (`analysis/stream.py`):
   - a `step` event as the analysis reaches each step (`assess`, `gate`, `retrieve` only when the RAG service is asked,
-    `read`, `judge`, `bind`), with the seconds since it began;
+    `read`, `bind`, `judge`), with the seconds since it began;
   - a `: heartbeat` comment every 15 seconds of quiet, so the browser can tell a slow step from a lost connection;
   - then `result`, holding the JSON body a plain request gets, or `error`, holding its status and `detail`.
   - The analysis runs in a task of its own, so it finishes and is stored even if the browser leaves. Without that
@@ -198,6 +198,9 @@ trace/                  what the analysis, chat and reports share
   trace.py              the trace: summary, parties, timeline, impacts, claims
   quotes.py             finding a quotation in a source
   bind.py               bind a written trace to the case; count what did not bind;
+                        bound_claims checks the reading's quotations before the
+                        judgement, and bound_references checks the judgement's
+                        claim IDs and techniques after it;
                         a "reported" claim left with no verified quote becomes
                         "not_confirmed"; a quote with an ellipsis in the middle is
                         stored as one citation per piece when every piece occurs
@@ -233,8 +236,9 @@ analysis/               producing an analysis of a case; routes, schemas
   assess.py             the cheap gaps-only call that runs first
   write.py              write_trace: a reading call (claims, parties, timeline,
                         impacts, with quotations; JSON from the prompt, no
-                        grammar), then a judgement call (summary, gaps,
-                        ATT&CK associations) over that reading
+                        grammar), the check of its quotations (bound_claims),
+                        then a judgement call (summary, gaps, ATT&CK
+                        associations) over the checked claims
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   progress.py           announce(step): the steps write, retrieve and the
@@ -307,8 +311,8 @@ decision = decide_followup(assessment.gaps, ...)
 if not isinstance(decision, Proceed):
     return AnalysisAdvance(assessment, decision)   # ask, and stop here
 artifacts = await retrieve_technical_context(...)  # only now pay for the rest
-artifacts = await write_analysis(...)
-artifacts = await bind_to_case(...)
+artifacts = await write_analysis(...)              # reading, quote check, judgement
+artifacts = await bind_to_case(...)                # the judgement's references
 ```
 
 A round that ends in a question never calls the MITRE gate, the RAG service,
