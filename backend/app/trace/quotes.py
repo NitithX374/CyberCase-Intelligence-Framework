@@ -9,6 +9,7 @@ MAX_QUOTE_CHARS = 2_000
 PARAPHRASE_TRIGRAM_SHARE = 0.6
 EDGE_ELLIPSIS = re.compile(r"^\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*|\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*$")
 QUOTE_MARK = "[\"'“”‘’]"
+OCR_TAG = r"(?:<page_number>[^<]*</page_number>|</?[A-Za-z][^<>]*>)"
 
 
 def folded(text: str) -> tuple[str, list[int]]:
@@ -196,10 +197,10 @@ def find_aligned_quote(source: str | IndexedText, quote: str) -> list[tuple[int,
                 parts.append(QUOTE_MARK)
             else:
                 parts.append(re.escape(ch))
-        return r"[*_#`~]*\s*".join(parts)
+        return rf"[*_#`~]*\s*(?:{OCR_TAG}\s*)*".join(parts)
 
     word_patterns = [word_to_pattern(w) for w in words]
-    pattern_str = r"[*_#`~]*" + r"[*_#`~\s]*".join(word_patterns) + r"[*_#`~]*"
+    pattern_str = r"[*_#`~]*" + rf"(?:[*_#`~\s]|{OCR_TAG})*".join(word_patterns) + r"[*_#`~]*"
 
     try:
         matches = list(re.finditer(pattern_str, content))

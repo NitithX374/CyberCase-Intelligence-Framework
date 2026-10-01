@@ -197,6 +197,80 @@ def test_a_gapped_quote_after_one_of_its_pieces_counts_for_the_piece_it_adds():
     assert_counts_add_up(trace)
 
 
+OCR_TABLE = (
+    "Transfer record\n"
+    "<table>\n"
+    "<tr><th>Date</th><th>Amount</th><th>To account</th></tr>\n"
+    "<tr><td>3 March 2026</td><td>50,000 baht</td><td>123-4-56789</td></tr>\n"
+    "<tr><td>5 March 2026</td><td>20,000 baht</td><td>987-6-54321</td></tr>\n"
+    "</table>\n"
+    "<page_number>2</page_number>"
+)
+
+
+def test_a_quote_inside_one_table_cell_is_found():
+    bundle, source_id = bundle_and_id(OCR_TABLE)
+    trace = resolve_case_trace(trace_of(claim(source_id, "A-01", "50,000 baht")), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == ["50,000 baht"]
+
+
+def test_a_quote_across_the_cells_of_a_table_row_is_found_with_the_tags_between():
+    bundle, source_id = bundle_and_id(OCR_TABLE)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "3 March 2026 50,000 baht")), bundle
+    )
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "3 March 2026</td><td>50,000 baht"
+    ]
+    assert trace.claims[0].epistemic_status == "reported"
+    assert trace.grounding.citations_verified == 1
+    assert_counts_add_up(trace)
+
+
+def test_a_thai_quote_across_two_cells_or_a_page_number_is_found():
+    text = (
+        "<table><tr><td>โอนเงิน</td><td>50,000 บาท</td></tr></table>\n"
+        "ผู้เสียหายโอนเงิน\n<page_number>3</page_number>\nให้ผู้ต้องหา"
+    )
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "โอนเงิน 50,000 บาท"),
+            claim(source_id, "A-02", "ผู้เสียหายโอนเงินให้ผู้ต้องหา"),
+        ),
+        bundle,
+    )
+
+    assert [c.supporting_citations[0].exact_quote for c in trace.claims] == [
+        "โอนเงิน</td><td>50,000 บาท",
+        "ผู้เสียหายโอนเงิน\n<page_number>3</page_number>\nให้ผู้ต้องหา",
+    ]
+
+
+def test_cells_from_different_rows_still_do_not_make_a_quote():
+    bundle, source_id = bundle_and_id(OCR_TABLE)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "3 March 2026 20,000 baht")), bundle
+    )
+
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
+    assert_counts_add_up(trace)
+
+
+def test_a_quote_across_cells_that_matches_twice_is_refused():
+    row = "<tr><td>1 April 2026</td><td>10,000 baht</td></tr>\n"
+    bundle, source_id = bundle_and_id(f"<table>\n{row}{row}</table>")
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "1 April 2026 10,000 baht")), bundle
+    )
+
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
+
+
 def test_a_quote_with_other_quotation_marks_than_the_source_is_found():
     text = 'Abta said the "vast majority" of the 43,000 people affected had registered.'
     bundle, source_id = bundle_and_id(text)
