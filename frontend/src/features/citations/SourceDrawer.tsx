@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import type { SourceMessageRef } from "./types";
+import { quotedPassage } from "./quotedPassage";
+import type { QuoteContext, SourceMessageRef } from "./types";
 import { Icon } from "@/components/icons";
 
 export function SourceDrawer({
@@ -76,10 +77,31 @@ export function SourceDrawer({
           tabIndex={0}
           aria-label="Source text"
         >
+          {sourceRef.exactQuote && (
+            <Quoted quote={sourceRef.exactQuote} context={sourceRef.quoteContext} />
+          )}
           <SourceContent sourceRef={sourceRef} />
         </div>
       </div>
     </dialog>
+  );
+}
+
+function Quoted({ quote, context }: { quote: string; context: QuoteContext | null }) {
+  const passage = quotedPassage(quote, context);
+  return (
+    <section className="mb-6">
+      <h3 className="mb-2 text-xs font-medium text-ink-muted">Quoted</h3>
+      <p className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+        {passage.before}
+        {passage.before || passage.after ? (
+          <strong className="font-semibold">{passage.quote}</strong>
+        ) : (
+          passage.quote
+        )}
+        {passage.after}
+      </p>
+    </section>
   );
 }
 
@@ -118,9 +140,14 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
           </section>
         ))
       ) : (
-        <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
-          {content || "(No text content)"}
-        </p>
+        <section>
+          {sourceRef.exactQuote && (
+            <h3 className="mb-2 text-xs font-medium text-ink-muted">Source text</h3>
+          )}
+          <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+            {content || "(No text content)"}
+          </p>
+        </section>
       )}
     </div>
   );

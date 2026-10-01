@@ -56,6 +56,12 @@ test.describe("case lifecycle", () => {
     await sections.getByRole("link", { name: /^Findings/ }).click();
     await expect(page).toHaveURL(/\/analysis\/findings$/, { timeout: 60_000 });
     await expect(page.getByText(narrative, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Case narrative #1" }).first().click();
+    const drawer = page.getByRole("dialog", { name: "Source: Case narrative #1" });
+    await expect(drawer.getByRole("heading", { level: 3, name: "Quoted" })).toBeVisible();
+    await expect(drawer.getByText(narrative, { exact: true }).first()).toBeVisible();
+    await drawer.getByRole("button", { name: "Close source" }).click();
+    await expect(drawer).toBeHidden();
 
     await sections.getByRole("link", { name: "Details" }).click();
     await expect(page.getByRole("region", { name: "Technical Context" })).toBeVisible({

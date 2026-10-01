@@ -375,6 +375,12 @@ export interface components {
             status: "candidate_only";
             support_role: "external_technical_context";
         };
+        CaseQuoteContext: {
+            before: string;
+            after: string;
+            cut_before: boolean;
+            cut_after: boolean;
+        };
         CaseRead: {
             id: string;
             user_id?: string | null;
@@ -420,6 +426,7 @@ export interface components {
             document_id?: string | null;
             filename?: string | null;
             page_numbers?: number[];
+            context?: components["schemas"]["CaseQuoteContext"] | null;
         };
         CaseSourceCreate: {
             exact_text: string;
@@ -522,6 +529,8 @@ export interface components {
             contradicting_source_labels?: string[];
             supporting_quotes?: string[];
             contradicting_quotes?: string[];
+            supporting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
+            contradicting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
             reasoning_summary?: string | null;
         };
         ReportGap: {
@@ -539,6 +548,12 @@ export interface components {
             name: string;
             role: string;
             references?: string[];
+        };
+        ReportQuoteContext: {
+            before: string;
+            after: string;
+            cut_before: boolean;
+            cut_after: boolean;
         };
         ReportSource: {
             label: string;

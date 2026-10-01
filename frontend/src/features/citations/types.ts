@@ -4,10 +4,18 @@ export interface SourceMessageRef {
   excerpt: string;
   displayContent: string;
   exactQuote: string | null;
+  quoteContext: QuoteContext | null;
   filename: string | null;
   pageNumbers: number[];
   sourcePages: SourcePage[];
   question: string | null;
+}
+
+export interface QuoteContext {
+  before: string;
+  after: string;
+  cutBefore: boolean;
+  cutAfter: boolean;
 }
 
 export interface SourcePage {

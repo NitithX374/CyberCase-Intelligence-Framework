@@ -9,6 +9,7 @@ const statement: SourceMessageRef = {
   excerpt: "received 52,000 baht",
   displayContent: "received 52,000 baht",
   exactQuote: "received 52,000 baht",
+  quoteContext: null,
   filename: "statement.pdf",
   pageNumbers: [4],
   sourcePages: [{ pageNumber: 4, text: "received 52,000 baht" }],
