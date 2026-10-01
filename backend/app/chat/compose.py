@@ -22,9 +22,9 @@ from app.models.chat_message import ChatMessage
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
 from app.trace.bind import (
     QuoteSearch,
+    added_citations,
     followup_registry_items,
     resolve_case_trace,
-    resolved_citations,
 )
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -122,6 +122,7 @@ class DraftUnit:
     claim_ids: tuple[str, ...]
     quotes: tuple[CaseSourceCitation, ...]
     offered_quotes: int
+    verified_quotes: int
 
 
 async def generate_case_answer(
@@ -279,8 +280,9 @@ def drafted_unit(
             )
         except ValidationError:
             continue
-    quotes = tuple(resolved_citations(offered, registry, document_context, search))
-    return DraftUnit(text, item.basis, claim_ids, quotes, len(item.quotes))
+    added = added_citations(offered, registry, search, document_context)
+    quotes = tuple(citation for fresh in added for citation in fresh)
+    return DraftUnit(text, item.basis, claim_ids, quotes, len(item.quotes), sum(map(bool, added)))
 
 
 def finished_unit(draft: DraftUnit, bound: Mapping[str, CaseAnalysisClaim]) -> ChatAnswerUnit:
@@ -337,7 +339,7 @@ def log_grounding(drafts: Sequence[DraftUnit], units: Sequence[ChatAnswerUnit]) 
         sum(unit.basis == "technical" for unit in units),
         sum(unit.basis == "general" for unit in units),
         sum(draft.offered_quotes for draft in drafts),
-        sum(len(draft.quotes) for draft in drafts),
+        sum(draft.verified_quotes for draft in drafts),
     )
 
 

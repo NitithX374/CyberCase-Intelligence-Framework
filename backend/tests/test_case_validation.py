@@ -453,10 +453,15 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
 
 def test_find_aligned_quote_handles_markdown_and_whitespace():
     content = 'Header\n\n**Witness** Statement\n\nThe witness saw "red car".'
-    assert find_aligned_quote(content, "Witness Statement") == "**Witness** Statement"
-    assert find_aligned_quote(content, 'witness saw "red car"') == 'witness saw "red car"'
-    assert find_aligned_quote(content, "witness saw “red car”") == 'witness saw "red car"'
-    assert find_aligned_quote(content, "Nonexistent Statement") is None
+
+    def aligned(quote: str) -> list[str] | None:
+        spans = find_aligned_quote(content, quote)
+        return None if spans is None else [content[start:end] for start, end in spans]
+
+    assert aligned("Witness Statement") == ["**Witness** Statement"]
+    assert aligned('witness saw "red car"') == ['witness saw "red car"']
+    assert aligned("witness saw “red car”") == ['witness saw "red car"']
+    assert aligned("Nonexistent Statement") is None
 
 
 def test_resolve_case_trace_allows_same_page_multiple_occurrences():
@@ -486,6 +491,57 @@ def test_resolve_case_trace_allows_same_page_multiple_occurrences():
         [],
     )
     assert validated.claims[0].supporting_citations[0].page_numbers == [1]
+
+
+def test_resolve_case_trace_locates_each_piece_of_a_gapped_quote_on_its_own_page():
+    page_one = "Report of the incident.\nThe server was encrypted overnight."
+    page_two = "Recovery notes.\nThe backups were restored on Monday."
+    content = f"{page_one}\n\n{page_two}"
+    provenance = bind_exact_page_spans(
+        {
+            "pages": [
+                {"page_number": 1, "merged_text": page_one},
+                {"page_number": 2, "merged_text": page_two},
+            ]
+        },
+        content,
+    )
+    claim = CaseAnalysisClaim(
+        claim_id="A-01",
+        claim_type="reported",
+        text="The server was encrypted and later restored.",
+        epistemic_status="reported",
+        supporting_source_ids=["s1"],
+        supporting_citations=[
+            CaseSourceCitation(
+                source_id="s1",
+                exact_quote=(
+                    "The server was encrypted overnight. ... The backups were restored on Monday."
+                ),
+            )
+        ],
+    )
+    source = CaseSourceItem(
+        source_id="s1",
+        source_kind="document",
+        text=content,
+        document_id="d1",
+        filename="report.pdf",
+        provenance={"pages": provenance["pages"]},
+    )
+    validated = resolve_case_trace(
+        _trace(claim, content),
+        CaseSourceBundle(revision=1, sources=(source,)),
+        [],
+    )
+
+    assert [
+        (citation.exact_quote, citation.page_numbers)
+        for citation in validated.claims[0].supporting_citations
+    ] == [
+        ("The server was encrypted overnight.", [1]),
+        ("The backups were restored on Monday.", [2]),
+    ]
 
 
 def test_claim_reasoning_summary_empty_and_whitespace_normalized():

@@ -83,6 +83,120 @@ def test_a_quote_cut_with_an_ellipsis_at_either_end_is_found():
     assert trace.grounding.citations_paraphrased == 0
 
 
+GAPPED = "Filenames had been changed ... demanded contact by email."
+
+
+def test_a_quote_with_a_gap_is_stored_as_one_citation_per_piece():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(trace_of(claim(source_id, "A-01", GAPPED)), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "Filenames had been changed",
+        "demanded contact by email.",
+    ]
+
+
+def test_a_quote_split_into_pieces_is_counted_once_and_keeps_its_claim_reported():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(trace_of(claim(source_id, "A-01", GAPPED)), bundle)
+
+    assert len(trace.claims[0].supporting_citations) == 2
+    assert trace.claims[0].epistemic_status == "reported"
+    assert trace.grounding.citations_claimed == 1
+    assert trace.grounding.citations_verified == 1
+    assert trace.grounding.citations_duplicated == 0
+    assert_counts_add_up(trace)
+
+
+def test_a_gapped_quote_whose_later_piece_appears_twice_after_the_first_is_dropped():
+    text = "The share was encrypted. Then a note was left. Later a note was left again."
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "The share was encrypted ... a note was left")), bundle
+    )
+
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
+    assert trace.grounding.citations_verified == 0
+    assert_counts_add_up(trace)
+
+
+def test_a_gapped_quote_with_a_piece_found_twice_is_stored_as_one_merged_span():
+    text = "Payroll was moved. The attacker logged in at night. Payroll was moved."
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "The attacker logged in ... Payroll was moved.")), bundle
+    )
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "The attacker logged in at night. Payroll was moved."
+    ]
+    assert trace.claims[0].epistemic_status == "reported"
+    assert trace.grounding.citations_verified == 1
+    assert_counts_add_up(trace)
+
+
+def test_ellipses_at_the_ends_are_trimmed_before_a_gapped_quote_is_split():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "...had been changed and a text file..."),
+            claim(source_id, "A-02", "… Filenames had been changed … demanded contact …"),
+        ),
+        bundle,
+    )
+
+    assert [[c.exact_quote for c in item.supporting_citations] for item in trace.claims] == [
+        ["had been changed and a text file"],
+        ["Filenames had been changed", "demanded contact"],
+    ]
+
+
+def test_a_piece_also_cited_on_its_own_is_kept_once():
+    bundle, source_id = bundle_and_id()
+    written = claim(source_id, "A-01", GAPPED).model_copy(
+        update={
+            "supporting_citations": [
+                CaseSourceCitation(source_id=source_id, exact_quote=GAPPED),
+                CaseSourceCitation(source_id=source_id, exact_quote="Filenames had been changed"),
+            ]
+        }
+    )
+
+    trace = resolve_case_trace(trace_of(written), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "Filenames had been changed",
+        "demanded contact by email.",
+    ]
+    assert trace.grounding.citations_claimed == 2
+    assert trace.grounding.citations_verified == 1
+    assert trace.grounding.citations_duplicated == 1
+    assert_counts_add_up(trace)
+
+
+def test_a_gapped_quote_after_one_of_its_pieces_counts_for_the_piece_it_adds():
+    bundle, source_id = bundle_and_id()
+    written = claim(source_id, "A-01", GAPPED).model_copy(
+        update={
+            "supporting_citations": [
+                CaseSourceCitation(source_id=source_id, exact_quote="Filenames had been changed"),
+                CaseSourceCitation(source_id=source_id, exact_quote=GAPPED),
+            ]
+        }
+    )
+
+    trace = resolve_case_trace(trace_of(written), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "Filenames had been changed",
+        "demanded contact by email.",
+    ]
+    assert trace.grounding.citations_verified == 2
+    assert trace.grounding.citations_duplicated == 0
+    assert_counts_add_up(trace)
+
+
 def test_a_quote_with_other_quotation_marks_than_the_source_is_found():
     text = 'Abta said the "vast majority" of the 43,000 people affected had registered.'
     bundle, source_id = bundle_and_id(text)

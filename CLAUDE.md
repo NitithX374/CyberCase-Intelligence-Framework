@@ -199,7 +199,11 @@ trace/                  what the analysis, chat and reports share
   quotes.py             finding a quotation in a source
   bind.py               bind a written trace to the case; count what did not bind;
                         a "reported" claim left with no verified quote becomes
-                        "not_confirmed"
+                        "not_confirmed"; a quote with an ellipsis in the middle is
+                        stored as one citation per piece when every piece occurs
+                        once in the source, and otherwise as the one span the
+                        pieces stretch over; either way it counts as one written
+                        quote
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share
