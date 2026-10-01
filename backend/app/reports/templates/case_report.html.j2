@@ -216,11 +216,11 @@
                 <td class="n">{{ finding.ordinal }}</td>
                 <td>
                   {{ finding.text | clean_report_text }}
-                  {% for quote in finding.supporting_quotes %}
-                    <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> “{{ quote }}”</div>
+                  {% for quote in finding.supporting_quotes | quoted(finding.supporting_contexts) %}
+                    <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> {{ quote }}</div>
                   {% endfor %}
-                  {% for quote in finding.contradicting_quotes %}
-                    <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> “{{ quote }}”</div>
+                  {% for quote in finding.contradicting_quotes | quoted(finding.contradicting_contexts) %}
+                    <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> {{ quote }}</div>
                   {% endfor %}
                   {% if finding.reasoning_summary %}
                     <div class="quote"><span class="quote-label">เหตุผลเชิงวิเคราะห์:</span> {{ finding.reasoning_summary | clean_report_text }}</div>

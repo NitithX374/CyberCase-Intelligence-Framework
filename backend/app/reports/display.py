@@ -12,6 +12,7 @@ from app.reports.schemas import (
     ReportGap,
     ReportImpact,
     ReportParty,
+    ReportQuoteContext,
     ReportSource,
     ReportTechnique,
 )
@@ -228,6 +229,8 @@ def report_findings(
                 ),
                 supporting_quotes=quotes(claim.supporting_citations),
                 contradicting_quotes=quotes(claim.contradicting_citations),
+                supporting_contexts=quote_contexts(claim.supporting_citations),
+                contradicting_contexts=quote_contexts(claim.contradicting_citations),
                 reasoning_summary=claim.reasoning_summary,
             )
         )
@@ -236,6 +239,14 @@ def report_findings(
 
 def quotes(citations: list[CaseSourceCitation]) -> list[str]:
     return [citation.exact_quote for citation in citations if citation.exact_quote.strip()]
+
+
+def quote_contexts(citations: list[CaseSourceCitation]) -> list[ReportQuoteContext | None]:
+    return [
+        ReportQuoteContext(**citation.context.model_dump()) if citation.context else None
+        for citation in citations
+        if citation.exact_quote.strip()
+    ]
 
 
 def report_techniques(
