@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -160,6 +161,24 @@ def test_a_fact_quoted_from_deep_in_a_document_is_cited_with_its_page(monkeypatc
         [20],
     )
     assert answered.supporting_source_ids == [DOCUMENT_ID]
+
+
+def test_the_grounding_log_counts_a_gapped_quote_once(monkeypatch, caplog):
+    caplog.set_level(logging.INFO, logger=module.__name__)
+    output, _ = ask(
+        monkeypatch,
+        reply(
+            unit(
+                "A caller posed as police on 3 March.",
+                quotes=[
+                    (NARRATIVE_ID, "On 3 March the victim ... claiming to be a police officer.")
+                ],
+            )
+        ),
+    )
+
+    assert len(output.units[0].supporting_citations) == 2
+    assert "quotes 1 offered 1 verified" in caplog.text
 
 
 def test_a_quote_that_is_not_in_the_source_loses_its_citation_but_not_its_text(monkeypatch):

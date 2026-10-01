@@ -197,19 +197,23 @@ async def stored_kinds(factory, case_id) -> list[str]:
         return [message.message_kind for message in rows]
 
 
-async def long_case(factory) -> tuple:
+FILLER = " ".join(f"Routine log line {n} recorded nothing unusual." for n in range(80))
+LONG_TEXT = f"{HEAD} {FILLER} {TAIL}"
+MARKED_WORDS = [f"tok{n:03d}" for n in range(250)]
+MARKED_TEXT = "\n\n".join(f"**{word}**" for word in MARKED_WORDS)
+
+
+async def case_with_source(factory, text: str) -> tuple:
     case_id, user_id, _ = await seeded_case(factory, trace=None)
-    filler = " ".join(f"Routine log line {n} recorded nothing unusual." for n in range(80))
-    long_text = f"{HEAD} {filler} {TAIL}"
     async with factory() as db, db.begin():
-        db.add(CaseSource(case_id=case_id, source_kind="narrative", exact_text=long_text))
-    return case_id, user_id, long_text
+        db.add(CaseSource(case_id=case_id, source_kind="narrative", exact_text=text))
+    return case_id, user_id
 
 
-def citing_across(long_text: str):
+def citing(text: str, quote: str):
     def cite(content: dict) -> dict:
-        [source_id] = [s["source_id"] for s in content["case_sources"] if s["text"] == long_text]
-        return reading(claim("A-01", source_id, f"{HEAD} ... {TAIL}"))
+        [source_id] = [s["source_id"] for s in content["case_sources"] if s["text"] == text]
+        return reading(claim("A-01", source_id, quote))
 
     return cite
 
@@ -218,8 +222,8 @@ async def test_an_elided_quote_that_spans_too_much_of_a_source_is_dropped_not_a_
     monkeypatch, model
 ):
     async with isolated_database() as factory:
-        case_id, user_id, long_text = await long_case(factory)
-        model(assess=[NO_GAPS], read=[citing_across(long_text)], judge=[JUDGED])
+        case_id, user_id = await case_with_source(factory, LONG_TEXT)
+        model(assess=[NO_GAPS], read=[citing(LONG_TEXT, f"{HEAD} ... {TAIL}")], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             ran = await client.post(f"/cases/{case_id}/analysis")
             stored = await client.get(f"/cases/{case_id}/analysis")
@@ -235,9 +239,10 @@ async def test_an_elided_quote_that_spans_too_much_of_a_source_is_dropped_not_a_
 
 async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypatch, model):
     async with isolated_database() as factory:
-        case_id, user_id, long_text = await long_case(factory)
+        case_id, user_id = await case_with_source(factory, MARKED_TEXT)
         monkeypatch.setattr(bind, "MAX_QUOTE_CHARS", 10 * MAX_QUOTE_CHARS)
-        model(assess=[NO_GAPS], read=[citing_across(long_text)], judge=[JUDGED])
+        quote = " ".join(MARKED_WORDS)
+        model(assess=[NO_GAPS], read=[citing(MARKED_TEXT, quote)], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
             ran = await client.post(f"/cases/{case_id}/analysis")
             stored = await client.get(f"/cases/{case_id}/analysis")

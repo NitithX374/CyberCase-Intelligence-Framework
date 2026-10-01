@@ -165,21 +165,21 @@ def without_edge_ellipses(quote: str) -> str:
     return trimmed if len(trimmed) >= 2 else quote
 
 
-def find_aligned_quote(source: str | IndexedText, quote: str) -> str | None:
+def find_aligned_quote(source: str | IndexedText, quote: str) -> list[tuple[int, int]] | None:
     source = indexed(source)
     content = source.text
     quote = without_edge_ellipses(quote)
     occurrences = quote_occurrences(content, quote)
     if len(occurrences) == 1:
-        return quote
+        return [(occurrences[0], occurrences[0] + len(quote))]
     if len(occurrences) > 1:
         return None
 
     compatibility_aligned = find_folded_quote(source, quote)
     if compatibility_aligned is not None:
-        return compatibility_aligned
+        return [compatibility_aligned]
 
-    ellipsis_aligned = expand_unique_ellipsis_quote(content, quote)
+    ellipsis_aligned = unique_ellipsis_pieces(content, quote)
     if ellipsis_aligned is not None:
         return ellipsis_aligned
 
@@ -207,15 +207,13 @@ def find_aligned_quote(source: str | IndexedText, quote: str) -> str | None:
         return None
 
     if len(matches) == 1:
-        match = matches[0]
-        return content[match.start() : match.end()]
+        return [matches[0].span()]
 
     return None
 
 
-def find_folded_quote(source: str | IndexedText, quote: str) -> str | None:
+def find_folded_quote(source: str | IndexedText, quote: str) -> tuple[int, int] | None:
     source = indexed(source)
-    content = source.text
     folded_content, index = source.folded
     folded_quote, _ = folded(quote)
     if not folded_quote:
@@ -223,41 +221,32 @@ def find_folded_quote(source: str | IndexedText, quote: str) -> str | None:
     positions = quote_occurrences(folded_content, folded_quote)
     if len(positions) != 1:
         return None
-    start = index[positions[0]]
     end_piece = positions[0] + len(folded_quote) - 1
-    return content[start : index[end_piece] + 1]
+    return index[positions[0]], index[end_piece] + 1
 
 
-def expand_unique_ellipsis_quote(content: str, quote: str) -> str | None:
+def unique_ellipsis_pieces(content: str, quote: str) -> list[tuple[int, int]] | None:
     parts = [part.strip() for part in re.split(r"(?:\.{3,}|…+)", quote)]
     if len(parts) < 2 or any(len(part) < 2 for part in parts):
         return None
-    candidates: list[tuple[int, int]] = []
+    candidates: list[list[tuple[int, int]]] = []
 
-    def collect(part_index: int, search_from: int, span_start: int | None) -> None:
+    def collect(part_index: int, search_from: int, placed: list[tuple[int, int]]) -> None:
         if len(candidates) > 1:
             return
         if part_index == len(parts):
-            if span_start is not None:
-                candidates.append((span_start, search_from))
+            candidates.append(placed)
             return
         part = parts[part_index]
         start = content.find(part, search_from)
         while start >= 0:
-            collect(
-                part_index + 1,
-                start + len(part),
-                start if span_start is None else span_start,
-            )
+            collect(part_index + 1, start + len(part), [*placed, (start, start + len(part))])
             if len(candidates) > 1:
                 return
             start = content.find(part, start + 1)
 
-    collect(0, 0, None)
-    if len(candidates) != 1:
-        return None
-    lower, upper = candidates[0]
-    return content[lower:upper]
+    collect(0, 0, [])
+    return candidates[0] if len(candidates) == 1 else None
 
 
 __all__ = [

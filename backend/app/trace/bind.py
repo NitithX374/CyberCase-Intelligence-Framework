@@ -158,7 +158,12 @@ def grounding_report(
         ]
 
     claimed = all_citations(written)
-    verified = len(all_citations(kept))
+    verified = sum(
+        bool(fresh)
+        for claim in written
+        for citations in (claim.supporting_citations, claim.contradicting_citations)
+        for fresh in added_citations(citations, registry, search)
+    )
     located = 0
     paraphrased = 0
     unfound = 0
@@ -229,19 +234,26 @@ def role_source_ids(
     return sorted(source_id for source_id in named if source_id in registry)
 
 
-def located_quote(source: str | IndexedText, quote: str) -> str | None:
+def located_quote(source: str | IndexedText, quote: str) -> tuple[str, ...] | None:
     source = indexed(source)
     quote = without_edge_ellipses(quote)
-    found = quote if quote_occurrences(source.text, quote) else find_aligned_quote(source, quote)
-    return found if found is not None and len(found) <= MAX_QUOTE_CHARS else None
+    if quote_occurrences(source.text, quote):
+        return (quote,) if len(quote) <= MAX_QUOTE_CHARS else None
+    spans = find_aligned_quote(source, quote)
+    if spans is None or spans[-1][1] - spans[0][0] > MAX_QUOTE_CHARS:
+        return None
+    pieces = tuple(source.text[start:end] for start, end in spans)
+    if any(len(quote_occurrences(source.text, piece)) > 1 for piece in pieces):
+        return (source.text[spans[0][0] : spans[-1][1]],)
+    return pieces
 
 
 class QuoteSearch:
     def __init__(self, registry: Mapping[str, CaseSourceItem]) -> None:
         self.texts = {source_id: IndexedText(source.text) for source_id, source in registry.items()}
-        self.found: dict[tuple[str, str], str | None] = {}
+        self.found: dict[tuple[str, str], tuple[str, ...] | None] = {}
 
-    def located(self, source_id: str, quote: str) -> str | None:
+    def located(self, source_id: str, quote: str) -> tuple[str, ...] | None:
         key = (source_id, quote)
         if key not in self.found:
             self.found[key] = located_quote(self.texts[source_id], quote)
@@ -251,6 +263,35 @@ class QuoteSearch:
         return looks_like_a_paraphrase(self.texts[source_id], quote)
 
 
+def added_citations(
+    citations: list[CaseSourceCitation],
+    registry: dict[str, CaseSourceItem],
+    search: QuoteSearch,
+    document_context: object = None,
+) -> list[list[CaseSourceCitation]]:
+    added: list[list[CaseSourceCitation]] = []
+    seen: set[tuple[str, str]] = set()
+    for citation in citations:
+        fresh: list[CaseSourceCitation] = []
+        added.append(fresh)
+        source = registry.get(citation.source_id)
+        if source is None:
+            continue
+        for exact_quote in search.located(source.source_id, citation.exact_quote) or ():
+            canonical = CaseSourceCitation(
+                source_id=source.source_id,
+                exact_quote=exact_quote,
+                **resolve_document_locator(
+                    source.source_id, exact_quote, source.text, document_context
+                ),
+            )
+            key = (canonical.source_id, canonical.exact_quote)
+            if key not in seen:
+                fresh.append(canonical)
+                seen.add(key)
+    return added
+
+
 def resolved_citations(
     citations: list[CaseSourceCitation],
     registry: dict[str, CaseSourceItem],
@@ -258,27 +299,11 @@ def resolved_citations(
     search: QuoteSearch | None = None,
 ) -> list[CaseSourceCitation]:
     search = search or QuoteSearch(registry)
-    resolved: list[CaseSourceCitation] = []
-    seen: set[tuple[str, str]] = set()
-    for citation in citations:
-        source = registry.get(citation.source_id)
-        if source is None:
-            continue
-        exact_quote = search.located(source.source_id, citation.exact_quote)
-        if exact_quote is None:
-            continue
-        canonical = CaseSourceCitation(
-            source_id=source.source_id,
-            exact_quote=exact_quote,
-            **resolve_document_locator(
-                source.source_id, exact_quote, source.text, document_context
-            ),
-        )
-        key = (canonical.source_id, canonical.exact_quote)
-        if key not in seen:
-            resolved.append(canonical)
-            seen.add(key)
-    return resolved
+    return [
+        citation
+        for fresh in added_citations(citations, registry, search, document_context)
+        for citation in fresh
+    ]
 
 
 def context_technique_ids(value: object) -> set[str]:
