@@ -186,6 +186,7 @@ describe("Case overview projection", () => {
                 near_passage: {
                   source_text: "The transfer happened on 17 March 2026",
                   differences: [{ written: "11", source: "17" }],
+                  occurrences: 1,
                 },
               },
               {

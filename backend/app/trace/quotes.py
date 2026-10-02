@@ -12,6 +12,7 @@ MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
 MAX_QUOTE_CHARS = 2_000
 MAX_POINTER_PLACES = 3
+CONTEXT_WORDS = 3
 WORD = re.compile(r"\w+(?:['’]\w+)*|\s+|[^\w\s]")
 THAI = re.compile(r"[฀-๿]")
 MASK = "\0"
@@ -60,6 +61,7 @@ def format_form(text: str) -> tuple[str, list[int]]:
 class NearPassage:
     source_text: str
     differences: tuple[tuple[str, str], ...]
+    occurrences: int = 1
 
 
 @dataclass(frozen=True)
@@ -67,7 +69,6 @@ class Alignment:
     start: int
     end: int
     edits: int
-    path: tuple[tuple[str, int, int], ...]
 
 
 class IndexedText:
@@ -95,18 +96,29 @@ def nearest_passage(source: str | IndexedText, quote: str) -> NearPassage | None
     best = aligned_candidate(content, quote)
     if best is None:
         return None
-    masked = content[: best.start] + MASK * (best.end - best.start) + content[best.end :]
-    second = aligned_candidate(masked, quote)
+    second = aligned_candidate(masked_everywhere(content, content[best.start : best.end]), quote)
     second_edits = second.edits if second is not None else len(quote)
-    if second_edits < best.edits + max(3, len(quote) // 10) or best.edits > len(quote) / 2:
+    if second_edits < best.edits + max(3, len(quote) // 10) or best.edits > len(quote) / 3:
         return None
-    passage = content[best.start : best.end]
-    if not passage.strip() or len(quote_occurrences(content, passage)) != 1:
+    worded = word_places(quote, content, best.start, best.end)
+    if worded is None:
         return None
-    places = quote_differences(quote, content, best.path)
-    if len(places) > MAX_POINTER_PLACES:
+    (start, end), places = worded
+    passage = content[start:end]
+    if not passage or len(places) > MAX_POINTER_PLACES:
         return None
-    return NearPassage(source_text=passage, differences=tuple(places))
+    return NearPassage(
+        source_text=passage,
+        differences=tuple(places),
+        occurrences=len(quote_occurrences(content, passage)),
+    )
+
+
+def masked_everywhere(content: str, text: str) -> str:
+    characters = list(content)
+    for start in quote_occurrences(content, text):
+        characters[start : start + len(text)] = MASK * len(text)
+    return "".join(characters)
 
 
 def aligned_candidate(content: str, quote: str) -> Alignment | None:
@@ -118,12 +130,7 @@ def aligned_candidate(content: str, quote: str) -> Alignment | None:
     if low >= high:
         return None
     alignment = infix_alignment(quote, content[low:high])
-    return Alignment(
-        start=alignment.start + low,
-        end=alignment.end + low,
-        edits=alignment.edits,
-        path=tuple((op, quote_at, source_at + low) for op, quote_at, source_at in alignment.path),
-    )
+    return Alignment(start=alignment.start + low, end=alignment.end + low, edits=alignment.edits)
 
 
 def infix_alignment(quote: str, text: str) -> Alignment:
@@ -149,22 +156,14 @@ def infix_alignment(quote: str, text: str) -> Alignment:
         moves.append(move)
         previous = row
     end = min(range(width + 1), key=previous.__getitem__)
-    path: list[tuple[str, int, int]] = []
     quote_at, column = len(quote), end
     while quote_at > 0:
         step = moves[quote_at - 1][column]
-        if step == 0:
-            same = quote[quote_at - 1] == text[column - 1]
-            path.append(("=" if same else "~", quote_at - 1, column - 1))
-            quote_at, column = quote_at - 1, column - 1
-        elif step == 1:
-            path.append(("+", quote_at - 1, column))
+        if step != 2:
             quote_at -= 1
-        else:
-            path.append(("-", quote_at, column - 1))
+        if step != 1:
             column -= 1
-    path.reverse()
-    return Alignment(start=column, end=end, edits=previous[end], path=tuple(path))
+    return Alignment(start=column, end=end, edits=previous[end])
 
 
 def token_spans(text: str, offset: int = 0) -> list[tuple[int, int]]:
@@ -182,86 +181,68 @@ def token_spans(text: str, offset: int = 0) -> list[tuple[int, int]]:
     ]
 
 
-def widened(spans: list[tuple[int, int]], start: int, end: int) -> tuple[int, int]:
-    hit = [span for span in spans if span[0] < max(end, start + 1) and span[1] > start]
-    return min([start] + [span[0] for span in hit]), max([end] + [span[1] for span in hit])
-
-
-def quote_differences(
-    quote: str, content: str, path: tuple[tuple[str, int, int], ...]
-) -> list[tuple[str, str]]:
-    source_low = min(at for op, _, at in path)
-    source_high = max(at for op, _, at in path) + 1
-    window_low = max(0, source_low - len(quote))
-    window_high = min(len(content), source_high + len(quote))
-    quote_words = token_spans(quote)
-    source_words = token_spans(content[window_low:window_high], window_low)
-    quote_to_source: dict[int, int] = {}
-    source_to_quote: dict[int, int] = {}
-    for op, quote_at, source_at in path:
-        if op != "-":
-            quote_to_source.setdefault(quote_at, source_at)
-        if op != "+":
-            source_to_quote.setdefault(source_at, quote_at)
-    runs: list[tuple[int, int, int, int]] = []
-    current: tuple[int, int, int, int] | None = None
-    for op, quote_at, source_at in path:
-        if op == "=":
-            if current is not None:
-                runs.append(current)
-                current = None
-            continue
-        quote_span = (quote_at, quote_at + 1) if op != "-" else (quote_at, quote_at)
-        source_span = (source_at, source_at + 1) if op != "+" else (source_at, source_at)
-        step = (*quote_span, *source_span)
-        current = (
-            step
-            if current is None
-            else (
-                min(current[0], step[0]),
-                max(current[1], step[1]),
-                min(current[2], step[2]),
-                max(current[3], step[3]),
-            )
-        )
-    if current is not None:
-        runs.append(current)
-    regions: list[tuple[int, int, int, int]] = []
-    for quote_start, quote_end, source_start, source_end in runs:
-        for _ in range(6):
-            new_quote = widened(quote_words, quote_start, quote_end)
-            mapped = [quote_to_source[at] for at in range(*new_quote) if at in quote_to_source]
-            new_source = widened(
-                source_words,
-                min([source_start, *mapped]),
-                max([source_end, *(at + 1 for at in mapped)]),
-            )
-            back = [source_to_quote[at] for at in range(*new_source) if at in source_to_quote]
-            grown = (
-                min([new_quote[0], *back]),
-                max([new_quote[1], *(at + 1 for at in back)]),
-                *new_source,
-            )
-            if grown == (quote_start, quote_end, source_start, source_end):
-                break
-            quote_start, quote_end, source_start, source_end = grown
-        if regions and (quote_start < regions[-1][1] or source_start < regions[-1][3]):
-            last = regions.pop()
-            quote_start, quote_end = min(quote_start, last[0]), max(quote_end, last[1])
-            source_start, source_end = min(source_start, last[2]), max(source_end, last[3])
-        regions.append((quote_start, quote_end, source_start, source_end))
+def word_places(
+    quote: str, content: str, start: int, end: int
+) -> tuple[tuple[int, int], list[tuple[str, str]]] | None:
+    margin = max(len(quote), 100)
+    low, high = max(0, start - margin), min(len(content), end + margin)
+    source_words = token_spans(content[low:high], low)
+    inside = [at for at, (a, b) in enumerate(source_words) if b > start and a < end]
+    if not inside:
+        return None
+    first = context_edge(source_words, content, inside[0], -1)
+    last = context_edge(source_words, content, inside[-1], 1)
+    window = source_words[first : last + 1]
+    written = [quote[a:b] for a, b in token_spans(quote)]
+    original = [content[a:b] for a, b in window]
+    opcodes = difflib.SequenceMatcher(None, written, original, autojunk=False).get_opcodes()
+    equal = [at for at, opcode in enumerate(opcodes) if opcode[0] == "equal"]
+    head, tail = (equal[0], equal[-1]) if equal else (len(opcodes), -1)
+    kept: list[int] = []
     places: list[tuple[str, str]] = []
-    for quote_start, quote_end, source_start, source_end in regions:
-        written = [quote[a:b] for a, b in quote_words if a >= quote_start and b <= quote_end]
-        original = [content[a:b] for a, b in source_words if a >= source_start and b <= source_end]
-        matcher = difflib.SequenceMatcher(None, written, original, autojunk=False)
-        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == "equal":
-                continue
-            place = ("".join(written[i1:i2]).strip(), "".join(original[j1:j2]).strip())
-            if place[0] != place[1] and place not in places:
-                places.append(place)
-    return places
+    for at, (tag, i1, i2, j1, j2) in enumerate(opcodes):
+        sources = list(range(j1, j2))
+        written_words = sum(1 for word in written[i1:i2] if word.strip())
+        if at < head:
+            sources = nearest_words(original, sources, written_words, reverse=True)
+        elif at > tail:
+            sources = nearest_words(original, sources, written_words, reverse=False)
+        kept.extend(sources)
+        if tag == "equal":
+            continue
+        place = ("".join(written[i1:i2]).strip(), "".join(original[j] for j in sources).strip())
+        if place[0] != place[1] and place not in places:
+            places.append(place)
+    if not kept:
+        return None
+    span_start, span_end = window[min(kept)][0], window[max(kept)][1]
+    piece = content[span_start:span_end]
+    span_start += len(piece) - len(piece.lstrip())
+    span_end -= len(piece) - len(piece.rstrip())
+    return (span_start, span_end), places
+
+
+def context_edge(words: list[tuple[int, int]], content: str, at: int, direction: int) -> int:
+    counted = 0
+    while 0 <= at + direction < len(words) and counted < CONTEXT_WORDS:
+        at += direction
+        if content[words[at][0] : words[at][1]].strip():
+            counted += 1
+    return at
+
+
+def nearest_words(
+    original: list[str], sources: list[int], wanted: int, *, reverse: bool
+) -> list[int]:
+    picked: list[int] = []
+    counted = 0
+    for at in reversed(sources) if reverse else sources:
+        if counted == wanted:
+            break
+        picked.append(at)
+        if original[at].strip():
+            counted += 1
+    return sorted(picked)
 
 
 def resolve_document_locator(

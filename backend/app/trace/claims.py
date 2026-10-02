@@ -150,6 +150,7 @@ class CaseNearPassage(BaseModel):
     differences: list[CaseQuoteDifference] = Field(
         default_factory=list, max_length=MAX_POINTER_PLACES
     )
+    occurrences: int = Field(default=1, ge=1)
 
 
 class CaseUnverifiedCitation(BaseModel):

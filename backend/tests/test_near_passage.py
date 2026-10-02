@@ -49,8 +49,42 @@ THAI_NAME = "ผู้เสียหายชื่อนายสมพงศ�
             "ผู้ต้องหาโอนเงินจากบัญชีของผู้เสียหายไปยังบัญชีม้าในวันศุกร์",
             (("", "ของ"),),
         ),
+        (
+            "The suspect withdrew the money from an ATM in Philadelphia on Friday evening.",
+            "The suspect withdrew the money from an ATM on Friday evening",
+            "The suspect withdrew the money from an ATM in Philadelphia on Friday evening",
+            (("", "in Philadelphia"),),
+        ),
+        (
+            "The attackers sent a fake invoice to the finance team on Monday morning.",
+            "The attackers sent a invoice to the finance team on Monday morning",
+            "The attackers sent a fake invoice to the finance team on Monday morning",
+            (("", "fake"),),
+        ),
+        (
+            "Filenames had been changed and a text file demanded contact by email.",
+            "Filenames were changed and a text file demanded contact",
+            "Filenames had been changed and a text file demanded contact",
+            (("were", "had been"),),
+        ),
+        (
+            "Police said attackers used a stolen password to log in on Monday.",
+            "Hackers used a stolen password to log in on Monday",
+            "attackers used a stolen password to log in on Monday",
+            (("Hackers", "attackers"),),
+        ),
     ],
-    ids=["changed-digit", "added-word", "dropped-word", "thai-name", "thai-dropped-word"],
+    ids=[
+        "changed-digit",
+        "added-word",
+        "dropped-word",
+        "thai-name",
+        "thai-dropped-word",
+        "dropped-words-near-the-end",
+        "dropped-word-beside-a-short-word",
+        "one-word-for-two",
+        "edge-words-are-context",
+    ],
 )
 def test_a_near_quote_points_at_its_passage_and_names_each_place(source, quote, passage, places):
     near = nearest_passage(source, quote)
@@ -72,15 +106,27 @@ def test_a_near_quote_points_at_its_passage_and_names_each_place(source, quote, 
             "The money was sent ... on Tuesday",
         ),
         (
+            "The attackers copied the payroll files to a server in Ohio on Monday and deleted the "
+            "logs before noon on the same day.",
+            "The attackers copied the salary files to a server in Texas on Tuesday and deleted the "
+            "logs before midnight on the same day",
+        ),
+        (
             "The attackers used a stolen password to log in to the payroll system on Monday morning.",
             "Hackers used a borrowed key to enter the salary platform on Friday evening",
         ),
         (
-            "Files on the shared drive were reported encrypted.",
-            "Nothing in this sentence comes from the source at all",
+            "The finance share was encrypted overnight and a note demanded contact.",
+            "There was no incident.",
         ),
     ],
-    ids=["two-passages-as-close", "middle-ellipsis", "more-than-three-places", "too-many-edits"],
+    ids=[
+        "two-passages-as-close",
+        "middle-ellipsis",
+        "more-than-three-places",
+        "more-edits-than-a-third",
+        "short-invented-quote",
+    ],
 )
 def test_no_passage_is_pointed_at_when_the_rule_does_not_hold(source, quote):
     assert nearest_passage(source, quote) is None
@@ -200,3 +246,30 @@ def test_neither_model_is_shown_an_unverified_quote():
 
 def test_the_reply_the_model_fills_has_no_place_for_unverified_quotes():
     assert "unverified_citations" not in str(CaseProviderReadingReply.model_json_schema())
+
+
+def test_a_passage_that_appears_twice_counts_as_one_with_its_occurrences():
+    source = (
+        "At noon the money was sent to the safe account. "
+        "At dusk the money was sent to the safe account again."
+    )
+
+    near = nearest_passage(source, "the money was sent to the secure account")
+
+    assert near is not None
+    assert near.source_text == "the money was sent to the safe account"
+    assert near.differences == (("secure", "safe"),)
+    assert near.occurrences == 2
+
+
+def test_a_thai_digit_written_as_an_arabic_digit_is_pointed_at_every_occurrence():
+    source = (
+        "รายชื่อ: นายสมชาย ใจกล้า ผู้กล่าวหาที่ ๑ อายุ ๔๐ ปี\n\n"
+        "จากการสอบสวน นายสมชาย ใจกล้า ผู้กล่าวหาที่ ๑ ให้การว่าถูกหลอกให้โอนเงิน"
+    )
+
+    near = nearest_passage(source, "นายสมชาย ใจกล้า ผู้กล่าวหาที่ 1")
+
+    assert near is not None
+    assert near.differences == (("1", "๑"),)
+    assert near.occurrences == 2
