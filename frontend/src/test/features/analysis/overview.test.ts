@@ -236,6 +236,42 @@ describe("Case overview projection", () => {
 
     expect(overview.findings[0].techniqueIds).toEqual(["T1566"]);
   });
+
+  it("names the findings each gap affects, in the gap's order, leaving out ids no finding has", () => {
+    const base = result(quote, { source_id: sourceId, exact_quote: quote });
+    const later = { ...base.trace_json!.claims[0], claim_id: "A-02", text: "It left at noon." };
+    const gap = {
+      gap_id: "G-01",
+      gap_key: "when",
+      topic: "when",
+      status: "NOT_PROVIDED" as const,
+      description: "The time the vehicle arrived is not given.",
+      reason: "The time places the vehicle at the scene.",
+      priority: "high" as const,
+      askable: true,
+    };
+    const analysis: CaseAnalysisResultRead = {
+      ...base,
+      trace_json: {
+        ...base.trace_json!,
+        claims: [...base.trace_json!.claims, later],
+        gaps: [
+          { ...gap, affected_claim_ids: ["A-02", "A-09", "A-01"] },
+          { ...gap, gap_id: "G-02" },
+        ],
+      },
+    };
+
+    const overview = buildCaseOverview(analysis, [narrativeSource(quote)]);
+
+    expect(overview.gaps.map((item) => item.affectedFindings)).toEqual([
+      [
+        { id: "A-02", text: "It left at noon." },
+        { id: "A-01", text: quote },
+      ],
+      [],
+    ]);
+  });
 });
 
 describe("gap topics", () => {

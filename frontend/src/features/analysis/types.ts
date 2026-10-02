@@ -37,6 +37,7 @@ export interface CaseGap {
   description: string;
   reason: string;
   askable: boolean;
+  affectedFindings: Pick<CaseFinding, "id" | "text">[];
 }
 
 interface ClaimBacked {
