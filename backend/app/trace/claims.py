@@ -15,7 +15,12 @@ from pydantic import (
     model_validator,
 )
 
-from app.trace.quotes import MAX_PAGE_SPANS_PER_QUOTE, MAX_QUOTE_CHARS, MAX_SUPPORTED_DOCUMENT_PAGES
+from app.trace.quotes import (
+    MAX_PAGE_SPANS_PER_QUOTE,
+    MAX_POINTER_PLACES,
+    MAX_QUOTE_CHARS,
+    MAX_SUPPORTED_DOCUMENT_PAGES,
+)
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_CONTEXT_CHARS = 400
@@ -131,6 +136,31 @@ class CaseProviderCitation(BaseModel):
     exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
 
 
+class CaseQuoteDifference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    written: str = Field(default="", max_length=MAX_QUOTE_CHARS)
+    source: str = Field(default="", max_length=2 * MAX_QUOTE_CHARS)
+
+
+class CaseNearPassage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_text: str = Field(min_length=1, max_length=2 * MAX_QUOTE_CHARS)
+    differences: list[CaseQuoteDifference] = Field(
+        default_factory=list, max_length=MAX_POINTER_PLACES
+    )
+
+
+class CaseUnverifiedCitation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str = Field(min_length=1, max_length=160)
+    role: Literal["supporting", "contradicting"]
+    written_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
+    near_passage: CaseNearPassage | None = None
+
+
 class CaseClaimFields(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -198,6 +228,7 @@ class CaseProviderClaim(CaseClaimFields):
 class CaseAnalysisClaim(CaseClaimFields):
     supporting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
     contradicting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
+    unverified_citations: list[CaseUnverifiedCitation] = Field(default_factory=list, max_length=128)
     reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
 
 

@@ -12,9 +12,11 @@ from app.reports.schemas import (
     ReportGap,
     ReportImpact,
     ReportParty,
+    ReportPlace,
     ReportQuoteContext,
     ReportSource,
     ReportTechnique,
+    ReportUnverifiedQuote,
 )
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
@@ -231,6 +233,7 @@ def report_findings(
                 contradicting_quotes=quotes(claim.contradicting_citations),
                 supporting_contexts=quote_contexts(claim.supporting_citations),
                 contradicting_contexts=quote_contexts(claim.contradicting_citations),
+                unverified_quotes=unverified_quotes(claim),
                 reasoning_summary=claim.reasoning_summary,
             )
         )
@@ -239,6 +242,19 @@ def report_findings(
 
 def quotes(citations: list[CaseSourceCitation]) -> list[str]:
     return [citation.exact_quote for citation in citations if citation.exact_quote.strip()]
+
+
+def unverified_quotes(claim: CaseAnalysisClaim) -> list[ReportUnverifiedQuote]:
+    return [
+        ReportUnverifiedQuote(
+            written_quote=item.written_quote,
+            places=[
+                ReportPlace(written=difference.written, source=difference.source)
+                for difference in (item.near_passage.differences if item.near_passage else [])
+            ],
+        )
+        for item in claim.unverified_citations
+    ]
 
 
 def quote_contexts(citations: list[CaseSourceCitation]) -> list[ReportQuoteContext | None]:
