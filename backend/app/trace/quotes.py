@@ -10,6 +10,10 @@ PARAPHRASE_TRIGRAM_SHARE = 0.6
 EDGE_ELLIPSIS = re.compile(r"^\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*|\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*$")
 QUOTE_MARK = "[\"'“”‘’]"
 OCR_TAG = r"(?:<page_number>[^<]*</page_number>|</?[A-Za-z][^<>]*>)"
+FORMAT_QUOTE_MARKS = frozenset("\"'“”‘’«»„‚`´")
+FORMAT_DASHES = frozenset("‐‑‒–—―−")
+FORMAT_PUNCTUATION = frozenset(".,;:!?()[]{}-/…*_#~")
+MIN_FORMAT_FORM_CHARS = 8
 
 
 def folded(text: str) -> tuple[str, list[int]]:
@@ -19,6 +23,28 @@ def folded(text: str) -> tuple[str, list[int]]:
         for piece in unicodedata.normalize("NFKC", character):
             pieces.append(piece)
             index.append(position)
+    return "".join(pieces), index
+
+
+def format_form(text: str) -> tuple[str, list[int]]:
+    pieces: list[str] = []
+    index: list[int] = []
+    for position, character in enumerate(text):
+        between_digits = (
+            0 < position < len(text) - 1
+            and text[position - 1].isdigit()
+            and text[position + 1].isdigit()
+        )
+        for piece in unicodedata.normalize("NFKC", character):
+            if piece in FORMAT_DASHES:
+                piece = "-"
+            if piece.isspace() or piece in FORMAT_QUOTE_MARKS:
+                continue
+            if piece in FORMAT_PUNCTUATION and not between_digits:
+                continue
+            for letter in piece.casefold():
+                pieces.append(letter)
+                index.append(position)
     return "".join(pieces), index
 
 
@@ -34,6 +60,10 @@ class IndexedText:
     @cached_property
     def folded(self) -> tuple[str, list[int]]:
         return folded(self.text)
+
+    @cached_property
+    def format_form(self) -> tuple[str, list[int]]:
+        return format_form(self.text)
 
     @cached_property
     def trigrams(self) -> set[str]:
@@ -184,6 +214,15 @@ def find_aligned_quote(source: str | IndexedText, quote: str) -> list[tuple[int,
     if ellipsis_aligned is not None:
         return ellipsis_aligned
 
+    relaxed = find_relaxed_quote(content, quote)
+    if relaxed is not None:
+        return [relaxed]
+
+    format_only = find_format_only_quote(source, quote)
+    return [format_only] if format_only is not None else None
+
+
+def find_relaxed_quote(content: str, quote: str) -> tuple[int, int] | None:
     clean_quote = re.sub(r"[*_#`~]", "", quote)
     clean_quote = re.sub(QUOTE_MARK, '"', clean_quote)
     words = clean_quote.split()
@@ -207,10 +246,19 @@ def find_aligned_quote(source: str | IndexedText, quote: str) -> list[tuple[int,
     except re.error:
         return None
 
-    if len(matches) == 1:
-        return [matches[0].span()]
+    return matches[0].span() if len(matches) == 1 else None
 
-    return None
+
+def find_format_only_quote(source: str | IndexedText, quote: str) -> tuple[int, int] | None:
+    source = indexed(source)
+    source_form, index = source.format_form
+    quote_form, _ = format_form(without_edge_ellipses(quote))
+    if len(quote_form) < MIN_FORMAT_FORM_CHARS:
+        return None
+    positions = quote_occurrences(source_form, quote_form)
+    if len(positions) != 1:
+        return None
+    return index[positions[0]], index[positions[0] + len(quote_form) - 1] + 1
 
 
 def find_folded_quote(source: str | IndexedText, quote: str) -> tuple[int, int] | None:
@@ -259,6 +307,7 @@ __all__ = [
     "extract_documents_for_source",
     "find_document_locator",
     "find_aligned_quote",
+    "find_format_only_quote",
     "quote_occurrences",
     "resolve_document_locator",
     "validate_page_spans",
