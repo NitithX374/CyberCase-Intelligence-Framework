@@ -86,6 +86,20 @@ for preset in CURATED_MODEL_PRESETS:
         _ALIAS_MAP[alias.lower().strip()] = preset.canonical_id
 
 
+def names_openrouter_model(name_or_alias: str | None) -> bool:
+    """True when the name is itself an OpenRouter choice: a curated alias or a vendor/model id.
+
+    ``resolve_openrouter_model`` answers an unknown name with the default, so it
+    cannot tell "this name selects a model" from "this name means nothing here".
+    """
+    if not name_or_alias or not name_or_alias.strip():
+        return False
+    clean_name = name_or_alias.strip()
+    if clean_name.lower().startswith("openrouter/"):
+        clean_name = clean_name[len("openrouter/"):].strip()
+    return clean_name.lower() in _ALIAS_MAP or "/" in clean_name
+
+
 def resolve_openrouter_model(name_or_alias: str | None) -> str:
     """Resolve a friendly model nickname, alias, or full ID to the canonical OpenRouter ID.
 
