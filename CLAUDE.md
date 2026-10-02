@@ -196,7 +196,12 @@ trace/                  what the analysis, chat and reports share
   claims.py             claims, citations, gaps, a follow-up exchange, what
                         the preflight returns
   trace.py              the trace: summary, parties, timeline, impacts, claims
-  quotes.py             finding a quotation in a source
+  quotes.py             finding a quotation in a source, in tiers: exact,
+                        NFKC fold, unique ellipsis pieces, markup-tolerant,
+                        then format only (quote marks, punctuation, dash
+                        style, case and spacing ignored; at least 8
+                        characters left, found once); the stored quote is
+                        always source text
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
   bind.py               bind a written trace to the case; count what did not bind;
