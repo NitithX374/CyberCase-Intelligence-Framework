@@ -72,24 +72,36 @@ class VectorRetriever:
         except Exception as e:
             print(f"[VECTOR] Warning: Could not get collection counts ({e})")
 
-    def _search_hybrid(self, collection_name: str, query: str, 
-                       top_k: int, qdrant_filter: Optional[Filter] = None) -> list[VectorResult]:
-        """Hybrid search: dense + sparse with RRF fusion natively in Qdrant."""
-        
-        # 1. Embed query (dense + sparse)
+    def _encode_query(self, query: str) -> tuple[list[float], list[int], list[float]]:
+        """One BGE-M3 forward pass → (dense vector, sparse indices, sparse values)."""
         query_output = self.embed_model.encode(
             [query], return_dense=True, return_sparse=True, return_colbert_vecs=False
         )
         dense_vec = query_output["dense_vecs"][0].tolist()
         sparse_dict = query_output["lexical_weights"][0]
-        
+
         sparse_indices = [int(k) for k in sparse_dict.keys()]
         sparse_values = list(sparse_dict.values())
-        
+
         # We handle empty sparse vectors gracefully just in case
         if not sparse_indices:
             sparse_indices = [0]
             sparse_values = [0.0]
+        return dense_vec, sparse_indices, sparse_values
+
+    def _search_hybrid(self, collection_name: str, query: str,
+                       top_k: int, qdrant_filter: Optional[Filter] = None,
+                       encoded: Optional[tuple[list[float], list[int], list[float]]] = None,
+                       ) -> list[VectorResult]:
+        """Hybrid search: dense + sparse with RRF fusion natively in Qdrant.
+
+        ``encoded`` is the query already embedded by ``_encode_query``. A caller
+        searching several collections with one query passes it so the model
+        runs once, not once per collection.
+        """
+
+        # 1. Embed query (dense + sparse)
+        dense_vec, sparse_indices, sparse_values = encoded or self._encode_query(query)
 
         # 2. Execute Qdrant native hybrid search
         results = self.client.query_points(
@@ -142,6 +154,7 @@ class VectorRetriever:
         query: str,
         top_k: int = VECTOR_TOP_K,
         node_label_filter: Optional[str] = None,
+        encoded: Optional[tuple[list[float], list[int], list[float]]] = None,
     ) -> list[VectorResult]:
         """Search entity descriptions semantically.
 
@@ -167,6 +180,7 @@ class VectorRetriever:
             query=query,
             top_k=fetch_k,
             qdrant_filter=q_filter,
+            encoded=encoded,
         )
 
         if ATTACK_DOMAIN_FILTER:
@@ -183,6 +197,7 @@ class VectorRetriever:
         query: str,
         top_k: int = VECTOR_TOP_K,
         edge_label_filter: Optional[str] = None,
+        encoded: Optional[tuple[list[float], list[int], list[float]]] = None,
     ) -> list[VectorResult]:
         """Search relationship descriptions semantically."""
         
@@ -202,6 +217,7 @@ class VectorRetriever:
             query=query,
             top_k=top_k,
             qdrant_filter=q_filter,
+            encoded=encoded,
         )
 
     @staticmethod
@@ -230,8 +246,13 @@ class VectorRetriever:
         Scores are min-max normalized within each collection before merging
         so RRF scores from different Qdrant collections are comparable.
         """
-        entity_results = self.search_entities(query, top_k=top_k)
-        rel_results = self.search_relationships(query, top_k=max(top_k // 2, 3))
+        # Both collections are searched with the same query: embed it once.
+        # Each search used to run its own BGE-M3 forward pass on identical text.
+        encoded = self._encode_query(query)
+        entity_results = self.search_entities(query, top_k=top_k, encoded=encoded)
+        rel_results = self.search_relationships(
+            query, top_k=max(top_k // 2, 3), encoded=encoded
+        )
 
         self._normalize_scores(entity_results)
         self._normalize_scores(rel_results)
