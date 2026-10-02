@@ -379,6 +379,7 @@ export interface components {
         CaseNearPassage: {
             source_text: string;
             differences?: components["schemas"]["CaseQuoteDifference"][];
+            occurrences: number;
         };
         CaseQuoteContext: {
             before: string;

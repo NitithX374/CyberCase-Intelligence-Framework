@@ -61,6 +61,7 @@ def format_form(text: str) -> tuple[str, list[int]]:
 class NearPassage:
     source_text: str
     differences: tuple[tuple[str, str], ...]
+    occurrences: int = 1
 
 
 @dataclass(frozen=True)
@@ -95,8 +96,7 @@ def nearest_passage(source: str | IndexedText, quote: str) -> NearPassage | None
     best = aligned_candidate(content, quote)
     if best is None:
         return None
-    masked = content[: best.start] + MASK * (best.end - best.start) + content[best.end :]
-    second = aligned_candidate(masked, quote)
+    second = aligned_candidate(masked_everywhere(content, content[best.start : best.end]), quote)
     second_edits = second.edits if second is not None else len(quote)
     if second_edits < best.edits + max(3, len(quote) // 10) or best.edits > len(quote) / 3:
         return None
@@ -105,13 +105,20 @@ def nearest_passage(source: str | IndexedText, quote: str) -> NearPassage | None
         return None
     (start, end), places = worded
     passage = content[start:end]
-    if (
-        not passage
-        or len(quote_occurrences(content, passage)) != 1
-        or len(places) > MAX_POINTER_PLACES
-    ):
+    if not passage or len(places) > MAX_POINTER_PLACES:
         return None
-    return NearPassage(source_text=passage, differences=tuple(places))
+    return NearPassage(
+        source_text=passage,
+        differences=tuple(places),
+        occurrences=len(quote_occurrences(content, passage)),
+    )
+
+
+def masked_everywhere(content: str, text: str) -> str:
+    characters = list(content)
+    for start in quote_occurrences(content, text):
+        characters[start : start + len(text)] = MASK * len(text)
+    return "".join(characters)
 
 
 def aligned_candidate(content: str, quote: str) -> Alignment | None:

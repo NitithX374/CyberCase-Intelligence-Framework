@@ -246,3 +246,30 @@ def test_neither_model_is_shown_an_unverified_quote():
 
 def test_the_reply_the_model_fills_has_no_place_for_unverified_quotes():
     assert "unverified_citations" not in str(CaseProviderReadingReply.model_json_schema())
+
+
+def test_a_passage_that_appears_twice_counts_as_one_with_its_occurrences():
+    source = (
+        "At noon the money was sent to the safe account. "
+        "At dusk the money was sent to the safe account again."
+    )
+
+    near = nearest_passage(source, "the money was sent to the secure account")
+
+    assert near is not None
+    assert near.source_text == "the money was sent to the safe account"
+    assert near.differences == (("secure", "safe"),)
+    assert near.occurrences == 2
+
+
+def test_a_thai_digit_written_as_an_arabic_digit_is_pointed_at_every_occurrence():
+    source = (
+        "รายชื่อ: นายสมชาย ใจกล้า ผู้กล่าวหาที่ ๑ อายุ ๔๐ ปี\n\n"
+        "จากการสอบสวน นายสมชาย ใจกล้า ผู้กล่าวหาที่ ๑ ให้การว่าถูกหลอกให้โอนเงิน"
+    )
+
+    near = nearest_passage(source, "นายสมชาย ใจกล้า ผู้กล่าวหาที่ 1")
+
+    assert near is not None
+    assert near.differences == (("1", "๑"),)
+    assert near.occurrences == 2

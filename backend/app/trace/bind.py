@@ -352,6 +352,7 @@ class QuoteSearch:
                         CaseQuoteDifference(written=written, source=source)
                         for written, source in passage.differences
                     ],
+                    occurrences=passage.occurrences,
                 )
             )
         return self.nearest[key]
