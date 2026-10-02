@@ -115,6 +115,12 @@ _EDGE_DISPLAY = {
 }
 
 
+def _own_label(labels) -> str:
+    """A node's ATT&CK label. Every node also carries the shared ``Entity``
+    label, and Neo4j does not promise the order ``labels()`` returns them in."""
+    return next((l for l in labels or [] if l != "Entity"), "Unknown")
+
+
 class GraphRetriever:
     """Expands subgraphs from Neo4j for GraphRAG context enrichment."""
 
@@ -144,6 +150,16 @@ class GraphRetriever:
         round-trips into 3. Neo4j's row order within a seed is not guaranteed
         identical to the per-seed query, so neighbour LIST order within a
         subgraph may differ; the retrieved-id SET is unchanged.
+
+        Seeds are matched through the shared ``:Entity`` label, which carries
+        the uniqueness constraint on ``stix_id``: without a label the planner
+        scans every node for every seed (AllNodesScan + Filter instead of
+        NodeUniqueIndexSeek).
+
+        Edge descriptions are not fetched. Nothing renders them (see
+        ``SubgraphResult.to_text``), and they were most of the payload: 631
+        incoming edges of seven seeds carried 127K characters of procedure
+        text, and the query took 244 ms with them against 84 ms without.
         """
         ordered = list(dict.fromkeys(stix_ids))  # dedupe, preserve order
         if not ordered:
@@ -155,7 +171,7 @@ class GraphRetriever:
             centers = session.run(
                 Query("""
                 UNWIND $ids AS sid
-                MATCH (n {stix_id: sid})
+                MATCH (n:Entity {stix_id: sid})
                 RETURN sid AS sid, n AS n, labels(n) AS labels
                 """),
                 ids=ordered,
@@ -167,7 +183,7 @@ class GraphRetriever:
                 sr.center_node = GraphNode(
                     stix_id=node_data.get("stix_id", ""),
                     name=node_data.get("name", ""),
-                    label=labels[0] if labels else "Unknown",
+                    label=_own_label(labels),
                     attack_id=node_data.get("attack_id", ""),
                     description=(node_data.get("description") or "")[:300],
                 )
@@ -179,8 +195,8 @@ class GraphRetriever:
             outgoing = session.run(
                 Query("""
                 UNWIND $ids AS sid
-                MATCH (n {stix_id: sid})-[r]->(m)
-                RETURN sid AS sid, type(r) AS rel_type, r.description AS rel_desc,
+                MATCH (n:Entity {stix_id: sid})-[r]->(m)
+                RETURN sid AS sid, type(r) AS rel_type,
                        m.stix_id AS target_id, m.name AS target_name,
                        m.attack_id AS target_attack_id, labels(m) AS target_labels
                 """),
@@ -190,28 +206,24 @@ class GraphRetriever:
                 sr = by_sid.get(rec["sid"])
                 if not sr:
                     continue
-                target_label = (
-                    rec["target_labels"][0] if rec["target_labels"] else "Unknown"
-                )
                 sr.neighbors.append(GraphNode(
                     stix_id=rec["target_id"] or "",
                     name=rec["target_name"] or "",
-                    label=target_label,
+                    label=_own_label(rec["target_labels"]),
                     attack_id=rec["target_attack_id"] or "",
                 ))
                 sr.edges.append(GraphEdge(
                     edge_label=rec["rel_type"] or "",
                     source_name=sr.center_node.name,
                     target_name=rec["target_name"] or "",
-                    description=rec["rel_desc"] or "",
                 ))
 
             # ── 3. Incoming relationships ─────────────────────────────────
             incoming = session.run(
                 Query("""
                 UNWIND $ids AS sid
-                MATCH (m)-[r]->(n {stix_id: sid})
-                RETURN sid AS sid, type(r) AS rel_type, r.description AS rel_desc,
+                MATCH (m)-[r]->(n:Entity {stix_id: sid})
+                RETURN sid AS sid, type(r) AS rel_type,
                        m.stix_id AS source_id, m.name AS source_name,
                        m.attack_id AS source_attack_id, labels(m) AS source_labels
                 """),
@@ -221,20 +233,16 @@ class GraphRetriever:
                 sr = by_sid.get(rec["sid"])
                 if not sr:
                     continue
-                source_label = (
-                    rec["source_labels"][0] if rec["source_labels"] else "Unknown"
-                )
                 sr.neighbors.append(GraphNode(
                     stix_id=rec["source_id"] or "",
                     name=rec["source_name"] or "",
-                    label=source_label,
+                    label=_own_label(rec["source_labels"]),
                     attack_id=rec["source_attack_id"] or "",
                 ))
                 sr.edges.append(GraphEdge(
                     edge_label=rec["rel_type"] or "",
                     source_name=rec["source_name"] or "",
                     target_name=sr.center_node.name,
-                    description=rec["rel_desc"] or "",
                 ))
 
         # Preserve input order, only ids that matched a center node.
@@ -360,7 +368,7 @@ class GraphRetriever:
             records = session.run(
                 Query("""
                 UNWIND $ids AS sid
-                MATCH (n {stix_id: sid})
+                MATCH (n:Entity {stix_id: sid})
                 OPTIONAL MATCH (n)-[:IN_TACTIC]->(t)
                 RETURN sid AS sid, n.description AS description,
                        collect(DISTINCT t.name) AS tactics
