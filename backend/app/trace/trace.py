@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -92,7 +92,7 @@ class CaseGroundingReport(BaseModel):
     claims: int = 0
     citations_claimed: int = 0
     citations_verified: int = 0
-    citations_paraphrased: int = 0
+    citations_pointed: int = 0
     citations_unfound: int = 0
     claims_without_citation: int = 0
     claims_duplicated: int = 0
@@ -101,6 +101,13 @@ class CaseGroundingReport(BaseModel):
     associations_without_claim: int = 0
     sources_cited: int = 0
     sources_total: int = 0
+
+    @model_validator(mode="before")
+    @classmethod
+    def without_retired_counts(cls, data: object) -> object:
+        if isinstance(data, dict) and "citations_paraphrased" in data:
+            data = {key: value for key, value in data.items() if key != "citations_paraphrased"}
+        return data
 
 
 class CaseAnalysisTrace(BaseModel):

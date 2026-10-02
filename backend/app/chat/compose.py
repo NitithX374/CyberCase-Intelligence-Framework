@@ -191,7 +191,10 @@ def chat_request(
 def analysis_payload(trace: CaseAnalysisTrace, summary: str | None) -> dict[str, object]:
     return {
         "summary": summary or trace.summary,
-        "claims": [claim.model_dump(mode="json") for claim in trace.claims],
+        "claims": [
+            claim.model_dump(mode="json", exclude={"unverified_citations"})
+            for claim in trace.claims
+        ],
         "involved_parties": [party.model_dump(mode="json") for party in trace.involved_parties],
         "timeline": [item.model_dump(mode="json") for item in trace.timeline],
         "impacts": [impact.model_dump(mode="json") for impact in trace.impacts],

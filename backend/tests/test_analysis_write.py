@@ -75,7 +75,9 @@ def written(bundle: CaseSourceBundle, reading: CaseProviderReading, **options):
     async def request_stage(**kwargs):
         seen.append(kwargs)
         if kwargs["stage"] == "case_reading":
-            return CaseProviderReadingReply.model_validate(reading.model_dump())
+            return CaseProviderReadingReply.model_validate(
+                reading.model_dump(exclude={"claims": {"__all__": {"unverified_citations"}}})
+            )
         return judgement()
 
     with patch("app.analysis.write.request_stage", new=request_stage):

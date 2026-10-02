@@ -16,6 +16,18 @@ export interface CaseFinding {
   supportingSources: SourceMessageRef[];
   contradictingSources: SourceMessageRef[];
   techniqueIds: string[];
+  unverifiedQuotes: UnverifiedQuote[];
+}
+
+export interface QuotePlace {
+  written: string;
+  source: string;
+}
+
+export interface UnverifiedQuote {
+  writtenQuote: string;
+  places: QuotePlace[];
+  passage: SourceMessageRef | null;
 }
 
 export interface CaseGap {

@@ -1,12 +1,20 @@
+import difflib
 import re
 import unicodedata
 from collections.abc import Mapping
+from dataclasses import dataclass
 from functools import cached_property
+
+from pythainlp.tokenize import word_tokenize
+from rapidfuzz import fuzz
 
 MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
 MAX_QUOTE_CHARS = 2_000
-PARAPHRASE_TRIGRAM_SHARE = 0.6
+MAX_POINTER_PLACES = 3
+WORD = re.compile(r"\w+(?:['’]\w+)*|\s+|[^\w\s]")
+THAI = re.compile(r"[฀-๿]")
+MASK = "\0"
 EDGE_ELLIPSIS = re.compile(r"^\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*|\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*$")
 QUOTE_MARK = "[\"'“”‘’]"
 OCR_TAG = r"(?:<page_number>[^<]*</page_number>|</?[A-Za-z][^<>]*>)"
@@ -48,9 +56,18 @@ def format_form(text: str) -> tuple[str, list[int]]:
     return "".join(pieces), index
 
 
-def trigrams(text: str) -> set[str]:
-    stripped = "".join(text.split())
-    return {stripped[i : i + 3] for i in range(len(stripped) - 2)}
+@dataclass(frozen=True)
+class NearPassage:
+    source_text: str
+    differences: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class Alignment:
+    start: int
+    end: int
+    edits: int
+    path: tuple[tuple[str, int, int], ...]
 
 
 class IndexedText:
@@ -65,20 +82,186 @@ class IndexedText:
     def format_form(self) -> tuple[str, list[int]]:
         return format_form(self.text)
 
-    @cached_property
-    def trigrams(self) -> set[str]:
-        return trigrams(self.text)
-
 
 def indexed(content: str | IndexedText) -> IndexedText:
     return content if isinstance(content, IndexedText) else IndexedText(content)
 
 
-def looks_like_a_paraphrase(content: str | IndexedText, quote: str) -> bool:
-    wanted = trigrams(quote)
-    if not wanted:
-        return False
-    return len(wanted & indexed(content).trigrams) / len(wanted) >= PARAPHRASE_TRIGRAM_SHARE
+def nearest_passage(source: str | IndexedText, quote: str) -> NearPassage | None:
+    content = indexed(source).text
+    quote = without_edge_ellipses(quote)
+    if not quote or not content or any(mark in quote.strip(" .…")[1:-1] for mark in ("...", "…")):
+        return None
+    best = aligned_candidate(content, quote)
+    if best is None:
+        return None
+    masked = content[: best.start] + MASK * (best.end - best.start) + content[best.end :]
+    second = aligned_candidate(masked, quote)
+    second_edits = second.edits if second is not None else len(quote)
+    if second_edits < best.edits + max(3, len(quote) // 10) or best.edits > len(quote) / 2:
+        return None
+    passage = content[best.start : best.end]
+    if not passage.strip() or len(quote_occurrences(content, passage)) != 1:
+        return None
+    places = quote_differences(quote, content, best.path)
+    if len(places) > MAX_POINTER_PLACES:
+        return None
+    return NearPassage(source_text=passage, differences=tuple(places))
+
+
+def aligned_candidate(content: str, quote: str) -> Alignment | None:
+    window = fuzz.partial_ratio_alignment(quote, content)
+    if window is None:
+        return None
+    low = max(0, window.dest_start - len(quote))
+    high = min(len(content), window.dest_end + len(quote))
+    if low >= high:
+        return None
+    alignment = infix_alignment(quote, content[low:high])
+    return Alignment(
+        start=alignment.start + low,
+        end=alignment.end + low,
+        edits=alignment.edits,
+        path=tuple((op, quote_at, source_at + low) for op, quote_at, source_at in alignment.path),
+    )
+
+
+def infix_alignment(quote: str, text: str) -> Alignment:
+    width = len(text)
+    previous = [0] * (width + 1)
+    moves: list[bytearray] = []
+    for row_at, character in enumerate(quote, 1):
+        row = [row_at] + [0] * width
+        move = bytearray(width + 1)
+        move[0] = 1
+        for column in range(1, width + 1):
+            diagonal = previous[column - 1] + (character != text[column - 1])
+            up = previous[column] + 1
+            left = row[column - 1] + 1
+            if diagonal <= up and diagonal <= left:
+                row[column] = diagonal
+            elif up <= left:
+                row[column] = up
+                move[column] = 1
+            else:
+                row[column] = left
+                move[column] = 2
+        moves.append(move)
+        previous = row
+    end = min(range(width + 1), key=previous.__getitem__)
+    path: list[tuple[str, int, int]] = []
+    quote_at, column = len(quote), end
+    while quote_at > 0:
+        step = moves[quote_at - 1][column]
+        if step == 0:
+            same = quote[quote_at - 1] == text[column - 1]
+            path.append(("=" if same else "~", quote_at - 1, column - 1))
+            quote_at, column = quote_at - 1, column - 1
+        elif step == 1:
+            path.append(("+", quote_at - 1, column))
+            quote_at -= 1
+        else:
+            path.append(("-", quote_at, column - 1))
+            column -= 1
+    path.reverse()
+    return Alignment(start=column, end=end, edits=previous[end], path=tuple(path))
+
+
+def token_spans(text: str, offset: int = 0) -> list[tuple[int, int]]:
+    if THAI.search(text):
+        tokens = word_tokenize(text, engine="newmm", keep_whitespace=True)
+        if "".join(tokens) == text:
+            spans: list[tuple[int, int]] = []
+            at = offset
+            for token in tokens:
+                spans.append((at, at + len(token)))
+                at += len(token)
+            return spans
+    return [
+        (start + offset, end + offset) for start, end in (m.span() for m in WORD.finditer(text))
+    ]
+
+
+def widened(spans: list[tuple[int, int]], start: int, end: int) -> tuple[int, int]:
+    hit = [span for span in spans if span[0] < max(end, start + 1) and span[1] > start]
+    return min([start] + [span[0] for span in hit]), max([end] + [span[1] for span in hit])
+
+
+def quote_differences(
+    quote: str, content: str, path: tuple[tuple[str, int, int], ...]
+) -> list[tuple[str, str]]:
+    source_low = min(at for op, _, at in path)
+    source_high = max(at for op, _, at in path) + 1
+    window_low = max(0, source_low - len(quote))
+    window_high = min(len(content), source_high + len(quote))
+    quote_words = token_spans(quote)
+    source_words = token_spans(content[window_low:window_high], window_low)
+    quote_to_source: dict[int, int] = {}
+    source_to_quote: dict[int, int] = {}
+    for op, quote_at, source_at in path:
+        if op != "-":
+            quote_to_source.setdefault(quote_at, source_at)
+        if op != "+":
+            source_to_quote.setdefault(source_at, quote_at)
+    runs: list[tuple[int, int, int, int]] = []
+    current: tuple[int, int, int, int] | None = None
+    for op, quote_at, source_at in path:
+        if op == "=":
+            if current is not None:
+                runs.append(current)
+                current = None
+            continue
+        quote_span = (quote_at, quote_at + 1) if op != "-" else (quote_at, quote_at)
+        source_span = (source_at, source_at + 1) if op != "+" else (source_at, source_at)
+        step = (*quote_span, *source_span)
+        current = (
+            step
+            if current is None
+            else (
+                min(current[0], step[0]),
+                max(current[1], step[1]),
+                min(current[2], step[2]),
+                max(current[3], step[3]),
+            )
+        )
+    if current is not None:
+        runs.append(current)
+    regions: list[tuple[int, int, int, int]] = []
+    for quote_start, quote_end, source_start, source_end in runs:
+        for _ in range(6):
+            new_quote = widened(quote_words, quote_start, quote_end)
+            mapped = [quote_to_source[at] for at in range(*new_quote) if at in quote_to_source]
+            new_source = widened(
+                source_words,
+                min([source_start, *mapped]),
+                max([source_end, *(at + 1 for at in mapped)]),
+            )
+            back = [source_to_quote[at] for at in range(*new_source) if at in source_to_quote]
+            grown = (
+                min([new_quote[0], *back]),
+                max([new_quote[1], *(at + 1 for at in back)]),
+                *new_source,
+            )
+            if grown == (quote_start, quote_end, source_start, source_end):
+                break
+            quote_start, quote_end, source_start, source_end = grown
+        if regions and (quote_start < regions[-1][1] or source_start < regions[-1][3]):
+            last = regions.pop()
+            quote_start, quote_end = min(quote_start, last[0]), max(quote_end, last[1])
+            source_start, source_end = min(source_start, last[2]), max(source_end, last[3])
+        regions.append((quote_start, quote_end, source_start, source_end))
+    places: list[tuple[str, str]] = []
+    for quote_start, quote_end, source_start, source_end in regions:
+        written = [quote[a:b] for a, b in quote_words if a >= quote_start and b <= quote_end]
+        original = [content[a:b] for a, b in source_words if a >= source_start and b <= source_end]
+        matcher = difflib.SequenceMatcher(None, written, original, autojunk=False)
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+            if tag == "equal":
+                continue
+            place = ("".join(written[i1:i2]).strip(), "".join(original[j1:j2]).strip())
+            if place[0] != place[1] and place not in places:
+                places.append(place)
+    return places
 
 
 def resolve_document_locator(
@@ -302,12 +485,13 @@ __all__ = [
     "IndexedText",
     "MAX_PAGE_SPANS_PER_QUOTE",
     "MAX_QUOTE_CHARS",
-    "looks_like_a_paraphrase",
     "MAX_SUPPORTED_DOCUMENT_PAGES",
+    "NearPassage",
     "extract_documents_for_source",
     "find_document_locator",
     "find_aligned_quote",
     "find_format_only_quote",
+    "nearest_passage",
     "quote_occurrences",
     "resolve_document_locator",
     "validate_page_spans",

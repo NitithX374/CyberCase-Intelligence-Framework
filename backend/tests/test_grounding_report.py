@@ -80,7 +80,7 @@ def test_a_quote_cut_with_an_ellipsis_at_either_end_is_found():
     ]
     assert [c.epistemic_status for c in trace.claims] == ["reported", "reported", "reported"]
     assert trace.grounding.citations_verified == 3
-    assert trace.grounding.citations_paraphrased == 0
+    assert trace.grounding.citations_pointed == 0
 
 
 GAPPED = "Filenames had been changed ... demanded contact by email."
@@ -300,11 +300,11 @@ def test_an_invented_quote_is_dropped_and_counted():
     assert trace.grounding.citations_claimed == 1
     assert trace.grounding.citations_verified == 0
     assert trace.grounding.citations_unfound == 1
-    assert trace.grounding.citations_paraphrased == 0
+    assert trace.grounding.citations_pointed == 0
     assert trace.grounding.claims_without_citation == 1
 
 
-def test_a_loose_quotation_of_a_real_sentence_is_counted_apart():
+def test_a_near_quotation_of_a_real_sentence_is_kept_with_a_pointer():
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(
         trace_of(
@@ -313,8 +313,16 @@ def test_a_loose_quotation_of_a_real_sentence_is_counted_apart():
         bundle,
     )
 
+    [unverified] = trace.claims[0].unverified_citations
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
+    assert unverified.role == "supporting"
+    assert unverified.written_quote == "Filenames were changed and a text file demanded contact"
+    assert unverified.near_passage.source_text == (
+        "Filenames had been changed and a text file demanded contact"
+    )
     assert trace.grounding.citations_verified == 0
-    assert trace.grounding.citations_paraphrased == 1
+    assert trace.grounding.citations_pointed == 1
     assert trace.grounding.citations_unfound == 0
 
 
@@ -370,7 +378,7 @@ def assert_counts_add_up(trace: CaseAnalysisTrace) -> None:
     assert (
         grounding.citations_verified
         + grounding.citations_duplicated
-        + grounding.citations_paraphrased
+        + grounding.citations_pointed
         + grounding.citations_unfound
         == grounding.citations_claimed
     )
@@ -468,14 +476,12 @@ def test_a_quote_the_markdown_match_widens_past_a_citation_is_dropped_and_counte
     assert_counts_add_up(trace)
 
 
-def test_a_source_is_folded_and_split_once_however_many_quotes_are_sought_in_it(monkeypatch):
+def test_a_source_is_folded_and_formed_once_however_many_quotes_are_sought_in_it(monkeypatch):
     folded: list[str] = []
     split: list[str] = []
-    fold, split_into_trigrams = quotes.folded, quotes.trigrams
+    fold, form = quotes.folded, quotes.format_form
     monkeypatch.setattr(quotes, "folded", lambda text: folded.append(text) or fold(text))
-    monkeypatch.setattr(
-        quotes, "trigrams", lambda text: split.append(text) or split_into_trigrams(text)
-    )
+    monkeypatch.setattr(quotes, "format_form", lambda text: split.append(text) or form(text))
     bundle, source_id = bundle_and_id()
     loose = [
         "Filenames were changed and a text file demanded contact",
@@ -488,6 +494,6 @@ def test_a_source_is_folded_and_split_once_however_many_quotes_are_sought_in_it(
         bundle,
     )
 
-    assert trace.grounding.citations_paraphrased == 3
+    assert trace.grounding.citations_pointed == 3
     assert folded.count(TEXT) == 1
     assert split.count(TEXT) == 1

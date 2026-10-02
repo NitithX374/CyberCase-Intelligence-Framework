@@ -99,6 +99,30 @@ describe("SourceDrawer", () => {
     ).toEqual(["Quoted", "Source text"]);
   });
 
+  it("names a near passage as the nearest passage, not as a quotation", () => {
+    const [cited] = claimRefs(
+      {
+        supporting_source_ids: ["narrative-1"],
+        supporting_citations: [
+          { source_id: "narrative-1", exact_quote: "a transfer of 52,000 baht" },
+        ],
+      },
+      parseCaseSources([narrative], []),
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+
+    render(
+      <SourceDrawer
+        sourceRef={{ ...cited, quoteLabel: "Nearest passage" }}
+        anchorElement={anchor}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 3, name: "Nearest passage" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 3, name: "Quoted" })).not.toBeInTheDocument();
+  });
+
   it("labels nothing for a source cited without a quotation", () => {
     const [named] = claimRefs(
       { supporting_source_ids: ["narrative-1"] },
