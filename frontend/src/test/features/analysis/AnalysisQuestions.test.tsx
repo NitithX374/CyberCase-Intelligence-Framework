@@ -1,11 +1,21 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalysisQuestions } from "@/features/analysis/AnalysisQuestions";
-import type { CaseAnalysisGap } from "@/lib/api/types";
-import { analysisResult, caseId, narrativeSource, sourcesRead, trace } from "@/test/fixtures";
+import type { CaseAnalysisClaim, CaseAnalysisGap } from "@/lib/api/types";
+import {
+  analysisResult,
+  caseId,
+  claim,
+  narrativeSource,
+  sourcesRead,
+  trace,
+} from "@/test/fixtures";
 
 const source = narrativeSource("Room 503 was broken into.");
-const state = vi.hoisted(() => ({ gaps: [] as CaseAnalysisGap[] }));
+const state = vi.hoisted(() => ({
+  gaps: [] as CaseAnalysisGap[],
+  claims: [] as CaseAnalysisClaim[],
+}));
 
 function gap(overrides: Partial<CaseAnalysisGap>): CaseAnalysisGap {
   return {
@@ -25,7 +35,7 @@ vi.mock("next/navigation", () => ({ useParams: () => ({ caseId }) }));
 vi.mock("@/features/analysis/queries", () => ({
   useCaseAnalysis: () => ({
     data: analysisResult({
-      trace_json: trace({ summary: "A theft.", gaps: state.gaps }),
+      trace_json: trace({ summary: "A theft.", gaps: state.gaps, claims: state.claims }),
       external_context_json: { sources_read: sourcesRead(source.id) },
     }),
     isLoading: false,
@@ -36,6 +46,10 @@ vi.mock("@/features/sources/queries", () => ({
 }));
 
 describe("AnalysisQuestions", () => {
+  beforeEach(() => {
+    state.claims = [];
+  });
+
   it("names a checklist gap in words, not by its key", () => {
     state.gaps = [gap({})];
     render(<AnalysisQuestions />);
@@ -60,5 +74,39 @@ describe("AnalysisQuestions", () => {
     render(<AnalysisQuestions />);
 
     expect(screen.getByText("Nothing is missing from this analysis.")).toBeInTheDocument();
+  });
+
+  it("lists the findings a gap affects behind a toggle that counts them", () => {
+    state.claims = [
+      claim("Room 503 was broken into.", source.id),
+      claim("The safe in room 503 was empty.", source.id, { claim_id: "A-02" }),
+    ];
+    state.gaps = [gap({ affected_claim_ids: ["A-02", "A-01"] })];
+    render(<AnalysisQuestions />);
+
+    const toggle = screen.getByRole("button", { name: /^Affected findings \(2\)/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("list", { name: "Affected findings" })).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const listed = within(screen.getByRole("list", { name: "Affected findings" }));
+    expect(listed.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "The safe in room 503 was empty.",
+      "Room 503 was broken into.",
+    ]);
+  });
+
+  it("offers no affected findings when the gap names none the analysis holds", () => {
+    state.claims = [claim("Room 503 was broken into.", source.id)];
+    state.gaps = [
+      gap({ affected_claim_ids: [] }),
+      gap({ gap_id: "G-02", gap_key: "when", topic: "when", affected_claim_ids: ["A-09"] }),
+    ];
+    render(<AnalysisQuestions />);
+
+    expect(screen.getAllByRole("button", { name: /Why it matters/ })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /Affected findings/ })).not.toBeInTheDocument();
   });
 });
