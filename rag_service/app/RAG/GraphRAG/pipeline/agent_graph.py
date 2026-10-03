@@ -13,15 +13,15 @@ The only pipeline serving ``POST /query``. A stateful graph that supports:
 
  The graph flow:
 
-     input → route → prepare → retrieve_quota → evaluate_context
-                   (lang detect)                      │
-                                        ┌─ sufficient │  insufficient
-                                        ↓             ↓
-                                   reasoning     broaden_search
-                                        ↓             ↓
-                                     output      retrieve_quota (loop)
-                                               (max 2 broaden iterations,
-                                                then answer with what we have)
+     input → prepare → retrieve_quota → evaluate_context
+           (lang detect)                      │
+                                ┌─ sufficient │  insufficient
+                                ↓             ↓
+                           reasoning     broaden_search
+                                ↓             ↓
+                             output      retrieve_quota (loop)
+                                       (max 2 broaden iterations,
+                                        then answer with what we have)
 
  ``reasoning`` writes the final answer in the query's language in one call;
  nothing is translated on the way in or out.
@@ -59,7 +59,7 @@ from ..config import (
     VECTOR_TOP_K,
     sep,
 )
-from ..llm_content import require_message_text
+from ..llm_content import invoke_for_text
 from ..llm_provider import (
     CoreLlmConfigurationError,
     create_core_chat_model,
@@ -76,7 +76,6 @@ from .evaluator import (
     EvaluationResult,
 )
 from .query_sanitizer import sanitize_retrieval_query
-from .router import QueryRouter
 
 _THAI_CHARS = re.compile(r"[฀-๿]")
 
@@ -106,9 +105,6 @@ class AgentState(TypedDict, total=False):
     # ── Inputs ────────────────────────────────────────────────────────────
     original_query: str  # The user's raw input
     verbose: bool
-
-    # ── Routing ───────────────────────────────────────────────────────────
-    route: str  # GENERAL_EXPLANATION | INCIDENT_ANALYSIS
 
     # ── Language ──────────────────────────────────────────────────────────
     # Nothing translates the input any more. english_query is kept only so the
@@ -194,7 +190,6 @@ class GraphRAGAgent:
         self.retriever = HybridRetriever(
             embed_model=self.embed_model, reranker=reranker
         )
-        self.router = QueryRouter()
         self.evaluator = ContextEvaluator()
         self.decomposer = QueryDecomposer()
 
@@ -245,7 +240,6 @@ class GraphRAGAgent:
 
         Deliberately strips everything the full agent does for robustness, trading
         coverage for ~2-3x lower latency:
-          • NO routing            (always treats input as an incident)
           • NO query decomposition / per-query quota → ONE hybrid retrieve on the
             raw query (BGE-M3 is multilingual, so no input translation either)
           • NO context evaluator / self-reflection loop / broaden
@@ -281,15 +275,16 @@ class GraphRAGAgent:
             english_query=user_query,
             respond_in_thai=respond_in_thai,
         )
-        response = self.reasoning_llm.invoke(
+        answer = invoke_for_text(
+            self.reasoning_llm,
             [
                 SystemMessage(
                     content=CrossLingualLayer.get_fast_system_prompt(respond_in_thai)
                 ),
                 HumanMessage(content=prompt),
-            ]
+            ],
+            operation="fast answer generation",
         )
-        answer = require_message_text(response, operation="fast answer generation")
 
         if verbose:
             sep("ANSWER (FAST)")
@@ -348,15 +343,16 @@ class GraphRAGAgent:
 
         # 2. One terse LLM call (compact prompt — skip the heavy generation template).
         user_prompt = f"{context}\n\n{'=' * 60}\nQUESTION\n{'=' * 60}\n{user_query}"
-        response = llm.invoke(
+        answer = invoke_for_text(
+            llm,
             [
                 SystemMessage(
                     content=CrossLingualLayer.get_ultrafast_system_prompt(respond_in_thai)
                 ),
                 HumanMessage(content=user_prompt),
-            ]
+            ],
+            operation="ultrafast answer generation",
         )
-        answer = require_message_text(response, operation="ultrafast answer generation")
 
         if verbose:
             sep("ANSWER (ULTRAFAST)")
@@ -421,8 +417,6 @@ class GraphRAGAgent:
         graph = StateGraph(AgentState)
 
         # ── Register nodes ────────────────────────────────────────────
-        graph.add_node("route_query", self._node_route_query)
-        graph.add_node("general_explanation", self._node_general_explanation)
         graph.add_node("prepare", self._node_prepare)
         graph.add_node("retrieve", self._node_retrieve)
         graph.add_node("evaluate_context", self._node_evaluate_context)
@@ -430,20 +424,11 @@ class GraphRAGAgent:
         graph.add_node("reasoning", self._node_reasoning)
 
         # ── Entry point ───────────────────────────────────────────────
-        graph.set_entry_point("route_query")
+        # Every query is analysed as an incident. A classifier call used to
+        # run first, but its verdict was discarded, so it only cost a call.
+        graph.set_entry_point("prepare")
 
         # ── Edges ─────────────────────────────────────────────────────
-        graph.add_conditional_edges(
-            "route_query",
-            self._edge_after_route,
-            {
-                "general": "general_explanation",
-                "incident": "prepare",
-            },
-        )
-
-        graph.add_edge("general_explanation", END)
-
         # Prepare (language detect) → Multi-Query Retrieval → Evaluation
         graph.add_edge("prepare", "retrieve")
         graph.add_edge("retrieve", "evaluate_context")
@@ -468,56 +453,6 @@ class GraphRAGAgent:
     # ------------------------------------------------------------------
     # Node implementations
     # ------------------------------------------------------------------
-    def _node_route_query(self, state: AgentState) -> dict:
-        """Classify the query as GENERAL_EXPLANATION or INCIDENT_ANALYSIS."""
-        query = state.get("original_query", "")
-        verbose = state.get("verbose", True)
-
-        if verbose:
-            sep("AGENT — ROUTING")
-            print(f"  Input: {query}")
-
-        route = self.router.route_query(query)
-
-        if verbose:
-            print(f"  Route: {route}")
-
-        return {"route": route}
-
-    def _node_general_explanation(self, state: AgentState) -> dict:
-        """Handle general knowledge questions without retrieval."""
-        query = state.get("original_query", "")
-        verbose = state.get("verbose", True)
-
-        if not self.reasoning_llm:
-            return {"answer": "Cannot answer general explanation without an LLM."}
-
-        system_prompt = (
-            "You are a cybersecurity expert. Provide a clear, concise, "
-            "and accurate explanation for the user's query."
-        )
-        if CrossLingualLayer.should_respond_in_thai(query):
-            system_prompt += " Answer in Thai."
-
-        if verbose:
-            sep("AGENT — GENERAL EXPLANATION")
-            print("  Skipping retrieval — using direct LLM knowledge...")
-
-        response = self.reasoning_llm.invoke(
-            [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=query),
-            ]
-        )
-
-        answer = require_message_text(response, operation="general explanation")
-
-        if verbose:
-            print(answer)
-            sep()
-
-        return {"answer": answer}
-
     def _node_prepare(self, state: AgentState) -> dict:
         """Detect the response language. NO input translation.
 
@@ -716,13 +651,14 @@ class GraphRAGAgent:
                 else "AGENT — REASONING LLM (context-grounded QA)"
             )
 
-        response = self.reasoning_llm.invoke(
+        answer = invoke_for_text(
+            self.reasoning_llm,
             [
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=reasoning_prompt),
-            ]
+            ],
+            operation="grounded answer generation",
         )
-        answer = require_message_text(response, operation="grounded answer generation")
 
         # The evaluator's limitation note rides along instead of replacing the
         # analysis. It is written in the query's language, so it needs no
@@ -739,14 +675,6 @@ class GraphRAGAgent:
     # ------------------------------------------------------------------
     # Edge routing functions
     # ------------------------------------------------------------------
-    @staticmethod
-    def _edge_after_route(state: AgentState) -> str:
-        """Route based on query classification."""
-        # TEMPORARILY DISABLED ROUTER: always go to incident analysis
-        # if state.get("route") == "GENERAL_EXPLANATION":
-        #     return "general"
-        return "incident"
-
     @staticmethod
     def _edge_after_evaluation(state: AgentState) -> str:
         """Decide next step based on context evaluation.

@@ -175,7 +175,6 @@ class _LlmMeter:
 
     def attach(self, agent) -> None:
         for owner, attr, stage in (
-            (agent.router, "llm", "router"),
             (agent.decomposer, "llm", "decompose"),
             (agent.evaluator, "llm", "evaluate"),
             (agent, "reasoning_llm", "reasoning"),
@@ -353,7 +352,7 @@ def derive_b(agent, meter: _LlmMeter, a_row: dict, query: str) -> dict:
     """Arm B from A's run: served reasoning on A's first-pass context."""
     trace = a_row["trace"]
     first_retrieve = next(i for i, t in enumerate(trace) if t["node"] == "retrieve")
-    shared = trace[: first_retrieve + 1]  # route_query, prepare, first retrieve
+    shared = trace[: first_retrieve + 1]  # prepare, first retrieve
 
     if a_row["b_identical"]:
         tail = [t for t in trace if t["node"] in ("reasoning", "translate_output")]
@@ -1174,8 +1173,8 @@ def phase_score(
               "makes A − B exactly the loop's effect, but B ≡ A on samples where the loop "
               "did not act, so the all-sample A − B is necessarily diluted.",
               "- **B − C is not decomposition + quota alone.** `query_fast` also renders a "
-              "smaller context (5 vector hits / 3 subgraphs vs 15 / 8) and skips the router "
-              "call; the difference bundles all of these.",
+              "smaller context (5 vector hits / 3 subgraphs vs 15 / 8); the difference "
+              "bundles both.",
               "- **One run per arm.** The core LLM is sampled at temperature 0 but is not "
               "guaranteed deterministic; comparisons involving an independent generation "
               "(B − C, A − C, and A − B on the loop subset) include run-to-run variance, "

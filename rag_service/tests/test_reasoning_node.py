@@ -1,18 +1,22 @@
 """
 Unit Tests for the reasoning node and the graph's answer path
 =============================================================
-One call writes the final answer in the query's language; the graph ends at
-``reasoning``; an ACKNOWLEDGE_LIMIT note reaches a Thai reader in Thai.
+One call writes the final answer in the query's language, and is asked again
+if it comes back empty; the graph runs ``prepare`` to ``reasoning`` with no
+classifier in front; an ACKNOWLEDGE_LIMIT note reaches a Thai reader in Thai.
 """
 
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 _APP_DIR = Path(__file__).resolve().parent.parent / "app"
 if str(_APP_DIR) not in sys.path:
     sys.path.insert(0, str(_APP_DIR))
 
+from RAG.GraphRAG.llm_content import EMPTY_REPLY_ATTEMPTS, LlmContentError
 from RAG.GraphRAG.pipeline.agent_graph import GraphRAGAgent, _THAI_LIMIT_NOTE
 from RAG.GraphRAG.pipeline.cross_lingual import CrossLingualLayer
 from RAG.GraphRAG.pipeline.evaluator import VERDICT_INSUFFICIENT
@@ -26,6 +30,19 @@ class _RecordingLlm:
     def invoke(self, messages, **_kwargs):
         self.messages = messages
         return SimpleNamespace(content=self.text)
+
+
+class _EmptyFirstLlm:
+    """``empties`` replies with no text, then the answer."""
+
+    def __init__(self, empties, text="คำตอบ T1566"):
+        self.empties = empties
+        self.text = text
+        self.calls = 0
+
+    def invoke(self, messages, **_kwargs):
+        self.calls += 1
+        return SimpleNamespace(content="" if self.calls <= self.empties else self.text)
 
 
 def _agent(text="คำตอบ T1566"):
@@ -79,7 +96,28 @@ class TestReasoningNode:
         assert out == {"answer": f"คำตอบ T1566\n\n{_THAI_LIMIT_NOTE}"}
 
 
+class TestEmptyReply:
+    def test_an_empty_reply_is_asked_again(self):
+        agent = _agent()
+        agent.reasoning_llm = _EmptyFirstLlm(empties=1)
+        assert agent._node_reasoning(_state(True)) == {"answer": "คำตอบ T1566"}
+        assert agent.reasoning_llm.calls == 2
+
+    def test_a_reply_that_stays_empty_fails_after_the_last_attempt(self):
+        agent = _agent()
+        agent.reasoning_llm = _EmptyFirstLlm(empties=EMPTY_REPLY_ATTEMPTS)
+        with pytest.raises(LlmContentError, match="grounded answer generation"):
+            agent._node_reasoning(_state(True))
+        assert agent.reasoning_llm.calls == EMPTY_REPLY_ATTEMPTS
+
+
 class TestGraph:
+    def test_prepare_is_the_first_node_and_nothing_classifies_the_query(self):
+        graph = GraphRAGAgent.__new__(GraphRAGAgent)._build_graph().get_graph()
+        assert "route_query" not in graph.nodes
+        assert "general_explanation" not in graph.nodes
+        assert any(e.source == "__start__" and e.target == "prepare" for e in graph.edges)
+
     def test_reasoning_is_the_last_node(self):
         graph = GraphRAGAgent.__new__(GraphRAGAgent)._build_graph().get_graph()
         assert "translate_output" not in graph.nodes

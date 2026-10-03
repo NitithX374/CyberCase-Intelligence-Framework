@@ -45,7 +45,6 @@ class _StubAgent:
     _node_prepare = GraphRAGAgent._node_prepare
 
     def __init__(self, script):
-        self.router = SimpleNamespace(llm=_Llm())
         self.evaluator = SimpleNamespace(llm=_Llm())
         self.reasoning_llm = _Llm("branch answer T1190")
         agent = self
@@ -59,9 +58,7 @@ class _StubAgent:
     def _stream(self, state, stream_mode):
         assert stream_mode == "updates"
         for node, update in self.script:
-            if node == "route_query":
-                self.router.llm.invoke("q")
-            elif node == "retrieve":
+            if node == "retrieve":
                 self.decomposer.decompose(state["original_query"])
             elif node == "evaluate_context" and update.pop("_judged", True):
                 self.evaluator.llm.invoke("q")
@@ -93,14 +90,13 @@ def _run(script):
 
 def test_loop_not_fired_b_is_a():
     agent, meter, a = _run([
-        ("route_query", {"route": "INCIDENT_ANALYSIS"}),
         ("prepare", {"english_query": "เหตุการณ์", "respond_in_thai": True}),
         ("retrieve", _retrieve("ctx-1")),
         ("evaluate_context", {"evaluation": _evaluation("SUFFICIENT")}),
         ("reasoning", {"answer": "A answer T1566"}),
     ])
-    assert a["llm_calls"] == 4
-    assert a["calls_by_stage"] == {"router": 1, "decompose": 1, "evaluate": 1, "reasoning": 1}
+    assert a["llm_calls"] == 3
+    assert a["calls_by_stage"] == {"decompose": 1, "evaluate": 1, "reasoning": 1}
     assert (a["broaden_rounds"], a["ack_limit"], a["b_identical"]) == (0, False, True)
     assert a["first_context"] == "ctx-1" and a["final_context"] is None
 
@@ -108,12 +104,11 @@ def test_loop_not_fired_b_is_a():
     b = derive_b(agent, meter, a, "เหตุการณ์")
     assert len(meter.events) == calls_before  # no new LLM call
     assert b["identical_to_A"] and b["answer"] == "A answer T1566"
-    assert b["calls_by_stage"] == {"router": 1, "decompose": 1, "reasoning": 1}
+    assert b["calls_by_stage"] == {"decompose": 1, "reasoning": 1}
 
 
 def test_broaden_fired_b_reasons_on_first_context():
     agent, meter, a = _run([
-        ("route_query", {"route": "INCIDENT_ANALYSIS"}),
         ("prepare", {"english_query": "เหตุการณ์", "respond_in_thai": True}),
         ("retrieve", _retrieve("ctx-1")),
         ("evaluate_context", {"evaluation": _evaluation("INSUFFICIENT", "BROADEN_SEARCH", "rewrite")}),
@@ -122,19 +117,18 @@ def test_broaden_fired_b_reasons_on_first_context():
         ("evaluate_context", {"evaluation": _evaluation("SUFFICIENT")}),
         ("reasoning", {"answer": "A answer"}),
     ])
-    assert a["calls_by_stage"] == {"router": 1, "decompose": 2, "evaluate": 2, "reasoning": 1}
+    assert a["calls_by_stage"] == {"decompose": 2, "evaluate": 2, "reasoning": 1}
     assert (a["broaden_rounds"], a["n_retrieves"], a["b_identical"]) == (1, 2, False)
     assert a["first_verdict"] == "INSUFFICIENT"
     assert (a["first_context"], a["final_context"]) == ("ctx-1", "ctx-2")
 
     b = derive_b(agent, meter, a, "เหตุการณ์")
     assert not b["identical_to_A"] and b["answer"] == "branch answer T1190"
-    assert b["calls_by_stage"] == {"router": 1, "decompose": 1, "reasoning": 1}
+    assert b["calls_by_stage"] == {"decompose": 1, "reasoning": 1}
 
 
 def test_acknowledge_limit_detected_without_broaden():
     agent, meter, a = _run([
-        ("route_query", {"route": "INCIDENT_ANALYSIS"}),
         ("prepare", {"english_query": "เหตุการณ์", "respond_in_thai": True}),
         ("retrieve", _retrieve("ctx-1")),
         ("evaluate_context", {"evaluation": _evaluation("INSUFFICIENT", "ACKNOWLEDGE_LIMIT", message="too vague")}),

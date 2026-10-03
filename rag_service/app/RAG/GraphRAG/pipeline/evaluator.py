@@ -28,7 +28,7 @@ from ..config import (
     EVALUATOR_TEMPERATURE,
     sep,
 )
-from ..llm_content import LlmContentError, require_message_text
+from ..llm_content import LlmContentError, invoke_for_text
 from ..llm_provider import CoreLlmConfigurationError, create_core_chat_model
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -234,14 +234,15 @@ class ContextEvaluator:
         ).replace("{max_retries}", str(MAX_RETRIES))
 
         try:
-            response = self.llm.invoke(
-                [
-                    SystemMessage(content=system_prompt),
-                    HumanMessage(content=user_prompt),
-                ]
-            )
             result = self._parse_response(
-                require_message_text(response, operation="context evaluation")
+                invoke_for_text(
+                    self.llm,
+                    [
+                        SystemMessage(content=system_prompt),
+                        HumanMessage(content=user_prompt),
+                    ],
+                    operation="context evaluation",
+                )
             )
         except LlmContentError:
             raise

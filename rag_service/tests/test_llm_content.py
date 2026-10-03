@@ -5,7 +5,12 @@ from typing import Any
 import pytest
 from langchain_core.messages import AIMessage
 
-from RAG.GraphRAG.llm_content import LlmContentError, require_message_text
+from RAG.GraphRAG.llm_content import (
+    EMPTY_REPLY_ATTEMPTS,
+    LlmContentError,
+    invoke_for_text,
+    require_message_text,
+)
 
 
 PIPELINE_FILES = (
@@ -33,8 +38,22 @@ class StubLlm:
 
 
 class RaisingLlm:
+    def __init__(self) -> None:
+        self.calls = 0
+
     def invoke(self, messages: object) -> AIMessage:
+        self.calls += 1
         raise RuntimeError("transport failure")
+
+
+class SequenceLlm:
+    def __init__(self, *contents: Any) -> None:
+        self.contents = list(contents)
+        self.calls = 0
+
+    def invoke(self, messages: object) -> AIMessage:
+        self.calls += 1
+        return message(self.contents[self.calls - 1])
 
 
 class StubRouter:
@@ -166,6 +185,18 @@ def test_evaluator_reads_visible_json_and_propagates_empty_content() -> None:
         evaluator.evaluate("query", "query", "context", verbose=False)
 
 
+def test_evaluator_asks_again_after_an_empty_reply() -> None:
+    from RAG.GraphRAG.pipeline.evaluator import ContextEvaluator
+
+    evaluator = ContextEvaluator.__new__(ContextEvaluator)
+    evaluator.llm = SequenceLlm("", '{"verdict":"SUFFICIENT","reason":"grounded"}')
+
+    result = evaluator.evaluate("query", "query", "context", verbose=False)
+
+    assert result.verdict == "SUFFICIENT"
+    assert evaluator.llm.calls == 2
+
+
 def test_router_falls_back_only_for_content_error() -> None:
     from RAG.GraphRAG.pipeline.router import QueryRouter
 
@@ -244,3 +275,19 @@ def test_pipeline_files_do_not_directly_consume_response_content() -> None:
             and node.value.id in RESPONSE_NAMES
         ]
         assert not direct_consumers, filename
+
+
+def test_invoke_for_text_asks_again_only_for_an_empty_reply() -> None:
+    llm = SequenceLlm("", [{"type": "unknown", "data": "hidden"}], "visible answer")
+    assert invoke_for_text(llm, [], operation="test response") == "visible answer"
+    assert llm.calls == 3
+
+    always_empty = SequenceLlm(*[""] * EMPTY_REPLY_ATTEMPTS)
+    with pytest.raises(LlmContentError, match="test response"):
+        invoke_for_text(always_empty, [], operation="test response")
+    assert always_empty.calls == EMPTY_REPLY_ATTEMPTS
+
+    failing = RaisingLlm()
+    with pytest.raises(RuntimeError, match="transport failure"):
+        invoke_for_text(failing, [], operation="test response")
+    assert failing.calls == 1
