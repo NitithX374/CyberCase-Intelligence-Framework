@@ -27,6 +27,7 @@ TRANSIENT_TRANSPORT_ERRORS = (
     httpx.WriteError,
     httpx.RemoteProtocolError,
 )
+TRANSIENT_STATUSES = frozenset({429, 500, 502, 503, 504})
 TRANSPORT_ATTEMPTS = 2
 TRANSPORT_RETRY_DELAY_SECONDS = 2.0
 RUNAWAY_ATTEMPTS = 2
@@ -118,7 +119,13 @@ def log_response_shape(stage: str, payload: Mapping[str, object]) -> None:
 
 
 def decode_response(response: httpx.Response) -> dict[str, object]:
-    if response.status_code in {408, 429, 504}:
+    if response.status_code == 429:
+        raise CaseAnalysisFailure(
+            "analysis_provider_rate_limited",
+            "The analysis provider is limiting requests",
+            status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+    if response.status_code in {408, 504}:
         raise CaseAnalysisFailure(
             "analysis_provider_timeout",
             "The analysis provider timed out",
@@ -275,7 +282,7 @@ async def post_stage(
         attempt = 1
         while True:
             try:
-                return await client.post(
+                response = await client.post(
                     target.messages_url,
                     headers=target.headers,
                     json=payload,
@@ -290,8 +297,17 @@ async def post_stage(
                     attempt,
                     error,
                 )
-                attempt += 1
-                await asyncio.sleep(TRANSPORT_RETRY_DELAY_SECONDS)
+            else:
+                if response.status_code not in TRANSIENT_STATUSES or attempt >= TRANSPORT_ATTEMPTS:
+                    return response
+                logger.warning(
+                    "Analysis stage %s answered HTTP %d on attempt %d, retrying",
+                    stage,
+                    response.status_code,
+                    attempt,
+                )
+            attempt += 1
+            await asyncio.sleep(TRANSPORT_RETRY_DELAY_SECONDS)
 
 
 def validation_problem(error: ValidationError) -> str:

@@ -137,6 +137,100 @@ async def test_a_second_transport_error_fails_the_stage(monkeypatch, caplog) -> 
     assert "RemoteProtocolError" in caplog.text
 
 
+@pytest.mark.parametrize("status_code", [429, 500, 502, 503, 504])
+async def test_a_transient_status_is_tried_once_more(monkeypatch, status_code) -> None:
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        if len(attempts) == 1:
+            return httpx.Response(status_code, json={"error": "try later"})
+        return answered()
+
+    calls: list[dict[str, object]] = []
+    result = await run_stage(monkeypatch, handler, calls)
+
+    assert result == Probe(ok=True)
+    assert len(attempts) == 2
+    assert calls[0]["status"] == "completed"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "code", "reported_status"),
+    [
+        (429, "analysis_provider_rate_limited", 429),
+        (500, "analysis_provider_down", 502),
+        (502, "analysis_provider_down", 502),
+        (503, "analysis_provider_down", 502),
+        (504, "analysis_provider_timeout", 504),
+    ],
+)
+async def test_a_transient_status_that_repeats_fails_the_stage_under_its_own_code(
+    monkeypatch, status_code, code, reported_status
+) -> None:
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        return httpx.Response(status_code, json={"error": "still down"})
+
+    calls: list[dict[str, object]] = []
+    with pytest.raises(CaseAnalysisFailure) as failure:
+        await run_stage(monkeypatch, handler, calls)
+
+    assert failure.value.code == code
+    assert failure.value.status_code == reported_status
+    assert len(attempts) == provider.TRANSPORT_ATTEMPTS
+    assert calls[0]["status"] == "failed"
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 408, 422])
+async def test_any_other_status_is_not_retried(monkeypatch, status_code) -> None:
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        return httpx.Response(status_code, json={"error": "refused"})
+
+    with pytest.raises(CaseAnalysisFailure):
+        await run_stage(monkeypatch, handler, [])
+
+    assert len(attempts) == 1
+
+
+async def test_a_dropped_connection_and_a_transient_status_share_one_retry(monkeypatch) -> None:
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        if len(attempts) == 1:
+            raise httpx.ConnectError("connection reset", request=request)
+        return httpx.Response(503, json={"error": "unavailable"})
+
+    with pytest.raises(CaseAnalysisFailure) as failure:
+        await run_stage(monkeypatch, handler, [])
+
+    assert failure.value.code == "analysis_provider_down"
+    assert len(attempts) == provider.TRANSPORT_ATTEMPTS
+
+
+async def test_a_transient_status_is_retried_after_the_same_delay_as_a_dropped_connection(
+    monkeypatch,
+) -> None:
+    waited: list[float] = []
+
+    async def record(seconds: float) -> None:
+        waited.append(seconds)
+
+    monkeypatch.setattr(provider.asyncio, "sleep", record)
+    monkeypatch.setattr(provider, "TRANSPORT_RETRY_DELAY_SECONDS", 2.0)
+    replies = [httpx.Response(429, json={"error": "slow down"}), answered()]
+
+    await run_stage(monkeypatch, lambda request: replies.pop(0), [])
+
+    assert waited == [2.0]
+
+
 async def test_a_timeout_is_not_retried(monkeypatch) -> None:
     attempts = []
 
