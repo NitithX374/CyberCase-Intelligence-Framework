@@ -1,3 +1,5 @@
+import { hasThai } from "@/lib/language";
+
 export type SupportStatus = "bound" | "mixed" | "unbound" | "no_claim";
 
 type Note = Exclude<SupportStatus, "bound">;
@@ -15,12 +17,10 @@ const NOTES: Record<"english" | "thai", Record<Note, string>> = {
   },
 };
 
-const THAI_CHARACTER = /[\u0E00-\u0E7F]/;
-
 export function supportNote(
   support: SupportStatus | null | undefined,
   writtenText: string,
 ): string | null {
   if (!support || support === "bound") return null;
-  return NOTES[THAI_CHARACTER.test(writtenText) ? "thai" : "english"][support];
+  return NOTES[hasThai(writtenText) ? "thai" : "english"][support];
 }

@@ -10,6 +10,7 @@ export interface SourceMessageRef {
   sourcePages: SourcePage[];
   question: string | null;
   quoteLabel?: string;
+  toleratedNotes?: string[];
 }
 
 export interface QuoteContext {

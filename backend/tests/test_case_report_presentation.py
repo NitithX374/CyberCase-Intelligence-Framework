@@ -470,6 +470,93 @@ def test_an_analysis_stored_before_the_status_existed_makes_a_report_with_none()
     assert [impact.support for impact in report.impacts] == [None]
 
 
+TOLERATED_LINE = "พบในเอกสารเมื่อไม่นับรูปแบบ"
+
+
+def _input_with_tolerated(
+    supporting: list[tuple[str, str]], contradicting: list[tuple[str, str]] | None = None
+) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    claim = trace.claims[0]
+    cited = claim.supporting_citations[0]
+
+    def with_differences(pairs: list[tuple[str, str]]) -> CaseSourceCitation:
+        return cited.model_copy(
+            update={
+                "tolerated_differences": [
+                    CaseQuoteDifference(written=written, source=source) for written, source in pairs
+                ]
+            }
+        )
+
+    claim = claim.model_copy(
+        update={
+            "supporting_citations": [with_differences(supporting)],
+            "contradicting_citations": (
+                [with_differences(contradicting)] if contradicting is not None else []
+            ),
+        }
+    )
+    return report_input.model_copy(
+        update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
+    )
+
+
+def test_a_new_report_stores_what_the_locator_tolerated_beside_each_quote() -> None:
+    report = _stored(
+        _input_with_tolerated([("apple", "Apple"), ("", "-")], [("resign", "re-sign")])
+    )
+
+    [finding] = report.findings
+    assert [[(p.written, p.source) for p in places] for places in finding.supporting_tolerated] == [
+        [("apple", "Apple"), ("", "-")]
+    ]
+    assert [
+        [(p.written, p.source) for p in places] for places in finding.contradicting_tolerated
+    ] == [[("resign", "re-sign")]]
+
+
+def test_a_tolerated_quote_is_printed_with_a_plain_line_per_difference() -> None:
+    html = render_case_report_html(
+        _stored(_input_with_tolerated([("apple", "Apple"), ("", "-"), ("5,000", "")])), ISSUE
+    )
+
+    assert f"{TOLERATED_LINE} — ข้อความวิเคราะห์เขียน «apple» เอกสารเขียน «Apple»" in html
+    assert f"{TOLERATED_LINE} — เอกสารมี «-» ที่ข้อความวิเคราะห์ตัดออก" in html
+    assert f"{TOLERATED_LINE} — ข้อความวิเคราะห์เติม «5,000»" in html
+    assert html.index("ข้อความจากหลักฐาน:") < html.index(TOLERATED_LINE)
+    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
+
+
+def test_the_line_of_a_contradicting_quote_follows_that_quote() -> None:
+    html = render_case_report_html(
+        _stored(_input_with_tolerated([], [("resign", "re-sign")])), ISSUE
+    )
+
+    assert html.count(TOLERATED_LINE) == 1
+    assert html.index("ข้อความที่ขัดแย้ง:") < html.index(TOLERATED_LINE)
+
+
+def test_a_quote_the_locator_tolerated_nothing_in_prints_no_line() -> None:
+    html = render_case_report_html(_stored(_input()), ISSUE)
+
+    assert TOLERATED_LINE not in html
+
+
+def test_a_report_stored_before_tolerated_differences_validates_and_prints_no_line() -> None:
+    written = _stored(_input_with_tolerated([("apple", "Apple")])).model_dump(mode="json")
+    for finding in written["findings"]:
+        del finding["supporting_tolerated"], finding["contradicting_tolerated"]
+
+    stored = CaseReportContent.model_validate(written)
+    html = render_case_report_html(stored, ISSUE)
+
+    assert stored.findings[0].supporting_tolerated == []
+    assert TOLERATED_LINE not in html
+    assert "ข้อความจากหลักฐาน:" in html
+
+
 def test_a_report_stored_before_quote_contexts_still_prints() -> None:
     written = _stored(_input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")).model_dump(
         mode="json"

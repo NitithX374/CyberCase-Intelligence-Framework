@@ -99,6 +99,65 @@ describe("SourceDrawer", () => {
     ).toEqual(["Quoted", "Source text"]);
   });
 
+  it("says under the quotation what the locator ignored to find it", () => {
+    const [cited] = claimRefs(
+      {
+        supporting_source_ids: ["narrative-1"],
+        supporting_citations: [
+          {
+            source_id: "narrative-1",
+            exact_quote: "a transfer of 52,000 baht",
+            tolerated_differences: [
+              { written: "apple", source: "Apple" },
+              { written: "", source: "-" },
+            ],
+          },
+        ],
+      },
+      parseCaseSources([narrative], []),
+      "A transfer was reported.",
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+
+    render(<SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />);
+
+    const quoted = screen.getByRole("heading", { level: 3, name: "Quoted" }).closest("section")!;
+    expect(
+      within(quoted).getByText(
+        "Found in the source when formatting is ignored. The analysis wrote «apple»; the source says «Apple».",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(quoted).getByText(
+        "Found in the source when formatting is ignored. The source has «-», which the analysis leaves out.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no line for a quotation found as written, or when the caller gave no text", () => {
+    const withDifference = {
+      source_id: "narrative-1",
+      exact_quote: "a transfer of 52,000 baht",
+      tolerated_differences: [{ written: "apple", source: "Apple" }],
+    };
+    const sources = parseCaseSources([narrative], []);
+    const [plain] = claimRefs(
+      {
+        supporting_source_ids: ["narrative-1"],
+        supporting_citations: [{ source_id: "narrative-1", exact_quote: "a transfer" }],
+      },
+      sources,
+      "A transfer was reported.",
+    ).supporting;
+    const [withoutText] = claimRefs(
+      { supporting_source_ids: ["narrative-1"], supporting_citations: [withDifference] },
+      sources,
+    ).supporting;
+
+    expect(plain.toleratedNotes).toBeUndefined();
+    expect(withoutText.toleratedNotes).toBeUndefined();
+  });
+
   it("names a near passage as the nearest passage, not as a quotation", () => {
     const [cited] = claimRefs(
       {

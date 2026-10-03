@@ -74,8 +74,9 @@ export function buildCaseOverview(
   }
   const sources = parseCaseSources(rows, analysisFollowups(result));
   const associations = trace.mitre_associations ?? [];
+  const incidentSummary = trace.summary || result.summary || "Case summary not provided.";
   const findings: CaseFinding[] = trace.claims.map((claim) => {
-    const cited = claimRefs(claim, sources);
+    const cited = claimRefs(claim, sources, incidentSummary);
     return {
       id: claim.claim_id,
       text: claim.text,
@@ -101,7 +102,6 @@ export function buildCaseOverview(
   });
   const backing = claimBacking(findings);
   const affected = findingsNamed(findings);
-  const incidentSummary = trace.summary || result.summary || "Case summary not provided.";
   return {
     hasAnalysis: true,
     incidentSummary,

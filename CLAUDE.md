@@ -203,10 +203,16 @@ trace/                  what the analysis, chat and reports share
                         then format only (quote marks, punctuation, dash
                         style, case and spacing ignored; at least 8
                         characters left, found once); the stored quote is
-                        always source text; nearest_passage points a quote no
-                        tier locates at its one clearly closest passage
+                        always source text; the locator says which tier
+                        accepted a quote (locate_quote), and
+                        tolerated_differences lists, word by word, what the
+                        NFKC, markup or format tier ignored (quote marks
+                        excluded, at most 8); nearest_passage points a quote
+                        no tier locates at its one clearly closest passage
                         (rapidfuzz candidates, an infix edit distance, at most
-                        3 places at word level)
+                        3 places at word level, the first and last words
+                        paired inside the aligned span, and a number with
+                        separators kept as one word)
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
   bind.py               bind a written trace to the case; count what did not bind;
@@ -219,7 +225,10 @@ trace/                  what the analysis, chat and reports share
                         once in the source, and otherwise as the one span the
                         pieces stretch over; either way it counts as one written
                         quote; each bound quote keeps the text around it as its
-                        context; a quote no tier locates is kept apart as an
+                        context and, when a tolerant tier found it, the
+                        differences that tier ignored (tolerated_differences;
+                        neither model is shown them); a quote no tier locates
+                        is kept apart as an
                         unverified citation, with that passage when one
                         qualifies, and counted as citations_pointed; neither
                         model is shown it; bound_references derives the
@@ -410,7 +419,7 @@ answer: one case in the development database holds six analyses at
 pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. Each party, event and impact in the snapshot carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. Each party, event and impact in the snapshot carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)
