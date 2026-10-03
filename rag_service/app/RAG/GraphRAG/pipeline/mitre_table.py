@@ -69,9 +69,16 @@ _SPACE_BEFORE_PUNCT_RE = re.compile(r"\s+([,.;:!?])(?=\s|$)")
 _WS_RE = re.compile(r"\s+")
 
 # ATT&CK IDs as they appear in answers: T1566, T1566.001, TA0001, G0016,
-# S0002, M1032, DS0026, C0011.
+# S0002, M1032, DS0026, C0011. Bounded by Latin letters and digits rather than
+# \b: Thai letters are word characters to Python's re, so \b found no boundary
+# in "ใช้T1566" and a cited row was dropped. The evaluation extractor
+# (evaluation/attack_id_metrics.py) uses the same lookarounds.
+_LATIN_BEFORE = r"(?<![A-Za-z0-9])"
+_LATIN_AFTER = r"(?![A-Za-z0-9])"
 _ATTACK_ID_PATTERN = re.compile(
-    r"\b(?:TA\d{4}|T\d{4}(?:\.\d{3})?|G\d{4}|S\d{4}|M\d{4}|DS\d{4}|C\d{4})\b",
+    _LATIN_BEFORE
+    + r"(?:TA\d{4}|T\d{4}(?:\.\d{3})?|G\d{4}|S\d{4}|M\d{4}|DS\d{4}|C\d{4})"
+    + _LATIN_AFTER,
     re.IGNORECASE,
 )
 
@@ -322,9 +329,10 @@ def _is_cited(
             return True
 
     # Name match: MITRE names stay in English even inside Thai answers.
-    # Guard short names against false positives and require word boundaries.
+    # Guard short names against false positives and require word boundaries -
+    # Latin ones, so a name written straight against Thai text still counts.
     if name and len(name) >= 4:
-        pattern = r"(?<!\w)" + re.escape(name.lower()) + r"(?!\w)"
+        pattern = _LATIN_BEFORE + re.escape(name.lower()) + _LATIN_AFTER
         if re.search(pattern, answer_lower):
             return True
 
