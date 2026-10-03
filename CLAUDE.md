@@ -368,9 +368,11 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
 - If torch, transformers or the weights are missing, it records `SKIP` with `mitre_shadow_unavailable`, and the
   analysis carries on.
 - **Where it is on.**
-  - Compose turns it on, installs CPU torch and transformers from `backend/requirements-encoder.txt`, and mounts
+  - Nowhere by default: the code default is `off`, and compose passes `${MITRE_GATE_SHADOW:-off}`, so compose,
+    Railway and the tests leave it off.
+  - `MITRE_GATE_SHADOW=encoder` in the shell or in Doppler turns it on under compose with no rebuild: the backend
+    image still installs CPU torch and transformers from `backend/requirements-encoder.txt`, and compose still mounts
     `backend/xlmr_ladder_best` read-only.
-  - The code default is `off`, so Railway and the tests are unaffected.
   - `tests/conftest.py` keeps it off whatever the local `.env` says.
 
 The `encoder` gate splits its input with PyThaiNLP `crfcut` (`trace/sentences.py`, which also cuts the sentence shown around a quotation);

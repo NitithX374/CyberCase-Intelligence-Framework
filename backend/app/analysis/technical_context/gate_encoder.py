@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import lru_cache
@@ -22,6 +23,8 @@ logger = logging.getLogger(__name__)
 MAX_TRIGGERS = 16
 MAX_TRIGGER_CHARS = 500
 BATCH = 32
+
+loading = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -54,8 +57,13 @@ def loaded_gate() -> Loaded:
     )
 
 
+def loaded_once() -> Loaded:
+    with loading:
+        return loaded_gate()
+
+
 def scores(texts: Sequence[str]) -> list[float]:
-    gate = loaded_gate()
+    gate = loaded_once()
     out: list[float] = []
     for start in range(0, len(texts), BATCH):
         encoded = gate.tokenizer(
@@ -75,11 +83,11 @@ async def evaluate_mitre_applicability_encoder(
     *,
     case_sources: Sequence[CaseSourceItem],
 ) -> MitreApplicabilityRecord:
-    sentences = split_sources(case_sources)
+    sentences = await asyncio.to_thread(split_sources, case_sources)
     if not sentences:
         return skipped_mitre_applicability()
 
-    threshold = loaded_gate().threshold
+    threshold = (await asyncio.to_thread(loaded_once)).threshold
     measured = await asyncio.to_thread(scores, [item.text for item in sentences])
 
     triggered = sorted(
