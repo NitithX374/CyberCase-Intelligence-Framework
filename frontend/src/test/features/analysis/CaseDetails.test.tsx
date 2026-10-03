@@ -26,6 +26,30 @@ const events = (count: number) =>
   }));
 
 describe("CaseDetails", () => {
+  it("prints both lines for a row whose claim is not confirmed and whose citation was not found", () => {
+    render(
+      <CaseDetails
+        timeline={[
+          {
+            time: "Monday",
+            event: "The account was frozen",
+            sources: [],
+            inferred: false,
+            unconfirmed: ["not_confirmed"],
+            supportNote: "No cited quotation was found in the sources.",
+          },
+        ]}
+        parties={[]}
+        impacts={[]}
+        onSelectSource={vi.fn()}
+        activeSourceKey={null}
+      />,
+    );
+
+    expect(screen.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(screen.getByText("No cited quotation was found in the sources.")).toBeInTheDocument();
+  });
+
   it("prints the line for an item whose cited quotations were not found, even with no source to show", () => {
     render(
       <CaseDetails
@@ -35,6 +59,7 @@ describe("CaseDetails", () => {
             event: "The account was frozen",
             sources: [],
             inferred: false,
+            unconfirmed: [],
             supportNote: "No cited quotation was found in the sources.",
           },
         ]}
@@ -44,6 +69,7 @@ describe("CaseDetails", () => {
             role: "Account holder",
             sources: [statement],
             inferred: false,
+            unconfirmed: [],
             supportNote: "Some cited quotations were not found in the sources.",
           },
         ]}
@@ -52,9 +78,15 @@ describe("CaseDetails", () => {
             description: "A transfer was made",
             sources: [],
             inferred: false,
+            unconfirmed: [],
             supportNote: "Not linked to any claim.",
           },
-          { description: "A bound impact", sources: [statement], inferred: false },
+          {
+            description: "A bound impact",
+            sources: [statement],
+            inferred: false,
+            unconfirmed: [],
+          },
         ]}
         onSelectSource={vi.fn()}
         activeSourceKey={null}
