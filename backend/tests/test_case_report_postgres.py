@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 
 import pytest
@@ -82,23 +83,25 @@ def test_the_pdf_is_laid_out_off_the_event_loop(monkeypatch):
     assert threads and threads[0] is not threading.main_thread()
 
 
+OLD_SHAPE = {
+    "report_version": "preliminary_analysis_report_v1",
+    "status": "provisional_unverified",
+    "title": "Seeded case",
+    "sections": [],
+    "claims": [],
+    "limitations": [],
+}
+
+
 def test_a_report_stored_in_the_old_shape_is_refused_with_a_code():
     async def exercise():
         async with isolated_database() as session_factory:
             case_id, user_id, report = await reported_case(session_factory)
             async with session_factory() as db, db.begin():
                 stored = await db.get(CaseReport, report.report_id)
-                stored.structured_report = {
-                    "report_version": "preliminary_analysis_report_v1",
-                    "status": "provisional_unverified",
-                    "title": "Seeded case",
-                    "sections": [],
-                    "claims": [],
-                    "limitations": [],
-                }
+                stored.structured_report = OLD_SHAPE
 
             reads = (
-                lambda service: service.list_reports(case_id, user_id),
                 lambda service: service.get_report_html(case_id, report.report_id, user_id),
                 lambda service: service.generate_report(case_id, CaseReportCreate(), user_id),
             )
@@ -109,4 +112,50 @@ def test_a_report_stored_in_the_old_shape_is_refused_with_a_code():
                 assert refused.value.code == "case_report_outdated"
                 assert refused.value.status_code == 409
 
+            async with session_factory() as db:
+                assert await CaseReportService(db).list_reports(case_id, user_id) == []
+
     asyncio.run(exercise())
+
+
+def test_a_report_in_the_old_shape_does_not_hide_the_reports_beside_it(caplog):
+    async def exercise():
+        async with isolated_database() as session_factory:
+            case_id, user_id, old = await reported_case(session_factory)
+            async with session_factory() as db, db.begin():
+                first = await db.scalar(
+                    select(CaseAnalysisResult).where(CaseAnalysisResult.case_id == case_id)
+                )
+                second = CaseAnalysisResult(
+                    case_id=case_id,
+                    source_revision=first.source_revision,
+                    summary=first.summary,
+                    trace_json=first.trace_json,
+                    pipeline_config={},
+                    external_context_json=first.external_context_json,
+                )
+                db.add(second)
+                await db.flush()
+                db.add(
+                    CaseReport(
+                        case_id=case_id,
+                        analysis_result_id=second.id,
+                        version_number=2,
+                        structured_report=old.report.model_dump(mode="json"),
+                    )
+                )
+                stored = await db.get(CaseReport, old.report_id)
+                stored.structured_report = OLD_SHAPE
+
+            async with session_factory() as db:
+                listed = await CaseReportService(db).list_reports(case_id, user_id)
+                with pytest.raises(ReportGenerationConflict) as refused:
+                    await CaseReportService(db).get_report_html(case_id, old.report_id, user_id)
+            return listed, old.report_id, refused.value
+
+    with caplog.at_level(logging.WARNING):
+        listed, old_id, refused = asyncio.run(exercise())
+
+    assert [report.version_number for report in listed] == [2]
+    assert refused.code == "case_report_outdated"
+    assert [str(old_id) in record.getMessage() for record in caplog.records] == [True]
