@@ -6,10 +6,11 @@ import { casePath, type WorkspaceView } from "@/lib/casePaths";
 import { useCase, useCaseMutations } from "@/features/cases/queries";
 import { useIsAnalysisUpdating } from "@/features/analysis/queries";
 import { useAnalysisRunOutcome } from "@/features/analysis/useRunCaseAnalysis";
+import { CaseNotFound } from "@/features/workspace/CaseNotFound";
 import { WorkspaceHeader } from "@/features/workspace/WorkspaceHeader";
 import { WorkspaceChatPanel } from "@/features/chat/WorkspaceChatPanel";
 import { MeaningfulErrorModal } from "@/components/MeaningfulErrorModal";
-import { toUserFacingError } from "@/lib/userFacingError";
+import { isCaseNotFound, toUserFacingError } from "@/lib/userFacingError";
 
 const CHAT_OPEN_STORAGE_KEY = "cybercase:chat-open";
 
@@ -30,7 +31,8 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
   });
   const [actionError, setActionError] = useState<unknown>(null);
 
-  const activeCase = useCase(caseId).data ?? null;
+  const caseQuery = useCase(caseId);
+  const activeCase = caseQuery.data ?? null;
   const { createMutation, updateMutation } = useCaseMutations();
   const isAnalyzing = useIsAnalysisUpdating(caseId);
 
@@ -72,6 +74,8 @@ export function CaseWorkspace({ children }: { children: ReactNode }) {
     (view: WorkspaceView) => router.push(casePath(caseId, view)),
     [caseId, router],
   );
+
+  if (isCaseNotFound(caseQuery.error)) return <CaseNotFound />;
 
   return (
     <div className="flex h-dvh overflow-hidden bg-surface text-ink">
