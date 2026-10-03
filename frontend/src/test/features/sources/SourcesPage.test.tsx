@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { refusal } from "@/test/httpErrors";
@@ -74,5 +74,42 @@ describe("SourcesPage", () => {
     );
     expect(dialog).toHaveTextContent("Reason: extraction_text_empty");
     expect(dialog).not.toHaveTextContent("เกิดข้อผิดพลาดที่ไม่คาดคิด");
+  });
+
+  it("tells the reader to split a file when the sources would be too large, with no retry", async () => {
+    state.upload.mockRejectedValue(
+      refusal(413, "source_too_large", "The case sources would exceed what the analysis can read"),
+    );
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("Add file"), {
+      target: { files: [new File(["%PDF"], "long.pdf", { type: "application/pdf" })] },
+    });
+
+    const dialog = await screen.findByRole("dialog");
+    const message = dialog.querySelector("#meaningful-error-message");
+    expect(message).toHaveTextContent("แบ่งไฟล์");
+    expect(message).toHaveTextContent("ทั้งหมดของคดีนี้");
+    expect(message).not.toHaveTextContent("exceed");
+    expect(within(dialog).queryByRole("button", { name: "ลองอีกครั้ง" })).not.toBeInTheDocument();
+  });
+
+  it("says in Thai that the case is being analysed when a file is refused for it", async () => {
+    state.upload.mockRejectedValue(
+      refusal(
+        409,
+        "analysis_in_progress",
+        "The case is being analysed, so a source cannot be added now",
+      ),
+    );
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("Add file"), {
+      target: { files: [new File(["%PDF"], "late.pdf", { type: "application/pdf" })] },
+    });
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.querySelector("#meaningful-error-message")).toHaveTextContent("กำลังวิเคราะห์");
+    expect(within(dialog).queryByRole("button", { name: "ลองอีกครั้ง" })).not.toBeInTheDocument();
   });
 });

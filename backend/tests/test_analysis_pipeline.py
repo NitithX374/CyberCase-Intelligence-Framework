@@ -21,7 +21,7 @@ from app.analysis.store import CaseUnderAnalysis
 from app.analysis.technical_context.contracts import skipped_mitre_applicability
 from app.analysis.technical_context.retrieve import CaseMitreAugmentation
 from app.errors import CaseWorkflowError
-from app.followup.clarification import Proceed
+from app.followup.clarification import Ask, Proceed
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import bound_claims
 from app.trace.claims import CaseAnalysisClaim, CaseAssessmentTrace, CaseSourceCitation
@@ -325,3 +325,78 @@ def test_only_an_advance_with_a_trace_is_stored():
         with pytest.raises(CaseWorkflowError) as refused:
             asyncio.run(store_outcome(None, started, outcome))
         assert refused.value.code == code
+
+
+def test_a_question_without_its_assessment_is_not_stored():
+    bundle, _ = case_with_one_narrative()
+    started = CaseUnderAnalysis(case_id=uuid4(), source_bundle=bundle)
+    gap = CaseAssessmentTrace.model_validate(
+        {
+            "gaps": [
+                {
+                    "gap_id": "G-01",
+                    "gap_key": "incident:time",
+                    "topic": "Incident time",
+                    "status": "NOT_PROVIDED",
+                    "description": "The incident time is missing.",
+                    "reason": "Timing affects the chronology.",
+                    "priority": "high",
+                    "askable": True,
+                    "clarification_question": "When did the incident happen?",
+                }
+            ]
+        }
+    ).gaps[0]
+
+    with pytest.raises(CaseWorkflowError) as refused:
+        asyncio.run(store_outcome(None, started, AnalysisAdvance(None, Ask(gap))))
+
+    assert refused.value.code == "analysis_result_invalid"
+
+
+def stub_steps(monkeypatch, called: list[str]) -> None:
+    def record(name):
+        async def step(_data, artifacts):
+            called.append(name)
+            return artifacts
+
+        return step
+
+    for name in ("retrieve_technical_context", "write_analysis", "bind_to_case"):
+        monkeypatch.setattr(pipeline_module, name, record(name))
+
+
+def test_no_assessment_is_requested_once_the_rounds_are_spent(monkeypatch):
+    called: list[str] = []
+
+    async def assessment(_data):
+        called.append("assess_gaps")
+        raise AssertionError("assess_gaps ran after the rounds were spent")
+
+    monkeypatch.setattr(pipeline_module, "assess_gaps", assessment)
+    stub_steps(monkeypatch, called)
+
+    bundle, _ = case_with_one_narrative()
+    outcome = asyncio.run(advance_case(AnalysisInput(sources=bundle, rounds_spent=4, max_rounds=3)))
+
+    assert outcome.assessment is None
+    assert outcome.decision == Proceed("max_rounds_reached")
+    assert outcome.artifacts is not None
+    assert called == ["retrieve_technical_context", "write_analysis", "bind_to_case"]
+
+
+def test_the_last_round_is_still_assessed(monkeypatch):
+    called: list[str] = []
+
+    async def assessment(_data):
+        called.append("assess_gaps")
+        return CaseAssessmentTrace(gaps=[])
+
+    monkeypatch.setattr(pipeline_module, "assess_gaps", assessment)
+    stub_steps(monkeypatch, called)
+
+    bundle, _ = case_with_one_narrative()
+    outcome = asyncio.run(advance_case(AnalysisInput(sources=bundle, rounds_spent=3, max_rounds=3)))
+
+    assert outcome.assessment == CaseAssessmentTrace(gaps=[])
+    assert called[0] == "assess_gaps"

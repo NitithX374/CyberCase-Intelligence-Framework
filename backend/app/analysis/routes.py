@@ -10,6 +10,7 @@ from app.analysis.run import AnalysisStep, run_case_analysis
 from app.analysis.schemas import AnalysisStepRead, CaseAnalysisResultRead
 from app.analysis.stream import STREAMED_RESPONSE, progress_response, wants_progress
 from app.auth.guard import get_current_user
+from app.cases.running import sole_analysis
 from app.cases.service import analysis_freshness
 from app.database import get_db
 from app.models.user import User
@@ -35,7 +36,8 @@ async def analyse_case(
     user: User = Depends(get_current_user),
 ):
     async def analyse() -> AnalysisStepRead:
-        return analysis_step_read(await run_case_analysis(case_id=case_id, user_id=user.id))
+        with sole_analysis(case_id):
+            return analysis_step_read(await run_case_analysis(case_id=case_id, user_id=user.id))
 
     if wants_progress(request):
         return progress_response(analyse)

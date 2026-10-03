@@ -41,6 +41,10 @@ def eligible_gaps(
     ]
 
 
+def rounds_are_spent(rounds_spent: int, max_rounds: int) -> bool:
+    return rounds_spent > max_rounds
+
+
 def decide_followup(
     *,
     gaps: Sequence[CaseAnalysisGap],
@@ -50,7 +54,7 @@ def decide_followup(
     max_rounds: int,
     gaps_per_round: int,
 ) -> FollowupDecision:
-    if rounds_spent > max_rounds:
+    if rounds_are_spent(rounds_spent, max_rounds):
         return Proceed("max_rounds_reached")
     if asked_this_round >= gaps_per_round:
         return Proceed("round_budget_spent")
@@ -72,4 +76,5 @@ __all__ = [
     "ProceedReason",
     "decide_followup",
     "eligible_gaps",
+    "rounds_are_spent",
 ]

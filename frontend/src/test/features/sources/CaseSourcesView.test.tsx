@@ -235,6 +235,53 @@ describe("CaseSourcesView", () => {
     expect(screen.getByRole("button", { name: "Analyzing…" })).toBeDisabled();
   });
 
+  it("does not let a source be added while an analysis runs", () => {
+    renderSources({
+      sources: [caseSource()],
+      analysis: { freshness: "current", isRunning: true, onAnalyze: vi.fn() },
+    });
+
+    expect(screen.getByRole("button", { name: "Add source" })).toBeDisabled();
+    expect(screen.getByLabelText("Add file")).toBeDisabled();
+  });
+
+  it("disables the choices of an add menu that was already open when an analysis began", () => {
+    const props: React.ComponentProps<typeof CaseSourcesView> = {
+      caseId: "case-1",
+      sources: [caseSource()],
+      followups: [],
+      isUploading: false,
+      isAddingNarrative: false,
+      onUploadDocument: vi.fn(),
+      onAddNarrative: vi.fn().mockResolvedValue(true),
+      analysis: { freshness: "current", isRunning: false, onAnalyze: vi.fn() },
+    };
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (running: boolean) => (
+      <QueryClientProvider client={queryClient}>
+        <CaseSourcesView {...props} analysis={{ ...props.analysis!, isRunning: running }} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view(false));
+    fireEvent.click(screen.getByRole("button", { name: "Add source" }));
+    expect(screen.getByRole("menuitem", { name: "File" })).toBeEnabled();
+
+    rerender(view(true));
+
+    expect(screen.getByRole("menuitem", { name: "File" })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: "Case narrative" })).toBeDisabled();
+  });
+
+  it("lets a source be added when no analysis runs", () => {
+    renderSources({
+      sources: [caseSource()],
+      analysis: { freshness: "current", isRunning: false, onAnalyze: vi.fn() },
+    });
+
+    expect(screen.getByRole("button", { name: "Add source" })).toBeEnabled();
+    expect(screen.getByLabelText("Add file")).toBeEnabled();
+  });
+
   it("waits for an upload to finish before analyzing", () => {
     renderSources({
       sources: [caseSource()],

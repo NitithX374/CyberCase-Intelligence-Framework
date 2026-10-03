@@ -97,6 +97,7 @@ export function CaseSourcesView({
         type="file"
         accept={ACCEPTED_FILES}
         aria-label="Add file"
+        disabled={analysis?.isRunning ?? false}
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (file) onUploadDocument(file);

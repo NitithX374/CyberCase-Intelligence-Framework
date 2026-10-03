@@ -67,7 +67,11 @@ async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
 `advance_case` is the production request path. An askable gap stops it before
 the MITRE gate, RAG retrieval, the two analysis calls, and claim binding. The
 assessment row is stored with `status="assessment"` so its questions retain an
-`analysis_result_id`, but it never moves `Case.latest_analysis_result_id`.
+`analysis_result_id`, but it never moves `Case.latest_analysis_result_id`. Once the
+rounds are spent the assessment is skipped too (`rounds_are_spent` in
+`followup/clarification.py`), since `decide_followup` would proceed whatever it
+found, and `AnalysisAdvance.assessment` is then `None`. A question is never stored
+without its assessment.
 
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
 trace in two model calls: `case_reading` writes the claims, parties, timeline
@@ -150,10 +154,13 @@ This is why the loop was **not** built with a state machine library. There is no
 state to machine — each step reads the world, decides once, and writes.
 
 The only state held in memory is what is in flight inside one request:
-`analysing` in `analysis/run.py` counts the analyses running per case,
+`analysing` in `cases/running.py` counts the analyses running per case,
 and `answering` in `chat/answer.py` marks the questions being
 answered. A retry reads them so that it returns what is stored instead of
 starting the same work twice. This holds because the backend runs one process.
+`POST /analysis`, through `sole_analysis` in the same module, and adding a source
+answer 409 `analysis_in_progress` while the count is above zero. An answer in the
+chat that closes a round is not covered: it still starts its own analysis.
 
 `followup/clarification.py` holds the decision and nothing else: given the gaps, what has
 been asked, and the budget, return `Ask` or `Proceed`. No database, no settings,
