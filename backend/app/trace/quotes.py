@@ -25,6 +25,7 @@ OCR_TAG = r"(?:<page_number>[^<]*</page_number>|</?[A-Za-z][^<>]*>)"
 FORMAT_QUOTE_MARKS = frozenset("\"'“”‘’«»„‚`´")
 FORMAT_DASHES = frozenset("‐‑‒–—―−")
 FORMAT_PUNCTUATION = frozenset(".,;:!?()[]{}-/…*_#~")
+EDGE_MARKS = frozenset(".,;:!?()[]{}…") | FORMAT_QUOTE_MARKS
 MIN_FORMAT_FORM_CHARS = 8
 
 QuoteTier = Literal["exact", "folded", "ellipsis", "relaxed", "format"]
@@ -294,7 +295,9 @@ def text_places(written: str, located: str) -> list[tuple[str, str]]:
 def tolerated_differences(quote: str, located: str) -> tuple[tuple[str, str], ...]:
     kept = [
         (written, source)
-        for written, source in text_places(without_edge_ellipses(quote), located)
+        for written, source in text_places(
+            without_edge_marks(without_edge_ellipses(quote)), without_edge_marks(located)
+        )
         if without_quote_marks(written) != without_quote_marks(source)
     ]
     return tuple(kept[:MAX_TOLERATED_DIFFERENCES])
@@ -302,6 +305,15 @@ def tolerated_differences(quote: str, located: str) -> tuple[tuple[str, str], ..
 
 def without_quote_marks(text: str) -> str:
     return "".join(character for character in text if character not in FORMAT_QUOTE_MARKS).strip()
+
+
+def without_edge_marks(text: str) -> str:
+    start, end = 0, len(text)
+    while start < end and (text[start].isspace() or text[start] in EDGE_MARKS):
+        start += 1
+    while end > start and (text[end - 1].isspace() or text[end - 1] in EDGE_MARKS):
+        end -= 1
+    return text[start:end]
 
 
 def context_edge(words: list[tuple[int, int]], content: str, at: int, direction: int) -> int:

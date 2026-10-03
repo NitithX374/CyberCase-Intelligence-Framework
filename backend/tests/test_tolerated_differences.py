@@ -131,6 +131,44 @@ def test_a_dash_sign_case_punctuation_or_spacing_inside_a_word_is_shown(written,
     assert tolerated_differences(written, located) == shown
 
 
+@pytest.mark.parametrize(
+    ("written", "located"),
+    [
+        ("on Monday.", "on Monday"),
+        ("on Monday,", "on Monday"),
+        ("(on Monday", "on Monday"),
+        ("on Monday.)", "on Monday"),
+        ("on Monday…", "on Monday"),
+        ("on Monday!?", "on Monday"),
+        ("on Monday", "on Monday."),
+    ],
+)
+def test_punctuation_at_the_ends_of_the_quote_is_not_shown(written, located):
+    assert tolerated_differences(written, located) == ()
+
+
+def test_punctuation_inside_the_quote_and_a_dash_at_its_edge_are_still_shown():
+    assert tolerated_differences("he said, so", "he said so") == ((",", ""),)
+    assert tolerated_differences("-5,000 baht", "5,000 baht") == (("-", ""),)
+    assert tolerated_differences("paid 5,000 baht.", "paid -5,000 baht") == (("", "-"),)
+
+
+@pytest.mark.parametrize(
+    "quote",
+    [
+        "The accountant paid 5,000 baht to the vendor on Monday.",
+        "(The accountant paid 5,000 baht to the vendor on Monday",
+        "The accountant paid 5,000 baht to the vendor on Monday,",
+        '"The accountant paid 5,000 baht to the vendor on Monday."',
+    ],
+)
+def test_a_format_tier_quote_with_edge_punctuation_shows_only_what_differs_inside(quote):
+    source = "The accountant paid -5,000 baht to the vendor on Monday and left."
+
+    assert locate_quote(source, quote).tier == "format"
+    assert [(d.written, d.source) for d in tolerated_in(source, quote)] == [("", "-")]
+
+
 def test_at_most_a_fixed_number_of_differences_are_kept():
     written = " ".join(f"alpha{n}" for n in range(MAX_TOLERATED_DIFFERENCES + 4))
     located = " ".join(f"omega{n}" for n in range(MAX_TOLERATED_DIFFERENCES + 4))
