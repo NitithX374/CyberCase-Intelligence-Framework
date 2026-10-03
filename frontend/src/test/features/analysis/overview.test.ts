@@ -320,6 +320,92 @@ describe("Case overview projection", () => {
   });
 });
 
+describe("Case overview rows backed by claims that are not settled", () => {
+  const otherSourceId = "33333333-3333-4333-8333-333333333333";
+  const first = "The witness saw a blue vehicle.";
+  const second = "The driver was seen leaving at noon.";
+
+  const analysis: CaseAnalysisResultRead = analysisResult({
+    summary: first,
+    trace_json: trace({
+      summary: first,
+      claims: [
+        claim(first),
+        claim(second, otherSourceId, {
+          claim_id: "A-02",
+          epistemic_status: "not_confirmed",
+          supporting_citations: [],
+        }),
+        claim(first, sourceId, {
+          claim_id: "A-03",
+          claim_type: "analytical_inference",
+          epistemic_status: "suspected",
+        }),
+        claim(second, otherSourceId, {
+          claim_id: "A-04",
+          claim_type: "analytical_inference",
+          epistemic_status: "suspected",
+          supporting_citations: [],
+        }),
+      ],
+      timeline: [
+        { time: "1", event: "Settled", claim_ids: ["A-01"] },
+        { time: "2", event: "Not confirmed only", claim_ids: ["A-02"] },
+        { time: "3", event: "Settled and not confirmed", claim_ids: ["A-01", "A-02"] },
+        { time: "4", event: "Suspected with a checked quote", claim_ids: ["A-03"] },
+        { time: "5", event: "Suspected on a named source", claim_ids: ["A-04"] },
+        { time: "6", event: "Both kinds", claim_ids: ["A-04", "A-02"] },
+        { time: "7", event: "Names no claim", claim_ids: [] },
+      ],
+    }),
+  });
+  const sources = [narrativeSource(first), narrativeSource(second, { id: otherSourceId })];
+  const timeline = buildCaseOverview(analysis, sources).timeline;
+
+  it("adds no note to a row whose claims are settled, or that names none", () => {
+    expect(timeline[0].unconfirmed).toEqual([]);
+    expect(timeline[0].sources.map((source) => source.id)).toEqual([sourceId]);
+    expect(timeline[6]).toMatchObject({ sources: [], unconfirmed: [] });
+  });
+
+  it("shows no source chip for a claim that is not confirmed, and says so", () => {
+    expect(timeline[1]).toMatchObject({ sources: [], unconfirmed: ["not_confirmed"] });
+  });
+
+  it("keeps the chips of the settled claims in a row and says the rest is not confirmed", () => {
+    expect(timeline[2].sources.map((source) => source.id)).toEqual([sourceId]);
+    expect(timeline[2].unconfirmed).toEqual(["not_confirmed"]);
+  });
+
+  it("keeps the chip of a suspected claim only where a checked quote stands behind it", () => {
+    expect(timeline[3].sources).toHaveLength(1);
+    expect(timeline[3].sources[0]).toMatchObject({ id: sourceId, exactQuote: first });
+    expect(timeline[3].unconfirmed).toEqual(["suspected"]);
+    expect(timeline[4]).toMatchObject({ sources: [], unconfirmed: ["suspected"] });
+  });
+
+  it("names each kind once, the missing check first", () => {
+    expect(timeline[5].unconfirmed).toEqual(["not_confirmed", "suspected"]);
+  });
+
+  it("marks parties and impacts the same way", () => {
+    const overview = buildCaseOverview(
+      {
+        ...analysis,
+        trace_json: {
+          ...analysis.trace_json!,
+          involved_parties: [{ name: "Driver", role: "Left at noon", claim_ids: ["A-02"] }],
+          impacts: [{ description: "The vehicle was gone", claim_ids: ["A-04"] }],
+        },
+      },
+      sources,
+    );
+
+    expect(overview.parties[0]).toMatchObject({ sources: [], unconfirmed: ["not_confirmed"] });
+    expect(overview.impacts[0]).toMatchObject({ sources: [], unconfirmed: ["suspected"] });
+  });
+});
+
 describe("gap topics", () => {
   it("names a checklist key in words", () => {
     expect(gapTopic("how_much", "how_much")).toBe("How much");

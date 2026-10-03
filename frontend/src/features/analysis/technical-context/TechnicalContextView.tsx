@@ -7,6 +7,7 @@ import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
 import { SourceDrawer } from "@/features/citations/SourceDrawer";
 import { useSourceDrawer } from "@/features/citations/useSourceDrawer";
 import type { SourceMessageRef } from "@/features/citations/types";
+import { NO_CHECKED_QUOTE } from "@/features/citations/unconfirmed";
 import {
   buildTechnicalContext,
   type RetrievedTechnicalContextCard,
@@ -63,7 +64,6 @@ function TechnicalItem({
           {item.caseBasisSources.map((source, index) => {
             const buttonKey = `${item.techniqueId}-source-${source.id}-${index}`;
             const isActive = activeSourceKey === buttonKey;
-            const quoted = source.exactQuote ?? source.excerpt;
             return (
               <button
                 key={buttonKey}
@@ -74,8 +74,10 @@ function TechnicalItem({
                   isActive ? "border-ink" : "border-line-strong hover:border-ink"
                 }`}
               >
-                <span className="block text-sm leading-6 text-ink">
-                  {quoted ? `“${quoted}”` : "No quotation recorded."}
+                <span
+                  className={`block text-sm leading-6 ${source.exactQuote ? "text-ink" : "text-ink-muted"}`}
+                >
+                  {source.exactQuote ? `“${source.exactQuote}”` : NO_CHECKED_QUOTE}
                 </span>
                 <span className="mt-0.5 block text-xs text-ink-muted">{source.label}</span>
               </button>

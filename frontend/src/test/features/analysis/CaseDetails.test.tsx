@@ -22,6 +22,7 @@ const events = (count: number) =>
     event: `Event ${index + 1}`,
     sources: [],
     inferred: false,
+    unconfirmed: [],
   }));
 
 describe("CaseDetails", () => {
@@ -78,10 +79,20 @@ describe("CaseDetails", () => {
             event: "The attachment was opened",
             sources: [statement],
             inferred: false,
+            unconfirmed: [],
           },
         ]}
-        parties={[{ name: "Somchai", role: "Account holder", sources: [], inferred: true }]}
-        impacts={[{ description: "52,000 baht left the account", sources: [], inferred: false }]}
+        parties={[
+          { name: "Somchai", role: "Account holder", sources: [], inferred: true, unconfirmed: [] },
+        ]}
+        impacts={[
+          {
+            description: "52,000 baht left the account",
+            sources: [],
+            inferred: false,
+            unconfirmed: [],
+          },
+        ]}
         onSelectSource={onSelectSource}
         activeSourceKey={null}
       />,
@@ -106,6 +117,68 @@ describe("CaseDetails", () => {
       "timeline-0-source-1-0",
       undefined,
     );
+  });
+
+  it("says in words that a row rests on a claim that is not confirmed or only suspected", () => {
+    render(
+      <CaseDetails
+        timeline={[
+          {
+            time: "09:00",
+            event: "A transfer left the account",
+            sources: [],
+            inferred: false,
+            unconfirmed: ["not_confirmed"],
+          },
+        ]}
+        parties={[
+          {
+            name: "Somchai",
+            role: "Account holder",
+            sources: [statement],
+            inferred: false,
+            unconfirmed: ["not_confirmed", "suspected"],
+          },
+        ]}
+        impacts={[
+          {
+            description: "52,000 baht left the account",
+            sources: [],
+            inferred: true,
+            unconfirmed: ["suspected"],
+          },
+        ]}
+        onSelectSource={vi.fn()}
+        activeSourceKey={null}
+      />,
+    );
+
+    const timeline = within(screen.getByRole("region", { name: "Timeline 1" }));
+    expect(timeline.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(timeline.queryByRole("button")).not.toBeInTheDocument();
+
+    const parties = within(screen.getByRole("region", { name: "Parties 1" }));
+    expect(parties.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(parties.getByText("อยู่ระหว่างตรวจสอบ")).toBeInTheDocument();
+    expect(parties.getByRole("button", { name: "statement.pdf · p. 4" })).toBeInTheDocument();
+
+    const impacts = within(screen.getByRole("region", { name: "Impact 1" }));
+    expect(impacts.getByText("อยู่ระหว่างตรวจสอบ")).toBeInTheDocument();
+    expect(impacts.getByText("Inference")).toBeInTheDocument();
+  });
+
+  it("adds no note to a row whose claims are all settled", () => {
+    render(
+      <CaseDetails
+        timeline={events(1)}
+        parties={[]}
+        impacts={[]}
+        onSelectSource={vi.fn()}
+        activeSourceKey={null}
+      />,
+    );
+
+    expect(screen.queryByText(/ยังไม่ยืนยัน|อยู่ระหว่างตรวจสอบ/)).not.toBeInTheDocument();
   });
 
   it("folds a long timeline and opens it on request", () => {

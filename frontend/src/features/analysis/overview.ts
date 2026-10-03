@@ -1,9 +1,13 @@
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { claimRefs, parseCaseSources, passageRef } from "@/features/citations/sourceRefs";
-import type { SourceMessageRef } from "@/features/citations/types";
+import {
+  checkedSources,
+  isUnconfirmed,
+  unconfirmedStatuses,
+} from "@/features/citations/unconfirmed";
 import { analysisFollowups } from "./analysisRecord";
 import { supportNote } from "./supportNote";
-import type { CaseFinding, CaseOverviewData, ClaimType } from "./types";
+import type { CaseFinding, CaseOverviewData, ClaimBacked, ClaimType } from "./types";
 
 export const claimTypeLabels: Record<ClaimType, string> = {
   reported: "Reported information",
@@ -149,11 +153,13 @@ function emptyCaseOverview(): CaseOverviewData {
 
 function claimBacking(findings: CaseFinding[]) {
   const byId = new Map(findings.map((finding) => [finding.id, finding]));
-  return (claimIds: string[] = []): { sources: SourceMessageRef[]; inferred: boolean } => {
+  return (claimIds: string[] = []): ClaimBacked => {
     const cited = claimIds.flatMap((id) => byId.get(id) ?? []);
     const seen = new Set<string>();
     const sources = cited
-      .flatMap((finding) => finding.supportingSources)
+      .flatMap((finding) =>
+        checkedSources(finding.supportingSources, isUnconfirmed(finding.epistemicStatus)),
+      )
       .filter((source) => {
         const key = JSON.stringify([source.id, source.pageNumbers]);
         if (seen.has(key)) return false;
@@ -164,6 +170,7 @@ function claimBacking(findings: CaseFinding[]) {
       sources,
       inferred:
         cited.length > 0 && cited.every((finding) => finding.claimType === "analytical_inference"),
+      unconfirmed: unconfirmedStatuses(cited.map((finding) => finding.epistemicStatus)),
     };
   };
 }

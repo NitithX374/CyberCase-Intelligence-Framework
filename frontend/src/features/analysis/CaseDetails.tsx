@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from "react";
 import type { SourceMessageRef } from "@/features/citations/types";
 import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
-import type { CaseImpact, CaseParty, CaseTimelineEvent } from "./types";
+import { UNCONFIRMED_NOTES } from "@/features/citations/unconfirmed";
+import type { CaseImpact, CaseParty, CaseTimelineEvent, ClaimBacked } from "./types";
 
 const VISIBLE_ROWS = 6;
 
@@ -28,10 +29,7 @@ export function CaseDetails({
 }: CaseDetailsProps) {
   if (!timeline.length && !parties.length && !impacts.length) return null;
   const hasSide = parties.length > 0 || impacts.length > 0;
-  const backing = (
-    row: { sources: SourceMessageRef[]; inferred: boolean; supportNote?: string | null },
-    owner: string,
-  ) => (
+  const backing = (row: ClaimBacked, owner: string) => (
     <Backing
       row={row}
       owner={owner}
@@ -168,15 +166,22 @@ function Backing({
   onSelectSource,
   activeSourceKey,
 }: {
-  row: { sources: SourceMessageRef[]; inferred: boolean; supportNote?: string | null };
+  row: ClaimBacked;
   owner: string;
   onSelectSource: CaseDetailsProps["onSelectSource"];
   activeSourceKey: string | null;
 }) {
-  if (!row.inferred && !row.sources.length && !row.supportNote) return null;
+  if (!row.inferred && !row.sources.length && !row.unconfirmed.length && !row.supportNote) {
+    return null;
+  }
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
       {row.inferred && <span className="text-xs text-ink-muted">Inference</span>}
+      {row.unconfirmed.map((status) => (
+        <span key={status} className="text-xs text-ink-muted">
+          {UNCONFIRMED_NOTES[status]}
+        </span>
+      ))}
       {row.sources.map((source, index) => {
         const key = `${owner}-${source.id}-${index}`;
         return (

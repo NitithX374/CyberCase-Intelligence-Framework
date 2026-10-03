@@ -29,7 +29,10 @@ function message(
   };
 }
 
-function analysisMessage(claims: Record<string, unknown>[]): ChatMessageRead {
+function analysisMessage(
+  claims: Record<string, unknown>[],
+  units: ChatAnswerUnit[] = [],
+): ChatMessageRead {
   return message("analysis-1", 3, "assistant", "Case analysis", {
     analysis_trace: {
       version: "case_analysis_trace_v1",
@@ -38,6 +41,7 @@ function analysisMessage(claims: Record<string, unknown>[]): ChatMessageRead {
       summary: "Case analysis",
       claims: claims as CaseAnalysisClaim[],
     },
+    ...(units.length ? { answer_units: units } : {}),
   });
 }
 
@@ -191,6 +195,127 @@ describe("ChatTranscript source references", () => {
     fireEvent.click(screen.getByRole("button", { name: "statement.pdf · p. 4" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Page 4");
     expect(screen.getByRole("dialog")).toHaveTextContent("records the transfer");
+  });
+});
+
+describe("ChatTranscript claims that are not settled", () => {
+  const otherId = "33333333-3333-4333-8333-333333333333";
+  const first = "The witness reported seeing a blue vehicle near the entrance.";
+  const second = "A second witness says the driver left at noon.";
+  const sources = [narrativeSource(first), narrativeSource(second, { id: otherId })];
+  const settled = {
+    claim_id: "A-01",
+    epistemic_status: "reported",
+    supporting_source_ids: [sources[0].id],
+    contradicting_source_ids: [],
+    supporting_citations: [{ source_id: sources[0].id, exact_quote: "seeing a blue vehicle" }],
+    contradicting_citations: [],
+  };
+  const notConfirmed = {
+    claim_id: "A-02",
+    epistemic_status: "not_confirmed",
+    supporting_source_ids: [otherId],
+    contradicting_source_ids: [],
+    supporting_citations: [],
+    contradicting_citations: [],
+  };
+  const suspected = {
+    claim_id: "A-03",
+    epistemic_status: "suspected",
+    supporting_source_ids: [otherId],
+    contradicting_source_ids: [],
+    supporting_citations: [{ source_id: otherId, exact_quote: "the driver left at noon" }],
+    contradicting_citations: [],
+  };
+
+  it("shows the sources of settled claims and no note", () => {
+    render(
+      <ChatTranscript
+        messages={[analysisMessage([settled])]}
+        isProcessing={false}
+        sources={sources}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
+    expect(screen.queryByText(/ยังไม่ยืนยัน|อยู่ระหว่างตรวจสอบ/)).not.toBeInTheDocument();
+  });
+
+  it("gives a claim that is not confirmed no source chip, and says so", () => {
+    render(
+      <ChatTranscript
+        messages={[analysisMessage([settled, notConfirmed])]}
+        isProcessing={false}
+        sources={sources}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Case narrative #2" })).not.toBeInTheDocument();
+    expect(screen.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+  });
+
+  it("keeps a suspected claim's chip only for a checked quote, and says it is under review", () => {
+    render(
+      <ChatTranscript
+        messages={[
+          analysisMessage([{ ...suspected, supporting_source_ids: [otherId, sources[0].id] }]),
+        ]}
+        isProcessing={false}
+        sources={sources}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Case narrative #2" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Case narrative #1" })).not.toBeInTheDocument();
+    expect(screen.getByText("อยู่ระหว่างตรวจสอบ")).toBeInTheDocument();
+    expect(screen.queryByText(/ยังไม่ยืนยัน/)).not.toBeInTheDocument();
+  });
+
+  it("marks an answer statement that rests on a claim that is not confirmed", () => {
+    const unit: ChatAnswerUnit = {
+      text: "A second witness places the driver at the scene.",
+      basis: "case_fact",
+      claim_ids: ["A-02"],
+      supporting_source_ids: [otherId, sources[0].id],
+      supporting_citations: [{ source_id: sources[0].id, exact_quote: "seeing a blue vehicle" }],
+    };
+    render(
+      <ChatTranscript
+        messages={[analysisMessage([notConfirmed], [unit])]}
+        isProcessing={false}
+        sources={sources}
+      />,
+    );
+
+    expect(screen.getByText("ยังไม่ยืนยัน ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Case narrative #1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Case narrative #2" })).not.toBeInTheDocument();
+  });
+
+  it("leaves a statement alone when the claims it rests on are settled or it names none", () => {
+    const rested: ChatAnswerUnit = {
+      text: "The witness saw a blue vehicle.",
+      basis: "case_fact",
+      claim_ids: ["A-01"],
+      supporting_source_ids: [sources[0].id, otherId],
+    };
+    const bare: ChatAnswerUnit = {
+      text: "The driver left at noon.",
+      basis: "case_fact",
+      supporting_source_ids: [otherId],
+    };
+    render(
+      <ChatTranscript
+        messages={[analysisMessage([settled, notConfirmed], [rested, bare])]}
+        isProcessing={false}
+        sources={sources}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: "Case narrative #1" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Case narrative #2" })).toHaveLength(2);
+    expect(screen.queryByText(/ยังไม่ยืนยัน|อยู่ระหว่างตรวจสอบ/)).not.toBeInTheDocument();
   });
 });
 

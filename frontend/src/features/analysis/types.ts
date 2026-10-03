@@ -1,4 +1,5 @@
 import type { SourceMessageRef } from "@/features/citations/types";
+import type { UnconfirmedStatus } from "@/features/citations/unconfirmed";
 
 export type ClaimType = "reported" | "analytical_inference" | "unknown";
 
@@ -40,10 +41,11 @@ export interface CaseGap {
   affectedFindings: Pick<CaseFinding, "id" | "text">[];
 }
 
-interface ClaimBacked {
+export interface ClaimBacked {
   sources: SourceMessageRef[];
   inferred: boolean;
   supportNote?: string | null;
+  unconfirmed: UnconfirmedStatus[];
 }
 
 export interface CaseParty extends ClaimBacked {
