@@ -67,8 +67,18 @@ async def progress_events(
 
 def settled(task: asyncio.Task) -> None:
     _unfinished.discard(task)
-    if not task.cancelled():
-        task.exception()
+    if task.cancelled():
+        return
+    error = task.exception()
+    if isinstance(error, AppError):
+        logger.warning(
+            "A streamed request failed: %s (HTTP %d) %s",
+            error.code,
+            error.status_code,
+            error.message,
+        )
+    elif error is not None:
+        logger.error("A streamed request failed", exc_info=error)
 
 
 def outcome(task: asyncio.Task) -> str:
@@ -77,7 +87,6 @@ def outcome(task: asyncio.Task) -> str:
     except AppError as error:
         return failure(error.status_code, error.code, error.message)
     except Exception:
-        logger.exception("A streamed request failed")
         return failure(500, "internal_error", "The request failed")
     return sse("result", jsonable_encoder(result))
 

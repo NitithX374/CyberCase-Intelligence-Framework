@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
@@ -13,6 +14,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
 from app.analysis import routes as analysis
+from app.analysis import stream as streaming
 from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, assess_gaps, bind_to_case
 from app.analysis.progress import announce, listening
 from app.analysis.stream import progress_events
@@ -141,6 +143,80 @@ def test_the_work_carries_on_when_the_reader_goes_away():
         return first
 
     assert asyncio.run(exercise()).startswith("event: step")
+
+
+def failures_logged(caplog) -> list[logging.LogRecord]:
+    return [record for record in caplog.records if record.name == streaming.logger.name]
+
+
+def failing_after_the_reader_left(failure: Exception):
+    async def exercise():
+        release = asyncio.Event()
+
+        async def work():
+            announce("read")
+            await release.wait()
+            raise failure
+
+        stream = progress_events(work)
+        await anext(stream)
+        await stream.aclose()
+        release.set()
+        await asyncio.gather(*list(streaming._unfinished), return_exceptions=True)
+
+    asyncio.run(exercise())
+
+
+def test_a_refusal_is_logged_with_its_code_after_the_reader_has_gone(caplog):
+    refusal = CaseWorkflowError(
+        "analysis_provider_down", "The analysis provider is unavailable", 502
+    )
+
+    with caplog.at_level(logging.WARNING):
+        failing_after_the_reader_left(refusal)
+
+    [record] = failures_logged(caplog)
+    assert record.levelno == logging.WARNING
+    assert "analysis_provider_down" in record.getMessage()
+    assert "502" in record.getMessage()
+    assert "The analysis provider is unavailable" in record.getMessage()
+
+
+def test_an_unexpected_failure_is_logged_with_its_traceback_after_the_reader_has_gone(caplog):
+    with caplog.at_level(logging.WARNING):
+        failing_after_the_reader_left(RuntimeError("boom"))
+
+    [record] = failures_logged(caplog)
+    assert record.levelno == logging.ERROR
+    assert record.exc_info is not None
+    assert record.exc_info[0] is RuntimeError
+
+
+def test_a_failure_the_reader_sees_is_logged_once(caplog):
+    async def refused():
+        raise CaseWorkflowError("case_sources_missing", "Add a source first", 422)
+
+    async def crashed():
+        raise RuntimeError("boom")
+
+    with caplog.at_level(logging.WARNING):
+        streamed(refused)
+        streamed(crashed)
+
+    assert [record.levelno for record in failures_logged(caplog)] == [
+        logging.WARNING,
+        logging.ERROR,
+    ]
+
+
+def test_a_request_that_finishes_logs_nothing(caplog):
+    async def work():
+        return Done(status="completed")
+
+    with caplog.at_level(logging.INFO):
+        streamed(work)
+
+    assert failures_logged(caplog) == []
 
 
 def test_the_preflight_and_the_binding_announce_themselves():
