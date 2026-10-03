@@ -190,7 +190,11 @@ class HybridRetriever:
                     if offset is None:
                         break
             except Exception as e:  # noqa: BLE001 — degrade to stix keys
+                # Degrade for this call only. Caching the empty map turned one
+                # transient Qdrant error into stix-keyed dedup for the life of
+                # the process.
                 print(f"[HYBRID] technique-key map unavailable ({e}); dedup by stix_id")
+                return {}
             self._attack_ids = cached
         return cached
 

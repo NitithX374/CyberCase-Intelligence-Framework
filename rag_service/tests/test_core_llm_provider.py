@@ -35,6 +35,41 @@ def test_default_provider_and_openrouter_target(monkeypatch: pytest.MonkeyPatch)
     assert "x-api-key" not in target.headers
 
 
+def test_pipeline_model_name_does_not_override_the_configured_openrouter_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every component passes config.LLM_MODEL; the OpenRouter setting must win.
+
+    Before this, CORE_LLM_OPENROUTER_MODEL (and the CLI's --model, which sets
+    it) was logged at start-up and then ignored: the Anthropic name resolved to
+    the registry's built-in default.
+    """
+    monkeypatch.setattr(config, "CORE_LLM_PROVIDER", "openrouter")
+    monkeypatch.setattr(config, "OPENROUTER_CYBERCASE", "core-secret")
+    monkeypatch.setattr(config, "CORE_LLM_OPENROUTER_MODEL", "qwen/qwen3.8-27b")
+
+    assert llm_provider.resolve_core_llm_target(config.LLM_MODEL).model == "qwen/qwen3.8-27b"
+    assert llm_provider.resolve_core_llm_target().model == "qwen/qwen3.8-27b"
+
+
+@pytest.mark.parametrize(
+    ("passed", "expected"),
+    (
+        ("luna", "openai/gpt-5.6-luna"),                      # curated alias
+        ("mistralai/some-model", "mistralai/some-model"),     # explicit vendor/model id
+        ("openrouter/openai/gpt-4o", "openai/gpt-4o"),        # prefixed id
+    ),
+)
+def test_an_openrouter_name_is_an_explicit_choice(
+    monkeypatch: pytest.MonkeyPatch, passed: str, expected: str
+) -> None:
+    monkeypatch.setattr(config, "CORE_LLM_PROVIDER", "openrouter")
+    monkeypatch.setattr(config, "OPENROUTER_CYBERCASE", "core-secret")
+    monkeypatch.setattr(config, "CORE_LLM_OPENROUTER_MODEL", "qwen/qwen3.8-27b")
+
+    assert llm_provider.resolve_core_llm_target(passed).model == expected
+
+
 def test_explicit_anthropic_target(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(config, "CORE_LLM_PROVIDER", "anthropic")
     monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "anthropic-secret")
@@ -87,6 +122,9 @@ def test_factory_constructs_selected_client(
     monkeypatch.setattr(config, "CORE_LLM_PROVIDER", provider)
     monkeypatch.setattr(config, "OPENROUTER_CYBERCASE", "core-secret")
     monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "anthropic-secret")
+    # The configured model, stated here so the test does not move with the
+    # registry's default.
+    monkeypatch.setattr(config, "CORE_LLM_OPENROUTER_MODEL", "openai/gpt-5.6-luna")
     monkeypatch.setattr(llm_provider, "ChatAnthropic", FakeChatAnthropic)
 
     llm_provider.create_core_chat_model(
@@ -96,6 +134,7 @@ def test_factory_constructs_selected_client(
     )
 
     assert captured["model_name"] == expected_model
+    assert captured["default_request_timeout"] == config.CORE_LLM_TIMEOUT_SECONDS
     if has_openrouter_headers:
         assert captured["base_url"] == "https://openrouter.ai/api"
         assert captured["default_headers"] == {

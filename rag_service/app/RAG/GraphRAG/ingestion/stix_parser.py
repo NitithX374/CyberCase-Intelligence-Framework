@@ -50,6 +50,15 @@ def _is_revoked_or_deprecated(obj: dict) -> bool:
     return obj.get("revoked", False) or obj.get("x_mitre_deprecated", False)
 
 
+# Which domain an entity present in several bundles is filed under. Retrieval
+# filters entity search to ATTACK_DOMAIN_FILTER (enterprise), so enterprise wins.
+_DOMAIN_PRIORITY = ("enterprise", "mobile", "ics")
+
+
+def _domain_rank(domain: str) -> int:
+    return _DOMAIN_PRIORITY.index(domain) if domain in _DOMAIN_PRIORITY else len(_DOMAIN_PRIORITY)
+
+
 def _get_tactics_from_kill_chain(obj: dict) -> list[str]:
     """Extract tactic shortnames from kill_chain_phases."""
     phases = obj.get("kill_chain_phases", [])
@@ -416,8 +425,20 @@ class StixParser:
 
     def finalize_parsing(self) -> None:
         """Apply tombstones and deduplicate entities and relationships."""
-        # 1. Deduplicate entities (latest active overrides earlier active)
-        unique_entities = {e.stix_id: e for e in self.entities}
+        # 1. Deduplicate entities (latest active overrides earlier active).
+        #
+        # Within one domain the later file is the newer release, so it wins. An
+        # object ATT&CK lists in two domains is a different case: 45 entities
+        # (APT28, APT41, Sandworm Team, Kimsuky, …) sit in both the Enterprise
+        # and the Mobile bundle, and letting the bundle parsed last win tagged
+        # them all "mobile" — which the Enterprise domain filter of entity
+        # search then drops. Across domains an entity keeps the
+        # highest-priority domain it appears in.
+        unique_entities: dict[str, AttackEntity] = {}
+        for e in self.entities:
+            prev = unique_entities.get(e.stix_id)
+            if prev is None or _domain_rank(e.domain) <= _domain_rank(prev.domain):
+                unique_entities[e.stix_id] = e
 
         # Remove tombstoned entities
         for tomb_id in self.tombstoned_ids:

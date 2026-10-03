@@ -318,3 +318,30 @@ def test_entity_the_lookup_misses_keeps_what_retrieval_carried():
     )
 
     assert [(r.tactic, r.description) for r in rows] == [("Discovery", _POWERSHELL_DESC)]
+
+
+def test_identifier_written_against_thai_text_is_cited():
+    """Thai letters are word characters to re, so \b saw no boundary in "ใช้T1059"."""
+    result = GraphRAGResult(
+        vector_results=[_vector_hit("PowerShell", "Subtechnique", "T1059.001", _POWERSHELL_DESC, score=0.01)],
+        graph_results=[],
+    )
+    rows = build_mitre_table(result, "ผู้กระทำผิดใช้T1059.001เพื่อรันคำสั่ง")
+    assert [(r.technique_id, r.relevance) for r in rows] == [("T1059.001", "cited_in_answer")]
+
+
+def test_name_written_against_thai_text_is_cited():
+    result = GraphRAGResult(
+        vector_results=[_vector_hit("PowerShell", "Subtechnique", "T1059.001", _POWERSHELL_DESC, score=0.01)],
+        graph_results=[],
+    )
+    rows = build_mitre_table(result, "ผู้กระทำผิดเรียกใช้PowerShellเพื่อรันคำสั่ง")
+    assert [r.relevance for r in rows] == ["cited_in_answer"]
+
+
+def test_identifier_inside_a_longer_token_is_not_cited():
+    result = GraphRAGResult(
+        vector_results=[_vector_hit("PowerShell", "Subtechnique", "T1059", _POWERSHELL_DESC, score=0.01)],
+        graph_results=[],
+    )
+    assert build_mitre_table(result, "build XT10599 failed") == []

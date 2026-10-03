@@ -8,6 +8,7 @@ from typing import Literal
 from langchain_anthropic import ChatAnthropic
 
 from . import config
+from .model_registry import names_openrouter_model
 
 
 CoreLlmProvider = Literal["anthropic", "openrouter"]
@@ -48,9 +49,15 @@ def resolve_core_llm_target(
         if require_key and not api_key:
             raise CoreLlmConfigurationError("openrouter", "OPENROUTER_CYBERCASE")
         base_url = config.CORE_LLM_OPENROUTER_BASE_URL.rstrip("/")
+        # Every pipeline component passes config.LLM_MODEL, an Anthropic model
+        # name. On OpenRouter that name selects nothing, and resolving it sent
+        # every call to the registry's built-in default: CORE_LLM_OPENROUTER_MODEL
+        # and the CLI's --model were read, logged at start-up, and ignored. Only
+        # a name that is itself an OpenRouter alias or vendor/model id overrides
+        # the configured model.
         selected_model = (
             anthropic_model
-            if anthropic_model
+            if names_openrouter_model(anthropic_model)
             else config.CORE_LLM_OPENROUTER_MODEL
         )
         resolved_model = config.resolve_openrouter_model(selected_model)
@@ -102,6 +109,7 @@ def create_core_chat_model(
         "api_key": target.api_key,
         "temperature": temperature,
         "max_tokens_to_sample": effective_max_tokens,
+        "default_request_timeout": config.CORE_LLM_TIMEOUT_SECONDS,
     }
     if target.provider == "openrouter":
         kwargs["base_url"] = target.base_url

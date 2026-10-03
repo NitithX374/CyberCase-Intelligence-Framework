@@ -261,3 +261,54 @@ def test_regression_t1527():
         parser.finalize_parsing()
 
     assert not any(e.attack_id == "T1527" for e in parser.entities)
+
+
+def _group(stix_id, name):
+    return {
+        "type": "intrusion-set",
+        "id": stix_id,
+        "name": name,
+        "description": f"{name} description",
+        "external_references": [{"source_name": "mitre-attack", "external_id": "G0001"}],
+    }
+
+
+def test_entity_in_two_domains_keeps_the_enterprise_domain():
+    """A group ATT&CK lists in both bundles must stay searchable under the Enterprise filter.
+
+    The Mobile bundle is parsed after the Enterprise one, and "latest wins" used
+    to re-tag the 45 shared entities (APT28, Sandworm Team, …) as mobile.
+    """
+    parser = StixParser()
+    shared = _group("intrusion-set--shared", "Shared Group")
+    mobile_only = _group("intrusion-set--mobile", "Mobile Group")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        enterprise = Path(tmpdir) / "enterprise-attack.json"
+        mobile = Path(tmpdir) / "mobile-attack.json"
+        enterprise.write_text(json.dumps(make_mock_bundle([shared])), encoding="utf-8")
+        mobile.write_text(json.dumps(make_mock_bundle([shared, mobile_only])), encoding="utf-8")
+
+        parser.parse_file(enterprise, domain="enterprise", finalize=False)
+        parser.parse_file(mobile, domain="mobile", finalize=False)
+        parser.finalize_parsing()
+
+    domains = {e.name: e.domain for e in parser.entities}
+    assert domains == {"Shared Group": "enterprise", "Mobile Group": "mobile"}
+
+
+def test_parse_order_does_not_decide_the_domain():
+    parser = StixParser()
+    shared = _group("intrusion-set--shared", "Shared Group")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        enterprise = Path(tmpdir) / "enterprise-attack.json"
+        mobile = Path(tmpdir) / "mobile-attack.json"
+        enterprise.write_text(json.dumps(make_mock_bundle([shared])), encoding="utf-8")
+        mobile.write_text(json.dumps(make_mock_bundle([shared])), encoding="utf-8")
+
+        parser.parse_file(mobile, domain="mobile", finalize=False)
+        parser.parse_file(enterprise, domain="enterprise", finalize=False)
+        parser.finalize_parsing()
+
+    assert [e.domain for e in parser.entities] == ["enterprise"]

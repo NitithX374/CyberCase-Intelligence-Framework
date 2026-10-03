@@ -129,3 +129,34 @@ class TestQuotaMergeDedups:
         merged = self._retriever(self._queries()).retrieve_multi_quota(
             ["a", "b"], technique_pool=False)
         assert [vr.stix_id for vr in merged.vector_results] == ["r1", AP_PARENT]
+
+
+class _FlakyClient:
+    def __init__(self, failures):
+        self.failures = failures
+        self.calls = 0
+
+    def scroll(self, collection, limit, offset, with_payload):
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise ConnectionError("qdrant unavailable")
+        point = type("P", (), {"payload": {"stix_id": AP_SUB, "attack_id": "T1566.001"}})()
+        return [point], None
+
+
+class TestTechniqueKeyMap:
+    def _retriever(self, failures):
+        r = HybridRetriever.__new__(HybridRetriever)  # no models, no DB
+        r.vector_retriever = type("V", (), {"client": _FlakyClient(failures)})()
+        return r
+
+    def test_a_failed_read_is_not_cached(self):
+        r = self._retriever(failures=1)
+        assert r._attack_id_by_stix() == {}
+        assert r._attack_id_by_stix() == {AP_SUB: "T1566.001"}
+
+    def test_a_successful_read_is_cached(self):
+        r = self._retriever(failures=0)
+        r._attack_id_by_stix()
+        r._attack_id_by_stix()
+        assert r.vector_retriever.client.calls == 1

@@ -159,6 +159,12 @@ LLM_MODEL = CORE_LLM_ANTHROPIC_MODEL
 LLM_MAX_TOKENS = 8192
 LLM_TEMPERATURE = 0
 
+# Per-request ceiling for every core LLM call. Without one the Anthropic client
+# waits up to its own 10-minute default, three times with retries, and a hung
+# call holds one of the MAX_CONCURRENT_QUERIES worker slots for all of it. The
+# slowest stage measured, the reasoning call, takes about 25 s on average.
+CORE_LLM_TIMEOUT_SECONDS = float(os.getenv("CORE_LLM_TIMEOUT_SECONDS", "120"))
+
 # Ultrafast mode (--ultrafast): vector-only retrieve (no graph) + terse, capped
 # output. Output-token count dominates LLM latency, so the answer is short.
 ULTRAFAST_MAX_TOKENS = int(os.getenv("ULTRAFAST_MAX_TOKENS", "2048"))
