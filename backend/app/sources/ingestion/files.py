@@ -6,7 +6,7 @@ from io import BytesIO
 from zipfile import BadZipFile, ZipFile
 
 import pypdfium2 as pdfium
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.sources.ingestion.contracts import InvalidDocumentError, UnsupportedDocumentError
 
@@ -85,6 +85,7 @@ def normalize_image(content: bytes, longest_edge: int, max_pixels: int) -> bytes
                     f"The image exceeds the {max_pixels:,}-pixel ingestion limit."
                 )
             image.load()
+        image = ImageOps.exif_transpose(image)
         image.thumbnail((longest_edge, longest_edge), Image.Resampling.LANCZOS)
         return encode_png(image)
     except InvalidDocumentError:

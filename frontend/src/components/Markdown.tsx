@@ -105,6 +105,7 @@ export function Markdown({ content }: MarkdownProps) {
             </th>
           ),
           td: ({ children }) => <td className="px-3 py-2 text-ink break-words">{children}</td>,
+          img: ({ alt }) => (alt ? <span>{alt}</span> : null),
           a: ({ href, children }) => (
             <a
               href={href}

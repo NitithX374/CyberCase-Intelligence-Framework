@@ -75,6 +75,14 @@ export function detailMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+export function isCaseNotFound(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    error.response?.status === 404 &&
+    detailCode(error.response.data) === "case_not_found"
+  );
+}
+
 export function toUserFacingError(
   error: unknown,
   options?: { actionLabel?: string },
