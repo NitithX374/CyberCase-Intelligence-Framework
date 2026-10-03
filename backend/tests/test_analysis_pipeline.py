@@ -325,3 +325,51 @@ def test_only_an_advance_with_a_trace_is_stored():
         with pytest.raises(CaseWorkflowError) as refused:
             asyncio.run(store_outcome(None, started, outcome))
         assert refused.value.code == code
+
+
+def stub_steps(monkeypatch, called: list[str]) -> None:
+    def record(name):
+        async def step(_data, artifacts):
+            called.append(name)
+            return artifacts
+
+        return step
+
+    for name in ("retrieve_technical_context", "write_analysis", "bind_to_case"):
+        monkeypatch.setattr(pipeline_module, name, record(name))
+
+
+def test_no_assessment_is_requested_once_the_rounds_are_spent(monkeypatch):
+    called: list[str] = []
+
+    async def assessment(_data):
+        called.append("assess_gaps")
+        raise AssertionError("assess_gaps ran after the rounds were spent")
+
+    monkeypatch.setattr(pipeline_module, "assess_gaps", assessment)
+    stub_steps(monkeypatch, called)
+
+    bundle, _ = case_with_one_narrative()
+    outcome = asyncio.run(advance_case(AnalysisInput(sources=bundle, rounds_spent=4, max_rounds=3)))
+
+    assert outcome.assessment is None
+    assert outcome.decision == Proceed("max_rounds_reached")
+    assert outcome.artifacts is not None
+    assert called == ["retrieve_technical_context", "write_analysis", "bind_to_case"]
+
+
+def test_the_last_round_is_still_assessed(monkeypatch):
+    called: list[str] = []
+
+    async def assessment(_data):
+        called.append("assess_gaps")
+        return CaseAssessmentTrace(gaps=[])
+
+    monkeypatch.setattr(pipeline_module, "assess_gaps", assessment)
+    stub_steps(monkeypatch, called)
+
+    bundle, _ = case_with_one_narrative()
+    outcome = asyncio.run(advance_case(AnalysisInput(sources=bundle, rounds_spent=3, max_rounds=3)))
+
+    assert outcome.assessment == CaseAssessmentTrace(gaps=[])
+    assert called[0] == "assess_gaps"
