@@ -109,6 +109,7 @@ def create_core_chat_model(
         "api_key": target.api_key,
         "temperature": temperature,
         "max_tokens_to_sample": effective_max_tokens,
+        "default_request_timeout": config.CORE_LLM_TIMEOUT_SECONDS,
     }
     if target.provider == "openrouter":
         kwargs["base_url"] = target.base_url

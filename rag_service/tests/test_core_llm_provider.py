@@ -134,6 +134,7 @@ def test_factory_constructs_selected_client(
     )
 
     assert captured["model_name"] == expected_model
+    assert captured["default_request_timeout"] == config.CORE_LLM_TIMEOUT_SECONDS
     if has_openrouter_headers:
         assert captured["base_url"] == "https://openrouter.ai/api"
         assert captured["default_headers"] == {
