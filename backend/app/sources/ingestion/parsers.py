@@ -1,5 +1,4 @@
 import math
-import re
 import unicodedata
 from dataclasses import dataclass
 from io import BytesIO
@@ -13,6 +12,7 @@ from docx.text.paragraph import Paragraph
 from pypdf import PdfReader
 
 from app.sources.ingestion.contracts import DocumentLimitError, DocumentPage, InvalidDocumentError
+from app.sources.ingestion.text import strip_unstorable
 
 
 def iter_document_blocks(document: DocumentObject):
@@ -80,13 +80,6 @@ class PdfPageInspection:
 class PdfInspection:
     page_count: int
     pages: list[PdfPageInspection]
-
-
-UNSTORABLE_CHARACTERS = re.compile(r"[\x00\ud800-\udfff]")
-
-
-def strip_unstorable(text: str) -> str:
-    return UNSTORABLE_CHARACTERS.sub("", text)
 
 
 def normalize_text(text: str) -> str:

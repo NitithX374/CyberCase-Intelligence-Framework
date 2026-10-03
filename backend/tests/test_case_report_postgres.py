@@ -158,4 +158,5 @@ def test_a_report_in_the_old_shape_does_not_hide_the_reports_beside_it(caplog):
 
     assert [report.version_number for report in listed] == [2]
     assert refused.code == "case_report_outdated"
-    assert [str(old_id) in record.getMessage() for record in caplog.records] == [True]
+    skipped = [record for record in caplog.records if record.name == "app.reports.generate"]
+    assert [str(old_id) in record.getMessage() for record in skipped] == [True]

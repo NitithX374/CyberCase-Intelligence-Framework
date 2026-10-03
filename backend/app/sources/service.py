@@ -13,8 +13,8 @@ from app.errors import AppError
 from app.models.document import CaseDocument
 from app.models.source import CaseSource
 from app.sources.ingestion.contracts import IngestedDocument
-from app.sources.ingestion.parsers import strip_unstorable
 from app.sources.ingestion.provenance import bind_exact_page_spans
+from app.sources.ingestion.text import strip_unstorable
 
 
 class SourceError(AppError):

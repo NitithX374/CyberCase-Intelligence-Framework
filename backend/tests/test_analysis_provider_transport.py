@@ -1,5 +1,7 @@
+import asyncio
 import json
 import logging
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -222,7 +224,9 @@ async def test_a_transient_status_is_retried_after_the_same_delay_as_a_dropped_c
     async def record(seconds: float) -> None:
         waited.append(seconds)
 
-    monkeypatch.setattr(provider.asyncio, "sleep", record)
+    monkeypatch.setattr(
+        provider, "asyncio", SimpleNamespace(sleep=record, to_thread=asyncio.to_thread)
+    )
     monkeypatch.setattr(provider, "TRANSPORT_RETRY_DELAY_SECONDS", 2.0)
     replies = [httpx.Response(429, json={"error": "slow down"}), answered()]
 

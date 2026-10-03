@@ -13,7 +13,7 @@ from app.sources.ingestion.contracts import (
     RecognitionResponseError,
     RecognitionTimeoutError,
 )
-from app.sources.ingestion.parsers import strip_unstorable
+from app.sources.ingestion.text import strip_unstorable
 
 
 @dataclass(frozen=True)

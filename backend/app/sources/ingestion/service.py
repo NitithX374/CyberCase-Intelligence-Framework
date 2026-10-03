@@ -27,9 +27,9 @@ from app.sources.ingestion.parsers import (
     PdfPageInspection,
     inspect_pdf,
     parse_docx,
-    strip_unstorable,
 )
 from app.sources.ingestion.recognition import DocumentRecognizer, RenderedPage
+from app.sources.ingestion.text import strip_unstorable
 
 
 @dataclass(frozen=True)
