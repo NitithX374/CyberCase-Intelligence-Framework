@@ -23,6 +23,7 @@ from app.analysis.technical_context.retrieve import CaseMitreAugmentation
 from app.errors import CaseWorkflowError
 from app.followup.clarification import Proceed
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.bind import bound_claims
 from app.trace.claims import CaseAnalysisClaim, CaseAssessmentTrace, CaseSourceCitation
 from app.trace.trace import CaseAnalysisTrace
 from experiments import analysis_arms
@@ -239,6 +240,23 @@ def test_binding_runs_off_the_event_loop(monkeypatch):
 
     assert len(bound_on) == 1
     assert bound_on[0] != loop_thread, "binding a large source would stall every other request"
+
+
+def test_a_trace_whose_claims_were_checked_gets_only_the_reference_checks(monkeypatch):
+    bundle, trace = case_with_one_narrative()
+    checked, grounding = bound_claims(trace, bundle)
+    checked = checked.model_copy(update={"grounding": grounding})
+
+    def checked_again(*args, **kwargs):
+        raise AssertionError("the claims of this trace were already checked")
+
+    monkeypatch.setattr(pipeline_module, "resolve_case_trace", checked_again)
+    bound = asyncio.run(
+        bind_to_case(AnalysisInput(sources=bundle), AnalysisArtifacts(trace=checked))
+    )
+
+    assert bound.trace.claims == checked.claims
+    assert bound.trace.grounding == grounding
 
 
 def test_the_analysis_needs_no_case_row_to_run():

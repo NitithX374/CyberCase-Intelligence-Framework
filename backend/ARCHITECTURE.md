@@ -72,7 +72,24 @@ assessment row is stored with `status="assessment"` so its questions retain an
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
 trace in two model calls: `case_reading` writes the claims, parties, timeline
 and impacts with their quotations, and `case_judgement` writes the summary,
-gaps and ATT&CK associations over that reading. The `verify` arm in
+gaps and ATT&CK associations over that reading.
+
+Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
+against the sources:
+- each quotation is found and located;
+- a `reported` claim left with no verified quotation becomes `not_confirmed`;
+- the grounding counts are taken.
+
+The judgement therefore reads checked claims: their statuses, and only the
+quotations that were found.
+
+`bind_to_case` then checks the judgement's references with `bound_references`:
+- the `affected_claim_ids` of a gap;
+- the claim IDs of each ATT&CK association, and its technique against the
+  retrieved context.
+
+A trace written without the middle step, as the one-call writer in
+`experiments/analysis_arms.py` writes it, is bound in full there. The `verify` arm in
 `experiments/analysis_arms.py` runs the same three steps without the
 assessment. There is no arm switch or config value. The alternative compositions the thesis measures live in
 `backend/experiments/analysis_arms.py`; each arm calls these same functions on
@@ -227,6 +244,17 @@ answer each time — one case in the database holds six analyses at revision 1
 whose technique tables read 6, 6, 11, 10, 9, 9. The pipeline behind `/query` is
 not deterministic, so "ask again" is not free and not neutral.
 
+**A quotation's context is exact; only its display is cleaned.** When a quote
+binds, `trace/bind.py` stores beside it the text around it, cut from the same
+stored source by `trace/sentences.py`: the sentence before and the sentences the
+quote touches, PyThaiNLP `crfcut` line by line, at most 400 characters besides
+the quote, with a trimmed side flagged. A quote found more than once gets none, because nothing
+says which occurrence was meant. The drawer and the report show the OCR's own
+markup — `<table>` rows and cells, `<page_number>` — as plain text, and leave
+every other tag visible: in a phishing email the link is the point. The stored
+context keeps every tag, so what is shown can always be traced back to the
+source.
+
 ---
 
 ## 7. Things that will trip you
@@ -235,7 +263,11 @@ not deterministic, so "ask again" is not free and not neutral.
 `reports/display.py` builds one `CaseReportContent` snapshot when the report is
 generated, and `case_reports.structured_report` holds it. The HTML and the PDF
 render from that stored copy only. A row stored in an older shape is refused
-with `case_report_outdated` rather than rebuilt from current code.
+with `case_report_outdated` rather than rebuilt from current code. A field added
+later is optional, so an older row still validates: a report stored before
+quotations carried context has no `supporting_contexts`, and its quotes print
+alone. `supporting_quotes` stays a list of strings for that reason, with the
+contexts beside it.
 
 **The validator belongs to the report-fidelity experiment, not to the app.**
 `StructuredReport`, `build_case_template_report` and

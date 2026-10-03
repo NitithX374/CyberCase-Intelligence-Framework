@@ -5,11 +5,25 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
-from app.trace.quotes import MAX_PAGE_SPANS_PER_QUOTE, MAX_QUOTE_CHARS, MAX_SUPPORTED_DOCUMENT_PAGES
+from app.trace.quotes import (
+    MAX_PAGE_SPANS_PER_QUOTE,
+    MAX_POINTER_PLACES,
+    MAX_QUOTE_CHARS,
+    MAX_SUPPORTED_DOCUMENT_PAGES,
+)
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
+MAX_CONTEXT_CHARS = 400
 
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
@@ -66,6 +80,15 @@ ClaimIds = Annotated[list[str], BeforeValidator(unique_claim_ids)]
 ReasoningSummary = Annotated[str | None, BeforeValidator(empty_as_none), clipped(1_000)]
 
 
+class CaseQuoteContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    before: str = Field(default="", max_length=MAX_CONTEXT_CHARS)
+    after: str = Field(default="", max_length=MAX_CONTEXT_CHARS)
+    cut_before: bool = False
+    cut_after: bool = False
+
+
 class CaseSourceCitation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -74,6 +97,7 @@ class CaseSourceCitation(BaseModel):
     document_id: str | None = Field(default=None, min_length=1, max_length=160)
     filename: str | None = Field(default=None, min_length=1, max_length=255)
     page_numbers: list[int] = Field(default_factory=list, max_length=MAX_PAGE_SPANS_PER_QUOTE)
+    context: CaseQuoteContext | None = None
 
     @field_validator("source_id", "exact_quote", "document_id", "filename")
     @classmethod
@@ -110,6 +134,32 @@ class CaseProviderCitation(BaseModel):
 
     source_id: str = Field(min_length=1, max_length=160)
     exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
+
+
+class CaseQuoteDifference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    written: str = Field(default="", max_length=MAX_QUOTE_CHARS)
+    source: str = Field(default="", max_length=2 * MAX_QUOTE_CHARS)
+
+
+class CaseNearPassage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_text: str = Field(min_length=1, max_length=2 * MAX_QUOTE_CHARS)
+    differences: list[CaseQuoteDifference] = Field(
+        default_factory=list, max_length=MAX_POINTER_PLACES
+    )
+    occurrences: int = Field(default=1, ge=1)
+
+
+class CaseUnverifiedCitation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str = Field(min_length=1, max_length=160)
+    role: Literal["supporting", "contradicting"]
+    written_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
+    near_passage: CaseNearPassage | None = None
 
 
 class CaseClaimFields(BaseModel):
@@ -179,6 +229,7 @@ class CaseProviderClaim(CaseClaimFields):
 class CaseAnalysisClaim(CaseClaimFields):
     supporting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
     contradicting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
+    unverified_citations: list[CaseUnverifiedCitation] = Field(default_factory=list, max_length=128)
     reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
 
 
@@ -201,7 +252,17 @@ def normalized_citation(data: object) -> dict[str, object] | None:
         "page_numbers": data.get("page_numbers")
         if isinstance(data.get("page_numbers"), (list, tuple))
         else [],
+        "context": stored_context(data.get("context")),
     }
+
+
+def stored_context(value: object) -> CaseQuoteContext | None:
+    if not isinstance(value, dict):
+        return None
+    try:
+        return CaseQuoteContext.model_validate(value)
+    except ValidationError:
+        return None
 
 
 def bounded_locator(value: object, limit: int) -> str | None:

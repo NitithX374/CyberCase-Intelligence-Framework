@@ -20,6 +20,7 @@ function finding(
     supportingSources: [],
     contradictingSources: [],
     techniqueIds: [],
+    unverifiedQuotes: [],
   };
 }
 
@@ -103,5 +104,69 @@ describe("Grouped case findings", () => {
       "href",
       `/case/${caseId}/analysis/details#mitre-T1566`,
     );
+  });
+
+  const passage = {
+    id: "narrative-1",
+    label: "Case narrative #1",
+    excerpt: "The transfer happened on 17 March 2026 at noon.",
+    displayContent: "The transfer happened on 17 March 2026 at noon.",
+    exactQuote: "The transfer happened on 17 March 2026",
+    quoteContext: null,
+    filename: null,
+    pageNumbers: [],
+    sourcePages: [],
+    question: null,
+    quoteLabel: "Nearest passage",
+  };
+  const unverified = {
+    writtenQuote: "The transfer happened on 11 March 2026 quickly",
+    places: [
+      { written: "11", source: "17" },
+      { written: "quickly", source: "" },
+      { written: "", source: "at noon" },
+    ],
+    passage,
+  };
+
+  it("says where a not-confirmed finding's quote differs from the source and opens the passage", () => {
+    const onSelectSource = vi.fn();
+    render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[
+          {
+            ...finding("transfer", "reported", "not_confirmed"),
+            unverifiedQuotes: [
+              unverified,
+              { writtenQuote: "Invented.", places: [], passage: null },
+            ],
+          },
+        ]}
+        onSelectSource={onSelectSource}
+      />,
+    );
+    const article = screen.getByRole("article");
+
+    expect(within(article).getAllByText("Not found word for word in the source.")).toHaveLength(2);
+    expect(article).toHaveTextContent("The analysis quotes «11»; the source says «17»");
+    expect(article).toHaveTextContent("The analysis adds «quickly»");
+    expect(article).toHaveTextContent("The source has «at noon», which the analysis leaves out");
+    const buttons = within(article).getAllByRole("button", { name: "Show in source" });
+    expect(buttons).toHaveLength(1);
+    fireEvent.click(buttons[0]);
+    expect(onSelectSource).toHaveBeenCalledWith(passage, buttons[0], "passage-transfer-0");
+  });
+
+  it("says nothing about unverified quotes under a finding that stayed reported", () => {
+    render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[{ ...finding("transfer"), unverifiedQuotes: [unverified] }]}
+        onSelectSource={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
   });
 });

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { analysisPath } from "@/lib/casePaths";
 import { groupCaseFindings, claimTypeLabels } from "./overview";
-import type { CaseFinding } from "@/features/analysis/types";
+import type { CaseFinding, QuotePlace } from "@/features/analysis/types";
 import type { SourceMessageRef } from "@/features/citations/types";
 import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import { Icon } from "@/components/icons";
@@ -86,8 +86,42 @@ export function FindingRow({
           {finding.reasoningSummary}
         </DisclosurePanel>
       )}
+      {finding.epistemicStatus === "not_confirmed" && finding.unverifiedQuotes.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {finding.unverifiedQuotes.map((item, index) => {
+            const key = `passage-${finding.id}-${index}`;
+            const passage = item.passage;
+            return (
+              <div key={key} className="text-sm leading-6 text-ink-secondary">
+                <p>Not found word for word in the source.</p>
+                {item.places.map((place, placeIndex) => (
+                  <p key={placeIndex}>{placeText(place)}</p>
+                ))}
+                {passage && (
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={(event) =>
+                      sourceActions.onSelectSource(passage, event.currentTarget, key)
+                    }
+                    className="text-ink underline underline-offset-2 hover:text-ink-secondary"
+                  >
+                    Show in source
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </article>
   );
+}
+
+function placeText({ written, source }: QuotePlace): string {
+  if (written && source) return `The analysis quotes «${written}»; the source says «${source}»`;
+  if (written) return `The analysis adds «${written}»`;
+  return `The source has «${source}», which the analysis leaves out`;
 }
 
 function SourceGroup({

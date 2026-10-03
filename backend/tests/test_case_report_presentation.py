@@ -1,5 +1,6 @@
 import json
 import re
+from dataclasses import replace
 from datetime import UTC, datetime
 from io import BytesIO
 from uuid import uuid4
@@ -21,14 +22,23 @@ from app.reports.display import (
     build_case_report_content,
     thai_date,
 )
-from app.reports.render import ReportIssue, render_case_report_html, render_case_report_pdf
-from app.reports.schemas import CaseReportContent
+from app.reports.render import (
+    ReportIssue,
+    quoted,
+    render_case_report_html,
+    render_case_report_pdf,
+)
+from app.reports.schemas import CaseReportContent, ReportQuoteContext
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.trace.bind import resolve_case_trace
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseFollowupExchange,
+    CaseNearPassage,
+    CaseQuoteDifference,
     CaseSourceCitation,
+    CaseUnverifiedCitation,
 )
 from app.trace.trace import (
     CaseAnalysisTrace,
@@ -335,6 +345,163 @@ def test_the_document_is_printed_from_the_stored_copy() -> None:
     assert render_case_report_html(stored, ISSUE) == render_case_report_html(
         build_case_report_content(report_input), ISSUE
     )
+
+
+QUOTED_SOURCE = (
+    "The victim called the bank. The caller said the account had been frozen. "
+    "He asked for a transfer of 52,000 baht to a safe account."
+)
+
+
+def _input_quoting(text: str, quote: str) -> CaseReportInput:
+    report_input = _input()
+    source = replace(report_input.source_bundle.sources[0], text=text)
+    bundle = CaseSourceBundle(revision=1, sources=(source,))
+    trace = report_input.analysis_trace
+    claim = trace.claims[0].model_copy(
+        update={
+            "supporting_citations": [
+                CaseSourceCitation(source_id=source.source_id, exact_quote=quote)
+            ]
+        }
+    )
+    return report_input.model_copy(
+        update={
+            "source_bundle": bundle,
+            "analysis_trace": resolve_case_trace(
+                trace.model_copy(update={"claims": [claim]}), bundle
+            ),
+        }
+    )
+
+
+def test_a_quote_is_printed_inside_its_sentence() -> None:
+    report_input = _input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")
+    html = render_case_report_html(_stored(report_input), ISSUE)
+
+    assert (
+        "“The caller said the account had been frozen. He asked for "
+        "<strong>a transfer of 52,000 baht</strong> to a safe account.”"
+    ) in html
+    assert html == render_case_report_html(build_case_report_content(report_input), ISSUE)
+
+
+def test_the_stored_report_keeps_each_quote_as_the_trace_holds_it() -> None:
+    [finding] = _stored(_input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")).findings
+
+    assert finding.supporting_quotes == ["a transfer of 52,000 baht"]
+    assert finding.supporting_contexts == [
+        ReportQuoteContext(
+            before="The caller said the account had been frozen. He asked for ",
+            after=" to a safe account.",
+        )
+    ]
+
+
+def test_a_report_stored_before_quote_contexts_still_prints() -> None:
+    written = _stored(_input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")).model_dump(
+        mode="json"
+    )
+    for finding in written["findings"]:
+        del finding["supporting_contexts"], finding["contradicting_contexts"]
+        del finding["unverified_quotes"]
+
+    html = render_case_report_html(CaseReportContent.model_validate(written), ISSUE)
+
+    assert "“a transfer of 52,000 baht”" in html
+    assert "<strong>a transfer" not in html
+
+
+def _input_with_unverified(*items: CaseUnverifiedCitation) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    claim = trace.claims[0].model_copy(update={"unverified_citations": list(items)})
+    return report_input.model_copy(
+        update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
+    )
+
+
+def test_an_unverified_quote_is_printed_with_each_place_the_source_differs() -> None:
+    source_id = _input().source_bundle.sources[0].source_id
+    near = CaseNearPassage(
+        source_text="พบการใช้ PowerShell.exe เชื่อมต่อไปยัง 198.51.100.23",
+        differences=[
+            CaseQuoteDifference(written="198.51.100.24", source="198.51.100.23"),
+            CaseQuoteDifference(written="ทันที", source=""),
+            CaseQuoteDifference(written="", source="PowerShell.exe"),
+        ],
+    )
+    written = "พบการใช้ เชื่อมต่อไปยัง 198.51.100.24 ทันที"
+    html = render_case_report_html(
+        _stored(
+            _input_with_unverified(
+                CaseUnverifiedCitation(
+                    source_id=source_id,
+                    role="supporting",
+                    written_quote=written,
+                    near_passage=near,
+                )
+            )
+        ),
+        ISSUE,
+    )
+
+    assert f"ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{written}”" in html
+    assert "ผลวิเคราะห์ยกมาว่า «198.51.100.24» ต้นฉบับเขียน «198.51.100.23»" in html
+    assert "ผลวิเคราะห์เติม «ทันที»" in html
+    assert "ต้นฉบับมี «PowerShell.exe» ที่ผลวิเคราะห์ตัดออก" in html
+
+
+def test_an_unverified_quote_with_no_near_passage_prints_only_that_it_was_not_found() -> None:
+    source_id = _input().source_bundle.sources[0].source_id
+    report = _stored(
+        _input_with_unverified(
+            CaseUnverifiedCitation(
+                source_id=source_id, role="supporting", written_quote="ข้อความที่ไม่มีในต้นฉบับ"
+            )
+        )
+    )
+    html = render_case_report_html(report, ISSUE)
+
+    assert report.findings[0].unverified_quotes[0].places == []
+    assert "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ" in html
+    assert "ผลวิเคราะห์ยกมาว่า" not in html
+    assert "ผลวิเคราะห์เติม" not in html
+
+
+def test_a_quote_that_is_its_whole_sentence_is_printed_plain() -> None:
+    report = _stored(_input_quoting(SOURCE_TEXT, SOURCE_TEXT))
+    html = render_case_report_html(report, ISSUE)
+
+    assert report.findings[0].supporting_contexts == [ReportQuoteContext()]
+    assert f"“{SOURCE_TEXT}”" in html
+    assert "<strong>พบการใช้" not in html
+
+
+def test_a_trimmed_ocr_context_is_marked_and_reads_as_plain_text() -> None:
+    [quote] = quoted(
+        ["123-4-56789"],
+        [
+            ReportQuoteContext(
+                before="<tr><td>3 มีนาคม 2569</td><td>",
+                after="</td><td>52,000 บาท</td></tr><page_number>2</page_number>",
+                cut_before=True,
+                cut_after=True,
+            )
+        ],
+    )
+
+    assert quote == "“… 3 มีนาคม 2569 <strong>123-4-56789</strong> 52,000 บาท …”"
+
+
+def test_a_quote_context_is_escaped() -> None:
+    [quote] = quoted(
+        ["the link"],
+        [ReportQuoteContext(before='<script>alert("x")</script> Click ', after=" now.")],
+    )
+
+    assert "&lt;script&gt;" in quote
+    assert "<script>" not in quote
 
 
 def test_the_document_names_its_version_and_dates() -> None:

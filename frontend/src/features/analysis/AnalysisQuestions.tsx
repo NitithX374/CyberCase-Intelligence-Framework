@@ -42,7 +42,10 @@ export function AnalysisQuestions() {
 
 function OpenQuestionRow({ gap }: { gap: CaseGap }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showsFindings, setShowsFindings] = useState(false);
   const reasonId = `gap-${gap.id}-reason`;
+  const findingsId = `gap-${gap.id}-findings`;
+  const affected = gap.affectedFindings;
   return (
     <li className="grid gap-x-4 gap-y-1.5 py-4 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
       <div className="flex flex-wrap items-start gap-1.5 sm:pt-0.5">
@@ -53,7 +56,7 @@ function OpenQuestionRow({ gap }: { gap: CaseGap }) {
       <div className="min-w-0">
         <h3 className="text-[15px] font-semibold leading-6 text-ink">{gap.topic}</h3>
         <p className="mt-0.5 text-sm leading-6 text-ink-secondary">{gap.description}</p>
-        {(gap.askable || gap.reason) && (
+        {(gap.askable || gap.reason || affected.length > 0) && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {gap.askable && (
               <span className="text-xs font-medium text-ink-secondary">Needs an answer</span>
@@ -66,11 +69,28 @@ function OpenQuestionRow({ gap }: { gap: CaseGap }) {
                 controls={reasonId}
               />
             )}
+            {affected.length > 0 && (
+              <DisclosureToggle
+                label={`Affected findings (${affected.length})`}
+                isOpen={showsFindings}
+                onToggle={() => setShowsFindings((open) => !open)}
+                controls={findingsId}
+              />
+            )}
           </div>
         )}
         {gap.reason && isOpen && (
           <DisclosurePanel id={reasonId} className="mt-2">
             {gap.reason}
+          </DisclosurePanel>
+        )}
+        {affected.length > 0 && showsFindings && (
+          <DisclosurePanel id={findingsId} className="mt-2">
+            <ul aria-label="Affected findings" className="space-y-1">
+              {affected.map((finding) => (
+                <li key={finding.id}>{finding.text}</li>
+              ))}
+            </ul>
           </DisclosurePanel>
         )}
       </div>

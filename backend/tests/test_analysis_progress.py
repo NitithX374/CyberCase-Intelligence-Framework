@@ -26,7 +26,7 @@ from app.errors import CaseWorkflowError
 from app.llm.settings import AnalysisPipelineConfig
 from app.main import app
 from app.trace.claims import CaseAssessmentTrace
-from app.trace.trace import CaseProviderJudgement, CaseProviderReading
+from app.trace.trace import CaseGroundingReport, CaseProviderJudgement, CaseProviderReading
 
 
 class Done(BaseModel):
@@ -157,7 +157,7 @@ def test_the_preflight_and_the_binding_announce_themselves():
     assert steps_heard(exercise) == ["assess", "bind"]
 
 
-def test_the_reading_and_the_judgement_announce_themselves_in_turn():
+def test_the_reading_the_quote_check_and_the_judgement_announce_themselves_in_turn():
     bundle = _fixtures()[2]
     reading = CaseProviderReading(
         version="case_analysis_trace_v1", claims=[], involved_parties=[], timeline=[], impacts=[]
@@ -173,7 +173,17 @@ def test_the_reading_and_the_judgement_announce_themselves_in_turn():
         with patch("app.analysis.write.request_stage", new=request_stage):
             await write_trace(sources=bundle, language="english", config=AnalysisPipelineConfig())
 
-    assert steps_heard(exercise) == ["read", "judge"]
+    assert steps_heard(exercise) == ["read", "bind", "judge"]
+
+
+def test_the_checks_after_a_checked_reading_announce_nothing():
+    _, trace, bundle, _, _ = _fixtures()
+    checked = trace.model_copy(update={"grounding": CaseGroundingReport()})
+
+    async def exercise():
+        await bind_to_case(AnalysisInput(sources=bundle), AnalysisArtifacts(trace=checked))
+
+    assert steps_heard(exercise) == []
 
 
 @pytest.mark.parametrize(

@@ -73,6 +73,7 @@
     .formal .minor { display: block; font-size: 9pt; color: #3f3f46; }
     .quote { margin-top: 3pt; font-size: 9.5pt; color: #27272a; }
     .quote-label { font-weight: 700; }
+    .quote-place { margin-top: 1pt; padding-left: 1.5em; font-size: 9.5pt; color: #27272a; }
 
     ol.numbered { margin: 0; padding: 0; list-style: none; }
     ol.numbered > li { display: flex; gap: 6pt; margin: 0 0 4pt; }
@@ -216,11 +217,17 @@
                 <td class="n">{{ finding.ordinal }}</td>
                 <td>
                   {{ finding.text | clean_report_text }}
-                  {% for quote in finding.supporting_quotes %}
-                    <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> “{{ quote }}”</div>
+                  {% for quote in finding.supporting_quotes | quoted(finding.supporting_contexts) %}
+                    <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> {{ quote }}</div>
                   {% endfor %}
-                  {% for quote in finding.contradicting_quotes %}
-                    <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> “{{ quote }}”</div>
+                  {% for quote in finding.contradicting_quotes | quoted(finding.contradicting_contexts) %}
+                    <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> {{ quote }}</div>
+                  {% endfor %}
+                  {% for item in finding.unverified_quotes %}
+                    <div class="quote"><span class="quote-label">ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{{ item.written_quote }}”</div>
+                    {% for place in item.places %}
+                      <div class="quote-place">{% if place.written and place.source %}ผลวิเคราะห์ยกมาว่า «{{ place.written }}» ต้นฉบับเขียน «{{ place.source }}»{% elif place.written %}ผลวิเคราะห์เติม «{{ place.written }}»{% else %}ต้นฉบับมี «{{ place.source }}» ที่ผลวิเคราะห์ตัดออก{% endif %}</div>
+                    {% endfor %}
                   {% endfor %}
                   {% if finding.reasoning_summary %}
                     <div class="quote"><span class="quote-label">เหตุผลเชิงวิเคราะห์:</span> {{ finding.reasoning_summary | clean_report_text }}</div>

@@ -80,7 +80,195 @@ def test_a_quote_cut_with_an_ellipsis_at_either_end_is_found():
     ]
     assert [c.epistemic_status for c in trace.claims] == ["reported", "reported", "reported"]
     assert trace.grounding.citations_verified == 3
-    assert trace.grounding.citations_paraphrased == 0
+    assert trace.grounding.citations_pointed == 0
+
+
+GAPPED = "Filenames had been changed ... demanded contact by email."
+
+
+def test_a_quote_with_a_gap_is_stored_as_one_citation_per_piece():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(trace_of(claim(source_id, "A-01", GAPPED)), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "Filenames had been changed",
+        "demanded contact by email.",
+    ]
+
+
+def test_a_quote_split_into_pieces_is_counted_once_and_keeps_its_claim_reported():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(trace_of(claim(source_id, "A-01", GAPPED)), bundle)
+
+    assert len(trace.claims[0].supporting_citations) == 2
+    assert trace.claims[0].epistemic_status == "reported"
+    assert trace.grounding.citations_claimed == 1
+    assert trace.grounding.citations_verified == 1
+    assert trace.grounding.citations_duplicated == 0
+    assert_counts_add_up(trace)
+
+
+def test_a_gapped_quote_whose_later_piece_appears_twice_after_the_first_is_dropped():
+    text = "The share was encrypted. Then a note was left. Later a note was left again."
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "The share was encrypted ... a note was left")), bundle
+    )
+
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
+    assert trace.grounding.citations_verified == 0
+    assert_counts_add_up(trace)
+
+
+def test_a_gapped_quote_with_a_piece_found_twice_is_stored_as_one_merged_span():
+    text = "Payroll was moved. The attacker logged in at night. Payroll was moved."
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "The attacker logged in ... Payroll was moved.")), bundle
+    )
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "The attacker logged in at night. Payroll was moved."
+    ]
+    assert trace.claims[0].epistemic_status == "reported"
+    assert trace.grounding.citations_verified == 1
+    assert_counts_add_up(trace)
+
+
+def test_ellipses_at_the_ends_are_trimmed_before_a_gapped_quote_is_split():
+    bundle, source_id = bundle_and_id()
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "...had been changed and a text file..."),
+            claim(source_id, "A-02", "… Filenames had been changed … demanded contact …"),
+        ),
+        bundle,
+    )
+
+    assert [[c.exact_quote for c in item.supporting_citations] for item in trace.claims] == [
+        ["had been changed and a text file"],
+        ["Filenames had been changed", "demanded contact"],
+    ]
+
+
+def test_a_piece_also_cited_on_its_own_is_kept_once():
+    bundle, source_id = bundle_and_id()
+    written = claim(source_id, "A-01", GAPPED).model_copy(
+        update={
+            "supporting_citations": [
+                CaseSourceCitation(source_id=source_id, exact_quote=GAPPED),
+                CaseSourceCitation(source_id=source_id, exact_quote="Filenames had been changed"),
+            ]
+        }
+    )
+
+    trace = resolve_case_trace(trace_of(written), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "Filenames had been changed",
+        "demanded contact by email.",
+    ]
+    assert trace.grounding.citations_claimed == 2
+    assert trace.grounding.citations_verified == 1
+    assert trace.grounding.citations_duplicated == 1
+    assert_counts_add_up(trace)
+
+
+def test_a_gapped_quote_after_one_of_its_pieces_counts_for_the_piece_it_adds():
+    bundle, source_id = bundle_and_id()
+    written = claim(source_id, "A-01", GAPPED).model_copy(
+        update={
+            "supporting_citations": [
+                CaseSourceCitation(source_id=source_id, exact_quote="Filenames had been changed"),
+                CaseSourceCitation(source_id=source_id, exact_quote=GAPPED),
+            ]
+        }
+    )
+
+    trace = resolve_case_trace(trace_of(written), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "Filenames had been changed",
+        "demanded contact by email.",
+    ]
+    assert trace.grounding.citations_verified == 2
+    assert trace.grounding.citations_duplicated == 0
+    assert_counts_add_up(trace)
+
+
+OCR_TABLE = (
+    "Transfer record\n"
+    "<table>\n"
+    "<tr><th>Date</th><th>Amount</th><th>To account</th></tr>\n"
+    "<tr><td>3 March 2026</td><td>50,000 baht</td><td>123-4-56789</td></tr>\n"
+    "<tr><td>5 March 2026</td><td>20,000 baht</td><td>987-6-54321</td></tr>\n"
+    "</table>\n"
+    "<page_number>2</page_number>"
+)
+
+
+def test_a_quote_inside_one_table_cell_is_found():
+    bundle, source_id = bundle_and_id(OCR_TABLE)
+    trace = resolve_case_trace(trace_of(claim(source_id, "A-01", "50,000 baht")), bundle)
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == ["50,000 baht"]
+
+
+def test_a_quote_across_the_cells_of_a_table_row_is_found_with_the_tags_between():
+    bundle, source_id = bundle_and_id(OCR_TABLE)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "3 March 2026 50,000 baht")), bundle
+    )
+
+    assert [c.exact_quote for c in trace.claims[0].supporting_citations] == [
+        "3 March 2026</td><td>50,000 baht"
+    ]
+    assert trace.claims[0].epistemic_status == "reported"
+    assert trace.grounding.citations_verified == 1
+    assert_counts_add_up(trace)
+
+
+def test_a_thai_quote_across_two_cells_or_a_page_number_is_found():
+    text = (
+        "<table><tr><td>โอนเงิน</td><td>50,000 บาท</td></tr></table>\n"
+        "ผู้เสียหายโอนเงิน\n<page_number>3</page_number>\nให้ผู้ต้องหา"
+    )
+    bundle, source_id = bundle_and_id(text)
+    trace = resolve_case_trace(
+        trace_of(
+            claim(source_id, "A-01", "โอนเงิน 50,000 บาท"),
+            claim(source_id, "A-02", "ผู้เสียหายโอนเงินให้ผู้ต้องหา"),
+        ),
+        bundle,
+    )
+
+    assert [c.supporting_citations[0].exact_quote for c in trace.claims] == [
+        "โอนเงิน</td><td>50,000 บาท",
+        "ผู้เสียหายโอนเงิน\n<page_number>3</page_number>\nให้ผู้ต้องหา",
+    ]
+
+
+def test_cells_from_different_rows_still_do_not_make_a_quote():
+    bundle, source_id = bundle_and_id(OCR_TABLE)
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "3 March 2026 20,000 baht")), bundle
+    )
+
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
+    assert_counts_add_up(trace)
+
+
+def test_a_quote_across_cells_that_matches_twice_is_refused():
+    row = "<tr><td>1 April 2026</td><td>10,000 baht</td></tr>\n"
+    bundle, source_id = bundle_and_id(f"<table>\n{row}{row}</table>")
+    trace = resolve_case_trace(
+        trace_of(claim(source_id, "A-01", "1 April 2026 10,000 baht")), bundle
+    )
+
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
 
 
 def test_a_quote_with_other_quotation_marks_than_the_source_is_found():
@@ -112,11 +300,11 @@ def test_an_invented_quote_is_dropped_and_counted():
     assert trace.grounding.citations_claimed == 1
     assert trace.grounding.citations_verified == 0
     assert trace.grounding.citations_unfound == 1
-    assert trace.grounding.citations_paraphrased == 0
+    assert trace.grounding.citations_pointed == 0
     assert trace.grounding.claims_without_citation == 1
 
 
-def test_a_loose_quotation_of_a_real_sentence_is_counted_apart():
+def test_a_near_quotation_of_a_real_sentence_is_kept_with_a_pointer():
     bundle, source_id = bundle_and_id()
     trace = resolve_case_trace(
         trace_of(
@@ -125,8 +313,16 @@ def test_a_loose_quotation_of_a_real_sentence_is_counted_apart():
         bundle,
     )
 
+    [unverified] = trace.claims[0].unverified_citations
+    assert trace.claims[0].supporting_citations == []
+    assert trace.claims[0].epistemic_status == "not_confirmed"
+    assert unverified.role == "supporting"
+    assert unverified.written_quote == "Filenames were changed and a text file demanded contact"
+    assert unverified.near_passage.source_text == (
+        "Filenames had been changed and a text file demanded contact"
+    )
     assert trace.grounding.citations_verified == 0
-    assert trace.grounding.citations_paraphrased == 1
+    assert trace.grounding.citations_pointed == 1
     assert trace.grounding.citations_unfound == 0
 
 
@@ -182,7 +378,7 @@ def assert_counts_add_up(trace: CaseAnalysisTrace) -> None:
     assert (
         grounding.citations_verified
         + grounding.citations_duplicated
-        + grounding.citations_paraphrased
+        + grounding.citations_pointed
         + grounding.citations_unfound
         == grounding.citations_claimed
     )
@@ -280,14 +476,12 @@ def test_a_quote_the_markdown_match_widens_past_a_citation_is_dropped_and_counte
     assert_counts_add_up(trace)
 
 
-def test_a_source_is_folded_and_split_once_however_many_quotes_are_sought_in_it(monkeypatch):
+def test_a_source_is_folded_and_formed_once_however_many_quotes_are_sought_in_it(monkeypatch):
     folded: list[str] = []
     split: list[str] = []
-    fold, split_into_trigrams = quotes.folded, quotes.trigrams
+    fold, form = quotes.folded, quotes.format_form
     monkeypatch.setattr(quotes, "folded", lambda text: folded.append(text) or fold(text))
-    monkeypatch.setattr(
-        quotes, "trigrams", lambda text: split.append(text) or split_into_trigrams(text)
-    )
+    monkeypatch.setattr(quotes, "format_form", lambda text: split.append(text) or form(text))
     bundle, source_id = bundle_and_id()
     loose = [
         "Filenames were changed and a text file demanded contact",
@@ -300,6 +494,6 @@ def test_a_source_is_folded_and_split_once_however_many_quotes_are_sought_in_it(
         bundle,
     )
 
-    assert trace.grounding.citations_paraphrased == 3
+    assert trace.grounding.citations_pointed == 3
     assert folded.count(TEXT) == 1
     assert split.count(TEXT) == 1

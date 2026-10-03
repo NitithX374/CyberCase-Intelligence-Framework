@@ -43,12 +43,15 @@ def test_the_gap_instructions_keep_the_topic_in_words(prompt) -> None:
     assert "It is never the gap_key." in " ".join(prompt().split())
 
 
-def test_ellipsis_citation_is_expanded_to_one_exact_source_span() -> None:
+def test_ellipsis_citation_is_aligned_to_each_retained_segment() -> None:
     content = "Prefix before\nfirst quoted statement\n omitted middle\nlast quoted statement\nSuffix after"
 
-    assert find_aligned_quote(content, "first quoted statement ... last quoted statement") == (
-        "first quoted statement\n omitted middle\nlast quoted statement"
-    )
+    spans = find_aligned_quote(content, "first quoted statement ... last quoted statement")
+
+    assert [content[start:end] for start, end in spans] == [
+        "first quoted statement",
+        "last quoted statement",
+    ]
 
 
 def test_ellipsis_alignment_requires_each_retained_segment() -> None:
@@ -66,7 +69,7 @@ def test_ellipsis_alignment_requires_each_retained_segment() -> None:
 def test_quote_alignment_preserves_source_text_when_ocr_wraps_a_word() -> None:
     content = "คำร้องขอ\nหมายจับผู้ต้องหา"
 
-    assert find_aligned_quote(content, "คำร้องขอหมายจับผู้ต้องหา") == content
+    assert find_aligned_quote(content, "คำร้องขอหมายจับผู้ต้องหา") == [(0, len(content))]
 
 
 def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:
