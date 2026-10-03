@@ -30,6 +30,29 @@ describe("the steps an analysis has reached", () => {
     ).toEqual(["assess", "gate", "retrieve", "read", "bind", "judge"]);
   });
 
+  it("leaves out the first step when the analysis went on without it", () => {
+    const rows = progressRows(
+      [
+        { step: "gate", elapsed: 0, reachedAt: 1_000 },
+        { step: "read", elapsed: 4, reachedAt: 5_000 },
+      ],
+      8_000,
+    );
+
+    expect(rows.map((row) => row.step)).toEqual(["gate", "read", "bind", "judge"]);
+    expect(rows.map((row) => row.state)).toEqual(["done", "current", "waiting", "waiting"]);
+  });
+
+  it("still shows the first step while nothing has been reached", () => {
+    expect(progressRows([], 0).map((row) => row.step)).toEqual([
+      "assess",
+      "gate",
+      "read",
+      "bind",
+      "judge",
+    ]);
+  });
+
   it("times a finished step by the server and the current one from when it arrived", () => {
     const rows = progressRows(
       [

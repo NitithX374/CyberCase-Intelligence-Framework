@@ -153,10 +153,16 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
 - `GET /health` — backend and database health (`health.py`)
 - `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` — cookie session (`auth/routes.py`)
 - `GET`, `POST /cases`; `GET`, `PATCH`, `DELETE /cases/{case_id}` — case lifecycle (`cases/routes.py`)
-- `GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages` — the Ask/Chat panel (`chat/routes.py`)
+- `GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages` — the Ask/Chat panel (`chat/routes.py`). A message, a
+  follow-up answer included, is at most 4,000 characters
 - `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — upload and read back (`sources/routes.py`, `document_router`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
-- `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`)
-- `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`)
+- `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`). A source, text or
+  document, is refused with 413 `source_too_large` when the sources of the case would pass `SOURCE_TOKEN_BUDGET` (40,000
+  tokens). Each source is weighed as it sits in a stage payload, which serializes it twice, plus `SOURCE_OVERHEAD_TOKENS`
+  (100) for its record; a narrative is also at most 250,000 characters. A source is refused with 409
+  `analysis_in_progress` while the case is being analysed
+- `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`). Running one
+  answers 409 `analysis_in_progress` while an analysis of that case is in flight
 - **Progress stream.** `POST /cases/{case_id}/analysis` and `POST /cases/{case_id}/chat/messages` answer a request sent
   with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
   (`analysis/stream.py`):
@@ -239,8 +245,10 @@ auth/                   routes, schemas, service (register, log in),
                         credentials (passwords, JWTs), guard (current user,
                         and the guard every browser request passes)
 cases/                  routes, schemas, service (case CRUD and whether the
-                        latest analysis is current), and ownership.py:
-                        owned_case, the one ownership check
+                        latest analysis is current), ownership.py:
+                        owned_case, the one ownership check, and running.py:
+                        which analyses are in flight (analysing, and
+                        sole_analysis, which refuses a second one)
 sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
   ingestion/            upload to text: service, files (detect, render pages),
@@ -339,7 +347,10 @@ artifacts = await bind_to_case(...)                # the judgement's references
 A round that ends in a question never calls the MITRE gate, the RAG service,
 the reading and judgement calls or the binding step. The `verify` arm in
 `experiments/analysis_arms.py` runs those three expensive steps without the
-preflight.
+preflight. Once the rounds are spent (`rounds_are_spent` in
+`followup/clarification.py`) the preflight is skipped as well: `decide_followup`
+would proceed whatever it found, and `AnalysisAdvance.assessment` is then `None`.
+A question is never stored without its assessment.
 The arms in `experiments/analysis_arms.py` take an `AnalysisInput` directly and
 touch no case row. `run_case_analysis(pipeline=...)` also accepts a substitute
 composition, as `tests/test_case_followup_postgres.py` does. There is no
@@ -397,7 +408,7 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 ### Chat Clarification Boundary
 
-The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each. It checks every case against a fixed 5W1H list, `CASE_CHECKLIST` in `analysis/prompts.py` (who was affected, who was responsible, what, when, where, why, how, how much). A gap on that list takes its key as its `gap_key`, and the follow-up history sent to the model carries the `gap_key` each earlier question was asked under. A gap therefore keeps its key from round to round and is not asked twice. `followup/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `followup/conversation.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `analysis/run.py` tracks the analyses in flight, which holds because the backend runs one process.
+The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each. It checks every case against a fixed 5W1H list, `CASE_CHECKLIST` in `analysis/prompts.py` (who was affected, who was responsible, what, when, where, why, how, how much). A gap on that list takes its key as its `gap_key`, and the follow-up history sent to the model carries the `gap_key` each earlier question was asked under. A gap therefore keeps its key from round to round and is not asked twice. `followup/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `followup/conversation.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `cases/running.py` tracks the analyses in flight, which holds because the backend runs one process.
 
 RAG is never called for clarification. It is reached only through the analysis pipeline's technical-context stage, when the MITRE gate says RETRIEVE, and the frontend never calls `rag_service` directly.
 

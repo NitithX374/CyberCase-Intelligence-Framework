@@ -89,6 +89,7 @@ export function SourceRail({
         </h2>
         <AddSourceMenu
           isUploading={isUploading}
+          isAnalysing={analysis?.isRunning ?? false}
           onOpenNarrative={onOpenNarrative}
           onPickFile={onPickFile}
         />
@@ -204,10 +205,12 @@ function UploadingItem({ filename }: { filename?: string | null }) {
 
 function AddSourceMenu({
   isUploading,
+  isAnalysing,
   onOpenNarrative,
   onPickFile,
 }: {
   isUploading: boolean;
+  isAnalysing: boolean;
   onOpenNarrative: () => void;
   onPickFile: () => void;
 }) {
@@ -222,9 +225,9 @@ function AddSourceMenu({
         type="button"
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        disabled={isUploading}
+        disabled={isUploading || isAnalysing}
         onClick={() => setIsOpen((open) => !open)}
-        title="Add source"
+        title={isAnalysing ? "Wait for the analysis to finish" : "Add source"}
         className="icon-btn disabled:cursor-wait"
       >
         <Icon name="plus" className="h-4 w-4" />
@@ -239,22 +242,24 @@ function AddSourceMenu({
           <button
             type="button"
             role="menuitem"
+            disabled={isAnalysing}
             onClick={() => {
               setIsOpen(false);
               onOpenNarrative();
             }}
-            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover"
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover disabled:text-ink-disabled disabled:hover:bg-transparent"
           >
             Case narrative
           </button>
           <button
             type="button"
             role="menuitem"
+            disabled={isAnalysing}
             onClick={() => {
               setIsOpen(false);
               onPickFile();
             }}
-            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover"
+            className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] text-ink hover:bg-surface-hover disabled:text-ink-disabled disabled:hover:bg-transparent"
           >
             File
           </button>

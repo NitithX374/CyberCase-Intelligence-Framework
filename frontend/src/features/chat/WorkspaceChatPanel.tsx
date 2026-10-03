@@ -116,6 +116,8 @@ export function WorkspaceChatPanel({
   );
 }
 
+const MESSAGE_MAX_LENGTH = 4_000;
+
 function ChatComposer({
   input,
   isSubmitting,
@@ -131,6 +133,7 @@ function ChatComposer({
 }) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const isTooLong = input.length > MESSAGE_MAX_LENGTH;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -165,7 +168,7 @@ function ChatComposer({
         />
         <button
           type="submit"
-          disabled={isSubmitting || !input.trim()}
+          disabled={isSubmitting || !input.trim() || isTooLong}
           aria-label="Send message"
           title="Send (Ctrl+Enter)"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-ivory transition-colors hover:bg-charcoal-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
@@ -173,6 +176,12 @@ function ChatComposer({
           <Icon name="send" className="h-4 w-4" />
         </button>
       </div>
+      {isTooLong && (
+        <p role="status" className="mt-1.5 px-1 text-xs text-ink-muted">
+          {input.length.toLocaleString("en-US")} of {MESSAGE_MAX_LENGTH.toLocaleString("en-US")}{" "}
+          characters. Shorten the message or send it in parts.
+        </p>
+      )}
     </form>
   );
 }

@@ -4,6 +4,8 @@ from app.config import settings
 from app.llm.registry import resolve_openrouter_model
 
 MIN_THINKING_TOKENS = 1_024
+SOURCE_TOKEN_BUDGET = 40_000
+SOURCE_OVERHEAD_TOKENS = 100
 
 
 def provider_order(value: str) -> tuple[str, ...]:

@@ -12,7 +12,8 @@ import app.analysis.pipeline as pipeline_module
 import app.chat.reply as case_chat
 from app.analysis.latest import get_latest_case_analysis
 from app.analysis.pipeline import AnalysisAdvance, AnalysisArtifacts
-from app.analysis.run import analysing, run_case_analysis
+from app.analysis.run import run_case_analysis
+from app.cases.running import analysing
 from app.chat.reply import get_case_chat, post_case_message, send_case_message
 from app.chat.schemas import ChatMessageCreate, ChatMessageRead
 from app.config import settings

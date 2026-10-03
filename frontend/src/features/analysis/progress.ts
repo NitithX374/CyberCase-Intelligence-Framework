@@ -56,8 +56,10 @@ export function useAnalysisProgress(caseId: string | null): ReachedStep[] {
 }
 
 export function progressRows(reached: ReachedStep[], now: number): ProgressRow[] {
-  const order = PLANNED.flatMap((step): AnalysisStepName[] =>
-    step === "gate" && reached.some((r) => r.step === "retrieve") ? ["gate", "retrieve"] : [step],
+  const skippedAssess = reached.length > 0 && !reached.some((r) => r.step === "assess");
+  const order = PLANNED.filter((step) => !(skippedAssess && step === "assess")).flatMap(
+    (step): AnalysisStepName[] =>
+      step === "gate" && reached.some((r) => r.step === "retrieve") ? ["gate", "retrieve"] : [step],
   );
   return order.map((step) => {
     const label = STEP_LABELS[step];

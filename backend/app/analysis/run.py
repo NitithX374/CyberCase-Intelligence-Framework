@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from collections import Counter
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from uuid import UUID
 
 from sqlalchemy import select
@@ -21,6 +19,7 @@ from app.analysis.store import (
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.retrieve import technical_context_key
 from app.cases.ownership import owned_case
+from app.cases.running import analysing
 from app.config import settings
 from app.database import async_session
 from app.errors import CaseAnalysisFailure, CaseWorkflowError
@@ -36,23 +35,6 @@ from app.models.analysis_result import CaseAnalysisResult
 from app.sources.bundle import WITH_SOURCES, analysable_bundle
 from app.sources.service import SourceError
 from app.trace.claims import CaseAssessmentTrace
-
-_running: Counter[UUID] = Counter()
-
-
-@contextmanager
-def analysing(case_id: UUID) -> Iterator[None]:
-    _running[case_id] += 1
-    try:
-        yield
-    finally:
-        _running[case_id] -= 1
-        if _running[case_id] <= 0:
-            del _running[case_id]
-
-
-def analysis_running(case_id: UUID) -> bool:
-    return _running[case_id] > 0
 
 
 async def run_case_analysis(
@@ -107,6 +89,10 @@ async def store_outcome(
     if not isinstance(outcome, AnalysisAdvance):
         raise CaseWorkflowError("analysis_result_invalid", "Analysis pipeline result is invalid")
     if isinstance(outcome.decision, Ask):
+        if outcome.assessment is None:
+            raise CaseWorkflowError(
+                "analysis_result_invalid", "Analysis pipeline result is invalid"
+            )
         return await store_assessment(
             session_factory, started, outcome.assessment, outcome.decision
         )
@@ -171,8 +157,6 @@ async def reusable_context(
 __all__ = [
     "AnalysisStep",
     "UnassessedAdvance",
-    "analysing",
-    "analysis_running",
     "external_context",
     "read_case_for_analysis",
     "run_case_analysis",
