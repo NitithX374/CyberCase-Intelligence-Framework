@@ -361,11 +361,13 @@ export interface components {
         CaseImpactItem: {
             description: string;
             claim_ids?: string[];
+            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         CaseInvolvedParty: {
             name: string;
             role: string;
             claim_ids?: string[];
+            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         CaseMitreAssociation: {
             association_id: string;
@@ -469,6 +471,7 @@ export interface components {
             time: string;
             event: string;
             claim_ids?: string[];
+            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         CaseUnverifiedCitation: {
             source_id: string;
@@ -535,6 +538,7 @@ export interface components {
             time: string;
             event: string;
             references?: string[];
+            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         ReportFinding: {
             ordinal: number;
@@ -560,11 +564,13 @@ export interface components {
         ReportImpact: {
             description: string;
             references?: string[];
+            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         ReportParty: {
             name: string;
             role: string;
             references?: string[];
+            support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
         };
         ReportPlace: {
             written: string;

@@ -43,6 +43,7 @@ export interface CaseGap {
 interface ClaimBacked {
   sources: SourceMessageRef[];
   inferred: boolean;
+  supportNote?: string | null;
 }
 
 export interface CaseParty extends ClaimBacked {

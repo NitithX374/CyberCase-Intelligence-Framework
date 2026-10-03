@@ -2,6 +2,7 @@ import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { claimRefs, parseCaseSources, passageRef } from "@/features/citations/sourceRefs";
 import type { SourceMessageRef } from "@/features/citations/types";
 import { analysisFollowups } from "./analysisRecord";
+import { supportNote } from "./supportNote";
 import type { CaseFinding, CaseOverviewData, ClaimType } from "./types";
 
 export const claimTypeLabels: Record<ClaimType, string> = {
@@ -100,9 +101,10 @@ export function buildCaseOverview(
   });
   const backing = claimBacking(findings);
   const affected = findingsNamed(findings);
+  const incidentSummary = trace.summary || result.summary || "Case summary not provided.";
   return {
     hasAnalysis: true,
-    incidentSummary: trace.summary || result.summary || "Case summary not provided.",
+    incidentSummary,
     findings,
     gaps: (trace.gaps ?? []).map((gap) => ({
       id: gap.gap_id,
@@ -113,19 +115,22 @@ export function buildCaseOverview(
       askable: gap.askable,
       affectedFindings: affected(gap.affected_claim_ids),
     })),
-    parties: (trace.involved_parties ?? []).map(({ name, role, claim_ids }) => ({
+    parties: (trace.involved_parties ?? []).map(({ name, role, claim_ids, support }) => ({
       name,
       role,
       ...backing(claim_ids),
+      supportNote: supportNote(support, incidentSummary),
     })),
-    timeline: (trace.timeline ?? []).map(({ time, event, claim_ids }) => ({
+    timeline: (trace.timeline ?? []).map(({ time, event, claim_ids, support }) => ({
       time,
       event,
       ...backing(claim_ids),
+      supportNote: supportNote(support, incidentSummary),
     })),
-    impacts: (trace.impacts ?? []).map(({ description, claim_ids }) => ({
+    impacts: (trace.impacts ?? []).map(({ description, claim_ids, support }) => ({
       description,
       ...backing(claim_ids),
+      supportNote: supportNote(support, incidentSummary),
     })),
   };
 }

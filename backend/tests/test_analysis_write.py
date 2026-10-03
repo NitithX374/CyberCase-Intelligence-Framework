@@ -76,7 +76,14 @@ def written(bundle: CaseSourceBundle, reading: CaseProviderReading, **options):
         seen.append(kwargs)
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
-                reading.model_dump(exclude={"claims": {"__all__": {"unverified_citations"}}})
+                reading.model_dump(
+                    exclude={
+                        "claims": {"__all__": {"unverified_citations"}},
+                        "involved_parties": {"__all__": {"support"}},
+                        "timeline": {"__all__": {"support"}},
+                        "impacts": {"__all__": {"support"}},
+                    }
+                )
             )
         return judgement()
 
@@ -210,6 +217,24 @@ def test_the_judgement_sees_a_claim_whose_quote_was_not_found_as_not_confirmed()
     assert demoted["supporting_citations"] == []
     assert trace.grounding.citations_claimed == 2
     assert trace.grounding.citations_verified == 1
+
+
+def test_the_judgement_is_told_what_a_not_confirmed_claim_is():
+    bundle = case_with_one_narrative()
+    reading = reading_of(bundle)
+    reading = reading.model_copy(
+        update={"claims": [*reading.claims, invented_claim(bundle.sources[0].source_id)]}
+    )
+
+    _, (_, judgement_call) = written(bundle, reading)
+
+    system = " ".join(judgement_call["system"].split())
+    assert 'A claim whose epistemic_status is "not_confirmed"' in system
+    assert "has no supplied quotation that was found in the case sources" in system
+    assert "This does not make it false" in system
+    assert "Do not state it as an established fact in the summary" in system
+    assert "say that it is unconfirmed, or raise it as a gap" in system
+    assert judgement_call["content"]["reading"]["claims"][1]["epistemic_status"] == "not_confirmed"
 
 
 def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_it():

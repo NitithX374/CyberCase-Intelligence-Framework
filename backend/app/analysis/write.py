@@ -143,9 +143,15 @@ def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
             claim.model_dump(mode="json", exclude={"unverified_citations"})
             for claim in reading.claims
         ],
-        "involved_parties": [party.model_dump(mode="json") for party in reading.involved_parties],
-        "timeline": [item.model_dump(mode="json") for item in reading.timeline],
-        "impacts": [impact.model_dump(mode="json") for impact in reading.impacts],
+        "involved_parties": [
+            party.model_dump(mode="json", exclude={"support"}) for party in reading.involved_parties
+        ],
+        "timeline": [
+            item.model_dump(mode="json", exclude={"support"}) for item in reading.timeline
+        ],
+        "impacts": [
+            impact.model_dump(mode="json", exclude={"support"}) for impact in reading.impacts
+        ],
     }
 
 
