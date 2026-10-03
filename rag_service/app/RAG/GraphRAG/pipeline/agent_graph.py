@@ -120,6 +120,7 @@ class AgentState(TypedDict, total=False):
     # ── Retrieval ─────────────────────────────────────────────────────────
     graphrag_result: Any  # GraphRAGResult
     context: str  # Assembled context text
+    sub_queries: list  # The decomposition of original_query, made once per query
     rewritten_queries: list  # MITRE-aligned rewrites produced by BROADEN_SEARCH
 
     # ── Evaluation ────────────────────────────────────────────────────────
@@ -562,7 +563,13 @@ class GraphRAGAgent:
         # Full original query goes FIRST as a holistic channel — it preserves the
         # incident's full context (the report path proved this gives better
         # technique coverage), then the atomic sub-queries pin each technique.
-        sub_queries = self.decomposer.decompose(incident=original_query, verbose=verbose)
+        # Decompose once per query. A broaden round re-enters this node with the
+        # same incident text, and decomposing it again cost one more model call
+        # and could return a different plan (temperature 0 is not a guarantee),
+        # so the channels of the two rounds would no longer match.
+        sub_queries = state.get("sub_queries")
+        if sub_queries is None:
+            sub_queries = self.decomposer.decompose(incident=original_query, verbose=verbose)
         all_queries: list[str] = []
         for q in [original_query, *sub_queries, *rewritten_queries]:
             if q and q.strip() and q not in all_queries:
@@ -600,6 +607,7 @@ class GraphRAGAgent:
         return {
             "graphrag_result": graphrag_result,
             "context": context,
+            "sub_queries": list(sub_queries),
         }
 
     def _node_evaluate_context(self, state: AgentState) -> dict:
