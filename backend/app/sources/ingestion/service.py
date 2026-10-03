@@ -27,6 +27,7 @@ from app.sources.ingestion.parsers import (
     PdfPageInspection,
     inspect_pdf,
     parse_docx,
+    strip_unstorable,
 )
 from app.sources.ingestion.recognition import DocumentRecognizer, RenderedPage
 
@@ -201,7 +202,7 @@ class DocumentIngestionService:
 
     @staticmethod
     def safe_filename(filename: str) -> str:
-        safe_filename = filename.replace("\x00", "").replace("\\", "/").split("/")[-1].strip()
+        safe_filename = strip_unstorable(filename).replace("\\", "/").split("/")[-1].strip()
         return (safe_filename or "document")[:255]
 
 

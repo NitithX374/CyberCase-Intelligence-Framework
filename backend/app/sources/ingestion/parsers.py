@@ -1,4 +1,5 @@
 import math
+import re
 import unicodedata
 from dataclasses import dataclass
 from io import BytesIO
@@ -81,8 +82,15 @@ class PdfInspection:
     pages: list[PdfPageInspection]
 
 
+UNSTORABLE_CHARACTERS = re.compile(r"[\x00\ud800-\udfff]")
+
+
+def strip_unstorable(text: str) -> str:
+    return UNSTORABLE_CHARACTERS.sub("", text)
+
+
 def normalize_text(text: str) -> str:
-    lines = [" ".join(line.split()) for line in text.replace("\x00", "").splitlines()]
+    lines = [" ".join(line.split()) for line in strip_unstorable(text).splitlines()]
     return "\n".join(line for line in lines if line)
 
 

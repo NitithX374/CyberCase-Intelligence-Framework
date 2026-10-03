@@ -10,7 +10,7 @@ from docx import Document
 from PIL import Image
 from reportlab.pdfgen import canvas
 
-from app.sources.ingestion import files
+from app.sources.ingestion import files, parsers
 from app.sources.ingestion import service as service_module
 from app.sources.ingestion.contracts import (
     DocumentIngestionError,
@@ -112,6 +112,16 @@ def _pdf_bytes(page_texts: list[str | None]) -> bytes:
 def _png_bytes() -> bytes:
     output = BytesIO()
     Image.new("RGB", (200, 100), "white").save(output, format="PNG")
+    return output.getvalue()
+
+
+def _sideways_jpeg_bytes() -> bytes:
+    image = Image.new("RGB", (200, 100), "blue")
+    image.paste("red", (0, 0, 100, 100))
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    output = BytesIO()
+    image.save(output, format="JPEG", exif=exif, quality=95)
     return output.getvalue()
 
 
@@ -250,6 +260,59 @@ def test_a_nul_in_an_uploaded_filename_is_dropped() -> None:
     result = asyncio.run(
         _service(RecordingRecognizer()).ingest(
             _docx_bytes("รายละเอียดคดี"), "case" + chr(0) + ".docx"
+        )
+    )
+
+    assert result.filename == "case.docx"
+
+
+def test_a_photo_taken_sideways_is_turned_upright_before_it_is_read() -> None:
+    content = _sideways_jpeg_bytes()
+    assert Image.open(BytesIO(content)).size == (200, 100)
+
+    upright = Image.open(BytesIO(files.normalize_image(content, 1000, 10_000_000)))
+
+    assert upright.size == (100, 200)
+    top, bottom = upright.getpixel((50, 20)), upright.getpixel((50, 180))
+    assert top[0] > 200 > top[2]
+    assert bottom[2] > 200 > bottom[0]
+
+
+def test_a_photo_with_no_orientation_keeps_its_shape() -> None:
+    kept = Image.open(BytesIO(files.normalize_image(_png_bytes(), 1000, 10_000_000)))
+
+    assert kept.size == (200, 100)
+
+
+def test_a_lone_surrogate_in_a_pdf_text_layer_is_dropped_before_it_can_be_stored(
+    monkeypatch,
+) -> None:
+    narrative = "Native page narrative describing a complete investigation. " * 4
+    unstorable = chr(0xD800) + " and" + chr(0xDFFF) + chr(0) + " more"
+
+    class MalformedMapPage:
+        mediabox = SimpleNamespace(width=612, height=792)
+
+        def extract_text(self) -> str:
+            return narrative + unstorable
+
+    monkeypatch.setattr(
+        parsers, "PdfReader", lambda *_args, **_kwargs: SimpleNamespace(pages=[MalformedMapPage()])
+    )
+    recognizer = RecordingRecognizer()
+
+    result = asyncio.run(_service(recognizer).ingest(b"%PDF-1.4 stand-in", "malformed.pdf"))
+
+    assert result.extraction_method == ExtractionMethod.NATIVE_PDF
+    assert result.full_text.endswith("and more")
+    assert result.full_text.encode("utf-8")
+    assert recognizer.pages == []
+
+
+def test_a_lone_surrogate_in_an_uploaded_filename_is_dropped() -> None:
+    result = asyncio.run(
+        _service(RecordingRecognizer()).ingest(
+            _docx_bytes("รายละเอียดคดี"), "case" + chr(0xD800) + ".docx"
         )
     )
 

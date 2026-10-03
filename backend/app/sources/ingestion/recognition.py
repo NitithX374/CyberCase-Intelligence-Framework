@@ -13,6 +13,7 @@ from app.sources.ingestion.contracts import (
     RecognitionResponseError,
     RecognitionTimeoutError,
 )
+from app.sources.ingestion.parsers import strip_unstorable
 
 
 @dataclass(frozen=True)
@@ -118,7 +119,7 @@ class TyphoonDocumentRecognizer:
         try:
             choice = provider_output["choices"][0]
             finish_reason = choice.get("finish_reason")
-            raw_text = choice["message"]["content"].replace("\x00", "").strip()
+            raw_text = strip_unstorable(choice["message"]["content"]).strip()
         except (KeyError, IndexError, TypeError, ValueError, AttributeError) as error:
             raise RecognitionResponseError("Typhoon OCR returned an invalid response.") from error
         if finish_reason == "length":

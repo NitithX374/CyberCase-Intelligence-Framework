@@ -119,6 +119,27 @@ def test_a_source_names_the_file_it_was_read_from():
     asyncio.run(exercise())
 
 
+def test_a_narrative_with_a_lone_surrogate_is_stored_without_it():
+    async def exercise():
+        async with isolated_database() as factory:
+            case_id = uuid4()
+            async with factory() as db, db.begin():
+                db.add(Case(id=case_id, title="Lone surrogate"))
+            async with factory() as db, db.begin():
+                await SourceService(db).add_text_source(
+                    case_id=case_id,
+                    user_id=None,
+                    source_kind="narrative",
+                    text="Report " + chr(0xD800) + "of a" + chr(0) + " breach",
+                    provenance_json={},
+                )
+            async with factory() as db:
+                sources = await SourceService(db).list_sources(case_id, None)
+        assert [source.exact_text for source in sources] == ["Report of a breach"]
+
+    asyncio.run(exercise())
+
+
 def test_a_document_with_no_text_is_refused():
     async def exercise():
         async with isolated_database() as factory:
