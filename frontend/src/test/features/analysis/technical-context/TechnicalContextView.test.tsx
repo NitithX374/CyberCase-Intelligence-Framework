@@ -74,6 +74,45 @@ describe("TechnicalContextView", () => {
     expect(screen.queryByText(/could not be verified/)).not.toBeInTheDocument();
   });
 
+  it("prints no quotation for a source with no checked quote, and never the start of the source", () => {
+    const projection = technicalProjection();
+    const unconfirmed = projection.result.trace_json!.claims[0];
+    unconfirmed.epistemic_status = "not_confirmed";
+    unconfirmed.supporting_citations = [];
+    render(
+      <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
+    );
+
+    expect(screen.getByText("ไม่มี quote ที่ตรวจแล้ว")).toBeInTheDocument();
+    expect(screen.queryByText(/“|”/)).not.toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(exactQuote.slice(0, 20)))).not.toBeInTheDocument();
+    expect(screen.queryByText("No quotation recorded.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Case narrative #1/ }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(exactQuote);
+  });
+
+  it("quotes only the sources whose quote was checked, beside one that was not", () => {
+    const otherId = "33333333-3333-4333-8333-333333333333";
+    const projection = technicalProjection();
+    const other = "A second report places the attacker on the file server.";
+    projection.result.trace_json!.claims.push({
+      ...claim(other, otherId, { claim_id: "A-02" }),
+      epistemic_status: "not_confirmed",
+      supporting_citations: [],
+    });
+    projection.result.trace_json!.mitre_associations![0].claim_ids = ["A-01", "A-02"];
+    projection.sources.push(narrativeSource(other, { id: otherId }));
+    render(
+      <TechnicalContextView analysisResult={projection.result} sources={projection.sources} />,
+    );
+
+    expect(screen.getByText(`“${exactQuote}”`)).toBeInTheDocument();
+    expect(screen.getAllByText("ไม่มี quote ที่ตรวจแล้ว")).toHaveLength(1);
+    expect(screen.queryByText(new RegExp(other.slice(0, 20)))).not.toBeInTheDocument();
+    expect(screen.getByText("Case narrative #1")).toBeInTheDocument();
+    expect(screen.getByText("Case narrative #2")).toBeInTheDocument();
+  });
+
   it("keeps a non-technical Case valid without MITRE rows", () => {
     const projection = technicalProjection();
     projection.result.trace_json = {
