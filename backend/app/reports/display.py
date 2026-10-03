@@ -118,15 +118,29 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
         ),
         summary=report_input.analysis_summary,
         parties=[
-            ReportParty(name=party.name, role=party.role, references=references(party.claim_ids))
+            ReportParty(
+                name=party.name,
+                role=party.role,
+                references=references(party.claim_ids),
+                support=party.support,
+            )
             for party in trace.involved_parties
         ],
         timeline=[
-            ReportEvent(time=event.time, event=event.event, references=references(event.claim_ids))
+            ReportEvent(
+                time=event.time,
+                event=event.event,
+                references=references(event.claim_ids),
+                support=event.support,
+            )
             for event in trace.timeline
         ],
         impacts=[
-            ReportImpact(description=impact.description, references=references(impact.claim_ids))
+            ReportImpact(
+                description=impact.description,
+                references=references(impact.claim_ids),
+                support=impact.support,
+            )
             for impact in trace.impacts
         ],
         findings=findings,

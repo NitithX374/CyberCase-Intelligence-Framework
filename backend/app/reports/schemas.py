@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.trace.trace import SupportStatus
+
 
 class ReportRow(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -15,17 +17,20 @@ class ReportParty(ReportRow):
     name: str
     role: str
     references: list[str] = Field(default_factory=list)
+    support: SupportStatus | None = None
 
 
 class ReportEvent(ReportRow):
     time: str
     event: str
     references: list[str] = Field(default_factory=list)
+    support: SupportStatus | None = None
 
 
 class ReportImpact(ReportRow):
     description: str
     references: list[str] = Field(default_factory=list)
+    support: SupportStatus | None = None
 
 
 class ReportQuoteContext(ReportRow):

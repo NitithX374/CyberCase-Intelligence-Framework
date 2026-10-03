@@ -28,7 +28,10 @@ export function CaseDetails({
 }: CaseDetailsProps) {
   if (!timeline.length && !parties.length && !impacts.length) return null;
   const hasSide = parties.length > 0 || impacts.length > 0;
-  const backing = (row: { sources: SourceMessageRef[]; inferred: boolean }, owner: string) => (
+  const backing = (
+    row: { sources: SourceMessageRef[]; inferred: boolean; supportNote?: string | null },
+    owner: string,
+  ) => (
     <Backing
       row={row}
       owner={owner}
@@ -165,12 +168,12 @@ function Backing({
   onSelectSource,
   activeSourceKey,
 }: {
-  row: { sources: SourceMessageRef[]; inferred: boolean };
+  row: { sources: SourceMessageRef[]; inferred: boolean; supportNote?: string | null };
   owner: string;
   onSelectSource: CaseDetailsProps["onSelectSource"];
   activeSourceKey: string | null;
 }) {
-  if (!row.inferred && !row.sources.length) return null;
+  if (!row.inferred && !row.sources.length && !row.supportNote) return null;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
       {row.inferred && <span className="text-xs text-ink-muted">Inference</span>}
@@ -186,6 +189,7 @@ function Backing({
           />
         );
       })}
+      {row.supportNote && <span className="text-xs text-ink-muted">{row.supportNote}</span>}
     </div>
   );
 }

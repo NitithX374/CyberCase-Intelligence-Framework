@@ -132,6 +132,11 @@
     <p class="notice"><strong>คำชี้แจง</strong>รายงานฉบับนี้จัดทำโดยระบบวิเคราะห์อัตโนมัติจากหลักฐานที่นำเข้าในสำนวนคดี เพื่อให้ผู้ตรวจสอบเห็นภาพรวมของคดี ประเด็นสำคัญ และหลักฐานที่ควรตรวจสอบต่อ รายงานนี้มิใช่คำวินิจฉัยข้อเท็จจริงหรือข้อกฎหมาย และต้องผ่านการตรวจสอบโดยเจ้าหน้าที่ผู้รับผิดชอบก่อนนำไปใช้</p>
 
     <main>
+      {% set support_notes = {
+        "unbound": "ไม่พบข้อความที่อ้างในเอกสาร",
+        "mixed": "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
+        "no_claim": "ไม่ได้เชื่อมกับข้อสังเกตใด",
+      } %}
       <section id="case_summary">
         <h2>1. สรุปข้อเท็จจริงของคดี</h2>
         {% set sub = namespace(n=1) %}
@@ -149,7 +154,7 @@
               {% for party in report.parties %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
-                <td>{{ party.name }}</td>
+                <td>{{ party.name }}{% if party.support in support_notes %}<div class="quote">{{ support_notes[party.support] }}</div>{% endif %}</td>
                 <td>{{ party.role }}</td>
                 <td class="ref">{{ party.references | join(", ") or "-" }}</td>
               </tr>
@@ -170,7 +175,7 @@
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ event.time }}</td>
-                <td>{{ event.event | clean_report_text }}</td>
+                <td>{{ event.event | clean_report_text }}{% if event.support in support_notes %}<div class="quote">{{ support_notes[event.support] }}</div>{% endif %}</td>
                 <td class="ref">{{ event.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -189,7 +194,7 @@
               {% for impact in report.impacts %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
-                <td>{{ impact.description | clean_report_text }}</td>
+                <td>{{ impact.description | clean_report_text }}{% if impact.support in support_notes %}<div class="quote">{{ support_notes[impact.support] }}</div>{% endif %}</td>
                 <td class="ref">{{ impact.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}

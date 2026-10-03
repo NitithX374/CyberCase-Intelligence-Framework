@@ -16,8 +16,10 @@ from app.trace.claims import (
 
 MAX_SUMMARY_CHARS = 24_000
 
+SupportStatus = Literal["bound", "mixed", "unbound", "no_claim"]
 
-class CaseInvolvedParty(BaseModel):
+
+class ProviderParty(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=1, max_length=500)
@@ -33,7 +35,11 @@ class CaseInvolvedParty(BaseModel):
         return normalized
 
 
-class CaseTimelineItem(BaseModel):
+class CaseInvolvedParty(ProviderParty):
+    support: SupportStatus | None = None
+
+
+class ProviderTimelineItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     time: str = Field(min_length=1, max_length=500)
@@ -49,7 +55,11 @@ class CaseTimelineItem(BaseModel):
         return normalized
 
 
-class CaseImpactItem(BaseModel):
+class CaseTimelineItem(ProviderTimelineItem):
+    support: SupportStatus | None = None
+
+
+class ProviderImpactItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = Field(min_length=1, max_length=2_000)
@@ -62,6 +72,10 @@ class CaseImpactItem(BaseModel):
         if not normalized:
             raise ValueError("impact text values must be non-empty")
         return normalized
+
+
+class CaseImpactItem(ProviderImpactItem):
+    support: SupportStatus | None = None
 
 
 class CaseMitreAssociation(BaseModel):
@@ -134,9 +148,9 @@ class CaseProviderAnalysis(BaseModel):
     version: Literal["case_analysis_trace_v1"]
     claims: list[CaseProviderClaim] = Field(max_length=64)
     summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
-    involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
-    timeline: list[CaseTimelineItem] = Field(max_length=64)
-    impacts: list[CaseImpactItem] = Field(max_length=64)
+    involved_parties: list[ProviderParty] = Field(max_length=64)
+    timeline: list[ProviderTimelineItem] = Field(max_length=64)
+    impacts: list[ProviderImpactItem] = Field(max_length=64)
     gaps: list[CaseAnalysisGap] = Field(default_factory=list, max_length=32)
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
 
@@ -156,9 +170,9 @@ class CaseProviderReadingReply(BaseModel):
 
     version: Literal["case_analysis_trace_v1"]
     claims: list[CaseProviderClaim] = Field(max_length=64)
-    involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
-    timeline: list[CaseTimelineItem] = Field(max_length=64)
-    impacts: list[CaseImpactItem] = Field(max_length=64)
+    involved_parties: list[ProviderParty] = Field(max_length=64)
+    timeline: list[ProviderTimelineItem] = Field(max_length=64)
+    impacts: list[ProviderImpactItem] = Field(max_length=64)
 
 
 class CaseProviderJudgement(BaseModel):
@@ -181,4 +195,8 @@ __all__ = [
     "CaseProviderReading",
     "CaseProviderReadingReply",
     "CaseTimelineItem",
+    "ProviderImpactItem",
+    "ProviderParty",
+    "ProviderTimelineItem",
+    "SupportStatus",
 ]

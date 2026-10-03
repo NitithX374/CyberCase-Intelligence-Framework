@@ -25,6 +25,49 @@ const events = (count: number) =>
   }));
 
 describe("CaseDetails", () => {
+  it("prints the line for an item whose cited quotations were not found, even with no source to show", () => {
+    render(
+      <CaseDetails
+        timeline={[
+          {
+            time: "Monday",
+            event: "The account was frozen",
+            sources: [],
+            inferred: false,
+            supportNote: "No cited quotation was found in the sources.",
+          },
+        ]}
+        parties={[
+          {
+            name: "Somchai",
+            role: "Account holder",
+            sources: [statement],
+            inferred: false,
+            supportNote: "Some cited quotations were not found in the sources.",
+          },
+        ]}
+        impacts={[
+          {
+            description: "A transfer was made",
+            sources: [],
+            inferred: false,
+            supportNote: "Not linked to any claim.",
+          },
+          { description: "A bound impact", sources: [statement], inferred: false },
+        ]}
+        onSelectSource={vi.fn()}
+        activeSourceKey={null}
+      />,
+    );
+
+    expect(screen.getByText("No cited quotation was found in the sources.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Some cited quotations were not found in the sources."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Not linked to any claim.")).toBeInTheDocument();
+    expect(screen.getAllByText(/quotation|claim\./)).toHaveLength(3);
+  });
+
   it("lists the timeline, parties and impacts under their own headings", () => {
     const onSelectSource = vi.fn();
     render(

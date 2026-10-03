@@ -31,6 +31,7 @@ from app.trace.trace import (
     CaseGroundingReport,
     CaseMitreAssociation,
     CaseProviderReading,
+    SupportStatus,
 )
 
 ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
@@ -96,7 +97,8 @@ def bound_claims(
 
 
 def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> CaseAnalysisTrace:
-    known_claim_ids = {claim.claim_id for claim in trace.claims}
+    claims_by_id = {claim.claim_id: claim for claim in trace.claims}
+    known_claim_ids = set(claims_by_id)
     associations, outside_context, without_claim = kept_associations(
         trace.mitre_associations,
         known_claim_ids,
@@ -105,6 +107,11 @@ def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> Ca
     )
     return trace.model_copy(
         update={
+            "involved_parties": [
+                with_support(party, claims_by_id) for party in trace.involved_parties
+            ],
+            "timeline": [with_support(item, claims_by_id) for item in trace.timeline],
+            "impacts": [with_support(impact, claims_by_id) for impact in trace.impacts],
             "gaps": [answerable_gap(gap, known_claim_ids) for gap in trace.gaps],
             "mitre_associations": associations,
             "grounding": trace.grounding.model_copy(
@@ -132,6 +139,22 @@ def bound_to_claims(item, known_claim_ids: set[str]):
     return item.model_copy(
         update={"claim_ids": [cid for cid in item.claim_ids if cid in known_claim_ids]}
     )
+
+
+def item_support(
+    claim_ids: Sequence[str], claims_by_id: Mapping[str, CaseAnalysisClaim]
+) -> SupportStatus:
+    named = [claims_by_id[claim_id] for claim_id in claim_ids if claim_id in claims_by_id]
+    if not named:
+        return "no_claim"
+    bound = [bool(claim.supporting_citations) for claim in named]
+    if all(bound):
+        return "bound"
+    return "mixed" if any(bound) else "unbound"
+
+
+def with_support(item, claims_by_id: Mapping[str, CaseAnalysisClaim]):
+    return item.model_copy(update={"support": item_support(item.claim_ids, claims_by_id)})
 
 
 def answerable_gap(gap, known_claim_ids: set[str]):

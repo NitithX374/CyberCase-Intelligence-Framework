@@ -235,6 +235,10 @@ The input contains three information classes:
      each claim carrying the source quotations that support it.
    - Every claim ID you write must name a claim that appears there. Never invent a
      claim ID, and never write a new claim.
+   - A claim whose epistemic_status is "not_confirmed" has no supplied quotation that
+     was found in the case sources. This does not make it false. Do not state it as an
+     established fact in the summary. If it matters to the case, say that it is
+     unconfirmed, or raise it as a gap.
 
 3. Technical context:
    - This is optional external knowledge retrieved from MITRE ATT&CK.

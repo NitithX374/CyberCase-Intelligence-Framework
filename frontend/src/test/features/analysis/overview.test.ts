@@ -38,6 +38,51 @@ function pagedCitation(exactQuote: string, pageNumbers: number[]): CaseSourceCit
 }
 
 describe("Case overview projection", () => {
+  const supported = (summary: string) =>
+    analysisResult({
+      summary,
+      trace_json: trace({
+        summary,
+        claims: [claim("A", sourceId, { supporting_citations: [] })],
+        involved_parties: [
+          { name: "Finance", role: "Victim", claim_ids: ["A-01"], support: "mixed" },
+          { name: "Intruder", role: "Attacker", claim_ids: ["A-01"], support: "bound" },
+        ],
+        timeline: [
+          { time: "Monday", event: "Encrypted", claim_ids: ["A-01"], support: "unbound" },
+          { time: "Tuesday", event: "Ransom", claim_ids: [], support: "no_claim" },
+        ],
+        impacts: [{ description: "Payroll lost", claim_ids: ["A-01"] }],
+      }),
+    });
+
+  it("gives each party, event and impact the line its status calls for", () => {
+    const overview = buildCaseOverview(supported("A share was encrypted."), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.parties.map((row) => row.supportNote)).toEqual([
+      "Some cited quotations were not found in the sources.",
+      null,
+    ]);
+    expect(overview.timeline.map((row) => row.supportNote)).toEqual([
+      "No cited quotation was found in the sources.",
+      "Not linked to any claim.",
+    ]);
+    expect(overview.impacts.map((row) => row.supportNote)).toEqual([null]);
+  });
+
+  it("writes the lines in Thai when the analysis is in Thai", () => {
+    const overview = buildCaseOverview(supported("ไฟล์ถูกเข้ารหัสในช่วงกลางคืน"), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.timeline.map((row) => row.supportNote)).toEqual([
+      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ไม่ได้เชื่อมกับข้อสังเกตใด",
+    ]);
+  });
+
   it("renders claims from current case sources", () => {
     const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
       narrativeSource(quote),

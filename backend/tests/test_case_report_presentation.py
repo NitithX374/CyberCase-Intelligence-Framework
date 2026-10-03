@@ -398,6 +398,78 @@ def test_the_stored_report_keeps_each_quote_as_the_trace_holds_it() -> None:
     ]
 
 
+SUPPORT_LINES = (
+    "ไม่พบข้อความที่อ้างในเอกสาร",
+    "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
+    "ไม่ได้เชื่อมกับข้อสังเกตใด",
+)
+
+
+def _input_with_support(*supports: str | None) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    party, event, impact = supports
+    trace = trace.model_copy(
+        update={
+            "involved_parties": [
+                trace.involved_parties[0].model_copy(update={"support": party}),
+                trace.involved_parties[0].model_copy(update={"support": "bound"}),
+            ],
+            "timeline": [trace.timeline[0].model_copy(update={"support": event})],
+            "impacts": [trace.impacts[0].model_copy(update={"support": impact})],
+        }
+    )
+    return report_input.model_copy(update={"analysis_trace": trace})
+
+
+def test_a_new_report_stores_the_support_of_each_party_event_and_impact() -> None:
+    report = _stored(_input_with_support("mixed", "unbound", "no_claim"))
+
+    assert [party.support for party in report.parties] == ["mixed", "bound"]
+    assert [event.support for event in report.timeline] == ["unbound"]
+    assert [impact.support for impact in report.impacts] == ["no_claim"]
+
+
+def test_a_new_report_prints_a_plain_line_for_what_no_checked_quotation_supports() -> None:
+    html = render_case_report_html(
+        _stored(_input_with_support("mixed", "unbound", "no_claim")), ISSUE
+    )
+
+    for line in SUPPORT_LINES:
+        assert html.count(line) == 1, line
+    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
+
+
+def test_a_bound_item_is_printed_as_before() -> None:
+    html = render_case_report_html(_stored(_input_with_support("bound", "bound", "bound")), ISSUE)
+
+    for line in SUPPORT_LINES:
+        assert line not in html
+
+
+def test_a_report_stored_before_the_status_existed_validates_and_prints_no_status_line() -> None:
+    written = _stored(_input_with_support("unbound", "unbound", "unbound")).model_dump(mode="json")
+    for key in ("parties", "timeline", "impacts"):
+        for row in written[key]:
+            del row["support"]
+
+    stored = CaseReportContent.model_validate(written)
+    html = render_case_report_html(stored, ISSUE)
+
+    assert [party.support for party in stored.parties] == [None, None]
+    for line in SUPPORT_LINES:
+        assert line not in html
+    assert "บุคคลและหน่วยงานที่เกี่ยวข้อง" in html
+
+
+def test_an_analysis_stored_before_the_status_existed_makes_a_report_with_none() -> None:
+    report = build_case_report_content(_input())
+
+    assert [party.support for party in report.parties] == [None]
+    assert [event.support for event in report.timeline] == [None]
+    assert [impact.support for impact in report.impacts] == [None]
+
+
 def test_a_report_stored_before_quote_contexts_still_prints() -> None:
     written = _stored(_input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")).model_dump(
         mode="json"
