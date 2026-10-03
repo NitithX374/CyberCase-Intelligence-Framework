@@ -107,7 +107,7 @@ Neo4j and Qdrant are cloud-hosted — no local containers for them.
 - **RAG Engine**: LangGraph for orchestration (the agentic state machine) plus LangChain for the LLM and message abstractions (`langchain_core.messages`, `langchain_anthropic.ChatAnthropic`), hosted in `rag_service`. LangGraph is a separate library, not part of LangChain. No LCEL — the LCEL chain is evaluation-only (`pipeline/chain.py`)
 - **Vector DB**: Qdrant (BGE-M3 embeddings, 1024-dim; FP16 on CUDA only)
 - **Graph DB**: Neo4j (MITRE ATT&CK STIX entities + relationships)
-- **LLMs**: one `CORE_LLM_PROVIDER` drives reasoning, routing, decomposition and evaluation. Default is `openrouter` → `deepseek/deepseek-v4.1-flash`; set `CORE_LLM_PROVIDER=anthropic` for `claude-haiku-4-5`. The served pipeline is cloud-only
+- **LLMs**: one `CORE_LLM_PROVIDER` drives reasoning, decomposition and evaluation. Default is `openrouter` → `deepseek/deepseek-v4.1-flash`; set `CORE_LLM_PROVIDER=anthropic` for `claude-haiku-4-5`. The served pipeline is cloud-only
 
 ### Agentic RAG Pipeline (`rag_service/app/RAG/GraphRAG/pipeline/`)
 
@@ -115,9 +115,6 @@ The pipeline is a LangGraph state machine in `agent_graph.py`:
 
 ```
 User Input (Thai/English)
-    ↓
-[ROUTER] Classifies, but the result is currently discarded — the graph edge is
-    hard-wired to the incident path, so general-explanation is unreachable
     ↓
 [PREPARE] Detect response language only. NO input translation — BGE-M3 is
     multilingual and retrieves on the Thai text as-is
@@ -137,11 +134,13 @@ User Input (Thai/English)
         loops retrieval (max 2x). Budget spent → answer with the best context
         available. ACKNOWLEDGE_LIMIT returns the evaluator's note on its own
         only on the first pass; after a broaden round the note is appended to
-        the answer.
+        the answer. An empty reply is asked again, as for the reasoning call
     ↓
 [REASONING LLM] One call writes the final answer in the query's language
     (Thai for a Thai case file). Nothing is translated. An ACKNOWLEDGE_LIMIT
-    note is returned as the evaluator wrote it (in the query's language)
+    note is returned as the evaluator wrote it (in the query's language).
+    A reply with no visible text is asked again, up to 3 attempts
+    (`llm_content.invoke_for_text`)
     ↓
 END → AgentResponse(status="completed", answer)
 ```
@@ -384,7 +383,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)
 - **Reranker**: `BAAI/bge-reranker-v2-m3` (multilingual incl. Thai)
-- **Core LLM**: `CORE_LLM_PROVIDER` (`openrouter` default → `deepseek/deepseek-v4.1-flash`, or `anthropic` → `claude-haiku-4-5`) — used for reasoning, routing, decomposition and evaluation
+- **Core LLM**: `CORE_LLM_PROVIDER` (`openrouter` default → `deepseek/deepseek-v4.1-flash`, or `anthropic` → `claude-haiku-4-5`) — used for reasoning, decomposition and evaluation
 - **Single-call generation**: Thai answers are written in one call; the served agent has no translation stage. Reason-EN-then-translate survives only as an evaluation baseline (`pipeline/chain.py`, `evaluation/crosslingual_generation_benchmark.py`)
 - **`DUAL_QUERY_RETRIEVAL`**: read only by `pipeline/chain.py`, which is evaluation-only. The served agent does no input translation
 - **RAGAS eval LLM**: `qwen/qwen-2.5-72b-instruct` via OpenRouter
