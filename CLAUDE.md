@@ -196,7 +196,15 @@ trace/                  what the analysis, chat and reports share
   claims.py             claims, citations, gaps, a follow-up exchange, what
                         the preflight returns
   trace.py              the trace: summary, parties, timeline, impacts, claims
-  quotes.py             finding a quotation in a source
+  quotes.py             finding a quotation in a source, in tiers: exact,
+                        NFKC fold, unique ellipsis pieces, markup-tolerant,
+                        then format only (quote marks, punctuation, dash
+                        style, case and spacing ignored; at least 8
+                        characters left, found once); the stored quote is
+                        always source text; nearest_passage points a quote no
+                        tier locates at its one clearly closest passage
+                        (rapidfuzz candidates, an infix edit distance, at most
+                        3 places at word level)
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
   bind.py               bind a written trace to the case; count what did not bind;
@@ -209,7 +217,10 @@ trace/                  what the analysis, chat and reports share
                         once in the source, and otherwise as the one span the
                         pieces stretch over; either way it counts as one written
                         quote; each bound quote keeps the text around it as its
-                        context
+                        context; a quote no tier locates is kept apart as an
+                        unverified citation, with that passage when one
+                        qualifies, and counted as citations_pointed; neither
+                        model is shown it
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share

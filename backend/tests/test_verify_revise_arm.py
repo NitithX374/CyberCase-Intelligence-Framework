@@ -130,7 +130,9 @@ def test_a_model_that_keeps_missing_stops_at_the_bound():
     artifacts = asyncio.run(revise(AnalysisInput(sources=BUNDLE), max_revisions=2, request=request))
 
     assert len(seen) == 3, "one analysis and two revisions, then it stops"
-    assert artifacts.trace.grounding.citations_unfound == 1
+    grounding = artifacts.trace.grounding
+    assert grounding.citations_verified == 0
+    assert grounding.citations_pointed + grounding.citations_unfound == 1
     assert len(artifacts.rounds) == 3
 
 

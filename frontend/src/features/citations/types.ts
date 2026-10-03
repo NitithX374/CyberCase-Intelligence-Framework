@@ -9,6 +9,7 @@ export interface SourceMessageRef {
   pageNumbers: number[];
   sourcePages: SourcePage[];
   question: string | null;
+  quoteLabel?: string;
 }
 
 export interface QuoteContext {

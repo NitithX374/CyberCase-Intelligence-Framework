@@ -74,6 +74,19 @@ function refs(
   });
 }
 
+export function passageRef(
+  sources: CaseSourceRef[],
+  sourceId: string,
+  passage: string,
+): SourceMessageRef | null {
+  const source = sources.find((candidate) => candidate.id === sourceId);
+  if (!source) return null;
+  return {
+    ...sourceRef(source, { source_id: sourceId, exact_quote: passage }),
+    quoteLabel: "Nearest passage",
+  };
+}
+
 function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): SourceMessageRef {
   const quote = citation?.exact_quote || null;
   const context = quote ? citation?.context : null;

@@ -275,6 +275,7 @@ export interface components {
             contradicting_source_ids?: string[];
             supporting_citations?: components["schemas"]["CaseSourceCitation"][];
             contradicting_citations?: components["schemas"]["CaseSourceCitation"][];
+            unverified_citations?: components["schemas"]["CaseUnverifiedCitation"][];
             reasoning_summary?: string | null;
         };
         CaseAnalysisGap: {
@@ -347,7 +348,7 @@ export interface components {
             claims: number;
             citations_claimed: number;
             citations_verified: number;
-            citations_paraphrased: number;
+            citations_pointed: number;
             citations_unfound: number;
             claims_without_citation: number;
             claims_duplicated: number;
@@ -375,11 +376,20 @@ export interface components {
             status: "candidate_only";
             support_role: "external_technical_context";
         };
+        CaseNearPassage: {
+            source_text: string;
+            differences?: components["schemas"]["CaseQuoteDifference"][];
+            occurrences: number;
+        };
         CaseQuoteContext: {
             before: string;
             after: string;
             cut_before: boolean;
             cut_after: boolean;
+        };
+        CaseQuoteDifference: {
+            written: string;
+            source: string;
         };
         CaseRead: {
             id: string;
@@ -460,6 +470,12 @@ export interface components {
             event: string;
             claim_ids?: string[];
         };
+        CaseUnverifiedCitation: {
+            source_id: string;
+            role: "supporting" | "contradicting";
+            written_quote: string;
+            near_passage?: components["schemas"]["CaseNearPassage"] | null;
+        };
         CaseUpdate: {
             title: string;
         };
@@ -531,6 +547,7 @@ export interface components {
             contradicting_quotes?: string[];
             supporting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
             contradicting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
+            unverified_quotes?: components["schemas"]["ReportUnverifiedQuote"][];
             reasoning_summary?: string | null;
         };
         ReportGap: {
@@ -548,6 +565,10 @@ export interface components {
             name: string;
             role: string;
             references?: string[];
+        };
+        ReportPlace: {
+            written: string;
+            source: string;
         };
         ReportQuoteContext: {
             before: string;
@@ -568,6 +589,10 @@ export interface components {
             reason: string;
             findings?: number[];
             references?: string[];
+        };
+        ReportUnverifiedQuote: {
+            written_quote: string;
+            places?: components["schemas"]["ReportPlace"][];
         };
         UserRead: {
             id: string;

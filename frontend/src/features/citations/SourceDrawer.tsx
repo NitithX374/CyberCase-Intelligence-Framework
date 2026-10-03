@@ -78,7 +78,11 @@ export function SourceDrawer({
           aria-label="Source text"
         >
           {sourceRef.exactQuote && (
-            <Quoted quote={sourceRef.exactQuote} context={sourceRef.quoteContext} />
+            <Quoted
+              quote={sourceRef.exactQuote}
+              context={sourceRef.quoteContext}
+              label={sourceRef.quoteLabel ?? "Quoted"}
+            />
           )}
           <SourceContent sourceRef={sourceRef} />
         </div>
@@ -87,11 +91,19 @@ export function SourceDrawer({
   );
 }
 
-function Quoted({ quote, context }: { quote: string; context: QuoteContext | null }) {
+function Quoted({
+  quote,
+  context,
+  label,
+}: {
+  quote: string;
+  context: QuoteContext | null;
+  label: string;
+}) {
   const passage = quotedPassage(quote, context);
   return (
     <section className="mb-6">
-      <h3 className="mb-2 text-xs font-medium text-ink-muted">Quoted</h3>
+      <h3 className="mb-2 text-xs font-medium text-ink-muted">{label}</h3>
       <p className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
         {passage.before}
         {passage.before || passage.after ? (

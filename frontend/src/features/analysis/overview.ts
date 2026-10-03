@@ -1,5 +1,5 @@
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
-import { claimRefs, parseCaseSources } from "@/features/citations/sourceRefs";
+import { claimRefs, parseCaseSources, passageRef } from "@/features/citations/sourceRefs";
 import type { SourceMessageRef } from "@/features/citations/types";
 import { analysisFollowups } from "./analysisRecord";
 import type { CaseFinding, CaseOverviewData, ClaimType } from "./types";
@@ -86,9 +86,20 @@ export function buildCaseOverview(
       techniqueIds: associations
         .filter((association) => association.claim_ids.includes(claim.claim_id))
         .map((association) => association.technique_id),
+      unverifiedQuotes: (claim.unverified_citations ?? []).map((item) => ({
+        writtenQuote: item.written_quote,
+        places: (item.near_passage?.differences ?? []).map(({ written, source }) => ({
+          written,
+          source,
+        })),
+        passage: item.near_passage
+          ? passageRef(sources, item.source_id, item.near_passage.source_text)
+          : null,
+      })),
     };
   });
   const backing = claimBacking(findings);
+  const affected = findingsNamed(findings);
   return {
     hasAnalysis: true,
     incidentSummary: trace.summary || result.summary || "Case summary not provided.",
@@ -100,6 +111,7 @@ export function buildCaseOverview(
       description: gap.description,
       reason: gap.reason,
       askable: gap.askable,
+      affectedFindings: affected(gap.affected_claim_ids),
     })),
     parties: (trace.involved_parties ?? []).map(({ name, role, claim_ids }) => ({
       name,
@@ -149,6 +161,15 @@ function claimBacking(findings: CaseFinding[]) {
         cited.length > 0 && cited.every((finding) => finding.claimType === "analytical_inference"),
     };
   };
+}
+
+function findingsNamed(findings: CaseFinding[]) {
+  const byId = new Map(findings.map((finding) => [finding.id, finding]));
+  return (claimIds: string[] = []): Pick<CaseFinding, "id" | "text">[] =>
+    claimIds.flatMap((id) => {
+      const finding = byId.get(id);
+      return finding ? [{ id: finding.id, text: finding.text }] : [];
+    });
 }
 
 function unavailableCaseOverview(reason: string): CaseOverviewData {

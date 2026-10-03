@@ -166,6 +166,53 @@ describe("Case overview projection", () => {
     expect(overview.impacts[0].inferred).toBe(true);
   });
 
+  it("carries each unverified quote with its places and a way to the nearest passage", () => {
+    const text = "The transfer happened on 17 March 2026 at noon.";
+    const base = result(text, { source_id: sourceId, exact_quote: text });
+    const analysis: CaseAnalysisResultRead = {
+      ...base,
+      trace_json: {
+        ...base.trace_json!,
+        claims: [
+          {
+            ...base.trace_json!.claims[0],
+            epistemic_status: "not_confirmed" as const,
+            supporting_citations: [],
+            unverified_citations: [
+              {
+                source_id: sourceId,
+                role: "supporting" as const,
+                written_quote: "The transfer happened on 11 March 2026",
+                near_passage: {
+                  source_text: "The transfer happened on 17 March 2026",
+                  differences: [{ written: "11", source: "17" }],
+                  occurrences: 1,
+                },
+              },
+              {
+                source_id: "missing",
+                role: "supporting" as const,
+                written_quote: "Something else",
+                near_passage: null,
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const [first, second] = buildCaseOverview(analysis, [narrativeSource(text)]).findings[0]
+      .unverifiedQuotes;
+
+    expect(first.places).toEqual([{ written: "11", source: "17" }]);
+    expect(first.passage).toMatchObject({
+      id: sourceId,
+      exactQuote: "The transfer happened on 17 March 2026",
+      quoteLabel: "Nearest passage",
+    });
+    expect(second).toEqual({ writtenQuote: "Something else", places: [], passage: null });
+  });
+
   it("links each finding to the ATT&CK techniques associated with it", () => {
     const base = result(quote, { source_id: sourceId, exact_quote: quote });
     const analysis: CaseAnalysisResultRead = {
@@ -189,6 +236,42 @@ describe("Case overview projection", () => {
     const overview = buildCaseOverview(analysis, [narrativeSource(quote)]);
 
     expect(overview.findings[0].techniqueIds).toEqual(["T1566"]);
+  });
+
+  it("names the findings each gap affects, in the gap's order, leaving out ids no finding has", () => {
+    const base = result(quote, { source_id: sourceId, exact_quote: quote });
+    const later = { ...base.trace_json!.claims[0], claim_id: "A-02", text: "It left at noon." };
+    const gap = {
+      gap_id: "G-01",
+      gap_key: "when",
+      topic: "when",
+      status: "NOT_PROVIDED" as const,
+      description: "The time the vehicle arrived is not given.",
+      reason: "The time places the vehicle at the scene.",
+      priority: "high" as const,
+      askable: true,
+    };
+    const analysis: CaseAnalysisResultRead = {
+      ...base,
+      trace_json: {
+        ...base.trace_json!,
+        claims: [...base.trace_json!.claims, later],
+        gaps: [
+          { ...gap, affected_claim_ids: ["A-02", "A-09", "A-01"] },
+          { ...gap, gap_id: "G-02" },
+        ],
+      },
+    };
+
+    const overview = buildCaseOverview(analysis, [narrativeSource(quote)]);
+
+    expect(overview.gaps.map((item) => item.affectedFindings)).toEqual([
+      [
+        { id: "A-02", text: "It left at noon." },
+        { id: "A-01", text: quote },
+      ],
+      [],
+    ]);
   });
 });
 

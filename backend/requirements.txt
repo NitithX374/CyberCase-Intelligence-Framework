@@ -20,11 +20,14 @@ tiktoken>=0.8.0
 pyjwt>=2.8.0
 email-validator>=2.2.0
 
-# Thai sentence segmentation: the sentence shown around each quotation, and the
-# MITRE applicability gate. crfsuite is the engine behind PyThaiNLP crfcut; the
-# encoder gate itself needs torch and transformers on top, which
-# research/mitre_gate/README.md covers.
+# Thai sentence segmentation: the sentence shown around each quotation, the
+# words of a near-match pointer, and the MITRE applicability gate. crfsuite is
+# the engine behind PyThaiNLP crfcut; the encoder gate itself needs torch and
+# transformers on top, which research/mitre_gate/README.md covers.
 pythainlp>=5.0.0
 python-crfsuite>=0.9.11
+
+# The candidate passages of a near-match pointer for an unlocated quote.
+rapidfuzz>=3.9.0
 
 watchfiles>=0.24.0

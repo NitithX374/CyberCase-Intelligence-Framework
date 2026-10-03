@@ -2,21 +2,25 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
+from typing import Literal
 
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseEpistemicStatus,
     CaseFollowupExchange,
+    CaseNearPassage,
     CaseQuoteContext,
+    CaseQuoteDifference,
     CaseSourceCitation,
+    CaseUnverifiedCitation,
 )
 from app.trace.quotes import (
     MAX_QUOTE_CHARS,
     IndexedText,
     find_aligned_quote,
     indexed,
-    looks_like_a_paraphrase,
+    nearest_passage,
     quote_occurrences,
     resolve_document_locator,
     without_edge_ellipses,
@@ -193,15 +197,15 @@ def grounding_report(
         for fresh in added_citations(citations, registry, search)
     )
     located = 0
-    paraphrased = 0
+    pointed = 0
     unfound = 0
     for citation in claimed:
         if citation.source_id not in registry:
             unfound += 1
         elif search.located(citation.source_id, citation.exact_quote) is not None:
             located += 1
-        elif search.paraphrased(citation.source_id, citation.exact_quote):
-            paraphrased += 1
+        elif search.near(citation.source_id, citation.exact_quote) is not None:
+            pointed += 1
         else:
             unfound += 1
 
@@ -209,7 +213,7 @@ def grounding_report(
         claims=len(kept),
         citations_claimed=len(claimed),
         citations_verified=verified,
-        citations_paraphrased=paraphrased,
+        citations_pointed=pointed,
         citations_unfound=unfound,
         claims_without_citation=sum(1 for c in kept if not c.supporting_citations),
         claims_duplicated=claims_dropped,
@@ -232,6 +236,14 @@ def resolve_claim(
     contradicting = resolved_citations(
         claim.contradicting_citations, registry, document_context, search
     )
+    unverified: list[CaseUnverifiedCitation] = []
+    for item in [
+        *claim.unverified_citations,
+        *unverified_citations(claim.supporting_citations, "supporting", registry, search),
+        *unverified_citations(claim.contradicting_citations, "contradicting", registry, search),
+    ]:
+        if item not in unverified:
+            unverified.append(item)
     return claim.model_copy(
         update={
             "epistemic_status": confirmed_status(claim.epistemic_status, supporting),
@@ -243,8 +255,37 @@ def resolve_claim(
             ),
             "supporting_citations": supporting,
             "contradicting_citations": contradicting,
+            "unverified_citations": unverified,
         }
     )
+
+
+def unverified_citations(
+    citations: list[CaseSourceCitation],
+    role: Literal["supporting", "contradicting"],
+    registry: dict[str, CaseSourceItem],
+    search: QuoteSearch,
+) -> list[CaseUnverifiedCitation]:
+    kept: list[CaseUnverifiedCitation] = []
+    for citation in citations:
+        if not citation.exact_quote:
+            continue
+        source = registry.get(citation.source_id)
+        if source is not None and search.located(source.source_id, citation.exact_quote):
+            continue
+        kept.append(
+            CaseUnverifiedCitation(
+                source_id=citation.source_id,
+                role=role,
+                written_quote=citation.exact_quote,
+                near_passage=(
+                    search.near(source.source_id, citation.exact_quote)
+                    if source is not None
+                    else None
+                ),
+            )
+        )
+    return kept
 
 
 def confirmed_status(
@@ -282,6 +323,7 @@ class QuoteSearch:
         self.found: dict[tuple[str, str], tuple[str, ...] | None] = {}
         self.sentences: dict[str, SentenceIndex] = {}
         self.contexts: dict[tuple[str, str], CaseQuoteContext | None] = {}
+        self.nearest: dict[tuple[str, str], CaseNearPassage | None] = {}
 
     def located(self, source_id: str, quote: str) -> tuple[str, ...] | None:
         key = (source_id, quote)
@@ -297,8 +339,23 @@ class QuoteSearch:
             self.contexts[key] = quote_context(self.sentences[source_id], quote)
         return self.contexts[key]
 
-    def paraphrased(self, source_id: str, quote: str) -> bool:
-        return looks_like_a_paraphrase(self.texts[source_id], quote)
+    def near(self, source_id: str, quote: str) -> CaseNearPassage | None:
+        key = (source_id, quote)
+        if key not in self.nearest:
+            passage = nearest_passage(self.texts[source_id], quote)
+            self.nearest[key] = (
+                None
+                if passage is None
+                else CaseNearPassage(
+                    source_text=passage.source_text,
+                    differences=[
+                        CaseQuoteDifference(written=written, source=source)
+                        for written, source in passage.differences
+                    ],
+                    occurrences=passage.occurrences,
+                )
+            )
+        return self.nearest[key]
 
 
 def added_citations(

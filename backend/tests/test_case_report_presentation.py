@@ -35,7 +35,10 @@ from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseFollowupExchange,
+    CaseNearPassage,
+    CaseQuoteDifference,
     CaseSourceCitation,
+    CaseUnverifiedCitation,
 )
 from app.trace.trace import (
     CaseAnalysisTrace,
@@ -401,11 +404,69 @@ def test_a_report_stored_before_quote_contexts_still_prints() -> None:
     )
     for finding in written["findings"]:
         del finding["supporting_contexts"], finding["contradicting_contexts"]
+        del finding["unverified_quotes"]
 
     html = render_case_report_html(CaseReportContent.model_validate(written), ISSUE)
 
     assert "“a transfer of 52,000 baht”" in html
     assert "<strong>a transfer" not in html
+
+
+def _input_with_unverified(*items: CaseUnverifiedCitation) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    claim = trace.claims[0].model_copy(update={"unverified_citations": list(items)})
+    return report_input.model_copy(
+        update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
+    )
+
+
+def test_an_unverified_quote_is_printed_with_each_place_the_source_differs() -> None:
+    source_id = _input().source_bundle.sources[0].source_id
+    near = CaseNearPassage(
+        source_text="พบการใช้ PowerShell.exe เชื่อมต่อไปยัง 198.51.100.23",
+        differences=[
+            CaseQuoteDifference(written="198.51.100.24", source="198.51.100.23"),
+            CaseQuoteDifference(written="ทันที", source=""),
+            CaseQuoteDifference(written="", source="PowerShell.exe"),
+        ],
+    )
+    written = "พบการใช้ เชื่อมต่อไปยัง 198.51.100.24 ทันที"
+    html = render_case_report_html(
+        _stored(
+            _input_with_unverified(
+                CaseUnverifiedCitation(
+                    source_id=source_id,
+                    role="supporting",
+                    written_quote=written,
+                    near_passage=near,
+                )
+            )
+        ),
+        ISSUE,
+    )
+
+    assert f"ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{written}”" in html
+    assert "ผลวิเคราะห์ยกมาว่า «198.51.100.24» ต้นฉบับเขียน «198.51.100.23»" in html
+    assert "ผลวิเคราะห์เติม «ทันที»" in html
+    assert "ต้นฉบับมี «PowerShell.exe» ที่ผลวิเคราะห์ตัดออก" in html
+
+
+def test_an_unverified_quote_with_no_near_passage_prints_only_that_it_was_not_found() -> None:
+    source_id = _input().source_bundle.sources[0].source_id
+    report = _stored(
+        _input_with_unverified(
+            CaseUnverifiedCitation(
+                source_id=source_id, role="supporting", written_quote="ข้อความที่ไม่มีในต้นฉบับ"
+            )
+        )
+    )
+    html = render_case_report_html(report, ISSUE)
+
+    assert report.findings[0].unverified_quotes[0].places == []
+    assert "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ" in html
+    assert "ผลวิเคราะห์ยกมาว่า" not in html
+    assert "ผลวิเคราะห์เติม" not in html
 
 
 def test_a_quote_that_is_its_whole_sentence_is_printed_plain() -> None:
