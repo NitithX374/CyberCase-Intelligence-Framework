@@ -4,6 +4,7 @@ import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cached_property
+from typing import Literal
 
 from pythainlp.tokenize import word_tokenize
 from rapidfuzz import fuzz
@@ -12,8 +13,10 @@ MAX_SUPPORTED_DOCUMENT_PAGES = 500
 MAX_PAGE_SPANS_PER_QUOTE = 8
 MAX_QUOTE_CHARS = 2_000
 MAX_POINTER_PLACES = 3
+MAX_TOLERATED_DIFFERENCES = 8
 CONTEXT_WORDS = 3
-WORD = re.compile(r"\w+(?:['’]\w+)*|\s+|[^\w\s]")
+WORD = re.compile(r"[A-Za-z]+(?:-\d+)+|\d+(?:[.,:/-]\d+)+|\w+(?:['’]\w+)*|\s+|[^\w\s]")
+HAS_WORD = re.compile(r"\w")
 THAI = re.compile(r"[฀-๿]")
 MASK = "\0"
 EDGE_ELLIPSIS = re.compile(r"^\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*|\s*[\[(]?(?:\.{3,}|…+)[\])]?\s*$")
@@ -23,6 +26,8 @@ FORMAT_QUOTE_MARKS = frozenset("\"'“”‘’«»„‚`´")
 FORMAT_DASHES = frozenset("‐‑‒–—―−")
 FORMAT_PUNCTUATION = frozenset(".,;:!?()[]{}-/…*_#~")
 MIN_FORMAT_FORM_CHARS = 8
+
+QuoteTier = Literal["exact", "folded", "ellipsis", "relaxed", "format"]
 
 
 def folded(text: str) -> tuple[str, list[int]]:
@@ -196,30 +201,107 @@ def word_places(
     written = [quote[a:b] for a, b in token_spans(quote)]
     original = [content[a:b] for a, b in window]
     opcodes = difflib.SequenceMatcher(None, written, original, autojunk=False).get_opcodes()
-    equal = [at for at, opcode in enumerate(opcodes) if opcode[0] == "equal"]
-    head, tail = (equal[0], equal[-1]) if equal else (len(opcodes), -1)
-    kept: list[int] = []
-    places: list[tuple[str, str]] = []
-    for at, (tag, i1, i2, j1, j2) in enumerate(opcodes):
-        sources = list(range(j1, j2))
-        written_words = sum(1 for word in written[i1:i2] if word.strip())
-        if at < head:
-            sources = nearest_words(original, sources, written_words, reverse=True)
-        elif at > tail:
-            sources = nearest_words(original, sources, written_words, reverse=False)
-        kept.extend(sources)
-        if tag == "equal":
-            continue
-        place = ("".join(written[i1:i2]).strip(), "".join(original[j] for j in sources).strip())
-        if place[0] != place[1] and place not in places:
-            places.append(place)
-    if not kept:
+    anchors = [
+        at
+        for at, (tag, i1, i2, _, _) in enumerate(opcodes)
+        if tag == "equal" and word_count(written[i1:i2])
+    ]
+    if not anchors:
         return None
+    first_anchor, last_anchor = anchors[0], anchors[-1]
+    written_head, original_head = opcodes[first_anchor][1], opcodes[first_anchor][3]
+    written_tail, original_tail = opcodes[last_anchor][2], opcodes[last_anchor][4]
+    thai = bool(THAI.search(quote) or THAI.search("".join(original)))
+    head = nearest_words(
+        original,
+        list(range(original_head)),
+        len(word_groups(written[:written_head], thai)),
+        reverse=True,
+        thai=thai,
+    )
+    tail = nearest_words(
+        original,
+        list(range(original_tail, len(original))),
+        len(word_groups(written[written_tail:], thai)),
+        reverse=False,
+        thai=thai,
+    )
+    kept = [*head, *tail]
+    places = diff_places(written[:written_head], [original[j] for j in head])
+    for tag, i1, i2, j1, j2 in opcodes[first_anchor : last_anchor + 1]:
+        kept.extend(range(j1, j2))
+        if tag != "equal":
+            add_place(places, "".join(written[i1:i2]), "".join(original[j1:j2]))
+    for written_text, source_text in diff_places(
+        written[written_tail:], [original[j] for j in tail]
+    ):
+        add_place(places, written_text, source_text)
     span_start, span_end = window[min(kept)][0], window[max(kept)][1]
     piece = content[span_start:span_end]
     span_start += len(piece) - len(piece.lstrip())
     span_end -= len(piece) - len(piece.rstrip())
     return (span_start, span_end), places
+
+
+def word_count(tokens: list[str]) -> int:
+    return sum(1 for token in tokens if HAS_WORD.search(token))
+
+
+def word_groups(tokens: list[str], thai: bool, offset: int = 0) -> list[tuple[int, int]]:
+    if thai:
+        return [
+            (at + offset, at + offset) for at, token in enumerate(tokens) if HAS_WORD.search(token)
+        ]
+    groups: list[tuple[int, int]] = []
+    first: int | None = None
+    last: int | None = None
+    for at, token in enumerate(tokens):
+        if not token.strip():
+            if first is not None and last is not None:
+                groups.append((first + offset, last + offset))
+            first = last = None
+        elif HAS_WORD.search(token):
+            first = at if first is None else first
+            last = at
+    if first is not None and last is not None:
+        groups.append((first + offset, last + offset))
+    return groups
+
+
+def add_place(places: list[tuple[str, str]], written: str, source: str) -> None:
+    place = (written.strip(), source.strip())
+    if place[0] != place[1] and place not in places:
+        places.append(place)
+
+
+def diff_places(written: list[str], original: list[str]) -> list[tuple[str, str]]:
+    places: list[tuple[str, str]] = []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(
+        None, written, original, autojunk=False
+    ).get_opcodes():
+        if tag != "equal":
+            add_place(places, "".join(written[i1:i2]), "".join(original[j1:j2]))
+    return places
+
+
+def text_places(written: str, located: str) -> list[tuple[str, str]]:
+    return diff_places(
+        [written[a:b] for a, b in token_spans(written)],
+        [located[a:b] for a, b in token_spans(located)],
+    )
+
+
+def tolerated_differences(quote: str, located: str) -> tuple[tuple[str, str], ...]:
+    kept = [
+        (written, source)
+        for written, source in text_places(without_edge_ellipses(quote), located)
+        if without_quote_marks(written) != without_quote_marks(source)
+    ]
+    return tuple(kept[:MAX_TOLERATED_DIFFERENCES])
+
+
+def without_quote_marks(text: str) -> str:
+    return "".join(character for character in text if character not in FORMAT_QUOTE_MARKS).strip()
 
 
 def context_edge(words: list[tuple[int, int]], content: str, at: int, direction: int) -> int:
@@ -232,17 +314,15 @@ def context_edge(words: list[tuple[int, int]], content: str, at: int, direction:
 
 
 def nearest_words(
-    original: list[str], sources: list[int], wanted: int, *, reverse: bool
+    original: list[str], sources: list[int], wanted: int, *, reverse: bool, thai: bool
 ) -> list[int]:
-    picked: list[int] = []
-    counted = 0
-    for at in reversed(sources) if reverse else sources:
-        if counted == wanted:
-            break
-        picked.append(at)
-        if original[at].strip():
-            counted += 1
-    return sorted(picked)
+    if not wanted or not sources:
+        return []
+    groups = word_groups(original[sources[0] : sources[-1] + 1], thai, sources[0])
+    chosen = groups[-wanted:] if reverse else groups[:wanted]
+    if not chosen:
+        return []
+    return list(range(chosen[0][0], chosen[-1][1] + 1))
 
 
 def resolve_document_locator(
@@ -360,30 +440,41 @@ def without_edge_ellipses(quote: str) -> str:
     return trimmed if len(trimmed) >= 2 else quote
 
 
-def find_aligned_quote(source: str | IndexedText, quote: str) -> list[tuple[int, int]] | None:
+@dataclass(frozen=True)
+class LocatedQuote:
+    spans: list[tuple[int, int]]
+    tier: QuoteTier
+
+
+def locate_quote(source: str | IndexedText, quote: str) -> LocatedQuote | None:
     source = indexed(source)
     content = source.text
     quote = without_edge_ellipses(quote)
     occurrences = quote_occurrences(content, quote)
     if len(occurrences) == 1:
-        return [(occurrences[0], occurrences[0] + len(quote))]
+        return LocatedQuote([(occurrences[0], occurrences[0] + len(quote))], "exact")
     if len(occurrences) > 1:
         return None
 
     compatibility_aligned = find_folded_quote(source, quote)
     if compatibility_aligned is not None:
-        return [compatibility_aligned]
+        return LocatedQuote([compatibility_aligned], "folded")
 
     ellipsis_aligned = unique_ellipsis_pieces(content, quote)
     if ellipsis_aligned is not None:
-        return ellipsis_aligned
+        return LocatedQuote(ellipsis_aligned, "ellipsis")
 
     relaxed = find_relaxed_quote(content, quote)
     if relaxed is not None:
-        return [relaxed]
+        return LocatedQuote([relaxed], "relaxed")
 
     format_only = find_format_only_quote(source, quote)
-    return [format_only] if format_only is not None else None
+    return LocatedQuote([format_only], "format") if format_only is not None else None
+
+
+def find_aligned_quote(source: str | IndexedText, quote: str) -> list[tuple[int, int]] | None:
+    located = locate_quote(source, quote)
+    return located.spans if located is not None else None
 
 
 def find_relaxed_quote(content: str, quote: str) -> tuple[int, int] | None:
@@ -467,14 +558,19 @@ __all__ = [
     "MAX_PAGE_SPANS_PER_QUOTE",
     "MAX_QUOTE_CHARS",
     "MAX_SUPPORTED_DOCUMENT_PAGES",
+    "MAX_TOLERATED_DIFFERENCES",
+    "LocatedQuote",
     "NearPassage",
+    "QuoteTier",
     "extract_documents_for_source",
     "find_document_locator",
     "find_aligned_quote",
     "find_format_only_quote",
+    "locate_quote",
     "nearest_passage",
     "quote_occurrences",
     "resolve_document_locator",
+    "tolerated_differences",
     "validate_page_spans",
     "without_edge_ellipses",
 ]

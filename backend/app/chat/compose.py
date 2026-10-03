@@ -27,6 +27,7 @@ from app.trace.bind import (
     resolve_case_trace,
 )
 from app.trace.claims import (
+    CLAIM_FIELDS_HIDDEN_FROM_MODELS,
     CaseAnalysisClaim,
     CaseFollowupExchange,
     CaseSourceCitation,
@@ -192,7 +193,7 @@ def analysis_payload(trace: CaseAnalysisTrace, summary: str | None) -> dict[str,
     return {
         "summary": summary or trace.summary,
         "claims": [
-            claim.model_dump(mode="json", exclude={"unverified_citations"})
+            claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_MODELS)
             for claim in trace.claims
         ],
         "involved_parties": [

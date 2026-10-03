@@ -61,6 +61,8 @@ class ReportFinding(ReportRow):
     contradicting_quotes: list[str] = Field(default_factory=list)
     supporting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
     contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
+    supporting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
+    contradicting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
     unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
     reasoning_summary: str | None = None
 

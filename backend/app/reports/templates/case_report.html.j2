@@ -224,9 +224,19 @@
                   {{ finding.text | clean_report_text }}
                   {% for quote in finding.supporting_quotes | quoted(finding.supporting_contexts) %}
                     <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> {{ quote }}</div>
+                    {% if loop.index0 < finding.supporting_tolerated | length %}
+                      {% for place in finding.supporting_tolerated[loop.index0] %}
+                        <div class="quote-place">พบในเอกสารเมื่อไม่นับรูปแบบ — {% if place.written and place.source %}ข้อความวิเคราะห์เขียน «{{ place.written }}» เอกสารเขียน «{{ place.source }}»{% elif place.written %}ข้อความวิเคราะห์เติม «{{ place.written }}»{% else %}เอกสารมี «{{ place.source }}» ที่ข้อความวิเคราะห์ตัดออก{% endif %}</div>
+                      {% endfor %}
+                    {% endif %}
                   {% endfor %}
                   {% for quote in finding.contradicting_quotes | quoted(finding.contradicting_contexts) %}
                     <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> {{ quote }}</div>
+                    {% if loop.index0 < finding.contradicting_tolerated | length %}
+                      {% for place in finding.contradicting_tolerated[loop.index0] %}
+                        <div class="quote-place">พบในเอกสารเมื่อไม่นับรูปแบบ — {% if place.written and place.source %}ข้อความวิเคราะห์เขียน «{{ place.written }}» เอกสารเขียน «{{ place.source }}»{% elif place.written %}ข้อความวิเคราะห์เติม «{{ place.written }}»{% else %}เอกสารมี «{{ place.source }}» ที่ข้อความวิเคราะห์ตัดออก{% endif %}</div>
+                      {% endfor %}
+                    {% endif %}
                   {% endfor %}
                   {% for item in finding.unverified_quotes %}
                     <div class="quote"><span class="quote-label">ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{{ item.written_quote }}”</div>

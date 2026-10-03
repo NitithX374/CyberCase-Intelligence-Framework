@@ -439,6 +439,7 @@ export interface components {
             filename?: string | null;
             page_numbers?: number[];
             context?: components["schemas"]["CaseQuoteContext"] | null;
+            tolerated_differences?: components["schemas"]["CaseQuoteDifference"][];
         };
         CaseSourceCreate: {
             exact_text: string;
@@ -551,6 +552,8 @@ export interface components {
             contradicting_quotes?: string[];
             supporting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
             contradicting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
+            supporting_tolerated?: components["schemas"]["ReportPlace"][][];
+            contradicting_tolerated?: components["schemas"]["ReportPlace"][][];
             unverified_quotes?: components["schemas"]["ReportUnverifiedQuote"][];
             reasoning_summary?: string | null;
         };

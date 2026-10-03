@@ -9,7 +9,7 @@ from app.chat.compose import analysis_payload
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
-from app.trace.quotes import nearest_passage
+from app.trace.quotes import nearest_passage, token_spans
 from app.trace.trace import CaseAnalysisTrace, CaseProviderReading, CaseProviderReadingReply
 
 THAI_NAME = "ผู้เสียหายชื่อนายสมพงศ์ ใจดี เข้าแจ้งความที่สถานีตำรวจในวันจันทร์"
@@ -273,3 +273,138 @@ def test_a_thai_digit_written_as_an_arabic_digit_is_pointed_at_every_occurrence(
     assert near is not None
     assert near.differences == (("1", "๑"),)
     assert near.occurrences == 2
+
+
+def test_a_misspelt_first_word_is_paired_with_its_own_word_not_with_the_sentence_before():
+    source = (
+        "The audit was completed last week and finished with the full information. "
+        "While WAHS students are required to attend every class they may leave early."
+    )
+
+    pointed = nearest_passage(source, "Whjle WAIS studfnts are required to attend every class")
+
+    assert pointed is not None
+    assert pointed.differences == (
+        ("Whjle", "While"),
+        ("WAIS", "WAHS"),
+        ("studfnts", "students"),
+    )
+    assert pointed.source_text == "While WAHS students are required to attend every class"
+
+
+def test_a_misspelt_last_word_is_paired_with_its_own_word_not_with_the_sentence_after():
+    source = (
+        "The students were required to attend every class and then they left early. "
+        "Another sentence follows after that one."
+    )
+
+    pointed = nearest_passage(
+        source, "students were required to attend every class and thfn thry lfft early"
+    )
+
+    assert pointed is not None
+    assert pointed.differences == (("thfn", "then"), ("thry", "they"), ("lfft", "left"))
+    assert "Another" not in pointed.source_text
+
+
+def test_a_leading_quote_mark_the_source_lacks_is_not_paired_with_a_source_word():
+    source = (
+        "To be sure, the vendor was paid. "
+        "To attend every class, the students were required to be present on Monday."
+    )
+
+    pointed = nearest_passage(
+        source, '"attend every class, the students were required to be present on Monday'
+    )
+
+    assert pointed is not None
+    assert pointed.differences == (('"', ""),)
+
+
+def test_a_trailing_quote_mark_the_source_lacks_is_not_paired_with_a_source_word():
+    source = (
+        "The students were required to attend every class and then they left early. "
+        "Another sentence follows."
+    )
+
+    pointed = nearest_passage(
+        source, 'The students were required to attend every class and then they left early"'
+    )
+
+    assert pointed is not None
+    assert pointed.differences == (('"', ""),)
+
+
+@pytest.mark.parametrize(
+    ("source", "quote", "places", "passage"),
+    [
+        (
+            "Earlier we saw it. Reset came from 123-456-7890 and then the caller asked to reset "
+            "the password quickly.",
+            "123-z56-7890 and then the caller asked to reset the password quickly",
+            (("123-z56-7890", "123-456-7890"),),
+            "123-456-7890 and then the caller asked to reset the password quickly",
+        ),
+        (
+            "Earlier we saw it. Logins between 02:00 and 03:15, mostly from a single subnet, "
+            "were noted.",
+            "02:0k and 03:15, mostly from a single subnet",
+            (("02:0k", "02:00"),),
+            "02:00 and 03:15, mostly from a single subnet",
+        ),
+        (
+            "The call came at the end from 123-456-7890. Another sentence follows here.",
+            "The call came at the end from 123-456-78z0",
+            (("123-456-78z0", "123-456-7890"),),
+            "The call came at the end from 123-456-7890",
+        ),
+    ],
+)
+def test_a_typo_inside_a_number_at_the_edge_is_paired_with_that_number_alone(
+    source, quote, places, passage
+):
+    pointed = nearest_passage(source, quote)
+
+    assert pointed is not None
+    assert pointed.differences == places
+    assert pointed.source_text == passage
+
+
+def test_a_number_with_separators_is_one_word_in_the_pointer():
+    source = "The fund reported $51,000 in total losses this year and said more would follow."
+
+    pointed = nearest_passage(
+        source, "The fund reported $51,001 in total losses this year and said more would follow"
+    )
+
+    assert pointed is not None
+    assert pointed.differences == (("51,001", "51,000"),)
+
+
+@pytest.mark.parametrize(
+    "number", ["51,001", "1.5", "10:30", "CVE-2017-0144", "123-456-7890", "2026-10-03"]
+)
+def test_a_number_or_identifier_with_separators_is_not_split_into_words(number):
+    text = f"paid {number} then"
+
+    assert [text[a:b] for a, b in token_spans(text)] == ["paid", " ", number, " ", "then"]
+
+
+def test_a_currency_sign_and_a_trailing_comma_stay_apart_from_the_number():
+    text = "cost $51,001, then"
+
+    assert [text[a:b] for a, b in token_spans(text)] == [
+        "cost",
+        " ",
+        "$",
+        "51,001",
+        ",",
+        " ",
+        "then",
+    ]
+
+
+def test_an_ordinary_hyphenated_word_is_still_split_at_its_hyphen():
+    text = "must re-sign it"
+
+    assert [text[a:b] for a, b in token_spans(text)] == ["must", " ", "re", "-", "sign", " ", "it"]

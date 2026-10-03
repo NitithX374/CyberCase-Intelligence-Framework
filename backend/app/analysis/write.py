@@ -15,7 +15,12 @@ from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import bound_claims
-from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, followup_payload
+from app.trace.claims import (
+    CLAIM_FIELDS_HIDDEN_FROM_MODELS,
+    CaseAnalysisClaim,
+    CaseFollowupExchange,
+    followup_payload,
+)
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseGroundingReport,
@@ -140,7 +145,7 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
 def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
     return {
         "claims": [
-            claim.model_dump(mode="json", exclude={"unverified_citations"})
+            claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_MODELS)
             for claim in reading.claims
         ],
         "involved_parties": [

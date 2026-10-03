@@ -92,6 +92,40 @@ describe("Case overview projection", () => {
     expect(source).toMatchObject({ id: sourceId, label: "Case narrative #1", exactQuote: quote });
   });
 
+  it("carries what the locator tolerated onto the quotation, in the language of the analysis", () => {
+    const citation: CaseSourceCitation = {
+      source_id: sourceId,
+      exact_quote: quote,
+      tolerated_differences: [{ written: "apple", source: "Apple" }],
+    };
+    const english = buildCaseOverview(result(quote, citation), [narrativeSource(quote)]);
+    const thai = buildCaseOverview(
+      analysisResult({
+        summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
+        trace_json: trace({
+          summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
+          claims: [claim(quote, sourceId, { supporting_citations: [citation] })],
+        }),
+      }),
+      [narrativeSource(quote)],
+    );
+
+    expect(english.findings[0].supportingSources[0].toleratedNotes).toEqual([
+      "Found in the source when formatting is ignored. The analysis wrote «apple»; the source says «Apple».",
+    ]);
+    expect(thai.findings[0].supportingSources[0].toleratedNotes).toEqual([
+      "พบในเอกสารเมื่อไม่นับรูปแบบ — ข้อความวิเคราะห์เขียน «apple» เอกสารเขียน «Apple»",
+    ]);
+  });
+
+  it("gives a quotation found as written no tolerated line", () => {
+    const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.findings[0].supportingSources[0].toleratedNotes).toBeUndefined();
+  });
+
   it("shows the pages the stored citation names", () => {
     const documentQuote = "Defendant was seen at the scene.";
     const overview = buildCaseOverview(result(documentQuote, pagedCitation(documentQuote, [1])), [
