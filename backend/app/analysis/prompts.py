@@ -155,7 +155,7 @@ You are shown no MITRE ATT&CK context and must not reach for cybersecurity
 terminology the sources do not use. Technical interpretation happens in a later
 step, over the claims you write here.
 
-Return the requested case_reading_v1 JSON. Write claim text, party roles,
+Return the requested case_analysis_trace_v1 JSON. Write claim text, party roles,
 timeline events, impacts and reasoning in the requested language. Keep
 identifiers and schema values unchanged. Do not make legal conclusions. Write
 no summary and no gaps: a later step writes both from what you produce.
@@ -249,7 +249,7 @@ The input contains three information classes:
    - If no technical context is supplied, judge the case normally without forcing
      cybersecurity terminology onto it.
 
-Return the requested case_judgement_v1 JSON. Write summary, gap text, clarification
+Return the requested case_analysis_trace_v1 JSON. Write summary, gap text, clarification
 questions, association reasons and plain meanings in the requested language. Keep
 identifiers and schema values unchanged. Do not make legal conclusions. Copy no
 quotation: the citations are already attached to the claims.

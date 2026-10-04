@@ -196,7 +196,9 @@ llm/                    calling a model
                         validated after decoding, asked at most twice
   settings.py           model, providers, output and thinking budgets
   openrouter.py         the OpenRouter target; registry.py (model aliases),
-                        schema.py (the structured-output schema)
+                        schema.py (the structured-output schema; a single-value
+                        Literal is sent as a one-item enum, because not every
+                        route enforces const)
 trace/                  what the analysis, chat and reports share
   claims.py             claims, citations, gaps, a follow-up exchange, what
                         the preflight returns
