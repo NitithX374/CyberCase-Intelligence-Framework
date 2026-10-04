@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -26,6 +27,8 @@ from app.sources.bundle import (
 )
 from app.trace.claims import CaseFollowupExchange, followup_history_of_snapshot
 from app.trace.trace import CaseAnalysisTrace
+
+logger = logging.getLogger(__name__)
 
 
 class CaseReportService:
@@ -73,7 +76,17 @@ class CaseReportService:
             .where(CaseReport.case_id == case_id)
             .order_by(CaseReport.version_number.desc())
         )
-        return [serialize_case_report(report) for report in result.scalars().all()]
+        listed = []
+        for report in result.scalars().all():
+            try:
+                listed.append(serialize_case_report(report))
+            except ReportGenerationConflict:
+                logger.warning(
+                    "Report %s of case %s is stored in an older format and is left out of the list",
+                    report.id,
+                    case_id,
+                )
+        return listed
 
     async def get_report_pdf(
         self,

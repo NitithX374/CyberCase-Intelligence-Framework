@@ -149,10 +149,12 @@ whose answer was lost, and otherwise returns the messages already stored. Two
 sends with the same key at the same moment both pass that lookup; the one the
 unique index refuses returns what the other stored and starts nothing.
 
-A provider that fails for now (timeout, dropped connection, a 5xx, or a reply
+A provider that fails for now (timeout, dropped connection, a 429 or 5xx, or a reply
 that cannot be read, stops short of its end or breaks the stage's schema)
-reaches the client as 502 or 504, which the frontend offers to retry: the model
-is not deterministic, so asking again often succeeds. A refusal that retrying
+reaches the client as 502 or 504 (an analysis keeps a provider's 429), which the
+frontend offers to retry: the model is not deterministic, so asking again often
+succeeds. A dropped connection or a 429, 500, 502, 503 or 504 has already been asked
+once more by then; a timeout has not. A refusal that retrying
 cannot fix, such as an input over budget, rejected credentials, a model that
 declines, or a changed case, stays a 4xx. A trace that binding cannot store is
 our own fault and a coded 500 (`case_bind_invalid`), logged with its cause.
@@ -277,7 +279,8 @@ source.
 `reports/display.py` builds one `CaseReportContent` snapshot when the report is
 generated, and `case_reports.structured_report` holds it. The HTML and the PDF
 render from that stored copy only. A row stored in an older shape is refused
-with `case_report_outdated` rather than rebuilt from current code. A field added
+with `case_report_outdated` by the HTML, PDF and generate paths rather than rebuilt from current code,
+and the report list leaves it out so the valid versions still load. A field added
 later is optional, so an older row still validates: a report stored before
 quotations carried context has no `supporting_contexts`, and its quotes print
 alone. `supporting_quotes` stays a list of strings for that reason, with the

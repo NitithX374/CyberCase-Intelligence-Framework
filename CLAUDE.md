@@ -170,8 +170,9 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
     `read`, `bind`, `judge`), with the seconds since it began;
   - a `: heartbeat` comment every 15 seconds of quiet, so the browser can tell a slow step from a lost connection;
   - then `result`, holding the JSON body a plain request gets, or `error`, holding its status and `detail`.
-  - The analysis runs in a task of its own, so it finishes and is stored even if the browser leaves. Without that
-    header both routes answer exactly as before.
+  - The analysis runs in a task of its own, so it finishes and is stored even if the browser leaves. When the task
+    ends in a failure it is logged, whether or not the browser is still listening (code, status and message for an
+    AppError, a traceback for anything else). Without that header both routes answer exactly as before.
 - `POST`, `GET /cases/{case_id}/reports`, `GET /cases/{case_id}/reports/{report_id}/pdf`, `.../html` — report versions and export (`reports/routes.py`)
 
 Every case route is authenticated and ownership-scoped; ownership is one check, `owned_case` in `cases/ownership.py`, which answers 404 for a case the user does not own. There are no top-level `/api/v1/reports`, `/users`, or RAG-proxy routes, and no `/runs/{run_id}` — the analysis happens in the request that asked for it, which is why `main.py` refuses to start with more than one worker.
@@ -193,7 +194,11 @@ llm/                    calling a model
   request.py            request_stage: the one transport every model call
                         takes, the LLM gate's included. grammar=False (the
                         reading) sends no output_config: the reply is
-                        validated after decoding, asked at most twice
+                        validated after decoding, asked at most twice. A
+                        dropped connection or an HTTP 429, 500, 502, 503 or
+                        504 is asked once more after 2 seconds (one retry
+                        between them); a timeout is not. A 429 that survives
+                        is analysis_provider_rate_limited, HTTP 429
   settings.py           model, providers, output and thinking budgets
   openrouter.py         the OpenRouter target; registry.py (model aliases),
                         schema.py (the structured-output schema; a single-value
@@ -269,9 +274,13 @@ cases/                  routes, schemas, service (case CRUD and whether the
                         sole_analysis, which refuses a second one)
 sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
-  ingestion/            upload to text: service, files (detect, render pages),
-                        parsers (PDF text, DOCX), recognition (Typhoon OCR),
-                        contracts (types and errors), provenance
+  ingestion/            upload to text: service, files (detect, render pages,
+                        turn a photo upright by its EXIF orientation),
+                        parsers (PDF text, DOCX), text (strip_unstorable, the
+                        one strip of NUL and lone surrogates that every
+                        extracted text and the filename pass through),
+                        recognition (Typhoon OCR), contracts (types and
+                        errors), provenance
 analysis/               producing an analysis of a case; routes, schemas
   run.py                one step of the bounded loop: read, think, write
   store.py              what a step writes: an assessment that asks, or a
@@ -439,6 +448,7 @@ answer: one case in the development database holds six analyses at
 `source_revision = 1` whose technique tables read 6, 6, 11, 10, 9, 9. The
 pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
+
 
 The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. Each party, event and impact in the snapshot carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences one by one, each followed by `[ข้อ n]`, and one plain line under a sentence that is `unbound`, `mixed` or `no_claim`; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 

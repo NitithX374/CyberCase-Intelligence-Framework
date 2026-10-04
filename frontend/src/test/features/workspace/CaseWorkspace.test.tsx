@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   push: vi.fn(),
   start: vi.fn(),
   segment: "sources" as string | null,
+  caseError: null as unknown,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -26,7 +27,7 @@ vi.mock("@/features/analysis/api", async (importOriginal) => ({
   startCaseAnalysis: (...args: unknown[]) => state.start(...args),
 }));
 vi.mock("@/features/cases/queries", () => ({
-  useCase: () => ({ data: undefined }),
+  useCase: () => ({ data: undefined, error: state.caseError }),
   useCaseMutations: () => ({
     createMutation: { isPending: false, mutateAsync: state.createCase },
     updateMutation: { isPending: false, mutateAsync: vi.fn() },
@@ -85,6 +86,7 @@ beforeEach(() => {
   state.push.mockReset();
   state.start.mockReset();
   state.segment = "sources";
+  state.caseError = null;
   localStorage.clear();
 });
 
@@ -108,6 +110,47 @@ describe("CaseWorkspace", () => {
     state.segment = null;
     renderLayout();
     expect(screen.getByText("Viewing analysis")).toBeInTheDocument();
+  });
+});
+
+describe("a case that does not exist", () => {
+  beforeEach(() => {
+    state.caseError = refusal(404, "case_not_found", "Case not found");
+  });
+
+  it("says so in Thai and points back to the case list, with nothing to retry", () => {
+    renderLayout();
+
+    expect(screen.getByRole("heading", { name: "ไม่พบคดีนี้" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "กลับไปที่รายการคดี" })).toHaveAttribute(
+      "href",
+      "/case",
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("opens none of the case pages, its header or its Ask panel", () => {
+    localStorage.setItem("cybercase:chat-open", "true");
+    renderLayout(<p>the case page</p>);
+
+    expect(screen.queryByText("the case page")).not.toBeInTheDocument();
+    expect(screen.queryByText("Viewing sources")).not.toBeInTheDocument();
+    expect(ask()).not.toBeInTheDocument();
+  });
+
+  it("keeps the workspace when the case could not be loaded for another reason", () => {
+    state.caseError = httpError(500, "Internal Server Error");
+    renderLayout(<p>the case page</p>);
+
+    expect(screen.getByText("the case page")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "ไม่พบคดีนี้" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the workspace when a different refusal shares the status", () => {
+    state.caseError = refusal(404, "document_not_found", "Document not found");
+    renderLayout(<p>the case page</p>);
+
+    expect(screen.getByText("the case page")).toBeInTheDocument();
   });
 });
 

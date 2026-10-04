@@ -7,6 +7,7 @@ from app.sources.ingestion.recognition import TyphoonDocumentRecognizer, Typhoon
 from app.sources.ingestion.service import build_document_recognizer
 
 NUL_LINE = "OCR line" + chr(0) + "one"
+LONE_SURROGATE_LINE = "OCR line" + chr(0xD800) + "one"
 
 
 def test_recognizer_is_typhoon():
@@ -48,7 +49,8 @@ def test_recognizer_rejects_length_terminated_output(monkeypatch):
         asyncio.run(recognizer.request(b"image-bytes"))
 
 
-def test_recognized_text_never_carries_a_nul_the_database_would_refuse(monkeypatch):
+@pytest.mark.parametrize("raw", [NUL_LINE, LONE_SURROGATE_LINE])
+def test_recognized_text_never_carries_what_the_database_would_refuse(monkeypatch, raw):
     recognizer = TyphoonDocumentRecognizer(
         TyphoonRecognizerConfig(
             api_key="test-key",
@@ -64,8 +66,11 @@ def test_recognized_text_never_carries_a_nul_the_database_would_refuse(monkeypat
     )
 
     async def answered(messages):
-        return {"choices": [{"finish_reason": "stop", "message": {"content": NUL_LINE}}]}
+        return {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}
 
     monkeypatch.setattr(recognizer, "post", answered)
 
-    assert asyncio.run(recognizer.request(b"image-bytes")) == "OCR lineone"
+    recognized = asyncio.run(recognizer.request(b"image-bytes"))
+
+    assert recognized == "OCR lineone"
+    assert recognized.encode("utf-8")

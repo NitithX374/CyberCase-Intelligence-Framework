@@ -20,6 +20,7 @@ from app.models.document import CaseDocument
 from app.models.source import CaseSource
 from app.sources.ingestion.contracts import IngestedDocument
 from app.sources.ingestion.provenance import bind_exact_page_spans
+from app.sources.ingestion.text import strip_unstorable
 
 
 class SourceError(AppError):
@@ -92,7 +93,7 @@ class SourceService:
     ) -> CaseSource:
         if source_kind != "narrative":
             raise SourceError("source_kind_invalid", "Unsupported native source kind")
-        normalized_text = text.replace("\x00", "").strip()
+        normalized_text = strip_unstorable(text).strip()
         if not normalized_text:
             raise SourceError("source_text_empty", "The case source text is empty")
         weight = await asyncio.to_thread(weight_in_payload, normalized_text)

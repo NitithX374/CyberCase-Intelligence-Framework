@@ -80,6 +80,10 @@ def slowed(_content: dict) -> httpx.Response:
     return httpx.Response(429, json={"error": "rate limited"})
 
 
+def gateway_timed_out(_content: dict) -> httpx.Response:
+    return httpx.Response(504, json={"error": "upstream timed out"})
+
+
 def refused(_content: dict) -> httpx.Response:
     return httpx.Response(401, json={"error": "bad key"})
 
@@ -256,7 +260,8 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
     ("failure", "status_code", "code"),
     [
         (down, 502, "analysis_provider_down"),
-        (slowed, 504, "analysis_provider_timeout"),
+        (slowed, 429, "analysis_provider_rate_limited"),
+        (gateway_timed_out, 504, "analysis_provider_timeout"),
         (timing_out, 504, "case_reading_timeout"),
         (disconnecting, 502, "case_reading_transport"),
         (off_schema, 502, "case_reading_invalid"),
@@ -354,7 +359,7 @@ async def test_a_round_asked_twice_resumes_when_its_answer_is_sent_again(monkeyp
 
         assert retried.status_code == 200
         assert retried.json()["analysis"] is not None, "the retry must run the round's analysis"
-        assert scripted.stages().count("read") == 2
+        assert scripted.stages().count("read") == provider.TRANSPORT_ATTEMPTS + 1
 
 
 async def test_a_round_asked_twice_resumes_when_the_case_is_analysed_again(monkeypatch, model):
