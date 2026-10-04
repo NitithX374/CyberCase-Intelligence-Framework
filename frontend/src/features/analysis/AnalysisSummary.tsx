@@ -11,6 +11,7 @@ import {
   technicalContextMessage,
 } from "./technical-context/technicalContext";
 import type { EpistemicStatus } from "./types";
+import { SummaryUnits } from "./SummaryUnits";
 import { useCaseOverview } from "./useCaseOverview";
 
 const statusWords: Record<EpistemicStatus, string> = {
@@ -58,7 +59,11 @@ export function AnalysisSummary() {
           Summary
         </h2>
         <div className="mt-3 max-w-[68ch] text-ink [overflow-wrap:anywhere] [&_p]:mb-4 [&_p]:text-base [&_p]:leading-8 sm:[&_p]:text-[17px]">
-          <Markdown content={overview.incidentSummary} />
+          {overview.summaryUnits.length > 0 ? (
+            <SummaryUnits caseId={caseId} units={overview.summaryUnits} />
+          ) : (
+            <Markdown content={overview.incidentSummary} />
+          )}
         </div>
       </section>
 

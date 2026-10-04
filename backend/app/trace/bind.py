@@ -17,20 +17,25 @@ from app.trace.claims import (
 )
 from app.trace.quotes import (
     MAX_QUOTE_CHARS,
+    MAX_TOLERATED_DIFFERENCES,
     IndexedText,
     find_aligned_quote,
     indexed,
+    locate_quote,
     nearest_passage,
     quote_occurrences,
     resolve_document_locator,
+    tolerated_differences,
     without_edge_ellipses,
 )
 from app.trace.sentences import SentenceIndex, quote_context
+from app.trace.summary import summary_pieces
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseGroundingReport,
     CaseMitreAssociation,
     CaseProviderReading,
+    CaseSummaryUnit,
     SupportStatus,
 )
 
@@ -105,8 +110,10 @@ def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> Ca
         context_technique_ids(mitre_table),
         has_retrieval=trace.retrieval_context_id is not None,
     )
+    units, unknown_ids = summary_units(trace.summary, claims_by_id)
     return trace.model_copy(
         update={
+            "summary_units": units,
             "involved_parties": [
                 with_support(party, claims_by_id) for party in trace.involved_parties
             ],
@@ -118,10 +125,25 @@ def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> Ca
                 update={
                     "associations_outside_context": outside_context,
                     "associations_without_claim": without_claim,
+                    "summary_ids_unknown": unknown_ids,
                 }
             ),
         }
     )
+
+
+def summary_units(
+    summary: str, claims_by_id: Mapping[str, CaseAnalysisClaim]
+) -> tuple[list[CaseSummaryUnit], int]:
+    units: list[CaseSummaryUnit] = []
+    unknown_ids = 0
+    for text, written in summary_pieces(summary):
+        known = [claim_id for claim_id in written if claim_id in claims_by_id]
+        unknown_ids += len(written) - len(known)
+        units.append(
+            CaseSummaryUnit(text=text, claim_ids=known, support=item_support(known, claims_by_id))
+        )
+    return units, unknown_ids
 
 
 def deduplicated_claims(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:
@@ -340,10 +362,26 @@ def located_quote(source: str | IndexedText, quote: str) -> tuple[str, ...] | No
     return pieces
 
 
+def tolerated_in(source: str | IndexedText, quote: str) -> list[CaseQuoteDifference]:
+    source = indexed(source)
+    quote = without_edge_ellipses(quote)
+    located = None if quote_occurrences(source.text, quote) else locate_quote(source, quote)
+    if located is None or located.tier not in ("folded", "relaxed", "format"):
+        return []
+    start, end = located.spans[0]
+    if end - start > MAX_QUOTE_CHARS:
+        return []
+    return [
+        CaseQuoteDifference(written=written, source=found)
+        for written, found in tolerated_differences(quote, source.text[start:end])
+    ]
+
+
 class QuoteSearch:
     def __init__(self, registry: Mapping[str, CaseSourceItem]) -> None:
         self.texts = {source_id: IndexedText(source.text) for source_id, source in registry.items()}
         self.found: dict[tuple[str, str], tuple[str, ...] | None] = {}
+        self.tolerances: dict[tuple[str, str], list[CaseQuoteDifference]] = {}
         self.sentences: dict[str, SentenceIndex] = {}
         self.contexts: dict[tuple[str, str], CaseQuoteContext | None] = {}
         self.nearest: dict[tuple[str, str], CaseNearPassage | None] = {}
@@ -353,6 +391,12 @@ class QuoteSearch:
         if key not in self.found:
             self.found[key] = located_quote(self.texts[source_id], quote)
         return self.found[key]
+
+    def tolerated(self, source_id: str, quote: str) -> list[CaseQuoteDifference]:
+        key = (source_id, quote)
+        if key not in self.tolerances:
+            self.tolerances[key] = tolerated_in(self.texts[source_id], quote)
+        return self.tolerances[key]
 
     def context(self, source_id: str, quote: str) -> CaseQuoteContext | None:
         key = (source_id, quote)
@@ -386,29 +430,50 @@ def added_citations(
     registry: dict[str, CaseSourceItem],
     search: QuoteSearch,
     document_context: object = None,
+    *,
+    tolerance: bool = False,
 ) -> list[list[CaseSourceCitation]]:
     added: list[list[CaseSourceCitation]] = []
-    seen: set[tuple[str, str]] = set()
+    kept: dict[tuple[str, str], CaseSourceCitation] = {}
     for citation in citations:
         fresh: list[CaseSourceCitation] = []
         added.append(fresh)
         source = registry.get(citation.source_id)
         if source is None:
             continue
+        found = [
+            *(search.tolerated(source.source_id, citation.exact_quote) if tolerance else []),
+            *citation.tolerated_differences,
+        ]
         for exact_quote in search.located(source.source_id, citation.exact_quote) or ():
             canonical = CaseSourceCitation(
                 source_id=source.source_id,
                 exact_quote=exact_quote,
                 context=search.context(source.source_id, exact_quote),
+                tolerated_differences=merged_differences([], found),
                 **resolve_document_locator(
                     source.source_id, exact_quote, source.text, document_context
                 ),
             )
             key = (canonical.source_id, canonical.exact_quote)
-            if key not in seen:
+            if key in kept:
+                kept[key].tolerated_differences = merged_differences(
+                    kept[key].tolerated_differences, found
+                )
+            else:
                 fresh.append(canonical)
-                seen.add(key)
+                kept[key] = canonical
     return added
+
+
+def merged_differences(
+    existing: list[CaseQuoteDifference], found: list[CaseQuoteDifference]
+) -> list[CaseQuoteDifference]:
+    merged = list(existing)
+    for difference in found:
+        if difference not in merged and len(merged) < MAX_TOLERATED_DIFFERENCES:
+            merged.append(difference)
+    return merged
 
 
 def resolved_citations(
@@ -420,7 +485,7 @@ def resolved_citations(
     search = search or QuoteSearch(registry)
     return [
         citation
-        for fresh in added_citations(citations, registry, search, document_context)
+        for fresh in added_citations(citations, registry, search, document_context, tolerance=True)
         for citation in fresh
     ]
 

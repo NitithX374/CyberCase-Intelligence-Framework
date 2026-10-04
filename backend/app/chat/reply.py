@@ -9,9 +9,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.analysis.run import AnalysisStep, analysis_running, run_case_analysis
+from app.analysis.run import AnalysisStep, run_case_analysis
 from app.analysis.schemas import CaseAnalysisResultRead
 from app.cases.ownership import owned_case
+from app.cases.running import analysis_running
 from app.chat.answer import (
     answer_case_question,
     answer_recorded_question,

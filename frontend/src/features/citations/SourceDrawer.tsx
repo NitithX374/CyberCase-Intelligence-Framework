@@ -82,6 +82,7 @@ export function SourceDrawer({
               quote={sourceRef.exactQuote}
               context={sourceRef.quoteContext}
               label={sourceRef.quoteLabel ?? "Quoted"}
+              notes={sourceRef.toleratedNotes}
             />
           )}
           <SourceContent sourceRef={sourceRef} />
@@ -95,10 +96,12 @@ function Quoted({
   quote,
   context,
   label,
+  notes = [],
 }: {
   quote: string;
   context: QuoteContext | null;
   label: string;
+  notes?: string[];
 }) {
   const passage = quotedPassage(quote, context);
   return (
@@ -113,6 +116,11 @@ function Quoted({
         )}
         {passage.after}
       </p>
+      {notes.map((note, index) => (
+        <p key={index} className="mt-2 text-xs text-ink-muted [overflow-wrap:anywhere]">
+          {note}
+        </p>
+      ))}
     </section>
   );
 }

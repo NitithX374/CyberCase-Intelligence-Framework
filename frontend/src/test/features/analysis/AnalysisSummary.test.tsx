@@ -91,7 +91,7 @@ beforeEach(() => {
 });
 
 describe("AnalysisSummary", () => {
-  it("opens with the summary the analysis wrote", () => {
+  it("opens with the summary the analysis wrote, plain when it has no units", () => {
     render(<AnalysisSummary />);
 
     expect(screen.getByRole("heading", { name: "Summary" })).toBeInTheDocument();

@@ -313,6 +313,7 @@ export interface components {
             validation_status: "validated";
             analysis_mode: "case_overview" | "question_answer";
             summary: string;
+            summary_units?: components["schemas"]["CaseSummaryUnit"][];
             involved_parties?: components["schemas"]["CaseInvolvedParty"][];
             timeline?: components["schemas"]["CaseTimelineItem"][];
             claims: components["schemas"]["CaseAnalysisClaim"][];
@@ -355,6 +356,7 @@ export interface components {
             citations_duplicated: number;
             associations_outside_context: number;
             associations_without_claim: number;
+            summary_ids_unknown: number;
             sources_cited: number;
             sources_total: number;
         };
@@ -408,6 +410,7 @@ export interface components {
             title: string;
             analysed?: string | null;
             summary: string;
+            summary_units?: components["schemas"]["ReportSummaryUnit"][];
             parties?: components["schemas"]["ReportParty"][];
             timeline?: components["schemas"]["ReportEvent"][];
             impacts?: components["schemas"]["ReportImpact"][];
@@ -439,6 +442,7 @@ export interface components {
             filename?: string | null;
             page_numbers?: number[];
             context?: components["schemas"]["CaseQuoteContext"] | null;
+            tolerated_differences?: components["schemas"]["CaseQuoteDifference"][];
         };
         CaseSourceCreate: {
             exact_text: string;
@@ -466,6 +470,11 @@ export interface components {
                 [key: string]: unknown;
             };
             created_at: string;
+        };
+        CaseSummaryUnit: {
+            text: string;
+            claim_ids?: string[];
+            support: "bound" | "mixed" | "unbound" | "no_claim";
         };
         CaseTimelineItem: {
             time: string;
@@ -551,6 +560,8 @@ export interface components {
             contradicting_quotes?: string[];
             supporting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
             contradicting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
+            supporting_tolerated?: components["schemas"]["ReportPlace"][][];
+            contradicting_tolerated?: components["schemas"]["ReportPlace"][][];
             unverified_quotes?: components["schemas"]["ReportUnverifiedQuote"][];
             reasoning_summary?: string | null;
         };
@@ -586,6 +597,11 @@ export interface components {
             label: string;
             kind: string;
             detail: string;
+        };
+        ReportSummaryUnit: {
+            text: string;
+            references?: number[];
+            support: "bound" | "mixed" | "unbound" | "no_claim";
         };
         ReportTechnique: {
             technique_id: string;

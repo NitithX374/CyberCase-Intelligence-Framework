@@ -33,6 +33,12 @@ class ReportImpact(ReportRow):
     support: SupportStatus | None = None
 
 
+class ReportSummaryUnit(ReportRow):
+    text: str
+    references: list[int] = Field(default_factory=list)
+    support: SupportStatus
+
+
 class ReportQuoteContext(ReportRow):
     before: str = ""
     after: str = ""
@@ -61,6 +67,8 @@ class ReportFinding(ReportRow):
     contradicting_quotes: list[str] = Field(default_factory=list)
     supporting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
     contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
+    supporting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
+    contradicting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
     unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
     reasoning_summary: str | None = None
 
@@ -96,6 +104,7 @@ class CaseReportContent(BaseModel):
     title: str
     analysed: str | None = None
     summary: str
+    summary_units: list[ReportSummaryUnit] = Field(default_factory=list)
     parties: list[ReportParty] = Field(default_factory=list)
     timeline: list[ReportEvent] = Field(default_factory=list)
     impacts: list[ReportImpact] = Field(default_factory=list)
@@ -139,6 +148,7 @@ __all__ = [
     "ReportPlace",
     "ReportQuoteContext",
     "ReportSource",
+    "ReportSummaryUnit",
     "ReportTechnique",
     "ReportUnverifiedQuote",
 ]

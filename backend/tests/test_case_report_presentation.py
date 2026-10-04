@@ -45,6 +45,7 @@ from app.trace.trace import (
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
+    CaseSummaryUnit,
     CaseTimelineItem,
 )
 
@@ -470,6 +471,93 @@ def test_an_analysis_stored_before_the_status_existed_makes_a_report_with_none()
     assert [impact.support for impact in report.impacts] == [None]
 
 
+TOLERATED_LINE = "พบในเอกสารเมื่อไม่นับรูปแบบ"
+
+
+def _input_with_tolerated(
+    supporting: list[tuple[str, str]], contradicting: list[tuple[str, str]] | None = None
+) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    claim = trace.claims[0]
+    cited = claim.supporting_citations[0]
+
+    def with_differences(pairs: list[tuple[str, str]]) -> CaseSourceCitation:
+        return cited.model_copy(
+            update={
+                "tolerated_differences": [
+                    CaseQuoteDifference(written=written, source=source) for written, source in pairs
+                ]
+            }
+        )
+
+    claim = claim.model_copy(
+        update={
+            "supporting_citations": [with_differences(supporting)],
+            "contradicting_citations": (
+                [with_differences(contradicting)] if contradicting is not None else []
+            ),
+        }
+    )
+    return report_input.model_copy(
+        update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
+    )
+
+
+def test_a_new_report_stores_what_the_locator_tolerated_beside_each_quote() -> None:
+    report = _stored(
+        _input_with_tolerated([("apple", "Apple"), ("", "-")], [("resign", "re-sign")])
+    )
+
+    [finding] = report.findings
+    assert [[(p.written, p.source) for p in places] for places in finding.supporting_tolerated] == [
+        [("apple", "Apple"), ("", "-")]
+    ]
+    assert [
+        [(p.written, p.source) for p in places] for places in finding.contradicting_tolerated
+    ] == [[("resign", "re-sign")]]
+
+
+def test_a_tolerated_quote_is_printed_with_a_plain_line_per_difference() -> None:
+    html = render_case_report_html(
+        _stored(_input_with_tolerated([("apple", "Apple"), ("", "-"), ("5,000", "")])), ISSUE
+    )
+
+    assert f"{TOLERATED_LINE} — ข้อความวิเคราะห์เขียน «apple» เอกสารเขียน «Apple»" in html
+    assert f"{TOLERATED_LINE} — เอกสารมี «-» ที่ข้อความวิเคราะห์ตัดออก" in html
+    assert f"{TOLERATED_LINE} — ข้อความวิเคราะห์เติม «5,000»" in html
+    assert html.index("ข้อความจากหลักฐาน:") < html.index(TOLERATED_LINE)
+    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
+
+
+def test_the_line_of_a_contradicting_quote_follows_that_quote() -> None:
+    html = render_case_report_html(
+        _stored(_input_with_tolerated([], [("resign", "re-sign")])), ISSUE
+    )
+
+    assert html.count(TOLERATED_LINE) == 1
+    assert html.index("ข้อความที่ขัดแย้ง:") < html.index(TOLERATED_LINE)
+
+
+def test_a_quote_the_locator_tolerated_nothing_in_prints_no_line() -> None:
+    html = render_case_report_html(_stored(_input()), ISSUE)
+
+    assert TOLERATED_LINE not in html
+
+
+def test_a_report_stored_before_tolerated_differences_validates_and_prints_no_line() -> None:
+    written = _stored(_input_with_tolerated([("apple", "Apple")])).model_dump(mode="json")
+    for finding in written["findings"]:
+        del finding["supporting_tolerated"], finding["contradicting_tolerated"]
+
+    stored = CaseReportContent.model_validate(written)
+    html = render_case_report_html(stored, ISSUE)
+
+    assert stored.findings[0].supporting_tolerated == []
+    assert TOLERATED_LINE not in html
+    assert "ข้อความจากหลักฐาน:" in html
+
+
 def test_a_report_stored_before_quote_contexts_still_prints() -> None:
     written = _stored(_input_quoting(QUOTED_SOURCE, "a transfer of 52,000 baht")).model_dump(
         mode="json"
@@ -699,3 +787,109 @@ def test_a_gap_named_by_its_checklist_key_reads_as_words() -> None:
 
 def test_every_checklist_key_has_a_report_topic() -> None:
     assert set(CHECKLIST_TOPICS) == set(CASE_CHECKLIST)
+
+
+SUMMARY_UNITS = (
+    ("พบการใช้ PowerShell", ["A-01"], "bound"),
+    ("มีการเชื่อมต่อออกภายนอก", ["A-01", "A-02"], "mixed"),
+    ("ผู้สั่งงานคือบุคคลภายใน", [], "no_claim"),
+    ("มีการลบข้อมูลสำรอง", ["A-03"], "unbound"),
+)
+
+
+def _input_with_summary_units() -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    first = trace.claims[0]
+    second = first.model_copy(update={"claim_id": "A-02", "text": "มีการเชื่อมต่อออกภายนอก"})
+    third = first.model_copy(
+        update={
+            "claim_id": "A-03",
+            "text": "มีการลบข้อมูลสำรอง",
+            "epistemic_status": "not_confirmed",
+            "supporting_citations": [],
+        }
+    )
+    trace = trace.model_copy(
+        update={
+            "claims": [first, second, third],
+            "summary": "สรุป [A-01]",
+            "summary_units": [
+                CaseSummaryUnit(text=text, claim_ids=claim_ids, support=support)
+                for text, claim_ids, support in SUMMARY_UNITS
+            ],
+        }
+    )
+    return report_input.model_copy(
+        update={"analysis_trace": trace, "analysis_summary": "สรุป [A-01]"}
+    )
+
+
+def test_a_new_report_stores_each_summary_unit_with_the_finding_numbers_it_rests_on() -> None:
+    report = _stored(_input_with_summary_units())
+
+    assert [(unit.text, unit.references, unit.support) for unit in report.summary_units] == [
+        ("พบการใช้ PowerShell", [1], "bound"),
+        ("มีการเชื่อมต่อออกภายนอก", [1, 2], "mixed"),
+        ("ผู้สั่งงานคือบุคคลภายใน", [], "no_claim"),
+        ("มีการลบข้อมูลสำรอง", [3], "unbound"),
+    ]
+    assert report.summary == "สรุป [A-01]"
+    assert "A-0" not in report.model_dump_json().replace("A-01]", "")
+
+
+def test_a_new_report_prints_the_summary_by_unit_with_the_finding_numbers() -> None:
+    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
+    summary = html.split('id="case_summary"')[1].split("</h3>")[1].split("<h3>")[0]
+
+    assert summary.count('class="body unit"') == 4
+    assert "พบการใช้ PowerShell [ข้อ 1]</p>" in summary
+    assert "มีการเชื่อมต่อออกภายนอก [ข้อ 1, 2]</p>" in summary
+    assert "ผู้สั่งงานคือบุคคลภายใน</p>" in summary
+    assert "มีการลบข้อมูลสำรอง [ข้อ 3]</p>" in summary
+    assert "[A-0" not in html
+
+
+def test_a_summary_unit_is_followed_by_a_plain_line_unless_its_claims_are_all_checked() -> None:
+    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
+    summary = html.split('id="case_summary"')[1].split("</h3>")[1].split("<h3>")[0]
+
+    assert summary.count("ข้อความที่อ้างบางส่วนไม่พบในเอกสาร") == 1
+    assert summary.count("ไม่ได้เชื่อมกับข้อสังเกตใด") == 1
+    assert summary.count("ไม่พบข้อความที่อ้างในเอกสาร") == 1
+    after_bound_unit = summary.split("พบการใช้ PowerShell [ข้อ 1]</p>")[1]
+    assert "unit-note" not in after_bound_unit.split('class="body unit"')[0]
+    assert "badge" not in summary
+
+
+def test_a_summary_unit_is_escaped_in_the_report() -> None:
+    report_input = _input_with_summary_units()
+    trace = report_input.analysis_trace.model_copy(
+        update={
+            "summary_units": [
+                CaseSummaryUnit(text="<script>alert(1)</script> **bold**", support="no_claim")
+            ]
+        }
+    )
+    report = _stored(report_input.model_copy(update={"analysis_trace": trace}))
+
+    html = render_case_report_html(report, ISSUE)
+
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt; bold" in html
+
+
+def test_a_report_stored_before_the_units_existed_prints_its_summary_as_before() -> None:
+    written = _stored(_input_with_summary_units()).model_dump(mode="json")
+    del written["summary_units"]
+
+    stored = CaseReportContent.model_validate(written)
+    html = render_case_report_html(stored, ISSUE)
+
+    assert stored.summary_units == []
+    assert 'class="body unit"' not in html
+    assert "สรุป [A-01]" in html
+
+
+def test_an_analysis_stored_before_the_units_existed_makes_a_report_with_none() -> None:
+    assert build_case_report_content(_input()).summary_units == []

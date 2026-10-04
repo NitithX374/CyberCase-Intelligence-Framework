@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, a check of those quotations against the sources, then a judgement that writes the summary, gaps and ATT&CK associations over the checked claims. The reading runs without grammar-constrained decoding: its JSON is described in the prompt, validated after decoding and asked at most twice. Every other call keeps the provider's JSON-schema grammar. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
+**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, a check of those quotations against the sources, then a judgement that writes the summary, gaps and ATT&CK associations over the checked claims. The judgement is not given the case sources, nor the sentence around each quotation; it reads the claims and their quotations, the follow-up history and the technical context, and every sentence of its summary ends with the IDs of the claims it rests on. The reading runs without grammar-constrained decoding: its JSON is described in the prompt, validated after decoding and asked at most twice. Every other call keeps the provider's JSON-schema grammar. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
 
 ## Service Layout
 
@@ -153,10 +153,16 @@ Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_rout
 - `GET /health` — backend and database health (`health.py`)
 - `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` — cookie session (`auth/routes.py`)
 - `GET`, `POST /cases`; `GET`, `PATCH`, `DELETE /cases/{case_id}` — case lifecycle (`cases/routes.py`)
-- `GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages` — the Ask/Chat panel (`chat/routes.py`)
+- `GET /cases/{case_id}/chat`, `POST /cases/{case_id}/chat/messages` — the Ask/Chat panel (`chat/routes.py`). A message, a
+  follow-up answer included, is at most 4,000 characters
 - `POST /cases/{case_id}/documents`, `GET /cases/{case_id}/documents/{document_id}/content` — upload and read back (`sources/routes.py`, `document_router`). There is no document list: a document is listed through its source, and `CaseSourceRead` carries `filename`, `mime_type` and `size_bytes`
-- `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`)
-- `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`)
+- `GET`, `POST /cases/{case_id}/sources` — what the case is analysed from (`sources/routes.py`). A source, text or
+  document, is refused with 413 `source_too_large` when the sources of the case would pass `SOURCE_TOKEN_BUDGET` (40,000
+  tokens). Each source is weighed as it sits in a stage payload, which serializes it twice, plus `SOURCE_OVERHEAD_TOKENS`
+  (100) for its record; a narrative is also at most 250,000 characters. A source is refused with 409
+  `analysis_in_progress` while the case is being analysed
+- `GET`, `POST /cases/{case_id}/analysis` — read the latest analysis, or run one (`analysis/routes.py`). Running one
+  answers 409 `analysis_in_progress` while an analysis of that case is in flight
 - **Progress stream.** `POST /cases/{case_id}/analysis` and `POST /cases/{case_id}/chat/messages` answer a request sent
   with `Accept: text/event-stream` with a Server-Sent Events stream on the same request, instead of one JSON body
   (`analysis/stream.py`):
@@ -195,36 +201,54 @@ llm/                    calling a model
                         is analysis_provider_rate_limited, HTTP 429
   settings.py           model, providers, output and thinking budgets
   openrouter.py         the OpenRouter target; registry.py (model aliases),
-                        schema.py (the structured-output schema)
+                        schema.py (the structured-output schema; a single-value
+                        Literal is sent as a one-item enum, because not every
+                        route enforces const)
 trace/                  what the analysis, chat and reports share
   claims.py             claims, citations, gaps, a follow-up exchange, what
                         the preflight returns
   trace.py              the trace: summary, parties, timeline, impacts, claims;
                         each party, timeline item and impact carries a derived
                         support (bound, mixed, unbound, no_claim) that the
-                        model never writes
+                        model never writes; summary_units holds the summary cut
+                        at its claim-ID brackets, each unit with its claim IDs
+                        and the same derived support
+  summary.py            cutting a summary into the units that end at a
+                        [A-nn, A-nn] bracket; the model writes only the summary
+                        string, with its brackets
   quotes.py             finding a quotation in a source, in tiers: exact,
                         NFKC fold, unique ellipsis pieces, markup-tolerant,
                         then format only (quote marks, punctuation, dash
                         style, case and spacing ignored; at least 8
                         characters left, found once); the stored quote is
-                        always source text; nearest_passage points a quote no
-                        tier locates at its one clearly closest passage
+                        always source text; the locator says which tier
+                        accepted a quote (locate_quote), and
+                        tolerated_differences lists, word by word, what the
+                        NFKC, markup or format tier ignored (quote marks
+                        excluded, at most 8); nearest_passage points a quote
+                        no tier locates at its one clearly closest passage
                         (rapidfuzz candidates, an infix edit distance, at most
-                        3 places at word level)
+                        3 places at word level, the first and last words
+                        paired inside the aligned span, and a number with
+                        separators kept as one word)
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
   bind.py               bind a written trace to the case; count what did not bind;
                         bound_claims checks the reading's quotations before the
                         judgement, and bound_references checks the judgement's
-                        claim IDs and techniques after it;
+                        claim IDs and techniques after it, and derives the
+                        summary's units (an ID that names no claim is dropped
+                        from its unit and counted in summary_ids_unknown);
                         a "reported" claim left with no verified quote becomes
                         "not_confirmed"; a quote with an ellipsis in the middle is
                         stored as one citation per piece when every piece occurs
                         once in the source, and otherwise as the one span the
                         pieces stretch over; either way it counts as one written
                         quote; each bound quote keeps the text around it as its
-                        context; a quote no tier locates is kept apart as an
+                        context and, when a tolerant tier found it, the
+                        differences that tier ignored (tolerated_differences;
+                        neither model is shown them); a quote no tier locates
+                        is kept apart as an
                         unverified citation, with that passage when one
                         qualifies, and counted as citations_pointed; neither
                         model is shown it; bound_references derives the
@@ -244,8 +268,10 @@ auth/                   routes, schemas, service (register, log in),
                         credentials (passwords, JWTs), guard (current user,
                         and the guard every browser request passes)
 cases/                  routes, schemas, service (case CRUD and whether the
-                        latest analysis is current), and ownership.py:
-                        owned_case, the one ownership check
+                        latest analysis is current), ownership.py:
+                        owned_case, the one ownership check, and running.py:
+                        which analyses are in flight (analysing, and
+                        sole_analysis, which refuses a second one)
 sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
   ingestion/            upload to text: service, files (detect, render pages,
@@ -268,7 +294,8 @@ analysis/               producing an analysis of a case; routes, schemas
                         impacts, with quotations; JSON from the prompt, no
                         grammar), the check of its quotations (bound_claims),
                         then a judgement call (summary, gaps, ATT&CK
-                        associations) over the checked claims
+                        associations) over the checked claims alone: no case
+                        sources and no sentence around each quotation
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   progress.py           announce(step): the steps write, retrieve and the
@@ -348,7 +375,10 @@ artifacts = await bind_to_case(...)                # the judgement's references
 A round that ends in a question never calls the MITRE gate, the RAG service,
 the reading and judgement calls or the binding step. The `verify` arm in
 `experiments/analysis_arms.py` runs those three expensive steps without the
-preflight.
+preflight. Once the rounds are spent (`rounds_are_spent` in
+`followup/clarification.py`) the preflight is skipped as well: `decide_followup`
+would proceed whatever it found, and `AnalysisAdvance.assessment` is then `None`.
+A question is never stored without its assessment.
 The arms in `experiments/analysis_arms.py` take an `AnalysisInput` directly and
 touch no case row. `run_case_analysis(pipeline=...)` also accepts a substitute
 composition, as `tests/test_case_followup_postgres.py` does. There is no
@@ -406,7 +436,7 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 ### Chat Clarification Boundary
 
-The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each. It checks every case against a fixed 5W1H list, `CASE_CHECKLIST` in `analysis/prompts.py` (who was affected, who was responsible, what, when, where, why, how, how much). A gap on that list takes its key as its `gap_key`, and the follow-up history sent to the model carries the `gap_key` each earlier question was asked under. A gap therefore keeps its key from round to round and is not asked twice. `followup/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `followup/conversation.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `analysis/run.py` tracks the analyses in flight, which holds because the backend runs one process.
+The backend owns bounded clarification. The analysis decides which gaps are worth asking about and writes the question for each. It checks every case against a fixed 5W1H list, `CASE_CHECKLIST` in `analysis/prompts.py` (who was affected, who was responsible, what, when, where, why, how, how much). A gap on that list takes its key as its `gap_key`, and the follow-up history sent to the model carries the `gap_key` each earlier question was asked under. A gap therefore keeps its key from round to round and is not asked twice. `followup/clarification.py` decides whether to ask one (`decide_followup`, pure policy); `followup/conversation.py` reads what that needs from the conversation (asked gap keys, rounds spent, the answered history) and builds the question and answer messages; `chat/reply.py` routes each message. One question is outstanding at a time, so a reply needs no marking — the backend links it to the question above it through `in_reply_to_message_id`. The reply stays a `ChatMessage`, cited as `QA-01`; it is **not** a case source, so answering does not move `source_revision` and does not invalidate the analysis that asked. The case is analysed again only once the round's questions are spent, so a round of three costs one analysis rather than three. `chat_followup_max_rounds` and `chat_followup_gaps_per_round` bound it. If that analysis fails, the round is not lost: retrying the answer that closed it, or pressing Analyze, runs the round's analysis instead of starting a new round. A retry that arrives while the round is still being analysed only returns what was stored; `analysing` in `cases/running.py` tracks the analyses in flight, which holds because the backend runs one process.
 
 RAG is never called for clarification. It is reached only through the analysis pipeline's technical-context stage, when the MITRE gate says RETRIEVE, and the frontend never calls `rag_service` directly.
 
@@ -419,7 +449,8 @@ answer: one case in the development database holds six analyses at
 pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated` by the HTML, PDF and generate paths, not rebuilt, and is left out of the report list (with a log line) so the valid versions still load. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. Each party, event and impact in the snapshot carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
+
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. Each party, event and impact in the snapshot carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences one by one, each followed by `[ข้อ n]`, and one plain line under a sentence that is `unbound`, `mixed` or `no_claim`; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)

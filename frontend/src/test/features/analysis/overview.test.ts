@@ -83,6 +83,62 @@ describe("Case overview projection", () => {
     ]);
   });
 
+  const unitsOf = (summary: string) =>
+    analysisResult({
+      summary,
+      trace_json: trace({
+        summary,
+        claims: [claim("A", sourceId)],
+        summary_units: [
+          { text: "A share was encrypted", claim_ids: ["A-01"], support: "bound" },
+          { text: "Both demands", claim_ids: ["A-01", "A-02"], support: "mixed" },
+          { text: "Ten bitcoin", claim_ids: ["A-03"], support: "unbound" },
+          { text: "Someone is to blame", claim_ids: [], support: "no_claim" },
+        ],
+      }),
+    });
+
+  it("gives each summary unit its claims and the line its status calls for", () => {
+    const overview = buildCaseOverview(unitsOf("A share was encrypted [A-01]."), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.summaryUnits).toEqual([
+      { text: "A share was encrypted", claimIds: ["A-01"], supportNote: null },
+      {
+        text: "Both demands",
+        claimIds: ["A-01", "A-02"],
+        supportNote: "Some cited quotations were not found in the sources.",
+      },
+      {
+        text: "Ten bitcoin",
+        claimIds: ["A-03"],
+        supportNote: "No cited quotation was found in the sources.",
+      },
+      { text: "Someone is to blame", claimIds: [], supportNote: "Not linked to any claim." },
+    ]);
+  });
+
+  it("writes the summary lines in Thai when the summary is in Thai", () => {
+    const overview = buildCaseOverview(unitsOf("ไฟล์ถูกเข้ารหัส [A-01]"), [narrativeSource(quote)]);
+
+    expect(overview.summaryUnits.map((unit) => unit.supportNote)).toEqual([
+      null,
+      "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
+      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ไม่ได้เชื่อมกับข้อสังเกตใด",
+    ]);
+  });
+
+  it("has no summary units for an analysis stored before they existed", () => {
+    const overview = buildCaseOverview(supported("A share was encrypted."), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.summaryUnits).toEqual([]);
+    expect(overview.incidentSummary).toBe("A share was encrypted.");
+  });
+
   it("renders claims from current case sources", () => {
     const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
       narrativeSource(quote),
@@ -90,6 +146,40 @@ describe("Case overview projection", () => {
     const source = overview.findings[0].supportingSources[0];
     expect(overview.incidentSummary).toContain("blue vehicle");
     expect(source).toMatchObject({ id: sourceId, label: "Case narrative #1", exactQuote: quote });
+  });
+
+  it("carries what the locator tolerated onto the quotation, in the language of the analysis", () => {
+    const citation: CaseSourceCitation = {
+      source_id: sourceId,
+      exact_quote: quote,
+      tolerated_differences: [{ written: "apple", source: "Apple" }],
+    };
+    const english = buildCaseOverview(result(quote, citation), [narrativeSource(quote)]);
+    const thai = buildCaseOverview(
+      analysisResult({
+        summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
+        trace_json: trace({
+          summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
+          claims: [claim(quote, sourceId, { supporting_citations: [citation] })],
+        }),
+      }),
+      [narrativeSource(quote)],
+    );
+
+    expect(english.findings[0].supportingSources[0].toleratedNotes).toEqual([
+      "Found in the source when formatting is ignored. The analysis wrote «apple»; the source says «Apple».",
+    ]);
+    expect(thai.findings[0].supportingSources[0].toleratedNotes).toEqual([
+      "พบในเอกสารเมื่อไม่นับรูปแบบ — ข้อความวิเคราะห์เขียน «apple» เอกสารเขียน «Apple»",
+    ]);
+  });
+
+  it("gives a quotation found as written no tolerated line", () => {
+    const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.findings[0].supportingSources[0].toleratedNotes).toBeUndefined();
   });
 
   it("shows the pages the stored citation names", () => {
@@ -317,6 +407,92 @@ describe("Case overview projection", () => {
       ],
       [],
     ]);
+  });
+});
+
+describe("Case overview rows backed by claims that are not settled", () => {
+  const otherSourceId = "33333333-3333-4333-8333-333333333333";
+  const first = "The witness saw a blue vehicle.";
+  const second = "The driver was seen leaving at noon.";
+
+  const analysis: CaseAnalysisResultRead = analysisResult({
+    summary: first,
+    trace_json: trace({
+      summary: first,
+      claims: [
+        claim(first),
+        claim(second, otherSourceId, {
+          claim_id: "A-02",
+          epistemic_status: "not_confirmed",
+          supporting_citations: [],
+        }),
+        claim(first, sourceId, {
+          claim_id: "A-03",
+          claim_type: "analytical_inference",
+          epistemic_status: "suspected",
+        }),
+        claim(second, otherSourceId, {
+          claim_id: "A-04",
+          claim_type: "analytical_inference",
+          epistemic_status: "suspected",
+          supporting_citations: [],
+        }),
+      ],
+      timeline: [
+        { time: "1", event: "Settled", claim_ids: ["A-01"] },
+        { time: "2", event: "Not confirmed only", claim_ids: ["A-02"] },
+        { time: "3", event: "Settled and not confirmed", claim_ids: ["A-01", "A-02"] },
+        { time: "4", event: "Suspected with a checked quote", claim_ids: ["A-03"] },
+        { time: "5", event: "Suspected on a named source", claim_ids: ["A-04"] },
+        { time: "6", event: "Both kinds", claim_ids: ["A-04", "A-02"] },
+        { time: "7", event: "Names no claim", claim_ids: [] },
+      ],
+    }),
+  });
+  const sources = [narrativeSource(first), narrativeSource(second, { id: otherSourceId })];
+  const timeline = buildCaseOverview(analysis, sources).timeline;
+
+  it("adds no note to a row whose claims are settled, or that names none", () => {
+    expect(timeline[0].unconfirmed).toEqual([]);
+    expect(timeline[0].sources.map((source) => source.id)).toEqual([sourceId]);
+    expect(timeline[6]).toMatchObject({ sources: [], unconfirmed: [] });
+  });
+
+  it("shows no source chip for a claim that is not confirmed, and says so", () => {
+    expect(timeline[1]).toMatchObject({ sources: [], unconfirmed: ["not_confirmed"] });
+  });
+
+  it("keeps the chips of the settled claims in a row and says the rest is not confirmed", () => {
+    expect(timeline[2].sources.map((source) => source.id)).toEqual([sourceId]);
+    expect(timeline[2].unconfirmed).toEqual(["not_confirmed"]);
+  });
+
+  it("keeps the chip of a suspected claim only where a checked quote stands behind it", () => {
+    expect(timeline[3].sources).toHaveLength(1);
+    expect(timeline[3].sources[0]).toMatchObject({ id: sourceId, exactQuote: first });
+    expect(timeline[3].unconfirmed).toEqual(["suspected"]);
+    expect(timeline[4]).toMatchObject({ sources: [], unconfirmed: ["suspected"] });
+  });
+
+  it("names each kind once, the missing check first", () => {
+    expect(timeline[5].unconfirmed).toEqual(["not_confirmed", "suspected"]);
+  });
+
+  it("marks parties and impacts the same way", () => {
+    const overview = buildCaseOverview(
+      {
+        ...analysis,
+        trace_json: {
+          ...analysis.trace_json!,
+          involved_parties: [{ name: "Driver", role: "Left at noon", claim_ids: ["A-02"] }],
+          impacts: [{ description: "The vehicle was gone", claim_ids: ["A-04"] }],
+        },
+      },
+      sources,
+    );
+
+    expect(overview.parties[0]).toMatchObject({ sources: [], unconfirmed: ["not_confirmed"] });
+    expect(overview.impacts[0]).toMatchObject({ sources: [], unconfirmed: ["suspected"] });
   });
 });
 

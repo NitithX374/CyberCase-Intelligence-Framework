@@ -1,5 +1,6 @@
 import type { CaseAnalysisClaim, CaseSourceCitation, CaseSourceRead } from "@/lib/api/types";
 import { asArray } from "@/lib/parse";
+import { toleratedNotes } from "./toleratedNotes";
 import type { CaseSourceRef, FollowupAnswer, SourceMessageRef, SourcePage } from "./types";
 
 interface ProvenancePage {
@@ -52,10 +53,16 @@ export function claimRefs(
     | "contradicting_citations"
   >,
   sources: CaseSourceRef[],
+  writtenText?: string,
 ): { supporting: SourceMessageRef[]; contradicting: SourceMessageRef[] } {
   return {
-    supporting: refs(claim.supporting_source_ids, claim.supporting_citations, sources),
-    contradicting: refs(claim.contradicting_source_ids, claim.contradicting_citations, sources),
+    supporting: refs(claim.supporting_source_ids, claim.supporting_citations, sources, writtenText),
+    contradicting: refs(
+      claim.contradicting_source_ids,
+      claim.contradicting_citations,
+      sources,
+      writtenText,
+    ),
   };
 }
 
@@ -63,13 +70,14 @@ function refs(
   ids: string[] = [],
   citations: CaseSourceCitation[] = [],
   sources: CaseSourceRef[],
+  writtenText?: string,
 ): SourceMessageRef[] {
   return ids.flatMap((id) => {
     const source = sources.find((candidate) => candidate.id === id);
     if (!source) return [];
     const cited = citations.filter((citation) => citation.source_id === id);
     return cited.length
-      ? cited.map((citation) => sourceRef(source, citation))
+      ? cited.map((citation) => sourceRef(source, citation, writtenText))
       : [sourceRef(source, null)];
   });
 }
@@ -87,7 +95,11 @@ export function passageRef(
   };
 }
 
-function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): SourceMessageRef {
+function sourceRef(
+  source: CaseSourceRef,
+  citation: CaseSourceCitation | null,
+  writtenText?: string,
+): SourceMessageRef {
   const quote = citation?.exact_quote || null;
   const context = quote ? citation?.context : null;
   const pages = (citation?.page_numbers ?? []).flatMap(
@@ -115,6 +127,9 @@ function sourceRef(source: CaseSourceRef, citation: CaseSourceCitation | null): 
     pageNumbers,
     sourcePages: pages,
     question: source.question,
+    ...(quote && writtenText !== undefined && citation?.tolerated_differences?.length
+      ? { toleratedNotes: toleratedNotes(citation.tolerated_differences, writtenText) }
+      : {}),
   };
 }
 

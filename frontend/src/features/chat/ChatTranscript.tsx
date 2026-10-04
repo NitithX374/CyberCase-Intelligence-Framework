@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type {
+  CaseAnalysisClaim,
   CaseAnalysisResultRead,
   CaseSourceRead,
   ChatAnswerUnit,
@@ -10,6 +11,12 @@ import type {
 import type { CaseSourceRef, SourceMessageRef } from "@/features/citations/types";
 import { claimRefs, parseCaseSources } from "@/features/citations/sourceRefs";
 import { chatFollowups } from "@/features/citations/followupSources";
+import {
+  checkedSources,
+  UNCONFIRMED_NOTES,
+  unconfirmedStatuses,
+  type UnconfirmedStatus,
+} from "@/features/citations/unconfirmed";
 import { Markdown } from "@/components/Markdown";
 import { SourceDrawer } from "@/features/citations/SourceDrawer";
 import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
@@ -115,19 +122,15 @@ function Messages({
         }
 
         const units = message.metadata_json.answer_units ?? [];
+        const claims = message.metadata_json.analysis_trace?.claims ?? [];
         return (
           <article key={message.id}>
             {units.length > 0 ? (
-              <AnswerUnits units={units} sources={citable} />
+              <AnswerUnits units={units} claims={claims} sources={citable} />
             ) : (
               <>
                 <Markdown content={message.content} />
-                <SourceReferences
-                  references={sourceReferences(
-                    message.metadata_json.analysis_trace?.claims ?? [],
-                    citable,
-                  )}
-                />
+                <AnswerReferences {...sourceReferences(claims.map(claimItem), citable)} />
               </>
             )}
             <SuggestionLine suggestion={message.metadata_json.suggestion} />
@@ -151,7 +154,16 @@ const SUGGESTION_LINES: Record<string, string> = {
   run_analysis: "กด Analyze เพื่อวิเคราะห์เคสอีกครั้ง",
 };
 
-function AnswerUnits({ units, sources }: { units: ChatAnswerUnit[]; sources: CaseSourceRef[] }) {
+function AnswerUnits({
+  units,
+  claims,
+  sources,
+}: {
+  units: ChatAnswerUnit[];
+  claims: CaseAnalysisClaim[];
+  sources: CaseSourceRef[];
+}) {
+  const statuses = new Map(claims.map((claim) => [claim.claim_id, claim.epistemic_status]));
   return (
     <div className="space-y-3">
       {units.map((unit, index) => (
@@ -160,7 +172,7 @@ function AnswerUnits({ units, sources }: { units: ChatAnswerUnit[]; sources: Cas
           {unit.basis === "interpretation" && (
             <p className="mt-1 text-xs text-ink-muted">{PRELIMINARY_NOTE}</p>
           )}
-          <SourceReferences references={sourceReferences([unit], sources)} />
+          <AnswerReferences {...sourceReferences([unitItem(unit, statuses)], sources)} />
         </div>
       ))}
     </div>
@@ -178,14 +190,32 @@ interface AnalysisSourceReference {
   source: SourceMessageRef;
 }
 
-function sourceReferences(
-  items: Parameters<typeof claimRefs>[0][],
-  sources: CaseSourceRef[],
-): AnalysisSourceReference[] {
+interface ReferenceList {
+  references: AnalysisSourceReference[];
+  unconfirmed: UnconfirmedStatus[];
+}
+
+type CitedItem = Parameters<typeof claimRefs>[0] & { unconfirmed: UnconfirmedStatus[] };
+
+function claimItem(claim: CaseAnalysisClaim): CitedItem {
+  return { ...claim, unconfirmed: unconfirmedStatuses([claim.epistemic_status]) };
+}
+
+function unitItem(unit: ChatAnswerUnit, statuses: Map<string, string>): CitedItem {
+  return {
+    ...unit,
+    unconfirmed: unconfirmedStatuses((unit.claim_ids ?? []).map((id) => statuses.get(id))),
+  };
+}
+
+function sourceReferences(items: CitedItem[], sources: CaseSourceRef[]): ReferenceList {
   const references = items.flatMap((item) => {
     const cited = claimRefs(item, sources);
     return [
-      ...cited.supporting.map((source) => ({ role: "supporting" as const, source })),
+      ...checkedSources(cited.supporting, item.unconfirmed.length > 0).map((source) => ({
+        role: "supporting" as const,
+        source,
+      })),
       ...cited.contradicting.map((source) => ({ role: "conflicting" as const, source })),
     ];
   });
@@ -198,7 +228,23 @@ function sourceReferences(
       unique.set(key, reference);
     }
   }
-  return [...unique.values()].slice(0, 12);
+  return {
+    references: [...unique.values()].slice(0, 12),
+    unconfirmed: unconfirmedStatuses(items.flatMap((item) => item.unconfirmed)),
+  };
+}
+
+function AnswerReferences({ references, unconfirmed }: ReferenceList) {
+  return (
+    <>
+      {unconfirmed.map((status) => (
+        <p key={status} className="mt-1 text-xs text-ink-muted">
+          {UNCONFIRMED_NOTES[status]}
+        </p>
+      ))}
+      <SourceReferences references={references} />
+    </>
+  );
 }
 
 function SourceReferences({ references }: { references: AnalysisSourceReference[] }) {

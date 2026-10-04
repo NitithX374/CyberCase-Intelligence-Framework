@@ -1,4 +1,6 @@
+import re
 import unittest
+from typing import get_args
 from unittest.mock import patch
 
 import httpx
@@ -7,6 +9,8 @@ from case_mitre_test_support import _fixtures
 
 from app.analysis.prompts import (
     CASE_JUDGEMENT_SYSTEM_PROMPT,
+    CASE_READING_JSON_PROMPT,
+    CASE_READING_SYSTEM_PROMPT,
     case_assessment_prompt,
     case_system_prompt,
 )
@@ -16,12 +20,35 @@ from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
     MAX_CLARIFICATION_QUESTION_CHARS,
+    CaseAssessmentTrace,
     CaseProviderCitation,
     CaseProviderClaim,
 )
 from app.trace.quotes import find_aligned_quote
-from app.trace.trace import CaseProviderAnalysis
+from app.trace.trace import CaseProviderAnalysis, CaseProviderJudgement, CaseProviderReadingReply
 from experiments.analysis_arms import write_single_call
+
+
+@pytest.mark.parametrize(
+    ("prompt", "schema"),
+    [
+        (case_system_prompt(), CaseProviderAnalysis),
+        (CASE_READING_SYSTEM_PROMPT, CaseProviderReadingReply),
+        (CASE_READING_JSON_PROMPT, CaseProviderReadingReply),
+        (CASE_JUDGEMENT_SYSTEM_PROMPT, CaseProviderJudgement),
+        (case_assessment_prompt(), CaseAssessmentTrace),
+    ],
+)
+def test_a_prompt_names_only_the_version_its_schema_requires(prompt, schema) -> None:
+    [required] = get_args(schema.model_fields["version"].annotation)
+
+    assert set(re.findall(r"[a-z]+(?:_[a-z]+)*_v\d+", prompt)) == {required}
+
+
+def test_the_judgement_is_asked_for_the_json_it_is_validated_against() -> None:
+    assert "Return the requested case_analysis_trace_v1 JSON." in " ".join(
+        CASE_JUDGEMENT_SYSTEM_PROMPT.split()
+    )
 
 
 def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:

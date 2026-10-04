@@ -58,6 +58,9 @@ def normalize_schema(value: object) -> object:
         key_text = str(key)
         if key_text in _UNSUPPORTED_SCHEMA_KEYS:
             continue
+        if key_text == "const":
+            normalized["enum"] = [normalize_schema(child)]
+            continue
         if key_text == "format" and child not in _SUPPORTED_STRING_FORMATS:
             continue
         normalized[key_text] = normalize_schema(child)

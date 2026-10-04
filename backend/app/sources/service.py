@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from copy import deepcopy
 from uuid import UUID
 
@@ -9,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, undefer
 
 from app.cases.ownership import owned_case
+from app.cases.running import analysis_running
 from app.errors import AppError
+from app.llm.request import token_count
+from app.llm.settings import SOURCE_OVERHEAD_TOKENS, SOURCE_TOKEN_BUDGET
+from app.models.case import Case
 from app.models.document import CaseDocument
 from app.models.source import CaseSource
 from app.sources.ingestion.contracts import IngestedDocument
@@ -33,9 +39,12 @@ class SourceService:
         ingested: IngestedDocument,
         content: bytes,
     ) -> CaseDocument:
+        weight = await asyncio.to_thread(weight_in_payload, ingested.full_text)
         case = await owned_case(self.db, case_id, user_id, lock=True)
+        refuse_while_analysing(case.id)
         if not ingested.full_text.strip():
             raise SourceError("extraction_text_empty", "Document extraction text is empty")
+        await self.refuse_beyond_budget(case, weight)
         document = CaseDocument(
             case_id=case.id,
             filename=ingested.filename,
@@ -87,7 +96,10 @@ class SourceService:
         normalized_text = strip_unstorable(text).strip()
         if not normalized_text:
             raise SourceError("source_text_empty", "The case source text is empty")
+        weight = await asyncio.to_thread(weight_in_payload, normalized_text)
         case = await owned_case(self.db, case_id, user_id, lock=True)
+        refuse_while_analysing(case.id)
+        await self.refuse_beyond_budget(case, weight)
         source = CaseSource(
             case_id=case.id,
             source_kind=source_kind,
@@ -101,6 +113,19 @@ class SourceService:
         await self.db.refresh(source)
         return source
 
+    async def refuse_beyond_budget(self, case: Case, weight: int) -> None:
+        stored = await self.db.scalars(
+            select(CaseSource.exact_text).where(CaseSource.case_id == case.id)
+        )
+        texts = stored.all()
+        kept = await asyncio.to_thread(lambda: sum(weight_in_payload(item) for item in texts))
+        if weight + kept > SOURCE_TOKEN_BUDGET:
+            raise SourceError(
+                "source_too_large",
+                "The case sources would exceed what the analysis can read",
+                status.HTTP_413_CONTENT_TOO_LARGE,
+            )
+
     async def list_sources(self, case_id: UUID, user_id: UUID | None) -> list[CaseSource]:
         await owned_case(self.db, case_id, user_id)
         result = await self.db.execute(
@@ -110,6 +135,19 @@ class SourceService:
             .order_by(CaseSource.created_at, CaseSource.id)
         )
         return list(result.scalars().unique().all())
+
+
+def weight_in_payload(text: str) -> int:
+    return token_count(json.dumps(text, ensure_ascii=False)) + SOURCE_OVERHEAD_TOKENS
+
+
+def refuse_while_analysing(case_id: UUID) -> None:
+    if analysis_running(case_id):
+        raise SourceError(
+            "analysis_in_progress",
+            "The case is being analysed, so a source cannot be added now",
+            status.HTTP_409_CONFLICT,
+        )
 
 
 def document_provenance(ingested: IngestedDocument) -> dict[str, object]:

@@ -63,6 +63,8 @@
     }
     h3 { margin: 10pt 0 5pt; font-size: 11.5pt; font-weight: 700; break-after: avoid; }
     .body { text-indent: 2.5em; white-space: pre-wrap; }
+    .body.unit { text-indent: 0; margin-bottom: 3pt; }
+    .quote.unit-note { margin: 0 0 4pt 1.5em; }
     .note { font-size: 10pt; color: #27272a; }
 
     .caption { margin: 8pt 0 3pt; font-size: 10pt; font-weight: 700; break-after: avoid; }
@@ -141,7 +143,14 @@
         <h2>1. สรุปข้อเท็จจริงของคดี</h2>
         {% set sub = namespace(n=1) %}
         <h3>1.1 ภาพรวมของเหตุการณ์</h3>
-        <p class="body">{{ report.summary | clean_report_text }}</p>
+        {% if report.summary_units %}
+          {% for unit in report.summary_units %}
+            <p class="body unit">{{ unit.text | clean_report_text }}{% if unit.references %} [ข้อ {{ unit.references | join(", ") }}]{% endif %}</p>
+            {% if unit.support in support_notes %}<p class="quote unit-note">{{ support_notes[unit.support] }}</p>{% endif %}
+          {% endfor %}
+        {% else %}
+          <p class="body">{{ report.summary | clean_report_text }}</p>
+        {% endif %}
 
         {% if report.parties %}
           {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
@@ -224,9 +233,19 @@
                   {{ finding.text | clean_report_text }}
                   {% for quote in finding.supporting_quotes | quoted(finding.supporting_contexts) %}
                     <div class="quote"><span class="quote-label">ข้อความจากหลักฐาน:</span> {{ quote }}</div>
+                    {% if loop.index0 < finding.supporting_tolerated | length %}
+                      {% for place in finding.supporting_tolerated[loop.index0] %}
+                        <div class="quote-place">พบในเอกสารเมื่อไม่นับรูปแบบ — {% if place.written and place.source %}ข้อความวิเคราะห์เขียน «{{ place.written }}» เอกสารเขียน «{{ place.source }}»{% elif place.written %}ข้อความวิเคราะห์เติม «{{ place.written }}»{% else %}เอกสารมี «{{ place.source }}» ที่ข้อความวิเคราะห์ตัดออก{% endif %}</div>
+                      {% endfor %}
+                    {% endif %}
                   {% endfor %}
                   {% for quote in finding.contradicting_quotes | quoted(finding.contradicting_contexts) %}
                     <div class="quote"><span class="quote-label">ข้อความที่ขัดแย้ง:</span> {{ quote }}</div>
+                    {% if loop.index0 < finding.contradicting_tolerated | length %}
+                      {% for place in finding.contradicting_tolerated[loop.index0] %}
+                        <div class="quote-place">พบในเอกสารเมื่อไม่นับรูปแบบ — {% if place.written and place.source %}ข้อความวิเคราะห์เขียน «{{ place.written }}» เอกสารเขียน «{{ place.source }}»{% elif place.written %}ข้อความวิเคราะห์เติม «{{ place.written }}»{% else %}เอกสารมี «{{ place.source }}» ที่ข้อความวิเคราะห์ตัดออก{% endif %}</div>
+                      {% endfor %}
+                    {% endif %}
                   {% endfor %}
                   {% for item in finding.unverified_quotes %}
                     <div class="quote"><span class="quote-label">ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{{ item.written_quote }}”</div>

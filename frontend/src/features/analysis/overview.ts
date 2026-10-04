@@ -1,9 +1,13 @@
 import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
 import { claimRefs, parseCaseSources, passageRef } from "@/features/citations/sourceRefs";
-import type { SourceMessageRef } from "@/features/citations/types";
+import {
+  checkedSources,
+  isUnconfirmed,
+  unconfirmedStatuses,
+} from "@/features/citations/unconfirmed";
 import { analysisFollowups } from "./analysisRecord";
 import { supportNote } from "./supportNote";
-import type { CaseFinding, CaseOverviewData, ClaimType } from "./types";
+import type { CaseFinding, CaseOverviewData, ClaimBacked, ClaimType } from "./types";
 
 export const claimTypeLabels: Record<ClaimType, string> = {
   reported: "Reported information",
@@ -74,8 +78,9 @@ export function buildCaseOverview(
   }
   const sources = parseCaseSources(rows, analysisFollowups(result));
   const associations = trace.mitre_associations ?? [];
+  const incidentSummary = trace.summary || result.summary || "Case summary not provided.";
   const findings: CaseFinding[] = trace.claims.map((claim) => {
-    const cited = claimRefs(claim, sources);
+    const cited = claimRefs(claim, sources, incidentSummary);
     return {
       id: claim.claim_id,
       text: claim.text,
@@ -101,10 +106,14 @@ export function buildCaseOverview(
   });
   const backing = claimBacking(findings);
   const affected = findingsNamed(findings);
-  const incidentSummary = trace.summary || result.summary || "Case summary not provided.";
   return {
     hasAnalysis: true,
     incidentSummary,
+    summaryUnits: (trace.summary_units ?? []).map(({ text, claim_ids, support }) => ({
+      text,
+      claimIds: claim_ids ?? [],
+      supportNote: supportNote(support, incidentSummary),
+    })),
     findings,
     gaps: (trace.gaps ?? []).map((gap) => ({
       id: gap.gap_id,
@@ -139,6 +148,7 @@ function emptyCaseOverview(): CaseOverviewData {
   return {
     hasAnalysis: false,
     incidentSummary: "",
+    summaryUnits: [],
     findings: [],
     gaps: [],
     parties: [],
@@ -149,11 +159,13 @@ function emptyCaseOverview(): CaseOverviewData {
 
 function claimBacking(findings: CaseFinding[]) {
   const byId = new Map(findings.map((finding) => [finding.id, finding]));
-  return (claimIds: string[] = []): { sources: SourceMessageRef[]; inferred: boolean } => {
+  return (claimIds: string[] = []): ClaimBacked => {
     const cited = claimIds.flatMap((id) => byId.get(id) ?? []);
     const seen = new Set<string>();
     const sources = cited
-      .flatMap((finding) => finding.supportingSources)
+      .flatMap((finding) =>
+        checkedSources(finding.supportingSources, isUnconfirmed(finding.epistemicStatus)),
+      )
       .filter((source) => {
         const key = JSON.stringify([source.id, source.pageNumbers]);
         if (seen.has(key)) return false;
@@ -164,6 +176,7 @@ function claimBacking(findings: CaseFinding[]) {
       sources,
       inferred:
         cited.length > 0 && cited.every((finding) => finding.claimType === "analytical_inference"),
+      unconfirmed: unconfirmedStatuses(cited.map((finding) => finding.epistemicStatus)),
     };
   };
 }

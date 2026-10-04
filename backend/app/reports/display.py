@@ -15,6 +15,7 @@ from app.reports.schemas import (
     ReportPlace,
     ReportQuoteContext,
     ReportSource,
+    ReportSummaryUnit,
     ReportTechnique,
     ReportUnverifiedQuote,
 )
@@ -117,6 +118,16 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
             else None
         ),
         summary=report_input.analysis_summary,
+        summary_units=[
+            ReportSummaryUnit(
+                text=unit.text,
+                references=sorted(
+                    {ordinals[claim_id] for claim_id in unit.claim_ids if claim_id in ordinals}
+                ),
+                support=unit.support,
+            )
+            for unit in trace.summary_units
+        ],
         parties=[
             ReportParty(
                 name=party.name,
@@ -247,6 +258,8 @@ def report_findings(
                 contradicting_quotes=quotes(claim.contradicting_citations),
                 supporting_contexts=quote_contexts(claim.supporting_citations),
                 contradicting_contexts=quote_contexts(claim.contradicting_citations),
+                supporting_tolerated=tolerated_places(claim.supporting_citations),
+                contradicting_tolerated=tolerated_places(claim.contradicting_citations),
                 unverified_quotes=unverified_quotes(claim),
                 reasoning_summary=claim.reasoning_summary,
             )
@@ -268,6 +281,17 @@ def unverified_quotes(claim: CaseAnalysisClaim) -> list[ReportUnverifiedQuote]:
             ],
         )
         for item in claim.unverified_citations
+    ]
+
+
+def tolerated_places(citations: list[CaseSourceCitation]) -> list[list[ReportPlace]]:
+    return [
+        [
+            ReportPlace(written=difference.written, source=difference.source)
+            for difference in citation.tolerated_differences
+        ]
+        for citation in citations
+        if citation.exact_quote.strip()
     ]
 
 

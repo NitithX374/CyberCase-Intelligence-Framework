@@ -14,7 +14,7 @@ MessageKind = Literal["conversation", "followup_question", "followup_answer"]
 
 
 class ChatMessageCreate(BaseModel):
-    content: str = Field(default="")
+    content: str = Field(default="", max_length=4_000)
     client_request_id: str | None = Field(default=None, max_length=255)
 
     @field_validator("client_request_id")

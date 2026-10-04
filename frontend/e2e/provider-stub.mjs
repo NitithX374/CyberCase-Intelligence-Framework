@@ -105,14 +105,31 @@ function responseFor(body) {
           source.source_id,
       )
     : [];
-  if (caseSources.length === 0) {
+  const readClaims = Array.isArray(request?.reading?.claims)
+    ? request.reading.claims.filter(
+        (claim) =>
+          claim &&
+          typeof claim === "object" &&
+          typeof claim.claim_id === "string" &&
+          typeof claim.text === "string",
+      )
+    : [];
+  if (caseSources.length === 0 && readClaims.length === 0) {
     throw new Error("Unsupported E2E provider request");
   }
 
-  const sections = caseSources.map((source) => ({
-    sourceId: source.source_id,
-    quote: typeof source.text === "string" ? source.text.trim() : "",
-  }));
+  const sections =
+    caseSources.length > 0
+      ? caseSources.map((source, idx) => ({
+          claimId: `A-0${idx + 1}`,
+          sourceId: source.source_id,
+          quote: typeof source.text === "string" ? source.text.trim() : "",
+        }))
+      : readClaims.map((claim) => ({
+          claimId: claim.claim_id,
+          sourceId: claim.supporting_source_ids?.[0] ?? "",
+          quote: claim.text.trim(),
+        }));
   const sourceText = sections.map((section) => section.quote).join("\n\n");
 
   const claims = sections.map((sec, idx) => ({
@@ -159,7 +176,9 @@ function responseFor(body) {
 
   const trace = {
     version: "case_analysis_trace_v1",
-    summary: `Deterministic E2E summary: ${sourceText}`,
+    summary: `Deterministic E2E summary: ${sections
+      .map((section) => `${section.quote} [${section.claimId}]`)
+      .join(" ")}`,
     involved_parties: [],
     timeline: [],
     impacts: [],

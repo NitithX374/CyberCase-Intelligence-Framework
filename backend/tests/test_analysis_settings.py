@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.llm.request import input_budget
-from app.llm.settings import AnalysisPipelineConfig, provider_order
+from app.llm.settings import SOURCE_TOKEN_BUDGET, AnalysisPipelineConfig, provider_order
 
 
 def test_the_request_budget_is_output_plus_thinking() -> None:
@@ -51,3 +51,9 @@ def test_the_provider_list_keeps_its_order_and_drops_blanks_and_repeats() -> Non
         "coreweave/fp8",
     )
     assert provider_order("") == ()
+
+
+def test_the_source_ceiling_leaves_room_for_the_prompt_the_reading_and_the_conversation() -> None:
+    config = AnalysisPipelineConfig(model="test/model")
+
+    assert input_budget(config) - SOURCE_TOKEN_BUDGET >= 30_000

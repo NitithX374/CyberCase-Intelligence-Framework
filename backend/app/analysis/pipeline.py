@@ -19,7 +19,12 @@ from app.analysis.technical_context.retrieve import (
 )
 from app.analysis.write import write_trace
 from app.errors import CaseAnalysisFailure
-from app.followup.clarification import FollowupDecision, Proceed, decide_followup
+from app.followup.clarification import (
+    FollowupDecision,
+    Proceed,
+    decide_followup,
+    rounds_are_spent,
+)
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.sources.bundle import CaseSourceBundle
 from app.trace.bind import bound_references, resolve_case_trace
@@ -55,15 +60,17 @@ class AnalysisArtifacts:
 
 @dataclass(frozen=True)
 class AnalysisAdvance:
-    assessment: CaseAssessmentTrace
+    assessment: CaseAssessmentTrace | None
     decision: FollowupDecision
     artifacts: AnalysisArtifacts | None = None
 
 
 async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
-    assessment = await assess_gaps(data)
+    assessment = (
+        None if rounds_are_spent(data.rounds_spent, data.max_rounds) else await assess_gaps(data)
+    )
     decision = decide_followup(
-        gaps=assessment.gaps,
+        gaps=() if assessment is None else assessment.gaps,
         asked_gap_keys=data.asked_gap_keys,
         asked_this_round=0,
         rounds_spent=data.rounds_spent,

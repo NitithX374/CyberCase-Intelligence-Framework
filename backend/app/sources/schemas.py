@@ -29,7 +29,7 @@ def contains_nul(value: object) -> bool:
 
 
 class CaseSourceCreate(BaseModel):
-    exact_text: str = Field(min_length=1, max_length=400_000)
+    exact_text: str = Field(min_length=1, max_length=250_000)
     provenance_json: dict[str, object] = Field(default_factory=dict)
     source_kind: Literal["narrative"] = "narrative"
     source_metadata_json: dict[str, object] = Field(default_factory=dict)

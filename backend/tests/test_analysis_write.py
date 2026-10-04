@@ -295,7 +295,7 @@ def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_i
     assert before.grounding.associations_without_claim == 1
 
 
-def test_each_call_is_given_the_case_sources_as_one_structured_collection():
+def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
     source = CaseSourceItem(
         source_id="s1",
         source_kind="document",
@@ -330,7 +330,6 @@ def test_each_call_is_given_the_case_sources_as_one_structured_collection():
     }
     assert judgement_call["content"] == {
         "response_language": "english",
-        "case_sources": case_sources,
         "followup_history": [],
         "technical_context": None,
         "reading": reading_payload(reading),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { analysisPath } from "@/lib/casePaths";
 import { groupCaseFindings, claimTypeLabels } from "./overview";
@@ -39,7 +39,7 @@ export function FindingRow({
   const detailsId = `finding-${finding.id}-details`;
 
   return (
-    <article className="py-4">
+    <article id={`finding-${finding.id}`} className="scroll-mt-5 py-4">
       <p className="break-words text-[15px] leading-7 text-ink">{finding.text}</p>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {showClaimType && finding.claimType !== "reported" && (
@@ -155,16 +155,35 @@ function SourceGroup({
   );
 }
 
+function groupsHolding(findings: CaseFinding[], findingId: string | null | undefined): string[] {
+  if (!findingId) return [];
+  return groupCaseFindings(findings)
+    .filter((group) => group.findings.some((finding) => finding.id === findingId))
+    .map((group) => group.id);
+}
+
 export function CaseFindingsSection({
   caseId,
   findings,
+  focusId,
   ...sourceActions
 }: FindingSourceActions & {
   caseId: string;
   findings: CaseFinding[];
+  focusId?: string | null;
 }) {
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(() =>
+    groupsHolding(findings, focusId),
+  );
   const groups = groupCaseFindings(findings);
+
+  useEffect(() => {
+    if (!focusId) return;
+    const frame = requestAnimationFrame(() =>
+      document.getElementById(`finding-${focusId}`)?.scrollIntoView?.({ block: "start" }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [focusId]);
 
   if (groups.length === 0) {
     return <p className="py-6 text-sm text-ink-muted">No findings in this analysis.</p>;

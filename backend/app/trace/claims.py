@@ -20,6 +20,7 @@ from app.trace.quotes import (
     MAX_POINTER_PLACES,
     MAX_QUOTE_CHARS,
     MAX_SUPPORTED_DOCUMENT_PAGES,
+    MAX_TOLERATED_DIFFERENCES,
 )
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
@@ -89,6 +90,13 @@ class CaseQuoteContext(BaseModel):
     cut_after: bool = False
 
 
+class CaseQuoteDifference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    written: str = Field(default="", max_length=MAX_QUOTE_CHARS)
+    source: str = Field(default="", max_length=2 * MAX_QUOTE_CHARS)
+
+
 class CaseSourceCitation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -98,6 +106,9 @@ class CaseSourceCitation(BaseModel):
     filename: str | None = Field(default=None, min_length=1, max_length=255)
     page_numbers: list[int] = Field(default_factory=list, max_length=MAX_PAGE_SPANS_PER_QUOTE)
     context: CaseQuoteContext | None = None
+    tolerated_differences: list[CaseQuoteDifference] = Field(
+        default_factory=list, max_length=MAX_TOLERATED_DIFFERENCES
+    )
 
     @field_validator("source_id", "exact_quote", "document_id", "filename")
     @classmethod
@@ -134,13 +145,6 @@ class CaseProviderCitation(BaseModel):
 
     source_id: str = Field(min_length=1, max_length=160)
     exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
-
-
-class CaseQuoteDifference(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    written: str = Field(default="", max_length=MAX_QUOTE_CHARS)
-    source: str = Field(default="", max_length=2 * MAX_QUOTE_CHARS)
 
 
 class CaseNearPassage(BaseModel):
@@ -233,6 +237,19 @@ class CaseAnalysisClaim(CaseClaimFields):
     reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
 
 
+CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
+    "unverified_citations": True,
+    "supporting_citations": {"__all__": {"tolerated_differences"}},
+    "contradicting_citations": {"__all__": {"tolerated_differences"}},
+}
+
+CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT = {
+    "unverified_citations": True,
+    "supporting_citations": {"__all__": {"tolerated_differences", "context"}},
+    "contradicting_citations": {"__all__": {"tolerated_differences", "context"}},
+}
+
+
 def normalized_citation(data: object) -> dict[str, object] | None:
     if not isinstance(data, dict):
         return None
@@ -253,6 +270,7 @@ def normalized_citation(data: object) -> dict[str, object] | None:
         if isinstance(data.get("page_numbers"), (list, tuple))
         else [],
         "context": stored_context(data.get("context")),
+        "tolerated_differences": stored_differences(data.get("tolerated_differences")),
     }
 
 
@@ -263,6 +281,18 @@ def stored_context(value: object) -> CaseQuoteContext | None:
         return CaseQuoteContext.model_validate(value)
     except ValidationError:
         return None
+
+
+def stored_differences(value: object) -> list[CaseQuoteDifference]:
+    if not isinstance(value, list):
+        return []
+    kept: list[CaseQuoteDifference] = []
+    for item in value[:MAX_TOLERATED_DIFFERENCES]:
+        try:
+            kept.append(CaseQuoteDifference.model_validate(item))
+        except ValidationError:
+            continue
+    return kept
 
 
 def bounded_locator(value: object, limit: int) -> str | None:
