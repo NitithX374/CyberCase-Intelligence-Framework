@@ -83,6 +83,62 @@ describe("Case overview projection", () => {
     ]);
   });
 
+  const unitsOf = (summary: string) =>
+    analysisResult({
+      summary,
+      trace_json: trace({
+        summary,
+        claims: [claim("A", sourceId)],
+        summary_units: [
+          { text: "A share was encrypted", claim_ids: ["A-01"], support: "bound" },
+          { text: "Both demands", claim_ids: ["A-01", "A-02"], support: "mixed" },
+          { text: "Ten bitcoin", claim_ids: ["A-03"], support: "unbound" },
+          { text: "Someone is to blame", claim_ids: [], support: "no_claim" },
+        ],
+      }),
+    });
+
+  it("gives each summary unit its claims and the line its status calls for", () => {
+    const overview = buildCaseOverview(unitsOf("A share was encrypted [A-01]."), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.summaryUnits).toEqual([
+      { text: "A share was encrypted", claimIds: ["A-01"], supportNote: null },
+      {
+        text: "Both demands",
+        claimIds: ["A-01", "A-02"],
+        supportNote: "Some cited quotations were not found in the sources.",
+      },
+      {
+        text: "Ten bitcoin",
+        claimIds: ["A-03"],
+        supportNote: "No cited quotation was found in the sources.",
+      },
+      { text: "Someone is to blame", claimIds: [], supportNote: "Not linked to any claim." },
+    ]);
+  });
+
+  it("writes the summary lines in Thai when the summary is in Thai", () => {
+    const overview = buildCaseOverview(unitsOf("ไฟล์ถูกเข้ารหัส [A-01]"), [narrativeSource(quote)]);
+
+    expect(overview.summaryUnits.map((unit) => unit.supportNote)).toEqual([
+      null,
+      "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
+      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ไม่ได้เชื่อมกับข้อสังเกตใด",
+    ]);
+  });
+
+  it("has no summary units for an analysis stored before they existed", () => {
+    const overview = buildCaseOverview(supported("A share was encrypted."), [
+      narrativeSource(quote),
+    ]);
+
+    expect(overview.summaryUnits).toEqual([]);
+    expect(overview.incidentSummary).toBe("A share was encrypted.");
+  });
+
   it("renders claims from current case sources", () => {
     const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
       narrativeSource(quote),

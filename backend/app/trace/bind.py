@@ -29,11 +29,13 @@ from app.trace.quotes import (
     without_edge_ellipses,
 )
 from app.trace.sentences import SentenceIndex, quote_context
+from app.trace.summary import summary_pieces
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseGroundingReport,
     CaseMitreAssociation,
     CaseProviderReading,
+    CaseSummaryUnit,
     SupportStatus,
 )
 
@@ -108,8 +110,10 @@ def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> Ca
         context_technique_ids(mitre_table),
         has_retrieval=trace.retrieval_context_id is not None,
     )
+    units, unknown_ids = summary_units(trace.summary, claims_by_id)
     return trace.model_copy(
         update={
+            "summary_units": units,
             "involved_parties": [
                 with_support(party, claims_by_id) for party in trace.involved_parties
             ],
@@ -121,10 +125,25 @@ def bound_references(trace: CaseAnalysisTrace, mitre_table: object = None) -> Ca
                 update={
                     "associations_outside_context": outside_context,
                     "associations_without_claim": without_claim,
+                    "summary_ids_unknown": unknown_ids,
                 }
             ),
         }
     )
+
+
+def summary_units(
+    summary: str, claims_by_id: Mapping[str, CaseAnalysisClaim]
+) -> tuple[list[CaseSummaryUnit], int]:
+    units: list[CaseSummaryUnit] = []
+    unknown_ids = 0
+    for text, written in summary_pieces(summary):
+        known = [claim_id for claim_id in written if claim_id in claims_by_id]
+        unknown_ids += len(written) - len(known)
+        units.append(
+            CaseSummaryUnit(text=text, claim_ids=known, support=item_support(known, claims_by_id))
+        )
+    return units, unknown_ids
 
 
 def deduplicated_claims(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisClaim]:

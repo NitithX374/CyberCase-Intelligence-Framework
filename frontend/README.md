@@ -36,6 +36,8 @@ Tests live only in `src/test/`, at the path of the file they test: `src/features
 
 The Sources and Analysis views may project answered follow-up messages alongside native sources for reader navigation: Sources reads them from the chat (`features/sources/useCaseSourceRows.ts`), and Analysis reads the ones the analysis recorded (`features/analysis/analysisRecord.ts`). That display projection does not make a follow-up answer a persisted `CaseSource`.
 
+The Summary shows the analysis's summary one sentence at a time (`features/analysis/SummaryUnits`), from the units the backend derives: each sentence ends with its claim IDs, each a link to `AnalysisFindings?finding=A-nn`, and a sentence the quotations do not support has one plain line under it (`supportNote`). The link is a query, not a `#` fragment: after a fragment link, the Findings link in the nav opened with that fragment still on its URL (seen in the e2e). An analysis stored before the units existed has none, and the Summary reads its text as Markdown, as before.
+
 ## Commands
 
 ```powershell

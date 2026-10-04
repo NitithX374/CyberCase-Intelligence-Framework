@@ -85,12 +85,19 @@ against the sources:
 - the grounding counts are taken.
 
 The judgement therefore reads checked claims: their statuses, and only the
-quotations that were found.
+quotations that were found. It is given neither the case sources nor the
+sentence around each quotation, so a fact reaches its summary only through a
+claim. It is still given the follow-up history, which the gap rules need, and
+the technical context. Every summary sentence ends with the IDs of the claims
+it rests on.
 
 `bind_to_case` then checks the judgement's references with `bound_references`:
 - the `affected_claim_ids` of a gap;
 - the claim IDs of each ATT&CK association, and its technique against the
-  retrieved context.
+  retrieved context;
+- the claim IDs at the end of each summary sentence: `summary_units` is derived
+  from the summary, each unit with its known claim IDs and a `support`, and the
+  IDs that name no claim are counted in `grounding.summary_ids_unknown`.
 
 A trace written without the middle step, as the one-call writer in
 `experiments/analysis_arms.py` writes it, is bound in full there. The `verify` arm in

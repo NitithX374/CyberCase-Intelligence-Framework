@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalysisFindings } from "@/features/analysis/AnalysisFindings";
 import {
@@ -87,5 +87,17 @@ describe("AnalysisFindings", () => {
 
     expect(screen.queryByText("The statement reports a transfer.")).not.toBeInTheDocument();
     expect(screen.getByText("The transfer went to Account B.")).toBeInTheDocument();
+  });
+
+  it("scrolls to the finding a summary link named", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    navigation.search = "finding=A-02";
+
+    const { container } = render(<AnalysisFindings />);
+
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    expect(scrollIntoView.mock.contexts[0]).toBe(container.querySelector("#finding-A-02"));
+    expect(screen.getByText("The statement reports a transfer.")).toBeInTheDocument();
   });
 });

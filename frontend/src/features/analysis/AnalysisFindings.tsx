@@ -53,6 +53,7 @@ export function AnalysisFindings() {
         key={`${analysisResult.id}:${filtered ? "not_confirmed" : "all"}`}
         caseId={caseId}
         findings={filtered ? unconfirmed : overview.findings}
+        focusId={searchParams?.get("finding") ?? null}
         onSelectSource={handleSelectSource}
         activeSourceKey={drawer.openKey}
       />

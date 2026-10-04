@@ -16,7 +16,7 @@ from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import bound_claims
 from app.trace.claims import (
-    CLAIM_FIELDS_HIDDEN_FROM_MODELS,
+    CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT,
     CaseAnalysisClaim,
     CaseFollowupExchange,
     followup_payload,
@@ -56,10 +56,7 @@ async def write_trace(
         config=config,
         stage="case_judgement",
         system=CASE_JUDGEMENT_SYSTEM_PROMPT,
-        content={
-            **write_request(sources, language, followup_history, technical_context),
-            "reading": reading_payload(reading),
-        },
+        content=judgement_request(reading, language, followup_history, technical_context),
         schema=CaseProviderJudgement,
     )
     return joined_trace(reading, judgement, technical_context, grounding)
@@ -113,14 +110,32 @@ def write_request(
 ) -> dict[str, object]:
     return {
         **reading_request(sources, language, followup_history),
-        "technical_context": (
-            {
-                "context": technical_context.context,
-                "mitre_table": list(technical_context.mitre_table),
-            }
-            if technical_context is not None
-            else None
-        ),
+        "technical_context": technical_context_payload(technical_context),
+    }
+
+
+def judgement_request(
+    reading: CaseProviderReading,
+    language: str,
+    followup_history: Sequence[CaseFollowupExchange],
+    technical_context: CaseRagContextPayload | None,
+) -> dict[str, object]:
+    return {
+        "response_language": language,
+        "followup_history": followup_payload(followup_history),
+        "technical_context": technical_context_payload(technical_context),
+        "reading": reading_payload(reading),
+    }
+
+
+def technical_context_payload(
+    technical_context: CaseRagContextPayload | None,
+) -> dict[str, object] | None:
+    if technical_context is None:
+        return None
+    return {
+        "context": technical_context.context,
+        "mitre_table": list(technical_context.mitre_table),
     }
 
 
@@ -145,7 +160,7 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
 def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
     return {
         "claims": [
-            claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_MODELS)
+            claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT)
             for claim in reading.claims
         ],
         "involved_parties": [
@@ -185,6 +200,7 @@ def joined_trace(
 __all__ = [
     "checked_reading",
     "joined_trace",
+    "judgement_request",
     "provider_source_payload",
     "reading_from",
     "reading_payload",
