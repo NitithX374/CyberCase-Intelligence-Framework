@@ -12,6 +12,7 @@ from app.trace.claims import (
     CaseNearPassage,
     CaseQuoteContext,
     CaseQuoteDifference,
+    CaseReviewFlag,
     CaseSourceCitation,
     CaseUnverifiedCitation,
 )
@@ -19,7 +20,9 @@ from app.trace.quotes import (
     MAX_QUOTE_CHARS,
     MAX_TOLERATED_DIFFERENCES,
     IndexedText,
+    edge_marks,
     find_aligned_quote,
+    ignored_marks,
     indexed,
     locate_quote,
     nearest_passage,
@@ -263,6 +266,7 @@ def grounding_report(
         claims_without_citation=sum(1 for c in kept if not c.supporting_citations),
         claims_duplicated=claims_dropped,
         citations_duplicated=located - verified,
+        citations_marked=sum(1 for c in all_citations(kept) if c.review_flags),
         associations_outside_context=associations_outside_context,
         associations_without_claim=associations_without_claim,
         sources_cited=len({c.source_id for c in all_citations(kept)}),
@@ -463,7 +467,29 @@ def added_citations(
             else:
                 fresh.append(canonical)
                 kept[key] = canonical
+    if tolerance:
+        for citation in kept.values():
+            citation.review_flags = review_flags(search.texts[citation.source_id], citation)
     return added
+
+
+def review_flags(source: IndexedText, citation: CaseSourceCitation) -> list[CaseReviewFlag]:
+    flags: list[CaseReviewFlag] = []
+    ignored = ignored_marks((item.written, item.source) for item in citation.tolerated_differences)
+    if ignored:
+        flags.append(mark_flag(ignored, "ignored"))
+    places = quote_occurrences(source.text, citation.exact_quote)
+    if places:
+        at_edge = edge_marks(source, places[0], places[0] + len(citation.exact_quote))
+        if at_edge:
+            flags.append(mark_flag(at_edge, "edge"))
+    return flags
+
+
+def mark_flag(marks: list[str], place: Literal["ignored", "edge"]) -> CaseReviewFlag:
+    return CaseReviewFlag(
+        kind="meaning_mark", verdict="rule_warning", detail=f"{' '.join(marks)} {place}"
+    )
 
 
 def merged_differences(

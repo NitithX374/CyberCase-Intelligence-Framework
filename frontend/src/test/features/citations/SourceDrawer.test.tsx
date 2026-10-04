@@ -158,6 +158,65 @@ describe("SourceDrawer", () => {
     expect(withoutText.toleratedNotes).toBeUndefined();
   });
 
+  it("tells the reader under the quotation which mark to check", () => {
+    const [cited] = claimRefs(
+      {
+        supporting_source_ids: ["narrative-1"],
+        supporting_citations: [
+          {
+            source_id: "narrative-1",
+            exact_quote: "a transfer of 52,000 baht",
+            tolerated_differences: [{ written: "apple", source: "Apple" }],
+            review_flags: [
+              { kind: "meaning_mark", verdict: "rule_warning", detail: "? edge" },
+              { kind: "meaning_mark", verdict: "rule_warning", detail: "~ ignored" },
+            ],
+          },
+        ],
+      },
+      parseCaseSources([narrative], []),
+      "A transfer was reported.",
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+
+    render(<SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />);
+
+    const quoted = screen.getByRole("heading", { level: 3, name: "Quoted" }).closest("section")!;
+    const lines = within(quoted)
+      .getAllByText(/^(Found in the source|Check:)/)
+      .map((line) => line.textContent);
+    expect(lines).toEqual([
+      "Found in the source when formatting is ignored. The analysis wrote «apple»; the source says «Apple».",
+      "Check: the source has the mark ? next to the quote, which the quote leaves out.",
+      "Check: the quote and the source differ at the mark ~, which may change the meaning.",
+    ]);
+    expect(quoted.querySelector("svg, img, button")).toBeNull();
+  });
+
+  it("shows no mark line for a quotation with no flag, or without the analysis text", () => {
+    const citation: CaseSourceCitation = {
+      source_id: "narrative-1",
+      exact_quote: "a transfer of 52,000 baht",
+      review_flags: [{ kind: "meaning_mark", verdict: "rule_warning", detail: "? edge" }],
+    };
+    const sources = parseCaseSources([narrative], []);
+    const [plain] = claimRefs(
+      {
+        supporting_source_ids: ["narrative-1"],
+        supporting_citations: [{ source_id: "narrative-1", exact_quote: "a transfer" }],
+      },
+      sources,
+      "A transfer was reported.",
+    ).supporting;
+    const [withoutText] = claimRefs(
+      { supporting_source_ids: ["narrative-1"], supporting_citations: [citation] },
+      sources,
+    ).supporting;
+
+    expect(plain.reviewNotes).toBeUndefined();
+    expect(withoutText.reviewNotes).toBeUndefined();
+  });
+
   it("names a near passage as the nearest passage, not as a quotation", () => {
     const [cited] = claimRefs(
       {

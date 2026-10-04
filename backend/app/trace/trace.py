@@ -119,6 +119,7 @@ class CaseGroundingReport(BaseModel):
     claims_without_citation: int = 0
     claims_duplicated: int = 0
     citations_duplicated: int = 0
+    citations_marked: int = 0
     associations_outside_context: int = 0
     associations_without_claim: int = 0
     summary_ids_unknown: int = 0

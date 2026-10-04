@@ -1,5 +1,6 @@
 import type { CaseAnalysisClaim, CaseSourceCitation, CaseSourceRead } from "@/lib/api/types";
 import { asArray } from "@/lib/parse";
+import { reviewNotes } from "./reviewNotes";
 import { toleratedNotes } from "./toleratedNotes";
 import type { CaseSourceRef, FollowupAnswer, SourceMessageRef, SourcePage } from "./types";
 
@@ -129,6 +130,9 @@ function sourceRef(
     question: source.question,
     ...(quote && writtenText !== undefined && citation?.tolerated_differences?.length
       ? { toleratedNotes: toleratedNotes(citation.tolerated_differences, writtenText) }
+      : {}),
+    ...(quote && writtenText !== undefined && citation?.review_flags?.length
+      ? { reviewNotes: reviewNotes(citation.review_flags, writtenText) }
       : {}),
   };
 }

@@ -51,6 +51,11 @@ class ReportPlace(ReportRow):
     source: str = ""
 
 
+class ReportMark(ReportRow):
+    marks: str
+    place: Literal["ignored", "edge"]
+
+
 class ReportUnverifiedQuote(ReportRow):
     written_quote: str
     places: list[ReportPlace] = Field(default_factory=list)
@@ -69,6 +74,8 @@ class ReportFinding(ReportRow):
     contradicting_contexts: list[ReportQuoteContext | None] = Field(default_factory=list)
     supporting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
     contradicting_tolerated: list[list[ReportPlace]] = Field(default_factory=list)
+    supporting_marked: list[list[ReportMark]] = Field(default_factory=list)
+    contradicting_marked: list[list[ReportMark]] = Field(default_factory=list)
     unverified_quotes: list[ReportUnverifiedQuote] = Field(default_factory=list)
     reasoning_summary: str | None = None
 
@@ -144,6 +151,7 @@ __all__ = [
     "ReportFinding",
     "ReportGap",
     "ReportImpact",
+    "ReportMark",
     "ReportParty",
     "ReportPlace",
     "ReportQuoteContext",

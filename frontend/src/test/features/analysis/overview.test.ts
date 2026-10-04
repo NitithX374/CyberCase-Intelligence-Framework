@@ -174,6 +174,52 @@ describe("Case overview projection", () => {
     ]);
   });
 
+  it("carries the marks to check onto the quotation, in the language of the analysis", () => {
+    const citation: CaseSourceCitation = {
+      source_id: sourceId,
+      exact_quote: quote,
+      review_flags: [{ kind: "meaning_mark", verdict: "rule_warning", detail: "? edge" }],
+    };
+    const english = buildCaseOverview(result(quote, citation), [narrativeSource(quote)]);
+    const thai = buildCaseOverview(
+      analysisResult({
+        summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
+        trace_json: trace({
+          summary: "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน",
+          claims: [claim(quote, sourceId, { supporting_citations: [citation] })],
+        }),
+      }),
+      [narrativeSource(quote)],
+    );
+
+    expect(english.findings[0].supportingSources[0].reviewNotes).toEqual([
+      "Check: the source has the mark ? next to the quote, which the quote leaves out.",
+    ]);
+    expect(thai.findings[0].supportingSources[0].reviewNotes).toEqual([
+      "ตรวจ: ต้นฉบับมีเครื่องหมาย ? ที่ quote ไม่ได้รวมไว้",
+    ]);
+  });
+
+  it("gives a quotation with no flag no mark line, and a flag changes no status", () => {
+    const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
+      narrativeSource(quote),
+    ]);
+    const flagged = buildCaseOverview(
+      result(quote, {
+        source_id: sourceId,
+        exact_quote: quote,
+        review_flags: [{ kind: "meaning_mark", verdict: "rule_warning", detail: "? edge" }],
+      }),
+      [narrativeSource(quote)],
+    );
+
+    expect(overview.findings[0].supportingSources[0].reviewNotes).toBeUndefined();
+    expect(flagged.findings[0].epistemicStatus).toBe(overview.findings[0].epistemicStatus);
+    expect(flagged.findings[0].supportingSources).toHaveLength(
+      overview.findings[0].supportingSources.length,
+    );
+  });
+
   it("gives a quotation found as written no tolerated line", () => {
     const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
       narrativeSource(quote),

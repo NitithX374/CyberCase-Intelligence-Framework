@@ -37,6 +37,7 @@ from app.trace.claims import (
     CaseFollowupExchange,
     CaseNearPassage,
     CaseQuoteDifference,
+    CaseReviewFlag,
     CaseSourceCitation,
     CaseUnverifiedCitation,
 )
@@ -893,3 +894,102 @@ def test_a_report_stored_before_the_units_existed_prints_its_summary_as_before()
 
 def test_an_analysis_stored_before_the_units_existed_makes_a_report_with_none() -> None:
     assert build_case_report_content(_input()).summary_units == []
+
+
+EDGE_LINE = "ตรวจ: ต้นฉบับมีเครื่องหมาย"
+IGNORED_LINE = "ตรวจ: ต้นฉบับกับ quote ต่างกันที่เครื่องหมาย"
+
+
+def _input_with_flags(
+    supporting: list[str], contradicting: list[str] | None = None
+) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    claim = trace.claims[0]
+    cited = claim.supporting_citations[0]
+
+    def with_flags(details: list[str]) -> CaseSourceCitation:
+        return cited.model_copy(
+            update={
+                "review_flags": [
+                    CaseReviewFlag(kind="meaning_mark", verdict="rule_warning", detail=detail)
+                    for detail in details
+                ]
+            }
+        )
+
+    claim = claim.model_copy(
+        update={
+            "supporting_citations": [with_flags(supporting)],
+            "contradicting_citations": (
+                [with_flags(contradicting)] if contradicting is not None else []
+            ),
+        }
+    )
+    return report_input.model_copy(
+        update={"analysis_trace": trace.model_copy(update={"claims": [claim]})}
+    )
+
+
+def test_a_new_report_stores_the_marks_to_review_beside_each_quote() -> None:
+    report = _stored(_input_with_flags(["? edge", "~ % ignored"], ["< ignored"]))
+
+    [finding] = report.findings
+    assert [[(m.marks, m.place) for m in marks] for marks in finding.supporting_marked] == [
+        [("?", "edge"), ("~ %", "ignored")]
+    ]
+    assert [[(m.marks, m.place) for m in marks] for marks in finding.contradicting_marked] == [
+        [("<", "ignored")]
+    ]
+
+
+def test_a_flagged_quote_is_printed_with_a_plain_line_for_each_reason() -> None:
+    html = render_case_report_html(_stored(_input_with_flags(["? edge", "~ % ignored"])), ISSUE)
+
+    assert f"{EDGE_LINE} ? ที่ quote ไม่ได้รวมไว้" in html
+    assert f"{IGNORED_LINE} ~ % ซึ่งอาจเปลี่ยนความหมาย" in html
+    assert html.index("ข้อความจากหลักฐาน:") < html.index(EDGE_LINE) < html.index(IGNORED_LINE)
+    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
+
+
+def test_the_line_of_a_contradicting_quote_follows_that_quote_too() -> None:
+    html = render_case_report_html(_stored(_input_with_flags([], ["% edge"])), ISSUE)
+
+    assert html.count(EDGE_LINE) == 1
+    assert html.index("ข้อความที่ขัดแย้ง:") < html.index(EDGE_LINE)
+
+
+def test_a_quote_with_no_flag_prints_no_review_line() -> None:
+    html = render_case_report_html(_stored(_input()), ISSUE)
+
+    assert EDGE_LINE not in html
+    assert IGNORED_LINE not in html
+
+
+def test_a_flag_does_not_change_the_status_or_the_sources_of_a_finding() -> None:
+    flagged = _stored(_input_with_flags(["? edge"])).findings[0]
+    plain = _stored(_input()).findings[0]
+
+    assert flagged.status == plain.status
+    assert flagged.source_labels == plain.source_labels
+    assert flagged.supporting_quotes == plain.supporting_quotes
+
+
+def test_a_report_stored_before_the_flags_validates_and_prints_no_line() -> None:
+    written = _stored(_input_with_flags(["? edge"])).model_dump(mode="json")
+    for finding in written["findings"]:
+        del finding["supporting_marked"], finding["contradicting_marked"]
+
+    stored = CaseReportContent.model_validate(written)
+    html = render_case_report_html(stored, ISSUE)
+
+    assert stored.findings[0].supporting_marked == []
+    assert EDGE_LINE not in html
+    assert "ข้อความจากหลักฐาน:" in html
+
+
+def test_an_analysis_stored_before_the_flags_existed_makes_a_report_with_none() -> None:
+    [finding] = build_case_report_content(_input()).findings
+
+    assert finding.supporting_marked == [[]]
+    assert finding.contradicting_marked == []
