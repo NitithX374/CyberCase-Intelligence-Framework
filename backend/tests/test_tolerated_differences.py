@@ -64,6 +64,7 @@ def test_a_quote_nothing_locates_has_no_tier():
     ("source", "quote", "differences"),
     [
         (SOURCE, "paid 1,500,000 baht", [("1,500,000", "1500000")]),
+        ("We must re-sign the lease today.", "must resign the lease", [("resign", "re-sign")]),
         (
             "The intrusion lasted from 10−15 March today.",
             "lasted from 10—15 March today",
@@ -420,13 +421,13 @@ def test_the_differences_do_not_depend_on_which_written_quote_came_first(order):
 @pytest.mark.parametrize(
     "order",
     [
-        ("apple pays 1,500,000 baht", "Apple pays 1,500,000 baht"),
-        ("Apple pays 1,500,000 baht", "apple pays 1,500,000 baht"),
+        ("apple pays 5,000 baht", "APPLE pays 5,000 baht"),
+        ("APPLE pays 5,000 baht", "apple pays 5,000 baht"),
     ],
 )
 def test_two_tolerated_variants_of_one_passage_keep_every_difference(order):
     source_id = str(uuid4())
-    text = "Apple pays 1500000 baht each month."
+    text = "Apple pays 5,000 baht each month."
     bundle = CaseSourceBundle(
         revision=1,
         sources=(CaseSourceItem(source_id=source_id, source_kind="narrative", text=text),),
@@ -440,5 +441,5 @@ def test_two_tolerated_variants_of_one_passage_keep_every_difference(order):
     bound = resolve_case_trace(trace, bundle)
 
     [(quote, found)] = shown(bound).items()
-    assert quote == "Apple pays 1500000 baht"
-    assert sorted(found) == [("1,500,000", "1500000"), ("apple", "Apple")]
+    assert quote == "Apple pays 5,000 baht"
+    assert sorted(found) == [("APPLE", "Apple"), ("apple", "Apple")]

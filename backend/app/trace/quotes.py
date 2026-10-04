@@ -29,8 +29,6 @@ EDGE_MARKS = frozenset(".,;:!?()[]{}…") | FORMAT_QUOTE_MARKS
 MIN_FORMAT_FORM_CHARS = 8
 THAI_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
 BOUNDARY = " "
-SENTENCE_END = frozenset(".!?")
-SENTENCE_CLOSERS = FORMAT_QUOTE_MARKS | frozenset(")]}")
 MARKUP = r"[*_#`~]"
 TIGHT_JOIN = rf"(?:(?:\s*(?:{MARKUP}|{OCR_TAG}))+\s*)?"
 LOOSE_JOIN = rf"{MARKUP}*\s*(?:{OCR_TAG}\s*)*"
@@ -53,9 +51,7 @@ def folded(text: str) -> tuple[str, list[int]]:
 @dataclass(frozen=True)
 class FormatForm:
     text: str
-    cased: str
     index: list[int]
-    exempt: frozenset[int]
 
 
 def solid(character: str) -> bool:
@@ -64,8 +60,6 @@ def solid(character: str) -> bool:
 
 def kept_dash(before: str, after: str) -> bool:
     if before.isdigit() and after.isdigit():
-        return True
-    if before.isalpha() and after.isalpha():
         return True
     return after.isdigit() and not before.isalnum()
 
@@ -77,13 +71,6 @@ def thousands_comma(units: list[tuple[str, int]], at: int) -> bool:
     return digits == 3
 
 
-def ends_sentence(units: list[tuple[str, int]], at: int) -> bool:
-    following = at + 1
-    while following < len(units) and units[following][0] in SENTENCE_CLOSERS:
-        following += 1
-    return following == len(units) or units[following][0].isspace()
-
-
 def format_form(text: str) -> FormatForm:
     units = [
         (piece, position)
@@ -91,12 +78,9 @@ def format_form(text: str) -> FormatForm:
         for piece in unicodedata.normalize("NFKC", character)
     ]
     pieces: list[str] = []
-    cased: list[str] = []
     index: list[int] = []
-    exempt: set[int] = set()
     boundary_at: int | None = None
     after_solid = False
-    sentence_start = True
     for at, (piece, position) in enumerate(units):
         if piece in FORMAT_DASHES:
             piece = "-"
@@ -105,8 +89,6 @@ def format_form(text: str) -> FormatForm:
         if piece.isspace():
             boundary_at = position if boundary_at is None else boundary_at
             continue
-        if piece in SENTENCE_END and ends_sentence(units, at):
-            sentence_start = True
         if piece in FORMAT_QUOTE_MARKS:
             continue
         if piece == "-":
@@ -125,20 +107,13 @@ def format_form(text: str) -> FormatForm:
         if boundary_at is not None:
             if after_solid and word:
                 pieces.append(BOUNDARY)
-                cased.append(BOUNDARY)
                 index.append(boundary_at)
             boundary_at = None
-        value = piece.translate(THAI_DIGITS)
-        letters = value.casefold()
-        for letter in letters:
+        for letter in piece.translate(THAI_DIGITS).casefold():
             pieces.append(letter)
-            cased.append(value if len(letters) == 1 else letter)
             index.append(position)
-            if sentence_start and letter.upper() != letter:
-                exempt.add(len(pieces) - 1)
-                sentence_start = False
         after_solid = word
-    return FormatForm("".join(pieces), "".join(cased), index, frozenset(exempt))
+    return FormatForm("".join(pieces), index)
 
 
 @dataclass(frozen=True)
@@ -612,19 +587,10 @@ def find_format_only_quote(source: str | IndexedText, quote: str) -> tuple[int, 
     spans = [
         (form.index[start], form.index[start + len(wanted.text) - 1] + 1)
         for start in quote_occurrences(form.text, wanted.text)
-        if same_case(wanted, form, start)
     ]
     if len(spans) == 1 or len({source.text[a:b] for a, b in spans}) == 1:
         return spans[0]
     return None
-
-
-def same_case(wanted: FormatForm, form: FormatForm, start: int) -> bool:
-    return all(
-        wanted.cased[at] == form.cased[start + at]
-        for at in range(len(wanted.text))
-        if at not in wanted.exempt
-    )
 
 
 def find_folded_quote(source: str | IndexedText, quote: str) -> tuple[int, int] | None:

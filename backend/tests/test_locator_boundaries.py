@@ -54,18 +54,38 @@ def test_the_style_of_a_dash_still_folds_when_it_is_a_sign_or_between_digits(sou
 
 
 @pytest.mark.parametrize(
-    ("source", "quote"),
+    ("source", "quote", "shown"),
     [
-        ("We must re-sign the lease today.", "must resign the lease today"),
-        ("We must resign the lease today.", "must re-sign the lease today"),
-        ("Send the e-mail to the whole department.", "Send the email to the whole department"),
-        ("Send the email to the whole department.", "Send the e-mail to the whole department"),
-        ("A well-known actor joined the board today.", "A wellknown actor joined the board today"),
+        (
+            "We must re-sign the lease today.",
+            "must resign the lease today",
+            [("resign", "re-sign")],
+        ),
+        (
+            "We must resign the lease today.",
+            "must re-sign the lease today",
+            [("re-sign", "resign")],
+        ),
+        (
+            "Send the e-mail to the whole department.",
+            "Send the email to the whole department",
+            [("email", "e-mail")],
+        ),
+        (
+            "Send the email to the whole department.",
+            "Send the e-mail to the whole department",
+            [("e-mail", "email")],
+        ),
+        (
+            "A well-known actor joined the board today.",
+            "A wellknown actor joined the board today",
+            [("wellknown", "well-known")],
+        ),
     ],
 )
-def test_a_hyphen_between_letters_is_never_dropped_and_never_added(source, quote):
-    assert located(source, quote) is None
-    assert find_format_only_quote(source, quote) is None
+def test_a_hyphen_between_letters_is_still_dropped_and_shown(source, quote, shown):
+    assert tier(source, quote) == "format"
+    assert [(d.written, d.source) for d in tolerated_in(source, quote)] == shown
 
 
 @pytest.mark.parametrize(
@@ -174,46 +194,43 @@ def test_whitespace_next_to_thai_script_may_still_be_dropped(source, quote):
 
 
 @pytest.mark.parametrize(
-    ("source", "quote"),
+    ("source", "quote", "shown"),
     [
-        ("Apple pays one million baht each month.", "Apple pays one million baht each month"),
-        ("Apple pays one million baht each month.", "apple pays one million baht each month"),
-        ("apple pays one million baht each month.", "Apple pays one million baht each month"),
-        ("It rained. Apple pays one million baht.", "It rained. apple pays one million baht"),
-        ("It rained! apple pays one million baht.", "It rained! Apple pays one million baht"),
-        ("Is it so? apple pays one million baht.", "Is it so? Apple pays one million baht"),
-        ('He said "No." apple pays one million baht.', 'He said "No." Apple pays one million baht'),
-    ],
-)
-def test_the_case_of_the_first_letter_of_the_quote_and_of_a_sentence_in_it_is_free(source, quote):
-    assert located(source, quote) is not None
-
-
-@pytest.mark.parametrize(
-    ("source", "quote"),
-    [
+        (
+            "Apple pays one million baht each month.",
+            "apple pays one million baht each month",
+            [("apple", "Apple")],
+        ),
+        (
+            "apple pays one million baht each month.",
+            "Apple pays one million baht each month",
+            [("Apple", "apple")],
+        ),
         (
             "They said that Apple pays one million baht.",
             "They said that apple pays one million baht",
+            [("apple", "Apple")],
         ),
         (
             "They said that apple pays one million baht.",
             "They said that Apple pays one million baht",
+            [("Apple", "apple")],
         ),
-        ("Apple pays one million baht each month.", "Apple PAYS one million baht each month"),
-        ("It rained. Apple pays one million baht.", "It rained, apple pays one million baht"),
-        ("It paid 5.5 million. apple pays more.", "It paid 5.5 million. apple Pays more"),
-        ("Apple pays Apple one million baht.", "apple pays apple one million baht"),
+        (
+            "Apple pays one million baht each month.",
+            "Apple PAYS one million baht each month",
+            [("PAYS", "pays")],
+        ),
+        (
+            "SPORTS Direct failed to tell its workers about it.",
+            "Sports Direct failed to tell its workers about it",
+            [("Sports", "SPORTS")],
+        ),
     ],
 )
-def test_the_case_of_any_other_letter_is_significant(source, quote):
-    assert located(source, quote) is None
-
-
-def test_a_decimal_point_does_not_start_a_sentence():
-    source = "The loss was 5.5 Million baht in total."
-
-    assert located(source, "The loss was 5.5 million baht in total") is None
+def test_letter_case_still_folds_everywhere_and_is_shown(source, quote, shown):
+    assert tier(source, quote) == "format"
+    assert [(d.written, d.source) for d in tolerated_in(source, quote)] == shown
 
 
 @pytest.mark.parametrize(
@@ -316,10 +333,10 @@ def test_a_format_form_that_repeats_with_different_source_texts_is_refused():
     assert located(source, '"the money was sent."') is None
 
 
-def test_a_format_form_that_repeats_with_different_cases_counts_only_the_ones_that_match():
+def test_a_format_form_that_repeats_with_texts_that_differ_in_case_is_refused():
     source = "Then the money was sent. Later the Money was sent!"
 
-    assert located(source, '"the money was sent."') == "the money was sent"
+    assert located(source, '"the money was sent."') is None
 
 
 def test_an_exact_quote_found_twice_is_still_refused_before_the_format_tier_is_tried():
