@@ -45,6 +45,7 @@ from app.trace.trace import (
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
+    CaseSummaryUnit,
     CaseTimelineItem,
 )
 
@@ -786,3 +787,109 @@ def test_a_gap_named_by_its_checklist_key_reads_as_words() -> None:
 
 def test_every_checklist_key_has_a_report_topic() -> None:
     assert set(CHECKLIST_TOPICS) == set(CASE_CHECKLIST)
+
+
+SUMMARY_UNITS = (
+    ("พบการใช้ PowerShell", ["A-01"], "bound"),
+    ("มีการเชื่อมต่อออกภายนอก", ["A-01", "A-02"], "mixed"),
+    ("ผู้สั่งงานคือบุคคลภายใน", [], "no_claim"),
+    ("มีการลบข้อมูลสำรอง", ["A-03"], "unbound"),
+)
+
+
+def _input_with_summary_units() -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    first = trace.claims[0]
+    second = first.model_copy(update={"claim_id": "A-02", "text": "มีการเชื่อมต่อออกภายนอก"})
+    third = first.model_copy(
+        update={
+            "claim_id": "A-03",
+            "text": "มีการลบข้อมูลสำรอง",
+            "epistemic_status": "not_confirmed",
+            "supporting_citations": [],
+        }
+    )
+    trace = trace.model_copy(
+        update={
+            "claims": [first, second, third],
+            "summary": "สรุป [A-01]",
+            "summary_units": [
+                CaseSummaryUnit(text=text, claim_ids=claim_ids, support=support)
+                for text, claim_ids, support in SUMMARY_UNITS
+            ],
+        }
+    )
+    return report_input.model_copy(
+        update={"analysis_trace": trace, "analysis_summary": "สรุป [A-01]"}
+    )
+
+
+def test_a_new_report_stores_each_summary_unit_with_the_finding_numbers_it_rests_on() -> None:
+    report = _stored(_input_with_summary_units())
+
+    assert [(unit.text, unit.references, unit.support) for unit in report.summary_units] == [
+        ("พบการใช้ PowerShell", [1], "bound"),
+        ("มีการเชื่อมต่อออกภายนอก", [1, 2], "mixed"),
+        ("ผู้สั่งงานคือบุคคลภายใน", [], "no_claim"),
+        ("มีการลบข้อมูลสำรอง", [3], "unbound"),
+    ]
+    assert report.summary == "สรุป [A-01]"
+    assert "A-0" not in report.model_dump_json().replace("A-01]", "")
+
+
+def test_a_new_report_prints_the_summary_by_unit_with_the_finding_numbers() -> None:
+    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
+    summary = html.split('id="case_summary"')[1].split("</h3>")[1].split("<h3>")[0]
+
+    assert summary.count('class="body unit"') == 4
+    assert "พบการใช้ PowerShell [ข้อ 1]</p>" in summary
+    assert "มีการเชื่อมต่อออกภายนอก [ข้อ 1, 2]</p>" in summary
+    assert "ผู้สั่งงานคือบุคคลภายใน</p>" in summary
+    assert "มีการลบข้อมูลสำรอง [ข้อ 3]</p>" in summary
+    assert "[A-0" not in html
+
+
+def test_a_summary_unit_is_followed_by_a_plain_line_unless_its_claims_are_all_checked() -> None:
+    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
+    summary = html.split('id="case_summary"')[1].split("</h3>")[1].split("<h3>")[0]
+
+    assert summary.count("ข้อความที่อ้างบางส่วนไม่พบในเอกสาร") == 1
+    assert summary.count("ไม่ได้เชื่อมกับข้อสังเกตใด") == 1
+    assert summary.count("ไม่พบข้อความที่อ้างในเอกสาร") == 1
+    after_bound_unit = summary.split("พบการใช้ PowerShell [ข้อ 1]</p>")[1]
+    assert "unit-note" not in after_bound_unit.split('class="body unit"')[0]
+    assert "badge" not in summary
+
+
+def test_a_summary_unit_is_escaped_in_the_report() -> None:
+    report_input = _input_with_summary_units()
+    trace = report_input.analysis_trace.model_copy(
+        update={
+            "summary_units": [
+                CaseSummaryUnit(text="<script>alert(1)</script> **bold**", support="no_claim")
+            ]
+        }
+    )
+    report = _stored(report_input.model_copy(update={"analysis_trace": trace}))
+
+    html = render_case_report_html(report, ISSUE)
+
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt; bold" in html
+
+
+def test_a_report_stored_before_the_units_existed_prints_its_summary_as_before() -> None:
+    written = _stored(_input_with_summary_units()).model_dump(mode="json")
+    del written["summary_units"]
+
+    stored = CaseReportContent.model_validate(written)
+    html = render_case_report_html(stored, ISSUE)
+
+    assert stored.summary_units == []
+    assert 'class="body unit"' not in html
+    assert "สรุป [A-01]" in html
+
+
+def test_an_analysis_stored_before_the_units_existed_makes_a_report_with_none() -> None:
+    assert build_case_report_content(_input()).summary_units == []

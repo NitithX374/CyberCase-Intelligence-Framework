@@ -41,6 +41,12 @@ export interface CaseGap {
   affectedFindings: Pick<CaseFinding, "id" | "text">[];
 }
 
+export interface SummaryUnit {
+  text: string;
+  claimIds: string[];
+  supportNote: string | null;
+}
+
 export interface ClaimBacked {
   sources: SourceMessageRef[];
   inferred: boolean;
@@ -65,6 +71,7 @@ export interface CaseImpact extends ClaimBacked {
 export interface CaseOverviewData {
   hasAnalysis: boolean;
   incidentSummary: string;
+  summaryUnits: SummaryUnit[];
   findings: CaseFinding[];
   gaps: CaseGap[];
   parties: CaseParty[];

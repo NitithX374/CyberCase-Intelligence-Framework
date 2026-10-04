@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CaseFindingsSection } from "@/features/analysis/CaseFindingsSection";
 import type { CaseFinding, ClaimType, EpistemicStatus } from "@/features/analysis/types";
@@ -168,5 +168,75 @@ describe("Grouped case findings", () => {
     );
 
     expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
+  });
+});
+
+describe("Findings reached from a summary link", () => {
+  const many = Array.from({ length: 12 }, (_, index) =>
+    finding(`A-${String(index + 1).padStart(2, "0")}`),
+  );
+
+  it("gives each finding an anchor named by its claim ID", () => {
+    const { container } = render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[finding("A-01"), finding("A-02")]}
+        onSelectSource={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector("#finding-A-01")).toHaveTextContent("Original finding A-01");
+    expect(container.querySelector("#finding-A-02")).toHaveTextContent("Original finding A-02");
+  });
+
+  it("opens the long group that holds the finding the link names and scrolls to it", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    const { container } = render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={many}
+        focusId="A-10"
+        onSelectSource={vi.fn()}
+      />,
+    );
+
+    const target = container.querySelector("#finding-A-10");
+    expect(target).not.toBeNull();
+    expect(screen.getAllByRole("article")).toHaveLength(12);
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    expect(scrollIntoView.mock.contexts[0]).toBe(target);
+  });
+
+  it("keeps a long group short when no link names one of its findings", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    const { container } = render(
+      <CaseFindingsSection caseId={caseId} findings={many} onSelectSource={vi.fn()} />,
+    );
+
+    expect(container.querySelector("#finding-A-10")).toBeNull();
+    expect(screen.getAllByRole("article")).toHaveLength(5);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when the link names a finding that is not there", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={many}
+        focusId="A-99"
+        onSelectSource={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByRole("article")).toHaveLength(5);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

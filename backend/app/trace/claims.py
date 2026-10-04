@@ -243,6 +243,12 @@ CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
     "contradicting_citations": {"__all__": {"tolerated_differences"}},
 }
 
+CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT = {
+    "unverified_citations": True,
+    "supporting_citations": {"__all__": {"tolerated_differences", "context"}},
+    "contradicting_citations": {"__all__": {"tolerated_differences", "context"}},
+}
+
 
 def normalized_citation(data: object) -> dict[str, object] | None:
     if not isinstance(data, dict):

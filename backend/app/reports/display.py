@@ -15,6 +15,7 @@ from app.reports.schemas import (
     ReportPlace,
     ReportQuoteContext,
     ReportSource,
+    ReportSummaryUnit,
     ReportTechnique,
     ReportUnverifiedQuote,
 )
@@ -117,6 +118,16 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
             else None
         ),
         summary=report_input.analysis_summary,
+        summary_units=[
+            ReportSummaryUnit(
+                text=unit.text,
+                references=sorted(
+                    {ordinals[claim_id] for claim_id in unit.claim_ids if claim_id in ordinals}
+                ),
+                support=unit.support,
+            )
+            for unit in trace.summary_units
+        ],
         parties=[
             ReportParty(
                 name=party.name,

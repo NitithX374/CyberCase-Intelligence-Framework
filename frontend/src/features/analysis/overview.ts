@@ -109,6 +109,11 @@ export function buildCaseOverview(
   return {
     hasAnalysis: true,
     incidentSummary,
+    summaryUnits: (trace.summary_units ?? []).map(({ text, claim_ids, support }) => ({
+      text,
+      claimIds: claim_ids ?? [],
+      supportNote: supportNote(support, incidentSummary),
+    })),
     findings,
     gaps: (trace.gaps ?? []).map((gap) => ({
       id: gap.gap_id,
@@ -143,6 +148,7 @@ function emptyCaseOverview(): CaseOverviewData {
   return {
     hasAnalysis: false,
     incidentSummary: "",
+    summaryUnits: [],
     findings: [],
     gaps: [],
     parties: [],

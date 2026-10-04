@@ -100,6 +100,14 @@ class CaseMitreAssociation(BaseModel):
         return value.strip() if isinstance(value, str) else value
 
 
+class CaseSummaryUnit(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
+    claim_ids: ClaimIds = Field(default_factory=list)
+    support: SupportStatus
+
+
 class CaseGroundingReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -113,6 +121,7 @@ class CaseGroundingReport(BaseModel):
     citations_duplicated: int = 0
     associations_outside_context: int = 0
     associations_without_claim: int = 0
+    summary_ids_unknown: int = 0
     sources_cited: int = 0
     sources_total: int = 0
 
@@ -131,6 +140,7 @@ class CaseAnalysisTrace(BaseModel):
     validation_status: Literal["validated"] = "validated"
     analysis_mode: CaseAnalysisMode
     summary: str = Field(min_length=1, max_length=MAX_SUMMARY_CHARS)
+    summary_units: list[CaseSummaryUnit] = Field(default_factory=list)
     involved_parties: list[CaseInvolvedParty] = Field(default_factory=list, max_length=64)
     timeline: list[CaseTimelineItem] = Field(default_factory=list, max_length=64)
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
@@ -194,6 +204,7 @@ __all__ = [
     "CaseProviderJudgement",
     "CaseProviderReading",
     "CaseProviderReadingReply",
+    "CaseSummaryUnit",
     "CaseTimelineItem",
     "ProviderImpactItem",
     "ProviderParty",
