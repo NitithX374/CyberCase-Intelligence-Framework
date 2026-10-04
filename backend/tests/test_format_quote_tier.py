@@ -66,10 +66,17 @@ def test_a_quote_that_differs_only_in_format_is_stored_as_source_text(source, qu
         ("A ransom of 15 million baht was demanded.", "A ransom of 1.5 million baht was demanded"),
         ("เขาบอกว่าไม้หายไปจากบ้านตั้งแต่เช้า", "เขาบอกว่าไม่หายไปจากบ้านตั้งแต่เช้า"),
         ("The attackers used a stolen password to log in.", "The attackers used a stolen passward"),
-        ("Then the money was sent. Later the money was sent!", '"the money was sent."'),
+        ("Then the money was sent. Later the money, was sent!", '"the money was sent."'),
         ("The money was sent to an account abroad.", '"was sent"'),
     ],
-    ids=["digit", "decimal-point", "thai-tone-mark", "one-letter", "form-twice", "too-short"],
+    ids=[
+        "digit",
+        "decimal-point",
+        "thai-tone-mark",
+        "one-letter",
+        "form-twice-differs",
+        "too-short",
+    ],
 )
 def test_a_quote_that_changes_text_is_not_located(source, quote):
     assert located(source, quote) is None

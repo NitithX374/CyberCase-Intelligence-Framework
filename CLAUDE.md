@@ -212,10 +212,17 @@ trace/                  what the analysis, chat and reports share
                         [A-nn, A-nn] bracket; the model writes only the summary
                         string, with its brackets
   quotes.py             finding a quotation in a source, in tiers: exact,
-                        NFKC fold, unique ellipsis pieces, markup-tolerant,
-                        then format only (quote marks, punctuation, dash
-                        style, case and spacing ignored; at least 8
-                        characters left, found once); the stored quote is
+                        NFKC fold, unique ellipsis pieces, markup-tolerant
+                        (whitespace between two non-Thai letters or digits
+                        must be on both sides), then format only (quote
+                        marks, punctuation, dash style and spacing ignored; a
+                        minus sign, a hyphen between letters and the word
+                        boundary between non-Thai letters or digits kept;
+                        letter case kept except for the quote's first letter
+                        and the first letter of a sentence in it; a thousands
+                        comma dropped and Thai digits read by value; at least
+                        8 characters left, found once or found again as the
+                        same source text); the stored quote is
                         always source text; the locator says which tier
                         accepted a quote (locate_quote), and
                         tolerated_differences lists, word by word, what the
