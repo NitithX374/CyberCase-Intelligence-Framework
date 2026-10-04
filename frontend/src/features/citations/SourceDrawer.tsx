@@ -82,7 +82,7 @@ export function SourceDrawer({
               quote={sourceRef.exactQuote}
               context={sourceRef.quoteContext}
               label={sourceRef.quoteLabel ?? "Quoted"}
-              notes={sourceRef.toleratedNotes}
+              notes={[...(sourceRef.toleratedNotes ?? []), ...(sourceRef.reviewNotes ?? [])]}
             />
           )}
           <SourceContent sourceRef={sourceRef} />

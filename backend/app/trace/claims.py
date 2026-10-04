@@ -25,6 +25,7 @@ from app.trace.quotes import (
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_CONTEXT_CHARS = 400
+MAX_REVIEW_FLAGS = 8
 
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
@@ -97,6 +98,14 @@ class CaseQuoteDifference(BaseModel):
     source: str = Field(default="", max_length=2 * MAX_QUOTE_CHARS)
 
 
+class CaseReviewFlag(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["meaning_mark"]
+    verdict: Literal["rule_warning"]
+    detail: str = Field(min_length=1, max_length=80)
+
+
 class CaseSourceCitation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -109,6 +118,7 @@ class CaseSourceCitation(BaseModel):
     tolerated_differences: list[CaseQuoteDifference] = Field(
         default_factory=list, max_length=MAX_TOLERATED_DIFFERENCES
     )
+    review_flags: list[CaseReviewFlag] = Field(default_factory=list, max_length=MAX_REVIEW_FLAGS)
 
     @field_validator("source_id", "exact_quote", "document_id", "filename")
     @classmethod
@@ -239,14 +249,14 @@ class CaseAnalysisClaim(CaseClaimFields):
 
 CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
     "unverified_citations": True,
-    "supporting_citations": {"__all__": {"tolerated_differences"}},
-    "contradicting_citations": {"__all__": {"tolerated_differences"}},
+    "supporting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
+    "contradicting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
 }
 
 CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT = {
     "unverified_citations": True,
-    "supporting_citations": {"__all__": {"tolerated_differences", "context"}},
-    "contradicting_citations": {"__all__": {"tolerated_differences", "context"}},
+    "supporting_citations": {"__all__": {"tolerated_differences", "context", "review_flags"}},
+    "contradicting_citations": {"__all__": {"tolerated_differences", "context", "review_flags"}},
 }
 
 
@@ -271,6 +281,7 @@ def normalized_citation(data: object) -> dict[str, object] | None:
         else [],
         "context": stored_context(data.get("context")),
         "tolerated_differences": stored_differences(data.get("tolerated_differences")),
+        "review_flags": stored_review_flags(data.get("review_flags")),
     }
 
 
@@ -290,6 +301,18 @@ def stored_differences(value: object) -> list[CaseQuoteDifference]:
     for item in value[:MAX_TOLERATED_DIFFERENCES]:
         try:
             kept.append(CaseQuoteDifference.model_validate(item))
+        except ValidationError:
+            continue
+    return kept
+
+
+def stored_review_flags(value: object) -> list[CaseReviewFlag]:
+    if not isinstance(value, list):
+        return []
+    kept: list[CaseReviewFlag] = []
+    for item in value[:MAX_REVIEW_FLAGS]:
+        try:
+            kept.append(CaseReviewFlag.model_validate(item))
         except ValidationError:
             continue
     return kept

@@ -1,7 +1,7 @@
 import difflib
 import re
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Literal
@@ -27,6 +27,9 @@ FORMAT_DASHES = frozenset("‐‑‒–—―−")
 FORMAT_PUNCTUATION = frozenset(".,;:!?()[]{}-/…*_#~")
 EDGE_MARKS = frozenset(".,;:!?()[]{}…") | FORMAT_QUOTE_MARKS
 MIN_FORMAT_FORM_CHARS = 8
+MEANING_MARKS = frozenset("?~≈±%<>")
+EDGE_REACH = 2
+OCR_TAG_PATTERN = re.compile(OCR_TAG)
 THAI_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
 BOUNDARY = " "
 MARKUP = r"[*_#`~]"
@@ -141,6 +144,10 @@ class IndexedText:
     @cached_property
     def format_form(self) -> FormatForm:
         return format_form(self.text)
+
+    @cached_property
+    def tag_spans(self) -> list[tuple[int, int]]:
+        return [match.span() for match in OCR_TAG_PATTERN.finditer(self.text)]
 
 
 def indexed(content: str | IndexedText) -> IndexedText:
@@ -354,6 +361,40 @@ def tolerated_differences(quote: str, located: str) -> tuple[tuple[str, str], ..
         if without_quote_marks(written) != without_quote_marks(source)
     ]
     return tuple(kept[:MAX_TOLERATED_DIFFERENCES])
+
+
+def meaning_marks(text: str) -> list[str]:
+    plain = unicodedata.normalize("NFKC", OCR_TAG_PATTERN.sub("", text))
+    return [mark for mark in dict.fromkeys(plain) if mark in MEANING_MARKS]
+
+
+def ignored_marks(differences: Iterable[tuple[str, str]]) -> list[str]:
+    ignored: list[str] = []
+    for written, source in differences:
+        in_written, in_source = meaning_marks(written), meaning_marks(source)
+        for mark in dict.fromkeys([*in_written, *in_source]):
+            if (mark in in_written) != (mark in in_source) and mark not in ignored:
+                ignored.append(mark)
+    return ignored
+
+
+def reached_mark(source: IndexedText, positions: range) -> str | None:
+    for position in positions:
+        character = source.text[position]
+        if character in "\r\n":
+            return None
+        if character.isspace():
+            continue
+        mark = unicodedata.normalize("NFKC", character)
+        covered = any(start <= position < end for start, end in source.tag_spans)
+        return mark if mark in MEANING_MARKS and not covered else None
+    return None
+
+
+def edge_marks(source: IndexedText, start: int, end: int) -> list[str]:
+    after = reached_mark(source, range(end, min(len(source.text), end + EDGE_REACH)))
+    before = reached_mark(source, range(start - 1, max(-1, start - 1 - EDGE_REACH), -1))
+    return list(dict.fromkeys(mark for mark in (before, after) if mark))
 
 
 def without_quote_marks(text: str) -> str:
@@ -639,10 +680,12 @@ __all__ = [
     "LocatedQuote",
     "NearPassage",
     "QuoteTier",
+    "edge_marks",
     "extract_documents_for_source",
     "find_document_locator",
     "find_aligned_quote",
     "find_format_only_quote",
+    "ignored_marks",
     "locate_quote",
     "nearest_passage",
     "quote_occurrences",

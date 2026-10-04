@@ -354,6 +354,7 @@ export interface components {
             claims_without_citation: number;
             claims_duplicated: number;
             citations_duplicated: number;
+            citations_marked: number;
             associations_outside_context: number;
             associations_without_claim: number;
             summary_ids_unknown: number;
@@ -435,6 +436,11 @@ export interface components {
             report: components["schemas"]["CaseReportContent"];
             created_at: string;
         };
+        CaseReviewFlag: {
+            kind: "meaning_mark";
+            verdict: "rule_warning";
+            detail: string;
+        };
         CaseSourceCitation: {
             source_id: string;
             exact_quote: string;
@@ -443,6 +449,7 @@ export interface components {
             page_numbers?: number[];
             context?: components["schemas"]["CaseQuoteContext"] | null;
             tolerated_differences?: components["schemas"]["CaseQuoteDifference"][];
+            review_flags?: components["schemas"]["CaseReviewFlag"][];
         };
         CaseSourceCreate: {
             exact_text: string;
@@ -562,6 +569,8 @@ export interface components {
             contradicting_contexts?: (components["schemas"]["ReportQuoteContext"] | null)[];
             supporting_tolerated?: components["schemas"]["ReportPlace"][][];
             contradicting_tolerated?: components["schemas"]["ReportPlace"][][];
+            supporting_marked?: components["schemas"]["ReportMark"][][];
+            contradicting_marked?: components["schemas"]["ReportMark"][][];
             unverified_quotes?: components["schemas"]["ReportUnverifiedQuote"][];
             reasoning_summary?: string | null;
         };
@@ -576,6 +585,10 @@ export interface components {
             description: string;
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+        };
+        ReportMark: {
+            marks: string;
+            place: "ignored" | "edge";
         };
         ReportParty: {
             name: string;

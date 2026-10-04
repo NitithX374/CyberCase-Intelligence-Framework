@@ -38,6 +38,8 @@ The Sources and Analysis views may project answered follow-up messages alongside
 
 The Summary shows the analysis's summary one sentence at a time (`features/analysis/SummaryUnits`), from the units the backend derives: each sentence ends with its claim IDs, each a link to `AnalysisFindings?finding=A-nn`, and a sentence the quotations do not support has one plain line under it (`supportNote`). The link is a query, not a `#` fragment: after a fragment link, the Findings link in the nav opened with that fragment still on its URL (seen in the e2e). An analysis stored before the units existed has none, and the Summary reads its text as Markdown, as before.
 
+A quotation whose citation carries a review flag gets one more plain line in the source drawer, under the quote and the lines about what the locator ignored (`features/citations/reviewNotes`): either the source has a mark such as `?` or `%` next to the quote that the quote leaves out, or the quote and the source differ at such a mark. The line says nothing about the claim's status; the backend sets the flag and a model never sees it.
+
 ## Commands
 
 ```powershell

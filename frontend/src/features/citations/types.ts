@@ -11,6 +11,7 @@ export interface SourceMessageRef {
   question: string | null;
   quoteLabel?: string;
   toleratedNotes?: string[];
+  reviewNotes?: string[];
 }
 
 export interface QuoteContext {

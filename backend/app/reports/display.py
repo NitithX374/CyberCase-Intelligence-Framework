@@ -11,6 +11,7 @@ from app.reports.schemas import (
     ReportFinding,
     ReportGap,
     ReportImpact,
+    ReportMark,
     ReportParty,
     ReportPlace,
     ReportQuoteContext,
@@ -260,6 +261,8 @@ def report_findings(
                 contradicting_contexts=quote_contexts(claim.contradicting_citations),
                 supporting_tolerated=tolerated_places(claim.supporting_citations),
                 contradicting_tolerated=tolerated_places(claim.contradicting_citations),
+                supporting_marked=marked_places(claim.supporting_citations),
+                contradicting_marked=marked_places(claim.contradicting_citations),
                 unverified_quotes=unverified_quotes(claim),
                 reasoning_summary=claim.reasoning_summary,
             )
@@ -289,6 +292,18 @@ def tolerated_places(citations: list[CaseSourceCitation]) -> list[list[ReportPla
         [
             ReportPlace(written=difference.written, source=difference.source)
             for difference in citation.tolerated_differences
+        ]
+        for citation in citations
+        if citation.exact_quote.strip()
+    ]
+
+
+def marked_places(citations: list[CaseSourceCitation]) -> list[list[ReportMark]]:
+    return [
+        [
+            ReportMark(marks=" ".join(words[:-1]), place=words[-1])
+            for words in (flag.detail.split() for flag in citation.review_flags)
+            if len(words) > 1 and words[-1] in ("ignored", "edge")
         ]
         for citation in citations
         if citation.exact_quote.strip()
