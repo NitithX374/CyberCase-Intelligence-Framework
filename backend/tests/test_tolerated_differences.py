@@ -24,7 +24,7 @@ from app.trace.trace import (
     CaseProviderReadingReply,
 )
 
-SOURCE = "The accountant paid -5,000 baht to the vendor on Monday."
+SOURCE = "The accountant paid 1500000 baht to the vendor on Monday."
 
 
 @pytest.mark.parametrize(
@@ -63,12 +63,17 @@ def test_a_quote_nothing_locates_has_no_tier():
 @pytest.mark.parametrize(
     ("source", "quote", "differences"),
     [
-        (SOURCE, "paid 5,000 baht", [("", "-")]),
+        (SOURCE, "paid 1,500,000 baht", [("1,500,000", "1500000")]),
         ("We must re-sign the lease today.", "must resign the lease", [("resign", "re-sign")]),
         (
-            "Our therapist said so after the meeting.",
-            "Our the rapist said so after the meeting",
-            [("the rapist", "therapist")],
+            "The intrusion lasted from 10−15 March today.",
+            "lasted from 10—15 March today",
+            [("—", "−")],
+        ),
+        (
+            "ผู้เสียหายโอนเงิน ๘๐๐๐ บาทไปยังบัญชีของคนร้าย",
+            "ผู้เสียหายโอนเงิน 8000 บาทไปยังบัญชีของคนร้าย",
+            [("8000", "๘๐๐๐")],
         ),
         (
             "Apple pays 5,000 baht each month.",
@@ -156,17 +161,19 @@ def test_punctuation_inside_the_quote_and_a_dash_at_its_edge_are_still_shown():
 @pytest.mark.parametrize(
     "quote",
     [
-        "The accountant paid 5,000 baht to the vendor on Monday.",
-        "(The accountant paid 5,000 baht to the vendor on Monday",
-        "The accountant paid 5,000 baht to the vendor on Monday,",
-        '"The accountant paid 5,000 baht to the vendor on Monday."',
+        "The accountant paid 1,500,000 baht to the vendor on Monday.",
+        "(The accountant paid 1,500,000 baht to the vendor on Monday",
+        "The accountant paid 1,500,000 baht to the vendor on Monday,",
+        '"The accountant paid 1,500,000 baht to the vendor on Monday."',
     ],
 )
 def test_a_format_tier_quote_with_edge_punctuation_shows_only_what_differs_inside(quote):
-    source = "The accountant paid -5,000 baht to the vendor on Monday and left."
+    source = "The accountant paid 1500000 baht to the vendor on Monday and left."
 
     assert locate_quote(source, quote).tier == "format"
-    assert [(d.written, d.source) for d in tolerated_in(source, quote)] == [("", "-")]
+    assert [(d.written, d.source) for d in tolerated_in(source, quote)] == [
+        ("1,500,000", "1500000")
+    ]
 
 
 def test_at_most_a_fixed_number_of_differences_are_kept():
@@ -206,7 +213,7 @@ def bundle_and_trace(*quotes: str) -> tuple[CaseSourceBundle, CaseAnalysisTrace]
     return bundle, trace
 
 
-QUOTES = ("paid 5,000 baht", "on Monday", "The accountant ... to the vendor")
+QUOTES = ("paid 1,500,000 baht", "on Monday", "The accountant ... to the vendor")
 
 
 def test_binding_records_the_differences_on_a_tolerated_citation_and_only_there():
@@ -223,7 +230,7 @@ def test_binding_records_the_differences_on_a_tolerated_citation_and_only_there(
         for citation in reported.supporting_citations
     }
     assert shown == {
-        "paid -5,000 baht": [("", "-")],
+        "paid 1500000 baht": [("1,500,000", "1500000")],
         "on Monday": [],
         "The accountant": [],
         "to the vendor": [],
@@ -238,7 +245,7 @@ def test_binding_a_bound_trace_again_keeps_the_differences():
 
     [reported] = again.claims
     [tolerated] = [c for c in reported.supporting_citations if c.tolerated_differences]
-    assert tolerated.exact_quote == "paid -5,000 baht"
+    assert tolerated.exact_quote == "paid 1500000 baht"
 
 
 def test_a_citation_stored_before_the_differences_existed_still_validates():
@@ -257,11 +264,11 @@ def test_a_citation_stored_before_the_differences_existed_still_validates():
 def test_a_chat_citation_is_found_as_before_and_carries_no_differences():
     source_id = "S1"
     registry = {source_id: CaseSourceItem(source_id, "narrative", SOURCE)}
-    offered = [CaseSourceCitation(source_id=source_id, exact_quote="paid 5,000 baht")]
+    offered = [CaseSourceCitation(source_id=source_id, exact_quote="paid 1,500,000 baht")]
 
     [[found]] = added_citations(offered, registry, QuoteSearch(registry))
 
-    assert found.exact_quote == "paid -5,000 baht"
+    assert found.exact_quote == "paid 1500000 baht"
     assert found.tolerated_differences == []
 
 
@@ -343,7 +350,7 @@ def test_the_differences_survive_the_stored_trace_being_read_back():
     reloaded = CaseAnalysisTrace.model_validate(stored)
 
     assert shown(reloaded) == shown(bound)
-    assert shown(reloaded)["paid -5,000 baht"] == [("", "-")]
+    assert shown(reloaded)["paid 1500000 baht"] == [("1,500,000", "1500000")]
 
 
 def test_the_api_read_model_keeps_the_differences():
@@ -363,7 +370,7 @@ def test_the_api_read_model_keeps_the_differences():
     )
 
     assert shown(read.trace_json) == shown(bound)
-    assert shown(read.trace_json)["paid -5,000 baht"] == [("", "-")]
+    assert shown(read.trace_json)["paid 1500000 baht"] == [("1,500,000", "1500000")]
 
 
 def test_a_report_built_from_the_stored_analysis_has_the_differences():
@@ -373,7 +380,7 @@ def test_a_report_built_from_the_stored_analysis_has_the_differences():
     [finding], _ = report_findings(trace.claims, {})
 
     places = [[(p.written, p.source) for p in group] for group in finding.supporting_tolerated]
-    assert [("", "-")] in places
+    assert [("1,500,000", "1500000")] in places
 
 
 def test_a_stored_list_with_junk_in_it_keeps_only_the_valid_differences():
@@ -401,14 +408,14 @@ def test_a_stored_list_with_junk_in_it_keeps_only_the_valid_differences():
 
 @pytest.mark.parametrize(
     "order",
-    [("paid -5,000 baht", "paid 5,000 baht"), ("paid 5,000 baht", "paid -5,000 baht")],
+    [("paid 1500000 baht", "paid 1,500,000 baht"), ("paid 1,500,000 baht", "paid 1500000 baht")],
 )
 def test_the_differences_do_not_depend_on_which_written_quote_came_first(order):
     bundle, trace = bundle_and_trace(*order)
 
     bound = resolve_case_trace(trace, bundle)
 
-    assert shown(bound) == {"paid -5,000 baht": [("", "-")]}
+    assert shown(bound) == {"paid 1500000 baht": [("1,500,000", "1500000")]}
 
 
 @pytest.mark.parametrize(
