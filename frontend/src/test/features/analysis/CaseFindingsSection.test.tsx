@@ -127,6 +127,7 @@ describe("Grouped case findings", () => {
       { written: "", source: "at noon" },
     ],
     passage,
+    meaningPassage: null,
   };
 
   it("says where a not-confirmed finding's quote differs from the source and opens the passage", () => {
@@ -139,7 +140,7 @@ describe("Grouped case findings", () => {
             ...finding("transfer", "reported", "not_confirmed"),
             unverifiedQuotes: [
               unverified,
-              { writtenQuote: "Invented.", places: [], passage: null },
+              { writtenQuote: "Invented.", places: [], passage: null, meaningPassage: null },
             ],
           },
         ]}
@@ -156,6 +157,80 @@ describe("Grouped case findings", () => {
     expect(buttons).toHaveLength(1);
     fireEvent.click(buttons[0]);
     expect(onSelectSource).toHaveBeenCalledWith(passage, buttons[0], "passage-transfer-0");
+  });
+
+  const meaningPassage = {
+    ...passage,
+    id: "narrative-1",
+    exactQuote: "The attackers encrypted the file server on Monday night.",
+    quoteLabel: "A passage in the source that may be related (found by meaning, not confirmed)",
+  };
+
+  it("points a quote the words cannot place at the passage found by meaning, and says how it was found", () => {
+    const onSelectSource = vi.fn();
+    render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[
+          {
+            ...finding("encrypted", "reported", "not_confirmed"),
+            unverifiedQuotes: [
+              { writtenQuote: "Invented.", places: [], passage: null, meaningPassage },
+            ],
+          },
+        ]}
+        onSelectSource={onSelectSource}
+      />,
+    );
+    const article = screen.getByRole("article");
+
+    expect(article).toHaveTextContent(
+      "A passage in the source that may be related (found by meaning, not confirmed)",
+    );
+    const button = within(article).getByRole("button", { name: "Show in source" });
+    fireEvent.click(button);
+    expect(onSelectSource).toHaveBeenCalledWith(
+      meaningPassage,
+      button,
+      "passage-encrypted-0-meaning",
+    );
+  });
+
+  it("draws no badge, icon or score for the passage", () => {
+    const { container } = render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[
+          {
+            ...finding("encrypted", "reported", "not_confirmed"),
+            unverifiedQuotes: [
+              { writtenQuote: "Invented.", places: [], passage: null, meaningPassage },
+            ],
+          },
+        ]}
+        onSelectSource={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector("svg, img")).toBeNull();
+    expect(container.textContent).not.toMatch(/\d\.\d|%|score/i);
+  });
+
+  it("says nothing about a meaning passage under a finding that stayed reported", () => {
+    render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[
+          {
+            ...finding("transfer"),
+            unverifiedQuotes: [{ ...unverified, passage: null, meaningPassage }],
+          },
+        ]}
+        onSelectSource={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/found by meaning/)).not.toBeInTheDocument();
   });
 
   it("says nothing about unverified quotes under a finding that stayed reported", () => {

@@ -10,6 +10,7 @@ import {
   isUnconfirmed,
   unconfirmedStatuses,
 } from "@/features/citations/unconfirmed";
+import { hasThai } from "@/lib/language";
 import { analysisFollowups } from "./analysisRecord";
 import { supportNote } from "./supportNote";
 import { noteLetter, summaryClosings } from "./summaryClosings";
@@ -114,6 +115,14 @@ export function buildCaseOverview(
         passage: item.near_passage
           ? passageRef(sources, item.source_id, item.near_passage.source_text)
           : null,
+        meaningPassage: item.meaning_passage
+          ? passageRef(
+              sources,
+              item.source_id,
+              item.meaning_passage.source_text,
+              meaningLine(incidentSummary),
+            )
+          : null,
       })),
     };
   });
@@ -156,6 +165,15 @@ export function buildCaseOverview(
       supportNote: supportNote(support, incidentSummary),
     })),
   };
+}
+
+const MEANING_LINES = {
+  thai: "ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน)",
+  english: "A passage in the source that may be related (found by meaning, not confirmed)",
+};
+
+function meaningLine(writtenText: string): string {
+  return hasThai(writtenText) ? MEANING_LINES.thai : MEANING_LINES.english;
 }
 
 export function findingNumbers(

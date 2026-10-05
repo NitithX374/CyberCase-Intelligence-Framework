@@ -120,6 +120,12 @@ class CaseGroundingReport(BaseModel):
     claims_duplicated: int = 0
     citations_duplicated: int = 0
     citations_marked: int = 0
+    citations_meaning_pointed: int = 0
+    meaning_pointer_eligible: int = 0
+    meaning_pointer_attempted: int = 0
+    meaning_pointer_unavailable: int = 0
+    meaning_pointer_unavailable_reason: str | None = Field(default=None, max_length=120)
+    meaning_pointer_skipped: int = 0
     associations_outside_context: int = 0
     associations_without_claim: int = 0
     summary_ids_unknown: int = 0

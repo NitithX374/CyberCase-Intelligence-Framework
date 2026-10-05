@@ -29,6 +29,7 @@ export interface UnverifiedQuote {
   writtenQuote: string;
   places: QuotePlace[];
   passage: SourceMessageRef | null;
+  meaningPassage: SourceMessageRef | null;
 }
 
 export interface CaseGap {

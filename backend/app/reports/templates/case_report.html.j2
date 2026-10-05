@@ -264,6 +264,9 @@
                     {% for place in item.places %}
                       <div class="quote-place">{% if place.written and place.source %}ผลวิเคราะห์ยกมาว่า «{{ place.written }}» ต้นฉบับเขียน «{{ place.source }}»{% elif place.written %}ผลวิเคราะห์เติม «{{ place.written }}»{% else %}ต้นฉบับมี «{{ place.source }}» ที่ผลวิเคราะห์ตัดออก{% endif %}</div>
                     {% endfor %}
+                    {% if item.meaning_passage %}
+                      <div class="quote-place"><span class="quote-label">ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน):</span> “{{ item.meaning_passage | readable | trim }}”</div>
+                    {% endif %}
                   {% endfor %}
                   {% if finding.reasoning_summary %}
                     <div class="quote"><span class="quote-label">เหตุผลเชิงวิเคราะห์:</span> {{ finding.reasoning_summary | clean_report_text }}</div>

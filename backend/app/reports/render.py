@@ -85,6 +85,7 @@ def render_case_report_html(report: CaseReportContent, issue: ReportIssue | None
     )
     environment.filters["clean_report_text"] = clean_report_text
     environment.filters["quoted"] = quoted
+    environment.filters["readable"] = readable
     environment.filters["note_letter"] = note_letter
     template = environment.get_template(REPORT_TEMPLATE_NAME)
     return template.render(

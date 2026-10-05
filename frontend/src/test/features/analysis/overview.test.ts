@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { CaseAnalysisResultRead, CaseSourceCitation } from "@/lib/api/types";
+import type {
+  CaseAnalysisResultRead,
+  CaseMeaningPassage,
+  CaseSourceCitation,
+} from "@/lib/api/types";
 import {
   analysisResult,
   claim,
@@ -234,6 +238,76 @@ describe("Case overview projection", () => {
     );
   });
 
+  const unlocated = (summary: string, meaning: CaseMeaningPassage | null) =>
+    analysisResult({
+      summary,
+      trace_json: trace({
+        summary,
+        claims: [
+          claim("A file share was encrypted overnight.", sourceId, {
+            epistemic_status: "not_confirmed",
+            supporting_citations: [],
+            unverified_citations: [
+              {
+                source_id: sourceId,
+                role: "supporting",
+                written_quote: "Something else entirely.",
+                near_passage: null,
+                ...(meaning ? { meaning_passage: meaning } : {}),
+              },
+            ],
+          }),
+        ],
+      }),
+    });
+  const found = {
+    source_text: quote,
+    start: 0,
+    end: quote.length,
+    entailment: 0.97,
+    model: "mdeberta",
+  };
+
+  it("carries the passage found by meaning onto the unverified quote, in the language of the analysis", () => {
+    const english = buildCaseOverview(unlocated("A share was encrypted.", found), [
+      narrativeSource(quote),
+    ]);
+    const thai = buildCaseOverview(unlocated("ไฟล์ถูกเข้ารหัสในช่วงกลางคืน", found), [
+      narrativeSource(quote),
+    ]);
+
+    const [fromEnglish] = english.findings[0].unverifiedQuotes;
+    const [fromThai] = thai.findings[0].unverifiedQuotes;
+    expect(fromEnglish.meaningPassage).toMatchObject({
+      exactQuote: quote,
+      quoteLabel: "A passage in the source that may be related (found by meaning, not confirmed)",
+    });
+    expect(fromThai.meaningPassage?.quoteLabel).toBe(
+      "ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน)",
+    );
+    expect(english.findings[0].epistemicStatus).toBe("not_confirmed");
+    expect(
+      english.findings[0].supportingSources.every((source) => source.exactQuote === null),
+    ).toBe(true);
+  });
+
+  it("has no meaning passage when the analysis found none, or was stored before", () => {
+    const none = buildCaseOverview(unlocated("A share was encrypted.", null), [
+      narrativeSource(quote),
+    ]);
+
+    expect(none.findings[0].unverifiedQuotes[0].meaningPassage).toBeNull();
+  });
+
+  it("never shows the score of a meaning passage", () => {
+    const overview = buildCaseOverview(unlocated("A share was encrypted.", found), [
+      narrativeSource(quote),
+    ]);
+
+    expect(JSON.stringify(overview)).not.toContain("0.97");
+    expect(JSON.stringify(overview)).not.toContain("entailment");
+  });
+
   it("gives a quotation found as written no tolerated line", () => {
     const overview = buildCaseOverview(result(quote, { source_id: sourceId, exact_quote: quote }), [
       narrativeSource(quote),
@@ -405,7 +479,12 @@ describe("Case overview projection", () => {
       exactQuote: "The transfer happened on 17 March 2026",
       quoteLabel: "Nearest passage",
     });
-    expect(second).toEqual({ writtenQuote: "Something else", places: [], passage: null });
+    expect(second).toEqual({
+      writtenQuote: "Something else",
+      places: [],
+      passage: null,
+      meaningPassage: null,
+    });
   });
 
   it("links each finding to the ATT&CK techniques associated with it", () => {

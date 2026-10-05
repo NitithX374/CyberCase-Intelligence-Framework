@@ -87,12 +87,13 @@ export function passageRef(
   sources: CaseSourceRef[],
   sourceId: string,
   passage: string,
+  quoteLabel = "Nearest passage",
 ): SourceMessageRef | null {
   const source = sources.find((candidate) => candidate.id === sourceId);
   if (!source) return null;
   return {
     ...sourceRef(source, { source_id: sourceId, exact_quote: passage }),
-    quoteLabel: "Nearest passage",
+    quoteLabel,
   };
 }
 

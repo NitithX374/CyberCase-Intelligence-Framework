@@ -59,6 +59,7 @@ class ReportMark(ReportRow):
 class ReportUnverifiedQuote(ReportRow):
     written_quote: str
     places: list[ReportPlace] = Field(default_factory=list)
+    meaning_passage: str | None = None
 
 
 class ReportFinding(ReportRow):
