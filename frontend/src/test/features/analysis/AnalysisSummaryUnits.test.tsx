@@ -53,21 +53,31 @@ beforeEach(() => {
 });
 
 describe("AnalysisSummary with a summary that names its claims", () => {
-  it("reads the summary unit by unit and links each claim to its finding", () => {
+  it("reads the summary as one paragraph and links each raised number to its finding", () => {
     render(<AnalysisSummary />);
 
     const section = screen
       .getByRole("heading", { name: "Summary" })
       .closest("section") as HTMLElement;
     const links = within(section).getAllByRole("link");
-    expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
-      ["A-01", `/case/${caseId}/analysis/findings?finding=A-01`],
-      ["A-02", `/case/${caseId}/analysis/findings?finding=A-02`],
+    expect(
+      links.map((link) => [
+        link.textContent,
+        link.getAttribute("aria-label"),
+        link.getAttribute("href"),
+      ]),
+    ).toEqual([
+      ["1", "Finding 1", `/case/${caseId}/analysis/findings?finding=A-01`],
+      ["2", "Finding 2", `/case/${caseId}/analysis/findings?finding=A-02`],
     ]);
-    expect(section).toHaveTextContent("Room 402 was entered with a hidden key [A-01]");
+    const paragraph = within(section).getAllByRole("paragraph")[0];
+    expect(paragraph).toHaveTextContent(
+      "Room 402 was entered with a hidden key1. Room 503 was forced open2a. The tenant is to blame.b",
+    );
+    expect(within(section).getAllByRole("paragraph")).toHaveLength(1);
   });
 
-  it("says in one plain line under a unit what no checked quotation supports", () => {
+  it("says under the paragraph what no checked quotation supports, by letter", () => {
     render(<AnalysisSummary />);
 
     expect(screen.getAllByText("No cited quotation was found in the sources.")).toHaveLength(1);
@@ -75,9 +85,9 @@ describe("AnalysisSummary with a summary that names its claims", () => {
     expect(screen.queryByText(/Some cited quotations/)).not.toBeInTheDocument();
   });
 
-  it("does not print the brackets as plain text twice", () => {
+  it("does not print the brackets as plain text", () => {
     render(<AnalysisSummary />);
 
-    expect(screen.queryByText(/\[A-01\]\./)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\[A-0\d\]/)).not.toBeInTheDocument();
   });
 });

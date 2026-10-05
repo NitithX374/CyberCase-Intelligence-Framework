@@ -24,6 +24,7 @@ from app.reports.display import (
 )
 from app.reports.render import (
     ReportIssue,
+    note_letter,
     quoted,
     render_case_report_html,
     render_case_report_pdf,
@@ -839,28 +840,231 @@ def test_a_new_report_stores_each_summary_unit_with_the_finding_numbers_it_rests
     assert "A-0" not in report.model_dump_json().replace("A-01]", "")
 
 
-def test_a_new_report_prints_the_summary_by_unit_with_the_finding_numbers() -> None:
-    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
-    summary = html.split('id="case_summary"')[1].split("</h3>")[1].split("<h3>")[0]
+def paragraph_of(html: str) -> str:
+    [paragraph] = re.findall(r'<p class="body summary-paragraph">(.*?)</p>', html, flags=re.DOTALL)
+    return paragraph
 
-    assert summary.count('class="body unit"') == 4
-    assert "พบการใช้ PowerShell [ข้อ 1]</p>" in summary
-    assert "มีการเชื่อมต่อออกภายนอก [ข้อ 1, 2]</p>" in summary
-    assert "ผู้สั่งงานคือบุคคลภายใน</p>" in summary
-    assert "มีการลบข้อมูลสำรอง [ข้อ 3]</p>" in summary
+
+def summary_section_of(html: str) -> str:
+    return html.split('id="case_summary"')[1].split("</h3>")[1].split("<h3>")[0]
+
+
+def link(number: int) -> str:
+    return f'<a href="#finding-{number}" aria-label="ข้อ {number}">{number}</a>'
+
+
+def test_the_summary_prints_as_one_paragraph_with_the_finding_numbers_after_each_unit() -> None:
+    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
+
+    paragraph = paragraph_of(html)
+    assert summary_section_of(html).count('class="body summary-paragraph"') == 1
+    assert paragraph.startswith(f"พบการใช้ PowerShell<sup>{link(1)}</sup> ")
+    assert f" มีการเชื่อมต่อออกภายนอก<sup>{link(1)},{link(2)}</sup><sup>a</sup> " in paragraph
+    assert " ผู้สั่งงานคือบุคคลภายใน<sup>b</sup> " in paragraph
+    assert paragraph.endswith(f" มีการลบข้อมูลสำรอง<sup>{link(3)}</sup><sup>c</sup>")
+    assert "[ข้อ" not in html
     assert "[A-0" not in html
 
 
-def test_a_summary_unit_is_followed_by_a_plain_line_unless_its_claims_are_all_checked() -> None:
+def test_each_note_marker_is_tied_to_one_unit_and_keeps_the_kind_of_its_state() -> None:
     html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
-    summary = html.split('id="case_summary"')[1].split("</h3>")[1].split("<h3>")[0]
 
-    assert summary.count("ข้อความที่อ้างบางส่วนไม่พบในเอกสาร") == 1
-    assert summary.count("ไม่ได้เชื่อมกับข้อสังเกตใด") == 1
-    assert summary.count("ไม่พบข้อความที่อ้างในเอกสาร") == 1
-    after_bound_unit = summary.split("พบการใช้ PowerShell [ข้อ 1]</p>")[1]
-    assert "unit-note" not in after_bound_unit.split('class="body unit"')[0]
-    assert "badge" not in summary
+    notes = re.findall(r'<p class="quote unit-note"><sup>([a-z]+)</sup> (.*?)</p>', html)
+    assert notes == [
+        ("a", "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร"),
+        ("b", "ไม่ได้เชื่อมกับข้อสังเกตใด"),
+        ("c", "ไม่พบข้อความที่อ้างในเอกสาร"),
+    ]
+    assert re.findall(r"<sup>([a-z]+)</sup>", paragraph_of(html)) == ["a", "b", "c"]
+
+
+def test_a_unit_whose_claims_are_all_checked_has_no_marker_and_no_note() -> None:
+    report_input = _input_with_summary_units()
+    trace = report_input.analysis_trace.model_copy(
+        update={
+            "summary_units": [
+                CaseSummaryUnit(text="พบการใช้ PowerShell", claim_ids=["A-01"], support="bound")
+            ]
+        }
+    )
+    html = render_case_report_html(
+        _stored(report_input.model_copy(update={"analysis_trace": trace})), ISSUE
+    )
+
+    assert paragraph_of(html) == f"พบการใช้ PowerShell<sup>{link(1)}</sup>"
+    assert 'class="quote unit-note"><sup>' not in html
+    assert "ไม่พบข้อความที่อ้างในเอกสาร" not in html
+
+
+def test_one_plain_line_says_what_the_raised_numbers_are() -> None:
+    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
+
+    assert summary_section_of(html).count("ตัวเลขยกคือเลขข้อค้นพบในหัวข้อที่ 2") == 1
+    assert html.index("ตัวเลขยกคือเลขข้อค้นพบ") > html.index("summary-paragraph")
+    assert "<h2>2. ข้อเท็จจริงและตัวบ่งชี้ที่ตรวจพบ</h2>" in html
+
+
+def test_a_summary_with_no_unit_that_names_a_finding_says_nothing_about_numbers() -> None:
+    report_input = _input_with_summary_units()
+    trace = report_input.analysis_trace.model_copy(
+        update={"summary_units": [CaseSummaryUnit(text="ผู้สั่งงานคือบุคคลภายใน", support="no_claim")]}
+    )
+    html = render_case_report_html(
+        _stored(report_input.model_copy(update={"analysis_trace": trace})), ISSUE
+    )
+
+    assert paragraph_of(html) == "ผู้สั่งงานคือบุคคลภายใน<sup>a</sup>"
+    assert "ตัวเลขยกคือเลขข้อค้นพบ" not in html
+    assert "<sup><a" not in paragraph_of(html)
+
+
+def test_every_finding_number_in_the_paragraph_is_a_link_to_a_finding_that_exists() -> None:
+    html = render_case_report_html(_stored(_input_with_summary_units()), ISSUE)
+
+    targets = re.findall(
+        r'<a href="#(finding-\d+)" aria-label="ข้อ (\d+)">(\d+)</a>', paragraph_of(html)
+    )
+    assert targets
+    for target, named, shown in targets:
+        assert target == f"finding-{shown}" and named == shown
+        assert f'<tr id="{target}">' in html
+
+
+def many_findings(
+    count: int, summary: str, units: list[tuple[str, list[str], str]]
+) -> CaseReportInput:
+    report_input = _input()
+    trace = report_input.analysis_trace
+    first = trace.claims[0]
+    claims = [
+        first.model_copy(update={"claim_id": f"A-{number:02d}", "text": f"ข้อเท็จจริงที่ {number}"})
+        for number in range(1, count + 1)
+    ]
+    trace = trace.model_copy(
+        update={
+            "claims": claims,
+            "summary": summary,
+            "summary_units": [
+                CaseSummaryUnit(text=text, claim_ids=claim_ids, support=support)
+                for text, claim_ids, support in units
+            ],
+        }
+    )
+    return report_input.model_copy(update={"analysis_trace": trace, "analysis_summary": summary})
+
+
+def test_a_finding_number_of_two_digits_is_one_link_not_two() -> None:
+    report_input = many_findings(12, "ก [A-10, A-12]", [("ก", ["A-10", "A-12"], "bound")])
+
+    paragraph = paragraph_of(render_case_report_html(_stored(report_input), ISSUE))
+
+    assert paragraph == f"ก<sup>{link(10)},{link(12)}</sup>"
+
+
+def test_the_sentence_punctuation_the_model_wrote_after_a_bracket_comes_back_after_the_marks() -> (
+    None
+):
+    summary = (
+        "A share was encrypted [A-01]. The ransom was two bitcoin [A-02], but none was paid [A-03]."
+    )
+    report_input = many_findings(
+        3,
+        summary,
+        [
+            ("A share was encrypted", ["A-01"], "bound"),
+            ("The ransom was two bitcoin", ["A-02"], "bound"),
+            ("but none was paid", ["A-03"], "bound"),
+        ],
+    )
+
+    paragraph = paragraph_of(render_case_report_html(_stored(report_input), ISSUE))
+
+    assert paragraph == (
+        f"A share was encrypted<sup>{link(1)}</sup>. "
+        f"The ransom was two bitcoin<sup>{link(2)}</sup>, "
+        f"but none was paid<sup>{link(3)}</sup>."
+    )
+
+
+def test_a_summary_that_no_longer_matches_its_units_prints_no_punctuation_but_still_prints() -> (
+    None
+):
+    report_input = _input_with_summary_units().model_copy(
+        update={"analysis_summary": "สรุป [A-01]."}
+    )
+    html = render_case_report_html(_stored(report_input), ISSUE)
+
+    assert "พบการใช้ PowerShell<sup>" in paragraph_of(html)
+    assert paragraph_of(html).count(".") == 0
+
+
+def test_a_long_thai_summary_is_one_paragraph_with_every_mark() -> None:
+    units = [
+        (f"ผู้เสียหายรายที่ {number} โอนเงินไปยังบัญชีของคนร้าย", [f"A-{number:02d}"], "bound")
+        for number in range(1, 41)
+    ]
+    summary = " ".join(f"{text} [{ids[0]}]" for text, ids, _ in units)
+    report_input = many_findings(40, summary, units)
+
+    html = render_case_report_html(_stored(report_input), ISSUE)
+
+    paragraph = paragraph_of(html)
+    assert summary_section_of(html).count('<p class="body summary-paragraph">') == 1
+    assert len(re.findall(r"<sup><a ", paragraph)) == 40
+    assert paragraph.count("\n") == 0
+    assert paragraph.endswith(f"<sup>{link(40)}</sup>")
+
+
+def test_more_than_twenty_six_notes_go_on_to_two_letters() -> None:
+    units = [(f"ประโยค{number}", [], "no_claim") for number in range(28)]
+    report_input = many_findings(1, "x", units)
+
+    html = render_case_report_html(_stored(report_input), ISSUE)
+
+    paragraph = paragraph_of(html)
+    assert "ประโยค25<sup>z</sup>" in paragraph
+    assert "ประโยค26<sup>aa</sup>" in paragraph
+    assert "ประโยค27<sup>ab</sup>" in paragraph
+    assert '<p class="quote unit-note"><sup>ab</sup> ไม่ได้เชื่อมกับข้อสังเกตใด</p>' in html
+
+
+@pytest.mark.parametrize(
+    ("index", "letters"),
+    [
+        (0, "a"),
+        (1, "b"),
+        (25, "z"),
+        (26, "aa"),
+        (27, "ab"),
+        (51, "az"),
+        (52, "ba"),
+        (701, "zz"),
+        (702, "aaa"),
+    ],
+)
+def test_note_markers_run_a_to_z_then_aa_ab_and_so_on(index, letters) -> None:
+    assert note_letter(index) == letters
+
+
+def test_two_claims_with_the_same_text_share_one_finding_number_in_the_marks() -> None:
+    report_input = many_findings(
+        4,
+        "x",
+        [("ก", ["A-03"], "bound"), ("ข", ["A-04", "A-01"], "bound"), ("ค", ["A-02"], "bound")],
+    )
+    claims = [
+        claim.model_copy(update={"text": text})
+        for claim, text in zip(
+            report_input.analysis_trace.claims, ["แรก", "สอง", "แรก", "สาม"], strict=True
+        )
+    ]
+    report_input = report_input.model_copy(
+        update={"analysis_trace": report_input.analysis_trace.model_copy(update={"claims": claims})}
+    )
+
+    report = _stored(report_input)
+
+    assert [unit.references for unit in report.summary_units] == [[1], [1, 3], [2]]
 
 
 def test_a_summary_unit_is_escaped_in_the_report() -> None:
@@ -888,12 +1092,22 @@ def test_a_report_stored_before_the_units_existed_prints_its_summary_as_before()
     html = render_case_report_html(stored, ISSUE)
 
     assert stored.summary_units == []
-    assert 'class="body unit"' not in html
+    assert 'class="body summary-paragraph"' not in html
     assert "สรุป [A-01]" in html
 
 
 def test_an_analysis_stored_before_the_units_existed_makes_a_report_with_none() -> None:
     assert build_case_report_content(_input()).summary_units == []
+
+
+def test_an_empty_list_of_units_prints_the_summary_as_before() -> None:
+    written = _stored(_input_with_summary_units()).model_dump(mode="json")
+    written["summary_units"] = []
+
+    html = render_case_report_html(CaseReportContent.model_validate(written), ISSUE)
+
+    assert 'class="body summary-paragraph"' not in html
+    assert "สรุป [A-01]" in html
 
 
 EDGE_LINE = "ตรวจ: ต้นฉบับมีเครื่องหมาย"

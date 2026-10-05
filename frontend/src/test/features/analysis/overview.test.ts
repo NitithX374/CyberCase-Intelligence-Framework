@@ -103,19 +103,33 @@ describe("Case overview projection", () => {
       narrativeSource(quote),
     ]);
 
-    expect(overview.summaryUnits).toEqual([
-      { text: "A share was encrypted", claimIds: ["A-01"], supportNote: null },
+    expect(
+      overview.summaryUnits.map(({ text, claimIds, supportNote, noteMark }) => ({
+        text,
+        claimIds,
+        supportNote,
+        noteMark,
+      })),
+    ).toEqual([
+      { text: "A share was encrypted", claimIds: ["A-01"], supportNote: null, noteMark: null },
       {
         text: "Both demands",
         claimIds: ["A-01", "A-02"],
         supportNote: "Some cited quotations were not found in the sources.",
+        noteMark: "a",
       },
       {
         text: "Ten bitcoin",
         claimIds: ["A-03"],
         supportNote: "No cited quotation was found in the sources.",
+        noteMark: "b",
       },
-      { text: "Someone is to blame", claimIds: [], supportNote: "Not linked to any claim." },
+      {
+        text: "Someone is to blame",
+        claimIds: [],
+        supportNote: "Not linked to any claim.",
+        noteMark: "c",
+      },
     ]);
   });
 

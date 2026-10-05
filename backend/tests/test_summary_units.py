@@ -10,7 +10,7 @@ from app.analysis.schemas import CaseAnalysisResultRead
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
-from app.trace.summary import summary_pieces
+from app.trace.summary import summary_closings, summary_pieces
 from app.trace.trace import CaseAnalysisTrace, CaseSummaryUnit
 
 SOURCE_TEXT = "The finance share was encrypted overnight. The attacker demanded two bitcoin."
@@ -254,3 +254,30 @@ def test_a_unit_is_never_written_by_a_model():
         assert "summary_units" not in json.dumps(schema)
         assert "summary_ids_unknown" not in json.dumps(schema)
     assert CaseSummaryUnit.model_fields.keys() == {"text", "claim_ids", "support"}
+
+
+CLOSINGS = [
+    ("A share was encrypted [A-01].", ["."]),
+    ("First [A-01]. Second [A-02].", [".", "."]),
+    ("It was found on October 1 [A-03], but the time is unknown [A-04].", [",", "."]),
+    ("ไฟล์ถูกเข้ารหัส [A-01] ทีมพบกุญแจ [A-02]", ["", ""]),
+    ("A [A-01] [A-02].", ["."]),
+    ("A [A-01]. It then spread.", [".", ""]),
+    ("No brackets at all.", [""]),
+    ("One [A-01]。Two [A-02]", ["。", ""]),
+    ("One [A-01]; two [A-02]!", [";", "!"]),
+    ("One [A-01] ... two [A-02]", ["...", ""]),
+    ("[A-01] Text [A-02].", ["."]),
+    ("One [A-01]\n\nTwo [A-02]", ["", ""]),
+    ("One [A-01] , two [A-02] .", [",", "."]),
+]
+
+
+@pytest.mark.parametrize(("summary", "closings"), CLOSINGS)
+def test_the_punctuation_after_a_bracket_is_the_closing_of_its_unit(summary, closings):
+    assert summary_closings(summary) == closings
+
+
+@pytest.mark.parametrize("summary", [summary for summary, _ in CLOSINGS])
+def test_there_is_one_closing_for_each_unit(summary):
+    assert len(summary_closings(summary)) == len(summary_pieces(summary))

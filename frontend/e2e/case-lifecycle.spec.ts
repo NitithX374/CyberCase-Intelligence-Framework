@@ -54,8 +54,9 @@ test.describe("case lifecycle", () => {
     const sections = page.getByRole("navigation", { name: "Analysis sections" });
     await expect(page.getByRole("heading", { name: "Summary", exact: true })).toBeVisible();
     const summary = page.getByRole("region", { name: "Summary", exact: true });
-    await expect(summary).toContainText(`${narrative} [A-01]`);
-    const claimLink = summary.getByRole("link", { name: "A-01", exact: true });
+    await expect(summary).toContainText(narrative);
+    await expect(summary.getByRole("paragraph")).toHaveCount(1);
+    const claimLink = summary.getByRole("link", { name: "Finding 1", exact: true });
     await expect(claimLink).toHaveAttribute("href", /\/analysis\/findings\?finding=A-01$/);
     await claimLink.click();
     await expect(page).toHaveURL(/\/analysis\/findings\?finding=A-01$/, { timeout: 60_000 });

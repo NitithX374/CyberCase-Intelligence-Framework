@@ -11,6 +11,7 @@ from markupsafe import Markup
 
 from app.reports.display import thai_date
 from app.reports.schemas import CaseReportContent, ReportQuoteContext
+from app.trace.summary import summary_closings
 
 HEADING_MARKER = re.compile(r"^#{1,6}\s*", flags=re.MULTILINE)
 OCR_MARKUP = re.compile(
@@ -58,6 +59,22 @@ def quote_in_context(quote: str, context: ReportQuoteContext | None) -> Markup:
     )
 
 
+def note_letter(index: int) -> str:
+    letters = ""
+    index += 1
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        letters = chr(ord("a") + remainder) + letters
+    return letters
+
+
+def closings_of(report: CaseReportContent) -> list[str]:
+    closings = summary_closings(report.summary)
+    return (
+        closings if len(closings) == len(report.summary_units) else [""] * len(report.summary_units)
+    )
+
+
 def render_case_report_html(report: CaseReportContent, issue: ReportIssue | None = None) -> str:
     environment = Environment(
         loader=FileSystemLoader(str(TEMPLATE_DIRECTORY)),
@@ -68,9 +85,11 @@ def render_case_report_html(report: CaseReportContent, issue: ReportIssue | None
     )
     environment.filters["clean_report_text"] = clean_report_text
     environment.filters["quoted"] = quoted
+    environment.filters["note_letter"] = note_letter
     template = environment.get_template(REPORT_TEMPLATE_NAME)
     return template.render(
         report=report,
+        summary_closings=closings_of(report),
         issue=issue,
         issued=thai_date(issue.created_at, with_time=True) if issue else None,
     )
@@ -86,6 +105,7 @@ __all__ = [
     "REPORT_TEMPLATE_NAME",
     "ReportIssue",
     "clean_report_text",
+    "note_letter",
     "quoted",
     "readable",
     "render_case_report_html",

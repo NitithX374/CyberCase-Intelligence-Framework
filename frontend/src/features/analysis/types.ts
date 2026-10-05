@@ -41,10 +41,18 @@ export interface CaseGap {
   affectedFindings: Pick<CaseFinding, "id" | "text">[];
 }
 
+export interface FindingMark {
+  number: number;
+  claimId: string;
+}
+
 export interface SummaryUnit {
   text: string;
   claimIds: string[];
+  marks: FindingMark[];
+  closing: string;
   supportNote: string | null;
+  noteMark: string | null;
 }
 
 export interface ClaimBacked {
