@@ -1,4 +1,9 @@
-import type { CaseAnalysisResultRead, CaseSourceRead } from "@/lib/api/types";
+import type {
+  CaseAnalysisClaim,
+  CaseAnalysisResultRead,
+  CaseSourceRead,
+  CaseSummaryUnit,
+} from "@/lib/api/types";
 import { claimRefs, parseCaseSources, passageRef } from "@/features/citations/sourceRefs";
 import {
   checkedSources,
@@ -7,7 +12,15 @@ import {
 } from "@/features/citations/unconfirmed";
 import { analysisFollowups } from "./analysisRecord";
 import { supportNote } from "./supportNote";
-import type { CaseFinding, CaseOverviewData, ClaimBacked, ClaimType } from "./types";
+import { noteLetter, summaryClosings } from "./summaryClosings";
+import type {
+  CaseFinding,
+  CaseOverviewData,
+  ClaimBacked,
+  ClaimType,
+  FindingMark,
+  SummaryUnit,
+} from "./types";
 
 export const claimTypeLabels: Record<ClaimType, string> = {
   reported: "Reported information",
@@ -109,11 +122,12 @@ export function buildCaseOverview(
   return {
     hasAnalysis: true,
     incidentSummary,
-    summaryUnits: (trace.summary_units ?? []).map(({ text, claim_ids, support }) => ({
-      text,
-      claimIds: claim_ids ?? [],
-      supportNote: supportNote(support, incidentSummary),
-    })),
+    summaryUnits: summaryUnits(
+      trace.summary_units ?? [],
+      trace.claims,
+      trace.summary ?? "",
+      incidentSummary,
+    ),
     findings,
     gaps: (trace.gaps ?? []).map((gap) => ({
       id: gap.gap_id,
@@ -142,6 +156,55 @@ export function buildCaseOverview(
       supportNote: supportNote(support, incidentSummary),
     })),
   };
+}
+
+export function findingNumbers(
+  claims: Pick<CaseAnalysisClaim, "claim_id" | "text">[],
+): Map<string, FindingMark> {
+  const byText = new Map<string, FindingMark>();
+  const numbers = new Map<string, FindingMark>();
+  for (const claim of claims) {
+    const key = claim.text.trim();
+    let mark = byText.get(key);
+    if (!mark) {
+      mark = { number: byText.size + 1, claimId: claim.claim_id };
+      byText.set(key, mark);
+    }
+    numbers.set(claim.claim_id, mark);
+  }
+  return numbers;
+}
+
+function summaryUnits(
+  units: CaseSummaryUnit[],
+  claims: CaseAnalysisClaim[],
+  summary: string,
+  writtenText: string,
+): SummaryUnit[] {
+  const numbers = findingNumbers(claims);
+  const closings = summaryClosings(summary);
+  const aligned = closings.length === units.length;
+  let notes = 0;
+  return units.map((unit, index) => {
+    const seen = new Set<number>();
+    const marks = (unit.claim_ids ?? [])
+      .flatMap((claimId) => {
+        const mark = numbers.get(claimId);
+        if (!mark || seen.has(mark.number)) return [];
+        seen.add(mark.number);
+        return [mark];
+      })
+      .sort((first, second) => first.number - second.number);
+    const note = supportNote(unit.support, writtenText);
+    return {
+      text: unit.text,
+      claimIds: unit.claim_ids ?? [],
+      marks,
+      closing: aligned ? closings[index] : "",
+      supportNote: note,
+      noteMark: note ? noteLetter(notes++) : null,
+    };
+  });
 }
 
 function emptyCaseOverview(): CaseOverviewData {

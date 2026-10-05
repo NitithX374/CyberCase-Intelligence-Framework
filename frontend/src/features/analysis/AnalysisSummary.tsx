@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useCaseReports } from "@/features/reports/queries";
 import { Markdown } from "@/components/Markdown";
 import { analysisPath } from "@/lib/casePaths";
+import { hasThai } from "@/lib/language";
 import {
   buildTechnicalContext,
   technicalContextMessage,
@@ -60,7 +61,11 @@ export function AnalysisSummary() {
         </h2>
         <div className="mt-3 max-w-[68ch] text-ink [overflow-wrap:anywhere] [&_p]:mb-4 [&_p]:text-base [&_p]:leading-8 sm:[&_p]:text-[17px]">
           {overview.summaryUnits.length > 0 ? (
-            <SummaryUnits caseId={caseId} units={overview.summaryUnits} />
+            <SummaryUnits
+              caseId={caseId}
+              units={overview.summaryUnits}
+              thai={hasThai(overview.incidentSummary)}
+            />
           ) : (
             <Markdown content={overview.incidentSummary} />
           )}

@@ -63,7 +63,9 @@
     }
     h3 { margin: 10pt 0 5pt; font-size: 11.5pt; font-weight: 700; break-after: avoid; }
     .body { text-indent: 2.5em; white-space: pre-wrap; }
-    .body.unit { text-indent: 0; margin-bottom: 3pt; }
+    .body.summary-paragraph { white-space: normal; }
+    sup { font-size: 0.7em; line-height: 0; vertical-align: super; }
+    sup a { color: inherit; text-decoration: none; }
     .quote.unit-note { margin: 0 0 4pt 1.5em; }
     .note { font-size: 10pt; color: #27272a; }
 
@@ -144,10 +146,10 @@
         {% set sub = namespace(n=1) %}
         <h3>1.1 ภาพรวมของเหตุการณ์</h3>
         {% if report.summary_units %}
-          {% for unit in report.summary_units %}
-            <p class="body unit">{{ unit.text | clean_report_text }}{% if unit.references %} [ข้อ {{ unit.references | join(", ") }}]{% endif %}</p>
-            {% if unit.support in support_notes %}<p class="quote unit-note">{{ support_notes[unit.support] }}</p>{% endif %}
-          {% endfor %}
+          {% set notes = namespace(items=[]) %}
+          <p class="body summary-paragraph">{% for unit in report.summary_units %}{{ unit.text | clean_report_text }}{% if unit.references %}<sup>{% for number in unit.references %}{% if not loop.first %},{% endif %}<a href="#finding-{{ number }}" aria-label="ข้อ {{ number }}">{{ number }}</a>{% endfor %}</sup>{% endif %}{% if unit.support in support_notes %}{% set letter = notes.items | length | note_letter %}{% set _ = notes.items.append((letter, unit.support)) %}<sup>{{ letter }}</sup>{% endif %}{{ summary_closings[loop.index0] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
+          {% if report.summary_units | selectattr("references") | list %}<p class="quote unit-note">ตัวเลขยกคือเลขข้อค้นพบในหัวข้อที่ 2</p>{% endif %}
+          {% for letter, support in notes.items %}<p class="quote unit-note"><sup>{{ letter }}</sup> {{ support_notes[support] }}</p>{% endfor %}
         {% else %}
           <p class="body">{{ report.summary | clean_report_text }}</p>
         {% endif %}
@@ -227,7 +229,7 @@
             <thead><tr><th>ข้อ</th><th>ข้อเท็จจริงหรือตัวบ่งชี้</th><th>สถานะ</th><th>อ้างอิง</th></tr></thead>
             <tbody>
               {% for finding in report.findings %}
-              <tr>
+              <tr id="finding-{{ finding.ordinal }}">
                 <td class="n">{{ finding.ordinal }}</td>
                 <td>
                   {{ finding.text | clean_report_text }}
