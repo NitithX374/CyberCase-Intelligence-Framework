@@ -18,6 +18,7 @@ from app.models.source import CaseSource
 from app.reports.contracts import CaseReportInput
 from app.reports.display import (
     CHECKLIST_TOPICS,
+    EPISTEMIC_STATUS_LABELS,
     SOURCE_KINDS,
     build_case_report_content,
     thai_date,
@@ -36,6 +37,7 @@ from app.trace.claims import (
     CaseAnalysisClaim,
     CaseAnalysisGap,
     CaseFollowupExchange,
+    CaseMeaningPassage,
     CaseNearPassage,
     CaseQuoteDifference,
     CaseReviewFlag,
@@ -44,6 +46,7 @@ from app.trace.claims import (
 )
 from app.trace.trace import (
     CaseAnalysisTrace,
+    CaseGroundingReport,
     CaseImpactItem,
     CaseInvolvedParty,
     CaseMitreAssociation,
@@ -1207,3 +1210,169 @@ def test_an_analysis_stored_before_the_flags_existed_makes_a_report_with_none() 
 
     assert finding.supporting_marked == [[]]
     assert finding.contradicting_marked == []
+
+
+MEANING_LINE = "ข้อความในต้นฉบับที่อาจเกี่ยวข้อง (หาจากความหมาย ยังไม่ยืนยัน):"
+MEANING_TEXT = "ต้นฉบับระบุว่าเครื่องถูกควบคุมจากระยะไกลเมื่อคืนนี้"
+
+
+def _not_confirmed_with_meaning(
+    *, status: str = "not_confirmed", text: str = MEANING_TEXT, grounding: dict | None = None
+) -> CaseReportInput:
+    report_input = _input_with_unverified(
+        CaseUnverifiedCitation(
+            source_id=_input().source_bundle.sources[0].source_id,
+            role="supporting",
+            written_quote="ข้อความที่ไม่มีในต้นฉบับ",
+            meaning_passage=CaseMeaningPassage(
+                source_text=text, start=0, end=len(text), entailment=0.97, model="fake"
+            ),
+        )
+    )
+    trace = report_input.analysis_trace
+    claim = trace.claims[0].model_copy(
+        update={"epistemic_status": status, "supporting_citations": []}
+    )
+    update: dict = {"claims": [claim]}
+    if grounding is not None:
+        update["grounding"] = CaseGroundingReport(**grounding)
+    return report_input.model_copy(update={"analysis_trace": trace.model_copy(update=update)})
+
+
+def test_a_not_confirmed_claim_prints_the_passage_found_by_meaning_under_its_unverified_quote() -> (
+    None
+):
+    report = _stored(_not_confirmed_with_meaning())
+    html = render_case_report_html(report, ISSUE)
+
+    [quote] = report.findings[0].unverified_quotes
+    assert quote.meaning_passage == MEANING_TEXT
+    assert f"{MEANING_LINE}</span> “{MEANING_TEXT}”" in html
+    assert html.index("ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ") < html.index(MEANING_LINE)
+    assert "badge" not in html.split("<main>")[1].split("</main>")[0]
+
+
+def test_the_report_shows_no_score_for_the_passage() -> None:
+    report = _stored(_not_confirmed_with_meaning())
+    html = render_case_report_html(report, ISSUE)
+
+    assert "0.97" not in html
+    assert "entailment" not in html
+    assert "fake" not in html
+    assert "entailment" not in report.model_dump_json()
+
+
+def test_the_passage_is_printed_as_readable_text() -> None:
+    marked = "ต้นฉบับระบุว่า <page_number>3</page_number>เครื่องถูกควบคุม\nจากระยะไกลเมื่อคืนนี้"
+
+    html = render_case_report_html(_stored(_not_confirmed_with_meaning(text=marked)), ISSUE)
+
+    assert "“ต้นฉบับระบุว่า เครื่องถูกควบคุม จากระยะไกลเมื่อคืนนี้”" in html
+    assert "page_number" not in html
+
+
+def test_a_passage_is_escaped_in_the_report() -> None:
+    html = render_case_report_html(
+        _stored(_not_confirmed_with_meaning(text="<script>alert(1)</script> ต้นฉบับ")), ISSUE
+    )
+
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt; ต้นฉบับ" in html
+
+
+def test_a_claim_that_is_not_not_confirmed_prints_no_passage() -> None:
+    report = _stored(_not_confirmed_with_meaning(status="reported"))
+    html = render_case_report_html(report, ISSUE)
+
+    assert report.findings[0].unverified_quotes[0].meaning_passage is None
+    assert MEANING_LINE not in html
+    assert (
+        MEANING_TEXT not in html.split('id="evidence_to_examine"')[0].split("ข้อความที่ไม่มีในต้นฉบับ")[-1]
+    )
+
+
+def test_the_passage_is_only_in_the_claims_own_unverified_quote() -> None:
+    report = _stored(_not_confirmed_with_meaning())
+    finding = report.findings[0]
+    dumped = json.loads(report.model_dump_json())
+
+    assert finding.supporting_quotes == []
+    assert finding.status == EPISTEMIC_STATUS_LABELS["not_confirmed"]
+    assert json.dumps(dumped, ensure_ascii=False).count(MEANING_TEXT) == 1
+    assert MEANING_TEXT not in report.summary
+    assert all(MEANING_TEXT not in unit.text for unit in report.summary_units)
+
+
+def test_a_report_stored_before_the_passage_existed_validates_and_prints_nothing_new() -> None:
+    written = _stored(_not_confirmed_with_meaning()).model_dump(mode="json")
+    for finding in written["findings"]:
+        for quote in finding["unverified_quotes"]:
+            del quote["meaning_passage"]
+
+    stored = CaseReportContent.model_validate(written)
+    html = render_case_report_html(stored, ISSUE)
+
+    assert stored.findings[0].unverified_quotes[0].meaning_passage is None
+    assert MEANING_LINE not in html
+    assert "ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ" in html
+
+
+def test_an_analysis_stored_before_the_passage_makes_a_report_with_none() -> None:
+    source_id = _input().source_bundle.sources[0].source_id
+    report = _stored(
+        _input_with_unverified(
+            CaseUnverifiedCitation(source_id=source_id, role="supporting", written_quote="ไม่มี")
+        )
+    )
+
+    assert report.findings[0].unverified_quotes[0].meaning_passage is None
+
+
+UNAVAILABLE_GROUNDING = {
+    "meaning_pointer_eligible": 3,
+    "meaning_pointer_unavailable": 3,
+    "meaning_pointer_unavailable_reason": "weights_missing",
+}
+
+
+def test_the_report_says_when_the_meaning_pointer_could_not_run() -> None:
+    report = _stored(_not_confirmed_with_meaning(grounding=UNAVAILABLE_GROUNDING))
+
+    [note] = [item for item in report.limitations if "จากความหมาย" in item]
+    assert "ใช้ไม่ได้ในการวิเคราะห์นี้" in note
+    assert "ไม่พบไฟล์น้ำหนักของโมเดล" in note
+    assert "3 รายการ" in note
+    assert "weights_missing" not in note
+    assert note in render_case_report_html(report, ISSUE)
+
+
+@pytest.mark.parametrize(
+    ("reason", "said"),
+    [
+        ("libraries_missing", "ไม่ได้ติดตั้งไลบรารีที่โมเดลต้องใช้"),
+        ("weights_hash_mismatch", "ไฟล์น้ำหนักของโมเดลไม่ตรงกับรุ่นที่กำหนด"),
+        ("label_mapping_mismatch", "ลำดับป้ายผลของโมเดลไม่ตรงกับที่คาดไว้"),
+        ("load_failed:OSError", "โมเดลโหลดหรือทำงานไม่สำเร็จ"),
+        ("failed:RuntimeError", "โมเดลโหลดหรือทำงานไม่สำเร็จ"),
+    ],
+)
+def test_each_reason_the_pointer_could_not_run_is_said_in_plain_words(reason, said) -> None:
+    grounding = {**UNAVAILABLE_GROUNDING, "meaning_pointer_unavailable_reason": reason}
+
+    report = _stored(_not_confirmed_with_meaning(grounding=grounding))
+
+    assert any(said in item for item in report.limitations)
+
+
+def test_a_pointer_that_ran_adds_no_limitation() -> None:
+    grounding = {
+        "meaning_pointer_eligible": 2,
+        "meaning_pointer_attempted": 2,
+        "citations_meaning_pointed": 1,
+    }
+
+    report = _stored(_not_confirmed_with_meaning(grounding=grounding))
+    plain = _stored(_not_confirmed_with_meaning())
+
+    assert report.limitations == plain.limitations
+    assert not any("จากความหมาย" in item for item in report.limitations)

@@ -16,6 +16,7 @@ from app.trace.claims import (
     CaseSourceCitation,
     CaseUnverifiedCitation,
 )
+from app.trace.meaning import meaning_pointed
 from app.trace.quotes import (
     MAX_QUOTE_CHARS,
     MAX_TOLERATED_DIFFERENCES,
@@ -83,6 +84,7 @@ def bound_claims(
     claims = deduplicated_claims(written.claims)
     known_claim_ids = {claim.claim_id for claim in claims}
     resolved_claims = [resolve_claim(claim, registry, document_context, search) for claim in claims]
+    resolved_claims, meaning = meaning_pointed(resolved_claims, registry)
 
     bound = written.model_copy(
         update={
@@ -100,7 +102,7 @@ def bound_claims(
         registry,
         search=search,
         claims_dropped=len(written.claims) - len(claims),
-    )
+    ).model_copy(update=meaning.grounding())
     return bound, grounding
 
 
@@ -287,7 +289,7 @@ def resolve_claim(
     )
     unverified: list[CaseUnverifiedCitation] = []
     for item in [
-        *claim.unverified_citations,
+        *(item.model_copy(update={"meaning_passage": None}) for item in claim.unverified_citations),
         *unverified_citations(claim.supporting_citations, "supporting", registry, search),
         *unverified_citations(claim.contradicting_citations, "contradicting", registry, search),
     ]:

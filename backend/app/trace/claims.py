@@ -26,6 +26,7 @@ from app.trace.quotes import (
 MAX_CLARIFICATION_QUESTION_CHARS = 300
 MAX_CONTEXT_CHARS = 400
 MAX_REVIEW_FLAGS = 8
+MAX_MEANING_PASSAGE_CHARS = 4_000
 
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
@@ -167,6 +168,16 @@ class CaseNearPassage(BaseModel):
     occurrences: int = Field(default=1, ge=1)
 
 
+class CaseMeaningPassage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_text: str = Field(min_length=1, max_length=MAX_MEANING_PASSAGE_CHARS)
+    start: int = Field(ge=0)
+    end: int = Field(gt=0)
+    entailment: float = Field(ge=0, le=1)
+    model: str = Field(min_length=1, max_length=200)
+
+
 class CaseUnverifiedCitation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -174,6 +185,7 @@ class CaseUnverifiedCitation(BaseModel):
     role: Literal["supporting", "contradicting"]
     written_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
     near_passage: CaseNearPassage | None = None
+    meaning_passage: CaseMeaningPassage | None = None
 
 
 class CaseClaimFields(BaseModel):

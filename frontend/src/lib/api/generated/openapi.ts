@@ -355,6 +355,12 @@ export interface components {
             claims_duplicated: number;
             citations_duplicated: number;
             citations_marked: number;
+            citations_meaning_pointed: number;
+            meaning_pointer_eligible: number;
+            meaning_pointer_attempted: number;
+            meaning_pointer_unavailable: number;
+            meaning_pointer_unavailable_reason?: string | null;
+            meaning_pointer_skipped: number;
             associations_outside_context: number;
             associations_without_claim: number;
             summary_ids_unknown: number;
@@ -371,6 +377,13 @@ export interface components {
             role: string;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+        };
+        CaseMeaningPassage: {
+            source_text: string;
+            start: number;
+            end: number;
+            entailment: number;
+            model: string;
         };
         CaseMitreAssociation: {
             association_id: string;
@@ -494,6 +507,7 @@ export interface components {
             role: "supporting" | "contradicting";
             written_quote: string;
             near_passage?: components["schemas"]["CaseNearPassage"] | null;
+            meaning_passage?: components["schemas"]["CaseMeaningPassage"] | null;
         };
         CaseUpdate: {
             title: string;
@@ -628,6 +642,7 @@ export interface components {
         ReportUnverifiedQuote: {
             written_quote: string;
             places?: components["schemas"]["ReportPlace"][];
+            meaning_passage?: string | null;
         };
         UserRead: {
             id: string;

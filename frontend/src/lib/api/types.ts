@@ -5,6 +5,7 @@ type Schemas = components["schemas"];
 export type AnalysisStepRead = Schemas["AnalysisStepRead"];
 export type CaseAnalysisClaim = Schemas["CaseAnalysisClaim"];
 export type CaseSummaryUnit = Schemas["CaseSummaryUnit"];
+export type CaseMeaningPassage = Schemas["CaseMeaningPassage"];
 export type CaseAnalysisGap = Schemas["CaseAnalysisGap"];
 export type CaseAnalysisResultRead = Schemas["CaseAnalysisResultRead"];
 export type CaseAnalysisTrace = Schemas["CaseAnalysisTrace"];

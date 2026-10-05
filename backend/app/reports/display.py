@@ -282,6 +282,11 @@ def unverified_quotes(claim: CaseAnalysisClaim) -> list[ReportUnverifiedQuote]:
                 ReportPlace(written=difference.written, source=difference.source)
                 for difference in (item.near_passage.differences if item.near_passage else [])
             ],
+            meaning_passage=(
+                item.meaning_passage.source_text
+                if item.meaning_passage and claim.epistemic_status == "not_confirmed"
+                else None
+            ),
         )
         for item in claim.unverified_citations
     ]
@@ -453,7 +458,31 @@ def report_limitations(report_input: CaseReportInput) -> list[str]:
     clarification = clarification_limitation(report_input.analysis_trace)
     if clarification is not None:
         limitations.append(clarification)
+    meaning = meaning_pointer_limitation(report_input.analysis_trace)
+    if meaning is not None:
+        limitations.append(meaning)
     return limitations
+
+
+MEANING_POINTER_REASONS = {
+    "weights_missing": "ไม่พบไฟล์น้ำหนักของโมเดล",
+    "libraries_missing": "ไม่ได้ติดตั้งไลบรารีที่โมเดลต้องใช้",
+    "weights_hash_mismatch": "ไฟล์น้ำหนักของโมเดลไม่ตรงกับรุ่นที่กำหนด",
+    "label_mapping_mismatch": "ลำดับป้ายผลของโมเดลไม่ตรงกับที่คาดไว้",
+}
+
+
+def meaning_pointer_limitation(trace: CaseAnalysisTrace) -> str | None:
+    grounding = trace.grounding
+    if grounding is None or not grounding.meaning_pointer_unavailable:
+        return None
+    reason = grounding.meaning_pointer_unavailable_reason or ""
+    shown = MEANING_POINTER_REASONS.get(reason, "โมเดลโหลดหรือทำงานไม่สำเร็จ")
+    return (
+        "การหาข้อความในต้นฉบับจากความหมายสำหรับข้อที่ยังไม่ยืนยันใช้ไม่ได้ในการวิเคราะห์นี้ "
+        f"({shown}) จึงไม่มีข้อความที่อาจเกี่ยวข้องให้ตรวจสำหรับ "
+        f"{grounding.meaning_pointer_unavailable} รายการ"
+    )
 
 
 def source_register(report_input: CaseReportInput, labels: dict[str, str]) -> list[ReportSource]:

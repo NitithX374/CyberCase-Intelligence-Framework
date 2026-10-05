@@ -91,6 +91,7 @@ export function FindingRow({
           {finding.unverifiedQuotes.map((item, index) => {
             const key = `passage-${finding.id}-${index}`;
             const passage = item.passage;
+            const meaning = item.meaningPassage;
             return (
               <div key={key} className="text-sm leading-6 text-ink-secondary">
                 <p>Not found word for word in the source.</p>
@@ -108,6 +109,21 @@ export function FindingRow({
                   >
                     Show in source
                   </button>
+                )}
+                {meaning && (
+                  <p>
+                    {meaning.quoteLabel}{" "}
+                    <button
+                      type="button"
+                      aria-haspopup="dialog"
+                      onClick={(event) =>
+                        sourceActions.onSelectSource(meaning, event.currentTarget, `${key}-meaning`)
+                      }
+                      className="text-ink underline underline-offset-2 hover:text-ink-secondary"
+                    >
+                      Show in source
+                    </button>
+                  </p>
                 )}
               </div>
             );
