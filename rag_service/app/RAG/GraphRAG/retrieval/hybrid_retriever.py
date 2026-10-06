@@ -9,7 +9,7 @@ Implements the GraphRAG architecture from schema_design.md:
 3. Merge & Deduplicate          → combined context
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from FlagEmbedding import BGEM3FlagModel
@@ -45,7 +45,14 @@ def merge_results(previous: "GraphRAGResult", new: "GraphRAGResult") -> "GraphRA
                       if sg.center_node and sg.center_node.stix_id not in centres
                       and not centres.add(sg.center_node.stix_id)]
 
-    return GraphRAGResult(vector_results=vector_results, graph_results=graph_results)
+    retrieved_by = {key: list(queries) for key, queries in previous.retrieved_by.items()}
+    for key, queries in new.retrieved_by.items():
+        asked = retrieved_by.setdefault(key, [])
+        asked += [q for q in queries if q not in asked]
+
+    return GraphRAGResult(
+        vector_results=vector_results, graph_results=graph_results, retrieved_by=retrieved_by
+    )
 
 
 @dataclass
@@ -56,6 +63,13 @@ class GraphRAGResult:
     vector_results: list[VectorResult]
     # Graph expansion results (one subgraph per unique stix_id)
     graph_results: list[SubgraphResult]
+    # Which queries returned each entity inside their quota: parent ATT&CK ID
+    # for a technique (or a relationship pointing at one), STIX ID otherwise →
+    # the queries, in the order they were asked. Filled by
+    # ``retrieve_multi_quota`` only; it is how a table row is traced to the
+    # sub-query that looked it up, and through that to a place in the case
+    # file (pipeline/case_evidence.py).
+    retrieved_by: dict[str, list[str]] = field(default_factory=dict)
 
     def get_context_text(self, max_length: int = 8000) -> str:
         """Format combined results as text for LLM context."""
@@ -437,6 +451,7 @@ class HybridRetriever:
         slot_key = self._technique_key if technique_pool else (lambda vr: vr.stix_id)
 
         per_query_vectors: list[list] = []
+        retrieved_by: dict[str, list[str]] = {}
         # center stix_id → (sort key, subgraph); the best key across sub-queries wins
         graph_candidates: dict[str, tuple[tuple, SubgraphResult]] = {}
 
@@ -450,6 +465,12 @@ class HybridRetriever:
                 technique_pool=technique_pool,
             )
             per_query_vectors.append(result.vector_results[:per_query_k])
+            # Recorded before the merge below drops a technique another
+            # sub-query also returned: every one that asked for it counts.
+            for vr in per_query_vectors[-1]:
+                asked = retrieved_by.setdefault(self._technique_key(vr), [])
+                if query not in asked:
+                    asked.append(query)
 
             seed_scores = self._graph_seeds(result.vector_results, per_query_k)
             tier_rank = [0, 0]
@@ -513,4 +534,5 @@ class HybridRetriever:
         return GraphRAGResult(
             vector_results=merged_vector,
             graph_results=merged_graph,
+            retrieved_by=retrieved_by,
         )

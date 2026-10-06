@@ -25,6 +25,11 @@ filters go on deciding the rows that are not techniques: software, groups,
 mitigations. A technique of another domain, which the re-read never saw, is a
 row only when the answer cites its ID.
 
+Given ``evidence`` (``case_evidence.CaseEvidence``), each row also says which
+part of the case file it rests on: the sentence the re-read tied the technique
+to, or, for a row the re-read tied to nothing, where the sub-queries that
+looked the entity up are in the case file.
+
 Retrieval carries an entity's description and tactic unevenly, so a row must
 not take them from whichever channel happened to surface it:
 
@@ -47,11 +52,12 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Callable, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_serializer
 
 from ..config import MITRE_TABLE_SCORE_THRESHOLD
 
 if TYPE_CHECKING:
+    from .case_evidence import CaseEvidence
     from .table_reread import TechniqueSelection
 
 # Rows the table is capped at — cited rows are never truncated in practice
@@ -106,6 +112,19 @@ _MITRE_URL_PATHS = {
 }
 
 
+class EvidenceSpan(BaseModel):
+    """A part of the case file a row rests on. ``text`` is the request's
+    query from ``start`` to ``end``, so a consumer can point at it."""
+
+    text: str
+    start: int
+    end: int
+    # "reread": the re-read named this technique for the step this sentence
+    # reports. "retrieval": a sub-query made of these words returned the
+    # entity, which says why it was looked up and no more.
+    basis: str
+
+
 class MitreTableRow(BaseModel):
     """One entry of the MITRE mapping table exposed to the backend."""
 
@@ -118,6 +137,18 @@ class MitreTableRow(BaseModel):
     relevance: str = "retrieved_only"  # "cited_in_answer" | "retrieved_only"
     description: str = ""
     mitre_url: Optional[str] = None
+    # Where in the case file the row comes from, in case-file order. None
+    # when the table was built without evidence, and then the field is left
+    # out of the JSON: the backend's row contract forbids fields it does not
+    # know.
+    evidence: Optional[list[EvidenceSpan]] = None
+
+    @model_serializer(mode="wrap")
+    def _without_absent_evidence(self, handler):
+        data = handler(self)
+        if data.get("evidence") is None:
+            data.pop("evidence", None)
+        return data
 
 
 # stix_ids → {stix_id: {"description": str, "tactics": [name, …]}}, the shape of
@@ -131,6 +162,7 @@ def build_mitre_table(
     score_threshold: Optional[float] = None,
     entity_details: Optional[EntityDetailsLookup] = None,
     selection: Optional[TechniqueSelection] = None,
+    evidence: Optional[CaseEvidence] = None,
 ) -> list[MitreTableRow]:
     """Build the filtered MITRE mapping table from raw retrieval results.
 
@@ -153,6 +185,9 @@ def build_mitre_table(
             did not return. A technique it never read (another domain's) is a
             row only when the answer cites its ID. None leaves every row to
             the two filters.
+        evidence: The parts of the case file behind this request's entities.
+            Each row gets its own list, empty when nothing ties it to a
+            sentence. None leaves the field off every row.
 
     Returns:
         Rows sorted cited or selected first, then by score descending. Empty
@@ -259,6 +294,14 @@ def build_mitre_table(
                 relevance=relevance,
                 description=description,
                 mitre_url=_mitre_url(cand["technique_id"]),
+                evidence=(
+                    None
+                    if evidence is None
+                    else [
+                        EvidenceSpan(text=s.text, start=s.start, end=s.end, basis=s.basis)
+                        for s in evidence.for_row(cand["technique_id"], cand["stix_id"])
+                    ]
+                ),
             )
         )
     return rows

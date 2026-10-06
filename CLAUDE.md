@@ -175,9 +175,30 @@ The technique list is read from Neo4j once per process
 (`GraphRetriever.enterprise_techniques`). The re-read cannot fail a request: no
 list, too few readable replies or a vote that keeps nothing all leave the
 answer-grounded table (the last branch, applied to every row), which is also
-what `MITRE_TABLE_REREAD=false` serves. The row contract is unchanged — a row
-retrieval did not return has `source="graph"` and no score, and `relevance`
-still says only whether the answer cites it.
+what `MITRE_TABLE_REREAD=false` serves. A row retrieval did not return has
+`source="graph"` and no score, and `relevance` still says only whether the
+answer cites it.
+
+Each row also carries `evidence`: the parts of the request's query it rests on,
+as `{text, start, end, basis}` with `query[start:end] == text`
+(`pipeline/case_evidence.py`).
+
+- `basis: "reread"` — every shortlist reply copies the sentence that reports
+  each step. The copies behind a kept technique are looked up in the query and
+  the places they are found at are its evidence; a sub-technique row carries
+  its parent's.
+- `basis: "retrieval"` — only for a row the re-read tied to nothing.
+  `GraphRAGResult.retrieved_by` records which sub-queries returned the entity,
+  and a sub-query is found in the query by its own words (its bracketed English
+  gloss aside). This says why a row was retrieved, not that the words describe
+  it. The decomposer is not asked for a source: when it was, it stopped writing
+  the English gloss and retrieval lost recall.
+
+Nothing a model wrote is sent as evidence: a copy that cannot be found in the
+query is dropped. The backend validates rows with `extra="forbid"`, so its row
+contract (`backend/app/analysis/technical_context/contracts.py`) has the field
+too; a backend older than that rejects every reply that carries it, and
+`MITRE_TABLE_EVIDENCE=false` leaves the field off.
 
 ### API Endpoints
 
@@ -448,6 +469,7 @@ composition, as `tests/test_case_followup_postgres.py` does. There is no
 | Evaluator | `pipeline/evaluator.py` | Assess context sufficiency, drive self-reflection |
 | MITRE table | `pipeline/mitre_table.py` | The rows `/query` returns, from retrieval, the answer and the re-read |
 | Table re-read | `pipeline/table_reread.py` | Second reading of the case file that decides the technique rows |
+| Case evidence | `pipeline/case_evidence.py` | Which part of the case file each table row rests on |
 | Config | `config.py` | All RAG settings (models, topK, DB URLs) |
 | Ingestion | `ingestion/` | Parse STIX JSON, populate Neo4j + Qdrant |
 
@@ -550,7 +572,8 @@ The frontend loads and generates reports through the case-scoped report endpoint
 - **MITRE table**: `MITRE_TABLE_REREAD=true` (six extra LLM calls a query, three
   of them carrying the whole technique list, about 41K characters),
   `MITRE_TABLE_REREAD_READINGS=3`, `MITRE_TABLE_REREAD_VOTES=2`,
-  `MITRE_TABLE_SCORE_THRESHOLD=0.5`. The re-read was measured on gemma only
+  `MITRE_TABLE_SCORE_THRESHOLD=0.5`, `MITRE_TABLE_EVIDENCE=true`. The re-read
+  and the evidence were measured on gemma only
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
