@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 
 class QueryRequest(BaseModel):
@@ -11,6 +18,17 @@ class QueryRequest(BaseModel):
 
     query: str
     use_agent: bool = True
+
+
+class CaseSpan(BaseModel):
+    """A part of the query a table row rests on: ``query[start:end] == text``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    start: int
+    end: int
+    basis: Literal["reread", "retrieval"]
 
 
 class MitreTableRow(BaseModel):
@@ -25,6 +43,17 @@ class MitreTableRow(BaseModel):
     relevance: Literal["cited_in_answer", "retrieved_only"] = "retrieved_only"
     description: str = ""
     mitre_url: str | None = None
+    # Where in the query the row comes from. The RAG service leaves the field
+    # out when it sends rows without evidence, and a row that arrived without
+    # it is stored and prompted without it, as rows were before the field.
+    evidence: list[CaseSpan] | None = None
+
+    @model_serializer(mode="wrap")
+    def _without_absent_evidence(self, handler):
+        data = handler(self)
+        if data.get("evidence") is None:
+            data.pop("evidence", None)
+        return data
 
 
 class LegalProvision(BaseModel):

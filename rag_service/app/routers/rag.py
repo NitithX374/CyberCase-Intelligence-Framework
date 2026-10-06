@@ -6,7 +6,8 @@ from typing import Any, Optional
 
 from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, HTTPException, Request
-from RAG.GraphRAG.config import MAX_CONCURRENT_QUERIES
+from RAG.GraphRAG.config import MAX_CONCURRENT_QUERIES, MITRE_TABLE_EVIDENCE
+from RAG.GraphRAG.pipeline.case_evidence import CaseEvidence
 from RAG.GraphRAG.pipeline.mitre_table import EntityDetailsLookup, build_mitre_table
 from RAG.legal_reference import LegalReferenceResult
 from schemas.rag import QueryRequest, QueryResponse, RetrievalContextSnapshot
@@ -47,13 +48,25 @@ def _run_pipeline(rag_agent: Any, query: str) -> tuple[Any, list[Any]]:
     # The MITRE selection stays inside rag-service. The generated answer is
     # used only as an internal relevance signal; it is deliberately excluded
     # from the HTTP response and context snapshot.
+    selection = _reread_selection(rag_agent, query, agent_response)
     mitre_table = build_mitre_table(
         agent_response.graphrag_result,
         agent_response.answer,
         entity_details=_entity_details_lookup(rag_agent),
-        selection=_reread_selection(rag_agent, query, agent_response),
+        selection=selection,
+        evidence=_case_evidence(query, selection, agent_response),
     )
     return agent_response, mitre_table
+
+
+def _case_evidence(query: str, selection: Any, agent_response: Any) -> Optional[CaseEvidence]:
+    """Where in the query each row comes from, or None when rows are sent
+    without it (``MITRE_TABLE_EVIDENCE``)."""
+    if not MITRE_TABLE_EVIDENCE:
+        return None
+    return CaseEvidence.build(
+        query, selection=selection, rag_result=agent_response.graphrag_result
+    )
 
 
 def _reread_selection(

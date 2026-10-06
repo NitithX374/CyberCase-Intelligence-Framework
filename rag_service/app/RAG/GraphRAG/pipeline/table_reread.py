@@ -24,6 +24,14 @@ A technique is kept when at least ``votes`` shortlist replies name it. The
 model does not repeat itself at temperature 0, which is what makes a vote of
 identical calls worth having.
 
+When rows carry evidence (``MITRE_TABLE_EVIDENCE``), each shortlist reply also
+copies, for every step, the sentence of the case file that reports it. For a
+kept technique those copies are looked up in the case file and the places they
+are found at become the row's evidence (``case_evidence``); a copy that is not
+in the case file is dropped. The copies make the replies longer, and that is
+the whole cost: no call is added. With evidence off the prompt does not ask
+for them.
+
 The technique list comes from Neo4j, once per process: the container ships no
 STIX bundle, and the graph is what retrieval already answers from.
 
@@ -41,13 +49,18 @@ import re
 import threading
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from dataclasses import dataclass, field
+from typing import Any, Callable, Mapping, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from ..config import MITRE_TABLE_REREAD_READINGS, MITRE_TABLE_REREAD_VOTES
+from ..config import (
+    MITRE_TABLE_EVIDENCE,
+    MITRE_TABLE_REREAD_READINGS,
+    MITRE_TABLE_REREAD_VOTES,
+)
 from ..llm_content import invoke_for_text
+from .case_evidence import Span, locate, merge_spans
 from .mitre_table import _ATTACK_ID_PATTERN, _TECHNIQUE_ID_RE, _normalise_description
 
 logger = logging.getLogger(__name__)
@@ -105,7 +118,7 @@ list the same technique twice.
 Reply with JSON only:
 {"steps": [{"step": "<the step, in Thai, a few words>", "technique_id": "<ID or NONE>"}]}"""
 
-SHORTLIST_SYSTEM = """You map a Thai cybercrime case file to MITRE ATT&CK Enterprise techniques. \
+_SHORTLIST_TEMPLATE = """You map a Thai cybercrime case file to MITRE ATT&CK Enterprise techniques. \
 The result is a table a prosecutor takes to a technical expert, so every row must be \
 something the case file says the offender did.
 
@@ -118,7 +131,7 @@ Work in two steps.
 them. A sentence that describes one step is ONE step, even when it also says how the \
 step was done (the tool, the language a script is written in, the protocol, the account \
 used, what was looked at on the way). Count two steps only when the case file joins two \
-different things the offender achieved.
+different things the offender achieved.{copy}
 2. For each step choose the ONE candidate whose definition matches what the offender \
 achieved in that step: its purpose, not an incidental detail of how it was done. If no \
 candidate matches, write "NONE".
@@ -126,7 +139,14 @@ candidate matches, write "NONE".
 Use only IDs from CANDIDATES. Never list the same technique twice.
 
 Reply with JSON only:
-{"steps": [{"step": "<the step, in Thai, a few words>", "technique_id": "<ID or NONE>"}]}"""
+{{"steps": [{{"step": "<the step, in Thai, a few words>", {field}"technique_id": "<ID or NONE>"}}]}}"""
+
+SHORTLIST_SYSTEM = _SHORTLIST_TEMPLATE.format(copy="", field="")
+# The same prompt, asking each step for the sentence that reports it as well.
+SHORTLIST_WITH_SENTENCES_SYSTEM = _SHORTLIST_TEMPLATE.format(
+    copy=" For each step also copy the sentence of the case file that reports it, word for word.",
+    field='"sentence": "<that sentence, copied from the case file>", ',
+)
 
 
 @dataclass(frozen=True)
@@ -153,6 +173,9 @@ class TechniqueSelection:
 
     kept: tuple[TechniqueEntry, ...]
     considered: frozenset[str]  # every parent ID on the full list
+    # kept parent ID → where in the case file the replies that named it found
+    # the step, as (start, end) offsets
+    spans: Mapping[str, tuple[Span, ...]] = field(default_factory=dict)
 
     def ruling(self, attack_id: str) -> Optional[bool]:
         """Whether a row with this ID belongs in the table.
@@ -227,11 +250,19 @@ def cited_parent_ids(answer: str) -> set[str]:
 
 
 def reply_ids(raw: str, allowed: set[str]) -> Optional[list[str]]:
-    """Parent IDs a reply names, in its order. None when it cannot be read.
+    """Parent IDs a reply names, in its order. None when it cannot be read."""
+    steps = reply_steps(raw, allowed)
+    return None if steps is None else [attack_id for attack_id, _ in steps]
+
+
+def reply_steps(raw: str, allowed: set[str]) -> Optional[list[tuple[str, str]]]:
+    """``(parent ID, copied sentence)`` for each technique a reply names, in
+    its order. None when the reply cannot be read.
 
     An unreadable reply and a reply that names nothing are different things:
     the first is a call that failed, the second is a reading that found no
-    technique, and only the second gets a vote.
+    technique, and only the second gets a vote. The sentence is "" when the
+    reply gave none.
     """
     match = _JSON_BLOCK.search(raw or "")
     if not match:
@@ -243,14 +274,14 @@ def reply_ids(raw: str, allowed: set[str]) -> Optional[list[str]]:
     steps = reply.get("steps") if isinstance(reply, dict) else None
     if not isinstance(steps, list):
         return None
-    ids: list[str] = []
+    named: list[tuple[str, str]] = []
     for step in steps:
         if not isinstance(step, dict):
             continue
         attack_id = str(step.get("technique_id") or "").strip().upper().split(".")[0]
-        if attack_id in allowed and attack_id not in ids:
-            ids.append(attack_id)
-    return ids
+        if attack_id in allowed and all(attack_id != seen for seen, _ in named):
+            named.append((attack_id, str(step.get("sentence") or "")))
+    return named
 
 
 class TableReread:
@@ -262,9 +293,13 @@ class TableReread:
         list_techniques: Callable[[], list[dict]],
         readings: int = MITRE_TABLE_REREAD_READINGS,
         votes: int = MITRE_TABLE_REREAD_VOTES,
+        copy_sentences: bool = MITRE_TABLE_EVIDENCE,
     ) -> None:
         self._llm = llm
         self._list_techniques = list_techniques
+        self._shortlist_system = (
+            SHORTLIST_WITH_SENTENCES_SYSTEM if copy_sentences else SHORTLIST_SYSTEM
+        )
         self.readings = max(1, readings)
         self.votes = max(1, min(votes, self.readings))
         self._catalogue: tuple[TechniqueEntry, ...] = ()
@@ -300,8 +335,10 @@ class TableReread:
                 the reason there is no selection; ``cited``, ``full_list`` (the
                 IDs each readable reply named), ``shortlist``, ``names`` (of
                 the shortlisted techniques), ``readings`` (as ``full_list``,
-                for the shortlist round), ``votes`` and ``kept`` are present
-                as far as the re-read got. Nothing reads it back.
+                for the shortlist round), ``votes``, ``kept``, ``quotes``
+                (the sentences the replies copied for each kept technique) and
+                ``spans`` (where those were found in the case file) are
+                present as far as the re-read got. Nothing reads it back.
 
         Returns:
             The selection, or None when the re-read could not decide and the
@@ -336,8 +373,11 @@ class TableReread:
             return None
 
         allowed = {e.attack_id for e in shortlist}
-        replies = self._ask(SHORTLIST_SYSTEM, shortlist_prompt(case_file, shortlist), "shortlist")
-        readings = [ids for ids in (reply_ids(raw, allowed) for raw in replies) if ids is not None]
+        replies = self._ask(
+            self._shortlist_system, shortlist_prompt(case_file, shortlist), "shortlist"
+        )
+        read = [steps for steps in (reply_steps(raw, allowed) for raw in replies) if steps is not None]
+        readings = [[attack_id for attack_id, _ in steps] for steps in read]
         trace["readings"] = readings
         if len(readings) < self.votes:
             logger.warning(
@@ -356,8 +396,26 @@ class TableReread:
             logger.warning("MITRE table re-read: the vote kept no technique")
             trace["outcome"] = "the vote kept nothing"
             return None
+
+        # Where each kept technique's step is in the case file, from every
+        # reply that named it. A sentence the model reworded past finding is
+        # left out: evidence is a place in the case file or nothing.
+        spans: dict[str, tuple[Span, ...]] = {}
+        for entry in kept:
+            found = [
+                locate(sentence, case_file)
+                for steps in read
+                for attack_id, sentence in steps
+                if attack_id == entry.attack_id
+            ]
+            spans[entry.attack_id] = tuple(merge_spans(span for span in found if span))
+        trace["quotes"] = {
+            entry.attack_id: [s for steps in read for a, s in steps if a == entry.attack_id and s]
+            for entry in kept
+        }
+        trace["spans"] = {attack_id: [list(span) for span in found] for attack_id, found in spans.items()}
         trace["outcome"] = "decided"
-        return TechniqueSelection(kept=kept, considered=frozenset(by_id))
+        return TechniqueSelection(kept=kept, considered=frozenset(by_id), spans=spans)
 
     def _ask(self, system: str, user: str, round_name: str) -> list[str]:
         """The same prompt ``readings`` times, side by side. A call that raises

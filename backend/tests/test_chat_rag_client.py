@@ -118,6 +118,30 @@ class ChatRagResponseMappingTests(unittest.TestCase):
         self.assertEqual(list(context.mitre_table), [mitre_row])
         self.assertEqual(json.loads(json.dumps(list(context.mitre_table))), [mitre_row])
 
+    def test_a_rows_evidence_spans_are_kept_and_an_unknown_basis_is_refused(self) -> None:
+        span = {"text": "ส่งอีเมลฟิชชิ่ง", "start": 12, "end": 27, "basis": "reread"}
+        row = {"technique_id": "T1566", "name": "Phishing", "evidence": [span]}
+
+        context = validated_case_rag_context(
+            QueryResponse(
+                status="completed",
+                retrieval_context_id="retrieval-1",
+                context="Phishing retrieval context",
+                mitre_table=[row],
+                legal_reference={"provider": "thanoy"},
+            )
+        )
+
+        self.assertEqual(context.mitre_table[0]["evidence"], [span])
+        with self.assertRaises(ValidationError):
+            QueryResponse(
+                status="completed",
+                retrieval_context_id="retrieval-1",
+                context="c",
+                mitre_table=[{**row, "evidence": [{**span, "basis": "guess"}]}],
+                legal_reference={"provider": "thanoy"},
+            )
+
     def test_empty_no_hit_context_and_empty_id_sentinel_are_valid(self) -> None:
         response = QueryResponse.model_validate(
             {

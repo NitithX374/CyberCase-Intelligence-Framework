@@ -345,6 +345,14 @@ MITRE_TABLE_REREAD_VOTES = max(1, int(os.getenv("MITRE_TABLE_REREAD_VOTES", "2")
 # 4096 on OpenRouter whatever is asked for.
 MITRE_TABLE_REREAD_MAX_TOKENS = 4096
 
+# Send each table row with the parts of the case file it rests on
+# (pipeline/case_evidence.py). The backend validates rows with extra="forbid",
+# so a backend that predates the `evidence` field rejects every /query reply
+# that carries it: set this to false until that backend is deployed. With it
+# off the re-read does not ask its replies for the sentences either, so the
+# time they cost is not spent.
+MITRE_TABLE_EVIDENCE = os.getenv("MITRE_TABLE_EVIDENCE", "true").lower() == "true"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # LEGACY — mmarco reranker (kept for reference / rollback)
 # ──────────────────────────────────────────────────────────────────────────────

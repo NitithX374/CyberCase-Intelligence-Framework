@@ -90,7 +90,7 @@ class _Model:
 
 def _reread(full_list, shortlist, rows=_ROWS):
     model = _Model(full_list, shortlist)
-    return TableReread(model, lambda: rows, readings=3, votes=2), model
+    return TableReread(model, lambda: rows, readings=3, votes=2, copy_sentences=False), model
 
 
 # ── the technique list ────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ def test_a_failed_read_of_the_list_is_asked_again_next_time():
         return _ROWS
 
     model = _Model([_steps("T1566")] * 3, [_steps("T1566")] * 3)
-    reread = TableReread(model, flaky_list)
+    reread = TableReread(model, flaky_list, copy_sentences=False)
 
     assert reread.select("สำนวน", "") is None
     assert model.prompts[INDEX_SYSTEM] == []  # no list, so no call was paid for
@@ -306,6 +306,9 @@ def test_the_trace_shows_each_round_and_why_there_is_no_selection():
         "readings": [["T1566", "T1486"], ["T1566", "T1078"], ["T1566"]],
         "votes": {"T1566": 3, "T1486": 1, "T1078": 1},
         "kept": ["T1566"],
+        # These replies copied no sentence, so there is nothing to find.
+        "quotes": {"T1566": []},
+        "spans": {"T1566": []},
         "outcome": "decided",
     }
 
