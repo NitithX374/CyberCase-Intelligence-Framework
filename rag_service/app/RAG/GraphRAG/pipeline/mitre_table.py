@@ -17,6 +17,14 @@ neighbors. Two filters are combined:
    ``MITRE_TABLE_SCORE_THRESHOLD`` are dropped; uncited graph-only entities
    (expansion neighbors) are always dropped.
 
+Both read the answer, so the table can hold only what retrieval returned and
+the answer happened to mention. Given a ``selection`` — a second reading of the
+case file against the whole Enterprise technique list (``table_reread``) — the
+Enterprise technique rows are that reading's and nothing else's. The two
+filters go on deciding the rows that are not techniques: software, groups,
+mitigations. A technique of another domain, which the re-read never saw, is a
+row only when the answer cites its ID.
+
 Retrieval carries an entity's description and tactic unevenly, so a row must
 not take them from whichever channel happened to surface it:
 
@@ -37,11 +45,14 @@ noise and marks any truncation.
 from __future__ import annotations
 
 import re
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from pydantic import BaseModel
 
 from ..config import MITRE_TABLE_SCORE_THRESHOLD
+
+if TYPE_CHECKING:
+    from .table_reread import TechniqueSelection
 
 # Rows the table is capped at — cited rows are never truncated in practice
 # (an answer cites a handful of techniques), this guards payload size.
@@ -82,6 +93,8 @@ _ATTACK_ID_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+_TECHNIQUE_ID_RE = re.compile(r"^T\d{4}(?:\.\d{3})?$", re.IGNORECASE)
+
 _MITRE_URL_PATHS = {
     "TA": "tactics",
     "T": "techniques",
@@ -117,6 +130,7 @@ def build_mitre_table(
     answer: str,
     score_threshold: Optional[float] = None,
     entity_details: Optional[EntityDetailsLookup] = None,
+    selection: Optional[TechniqueSelection] = None,
 ) -> list[MitreTableRow]:
     """Build the filtered MITRE mapping table from raw retrieval results.
 
@@ -129,10 +143,20 @@ def build_mitre_table(
         entity_details: Lookup for each kept row's own description and
             tactics. Called once, only with the ids of rows that survive
             filtering and the row cap. None keeps what retrieval carried.
+        selection: What a re-read of the case file decided
+            (``TableReread.select``). It alone decides the Enterprise technique
+            rows: a technique it keeps is a row whether or not retrieval
+            returned it, one it read and did not keep is not a row, and a
+            sub-technique is a row only when the answer cites it and its
+            parent is kept. A kept row's ``relevance`` still says whether the
+            answer cites it, and ``source`` is ``"graph"`` for one retrieval
+            did not return. A technique it never read (another domain's) is a
+            row only when the answer cites its ID. None leaves every row to
+            the two filters.
 
     Returns:
-        Rows sorted cited-first then by score descending. Empty when there is
-        no retrieval result or no answer (e.g. follow-up pauses).
+        Rows sorted cited or selected first, then by score descending. Empty
+        when there is no retrieval result or no answer (e.g. follow-up pauses).
     """
     if rag_result is None or not answer:
         return []
@@ -147,26 +171,70 @@ def build_mitre_table(
     cited_ids = {m.upper() for m in _ATTACK_ID_PATTERN.findall(answer)}
     answer_lower = answer.lower()
 
-    kept: list[tuple[dict, str]] = []
+    # (candidate, relevance, selected by the re-read)
+    kept: list[tuple[dict, str, bool]] = []
     for cand in candidates.values():
         cited = _is_cited(cand["technique_id"], cand["name"], cited_ids, answer_lower)
-        if cited:
+        ruling = selection.ruling(cand["technique_id"]) if selection is not None else None
+        if ruling is not None:
+            # A sub-technique is a detail of a kept parent, and only the
+            # answer can vouch for the detail.
+            if not ruling or ("." in cand["technique_id"] and not cited):
+                continue
+            relevance = "cited_in_answer" if cited else "retrieved_only"
+        elif selection is not None and _TECHNIQUE_ID_RE.match(cand["technique_id"]):
+            # Another domain's technique. The mobile matrix reuses Enterprise
+            # names (Screen Capture is T1113 and T1513), so a name in the
+            # answer is the Enterprise technique the re-read has already ruled
+            # on, and a score says nothing the re-read did not weigh. Only the
+            # ID says the answer meant this one.
+            if not _is_cited(cand["technique_id"], "", cited_ids, answer_lower):
+                continue
+            relevance = "cited_in_answer"
+        elif cited:
             relevance = "cited_in_answer"
         elif cand["source"] == "vector" and (cand["score"] or 0.0) >= threshold:
             relevance = "retrieved_only"
         else:
             continue
-        kept.append((cand, relevance))
+        kept.append((cand, relevance, ruling is not None))
 
-    kept.sort(key=lambda k: (k[1] != "cited_in_answer", -(k[0]["score"] or 0.0)))
+    if selection is not None:
+        listed = {cand["technique_id"].upper() for cand, _, _ in kept}
+        for entry in selection.kept:
+            if entry.attack_id in listed:
+                continue
+            # Retrieval never returned this one; its row is the technique's
+            # own node.
+            cited = _is_cited(entry.attack_id, entry.name, cited_ids, answer_lower)
+            kept.append(
+                (
+                    {
+                        "stix_id": entry.stix_id,
+                        "technique_id": entry.attack_id,
+                        "name": entry.name,
+                        "entity_type": "Technique",
+                        "score": None,
+                        "source": "graph",
+                        "description": entry.description,
+                        "tactic": ", ".join(entry.tactic_names) or None,
+                    },
+                    "cited_in_answer" if cited else "retrieved_only",
+                    True,
+                )
+            )
+
+    kept.sort(
+        key=lambda k: (not (k[2] or k[1] == "cited_in_answer"), -(k[0]["score"] or 0.0))
+    )
     kept = kept[:_MAX_ROWS]
 
     details: dict[str, dict] = {}
     if entity_details is not None and kept:
-        details = entity_details([cand["stix_id"] for cand, _ in kept if cand["stix_id"]])
+        details = entity_details([cand["stix_id"] for cand, _, _ in kept if cand["stix_id"]])
 
     rows: list[MitreTableRow] = []
-    for cand, relevance in kept:
+    for cand, relevance, _ in kept:
         node = details.get(cand["stix_id"]) if cand["stix_id"] else None
         if node is not None:
             # The node answered for itself: its tactics are the truth, even
@@ -177,7 +245,7 @@ def build_mitre_table(
                 _normalise_description(node.get("description")) or cand["description"]
             )
         else:
-            tactic = tactic_by_technique.get(cand["name"])
+            tactic = tactic_by_technique.get(cand["name"]) or cand.get("tactic")
             description = cand["description"]
 
         rows.append(

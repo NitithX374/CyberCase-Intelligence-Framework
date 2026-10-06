@@ -383,6 +383,32 @@ class GraphRetriever:
                 for rec in records
             }
 
+    def enterprise_techniques(self) -> list[dict]:
+        """Every Enterprise parent technique, for the MITRE table re-read.
+
+        One query for the whole list: 222 techniques, each with its tactics
+        and the names of its sub-techniques. The caller keeps the result for
+        the life of the process, so this runs once.
+
+        Returns:
+            ``[{"stix_id", "attack_id", "name", "description",
+            "tactics": [{"shortname", "name"}, …], "sub_names": [str, …]}]``,
+            in no particular order.
+        """
+        with self.driver.session() as session:
+            records = session.run(
+                Query("""
+                MATCH (t:Technique {domain: 'enterprise'})
+                OPTIONAL MATCH (t)-[:IN_TACTIC]->(ta:Tactic)
+                WITH t, collect(DISTINCT {shortname: ta.shortname, name: ta.name}) AS tactics
+                OPTIONAL MATCH (s:Subtechnique)-[:SUBTECHNIQUE_OF]->(t)
+                RETURN t.stix_id AS stix_id, t.attack_id AS attack_id, t.name AS name,
+                       t.description AS description, tactics,
+                       collect(DISTINCT s.name) AS sub_names
+                """)
+            )
+            return [dict(rec) for rec in records]
+
     def query_cypher(self, cypher: str, params: Optional[dict] = None) -> list[dict]:
         """Execute an arbitrary Cypher query and return results as dicts."""
         with self.driver.session() as session:

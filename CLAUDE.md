@@ -147,6 +147,38 @@ END → AgentResponse(status="completed", answer)
 
 The pipeline never pauses for user input.
 
+### MITRE Table (`POST /query`, after the graph)
+
+`routers/rag.py::_run_pipeline` builds the table the backend receives, in the
+same worker thread as the graph and from the answer the graph wrote. The answer
+itself never leaves the service.
+
+```
+answer + GraphRAGResult
+    ↓
+[RE-READ] pipeline/table_reread.py — decides the Enterprise technique rows
+    1. full list: the case file against all 222 Enterprise parent techniques
+       (tactics + first sentence each), 3 calls side by side
+    2. shortlist: the case file against what the answer cites plus what round 1
+       named, each with its whole definition, 3 calls side by side
+    a technique is kept when 2 of the 3 shortlist replies name it
+    ↓
+[TABLE] pipeline/mitre_table.py::build_mitre_table(selection=…)
+    ├── Enterprise technique: a row when the re-read kept it, retrieved or not;
+    │   a sub-technique only when the answer cites it and its parent is kept
+    ├── another domain's technique (mobile): a row only when the answer cites its ID
+    └── everything else (software, groups, mitigations): cited in the answer,
+        or a vector hit ≥ MITRE_TABLE_SCORE_THRESHOLD
+```
+
+The technique list is read from Neo4j once per process
+(`GraphRetriever.enterprise_techniques`). The re-read cannot fail a request: no
+list, too few readable replies or a vote that keeps nothing all leave the
+answer-grounded table (the last branch, applied to every row), which is also
+what `MITRE_TABLE_REREAD=false` serves. The row contract is unchanged — a row
+retrieval did not return has `source="graph"` and no score, and `relevance`
+still says only whether the answer cites it.
+
 ### API Endpoints
 
 Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_route_surface.py` asserts this exact set, so it is the authority when this list and the code disagree:
@@ -425,6 +457,8 @@ composition, as `tests/test_case_followup_postgres.py` does. There is no
 | Hybrid retriever | `retrieval/hybrid_retriever.py` | Vector + graph search with RRF fusion |
 | Context builder | `pipeline/context_builder.py` | Format retrieved context for LLM |
 | Evaluator | `pipeline/evaluator.py` | Assess context sufficiency, drive self-reflection |
+| MITRE table | `pipeline/mitre_table.py` | The rows `/query` returns, from retrieval, the answer and the re-read |
+| Table re-read | `pipeline/table_reread.py` | Second reading of the case file that decides the technique rows |
 | Config | `config.py` | All RAG settings (models, topK, DB URLs) |
 | Ingestion | `ingestion/` | Parse STIX JSON, populate Neo4j + Qdrant |
 
@@ -510,6 +544,10 @@ The frontend loads and generates reports through the case-scoped report endpoint
   with `TECHNIQUE_POOL`, the default; 3 without), not `FINAL_TOP_K`, so a hit
   the quota drops cannot return as a subgraph
 - **Qdrant collections**: `mitre_entities`, `mitre_relationships`
+- **MITRE table**: `MITRE_TABLE_REREAD=true` (six extra LLM calls a query, three
+  of them carrying the whole technique list, about 41K characters),
+  `MITRE_TABLE_REREAD_READINGS=3`, `MITRE_TABLE_REREAD_VOTES=2`,
+  `MITRE_TABLE_SCORE_THRESHOLD=0.5`. The re-read was measured on gemma only
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files

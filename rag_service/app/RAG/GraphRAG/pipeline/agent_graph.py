@@ -53,6 +53,8 @@ from ..config import (
     LLM_MAX_TOKENS,
     LLM_MODEL,
     LLM_TEMPERATURE,
+    MITRE_TABLE_REREAD,
+    MITRE_TABLE_REREAD_MAX_TOKENS,
     ULTRAFAST_MAX_TOKENS,
     ULTRAFAST_TOP_K,
     USE_FP16,
@@ -76,6 +78,7 @@ from .evaluator import (
     EvaluationResult,
 )
 from .query_sanitizer import sanitize_retrieval_query
+from .table_reread import TableReread
 
 _THAI_CHARS = re.compile(r"[฀-๿]")
 
@@ -207,6 +210,21 @@ class GraphRAGAgent:
         except CoreLlmConfigurationError as exc:
             self.reasoning_llm = None
             print(f"[AGENT] No cloud LLM configured: {exc}")
+
+        # The MITRE table's own reading of the case file. It runs after the
+        # graph, on the answer the graph wrote, so it is not a node: whoever
+        # builds the table calls it (routers/rag.py).
+        self.table_reread: Optional[TableReread] = None
+        if MITRE_TABLE_REREAD and self.reasoning_llm is not None:
+            self.table_reread = TableReread(
+                create_core_chat_model(
+                    anthropic_model=LLM_MODEL,
+                    temperature=LLM_TEMPERATURE,
+                    max_tokens=MITRE_TABLE_REREAD_MAX_TOKENS,
+                ),
+                self.retriever.graph_retriever.enterprise_techniques,
+            )
+            print("[AGENT] MITRE table re-read: on")
 
         # Build the LangGraph
         self.graph = self._build_graph()
