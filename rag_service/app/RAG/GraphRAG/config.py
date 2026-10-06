@@ -320,6 +320,24 @@ RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 # that.
 MITRE_TABLE_SCORE_THRESHOLD = float(os.getenv("MITRE_TABLE_SCORE_THRESHOLD", "0.5"))
 
+# Re-read the case file to decide the table's Enterprise technique rows
+# (pipeline/table_reread.py): READINGS calls against the whole technique list,
+# then READINGS calls against the shortlist they and the answer produce, and a
+# technique is a row when VOTES of the second round name it. Six calls a query
+# at the defaults, three of them carrying the 222-technique list (about 41K
+# characters).
+#
+# Measured on the 100 real-CTI incidents with google/gemma-4-26b-a4b-it and no
+# other model. Set MITRE_TABLE_REREAD=false for the answer-grounded table
+# alone; a re-read that fails falls back to it by itself.
+# Report: evaluation/results/table_reread_e2e.md.
+MITRE_TABLE_REREAD = os.getenv("MITRE_TABLE_REREAD", "true").lower() == "true"
+MITRE_TABLE_REREAD_READINGS = max(1, int(os.getenv("MITRE_TABLE_REREAD_READINGS", "3")))
+MITRE_TABLE_REREAD_VOTES = max(1, int(os.getenv("MITRE_TABLE_REREAD_VOTES", "2")))
+# A reply is a short JSON list of steps. create_core_chat_model raises this to
+# 4096 on OpenRouter whatever is asked for.
+MITRE_TABLE_REREAD_MAX_TOKENS = 4096
+
 # ──────────────────────────────────────────────────────────────────────────────
 # LEGACY — mmarco reranker (kept for reference / rollback)
 # ──────────────────────────────────────────────────────────────────────────────

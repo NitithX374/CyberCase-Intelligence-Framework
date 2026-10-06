@@ -39,19 +39,42 @@ def _get_query_limiter(req: Request) -> CapacityLimiter:
 def _run_pipeline(rag_agent: Any, query: str) -> tuple[Any, list[Any]]:
     """The whole blocking section, so one worker thread does all of it.
 
-    Both steps are CPU/network-bound and synchronous: the agent graph
-    (retrieval + LLM calls) and the answer-grounded MITRE table selection.
+    All of it is CPU/network-bound and synchronous: the agent graph (retrieval
+    + LLM calls), the re-read of the case file that decides the table's
+    technique rows, and the table itself.
     """
     agent_response = rag_agent.query(query, verbose=False)
-    # Keep the old answer-grounded MITRE selection inside rag-service. The
-    # generated answer is used only as an internal relevance signal; it is
-    # deliberately excluded from the HTTP response and context snapshot.
+    # The MITRE selection stays inside rag-service. The generated answer is
+    # used only as an internal relevance signal; it is deliberately excluded
+    # from the HTTP response and context snapshot.
     mitre_table = build_mitre_table(
         agent_response.graphrag_result,
         agent_response.answer,
         entity_details=_entity_details_lookup(rag_agent),
+        selection=_reread_selection(rag_agent, query, agent_response),
     )
     return agent_response, mitre_table
+
+
+def _reread_selection(
+    rag_agent: Any, query: str, agent_response: Any, trace: Optional[dict] = None
+) -> Any:
+    """The re-read's choice of technique rows, unable to fail the request.
+
+    None when the agent has no re-read (it is switched off, or no model is
+    configured), when there is no answer to build a table from, or when the
+    re-read itself gives up. The table is then answer-grounded, as it was
+    before the re-read existed. ``trace`` is handed to the re-read to fill
+    (``TableReread.select``); the inspector passes one, ``POST /query`` does not.
+    """
+    reread = getattr(rag_agent, "table_reread", None)
+    if reread is None or agent_response.graphrag_result is None or not agent_response.answer:
+        return None
+    try:
+        return reread.select(query, agent_response.answer, trace)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MITRE table re-read failed: %s", exc)
+        return None
 
 
 def _entity_details_lookup(rag_agent: Any) -> Optional[EntityDetailsLookup]:
