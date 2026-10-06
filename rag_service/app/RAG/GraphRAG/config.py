@@ -327,9 +327,16 @@ MITRE_TABLE_SCORE_THRESHOLD = float(os.getenv("MITRE_TABLE_SCORE_THRESHOLD", "0.
 # at the defaults, three of them carrying the 222-technique list (about 41K
 # characters).
 #
-# Measured on the 100 real-CTI incidents with google/gemma-4-26b-a4b-it and no
-# other model. Set MITRE_TABLE_REREAD=false for the answer-grounded table
-# alone; a re-read that fails falls back to it by itself.
+# Two served runs of the 100 real-CTI incidents on google/gemma-4-26b-a4b-it,
+# parent-level technique F1, against the answer-grounded table built from the
+# same retrieval and answer:
+#
+#                    answer-grounded   with the re-read
+#     all 100           .640 – .647       .738 – .744
+#     held-out 45       .631 – .640       .722 – .723
+#
+# No other model was measured. Set MITRE_TABLE_REREAD=false for the
+# answer-grounded table alone; a re-read that fails falls back to it by itself.
 # Report: evaluation/results/table_reread_e2e.md.
 MITRE_TABLE_REREAD = os.getenv("MITRE_TABLE_REREAD", "true").lower() == "true"
 MITRE_TABLE_REREAD_READINGS = max(1, int(os.getenv("MITRE_TABLE_REREAD_READINGS", "3")))

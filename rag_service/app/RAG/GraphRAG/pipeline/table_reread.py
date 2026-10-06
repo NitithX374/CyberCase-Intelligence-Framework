@@ -298,9 +298,10 @@ class TableReread:
             trace: A dict to fill with what each round returned, for a caller
                 that shows the re-read's work. ``outcome`` is ``"decided"`` or
                 the reason there is no selection; ``cited``, ``full_list`` (the
-                IDs each readable reply named), ``shortlist``, ``readings``
-                (the same for the shortlist round), ``votes`` and ``kept`` are
-                present as far as the re-read got. Nothing reads it back.
+                IDs each readable reply named), ``shortlist``, ``names`` (of
+                the shortlisted techniques), ``readings`` (as ``full_list``,
+                for the shortlist round), ``votes`` and ``kept`` are present
+                as far as the re-read got. Nothing reads it back.
 
         Returns:
             The selection, or None when the re-read could not decide and the
@@ -328,6 +329,7 @@ class TableReread:
                 proposed.update(named)
         shortlist = [by_id[i] for i in sorted(proposed) if i in by_id]
         trace["shortlist"] = [e.attack_id for e in shortlist]
+        trace["names"] = {e.attack_id: e.name for e in shortlist}
         if not shortlist:
             logger.warning("MITRE table re-read: nothing on the shortlist")
             trace["outcome"] = "nothing on the shortlist"

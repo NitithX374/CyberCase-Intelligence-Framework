@@ -298,6 +298,11 @@ def test_the_trace_shows_each_round_and_why_there_is_no_selection():
         "cited": ["T1078"],  # T1417 is not on the list
         "full_list": [["T1566"], ["T1566", "T1486"]],  # the unreadable reply is not a reading
         "shortlist": ["T1078", "T1486", "T1566"],
+        "names": {
+            "T1078": "Valid Accounts",
+            "T1486": "Data Encrypted for Impact",
+            "T1566": "Phishing",
+        },
         "readings": [["T1566", "T1486"], ["T1566", "T1078"], ["T1566"]],
         "votes": {"T1566": 3, "T1486": 1, "T1078": 1},
         "kept": ["T1566"],
