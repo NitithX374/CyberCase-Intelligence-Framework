@@ -70,9 +70,6 @@ def reading_of(*claims: CaseAnalysisClaim) -> CaseProviderReading:
     return CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=list(claims),
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
     )
 
 

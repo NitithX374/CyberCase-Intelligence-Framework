@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes claims with selected Evidence Unit IDs and claim-linked parties, timeline and impacts; the backend resolves those IDs to original source spans and separately checks the complete structured projections against their linked claims; Judgement writes the summary, gaps and ATT&CK associations over the checked reading. Judgement receives claims and their resolved evidence, semantically supported projections, follow-up history and technical context, without the full sources or quotation context. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The Evidence Unit grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. Local GLiNER2 extracts Parties, Timeline and Impacts from claims with resolved supporting citations for display and reports. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
 
 ## Service Layout
 
@@ -209,13 +209,13 @@ trace/                  what the analysis, chat and reports share
                         exchanges; reexports historical citation names
   citations.py          evidence references, resolved citations, invalid pointers
                         and legacy quote schemas; review flags are backend-only
-  trace.py              the trace: summary, parties, timeline, impacts, claims;
-                        each party, timeline item and impact carries a derived
-                        support (bound, mixed, unbound, no_claim) that the
-                        model never writes, and a separate projection_grounding
-                        semantic verdict; summary_units holds the summary cut
+  trace.py              claims-only Reader contracts and the stored trace;
+                        historical parties, timeline and impacts retain their
+                        support and saved projection_grounding for display.
+                        summary_units holds the summary cut
                         at its claim-ID brackets, each unit with its claim IDs
                         and the same derived support
+  view_fields.py        exact Claim-span pointers and local extraction provenance
   summary.py            cutting a summary into the units that end at a
                         [A-nn, A-nn] bracket; the model writes only the summary
                         string, with its brackets; summary_closings gives the
@@ -260,8 +260,8 @@ trace/                  what the analysis, chat and reports share
                         broken model is NliUnavailable with a reason
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
-  bind.py               stable orchestration: resolve claim evidence and validate
-                        projections before Judgement; check final references and
+  bind.py               stable orchestration: resolve claim source references
+                        before Judgement; check final references and
                         derive summary units afterwards
   evidence_binding.py   validate selected IDs, materialize original source spans
                         and page locators, reject duplicate references
@@ -270,9 +270,6 @@ trace/                  what the analysis, chat and reports share
   grounding.py          legacy counters and deterministic Evidence ID metrics
   support.py            bound/mixed/unbound/no_claim describe evidence binding
                         of linked claims, never semantic or factual confirmation
-  projection.py         complete party-role, time-event and impact hypotheses
-                        checked against only linked grounded claim texts with NLI;
-                        only supported projections enter downstream model inputs
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share
@@ -308,10 +305,10 @@ analysis/               producing an analysis of a case; routes, schemas
   pipeline.py           advance_case(): assess first, then analyse only if
                         there is nothing worth asking
   assess.py             the cheap gaps-only call that runs first
-  write.py              write_trace: a reading call (claims, parties, timeline,
-                        impacts; claims select Evidence Unit IDs; prompt JSON,
-                        no grammar), evidence binding and projection validation
-                        (bound_claims),
+  write.py              write_trace: a claims-only reading call (selected Source
+                        unit IDs; prompt JSON, no grammar), deterministic source
+                        binding (bound_claims),
+                        local GLiNER2 views for display only,
                         then a judgement call (summary, gaps, ATT&CK
                         associations) over the checked claims alone: no case
                         sources and no sentence around each quotation
@@ -321,8 +318,13 @@ analysis/               producing an analysis of a case; routes, schemas
                         pipeline report, heard only by a request that listens
   stream.py             the progress stream: steps, heartbeats, then the result
   prompts.py            assessment and Judgement prompts; Reading reexports
-  reading_prompt.py     Evidence Unit selection and complete claim-mediated
-                        structured projection contract
+  reading_prompt.py     contextual claim construction with Source unit selection;
+                        attribution, uncertainty and whole-Case consolidation
+  views.py              extract Parties/Timeline/Impacts from bound claims;
+                        verify original Claim spans, assign claim links and
+                        retain context; no views sent to Judgement
+  view_model.py         pinned local GLiNER2 loader and serialized inference;
+                        exact-offset Thai/English tokenization
   technical_context/    whether and how the case gets ATT&CK context
     contracts.py        the augmentation and applicability records, and the
                         RAG service's request and response
@@ -389,7 +391,7 @@ decision = decide_followup(assessment.gaps, ...)
 if not isinstance(decision, Proceed):
     return AnalysisAdvance(assessment, decision)   # ask, and stop here
 artifacts = await retrieve_technical_context(...)  # only now pay for the rest
-artifacts = await write_analysis(...)              # reading, evidence/projection check, judgement
+artifacts = await write_analysis(...)              # reading, source binding, local views, judgement
 artifacts = await bind_to_case(...)                # the judgement's references
 ```
 
@@ -455,11 +457,19 @@ The RAG query is not the trigger text alone: `retrieval_query` in
 question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 `research/mitre_gate/README.md` has the measurements.
 
-### Evidence Units and projection grounding (backend)
+### Source units and canonical claims (backend)
 
 `sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together and selects IDs on claims. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. Legacy quotes retain the old matcher.
 
-`trace/projection.py` checks the complete party name-role relation, time-event relation or impact description against only linked grounded claim texts, using the existing pinned NLI loader. Entailment must be the winning label with probability at least 0.5. Missing, unbound or qualified claims, unavailable weights and oversized pairs are explicitly `unassessed`; no input is truncated. Rejected and unassessed items remain visible in trace/report with notes but cannot enter Judgement or chat model inputs as factual projections. `support=bound` means the known linked claims carry resolved supporting evidence. A `supported` projection is a model verdict about derivability, not a legal or source-truth judgement.
+The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation. The single-call `CaseProviderAnalysis` contract remains solely for the existing experimental baseline, separate from the production Reader.
+
+### Claim views (backend)
+
+`analysis/views.py` runs GLiNER2 over the original text of claims that have resolved supporting citations. It selects spans for party names/explicit roles, time/event pairs and impacts. The backend verifies offsets against the exact Claim text and assigns `claim_ids` and `field_spans`; there are no new Source citations on views. A role the extractor did not select is `null`; this does not prove the Claim has no role. Timeline events and impact descriptions retain the full Claim text, and party rows show their full linked Claim context in Details and reports. Exact duplicate views consolidate their claim links without guessing aliases or coreference.
+
+These are extracted display views, not semantically verified facts. Exact-span validation cannot prove name/role or time/event association. `projection_grounding` stays null and `support=bound` still means linked claims have resolved supporting citations. The claims-only Judgement and chat payloads are unchanged. Saved historical projection verdicts remain visible separately.
+
+Runtime is pinned to `gliner2==1.3.2` and `fastino/gliner2-multi-v1` revision `ce747d79a8e362d3dee0b0b26d1201f7f1a8615a`. Run `python scripts/copy_case_view_weights.py` from `backend` once to provision the ignored `gliner_case_views/` directory; the application never downloads weights. Compose mounts it read-only. `CASE_VIEW_MODEL_PATH`, `CASE_VIEW_DEVICE` (default `cpu`) and `CASE_VIEW_THRESHOLD` (default `0.5`) configure execution. Extraction runs in a worker thread with serialized model inference, no provider call. Missing weights or invalid extracted spans fail explicitly. `view_extraction` records the pin, threshold/device, included/excluded claim IDs and elapsed time. Multilingual coverage and role association quality require separate evaluation; successful extraction does not establish Thai accuracy.
 
 ### Legacy Meaning Pointer (backend)
 
@@ -485,7 +495,7 @@ pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. An unverified quote of a not-confirmed claim carries the passage found by meaning in `meaning_passage`, and the report prints it under that quote after one plain line saying how it was found, with no score; a report stored before that has none and prints nothing new, and when the analysis could not run the pointer a limitation says so. A quote with a review flag carries it in `supporting_marked` and `contradicting_marked`, and the report prints one plain line under it, saying that the source has the mark next to the quote or that the quote and the source differ at the mark; a report stored before that has none and prints no line. Each party, event and impact in the snapshot carries `support` and, for new analyses, a separate `projection_grounding` verdict; rejected/unassessed projections print a semantic note independently of binding, and historical snapshots keep their previous shape. An unresolved Evidence Unit ID prints as an invalid pointer rather than an empty quote. Each item carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. An unverified quote of a not-confirmed claim carries the passage found by meaning in `meaning_passage`, and the report prints it under that quote after one plain line saying how it was found, with no score; a report stored before that has none and prints nothing new, and when the analysis could not run the pointer a limitation says so. A quote with a review flag carries it in `supporting_marked` and `contradicting_marked`, and the report prints one plain line under it, saying that the source has the mark next to the quote or that the quote and the source differ at the mark; a report stored before that has none and prints no line. Historical party, event and impact snapshots retain `support` and saved `projection_grounding` verdicts. New analyses render saved GLiNER2 views with linked Claim context alongside Findings; report generation runs no model or extraction step. An unresolved Evidence Unit ID prints as an invalid pointer rather than an empty quote. Each item carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)

@@ -31,7 +31,7 @@ describe("Projection support", () => {
         "An incident occurred.",
       ),
     ).toBe(
-      "No cited quotation was found in the sources. Support for this description has not been assessed.",
+      "None of the linked claims has a resolved source citation. Support for this description has not been assessed.",
     );
   });
 

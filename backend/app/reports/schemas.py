@@ -15,7 +15,8 @@ class ReportRow(BaseModel):
 
 class ReportParty(ReportRow):
     name: str
-    role: str
+    role: str | None
+    claim_context: list[str] = Field(default_factory=list)
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
     projection_grounding: CaseProjectionGrounding | None = None
@@ -116,6 +117,7 @@ class CaseReportContent(BaseModel):
     title: str
     analysed: str | None = None
     summary: str
+    views_derived_from_claims: bool = False
     summary_units: list[ReportSummaryUnit] = Field(default_factory=list)
     parties: list[ReportParty] = Field(default_factory=list)
     timeline: list[ReportEvent] = Field(default_factory=list)

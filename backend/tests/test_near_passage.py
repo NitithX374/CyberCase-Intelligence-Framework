@@ -234,9 +234,6 @@ def test_neither_model_is_shown_an_unverified_quote():
     reading = CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=trace.claims,
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
     )
 
     assert trace.claims[0].unverified_citations

@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from app.analysis.progress import announce
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_JSON_PROMPT
 from app.analysis.technical_context.contracts import CaseRagContextPayload
+from app.analysis.views import DerivedCaseViews, derive_claim_views
 from app.errors import CaseAnalysisFailure
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
@@ -22,7 +23,6 @@ from app.trace.claims import (
     CaseFollowupExchange,
     followup_payload,
 )
-from app.trace.projection import projection_payload
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseGroundingReport,
@@ -53,6 +53,8 @@ async def write_trace(
     )
     announce("bind")
     reading, grounding = await checked_reading(reading_from(reply), sources, followup_history)
+    announce("views")
+    views = await asyncio.to_thread(derive_claim_views, reading.claims)
     announce("judge")
     judgement = await request_stage(
         config=config,
@@ -61,7 +63,7 @@ async def write_trace(
         content=judgement_request(reading, language, followup_history, technical_context),
         schema=CaseProviderJudgement,
     )
-    return joined_trace(reading, judgement, technical_context, grounding)
+    return joined_trace(reading, judgement, technical_context, grounding, views=views)
 
 
 async def checked_reading(
@@ -81,14 +83,24 @@ async def checked_reading(
 
 
 def reading_from(reply: CaseProviderReadingReply) -> CaseProviderReading:
-    return CaseProviderReading.model_validate(
-        {
-            **reply.model_dump(),
-            "claims": [
-                CaseAnalysisClaim.model_validate(claim.model_dump()).model_dump()
-                for claim in reply.claims
-            ],
-        }
+    return CaseProviderReading(
+        version=reply.version,
+        claims=[
+            CaseAnalysisClaim.model_validate(
+                {
+                    **claim.model_dump(),
+                    "supporting_source_ids": list(
+                        dict.fromkeys(citation.source_id for citation in claim.supporting_citations)
+                    ),
+                    "contradicting_source_ids": list(
+                        dict.fromkeys(
+                            citation.source_id for citation in claim.contradicting_citations
+                        )
+                    ),
+                }
+            )
+            for claim in reply.claims
+        ],
     )
 
 
@@ -177,9 +189,6 @@ def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
             claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT)
             for claim in reading.claims
         ],
-        "involved_parties": projection_payload(reading.involved_parties),
-        "timeline": projection_payload(reading.timeline),
-        "impacts": projection_payload(reading.impacts),
     }
 
 
@@ -188,14 +197,17 @@ def joined_trace(
     judgement: CaseProviderJudgement,
     technical_context: CaseRagContextPayload | None = None,
     grounding: CaseGroundingReport | None = None,
+    *,
+    views: DerivedCaseViews | None = None,
 ) -> CaseAnalysisTrace:
     return CaseAnalysisTrace(
         analysis_mode="case_overview",
         summary=judgement.summary,
-        involved_parties=reading.involved_parties,
-        timeline=reading.timeline,
         claims=reading.claims,
-        impacts=reading.impacts,
+        involved_parties=views.parties if views is not None else [],
+        timeline=views.timeline if views is not None else [],
+        impacts=views.impacts if views is not None else [],
+        view_extraction=views.extraction if views is not None else None,
         gaps=judgement.gaps,
         mitre_associations=judgement.mitre_associations,
         retrieval_context_id=(

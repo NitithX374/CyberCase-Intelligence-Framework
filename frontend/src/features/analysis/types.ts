@@ -1,5 +1,6 @@
 import type { SourceMessageRef } from "@/features/citations/types";
 import type { UnconfirmedStatus } from "@/features/citations/unconfirmed";
+import type { CaseClaimSpan, CaseProjectionGrounding } from "@/lib/api/types";
 
 export type ClaimType = "reported" | "analytical_inference" | "unknown";
 
@@ -62,11 +63,14 @@ export interface ClaimBacked {
   inferred: boolean;
   supportNote?: string | null;
   unconfirmed: UnconfirmedStatus[];
+  linkedClaims?: Pick<CaseFinding, "id" | "text">[];
+  projectionGrounding?: CaseProjectionGrounding | null;
+  fieldSpans?: Record<string, CaseClaimSpan>;
 }
 
 export interface CaseParty extends ClaimBacked {
   name: string;
-  role: string;
+  role: string | null;
 }
 
 export interface CaseTimelineEvent extends ClaimBacked {

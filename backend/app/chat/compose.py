@@ -29,7 +29,6 @@ from app.trace.claims import (
     normalize_identifier,
 )
 from app.trace.messages import ChatAnswerUnit
-from app.trace.projection import projection_payload
 from app.trace.quote_binding import QuoteSearch, added_citations
 from app.trace.trace import MAX_SUMMARY_CHARS, CaseAnalysisTrace
 
@@ -193,9 +192,6 @@ def analysis_payload(trace: CaseAnalysisTrace, summary: str | None) -> dict[str,
             claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_MODELS)
             for claim in trace.claims
         ],
-        "involved_parties": projection_payload(trace.involved_parties),
-        "timeline": projection_payload(trace.timeline),
-        "impacts": projection_payload(trace.impacts),
         "mitre_associations": [
             association.model_dump(mode="json") for association in trace.mitre_associations
         ],

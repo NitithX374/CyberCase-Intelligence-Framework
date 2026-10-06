@@ -337,6 +337,6 @@ it("explains an unresolved evidence ID without claiming a quote mismatch", () =>
       onSelectSource={vi.fn()}
     />,
   );
-  expect(screen.getByText("The evidence reference could not be resolved.")).toBeInTheDocument();
+  expect(screen.getByText("The source unit reference could not be resolved.")).toBeInTheDocument();
   expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
 });

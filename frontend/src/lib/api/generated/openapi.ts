@@ -323,6 +323,7 @@ export interface components {
             mitre_associations?: components["schemas"]["CaseMitreAssociation"][];
             retrieval_context_id?: string | null;
             grounding?: components["schemas"]["CaseGroundingReport"] | null;
+            view_extraction?: components["schemas"]["CaseViewExtraction"] | null;
             stop_reason?: string | null;
         };
         CaseChatRead: {
@@ -334,6 +335,11 @@ export interface components {
             messages: components["schemas"]["ChatMessageRead"][];
             pending_question_id?: string | null;
             analysis?: components["schemas"]["CaseAnalysisResultRead"] | null;
+        };
+        CaseClaimSpan: {
+            claim_id: string;
+            start: number;
+            end: number;
         };
         CaseCreate: {
             title: string;
@@ -380,6 +386,9 @@ export interface components {
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
             projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
+            field_spans?: {
+                [key: string]: components["schemas"]["CaseClaimSpan"];
+            };
         };
         CaseInvalidEvidence: {
             source_id: string;
@@ -390,10 +399,13 @@ export interface components {
         };
         CaseInvolvedParty: {
             name: string;
-            role: string;
+            role?: string | null;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
             projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
+            field_spans?: {
+                [key: string]: components["schemas"]["CaseClaimSpan"];
+            };
         };
         CaseMeaningPassage: {
             source_text: string;
@@ -447,6 +459,7 @@ export interface components {
             title: string;
             analysed?: string | null;
             summary: string;
+            views_derived_from_claims: boolean;
             summary_units?: components["schemas"]["ReportSummaryUnit"][];
             parties?: components["schemas"]["ReportParty"][];
             timeline?: components["schemas"]["ReportEvent"][];
@@ -529,6 +542,9 @@ export interface components {
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
             projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
+            field_spans?: {
+                [key: string]: components["schemas"]["CaseClaimSpan"];
+            };
         };
         CaseUnverifiedCitation: {
             source_id: string;
@@ -540,6 +556,17 @@ export interface components {
         };
         CaseUpdate: {
             title: string;
+        };
+        CaseViewExtraction: {
+            method: "gliner2";
+            model: string;
+            revision: string;
+            library_version: string;
+            device: string;
+            threshold: number;
+            input_claim_ids: string[];
+            excluded_claim_ids: string[];
+            duration_ms: number;
         };
         ChatAnswerUnit: {
             text: string;
@@ -637,7 +664,8 @@ export interface components {
         };
         ReportParty: {
             name: string;
-            role: string;
+            role: string | null;
+            claim_context?: string[];
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
             projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;

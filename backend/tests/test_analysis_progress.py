@@ -233,10 +233,11 @@ def test_the_preflight_and_the_binding_announce_themselves():
     assert steps_heard(exercise) == ["assess", "bind"]
 
 
-def test_the_reading_the_quote_check_and_the_judgement_announce_themselves_in_turn():
+def test_reading_source_binding_and_judgement_announce_in_turn():
     bundle = _fixtures()[2]
     reading = CaseProviderReading(
-        version="case_analysis_trace_v1", claims=[], involved_parties=[], timeline=[], impacts=[]
+        version="case_analysis_trace_v1",
+        claims=[],
     )
     judgement = CaseProviderJudgement(
         version="case_analysis_trace_v1", summary="Nothing yet.", gaps=[], mitre_associations=[]
@@ -249,7 +250,7 @@ def test_the_reading_the_quote_check_and_the_judgement_announce_themselves_in_tu
         with patch("app.analysis.write.request_stage", new=request_stage):
             await write_trace(sources=bundle, language="english", config=AnalysisPipelineConfig())
 
-    assert steps_heard(exercise) == ["read", "bind", "judge"]
+    assert steps_heard(exercise) == ["read", "bind", "views", "judge"]
 
 
 def test_the_checks_after_a_checked_reading_announce_nothing():

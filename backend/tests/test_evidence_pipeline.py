@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from fake_nli import NEUTRAL, FakeNli
-
 from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, bind_to_case, write_analysis
 from app.analysis.write import reading_request
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
@@ -9,11 +7,10 @@ from app.sources.evidence import evidence_units
 from app.trace import nli_model
 from app.trace.bind import bound_claims
 from app.trace.claims import CaseFollowupExchange
-from app.trace.nli_model import Judgement
 from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
 
 
-async def test_whole_case_reading_direct_binding_projection_judgement_and_join(monkeypatch):
+async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(monkeypatch):
     first = CaseSourceItem(
         "S1",
         "document",
@@ -58,22 +55,13 @@ async def test_whole_case_reading_direct_binding_projection_judgement_and_join(m
                 }
                 for index, (text, evidence) in enumerate(zip(texts, citations, strict=True), 1)
             ],
-            "involved_parties": [
-                {"name": "John", "role": "the victim", "claim_ids": ["A-01"]},
-                {"name": "John", "role": "Attacker", "claim_ids": ["A-04"]},
-            ],
-            "timeline": [
-                {"time": "13:00", "event": "the server was encrypted.", "claim_ids": ["A-02"]}
-            ],
-            "impacts": [{"description": "Payroll was interrupted.", "claim_ids": ["A-03"]}],
         }
     )
-    scorer = FakeNli(
-        judge=lambda premise, hypothesis: (
-            Judgement("entailment", 0.9) if premise == hypothesis else NEUTRAL
-        )
-    )
-    monkeypatch.setattr(nli_model, "load_nli", lambda: scorer)
+
+    def forbidden_nli():
+        raise AssertionError("Direct unit binding must not load a semantic projection verifier")
+
+    monkeypatch.setattr(nli_model, "load_nli", forbidden_nli)
     seen = []
 
     async def request_stage(**kwargs):
@@ -84,10 +72,7 @@ async def test_whole_case_reading_direct_binding_projection_judgement_and_join(m
             return reply
         reading = kwargs["content"]["reading"]
         assert "case_sources" not in kwargs["content"]
-        assert reading["involved_parties"] == [
-            {"name": "John", "role": "the victim", "claim_ids": ["A-01"]}
-        ]
-        assert len(reading["timeline"]) == len(reading["impacts"]) == 1
+        assert set(reading) == {"claims"}
         assert all(
             c["pointer_state"] == "direct"
             for claim in reading["claims"]
@@ -104,10 +89,7 @@ async def test_whole_case_reading_direct_binding_projection_judgement_and_join(m
     final = (await bind_to_case(data, written)).trace
     assert [item["stage"] for item in seen] == ["case_reading", "case_judgement"]
     assert final.claims[1].supporting_source_ids == ["S1", "S2"]
-    assert [party.projection_grounding.verdict for party in final.involved_parties] == [
-        "supported",
-        "not_supported",
-    ]
+    assert final.involved_parties == final.timeline == final.impacts == []
     assert [unit.support for unit in final.summary_units] == ["bound", "bound"]
     assert final.grounding.evidence_ids_claimed == final.grounding.evidence_ids_resolved == 5
     assert CaseAnalysisTrace.model_validate_json(final.model_dump_json()) == final
@@ -140,9 +122,6 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
                     ],
                 }
             ],
-            "involved_parties": [],
-            "timeline": [],
-            "impacts": [],
         }
     )
     from app.analysis.write import reading_from

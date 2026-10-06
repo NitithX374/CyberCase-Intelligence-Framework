@@ -42,6 +42,31 @@ function pagedCitation(exactQuote: string, pageNumbers: number[]): CaseSourceCit
 }
 
 describe("Case overview projection", () => {
+  it("preserves the semantic verdict and linked claim text independently of binding", () => {
+    const grounding = { verdict: "not_supported", reason: "neutral" } as const;
+    const overview = buildCaseOverview(
+      analysisResult({
+        trace_json: trace({
+          claims: [claim("John sent an email.")],
+          involved_parties: [
+            {
+              name: "John",
+              role: "Attacker",
+              claim_ids: ["A-01"],
+              support: "bound",
+              projection_grounding: grounding,
+            },
+          ],
+        }),
+      }),
+      [narrativeSource("John sent an email.")],
+    );
+    expect(overview.parties[0].projectionGrounding).toEqual(grounding);
+    expect(overview.parties[0].linkedClaims).toEqual([{ id: "A-01", text: "John sent an email." }]);
+    expect(overview.parties[0].supportNote).toBe(
+      "The linked findings do not support this description.",
+    );
+  });
   const supported = (summary: string) =>
     analysisResult({
       summary,
@@ -66,11 +91,11 @@ describe("Case overview projection", () => {
     ]);
 
     expect(overview.parties.map((row) => row.supportNote)).toEqual([
-      "Some cited quotations were not found in the sources.",
+      "Only some linked claims have resolved source citations.",
       null,
     ]);
     expect(overview.timeline.map((row) => row.supportNote)).toEqual([
-      "No cited quotation was found in the sources.",
+      "None of the linked claims has a resolved source citation.",
       "Not linked to any claim.",
     ]);
     expect(overview.impacts.map((row) => row.supportNote)).toEqual([null]);
@@ -82,7 +107,7 @@ describe("Case overview projection", () => {
     ]);
 
     expect(overview.timeline.map((row) => row.supportNote)).toEqual([
-      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
       "ไม่ได้เชื่อมกับข้อสังเกตใด",
     ]);
   });
@@ -119,13 +144,13 @@ describe("Case overview projection", () => {
       {
         text: "Both demands",
         claimIds: ["A-01", "A-02"],
-        supportNote: "Some cited quotations were not found in the sources.",
+        supportNote: "Only some linked claims have resolved source citations.",
         noteMark: "a",
       },
       {
         text: "Ten bitcoin",
         claimIds: ["A-03"],
-        supportNote: "No cited quotation was found in the sources.",
+        supportNote: "None of the linked claims has a resolved source citation.",
         noteMark: "b",
       },
       {
@@ -142,8 +167,8 @@ describe("Case overview projection", () => {
 
     expect(overview.summaryUnits.map((unit) => unit.supportNote)).toEqual([
       null,
-      "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
-      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ระบุตำแหน่งข้อความอ้างอิงใน Source ได้สำหรับข้อค้นพบที่เชื่อมไว้บางข้อ",
+      "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
       "ไม่ได้เชื่อมกับข้อสังเกตใด",
     ]);
   });

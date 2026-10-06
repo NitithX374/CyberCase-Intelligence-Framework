@@ -1,55 +1,74 @@
-# Case Analysis Evidence Unit grounding
+# Case Analysis: Source units and canonical claims
 
-Implemented against `origin/main` **1d3c997a2b95933b2d45215c552ddf79579f875f**, fetched and inspected on 2026-10-06 before modifying application code. This checkout was fast-forwarded to that commit. Existing deletions and research/document work were preserved. The implementation preserves whole-Case analysis and requires no database migration.
+Updated 2026-10-06 from the current working tree. This contract supersedes the
+projection-generating architecture in commit `ca7fc6d6`.
 
-## Current-main audit, before implementation
+The Reader constructs contextual claims across a whole Case. Claims are its only
+factual output. The backend binds selected Source units to original text; later
+stages reason over claims rather than independently generated factual structures.
 
-| Question | Observed flow / chosen location |
-|---|---|
-| Case → documents → sources | `sources/service.py` stores the uploaded file as `CaseDocument` and extracted text/provenance as a document `CaseSource`. Narratives are additional sources. Native source additions increment Case `source_revision`. |
-| Multiple sources | `sources/bundle.py` builds one ordered `CaseSourceBundle(revision, sources)`. `analysis/write.py` supplies all analysable sources to a single whole-Case Reading call. |
-| Provider evidence | `trace/claims.py::CaseProviderClaim` previously carried supporting/contradicting `source_id + exact_quote`, converted to `CaseAnalysisClaim`. |
-| Quote resolution | `checked_reading → bound_claims → resolve_claim → resolved_citations` located/canonicalized model-written quotes and bound document pages. Unlocated quotes could retain nearest/meaning passages as advisory pointers. |
-| Projection support | `item_support` checked whether known linked claims had supporting citations; `bound_references` copied that state onto parties, timeline and impacts. |
-| Meaning of bound | Evidence presence alone did not establish a party's role, an event at a time, or an impact description. John sending an email could incorrectly lend `bound` to John/Attacker. |
-| Segmentation | `sources/evidence.py`, at analysis time, reuses `trace/sentences.py::sentence_spans`; no ingestion/storage redesign. |
-| Evidence resolution | `trace/evidence_binding.py`, called by the existing binder before Judgement. |
-| Migration | None: exact source text/provenance already persist; trace/report additions are compatible JSON fields; units are reproducible. |
-| Minimum scope | Reading payload/prompt, citation schemas, binding/metrics, structured support validation, focused tests; small report/UI compatibility edits and generated API types are required for new diagnostics. |
+## Flow and ownership
 
-The chosen structured-grounding strategy is **Option B**, reinforced by **Option A**. Main already contained a pinned multilingual mDeBERTa NLI loader for the meaning pointer. Reusing it to validate linked-claim text against a complete projection closes the independent semantic hole without another generation stage, new model/library, or pipeline. Reading is also instructed to write claims that explicitly contain every projected fact.
+```text
+Case → N Documents / Narratives / answered follow-ups
+     → deterministic Source units
+     → one whole-Case Reading call → claims + selected unit IDs
+     → deterministic binding → canonical claims with source provenance
+     ├→ GLiNER2 → Parties / Timeline / Impacts → display and report
+     └→ Judgement → summary + gaps + conditional MITRE associations
+     → reference binding → CaseAnalysisTrace → UI / deterministic report
+```
 
-## Final Evidence Unit contract
+Gap assessment and the bounded follow-up policy still run before expensive analysis.
+MITRE context is external interpretation, never a Case Source, and is not supplied
+to Reading. GLiNER2 is local extraction from Claims, with no extra generation call,
+store or migration. Extracted views never enter Judgement or chat.
+The editable [architecture diagram](evidence-unit-grounding.drawio) shows this flow.
+
+## Source unit contract
+
+The internal class name remains `EvidenceUnit`; API keys remain stable. Product
+labels use **Source** and **Source unit**.
 
 ```python
-@dataclass(frozen=True)
-class EvidenceUnit:
-    unit_id: str
-    source_id: str
-    start: int
-    end: int
-    text: str
+EvidenceUnit(unit_id: str, source_id: str, start: int, end: int, text: str)
 ```
 
-Offsets are Python Unicode code-point indices, start inclusive/end exclusive. For every unit, `unit.text == source.text[unit.start:unit.end]`. Ordered units partition and reconstruct the complete source, including leading/trailing whitespace and line separators. Empty text has no units; whitespace-only units cannot serve as evidence. Oversized sentence/fragments are deterministically split into at most 2,000-character units to fit the existing stored-citation bound. Units need not be grammatical sentences: OCR fragments, bullets, log lines and rows use the same abstraction.
+`text == source.text[start:end]`. Units partition all characters, including
+whitespace, and reconstruct the exact source when joined. Sentence/span machinery
+is the initial segmenter; oversized spans split at the existing quotation-size
+bound. This supports prose, Thai, OCR fragments, bullets and other extracted text.
 
-IDs are globally scoped: `S1:U001-baf6fdfbbd4780cb`. The suffix is the first 16 lowercase hex characters of SHA-256 over `evidence_units_v1 + NUL + full exact source text`. Unit numbering begins at one with at least three digits. The same source/text and segmentation implementation generate the same IDs; another source cannot collide merely because its local unit number is the same. Changed source text produces stale IDs. A future change to segmentation must increment the version. Existing Case source-revision checks remain in force independently of these fingerprints.
+IDs are source-scoped, for example `S1:U001-baf6fdfbbd4780cb`. The suffix is the first
+16 lowercase hex characters of SHA-256 over `evidence_units_v1 + NUL + source.text`.
+Identical source/text gives identical IDs; other sources cannot collide merely
+because they also contain U001. Changed text makes earlier IDs stale. Segmentation
+changes require a version bump. Persisted Case source revisions remain independent.
 
-Units are computed at analysis time, not persisted in a new table. The source owns original text, extraction method, verification status, warnings, page spans, document ID and filename. Resolved citations retain original offsets/text and document identity; the existing page-span bounds/order validation and locator derive page numbers when available and safe. OCR uncertainty remains source provenance.
+Units are computed at analysis time by `sources/evidence.py`, without a new table.
+Document identity, filename, extraction method, verification status, warnings and
+page offsets remain source provenance. OCR is not converted into trusted truth.
 
-## Provider claim citation contract
+## Reader provider contract
 
-Supporting and contradicting citation arrays contain source-grouped references:
+`CaseProviderReadingReply` contains exactly `version` and `claims`. `CaseReadingClaim`
+contains exactly claim ID/type/text/epistemic status and two citation lists. Each
+selected citation contains only `source_id` and `evidence_unit_ids`.
 
-```json
-{"source_id": "S1", "evidence_unit_ids": ["S1:U001-baf6fdfbbd4780cb", "S1:U002-baf6fdfbbd4780cb"]}
-```
+- `claim_type`: `reported` or `unknown`. Reported covers attributed and qualified
+  source assertions. Unknown is uncertainty explicitly stated in a source.
+- `epistemic_status`: `reported`, `suspected`, `contradicted`, `not_established`,
+  or `unknown`. The backend owns `not_confirmed` for unresolved reported claims.
+- Every claim selects at least one supporting citation. Each citation selects
+  1–64 unit IDs; each role has at most 64 citation groups; a reading has 0–64 claims.
+- Extra fields fail provider validation: copied quotations, offsets, source-ID
+  arrays, reasoning summaries, metadata, scores, summary, projections, gaps or MITRE.
 
-`source_id` is the Case Source identity; unit IDs address its content. A reference may contain up to 64 unit IDs, and each role may contain up to 64 groups. The backend materializes one citation per resolved unit, with room for every selected unit; stored traces are not silently truncated. An invalid provider shape fails existing reply validation/retry rather than being silently clipped. Model-provided quotation/offset fields accompanying ID references are ignored. The provider schema still accepts legacy `source_id + exact_quote` for older callers, but the Reading prompt and normal payload require Evidence Unit selection. Parties, timeline, impacts and summary receive no independent evidence citations.
+The prompt preserves material attribution, qualification, dates, quantities,
+conflicts and OCR uncertainty without producing independent party/timeline/impact
+objects or analytical inferences. Higher-level interpretation belongs to Judgement.
 
-## One-document Reading payload
-
-The examples below were generated from the implemented payload/resolver using fictional sources. They are illustrative input/output contracts, not an API-backed model run.
+### One document
 
 ```json
 {
@@ -89,9 +108,9 @@ The examples below were generated from the implemented payload/resolver using fi
 }
 ```
 
-## Multiple-document Reading payload
+### Multiple documents
 
-One Case, two sources, one Reading call; no per-document summaries or merge stage.
+One bundle, one Reading call; no per-document summaries or merge pipeline.
 
 ```json
 {
@@ -148,9 +167,9 @@ One Case, two sources, one Reading call; no per-document summaries or merge stag
 }
 ```
 
-## Example model reply
+### Model reply
 
-A-02 consolidates the event/time in Document A and its impact in Document B. Only claims carry evidence references.
+A-02 selects the time/event from Document A and its stated impact from Document B.
 
 ```json
 {
@@ -161,10 +180,6 @@ A-02 consolidates the event/time in Document A and its impact in Document B. Onl
       "claim_type": "reported",
       "text": "John is the victim.",
       "epistemic_status": "reported",
-      "supporting_source_ids": [
-        "S1"
-      ],
-      "contradicting_source_ids": [],
       "supporting_citations": [
         {
           "source_id": "S1",
@@ -173,19 +188,13 @@ A-02 consolidates the event/time in Document A and its impact in Document B. Onl
           ]
         }
       ],
-      "contradicting_citations": [],
-      "reasoning_summary": null
+      "contradicting_citations": []
     },
     {
       "claim_id": "A-02",
       "claim_type": "reported",
-      "text": "At 13:00, the server was encrypted, interrupting payroll.",
+      "text": "The server was encrypted at 13:00, and its encryption interrupted payroll.",
       "epistemic_status": "reported",
-      "supporting_source_ids": [
-        "S1",
-        "S2"
-      ],
-      "contradicting_source_ids": [],
       "supporting_citations": [
         {
           "source_id": "S1",
@@ -200,48 +209,26 @@ A-02 consolidates the event/time in Document A and its impact in Document B. Onl
           ]
         }
       ],
-      "contradicting_citations": [],
-      "reasoning_summary": null
-    }
-  ],
-  "involved_parties": [
-    {
-      "name": "John",
-      "role": "the victim",
-      "claim_ids": [
-        "A-01"
-      ]
-    }
-  ],
-  "timeline": [
-    {
-      "time": "13:00",
-      "event": "the server was encrypted",
-      "claim_ids": [
-        "A-02"
-      ]
-    }
-  ],
-  "impacts": [
-    {
-      "description": "Payroll was interrupted.",
-      "claim_ids": [
-        "A-02"
-      ]
+      "contradicting_citations": []
     }
   ]
 }
 ```
 
-## Deterministically resolved claim
+## Backend binding and canonical claims
 
-The backend copies these spans from the sources; it performs no model-quote search on this path. The first citation binds to page 2 using its selected offset. The second preserves document identity even without page provenance.
+`analysis/write.py:reading_from` creates internal `CaseAnalysisClaim` objects and
+derives unique supporting/contradicting source-ID lists from selected citations.
+`trace/evidence_binding.py` resolves each selected ID deterministically, materializes
+one citation per unit, and derives original text, offsets, filename, document ID,
+page locator and surrounding context. Selected IDs never authorize model-written
+source text. Metadata and reasoning summaries are not supplied as generated state.
 
 ```json
 {
   "claim_id": "A-02",
   "claim_type": "reported",
-  "text": "At 13:00, the server was encrypted, interrupting payroll.",
+  "text": "The server was encrypted at 13:00, and its encryption interrupted payroll.",
   "epistemic_status": "reported",
   "supporting_source_ids": [
     "S1",
@@ -261,9 +248,8 @@ The backend copies these spans from the sources; it performs no model-quote sear
       "document_id": "D1",
       "filename": "statement.pdf",
       "page_numbers": [
-        2
+        1
       ],
-      "context": null,
       "tolerated_differences": [],
       "review_flags": []
     },
@@ -279,121 +265,151 @@ The backend copies these spans from the sources; it performs no model-quote sear
       "document_id": "D2",
       "filename": "logs.pdf",
       "page_numbers": [],
-      "context": null,
       "tolerated_differences": [],
       "review_flags": []
     }
   ],
   "contradicting_citations": [],
   "unverified_citations": [],
-  "invalid_evidence": [],
-  "reasoning_summary": null
+  "invalid_evidence": []
 }
 ```
 
-## Cross-document claims and follow-up answers
+Internal canonical fields are claim ID/type/text/status, derived source lists,
+resolved supporting/contradicting citations, unresolved-pointer diagnostics and
+legacy advisory locations. `reasoning_summary` remains nullable only because stored
+findings/reports contain it; new Reader output cannot generate it and model inputs
+omit it. Internal `analytical_inference` remains readable for historical records.
 
-One claim can reference several units within one source and/or several sources in the same bundle. Every selected unit is checked against its named source; there is no shared local-unit namespace or independent document analysis. Sources remain consolidated at the Case level by Reading.
+Answered QA inputs use the same segmenter/index with the supplied `qa_id`, for
+example `QA-03:U001-<answer fingerprint>`. Unanswered exchanges are omitted. QA
+answers remain conversation rows and recorded follow-up snapshots, not native
+CaseSource rows; they do not change native `source_revision`.
 
-Answered follow-ups are exposed through the same segmentation/resolution functions under `QA-03:U001-<answer fingerprint>`. Short answers normally produce one unit; longer answers can produce more. Unanswered exchanges are omitted. QA text remains a persisted conversation message and a recorded analysis follow-up snapshot, not a new `CaseSource` row, and it does not increment native `source_revision`.
+### Invalid references and states
 
-## Structured projection grounding
-
-The backend constructs a hypothesis containing the **complete** structured statement:
-
-| Projection | Hypothesis | Premise |
-|---|---|---|
-| Party | `John is Attacker.` (Thai uses the name-role relation in Thai) | Only texts of its linked grounded claims |
-| Timeline | `At 13:00, the server was encrypted` | Only texts of its linked grounded claims |
-| Impact | The complete impact description | Only texts of its linked grounded claims |
-
-No raw source text, unrelated claims or MITRE context enter this test. All referenced claims must exist, have resolved supporting evidence, and retain `epistemic_status=reported`; otherwise the result is explicitly unassessed. The existing pinned NLI model checks the joint premise/hypothesis with no truncation. Entailment must be the winning label and at least 0.5. The backend stores verdict, reason, model identity and entailment for audit. NLI is a fallible support classifier, not legal or factual confirmation.
-
-Rejected and unassessed projections remain in the final trace and report, with separate semantic notes. They are excluded from Judgement's factual projection input and from the analysis projections supplied to chat. Supported projections still link only claim IDs. Summary continues to derive support through claims; this change does not add a summary semantic verifier or a new claim-to-original-evidence entailment stage.
-
-## Exact state semantics
-
-| Field/state | Meaning |
+| State | Meaning |
 |---|---|
-| `support=bound` | At least one known linked claim, and every known linked claim carries resolved supporting evidence. It says nothing about projection derivability or source truth. |
-| `support=mixed` | Some known linked claims have resolved supporting evidence and others do not. |
-| `support=unbound` | Known linked claims exist, but none has resolved supporting evidence. |
-| `support=no_claim` | No known linked claim remains. Unknown IDs are filtered; projection validation independently records `unknown_claim` before filtering. |
-| `projection_grounding.verdict=supported` | The complete projection passed linked-claim NLI entailment under the stated threshold; not confirmation of events or guilt. |
-| `not_supported` | NLI did not establish entailment (neutral, contradiction, or low entailment). This does not mean the statement has been proven false. |
-| `unassessed` | No/unknown/unbound/qualified linked claim, missing model, or an oversized pair. The reason is recorded, with model identity when available. |
-| `pointer_state=direct` | A valid current Evidence Unit ID was deterministically resolved to original source content. |
-| `pointer_state=recovered` | A legacy model-written quote was located/canonicalized by the existing matcher. It is distinguishable from ID addressing, even if the old quote happened to match exactly. |
-| `pointer_state=unresolved` | A draft or invalid pointer has no resolved evidence location. Invalid IDs are recorded individually with reasons. |
-| Claim `not_confirmed` | Existing epistemic demotion of a reported claim with no resolved supporting evidence; advisory passages do not promote it. |
+| `direct` | A valid selected ID resolved to its original Source unit. |
+| `recovered` | A stored legacy quote was located by the existing matcher. |
+| `unresolved` | No reliable supporting location resolved. |
+| `not_confirmed` | A reported claim has no resolved supporting citation. This does not establish that it is false. |
+| `bound` | Known linked claims all have resolved supporting citations. |
+| `mixed` | Some known linked claims have supporting citations and others do not. |
+| `unbound` | Known linked claims exist but none has a supporting citation. |
+| `no_claim` | No known linked claim remains. |
 
-Historical citations default to recovered and historical projections default to no semantic verdict. Reading old rows does not invent validation. Public pointer-state fields remain optional for historical API consumers. The trace version and stored-report format remain compatible.
+Malformed shapes fail decoding/validation and the existing bounded provider retry.
+Unknown sources, malformed/stale/unknown units, source-unit mismatch, blank units and
+duplicates are diagnosed in `invalid_evidence`; they do not become direct citations.
+Duplicate references materialize original content once per claim and are counted
+as invalid generated references. A claim can still carry other valid references.
 
-## Invalid pointers and legacy recovery
+These states describe structural resolution, not source truth or semantic support.
+No claim-to-source semantic verifier or summary entailment verifier is added.
 
-The resolver rejects `unknown_source`, `malformed_id`, `cross_source`, `stale_id`, `unknown_unit`, `empty_unit` and `duplicate_id`. Duplicates within a claim, including across supporting/contradicting roles, never produce duplicate materialized citations. The same unit may validly support different claims. Invalid refs remain in `invalid_evidence`; nonduplicate unresolved pointers also appear in `unverified_citations` for display/advisory recovery. A valid subset remains resolved even if other IDs are invalid. A claim with no resolved supporting evidence is retained as not-confirmed, not silently deleted.
+## Judgement, historical views and report
 
-Legacy quote locating, folded/relaxed/OCR-tolerant matching, ellipsis handling, context, differences and review flags are preserved in `trace/quote_binding.py` and the unchanged quote/sentence machinery. A located legacy quote produces recovered evidence. Nearest and NLI meaning passages remain **advisory unresolved pointers**, as on main: they do not become supporting citations, improve direct-resolution metrics, change claim status or reach model factual input. Invalid IDs without a trustworthy quote can receive only that existing advisory meaning-pointer behavior when eligible. Recovery is never silently presented as direct addressing. No recovery algorithm was redesigned.
+`reading_payload` contains only `claims`. Source-ID lists, old reasoning summaries,
+unverified pointers, review flags and surrounding context are omitted from model
+input. Selected units' original text remains available through resolved citations.
+Judgement also receives follow-up history and optional external MITRE context; it
+must end every factual summary sentence with existing claim IDs. Summary-reference
+binding and technique/context checks remain deterministic and unchanged.
 
-## Grounding introspection metrics
+No separate parties, timeline or impacts enter Judgement or chat. New joined traces
+contain GLiNER2-derived display views linked to canonical Claims. UI Details keeps
+full Claim context and links to Findings. Reports render those saved views and
+Findings without a new generation or extraction call.
 
-`CaseGroundingReport` adds `evidence_ids_claimed`, `evidence_ids_resolved`, `evidence_ids_invalid`, `evidence_id_resolution_rate`, `claims_with_direct_evidence`, `claims_with_recovered_evidence`, and `claims_without_resolved_evidence`.
+Historical CaseAnalysisTrace/report fields and their saved `projection_grounding`
+remain because existing UI/report snapshots consume them. Their linked claim IDs
+are filtered deterministically. Saved checks are historical provenance, not a new
+runtime verification stage. No independent factual authority is created from them.
+The obsolete projection-specific verifier and its tests are removed. Generic NLI
+continues to serve legacy meaning-pointer recovery, whose passage remains advisory
+and never promotes an unresolved claim into supported evidence.
 
-Resolution rate is `resolved ID references / all model-generated ID references`, counting supporting and contradicting refs; duplicates are invalid. The same unit selected for different claims counts as a separate reference each time. Raw references are counted before duplicate claim removal. Zero ID references produces `null`, not a fabricated 100%. Claim metrics count supporting evidence; a claim may have both direct and recovered evidence and be counted in both categories. Existing citation/meaning-pointer counters are retained. Structural resolution does not measure semantic citation correctness or factual accuracy.
+The single-call `CaseProviderAnalysis` and legacy provider-quote schema remain for
+the real `backend/experiments/analysis_arms.py` baseline consumer. They are not alternative
+production Reader contracts. The stopped projection-validation research artifacts
+remain frozen against the earlier implementation; this refactor does not rerun or
+adapt that experiment.
 
-## Files changed
+## GLiNER2-derived views
 
-| Responsibility | Paths |
-|---|---|
-| Evidence representation | `backend/app/sources/evidence.py` |
-| Citation/claim contracts | `backend/app/trace/citations.py`, `claims.py`, `trace.py` |
-| Binding/metrics | `backend/app/trace/bind.py`, `evidence_binding.py`, `quote_binding.py`, `grounding.py` |
-| Projection validation | `backend/app/trace/projection.py`, `support.py` |
-| Reading/Judgement | `backend/app/analysis/write.py`, `reading_prompt.py`, `prompts.py` |
-| Downstream compatibility | `backend/app/chat/compose.py`; `backend/app/reports/display.py`, `schemas.py`, `templates/case_report.html.j2` |
-| Frontend contracts/navigation/notes | `frontend/src/lib/api/generated/openapi.ts`, `src/lib/api/types.ts`; `src/features/analysis/projectionNote.ts`, `overview.ts`, `types.ts`, `CaseFindingsSection.tsx`; `src/features/citations/sourceRefs.ts` |
-| New backend tests | `backend/tests/test_evidence_units.py`, `test_evidence_binding.py`, `test_evidence_pipeline.py`, `test_evidence_report.py`, `test_projection_grounding.py` |
-| Existing backend tests adapted | `backend/tests/test_analysis_write.py`, `test_claims_only_judgement.py`, `test_case_workflow_http_postgres.py`, `test_item_support.py` |
-| Frontend tests | `frontend/src/test/features/analysis/projectionNote.test.ts`, `CaseFindingsSection.test.tsx`; `src/test/features/citations/evidenceOffsets.test.ts` |
-| Architecture docs | `CLAUDE.md`, `backend/ARCHITECTURE.md`, `backend/README.md`, `frontend/README.md`, this document and `evidence-unit-grounding.drawio` |
+`analysis/views.py` extracts all three views from each Claim with at least one
+resolved supporting citation. Unresolved Claims remain available to Judgement
+under their existing status but are excluded from extraction. Source truth and
+claim-to-source semantic support are not checked by this extraction stage.
 
-No SQLAlchemy/Alembic, external RAG, MITRE concept, ingestion, dependency or provider-transport change. The existing source/claim contracts, binder entrypoints and legacy `write_request` entrypoint remain compatible. Quote recovery helpers belong to `trace/quote_binding.py`; chat and legacy tests import them there rather than through the binder. The retired quote-locator prompt constant is removed because Reading now selects Evidence Unit IDs. Frontend changes are small diagnostic/navigation adaptations, not a redesign.
+The backend verifies every selected field against its original Claim offsets,
+then assigns `claim_ids` and `field_spans`. For example:
 
-## Validation and compatibility limits
-
-- Full backend suite in a disposable Linux container, mounted current source/tests read-only, with an isolated PostgreSQL 16 database: **1,082 passed, 7 skipped, 2 subtests passed**. Includes native PDF rendering, schema/migration parity and PostgreSQL workflow tests. The seven real-model tests skip because the pinned model folder is absent in that disposable image. Receipt: `tmp/evidence-unit-refactor/backend-final.log`.
-- Full frontend Vitest: **51 files / 361 tests passed**; the subsequently added invalid-ID rendering test and affected suites: **3 files / 20 tests passed**. Receipts: `tmp/evidence-unit-refactor/frontend-tests.log` and the focused command output.
-- Ruff lint/format checks on all 25 changed/new Python files, targeted frontend Prettier, and `git diff --check` passed.
-- `npm run generate:api-types`, `npm run check:api-types`, `npx tsc --noEmit`, `npm run lint`, and `npm run build` passed. Build receipt: `tmp/evidence-unit-refactor/frontend-build.log`.
-- Real cached pinned NLI CPU smoke: **6/6 expected verdicts** (three mismatch negatives, three complete-relation positives). Receipt: `tmp/evidence-unit-refactor/nli-projection-smoke.json`; no provider API, download or training. This is bounded regression evidence, not an accuracy/calibration benchmark, particularly for Thai/legal cases.
-- Focused backend tests cover deterministic exact reconstruction in English/Thai/OCR/blank/Unicode fragments, source namespace and stale/invalid/duplicate IDs, multi-unit/cross-document claims, page offsets/repeated text, QA, full reading/binding/projection/judgement/join, legacy quotes, report compatibility and explicit party-role/time-event/impact mismatches.
-
-Evidence Unit labels add Reading payload overhead; the existing native-source admission budget is unchanged. NLI validation adds local work during binding. NLI availability is now material to whether projections enter Judgement. A missing checkpoint is explicit `unassessed`, and unsupported/unassessed projection rows remain visible with notes. Pairs longer than the model's 512-token context are not truncated or treated as supported. NLI can make classification errors; direct pointers establish addresses, not correctness of claim interpretation. Claim-to-evidence and summary entailment remain generation contracts, outside this surgical refactor. Older clients that forbid extra JSON properties need regeneration; stored legacy rows remain loadable. Segmentation changes require a version bump. No deployment or live API-backed Reading call was performed. An initial host-only PDF test was blocked by missing Windows native WeasyPrint libraries; the complete Linux run passed it.
-
-The final backend command inside the disposable validation image was:
-
-```text
-python -m pytest tests -q --tb=short -p no:cacheprovider
+```json
+{
+  "name": "John",
+  "role": null,
+  "claim_ids": ["A-01"],
+  "support": "bound",
+  "projection_grounding": null,
+  "field_spans": {"name": {"claim_id": "A-01", "start": 0, "end": 4}}
+}
 ```
 
-`CYBERCASE_TEST_DATABASE_URL` and `DATABASE_URL` pointed to the isolated task database, so PostgreSQL tests ran. The full frontend command was `npm test -- --reporter=dot`; the added/affected tests ran with `npm test -- --run src/test/features/analysis/CaseFindingsSection.test.tsx src/test/features/analysis/projectionNote.test.ts src/test/features/citations/evidenceOffsets.test.ts`. The existing seven real-model test skips were supplemented by the separately executed cached-model projection smoke.
+For `A-01 = "John sent an email."`, no role is fabricated by the backend. A role
+selected by the extractor must also be an exact Claim span. A null role means
+no role was selected, not that the Claim definitely has none. This does not prove
+the extractor associated that role with the correct name: the original linked
+Claim context is displayed for review. Timeline rows require both a time and an
+event selection; event/impact display text preserves the complete Claim, including
+attribution and uncertainty. Identical display rows merge their claim IDs; alias
+resolution and cross-claim entity inference are not introduced.
 
-## Before / after
+`CaseClaimSpan(claim_id, start, end)` points inside the Claim, not inside a Source.
+Source citations still belong only to Claims. Derived views have no new evidence
+citations, no semantic verdict and no role in the Judgement/chat factual payload.
+Historical saved projection verdicts remain readable separately.
 
-```text
-Before: Case → N Sources → Reading (claims + model quotes)
-        → quote locating → claims with evidence
-        → projections inherit citation presence → Judgement → Trace
+The pinned model is `fastino/gliner2-multi-v1` revision
+`ce747d79a8e362d3dee0b0b26d1201f7f1a8615a`, with `gliner2==1.3.2`. This existing
+library version works with the project's Transformers 5 runtime; moving to the
+newer GLiNER2.5 package would require a separate dependency decision. Official
+references: [GLiNER2](https://github.com/fastino-ai/GLiNER2) and
+[multilingual checkpoint](https://huggingface.co/fastino/gliner2-multi-v1).
 
-After:  Case → N Sources → deterministic Evidence Units
-        → whole-Case Reading (claims + selected IDs)
-        → backend ID resolution → claims with original source spans
-        → claim-linked projections → separate NLI support check
-        → Judgement → Trace / report
+Provision once from `backend`:
 
-Legacy: quote locating → recovered evidence;
-        nearest / meaning pointers → advisory unresolved location
-MITRE:  conditional external interpretation → Judgement, never Case evidence
+```powershell
+python scripts/copy_case_view_weights.py
 ```
 
-[Editable before/after diagram](evidence-unit-grounding.drawio).
+The ignored local `gliner_case_views/` folder carries a pinned manifest and weights;
+Compose mounts it read-only. Runtime never downloads a checkpoint or substitutes
+another extractor. Missing assets, pin mismatches and malformed spans fail explicitly.
+Default configuration: `CASE_VIEW_MODEL_PATH=gliner_case_views`,
+`CASE_VIEW_DEVICE=cpu`, `CASE_VIEW_THRESHOLD=0.5`. Thai text uses the existing
+PyThaiNLP `newmm` tokenizer with exact offsets; other text uses native GLiNER2
+word splitting. Extraction runs in a worker thread with serialized model calls.
+
+`view_extraction` records model/revision, library version, device, threshold,
+processed/excluded claim IDs and duration. Functional English/Thai probes live in
+`tmp/gliner-case-views/`; missed fields and incorrect role association remain model
+quality limitations. These probes do not establish extraction precision/recall,
+semantic correctness or downstream summary improvement.
+
+## Structural introspection and verification
+
+Existing counters remain: selected/resolved/invalid IDs, ID-resolution rate, claims
+with direct or recovered support and claims with no resolved supporting citation.
+Resolution rate is resolved references divided by all generated ID references,
+including invalid and duplicate references. It is not semantic citation accuracy.
+
+Tests cover claims-only acceptance/extra-field rejection, exact-span segmentation,
+multi-unit/multi-document/QA binding, invalid-pointer integrity, claims-only Judgement,
+summary references, conditional MITRE, unchanged gap/follow-up behavior, deterministic
+reports, historical serialization and legacy quote/meaning recovery.
+
+Verification receipts and generated examples for this change are under
+`tmp/claims-reader-refactor/` and `tmp/gliner-case-views/`. Model API-backed Reading/Judgement quality and final
+factual correctness are not inferred from contract/regression tests.

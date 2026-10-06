@@ -74,8 +74,8 @@ found, and `AnalysisAdvance.assessment` is then `None`. A question is never stor
 without its assessment.
 
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
-trace in two model calls: `case_reading` writes the claims, parties, timeline
-and impacts, with evidence-unit IDs on the claims, and `case_judgement` writes the summary,
+trace in two model calls: `case_reading` writes canonical claims only,
+with source-unit IDs on the claims, and `case_judgement` writes the summary,
 gaps and ATT&CK associations over that reading.
 
 Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
@@ -84,14 +84,24 @@ against the sources:
 - `trace/evidence_binding.py` resolves selected IDs to original text and document/page locators;
 - legacy quotes still use `trace/quote_binding.py` and the existing recovery machinery;
 - a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`;
-- `trace/projection.py` checks each complete party-role, time-event or impact statement against only its linked grounded claim texts, using the existing pinned NLI model;
 - the grounding counts are taken.
 
+`analysis/views.py` then uses local GLiNER2 to extract Parties, Timeline and Impacts
+from claims with resolved supporting citations. The backend checks selected Claim
+spans and assigns claim links. Timeline/impact text retains the whole Claim;
+party displays retain linked Claim context. These views are saved for Details and
+reports, without entering Judgement or chat. Extraction is not NLI verification
+and does not establish semantic name/role or time/event relationships. Missing
+weights and malformed spans fail explicitly; model provisioning is described in
+the grounding contract.
+
 The judgement therefore reads checked claims: their statuses, and only the
-source spans that were resolved. Only projections with a `supported` semantic verdict
-enter its input; rejected and unassessed projections remain visible in the trace with
-separate notes. `support=bound` still describes evidence binding, not semantic
-support or factual confirmation. It is given neither the case sources nor the
+source spans that were resolved. The backend derives source-ID lists from selected
+citations; the Reader generates no source lists, reasoning summaries or independent
+party, timeline or impact structures. Historical structured views remain readable
+in saved traces and reports but do not enter Judgement or chat as factual authority.
+`support=bound` describes evidence binding, not semantic support or factual
+confirmation. Judgement is given neither the complete case sources nor the
 sentence around each quotation, so a fact reaches its summary only through a
 claim. It is still given the follow-up history, which the gap rules need, and
 the technical context. Every summary sentence ends with the IDs of the claims
@@ -204,7 +214,7 @@ Five stages in four files, and all of them go through `request_stage` in
 | Call | File | `stage` |
 |---|---|---|
 | The gap-only assessment | `analysis/assess.py` | `assess` |
-| The reading: claims, parties, timeline, impacts | `analysis/write.py` | `case_reading` |
+| The reading: canonical claims with selected Source units | `analysis/write.py` | `case_reading` |
 | The judgement: summary, gaps, ATT&CK associations | `analysis/write.py` | `case_judgement` |
 | A chat answer, before or after an analysis | `chat/compose.py` | `chat_answer` |
 | The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/technical_context/gate_llm.py` | `mitre_applicability` |

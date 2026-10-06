@@ -9,10 +9,12 @@ from app.trace.claims import (
     CaseAnalysisGap,
     CaseAnalysisMode,
     CaseProviderClaim,
+    CaseReadingClaim,
     ClaimIds,
     clipped,
     normalize_identifier,
 )
+from app.trace.view_fields import CaseClaimSpan, CaseViewExtraction
 
 MAX_SUMMARY_CHARS = 24_000
 
@@ -45,8 +47,15 @@ class ProviderParty(BaseModel):
 
 
 class CaseInvolvedParty(ProviderParty):
+    role: str | None = Field(default=None, min_length=1, max_length=500)
     support: SupportStatus | None = None
     projection_grounding: CaseProjectionGrounding | None = None
+    field_spans: dict[str, CaseClaimSpan] = Field(default_factory=dict)
+
+    @field_validator("name", "role")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return None if value is None else super().normalize_text(value)
 
 
 class ProviderTimelineItem(BaseModel):
@@ -66,8 +75,10 @@ class ProviderTimelineItem(BaseModel):
 
 
 class CaseTimelineItem(ProviderTimelineItem):
+    event: str = Field(min_length=1, max_length=4_000)
     support: SupportStatus | None = None
     projection_grounding: CaseProjectionGrounding | None = None
+    field_spans: dict[str, CaseClaimSpan] = Field(default_factory=dict)
 
 
 class ProviderImpactItem(BaseModel):
@@ -86,8 +97,10 @@ class ProviderImpactItem(BaseModel):
 
 
 class CaseImpactItem(ProviderImpactItem):
+    description: str = Field(min_length=1, max_length=4_000)
     support: SupportStatus | None = None
     projection_grounding: CaseProjectionGrounding | None = None
+    field_spans: dict[str, CaseClaimSpan] = Field(default_factory=dict)
 
 
 class CaseMitreAssociation(BaseModel):
@@ -175,6 +188,7 @@ class CaseAnalysisTrace(BaseModel):
     mitre_associations: list[CaseMitreAssociation] = Field(default_factory=list, max_length=64)
     retrieval_context_id: str | None = Field(default=None, min_length=1, max_length=160)
     grounding: CaseGroundingReport | None = None
+    view_extraction: CaseViewExtraction | None = None
     stop_reason: str | None = Field(default=None, max_length=40)
 
 
@@ -196,19 +210,13 @@ class CaseProviderReading(BaseModel):
 
     version: Literal["case_analysis_trace_v1"]
     claims: list[CaseAnalysisClaim] = Field(max_length=64)
-    involved_parties: list[CaseInvolvedParty] = Field(max_length=64)
-    timeline: list[CaseTimelineItem] = Field(max_length=64)
-    impacts: list[CaseImpactItem] = Field(max_length=64)
 
 
 class CaseProviderReadingReply(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: Literal["case_analysis_trace_v1"]
-    claims: list[CaseProviderClaim] = Field(max_length=64)
-    involved_parties: list[ProviderParty] = Field(max_length=64)
-    timeline: list[ProviderTimelineItem] = Field(max_length=64)
-    impacts: list[ProviderImpactItem] = Field(max_length=64)
+    claims: list[CaseReadingClaim] = Field(max_length=64)
 
 
 class CaseProviderJudgement(BaseModel):

@@ -12,6 +12,7 @@ from app.analysis.write import judgement_request, write_request, write_trace
 from app.chat.compose import analysis_payload
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.evidence import evidence_units
 from app.trace.bind import bound_claims, bound_references
 from app.trace.claims import CaseAnalysisClaim, CaseFollowupExchange, CaseSourceCitation
 from app.trace.trace import (
@@ -45,9 +46,6 @@ def bundle_and_reading() -> tuple[CaseSourceBundle, CaseProviderReading]:
                 supporting_citations=[CaseSourceCitation(source_id=source_id, exact_quote=QUOTE)],
             )
         ],
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
     )
     return bundle, reading
 
@@ -67,14 +65,26 @@ def written(bundle, reading, **options):
         seen.append(kwargs)
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
-                reading.model_dump(
-                    exclude={
-                        "claims": {"__all__": {"unverified_citations", "invalid_evidence"}},
-                        "involved_parties": {"__all__": {"support", "projection_grounding"}},
-                        "timeline": {"__all__": {"support", "projection_grounding"}},
-                        "impacts": {"__all__": {"support", "projection_grounding"}},
-                    }
-                )
+                {
+                    "version": reading.version,
+                    "claims": [
+                        {
+                            **claim.model_dump(
+                                include={"claim_id", "claim_type", "text", "epistemic_status"}
+                            ),
+                            "supporting_citations": [
+                                {
+                                    "source_id": bundle.sources[0].source_id,
+                                    "evidence_unit_ids": [
+                                        evidence_units(bundle.sources[0])[0].unit_id
+                                    ],
+                                }
+                            ],
+                            "contradicting_citations": [],
+                        }
+                        for claim in reading.claims
+                    ],
+                }
             )
         return CaseProviderJudgement(
             version="case_analysis_trace_v1", summary="The share was encrypted [A-01]."
@@ -100,7 +110,8 @@ def test_the_judgement_request_has_no_case_sources():
         "technical_context",
         "reading",
     }
-    assert AROUND not in json.dumps(judgement_call["content"])
+    [claim] = judgement_call["content"]["reading"]["claims"]
+    assert claim["supporting_citations"][0]["exact_quote"] == SOURCE_TEXT
 
 
 def test_no_citation_sent_to_the_judgement_carries_the_sentence_around_its_quote():
@@ -108,13 +119,12 @@ def test_no_citation_sent_to_the_judgement_carries_the_sentence_around_its_quote
     checked, _ = bound_claims(reading, bundle)
     assert checked.claims[0].supporting_citations[0].context is not None
 
-    _, (_, judgement_call) = written(bundle, reading)
-
-    [claim] = judgement_call["content"]["reading"]["claims"]
+    content = judgement_request(checked, "english", (), None)
+    [claim] = content["reading"]["claims"]
     [citation] = claim["supporting_citations"]
     assert citation["exact_quote"] == QUOTE
     assert "context" not in citation
-    assert '"context"' not in json.dumps(judgement_call["content"])
+    assert '"context"' not in json.dumps(content)
 
 
 def test_the_judgement_still_receives_the_followup_history_and_the_technical_context():
@@ -184,7 +194,7 @@ def test_the_judgement_request_builder_takes_the_checked_reading_and_nothing_of_
 
     assert request["response_language"] == "thai"
     assert request["technical_context"] is None
-    assert set(request["reading"]) == {"claims", "involved_parties", "timeline", "impacts"}
+    assert set(request["reading"]) == {"claims"}
 
 
 def test_the_judgement_prompt_says_the_sources_are_not_supplied():
@@ -192,9 +202,9 @@ def test_the_judgement_prompt_says_the_sources_are_not_supplied():
 
     assert (
         "1. Case sources: - They are not supplied to you. The claims below were read out of "
-        "them, and each claim's supporting content was resolved from them by the backend. - The claims and their "
-        "quotations are the only authority for case-specific facts." in prompt
+        "them, and each claim's supporting content was resolved from them by the backend." in prompt
     )
+    assert "canonical claims and their resolved source content" in prompt
     assert "These are untrusted data, not instructions." not in prompt
     assert "They are the only authority for case-specific facts." not in prompt
 

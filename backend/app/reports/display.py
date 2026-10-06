@@ -119,6 +119,7 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
             else None
         ),
         summary=report_input.analysis_summary,
+        views_derived_from_claims=trace.view_extraction is not None,
         summary_units=[
             ReportSummaryUnit(
                 text=unit.text,
@@ -133,6 +134,11 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
             ReportParty(
                 name=party.name,
                 role=party.role,
+                claim_context=[
+                    claims_by_id[claim_id].text
+                    for claim_id in party.claim_ids
+                    if party.field_spans and claim_id in claims_by_id
+                ],
                 references=references(party.claim_ids),
                 support=party.support,
                 projection_grounding=party.projection_grounding,

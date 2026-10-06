@@ -269,7 +269,7 @@ describe("AnalysisLayout", () => {
 
     const list = screen.getByRole("list", { name: "Analysis progress" });
     expect(list.querySelector('[aria-current="step"]')).toHaveTextContent(
-      "Reading the sources: claims and quotations",
+      "Reading sources: claims and source unit IDs",
     );
   });
 

@@ -149,7 +149,7 @@ def test_one_unit_can_support_different_claims_and_counts_each_reference():
     assert trace.grounding.evidence_ids_claimed == trace.grounding.evidence_ids_resolved == 2
 
 
-def test_provider_ids_survive_conversion_and_model_text_is_ignored():
+def test_provider_ids_survive_conversion_without_provider_generated_locations():
     reply = CaseProviderReadingReply.model_validate(
         {
             "version": "case_analysis_trace_v1",
@@ -159,14 +159,9 @@ def test_provider_ids_survive_conversion_and_model_text_is_ignored():
                     "claim_type": "reported",
                     "epistemic_status": "reported",
                     "text": "Reported encryption.",
-                    "supporting_citations": [
-                        {**reference(FIRST), "exact_quote": "invented by the model", "start": 999}
-                    ],
+                    "supporting_citations": [reference(FIRST)],
                 }
             ],
-            "involved_parties": [],
-            "timeline": [],
-            "impacts": [],
         }
     )
     [citation] = reading_from(reply).claims[0].supporting_citations

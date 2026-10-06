@@ -41,6 +41,7 @@ services:
       MITRE_GATE_SHADOW: ${MITRE_GATE_SHADOW:-off}
       QUOTE_MEANING_POINTER: ${QUOTE_MEANING_POINTER:-on}
       QUOTE_MEANING_POINTER_PATH: /app/nli_mdeberta
+      CASE_VIEW_MODEL_PATH: /app/gliner_case_views
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -55,6 +56,7 @@ services:
       - ./backend/alembic.ini:/app/alembic.ini
       - ./backend/xlmr_ladder_best:/app/xlmr_ladder_best:ro
       - ./backend/nli_mdeberta:/app/nli_mdeberta:ro
+      - ./backend/gliner_case_views:/app/gliner_case_views:ro
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       db:

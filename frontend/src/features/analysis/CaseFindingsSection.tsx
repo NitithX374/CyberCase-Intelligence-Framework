@@ -96,7 +96,7 @@ export function FindingRow({
               <div key={key} className="text-sm leading-6 text-ink-secondary">
                 <p>
                   {item.evidenceUnitId
-                    ? "The evidence reference could not be resolved."
+                    ? "The source unit reference could not be resolved."
                     : "Not found word for word in the source."}
                 </p>
                 {item.places.map((place, placeIndex) => (

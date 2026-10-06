@@ -158,6 +158,9 @@
           <p class="body">{{ report.summary | clean_report_text }}</p>
         {% endif %}
 
+        {% if report.views_derived_from_claims and (report.parties or report.timeline or report.impacts) %}
+          <p class="note">รายการในส่วนนี้จัดรูปแบบจากข้อความข้อค้นพบเพื่อช่วยอ่านคดี การจับคู่ชื่อกับบทบาทหรือเวลากับเหตุการณ์ยังไม่ได้ตรวจความหมาย โปรดตรวจบริบท ผู้รายงาน และความไม่แน่นอนจากข้อค้นพบที่เชื่อมอยู่ในส่วนที่ 2</p>
+        {% endif %}
         {% if report.parties %}
           {% set sub.n = sub.n + 1 %}{% set tables.n = tables.n + 1 %}
           <h3>1.{{ sub.n }} บุคคลและหน่วยงานที่เกี่ยวข้อง</h3>
@@ -170,7 +173,7 @@
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ party.name }}{% if party.support in support_notes %}<div class="quote">{{ support_notes[party.support] }}</div>{% endif %}</td>
-                <td>{{ party.role }}{% if party.projection_grounding and party.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[party.projection_grounding.verdict] }}</div>{% endif %}</td>
+                <td>{{ party.role if party.role is not none else 'ไม่ได้สกัดบทบาท โปรดตรวจข้อค้นพบที่เชื่อมโยง' }}{% if party.projection_grounding and party.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[party.projection_grounding.verdict] }}</div>{% endif %}{% for context in party.claim_context %}<div class="quote">{{ context }}</div>{% endfor %}</td>
                 <td class="ref">{{ party.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -218,7 +221,11 @@
         {% endif %}
 
         {% if not (report.parties or report.timeline or report.impacts) %}
-          <p class="note">ผลการวิเคราะห์ยังไม่ระบุผู้เกี่ยวข้อง ลำดับเหตุการณ์ หรือผลกระทบของคดี</p>
+          {% if report.findings %}
+          <p class="note">ข้อมูลบุคคล เหตุการณ์ และผลกระทบของคดีแสดงในข้อค้นพบพร้อม Source ที่อ้างอิงในส่วนที่ 2</p>
+          {% else %}
+          <p class="note">ผลการวิเคราะห์นี้ไม่มีข้อค้นพบที่บันทึกไว้</p>
+          {% endif %}
         {% endif %}
       </section>
 

@@ -148,7 +148,7 @@ def test_a_reply_that_names_a_status_is_refused():
     }
 
     with pytest.raises(ValueError, match="support"):
-        CaseProviderReadingReply.model_validate(reply)
+        CaseProviderAnalysis.model_validate({**reply, "summary": "Legacy summary."})
 
 
 def test_neither_model_is_shown_the_status():
@@ -157,12 +157,7 @@ def test_neither_model_is_shown_the_status():
     reading = CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=bound.claims,
-        involved_parties=bound.involved_parties,
-        timeline=bound.timeline,
-        impacts=bound.impacts,
     )
 
     for payload in (reading_payload(reading), analysis_payload(bound, None)):
-        for key in ("involved_parties", "timeline", "impacts"):
-            assert payload[key] == [], key
-            assert all("support" not in item for item in payload[key]), key
+        assert not {"involved_parties", "timeline", "impacts"} & payload.keys()

@@ -5,8 +5,8 @@ CHAT_PROMPT = """You answer one question in the chat of an investigative case.
 You are given:
 - case_sources: the texts the case is analysed from, each with a source_id.
 - followup_history: the reader's answers to earlier clarification questions, each with a qa_id.
-- analysis: the stored analysis of the case (summary, claims with claim_ids, involved parties,
-  timeline, impacts, ATT&CK associations, gaps), or null when the case is not analysed yet.
+- analysis: the stored analysis of the case (summary, canonical claims with claim_ids,
+  ATT&CK associations, gaps), or null when the case is not analysed yet.
 - analysis_status: "none" (not analysed yet), "current", or "stale" (the sources changed after the
   analysis was made).
 - technical_context: the ATT&CK context the analysis retrieved for this case, or null.

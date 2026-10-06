@@ -269,9 +269,6 @@ def real_pointer(claim_text: str, source: str, monkeypatch):
     reading = CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=[claim_about(claim_text)],
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
     )
     bound, grounding = bound_claims(reading, bundle)
     [claim] = bound.claims

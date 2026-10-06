@@ -37,8 +37,9 @@ describe("the progress of a running analysis", () => {
       "Checking what the case is missing0:21",
       "Checking whether ATT&CK applies0:04",
       "Retrieving ATT&CK context0:00",
-      "Reading the sources: claims and quotations",
-      "Checking the quotations against the sources",
+      "Reading sources: claims and source unit IDs",
+      "Binding claims to original source text",
+      "Organizing claim information for Details",
       "Judging: summary, open questions, ATT&CK",
     ]);
     expect(items[2]).toHaveAttribute("aria-current", "step");
