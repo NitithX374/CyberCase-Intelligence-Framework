@@ -14,8 +14,9 @@ from app.llm.schema import structured_output_schema
 from app.reports.display import report_findings
 from app.reports.generate import validated_trace
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import QuoteSearch, added_citations, resolve_case_trace, tolerated_in
+from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
+from app.trace.quote_binding import QuoteSearch, added_citations, tolerated_in
 from app.trace.quotes import MAX_TOLERATED_DIFFERENCES, locate_quote, tolerated_differences
 from app.trace.trace import (
     CaseAnalysisTrace,

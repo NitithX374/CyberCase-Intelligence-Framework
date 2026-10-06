@@ -135,6 +135,7 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
                 role=party.role,
                 references=references(party.claim_ids),
                 support=party.support,
+                projection_grounding=party.projection_grounding,
             )
             for party in trace.involved_parties
         ],
@@ -144,6 +145,7 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
                 event=event.event,
                 references=references(event.claim_ids),
                 support=event.support,
+                projection_grounding=event.projection_grounding,
             )
             for event in trace.timeline
         ],
@@ -152,6 +154,7 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
                 description=impact.description,
                 references=references(impact.claim_ids),
                 support=impact.support,
+                projection_grounding=impact.projection_grounding,
             )
             for impact in trace.impacts
         ],
@@ -278,6 +281,7 @@ def unverified_quotes(claim: CaseAnalysisClaim) -> list[ReportUnverifiedQuote]:
     return [
         ReportUnverifiedQuote(
             written_quote=item.written_quote,
+            evidence_unit_id=item.evidence_unit_id,
             places=[
                 ReportPlace(written=difference.written, source=difference.source)
                 for difference in (item.near_passage.differences if item.near_passage else [])

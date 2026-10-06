@@ -24,7 +24,7 @@ from app.llm.openrouter import CoreLlmTarget
 from app.main import app
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
-from app.trace import bind
+from app.trace import quote_binding
 from app.trace.quotes import MAX_QUOTE_CHARS
 
 pytestmark = pytest.mark.asyncio
@@ -216,7 +216,11 @@ async def case_with_source(factory, text: str) -> tuple:
 
 def citing(text: str, quote: str):
     def cite(content: dict) -> dict:
-        [source_id] = [s["source_id"] for s in content["case_sources"] if s["text"] == text]
+        [source_id] = [
+            s["source_id"]
+            for s in content["case_sources"]
+            if "".join(unit["text"] for unit in s["evidence_units"]) == text
+        ]
         return reading(claim("A-01", source_id, quote))
 
     return cite
@@ -244,7 +248,7 @@ async def test_an_elided_quote_that_spans_too_much_of_a_source_is_dropped_not_a_
 async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id = await case_with_source(factory, MARKED_TEXT)
-        monkeypatch.setattr(bind, "MAX_QUOTE_CHARS", 10 * MAX_QUOTE_CHARS)
+        monkeypatch.setattr(quote_binding, "MAX_QUOTE_CHARS", 10 * MAX_QUOTE_CHARS)
         quote = " ".join(MARKED_WORDS)
         model(assess=[NO_GAPS], read=[citing(MARKED_TEXT, quote)], judge=[JUDGED])
         async with signed_in(monkeypatch, factory, user_id) as client:
@@ -384,7 +388,9 @@ async def test_a_chat_answer_keeps_the_follow_up_answer_its_claim_rests_on(monke
 
         def cite_the_reply(content: dict) -> dict:
             [answered] = content["followup_history"]
-            [narrative] = [s["source_id"] for s in content["case_sources"]]
+            [narrative] = [
+                s["source_id"] for s in content["case_sources"] if s["source_kind"] == "narrative"
+            ]
             return reading(
                 claim("A-01", answered["qa_id"], reply), claim("A-02", narrative, NARRATIVE)
             )

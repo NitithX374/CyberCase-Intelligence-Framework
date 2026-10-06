@@ -14,13 +14,15 @@ from app.errors import CaseAnalysisFailure
 from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import bound_claims
+from app.sources.evidence import evidence_payload
+from app.trace.bind import bound_claims, followup_registry_items
 from app.trace.claims import (
     CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT,
     CaseAnalysisClaim,
     CaseFollowupExchange,
     followup_payload,
 )
+from app.trace.projection import projection_payload
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseGroundingReport,
@@ -45,7 +47,7 @@ async def write_trace(
         config=config,
         stage="case_reading",
         system=CASE_READING_JSON_PROMPT,
-        content=reading_request(sources, language, followup_history),
+        content=await asyncio.to_thread(reading_request, sources, language, followup_history),
         schema=CaseProviderReadingReply,
         grammar=False,
     )
@@ -97,7 +99,11 @@ def reading_request(
 ) -> dict[str, object]:
     return {
         "response_language": language,
-        "case_sources": [provider_source_payload(source) for source in sources.sources],
+        "source_revision": sources.revision,
+        "case_sources": [
+            provider_evidence_payload(source)
+            for source in (*sources.sources, *followup_registry_items(followup_history))
+        ],
         "followup_history": followup_payload(followup_history),
     }
 
@@ -109,7 +115,9 @@ def write_request(
     technical_context: CaseRagContextPayload | None,
 ) -> dict[str, object]:
     return {
-        **reading_request(sources, language, followup_history),
+        "response_language": language,
+        "case_sources": [provider_source_payload(source) for source in sources.sources],
+        "followup_history": followup_payload(followup_history),
         "technical_context": technical_context_payload(technical_context),
     }
 
@@ -157,21 +165,21 @@ def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
     return payload
 
 
+def provider_evidence_payload(source: CaseSourceItem) -> dict[str, object]:
+    payload = provider_source_payload(source)
+    del payload["text"]
+    return {**payload, **evidence_payload(source)}
+
+
 def reading_payload(reading: CaseProviderReading) -> dict[str, object]:
     return {
         "claims": [
             claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT)
             for claim in reading.claims
         ],
-        "involved_parties": [
-            party.model_dump(mode="json", exclude={"support"}) for party in reading.involved_parties
-        ],
-        "timeline": [
-            item.model_dump(mode="json", exclude={"support"}) for item in reading.timeline
-        ],
-        "impacts": [
-            impact.model_dump(mode="json", exclude={"support"}) for impact in reading.impacts
-        ],
+        "involved_parties": projection_payload(reading.involved_parties),
+        "timeline": projection_payload(reading.timeline),
+        "impacts": projection_payload(reading.impacts),
     }
 
 
@@ -202,6 +210,7 @@ __all__ = [
     "joined_trace",
     "judgement_request",
     "provider_source_payload",
+    "provider_evidence_payload",
     "reading_from",
     "reading_payload",
     "reading_request",

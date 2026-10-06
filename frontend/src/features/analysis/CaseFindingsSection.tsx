@@ -94,7 +94,11 @@ export function FindingRow({
             const meaning = item.meaningPassage;
             return (
               <div key={key} className="text-sm leading-6 text-ink-secondary">
-                <p>Not found word for word in the source.</p>
+                <p>
+                  {item.evidenceUnitId
+                    ? "The evidence reference could not be resolved."
+                    : "Not found word for word in the source."}
+                </p>
                 {item.places.map((place, placeIndex) => (
                   <p key={placeIndex}>{placeText(place)}</p>
                 ))}

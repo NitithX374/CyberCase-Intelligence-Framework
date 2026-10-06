@@ -10,23 +10,50 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
-    ValidationError,
     field_validator,
     model_validator,
 )
 
-from app.trace.quotes import (
-    MAX_PAGE_SPANS_PER_QUOTE,
-    MAX_POINTER_PLACES,
-    MAX_QUOTE_CHARS,
-    MAX_SUPPORTED_DOCUMENT_PAGES,
-    MAX_TOLERATED_DIFFERENCES,
+from app.trace.citations import (
+    MAX_CONTEXT_CHARS as MAX_CONTEXT_CHARS,
+)
+from app.trace.citations import (
+    CaseEvidenceReference as CaseEvidenceReference,
+)
+from app.trace.citations import (
+    CaseInvalidEvidence,
+    normalized_citation,
+)
+from app.trace.citations import (
+    CaseMeaningPassage as CaseMeaningPassage,
+)
+from app.trace.citations import (
+    CaseNearPassage as CaseNearPassage,
+)
+from app.trace.citations import (
+    CaseProviderCitation as CaseProviderCitation,
+)
+from app.trace.citations import (
+    CaseQuoteContext as CaseQuoteContext,
+)
+from app.trace.citations import (
+    CaseQuoteDifference as CaseQuoteDifference,
+)
+from app.trace.citations import (
+    CaseReviewFlag as CaseReviewFlag,
+)
+from app.trace.citations import (
+    CaseSourceCitation as CaseSourceCitation,
+)
+from app.trace.citations import (
+    CaseUnverifiedCitation as CaseUnverifiedCitation,
+)
+from app.trace.citations import (
+    stored_review_flags as stored_review_flags,
 )
 
 MAX_CLARIFICATION_QUESTION_CHARS = 300
-MAX_CONTEXT_CHARS = 400
-MAX_REVIEW_FLAGS = 8
-MAX_MEANING_PASSAGE_CHARS = 4_000
+MAX_RESOLVED_EVIDENCE_REFERENCES = 64 * 64
 
 
 CaseClaimType = Literal["reported", "analytical_inference", "unknown"]
@@ -83,111 +110,6 @@ ClaimIds = Annotated[list[str], BeforeValidator(unique_claim_ids)]
 ReasoningSummary = Annotated[str | None, BeforeValidator(empty_as_none), clipped(1_000)]
 
 
-class CaseQuoteContext(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    before: str = Field(default="", max_length=MAX_CONTEXT_CHARS)
-    after: str = Field(default="", max_length=MAX_CONTEXT_CHARS)
-    cut_before: bool = False
-    cut_after: bool = False
-
-
-class CaseQuoteDifference(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    written: str = Field(default="", max_length=MAX_QUOTE_CHARS)
-    source: str = Field(default="", max_length=2 * MAX_QUOTE_CHARS)
-
-
-class CaseReviewFlag(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    kind: Literal["meaning_mark"]
-    verdict: Literal["rule_warning"]
-    detail: str = Field(min_length=1, max_length=80)
-
-
-class CaseSourceCitation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_id: str = Field(min_length=1, max_length=160)
-    exact_quote: str = Field(default="", max_length=MAX_QUOTE_CHARS)
-    document_id: str | None = Field(default=None, min_length=1, max_length=160)
-    filename: str | None = Field(default=None, min_length=1, max_length=255)
-    page_numbers: list[int] = Field(default_factory=list, max_length=MAX_PAGE_SPANS_PER_QUOTE)
-    context: CaseQuoteContext | None = None
-    tolerated_differences: list[CaseQuoteDifference] = Field(
-        default_factory=list, max_length=MAX_TOLERATED_DIFFERENCES
-    )
-    review_flags: list[CaseReviewFlag] = Field(default_factory=list, max_length=MAX_REVIEW_FLAGS)
-
-    @field_validator("source_id", "exact_quote", "document_id", "filename")
-    @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        return value.strip() if value is not None else None
-
-    @field_validator("page_numbers", mode="before")
-    @classmethod
-    def sanitize_page_numbers(cls, value: object) -> object:
-        if not isinstance(value, (list, tuple)):
-            return value
-        pages: list[int] = []
-        for item in value:
-            page = int(item.strip()) if isinstance(item, str) and item.strip().isdigit() else item
-            if (
-                isinstance(page, int)
-                and 1 <= page <= MAX_SUPPORTED_DOCUMENT_PAGES
-                and page not in pages
-            ):
-                pages.append(page)
-        return pages
-
-    @model_validator(mode="after")
-    def drop_incomplete_locator(self) -> CaseSourceCitation:
-        if not (self.document_id and self.filename and self.page_numbers):
-            self.document_id = None
-            self.filename = None
-            self.page_numbers = []
-        return self
-
-
-class CaseProviderCitation(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    source_id: str = Field(min_length=1, max_length=160)
-    exact_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
-
-
-class CaseNearPassage(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_text: str = Field(min_length=1, max_length=2 * MAX_QUOTE_CHARS)
-    differences: list[CaseQuoteDifference] = Field(
-        default_factory=list, max_length=MAX_POINTER_PLACES
-    )
-    occurrences: int = Field(default=1, ge=1)
-
-
-class CaseMeaningPassage(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_text: str = Field(min_length=1, max_length=MAX_MEANING_PASSAGE_CHARS)
-    start: int = Field(ge=0)
-    end: int = Field(gt=0)
-    entailment: float = Field(ge=0, le=1)
-    model: str = Field(min_length=1, max_length=200)
-
-
-class CaseUnverifiedCitation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_id: str = Field(min_length=1, max_length=160)
-    role: Literal["supporting", "contradicting"]
-    written_quote: str = Field(min_length=1, max_length=MAX_QUOTE_CHARS)
-    near_passage: CaseNearPassage | None = None
-    meaning_passage: CaseMeaningPassage | None = None
-
-
 class CaseClaimFields(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -197,26 +119,6 @@ class CaseClaimFields(BaseModel):
     epistemic_status: CaseEpistemicStatus
     supporting_source_ids: list[str] = Field(default_factory=list, max_length=64)
     contradicting_source_ids: list[str] = Field(default_factory=list, max_length=64)
-
-    @model_validator(mode="before")
-    @classmethod
-    def sanitize_raw_citations(cls, data: object) -> object:
-        if not isinstance(data, dict):
-            return data
-        data = dict(data)
-        for field_name in ("supporting_citations", "contradicting_citations"):
-            raw = data.get(field_name)
-            if not isinstance(raw, (list, tuple)):
-                continue
-            cleaned = []
-            for item in raw:
-                citation = normalized_citation(
-                    item.model_dump() if isinstance(item, BaseModel) else item
-                )
-                if citation is not None:
-                    cleaned.append(citation)
-            data[field_name] = cleaned[:64]
-        return data
 
     @field_validator("claim_id", mode="before")
     @classmethod
@@ -247,94 +149,80 @@ class CaseClaimFields(BaseModel):
 
 
 class CaseProviderClaim(CaseClaimFields):
-    supporting_citations: list[CaseProviderCitation] = Field(default_factory=list, max_length=64)
-    contradicting_citations: list[CaseProviderCitation] = Field(default_factory=list, max_length=64)
+    supporting_citations: list[CaseEvidenceReference | CaseProviderCitation] = Field(
+        default_factory=list, max_length=64
+    )
+    contradicting_citations: list[CaseEvidenceReference | CaseProviderCitation] = Field(
+        default_factory=list, max_length=64
+    )
     reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def select_evidence_references(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        for field_name in ("supporting_citations", "contradicting_citations"):
+            citations = data.get(field_name)
+            if not isinstance(citations, (list, tuple)):
+                continue
+            data[field_name] = [
+                {"source_id": item.get("source_id"), "evidence_unit_ids": item["evidence_unit_ids"]}
+                if isinstance(item, dict) and item.get("evidence_unit_ids")
+                else item
+                for item in citations
+            ]
+        return data
 
 
 class CaseAnalysisClaim(CaseClaimFields):
-    supporting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
-    contradicting_citations: list[CaseSourceCitation] = Field(default_factory=list, max_length=64)
-    unverified_citations: list[CaseUnverifiedCitation] = Field(default_factory=list, max_length=128)
+    supporting_citations: list[CaseSourceCitation] = Field(
+        default_factory=list, max_length=MAX_RESOLVED_EVIDENCE_REFERENCES
+    )
+    contradicting_citations: list[CaseSourceCitation] = Field(
+        default_factory=list, max_length=MAX_RESOLVED_EVIDENCE_REFERENCES
+    )
+    unverified_citations: list[CaseUnverifiedCitation] = Field(
+        default_factory=list, max_length=2 * MAX_RESOLVED_EVIDENCE_REFERENCES
+    )
+    invalid_evidence: list[CaseInvalidEvidence] = Field(default_factory=list)
     reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_raw_citations(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        for field_name in ("supporting_citations", "contradicting_citations"):
+            raw = data.get(field_name)
+            if not isinstance(raw, (list, tuple)):
+                continue
+            cleaned = []
+            for item in raw:
+                citation = normalized_citation(
+                    item.model_dump() if isinstance(item, BaseModel) else item
+                )
+                if citation is not None:
+                    cleaned.append(citation)
+            data[field_name] = cleaned
+        return data
 
 
 CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
+    "invalid_evidence": True,
     "unverified_citations": True,
     "supporting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
     "contradicting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
 }
 
 CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT = {
+    "invalid_evidence": True,
     "unverified_citations": True,
     "supporting_citations": {"__all__": {"tolerated_differences", "context", "review_flags"}},
     "contradicting_citations": {"__all__": {"tolerated_differences", "context", "review_flags"}},
 }
-
-
-def normalized_citation(data: object) -> dict[str, object] | None:
-    if not isinstance(data, dict):
-        return None
-    source_id = data.get("source_id")
-    quote = data.get("exact_quote")
-    if not isinstance(source_id, str) or not isinstance(quote, str):
-        return None
-    source_id = source_id.strip()
-    quote = quote.strip()
-    if not source_id or not quote or len(source_id) > 160 or len(quote) > MAX_QUOTE_CHARS:
-        return None
-    return {
-        "source_id": source_id,
-        "exact_quote": quote,
-        "document_id": bounded_locator(data.get("document_id"), 160),
-        "filename": bounded_locator(data.get("filename"), 255),
-        "page_numbers": data.get("page_numbers")
-        if isinstance(data.get("page_numbers"), (list, tuple))
-        else [],
-        "context": stored_context(data.get("context")),
-        "tolerated_differences": stored_differences(data.get("tolerated_differences")),
-        "review_flags": stored_review_flags(data.get("review_flags")),
-    }
-
-
-def stored_context(value: object) -> CaseQuoteContext | None:
-    if not isinstance(value, dict):
-        return None
-    try:
-        return CaseQuoteContext.model_validate(value)
-    except ValidationError:
-        return None
-
-
-def stored_differences(value: object) -> list[CaseQuoteDifference]:
-    if not isinstance(value, list):
-        return []
-    kept: list[CaseQuoteDifference] = []
-    for item in value[:MAX_TOLERATED_DIFFERENCES]:
-        try:
-            kept.append(CaseQuoteDifference.model_validate(item))
-        except ValidationError:
-            continue
-    return kept
-
-
-def stored_review_flags(value: object) -> list[CaseReviewFlag]:
-    if not isinstance(value, list):
-        return []
-    kept: list[CaseReviewFlag] = []
-    for item in value[:MAX_REVIEW_FLAGS]:
-        try:
-            kept.append(CaseReviewFlag.model_validate(item))
-        except ValidationError:
-            continue
-    return kept
-
-
-def bounded_locator(value: object, limit: int) -> str | None:
-    if not isinstance(value, str):
-        return None
-    normalized = value.strip()
-    return normalized if normalized and len(normalized) <= limit else None
 
 
 class CaseAnalysisGap(BaseModel):

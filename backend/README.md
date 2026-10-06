@@ -29,13 +29,17 @@ A report is built once per analysis by `app/reports/display.py` and stored as a 
 
 A document becomes a `CaseDocument` holding the file and a document `CaseSource` holding the text read from it; the source's `provenance_json` keeps the pages, their offsets into that text, and the warnings from reading it, and the source reads its document's `filename`, `mime_type` and `size_bytes`, which `CaseSourceRead` returns. A narrative becomes a narrative `CaseSource`. Each native source changes the Case `source_revision`.
 
-Clarification answers are different: they are persisted `ChatMessage` rows and loaded as `followup_history` for later analysis. They are not native Case sources and do not change `source_revision`; the binding layer may expose them to the analysis trace through synthetic QA identifiers.
+Clarification answers are different: they are persisted `ChatMessage` rows and loaded as `followup_history` for later analysis. They are not native Case sources and do not change `source_revision`; Reading and binding expose answered text as Evidence Units under synthetic QA identifiers.
 
 An analysis reads one `CaseSourceBundle(revision, sources)` plus the separate follow-up history. The bundle is passed through assessment, optional technical augmentation, structured analysis, and source binding without database access inside the analysis steps. The workflow stores the result only after model work finishes and refuses to store it if the Case source revision changed meanwhile. The stored result records what it read in `external_context_json`: `sources_read`, the IDs of the sources it read, and `followup_history`, each answered follow-up's QA id, question and answer. The report takes the list of sources from `sources_read` and reads those source rows (`recorded_source_bundle` in `app/reports/generate.py`); a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is not re-read from chat.
 
+Reading receives all sources as deterministic, exact-offset Evidence Units from `app/sources/evidence.py`. Claims select `source_id` plus `evidence_unit_ids`; `app/trace/evidence_binding.py` reproduces original source text and page locators without searching for model-written quotes. Units are computed at analysis time and need no table or migration. Existing quote matching and advisory recovery remain available for legacy citations and unresolved pointers.
+
+Parties, timeline items and impacts carry claim IDs only. `app/trace/projection.py` validates each complete structured statement against linked grounded claim texts with the existing NLI model. Evidence binding (`bound`, `mixed`, `unbound`, `no_claim`) and semantic projection verdict (`supported`, `not_supported`, `unassessed`) are separate. Only supported projections enter Judgement as factual input. See [the grounding contract and examples](../docs/architecture/evidence-unit-grounding.md).
+
 ## One name per thing
 
-A Case is analysed from **sources**. `case_sources`, `source_revision`, `CaseSource`, `CaseSourceCreate`, `CaseSourceRead`, and `/cases/{case_id}/sources` use the same vocabulary. In prose, “evidence” can describe what a report found, but it is not the identifier for the persisted input object.
+A Case is analysed from **sources**. `case_sources`, `source_revision`, `CaseSource`, `CaseSourceCreate`, `CaseSourceRead`, and `/cases/{case_id}/sources` use the same vocabulary. An Evidence Unit addresses content inside a source; its ID does not replace the persisted source identity.
 
 The report template's `case_evidence` and `evidence_to_examine` sections (`app/reports/templates/case_report.html.j2`) are section ids in the template, not inputs: they print the snapshot's `findings` and its `gaps`, the information that still needs checking.
 

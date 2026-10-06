@@ -27,6 +27,7 @@ export interface QuotePlace {
 
 export interface UnverifiedQuote {
   writtenQuote: string;
+  evidenceUnitId?: string | null;
   places: QuotePlace[];
   passage: SourceMessageRef | null;
   meaningPassage: SourceMessageRef | null;

@@ -315,3 +315,28 @@ describe("Findings reached from a summary link", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });
+
+it("explains an unresolved evidence ID without claiming a quote mismatch", () => {
+  render(
+    <CaseFindingsSection
+      caseId={caseId}
+      findings={[
+        {
+          ...finding("A-01", "reported", "not_confirmed"),
+          unverifiedQuotes: [
+            {
+              writtenQuote: "",
+              evidenceUnitId: "unknown-id",
+              places: [],
+              passage: null,
+              meaningPassage: null,
+            },
+          ],
+        },
+      ]}
+      onSelectSource={vi.fn()}
+    />,
+  );
+  expect(screen.getByText("The evidence reference could not be resolved.")).toBeInTheDocument();
+  expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
+});

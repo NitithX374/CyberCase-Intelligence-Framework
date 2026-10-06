@@ -20,12 +20,7 @@ from app.llm.settings import configured_pipeline
 from app.models.analysis_result import CaseAnalysisResult
 from app.models.chat_message import ChatMessage
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
-from app.trace.bind import (
-    QuoteSearch,
-    added_citations,
-    followup_registry_items,
-    resolve_case_trace,
-)
+from app.trace.bind import followup_registry_items, resolve_case_trace
 from app.trace.claims import (
     CLAIM_FIELDS_HIDDEN_FROM_MODELS,
     CaseAnalysisClaim,
@@ -34,6 +29,8 @@ from app.trace.claims import (
     normalize_identifier,
 )
 from app.trace.messages import ChatAnswerUnit
+from app.trace.projection import projection_payload
+from app.trace.quote_binding import QuoteSearch, added_citations
 from app.trace.trace import MAX_SUMMARY_CHARS, CaseAnalysisTrace
 
 logger = logging.getLogger(__name__)
@@ -196,13 +193,9 @@ def analysis_payload(trace: CaseAnalysisTrace, summary: str | None) -> dict[str,
             claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_MODELS)
             for claim in trace.claims
         ],
-        "involved_parties": [
-            party.model_dump(mode="json", exclude={"support"}) for party in trace.involved_parties
-        ],
-        "timeline": [item.model_dump(mode="json", exclude={"support"}) for item in trace.timeline],
-        "impacts": [
-            impact.model_dump(mode="json", exclude={"support"}) for impact in trace.impacts
-        ],
+        "involved_parties": projection_payload(trace.involved_parties),
+        "timeline": projection_payload(trace.timeline),
+        "impacts": projection_payload(trace.impacts),
         "mitre_associations": [
             association.model_dump(mode="json") for association in trace.mitre_associations
         ],

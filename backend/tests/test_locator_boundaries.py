@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.trace.bind import tolerated_in
+from app.trace.quote_binding import tolerated_in
 from app.trace.quotes import (
     find_aligned_quote,
     find_format_only_quote,

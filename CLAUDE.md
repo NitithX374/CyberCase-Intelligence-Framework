@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** is a full-stack RAG application that analyses cybersecurity incident cases using MITRE ATT&CK intelligence. The case is the aggregate: it owns the documents and narratives it is analysed from, the analysis, the conversation about it, and its reports. An analysis starts with a cheap preflight that asks only what the case is missing; if something is worth asking, the reader is asked and nothing expensive runs. Otherwise the analysis follows in two grounded model calls, which the caller waits for — a reading that writes the claims, parties, timeline and impacts with their quotations, a check of those quotations against the sources, then a judgement that writes the summary, gaps and ATT&CK associations over the checked claims. The judgement is not given the case sources, nor the sentence around each quotation; it reads the claims and their quotations, the follow-up history and the technical context, and every sentence of its summary ends with the IDs of the claims it rests on. The reading runs without grammar-constrained decoding: its JSON is described in the prompt, validated after decoding and asked at most twice. Every other call keeps the provider's JSON-schema grammar. There is no run row and no queue. Technical context, when the case needs it, comes from an agentic RAG pipeline with hybrid retrieval, cross-lingual support (Thai ↔ English) and self-reflection loops; that pipeline never pauses. The report is deterministic and template-first, built from the analysis that is already stored.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes claims with selected Evidence Unit IDs and claim-linked parties, timeline and impacts; the backend resolves those IDs to original source spans and separately checks the complete structured projections against their linked claims; Judgement writes the summary, gaps and ATT&CK associations over the checked reading. Judgement receives claims and their resolved evidence, semantically supported projections, follow-up history and technical context, without the full sources or quotation context. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The Evidence Unit grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
 
 ## Service Layout
 
@@ -205,14 +205,15 @@ llm/                    calling a model
                         Literal is sent as a one-item enum, because not every
                         route enforces const)
 trace/                  what the analysis, chat and reports share
-  claims.py             claims, citations, gaps, a follow-up exchange, what
-                        the preflight returns; a citation carries review_flags
-                        (kind, verdict, detail) that the code sets and no
-                        model sees
+  claims.py             claim fields/provider boundaries, gaps and follow-up
+                        exchanges; reexports historical citation names
+  citations.py          evidence references, resolved citations, invalid pointers
+                        and legacy quote schemas; review flags are backend-only
   trace.py              the trace: summary, parties, timeline, impacts, claims;
                         each party, timeline item and impact carries a derived
                         support (bound, mixed, unbound, no_claim) that the
-                        model never writes; summary_units holds the summary cut
+                        model never writes, and a separate projection_grounding
+                        semantic verdict; summary_units holds the summary cut
                         at its claim-ID brackets, each unit with its claim IDs
                         and the same derived support
   summary.py            cutting a summary into the units that end at a
@@ -259,38 +260,19 @@ trace/                  what the analysis, chat and reports share
                         broken model is NliUnavailable with a reason
   sentences.py          the sentence around a quotation: PyThaiNLP crfcut, line
                         by line; the encoder gate splits with it too
-  bind.py               bind a written trace to the case; count what did not bind;
-                        bound_claims checks the reading's quotations before the
-                        judgement, and bound_references checks the judgement's
-                        claim IDs and techniques after it, and derives the
-                        summary's units (an ID that names no claim is dropped
-                        from its unit and counted in summary_ids_unknown);
-                        a "reported" claim left with no verified quote becomes
-                        "not_confirmed"; a quote with an ellipsis in the middle is
-                        stored as one citation per piece when every piece occurs
-                        once in the source, and otherwise as the one span the
-                        pieces stretch over; either way it counts as one written
-                        quote; each bound quote keeps the text around it as its
-                        context and, when a tolerant tier found it, the
-                        differences that tier ignored (tolerated_differences;
-                        neither model is shown them) and, when a mark that
-                        can carry meaning was ignored or sits at its edge, a
-                        review flag (a rule warning that changes no status,
-                        support or acceptance; counted in citations_marked;
-                        neither model is shown it, and the chat sets none); a
-                        quote no tier locates
-                        is kept apart as an
-                        unverified citation, with that passage when one
-                        qualifies, and counted as citations_pointed, or, when
-                        none does and the claim is not confirmed, with the
-                        sentence an NLI model finds says it (meaning.py,
-                        counted in citations_meaning_pointed); neither
-                        model is shown it; bound_references derives the
-                        support of each party, timeline item and impact from
-                        the claims it names that exist: bound when each has a
-                        bound supporting citation, mixed when only some do,
-                        unbound when none does, no_claim when it names none;
-                        neither model is shown that either
+  bind.py               stable orchestration: resolve claim evidence and validate
+                        projections before Judgement; check final references and
+                        derive summary units afterwards
+  evidence_binding.py   validate selected IDs, materialize original source spans
+                        and page locators, reject duplicate references
+  quote_binding.py      legacy quote locating, context, tolerated differences,
+                        review flags and advisory nearest passages
+  grounding.py          legacy counters and deterministic Evidence ID metrics
+  support.py            bound/mixed/unbound/no_claim describe evidence binding
+                        of linked claims, never semantic or factual confirmation
+  projection.py         complete party-role, time-event and impact hypotheses
+                        checked against only linked grounded claim texts with NLI;
+                        only supported projections enter downstream model inputs
   messages.py           what a chat message carries: the trace attached to it,
                         an answer's units and its suggestion
 followup/               the bounded clarification the analysis and chat share
@@ -308,6 +290,8 @@ cases/                  routes, schemas, service (case CRUD and whether the
                         sole_analysis, which refuses a second one)
 sources/                routes (sources and documents), schemas, service, and
                         bundle.py: the one bundle an analysis reads from
+  evidence.py           analysis-time exact-offset units, with source-scoped and
+                        text-fingerprinted IDs; no evidence table or migration
   ingestion/            upload to text: service, files (detect, render pages,
                         turn a photo upright by its EXIF orientation),
                         parsers (PDF text, DOCX), text (strip_unstorable, the
@@ -325,8 +309,9 @@ analysis/               producing an analysis of a case; routes, schemas
                         there is nothing worth asking
   assess.py             the cheap gaps-only call that runs first
   write.py              write_trace: a reading call (claims, parties, timeline,
-                        impacts, with quotations; JSON from the prompt, no
-                        grammar), the check of its quotations (bound_claims),
+                        impacts; claims select Evidence Unit IDs; prompt JSON,
+                        no grammar), evidence binding and projection validation
+                        (bound_claims),
                         then a judgement call (summary, gaps, ATT&CK
                         associations) over the checked claims alone: no case
                         sources and no sentence around each quotation
@@ -335,7 +320,9 @@ analysis/               producing an analysis of a case; routes, schemas
   progress.py           announce(step): the steps write, retrieve and the
                         pipeline report, heard only by a request that listens
   stream.py             the progress stream: steps, heartbeats, then the result
-  prompts.py            the analysis prompts
+  prompts.py            assessment and Judgement prompts; Reading reexports
+  reading_prompt.py     Evidence Unit selection and complete claim-mediated
+                        structured projection contract
   technical_context/    whether and how the case gets ATT&CK context
     contracts.py        the augmentation and applicability records, and the
                         RAG service's request and response
@@ -402,7 +389,7 @@ decision = decide_followup(assessment.gaps, ...)
 if not isinstance(decision, Proceed):
     return AnalysisAdvance(assessment, decision)   # ask, and stop here
 artifacts = await retrieve_technical_context(...)  # only now pay for the rest
-artifacts = await write_analysis(...)              # reading, quote check, judgement
+artifacts = await write_analysis(...)              # reading, evidence/projection check, judgement
 artifacts = await bind_to_case(...)                # the judgement's references
 ```
 
@@ -468,9 +455,15 @@ The RAG query is not the trigger text alone: `retrieval_query` in
 question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 `research/mitre_gate/README.md` has the measurements.
 
-### Meaning Pointer (backend)
+### Evidence Units and projection grounding (backend)
 
-When a reported claim's quotation is not located and the string pointer (`nearest_passage`) returns nothing, `bound_claims` asks an NLI model whether a sentence of the cited source says what the claim says (`trace/meaning.py`, `trace/nli_model.py`). The candidates are the three sentences that share most words with the claim (newmm tokens for Thai, lowercase words otherwise); premise is the sentence, hypothesis is the claim, model `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7`. A sentence becomes the unverified citation's `meaning_passage` (verbatim source text, start and end offsets, the entailment kept for audit and never shown) only when entailment is the argmax and at least 0.5; ties go to the earlier sentence; a pair over 512 tokens is skipped, never cut; at most 30 citations and 3 pairs each per analysis. It runs inside `bind` in the worker thread, with no new progress step.
+`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together and selects IDs on claims. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. Legacy quotes retain the old matcher.
+
+`trace/projection.py` checks the complete party name-role relation, time-event relation or impact description against only linked grounded claim texts, using the existing pinned NLI loader. Entailment must be the winning label with probability at least 0.5. Missing, unbound or qualified claims, unavailable weights and oversized pairs are explicitly `unassessed`; no input is truncated. Rejected and unassessed items remain visible in trace/report with notes but cannot enter Judgement or chat model inputs as factual projections. `support=bound` means the known linked claims carry resolved supporting evidence. A `supported` projection is a model verdict about derivability, not a legal or source-truth judgement.
+
+### Legacy Meaning Pointer (backend)
+
+When a reported claim's legacy quotation is not located, or its Evidence Unit pointer is invalid, and no nearest passage is available, `bound_claims` may ask the existing meaning pointer whether a sentence of the named source says what the claim says (`trace/meaning.py`, `trace/nli_model.py`). The candidates are the three sentences that share most words with the claim (newmm tokens for Thai, lowercase words otherwise); premise is the sentence, hypothesis is the claim, model `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7`. A sentence becomes the unverified citation's `meaning_passage` (verbatim source text, start and end offsets, the entailment kept for audit and never shown) only when entailment is the argmax and at least 0.5; ties go to the earlier sentence; a pair over 512 tokens is skipped, never cut; at most 30 citations and 3 pairs each per analysis. It runs inside `bind` in the worker thread, with no new progress step.
 
 The passage is shown under the not-confirmed claim only (the report's unverified quote, and the Findings row, with the words "found by meaning, not confirmed" and no score). It is never evidence: the claim stays `not_confirmed`, and the passage is in no support, grounding citation count, summary unit or model input.
 
@@ -492,7 +485,7 @@ pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. An unverified quote of a not-confirmed claim carries the passage found by meaning in `meaning_passage`, and the report prints it under that quote after one plain line saying how it was found, with no score; a report stored before that has none and prints nothing new, and when the analysis could not run the pointer a limitation says so. A quote with a review flag carries it in `supporting_marked` and `contradicting_marked`, and the report prints one plain line under it, saying that the source has the mark next to the quote or that the quote and the source differ at the mark; a report stored before that has none and prints no line. Each party, event and impact in the snapshot carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. An unverified quote of a not-confirmed claim carries the passage found by meaning in `meaning_passage`, and the report prints it under that quote after one plain line saying how it was found, with no score; a report stored before that has none and prints nothing new, and when the analysis could not run the pointer a limitation says so. A quote with a review flag carries it in `supporting_marked` and `contradicting_marked`, and the report prints one plain line under it, saying that the source has the mark next to the quote or that the quote and the source differ at the mark; a report stored before that has none and prints no line. Each party, event and impact in the snapshot carries `support` and, for new analyses, a separate `projection_grounding` verdict; rejected/unassessed projections print a semantic note independently of binding, and historical snapshots keep their previous shape. An unresolved Evidence Unit ID prints as an invalid pointer rather than an empty quote. Each item carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)

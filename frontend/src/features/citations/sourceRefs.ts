@@ -115,7 +115,7 @@ function sourceRef(
     excerpt: source.text.length > 120 ? `${source.text.slice(0, 120)}…` : source.text,
     displayContent: pages.length
       ? pages.map((page) => page.text).join("\n\n")
-      : contextualExcerpt(source.text, quote),
+      : contextualExcerpt(source.text, quote, citation),
     exactQuote: quote,
     quoteContext: context
       ? {
@@ -154,7 +154,19 @@ function sourcePages(row: CaseSourceRead): SourcePage[] {
   }));
 }
 
-function contextualExcerpt(content: string, exactQuote: string | null): string {
+function contextualExcerpt(
+  content: string,
+  exactQuote: string | null,
+  citation: CaseSourceCitation | null,
+): string {
+  if (citation?.pointer_state === "direct" && citation.start != null && citation.end != null) {
+    const characters = Array.from(content);
+    if (characters.slice(citation.start, citation.end).join("") === exactQuote) {
+      const lower = Math.max(0, citation.start - 220);
+      const upper = Math.min(characters.length, citation.end + 220);
+      return `${lower > 0 ? "…" : ""}${characters.slice(lower, upper).join("")}${upper < characters.length ? "…" : ""}`;
+    }
+  }
   const start = exactQuote ? content.indexOf(exactQuote) : -1;
   if (!exactQuote || start < 0) return content.length > 640 ? `${content.slice(0, 640)}…` : content;
   const lower = Math.max(0, start - 220);

@@ -276,6 +276,7 @@ export interface components {
             supporting_citations?: components["schemas"]["CaseSourceCitation"][];
             contradicting_citations?: components["schemas"]["CaseSourceCitation"][];
             unverified_citations?: components["schemas"]["CaseUnverifiedCitation"][];
+            invalid_evidence?: components["schemas"]["CaseInvalidEvidence"][];
             reasoning_summary?: string | null;
         };
         CaseAnalysisGap: {
@@ -356,6 +357,13 @@ export interface components {
             citations_duplicated: number;
             citations_marked: number;
             citations_meaning_pointed: number;
+            evidence_ids_claimed: number;
+            evidence_ids_resolved: number;
+            evidence_ids_invalid: number;
+            evidence_id_resolution_rate?: number | null;
+            claims_with_direct_evidence: number;
+            claims_with_recovered_evidence: number;
+            claims_without_resolved_evidence: number;
             meaning_pointer_eligible: number;
             meaning_pointer_attempted: number;
             meaning_pointer_unavailable: number;
@@ -371,12 +379,21 @@ export interface components {
             description: string;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
+        };
+        CaseInvalidEvidence: {
+            source_id: string;
+            evidence_unit_id: string;
+            role: "supporting" | "contradicting";
+            pointer_state: "unresolved";
+            reason: "unknown_source" | "malformed_id" | "cross_source" | "stale_id" | "unknown_unit" | "empty_unit" | "duplicate_id";
         };
         CaseInvolvedParty: {
             name: string;
             role: string;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
         };
         CaseMeaningPassage: {
             source_text: string;
@@ -398,6 +415,12 @@ export interface components {
             source_text: string;
             differences?: components["schemas"]["CaseQuoteDifference"][];
             occurrences: number;
+        };
+        CaseProjectionGrounding: {
+            verdict: "supported" | "not_supported" | "unassessed";
+            reason: string;
+            model?: string | null;
+            entailment?: number | null;
         };
         CaseQuoteContext: {
             before: string;
@@ -457,6 +480,10 @@ export interface components {
         CaseSourceCitation: {
             source_id: string;
             exact_quote: string;
+            evidence_unit_ids?: string[];
+            pointer_state?: "direct" | "recovered" | "unresolved";
+            start?: number | null;
+            end?: number | null;
             document_id?: string | null;
             filename?: string | null;
             page_numbers?: number[];
@@ -501,11 +528,13 @@ export interface components {
             event: string;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
         };
         CaseUnverifiedCitation: {
             source_id: string;
             role: "supporting" | "contradicting";
             written_quote: string;
+            evidence_unit_id?: string | null;
             near_passage?: components["schemas"]["CaseNearPassage"] | null;
             meaning_passage?: components["schemas"]["CaseMeaningPassage"] | null;
         };
@@ -569,6 +598,7 @@ export interface components {
             event: string;
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
         };
         ReportFinding: {
             ordinal: number;
@@ -599,6 +629,7 @@ export interface components {
             description: string;
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
         };
         ReportMark: {
             marks: string;
@@ -609,6 +640,7 @@ export interface components {
             role: string;
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
+            projection_grounding?: components["schemas"]["CaseProjectionGrounding"] | null;
         };
         ReportPlace: {
             written: string;
@@ -641,6 +673,7 @@ export interface components {
         };
         ReportUnverifiedQuote: {
             written_quote: string;
+            evidence_unit_id?: string | null;
             places?: components["schemas"]["ReportPlace"][];
             meaning_passage?: string | null;
         };

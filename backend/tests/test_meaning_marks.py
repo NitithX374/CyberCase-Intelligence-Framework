@@ -11,7 +11,7 @@ from app.analysis.write import reading_from, reading_payload
 from app.chat.compose import analysis_payload
 from app.llm.schema import structured_output_schema
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.trace.bind import QuoteSearch, added_citations, resolve_case_trace
+from app.trace.bind import resolve_case_trace
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseReviewFlag,
@@ -19,6 +19,7 @@ from app.trace.claims import (
     normalized_citation,
     stored_review_flags,
 )
+from app.trace.quote_binding import QuoteSearch, added_citations
 from app.trace.quotes import (
     MEANING_MARKS,
     IndexedText,

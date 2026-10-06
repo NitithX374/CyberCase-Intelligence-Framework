@@ -141,6 +141,10 @@
         "mixed": "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
         "no_claim": "ไม่ได้เชื่อมกับข้อสังเกตใด",
       } %}
+      {% set projection_notes = {
+        "not_supported": "ข้อมูลนี้ไม่ได้รับการสนับสนุนจากข้อสังเกตที่เชื่อมไว้",
+        "unassessed": "ยังไม่ได้ประเมินความสอดคล้องของข้อมูลนี้กับข้อสังเกตที่เชื่อมไว้",
+      } %}
       <section id="case_summary">
         <h2>1. สรุปข้อเท็จจริงของคดี</h2>
         {% set sub = namespace(n=1) %}
@@ -166,7 +170,7 @@
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ party.name }}{% if party.support in support_notes %}<div class="quote">{{ support_notes[party.support] }}</div>{% endif %}</td>
-                <td>{{ party.role }}</td>
+                <td>{{ party.role }}{% if party.projection_grounding and party.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[party.projection_grounding.verdict] }}</div>{% endif %}</td>
                 <td class="ref">{{ party.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -186,7 +190,7 @@
               <tr>
                 <td class="n">{{ loop.index }}</td>
                 <td>{{ event.time }}</td>
-                <td>{{ event.event | clean_report_text }}{% if event.support in support_notes %}<div class="quote">{{ support_notes[event.support] }}</div>{% endif %}</td>
+                <td>{{ event.event | clean_report_text }}{% if event.support in support_notes %}<div class="quote">{{ support_notes[event.support] }}</div>{% endif %}{% if event.projection_grounding and event.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[event.projection_grounding.verdict] }}</div>{% endif %}</td>
                 <td class="ref">{{ event.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -205,7 +209,7 @@
               {% for impact in report.impacts %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
-                <td>{{ impact.description | clean_report_text }}{% if impact.support in support_notes %}<div class="quote">{{ support_notes[impact.support] }}</div>{% endif %}</td>
+                <td>{{ impact.description | clean_report_text }}{% if impact.support in support_notes %}<div class="quote">{{ support_notes[impact.support] }}</div>{% endif %}{% if impact.projection_grounding and impact.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[impact.projection_grounding.verdict] }}</div>{% endif %}</td>
                 <td class="ref">{{ impact.references | join(", ") or "-" }}</td>
               </tr>
               {% endfor %}
@@ -260,7 +264,7 @@
                     {% endif %}
                   {% endfor %}
                   {% for item in finding.unverified_quotes %}
-                    <div class="quote"><span class="quote-label">ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{{ item.written_quote }}”</div>
+                    {% if item.evidence_unit_id %}<div class="quote"><span class="quote-label">ไม่สามารถระบุตำแหน่งหลักฐานที่อ้างอิงได้</span></div>{% else %}<div class="quote"><span class="quote-label">ไม่พบข้อความนี้แบบตรงตัวในต้นฉบับ:</span> “{{ item.written_quote }}”</div>{% endif %}
                     {% for place in item.places %}
                       <div class="quote-place">{% if place.written and place.source %}ผลวิเคราะห์ยกมาว่า «{{ place.written }}» ต้นฉบับเขียน «{{ place.source }}»{% elif place.written %}ผลวิเคราะห์เติม «{{ place.written }}»{% else %}ต้นฉบับมี «{{ place.source }}» ที่ผลวิเคราะห์ตัดออก{% endif %}</div>
                     {% endfor %}

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.trace.trace import SupportStatus
+from app.trace.trace import CaseProjectionGrounding, SupportStatus
 
 
 class ReportRow(BaseModel):
@@ -18,6 +18,7 @@ class ReportParty(ReportRow):
     role: str
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
+    projection_grounding: CaseProjectionGrounding | None = None
 
 
 class ReportEvent(ReportRow):
@@ -25,12 +26,14 @@ class ReportEvent(ReportRow):
     event: str
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
+    projection_grounding: CaseProjectionGrounding | None = None
 
 
 class ReportImpact(ReportRow):
     description: str
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None
+    projection_grounding: CaseProjectionGrounding | None = None
 
 
 class ReportSummaryUnit(ReportRow):
@@ -58,6 +61,7 @@ class ReportMark(ReportRow):
 
 class ReportUnverifiedQuote(ReportRow):
     written_quote: str
+    evidence_unit_id: str | None = None
     places: list[ReportPlace] = Field(default_factory=list)
     meaning_passage: str | None = None
 

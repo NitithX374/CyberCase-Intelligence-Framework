@@ -75,17 +75,23 @@ without its assessment.
 
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
 trace in two model calls: `case_reading` writes the claims, parties, timeline
-and impacts with their quotations, and `case_judgement` writes the summary,
+and impacts, with evidence-unit IDs on the claims, and `case_judgement` writes the summary,
 gaps and ATT&CK associations over that reading.
 
 Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
 against the sources:
-- each quotation is found and located;
-- a `reported` claim left with no verified quotation becomes `not_confirmed`;
+- `sources/evidence.py` partitions each source into exact-offset Evidence Units;
+- `trace/evidence_binding.py` resolves selected IDs to original text and document/page locators;
+- legacy quotes still use `trace/quote_binding.py` and the existing recovery machinery;
+- a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`;
+- `trace/projection.py` checks each complete party-role, time-event or impact statement against only its linked grounded claim texts, using the existing pinned NLI model;
 - the grounding counts are taken.
 
 The judgement therefore reads checked claims: their statuses, and only the
-quotations that were found. It is given neither the case sources nor the
+source spans that were resolved. Only projections with a `supported` semantic verdict
+enter its input; rejected and unassessed projections remain visible in the trace with
+separate notes. `support=bound` still describes evidence binding, not semantic
+support or factual confirmation. It is given neither the case sources nor the
 sentence around each quotation, so a fact reaches its summary only through a
 claim. It is still given the follow-up history, which the gap rules need, and
 the technical context. Every summary sentence ends with the IDs of the claims
@@ -179,8 +185,9 @@ reason about; keep it that way.
 ### Follow-up answers are conversation, not sources
 
 A reader's answer becomes a **`ChatMessage`**, never a `CaseSource`. It is cited
-as `QA-01`, `QA-02` so a claim can quote it, but it does not enter the source
-bundle and does not bump `source_revision`.
+as `QA-01`, `QA-02`. Reading and binding expose the answered text through the same
+Evidence Unit abstraction as native sources, for example `QA-01:U001-<text hash>`.
+It does not enter the persisted source bundle or bump `source_revision`.
 
 This matters more than it sounds. `source_revision` is the case's "have the
 facts changed" counter: an analysis is refused if the revision moved underneath

@@ -19,6 +19,15 @@ MAX_SUMMARY_CHARS = 24_000
 SupportStatus = Literal["bound", "mixed", "unbound", "no_claim"]
 
 
+class CaseProjectionGrounding(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    verdict: Literal["supported", "not_supported", "unassessed"]
+    reason: str = Field(min_length=1, max_length=120)
+    model: str | None = Field(default=None, max_length=200)
+    entailment: float | None = Field(default=None, ge=0, le=1)
+
+
 class ProviderParty(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -37,6 +46,7 @@ class ProviderParty(BaseModel):
 
 class CaseInvolvedParty(ProviderParty):
     support: SupportStatus | None = None
+    projection_grounding: CaseProjectionGrounding | None = None
 
 
 class ProviderTimelineItem(BaseModel):
@@ -57,6 +67,7 @@ class ProviderTimelineItem(BaseModel):
 
 class CaseTimelineItem(ProviderTimelineItem):
     support: SupportStatus | None = None
+    projection_grounding: CaseProjectionGrounding | None = None
 
 
 class ProviderImpactItem(BaseModel):
@@ -76,6 +87,7 @@ class ProviderImpactItem(BaseModel):
 
 class CaseImpactItem(ProviderImpactItem):
     support: SupportStatus | None = None
+    projection_grounding: CaseProjectionGrounding | None = None
 
 
 class CaseMitreAssociation(BaseModel):
@@ -121,6 +133,13 @@ class CaseGroundingReport(BaseModel):
     citations_duplicated: int = 0
     citations_marked: int = 0
     citations_meaning_pointed: int = 0
+    evidence_ids_claimed: int = 0
+    evidence_ids_resolved: int = 0
+    evidence_ids_invalid: int = 0
+    evidence_id_resolution_rate: float | None = Field(default=None, ge=0, le=1)
+    claims_with_direct_evidence: int = 0
+    claims_with_recovered_evidence: int = 0
+    claims_without_resolved_evidence: int = 0
     meaning_pointer_eligible: int = 0
     meaning_pointer_attempted: int = 0
     meaning_pointer_unavailable: int = 0
@@ -208,6 +227,7 @@ __all__ = [
     "CaseImpactItem",
     "CaseMitreAssociation",
     "CaseProviderAnalysis",
+    "CaseProjectionGrounding",
     "CaseProviderJudgement",
     "CaseProviderReading",
     "CaseProviderReadingReply",

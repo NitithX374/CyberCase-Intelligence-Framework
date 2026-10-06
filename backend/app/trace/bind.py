@@ -2,45 +2,30 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from typing import Literal
 
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
+from app.sources.evidence import EvidenceIndex
 from app.trace.claims import (
     CaseAnalysisClaim,
     CaseEpistemicStatus,
     CaseFollowupExchange,
-    CaseNearPassage,
-    CaseQuoteContext,
-    CaseQuoteDifference,
-    CaseReviewFlag,
     CaseSourceCitation,
     CaseUnverifiedCitation,
 )
+from app.trace.evidence_binding import bind_citations, evidence_counts
+from app.trace.grounding import grounding_report as grounding_report
 from app.trace.meaning import meaning_pointed
-from app.trace.quotes import (
-    MAX_QUOTE_CHARS,
-    MAX_TOLERATED_DIFFERENCES,
-    IndexedText,
-    edge_marks,
-    find_aligned_quote,
-    ignored_marks,
-    indexed,
-    locate_quote,
-    nearest_passage,
-    quote_occurrences,
-    resolve_document_locator,
-    tolerated_differences,
-    without_edge_ellipses,
-)
-from app.trace.sentences import SentenceIndex, quote_context
+from app.trace.projection import ProjectionValidator
+from app.trace.quote_binding import QuoteSearch
 from app.trace.summary import summary_pieces
+from app.trace.support import item_support as item_support
+from app.trace.support import with_support
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseGroundingReport,
     CaseMitreAssociation,
     CaseProviderReading,
     CaseSummaryUnit,
-    SupportStatus,
 )
 
 ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
@@ -76,24 +61,24 @@ def bound_claims(
     source_bundle: CaseSourceBundle,
     followup_history: Sequence[CaseFollowupExchange] = (),
 ) -> tuple[CaseAnalysisTrace | CaseProviderReading, CaseGroundingReport]:
-    registry = {source.source_id: source for source in source_bundle.sources}
-    registry.update({item.source_id: item for item in followup_registry_items(followup_history)})
+    evidence = EvidenceIndex((*source_bundle.sources, *followup_registry_items(followup_history)))
+    registry = evidence.sources
     document_context = build_document_source_context(source_bundle)
     search = QuoteSearch(registry)
 
     claims = deduplicated_claims(written.claims)
-    known_claim_ids = {claim.claim_id for claim in claims}
-    resolved_claims = [resolve_claim(claim, registry, document_context, search) for claim in claims]
+    resolved_claims = [
+        resolve_claim(claim, registry, document_context, search, evidence) for claim in claims
+    ]
     resolved_claims, meaning = meaning_pointed(resolved_claims, registry)
 
+    projection = ProjectionValidator(resolved_claims)
     bound = written.model_copy(
         update={
             "claims": resolved_claims,
-            "involved_parties": [
-                bound_to_claims(party, known_claim_ids) for party in written.involved_parties
-            ],
-            "timeline": [bound_to_claims(item, known_claim_ids) for item in written.timeline],
-            "impacts": [bound_to_claims(impact, known_claim_ids) for impact in written.impacts],
+            "involved_parties": [projection.check(party) for party in written.involved_parties],
+            "timeline": [projection.check(item) for item in written.timeline],
+            "impacts": [projection.check(impact) for impact in written.impacts],
         }
     )
     grounding = grounding_report(
@@ -101,8 +86,11 @@ def bound_claims(
         resolved_claims,
         registry,
         search=search,
+        evidence=evidence,
         claims_dropped=len(written.claims) - len(claims),
-    ).model_copy(update=meaning.grounding())
+    ).model_copy(
+        update={**meaning.grounding(), **evidence_counts(written.claims, resolved_claims, evidence)}
+    )
     return bound, grounding
 
 
@@ -162,28 +150,6 @@ def deduplicated_claims(claims: list[CaseAnalysisClaim]) -> list[CaseAnalysisCla
     return kept
 
 
-def bound_to_claims(item, known_claim_ids: set[str]):
-    return item.model_copy(
-        update={"claim_ids": [cid for cid in item.claim_ids if cid in known_claim_ids]}
-    )
-
-
-def item_support(
-    claim_ids: Sequence[str], claims_by_id: Mapping[str, CaseAnalysisClaim]
-) -> SupportStatus:
-    named = [claims_by_id[claim_id] for claim_id in claim_ids if claim_id in claims_by_id]
-    if not named:
-        return "no_claim"
-    bound = [bool(claim.supporting_citations) for claim in named]
-    if all(bound):
-        return "bound"
-    return "mixed" if any(bound) else "unbound"
-
-
-def with_support(item, claims_by_id: Mapping[str, CaseAnalysisClaim]):
-    return item.model_copy(update={"support": item_support(item.claim_ids, claims_by_id)})
-
-
 def answerable_gap(gap, known_claim_ids: set[str]):
     return gap.model_copy(
         update={
@@ -220,78 +186,27 @@ def kept_associations(
     return kept, outside_context, without_claim
 
 
-def grounding_report(
-    written: list[CaseAnalysisClaim],
-    kept: list[CaseAnalysisClaim],
-    registry: dict[str, CaseSourceItem],
-    *,
-    search: QuoteSearch | None = None,
-    associations_outside_context: int = 0,
-    associations_without_claim: int = 0,
-    claims_dropped: int = 0,
-) -> CaseGroundingReport:
-    search = search or QuoteSearch(registry)
-
-    def all_citations(claims: list[CaseAnalysisClaim]) -> list[CaseSourceCitation]:
-        return [
-            c
-            for claim in claims
-            for c in claim.supporting_citations + claim.contradicting_citations
-        ]
-
-    claimed = all_citations(written)
-    verified = sum(
-        bool(fresh)
-        for claim in written
-        for citations in (claim.supporting_citations, claim.contradicting_citations)
-        for fresh in added_citations(citations, registry, search)
-    )
-    located = 0
-    pointed = 0
-    unfound = 0
-    for citation in claimed:
-        if citation.source_id not in registry:
-            unfound += 1
-        elif search.located(citation.source_id, citation.exact_quote) is not None:
-            located += 1
-        elif search.near(citation.source_id, citation.exact_quote) is not None:
-            pointed += 1
-        else:
-            unfound += 1
-
-    return CaseGroundingReport(
-        claims=len(kept),
-        citations_claimed=len(claimed),
-        citations_verified=verified,
-        citations_pointed=pointed,
-        citations_unfound=unfound,
-        claims_without_citation=sum(1 for c in kept if not c.supporting_citations),
-        claims_duplicated=claims_dropped,
-        citations_duplicated=located - verified,
-        citations_marked=sum(1 for c in all_citations(kept) if c.review_flags),
-        associations_outside_context=associations_outside_context,
-        associations_without_claim=associations_without_claim,
-        sources_cited=len({c.source_id for c in all_citations(kept)}),
-        sources_total=len(registry),
-    )
-
-
 def resolve_claim(
     claim: CaseAnalysisClaim,
     registry: dict[str, CaseSourceItem],
     document_context: object,
     search: QuoteSearch | None = None,
+    evidence: EvidenceIndex | None = None,
 ) -> CaseAnalysisClaim:
     search = search or QuoteSearch(registry)
-    supporting = resolved_citations(claim.supporting_citations, registry, document_context, search)
-    contradicting = resolved_citations(
-        claim.contradicting_citations, registry, document_context, search
+    evidence = evidence or EvidenceIndex(tuple(registry.values()))
+    seen: set[str] = set()
+    supporting, supporting_invalid, supporting_unverified = bind_citations(
+        claim.supporting_citations, "supporting", evidence, search, document_context, seen
+    )
+    contradicting, contradicting_invalid, contradicting_unverified = bind_citations(
+        claim.contradicting_citations, "contradicting", evidence, search, document_context, seen
     )
     unverified: list[CaseUnverifiedCitation] = []
     for item in [
         *(item.model_copy(update={"meaning_passage": None}) for item in claim.unverified_citations),
-        *unverified_citations(claim.supporting_citations, "supporting", registry, search),
-        *unverified_citations(claim.contradicting_citations, "contradicting", registry, search),
+        *supporting_unverified,
+        *contradicting_unverified,
     ]:
         if item not in unverified:
             unverified.append(item)
@@ -307,36 +222,9 @@ def resolve_claim(
             "supporting_citations": supporting,
             "contradicting_citations": contradicting,
             "unverified_citations": unverified,
+            "invalid_evidence": [*supporting_invalid, *contradicting_invalid],
         }
     )
-
-
-def unverified_citations(
-    citations: list[CaseSourceCitation],
-    role: Literal["supporting", "contradicting"],
-    registry: dict[str, CaseSourceItem],
-    search: QuoteSearch,
-) -> list[CaseUnverifiedCitation]:
-    kept: list[CaseUnverifiedCitation] = []
-    for citation in citations:
-        if not citation.exact_quote:
-            continue
-        source = registry.get(citation.source_id)
-        if source is not None and search.located(source.source_id, citation.exact_quote):
-            continue
-        kept.append(
-            CaseUnverifiedCitation(
-                source_id=citation.source_id,
-                role=role,
-                written_quote=citation.exact_quote,
-                near_passage=(
-                    search.near(source.source_id, citation.exact_quote)
-                    if source is not None
-                    else None
-                ),
-            )
-        )
-    return kept
 
 
 def confirmed_status(
@@ -352,170 +240,6 @@ def role_source_ids(
 ) -> list[str]:
     named = {*source_ids, *(citation.source_id for citation in citations)}
     return sorted(source_id for source_id in named if source_id in registry)
-
-
-def located_quote(source: str | IndexedText, quote: str) -> tuple[str, ...] | None:
-    source = indexed(source)
-    quote = without_edge_ellipses(quote)
-    if quote_occurrences(source.text, quote):
-        return (quote,) if len(quote) <= MAX_QUOTE_CHARS else None
-    spans = find_aligned_quote(source, quote)
-    if spans is None or spans[-1][1] - spans[0][0] > MAX_QUOTE_CHARS:
-        return None
-    pieces = tuple(source.text[start:end] for start, end in spans)
-    if any(len(quote_occurrences(source.text, piece)) > 1 for piece in pieces):
-        return (source.text[spans[0][0] : spans[-1][1]],)
-    return pieces
-
-
-def tolerated_in(source: str | IndexedText, quote: str) -> list[CaseQuoteDifference]:
-    source = indexed(source)
-    quote = without_edge_ellipses(quote)
-    located = None if quote_occurrences(source.text, quote) else locate_quote(source, quote)
-    if located is None or located.tier not in ("folded", "relaxed", "format"):
-        return []
-    start, end = located.spans[0]
-    if end - start > MAX_QUOTE_CHARS:
-        return []
-    return [
-        CaseQuoteDifference(written=written, source=found)
-        for written, found in tolerated_differences(quote, source.text[start:end])
-    ]
-
-
-class QuoteSearch:
-    def __init__(self, registry: Mapping[str, CaseSourceItem]) -> None:
-        self.texts = {source_id: IndexedText(source.text) for source_id, source in registry.items()}
-        self.found: dict[tuple[str, str], tuple[str, ...] | None] = {}
-        self.tolerances: dict[tuple[str, str], list[CaseQuoteDifference]] = {}
-        self.sentences: dict[str, SentenceIndex] = {}
-        self.contexts: dict[tuple[str, str], CaseQuoteContext | None] = {}
-        self.nearest: dict[tuple[str, str], CaseNearPassage | None] = {}
-
-    def located(self, source_id: str, quote: str) -> tuple[str, ...] | None:
-        key = (source_id, quote)
-        if key not in self.found:
-            self.found[key] = located_quote(self.texts[source_id], quote)
-        return self.found[key]
-
-    def tolerated(self, source_id: str, quote: str) -> list[CaseQuoteDifference]:
-        key = (source_id, quote)
-        if key not in self.tolerances:
-            self.tolerances[key] = tolerated_in(self.texts[source_id], quote)
-        return self.tolerances[key]
-
-    def context(self, source_id: str, quote: str) -> CaseQuoteContext | None:
-        key = (source_id, quote)
-        if key not in self.contexts:
-            if source_id not in self.sentences:
-                self.sentences[source_id] = SentenceIndex(self.texts[source_id].text)
-            self.contexts[key] = quote_context(self.sentences[source_id], quote)
-        return self.contexts[key]
-
-    def near(self, source_id: str, quote: str) -> CaseNearPassage | None:
-        key = (source_id, quote)
-        if key not in self.nearest:
-            passage = nearest_passage(self.texts[source_id], quote)
-            self.nearest[key] = (
-                None
-                if passage is None
-                else CaseNearPassage(
-                    source_text=passage.source_text,
-                    differences=[
-                        CaseQuoteDifference(written=written, source=source)
-                        for written, source in passage.differences
-                    ],
-                    occurrences=passage.occurrences,
-                )
-            )
-        return self.nearest[key]
-
-
-def added_citations(
-    citations: list[CaseSourceCitation],
-    registry: dict[str, CaseSourceItem],
-    search: QuoteSearch,
-    document_context: object = None,
-    *,
-    tolerance: bool = False,
-) -> list[list[CaseSourceCitation]]:
-    added: list[list[CaseSourceCitation]] = []
-    kept: dict[tuple[str, str], CaseSourceCitation] = {}
-    for citation in citations:
-        fresh: list[CaseSourceCitation] = []
-        added.append(fresh)
-        source = registry.get(citation.source_id)
-        if source is None:
-            continue
-        found = [
-            *(search.tolerated(source.source_id, citation.exact_quote) if tolerance else []),
-            *citation.tolerated_differences,
-        ]
-        for exact_quote in search.located(source.source_id, citation.exact_quote) or ():
-            canonical = CaseSourceCitation(
-                source_id=source.source_id,
-                exact_quote=exact_quote,
-                context=search.context(source.source_id, exact_quote),
-                tolerated_differences=merged_differences([], found),
-                **resolve_document_locator(
-                    source.source_id, exact_quote, source.text, document_context
-                ),
-            )
-            key = (canonical.source_id, canonical.exact_quote)
-            if key in kept:
-                kept[key].tolerated_differences = merged_differences(
-                    kept[key].tolerated_differences, found
-                )
-            else:
-                fresh.append(canonical)
-                kept[key] = canonical
-    if tolerance:
-        for citation in kept.values():
-            citation.review_flags = review_flags(search.texts[citation.source_id], citation)
-    return added
-
-
-def review_flags(source: IndexedText, citation: CaseSourceCitation) -> list[CaseReviewFlag]:
-    flags: list[CaseReviewFlag] = []
-    ignored = ignored_marks((item.written, item.source) for item in citation.tolerated_differences)
-    if ignored:
-        flags.append(mark_flag(ignored, "ignored"))
-    places = quote_occurrences(source.text, citation.exact_quote)
-    if places:
-        at_edge = edge_marks(source, places[0], places[0] + len(citation.exact_quote))
-        if at_edge:
-            flags.append(mark_flag(at_edge, "edge"))
-    return flags
-
-
-def mark_flag(marks: list[str], place: Literal["ignored", "edge"]) -> CaseReviewFlag:
-    return CaseReviewFlag(
-        kind="meaning_mark", verdict="rule_warning", detail=f"{' '.join(marks)} {place}"
-    )
-
-
-def merged_differences(
-    existing: list[CaseQuoteDifference], found: list[CaseQuoteDifference]
-) -> list[CaseQuoteDifference]:
-    merged = list(existing)
-    for difference in found:
-        if difference not in merged and len(merged) < MAX_TOLERATED_DIFFERENCES:
-            merged.append(difference)
-    return merged
-
-
-def resolved_citations(
-    citations: list[CaseSourceCitation],
-    registry: dict[str, CaseSourceItem],
-    document_context: object,
-    search: QuoteSearch | None = None,
-) -> list[CaseSourceCitation]:
-    search = search or QuoteSearch(registry)
-    return [
-        citation
-        for fresh in added_citations(citations, registry, search, document_context, tolerance=True)
-        for citation in fresh
-    ]
 
 
 def context_technique_ids(value: object) -> set[str]:

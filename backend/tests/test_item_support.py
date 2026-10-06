@@ -164,5 +164,5 @@ def test_neither_model_is_shown_the_status():
 
     for payload in (reading_payload(reading), analysis_payload(bound, None)):
         for key in ("involved_parties", "timeline", "impacts"):
-            assert payload[key], key
+            assert payload[key] == [], key
             assert all("support" not in item for item in payload[key]), key

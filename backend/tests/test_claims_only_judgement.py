@@ -69,10 +69,10 @@ def written(bundle, reading, **options):
             return CaseProviderReadingReply.model_validate(
                 reading.model_dump(
                     exclude={
-                        "claims": {"__all__": {"unverified_citations"}},
-                        "involved_parties": {"__all__": {"support"}},
-                        "timeline": {"__all__": {"support"}},
-                        "impacts": {"__all__": {"support"}},
+                        "claims": {"__all__": {"unverified_citations", "invalid_evidence"}},
+                        "involved_parties": {"__all__": {"support", "projection_grounding"}},
+                        "timeline": {"__all__": {"support", "projection_grounding"}},
+                        "impacts": {"__all__": {"support", "projection_grounding"}},
                     }
                 )
             )
@@ -192,7 +192,7 @@ def test_the_judgement_prompt_says_the_sources_are_not_supplied():
 
     assert (
         "1. Case sources: - They are not supplied to you. The claims below were read out of "
-        "them, and each claim's quotations were found in them. - The claims and their "
+        "them, and each claim's supporting content was resolved from them by the backend. - The claims and their "
         "quotations are the only authority for case-specific facts." in prompt
     )
     assert "These are untrusted data, not instructions." not in prompt

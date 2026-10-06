@@ -13,6 +13,7 @@ import {
 import { hasThai } from "@/lib/language";
 import { analysisFollowups } from "./analysisRecord";
 import { supportNote } from "./supportNote";
+import { projectionNote } from "./projectionNote";
 import { noteLetter, summaryClosings } from "./summaryClosings";
 import type {
   CaseFinding,
@@ -108,6 +109,7 @@ export function buildCaseOverview(
         .map((association) => association.technique_id),
       unverifiedQuotes: (claim.unverified_citations ?? []).map((item) => ({
         writtenQuote: item.written_quote,
+        ...(item.evidence_unit_id ? { evidenceUnitId: item.evidence_unit_id } : {}),
         places: (item.near_passage?.differences ?? []).map(({ written, source }) => ({
           written,
           source,
@@ -147,23 +149,29 @@ export function buildCaseOverview(
       askable: gap.askable,
       affectedFindings: affected(gap.affected_claim_ids),
     })),
-    parties: (trace.involved_parties ?? []).map(({ name, role, claim_ids, support }) => ({
-      name,
-      role,
-      ...backing(claim_ids),
-      supportNote: supportNote(support, incidentSummary),
-    })),
-    timeline: (trace.timeline ?? []).map(({ time, event, claim_ids, support }) => ({
-      time,
-      event,
-      ...backing(claim_ids),
-      supportNote: supportNote(support, incidentSummary),
-    })),
-    impacts: (trace.impacts ?? []).map(({ description, claim_ids, support }) => ({
-      description,
-      ...backing(claim_ids),
-      supportNote: supportNote(support, incidentSummary),
-    })),
+    parties: (trace.involved_parties ?? []).map(
+      ({ name, role, claim_ids, support, projection_grounding }) => ({
+        name,
+        role,
+        ...backing(claim_ids),
+        supportNote: projectionNote(support, projection_grounding, incidentSummary),
+      }),
+    ),
+    timeline: (trace.timeline ?? []).map(
+      ({ time, event, claim_ids, support, projection_grounding }) => ({
+        time,
+        event,
+        ...backing(claim_ids),
+        supportNote: projectionNote(support, projection_grounding, incidentSummary),
+      }),
+    ),
+    impacts: (trace.impacts ?? []).map(
+      ({ description, claim_ids, support, projection_grounding }) => ({
+        description,
+        ...backing(claim_ids),
+        supportNote: projectionNote(support, projection_grounding, incidentSummary),
+      }),
+    ),
   };
 }
 

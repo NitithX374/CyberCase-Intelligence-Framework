@@ -11,9 +11,14 @@ from app.analysis.prompts import (
     CASE_READING_JSON_PROMPT,
     CASE_READING_SYSTEM_PROMPT,
     READING_JSON_FORMAT,
-    READING_LOCATOR_SENTENCE,
 )
-from app.analysis.write import joined_trace, reading_from, reading_payload, write_trace
+from app.analysis.write import (
+    joined_trace,
+    provider_evidence_payload,
+    reading_from,
+    reading_payload,
+    write_trace,
+)
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.bind import bound_claims, bound_references, resolve_case_trace
@@ -78,10 +83,10 @@ def written(bundle: CaseSourceBundle, reading: CaseProviderReading, **options):
             return CaseProviderReadingReply.model_validate(
                 reading.model_dump(
                     exclude={
-                        "claims": {"__all__": {"unverified_citations"}},
-                        "involved_parties": {"__all__": {"support"}},
-                        "timeline": {"__all__": {"support"}},
-                        "impacts": {"__all__": {"support"}},
+                        "claims": {"__all__": {"unverified_citations", "invalid_evidence"}},
+                        "involved_parties": {"__all__": {"support", "projection_grounding"}},
+                        "timeline": {"__all__": {"support", "projection_grounding"}},
+                        "impacts": {"__all__": {"support", "projection_grounding"}},
                     }
                 )
             )
@@ -119,12 +124,12 @@ def test_the_reading_is_validated_after_decoding_and_the_judgement_keeps_its_gra
     assert judgement_call["system"] == CASE_JUDGEMENT_SYSTEM_PROMPT
 
 
-def test_the_reading_prompt_drops_only_the_locator_sentence_and_states_the_json():
-    slim = CASE_READING_SYSTEM_PROMPT.replace(READING_LOCATOR_SENTENCE, "")
-
-    assert READING_LOCATOR_SENTENCE in CASE_READING_SYSTEM_PROMPT
-    assert READING_LOCATOR_SENTENCE not in CASE_READING_JSON_PROMPT
-    assert slim + READING_JSON_FORMAT == CASE_READING_JSON_PROMPT
+def test_the_reading_prompt_selects_units_and_states_the_json():
+    assert '"document_id"' not in READING_JSON_FORMAT
+    assert '"page_numbers"' not in READING_JSON_FORMAT
+    assert CASE_READING_SYSTEM_PROMPT + READING_JSON_FORMAT == CASE_READING_JSON_PROMPT
+    assert "evidence_unit_ids" in READING_JSON_FORMAT
+    assert "Do not write exact_quote" in CASE_READING_SYSTEM_PROMPT
     assert READING_JSON_FORMAT.endswith(
         'write a double quotation mark as \\" so the JSON stays valid.'
     )
@@ -230,7 +235,7 @@ def test_the_judgement_is_told_what_a_not_confirmed_claim_is():
 
     system = " ".join(judgement_call["system"].split())
     assert 'A claim whose epistemic_status is "not_confirmed"' in system
-    assert "has no supplied quotation that was found in the case sources" in system
+    assert "has no supporting evidence location resolved in the case sources" in system
     assert "This does not make it false" in system
     assert "Do not state it as an established fact in the summary" in system
     assert "say that it is unconfirmed, or raise it as a gap" in system
@@ -310,24 +315,14 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
     _, (reading_call, judgement_call) = written(
         CaseSourceBundle(revision=1, sources=(source,)), reading
     )
-    case_sources = [
-        {
-            "source_id": "s1",
-            "source_kind": "document",
-            "text": "The report was submitted.",
-            "document": {
-                "document_id": "d1",
-                "filename": "report.pdf",
-                "verification_status": "machine_read",
-            },
-        }
-    ]
-
     assert reading_call["content"] == {
         "response_language": "english",
-        "case_sources": case_sources,
+        "source_revision": 1,
+        "case_sources": [provider_evidence_payload(source)],
         "followup_history": [],
     }
+    assert "text" not in reading_call["content"]["case_sources"][0]
+
     assert judgement_call["content"] == {
         "response_language": "english",
         "followup_history": [],
