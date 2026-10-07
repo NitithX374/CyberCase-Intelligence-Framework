@@ -38,17 +38,46 @@ export function FindingRow({
   const [isOpen, setIsOpen] = useState(false);
   const detailsId = `finding-${finding.id}-details`;
 
+  const isUnknown = finding.claimType === "unknown" || finding.epistemicStatus === "unknown";
+  const isNotConfirmed = finding.epistemicStatus === "not_confirmed";
+  const isContradicted =
+    finding.epistemicStatus === "contradicted" || finding.epistemicStatus === "not_established";
+
   return (
-    <article id={`finding-${finding.id}`} className="scroll-mt-5 py-4">
-      <p className="break-words text-[15px] leading-7 text-ink">{finding.text}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {showClaimType && finding.claimType !== "reported" && (
-          <span className="text-xs text-ink-muted">
-            {finding.claimType === "analytical_inference"
-              ? "Inference"
-              : claimTypeLabels[finding.claimType]}
-          </span>
-        )}
+    <article
+      id={`finding-${finding.id}`}
+      className={`scroll-mt-5 rounded-xl border p-4 sm:p-5 transition-all duration-150 ${
+        isNotConfirmed
+          ? "border-unresolved/30 bg-surface shadow-xs"
+          : isUnknown
+            ? "border-amber-500/25 bg-amber-500/[0.02] dark:bg-amber-500/[0.04] shadow-xs"
+            : isContradicted
+              ? "border-critical/30 bg-critical/[0.02] shadow-xs"
+              : "border-line bg-surface hover:border-line-strong hover:shadow-xs"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="break-words text-[15px] sm:text-[16px] font-medium leading-relaxed text-ink flex-1 tracking-tight">
+          {finding.text}
+        </p>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {showClaimType && finding.claimType !== "reported" && (
+            <span
+              className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                finding.claimType === "unknown"
+                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                  : "bg-surface-nested text-ink-secondary"
+              }`}
+            >
+              {finding.claimType === "analytical_inference"
+                ? "Inference"
+                : claimTypeLabels[finding.claimType]}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-line/60">
         <SourceGroup
           sources={finding.supportingSources}
           findingId={finding.id}
@@ -66,7 +95,7 @@ export function FindingRow({
             key={techniqueId}
             href={`${analysisPath(caseId, "details")}#mitre-${techniqueId}`}
             title={`ATT&CK ${techniqueId}`}
-            className="inline-flex h-6 items-center px-1 text-xs font-medium text-ink-secondary underline-offset-2 hover:text-ink hover:underline"
+            className="inline-flex h-6 items-center px-2 rounded bg-surface-nested text-xs font-mono font-medium text-ink-secondary hover:text-ink hover:bg-surface-hover transition-colors"
           >
             {techniqueId}
           </Link>
@@ -81,26 +110,36 @@ export function FindingRow({
           />
         )}
       </div>
+
       {finding.reasoningSummary && isOpen && (
-        <DisclosurePanel id={detailsId} className="mt-3">
+        <DisclosurePanel
+          id={detailsId}
+          className="mt-3 rounded-lg border border-line bg-surface-nested p-3.5 text-[13px] leading-relaxed text-ink-secondary"
+        >
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted mb-1">
+            Reasoning & Analysis
+          </div>
           {finding.reasoningSummary}
         </DisclosurePanel>
       )}
+
       {finding.epistemicStatus === "not_confirmed" && finding.unverifiedQuotes.length > 0 && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-3 space-y-2 rounded-lg border border-unresolved/20 bg-unresolved/5 p-3.5 text-sm">
           {finding.unverifiedQuotes.map((item, index) => {
             const key = `passage-${finding.id}-${index}`;
             const passage = item.passage;
             const meaning = item.meaningPassage;
             return (
               <div key={key} className="text-sm leading-6 text-ink-secondary">
-                <p>
+                <p className="font-medium text-unresolved">
                   {item.evidenceUnitId
-                    ? "The evidence reference could not be resolved."
+                    ? "The source unit reference could not be resolved."
                     : "Not found word for word in the source."}
                 </p>
                 {item.places.map((place, placeIndex) => (
-                  <p key={placeIndex}>{placeText(place)}</p>
+                  <p key={placeIndex} className="text-xs text-ink-muted mt-0.5">
+                    {placeText(place)}
+                  </p>
                 ))}
                 {passage && (
                   <button
@@ -109,13 +148,13 @@ export function FindingRow({
                     onClick={(event) =>
                       sourceActions.onSelectSource(passage, event.currentTarget, key)
                     }
-                    className="text-ink underline underline-offset-2 hover:text-ink-secondary"
+                    className="mt-1 text-xs font-medium text-ink underline underline-offset-2 hover:text-ink-secondary inline-block"
                   >
                     Show in source
                   </button>
                 )}
                 {meaning && (
-                  <p>
+                  <p className="mt-1 text-xs">
                     {meaning.quoteLabel}{" "}
                     <button
                       type="button"
@@ -123,7 +162,7 @@ export function FindingRow({
                       onClick={(event) =>
                         sourceActions.onSelectSource(meaning, event.currentTarget, `${key}-meaning`)
                       }
-                      className="text-ink underline underline-offset-2 hover:text-ink-secondary"
+                      className="font-medium text-ink underline underline-offset-2 hover:text-ink-secondary"
                     >
                       Show in source
                     </button>
@@ -156,9 +195,17 @@ function SourceGroup({
   role: "supporting" | "conflicting";
 }) {
   if (!sources.length) return null;
+  const seen = new Set<string>();
+  const uniqueSources = sources.filter((s) => {
+    const key = `${s.id}:${(s.pageNumbers ?? []).join(",")}:${s.label}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   return (
     <>
-      {sources.map((source, index) => {
+      {uniqueSources.map((source, index) => {
         const key = `${role}-${findingId}-${source.id}-${index}`;
         return (
           <SourceCitationChip
@@ -210,27 +257,47 @@ export function CaseFindingsSection({
   }
 
   return (
-    <div className="space-y-7 pt-6">
+    <div className="space-y-8 pt-6">
       {groups.map((group) => {
         const expanded = expandedGroups.includes(group.id);
         const canCollapse = group.collapsible && group.findings.length > INITIAL_FINDINGS;
         const visible =
           canCollapse && !expanded ? group.findings.slice(0, INITIAL_FINDINGS) : group.findings;
         const showClaimType = group.id !== "reported" && group.id !== "analytical_inference";
+        const isAlertGroup =
+          group.id === "not_confirmed" ||
+          group.id === "not_established" ||
+          group.id === "contradicted" ||
+          group.id === "unknown" ||
+          group.id === "unknown_claim" ||
+          group.id === "suspected";
+
         return (
           <section
             key={group.id}
             aria-labelledby={`findings-${group.id}-heading`}
             className="scroll-mt-5"
           >
-            <h3
-              id={`findings-${group.id}-heading`}
-              className={`text-[13px] font-semibold ${groupTitleClass[group.id] ?? "text-ink-secondary"}`}
-            >
-              {group.title}{" "}
-              <span className="font-medium text-ink-muted">{group.findings.length}</span>
-            </h3>
-            <div id={`findings-${group.id}`} className="mt-1 divide-y divide-line">
+            <div className="flex items-center justify-between mb-3">
+              <h3
+                id={`findings-${group.id}-heading`}
+                className={`text-[13px] font-semibold flex items-center gap-2 ${
+                  groupTitleClass[group.id] ?? "text-ink-secondary"
+                }`}
+              >
+                {group.title}{" "}
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    isAlertGroup
+                      ? "bg-unresolved/10 text-unresolved"
+                      : "bg-surface-nested text-ink-muted"
+                  }`}
+                >
+                  {group.findings.length}
+                </span>
+              </h3>
+            </div>
+            <div id={`findings-${group.id}`} className="space-y-3">
               {visible.map((finding) => (
                 <FindingRow
                   key={finding.id}
@@ -242,24 +309,26 @@ export function CaseFindingsSection({
               ))}
             </div>
             {canCollapse && (
-              <button
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={`findings-${group.id}`}
-                onClick={() =>
-                  setExpandedGroups((current) =>
-                    expanded ? current.filter((id) => id !== group.id) : [...current, group.id],
-                  )
-                }
-                className="btn-ghost -ml-3 h-8"
-              >
-                {expanded ? "Show fewer" : `Show all ${group.findings.length}`}{" "}
-                <span className="sr-only">{group.title.toLowerCase()}</span>
-                <Icon
-                  name="chevron"
-                  className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-                />
-              </button>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={`findings-${group.id}`}
+                  onClick={() =>
+                    setExpandedGroups((current) =>
+                      expanded ? current.filter((id) => id !== group.id) : [...current, group.id],
+                    )
+                  }
+                  className="btn-ghost h-8"
+                >
+                  {expanded ? "Show fewer" : `Show all ${group.findings.length}`}{" "}
+                  <span className="sr-only">{group.title.toLowerCase()}</span>
+                  <Icon
+                    name="chevron"
+                    className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                  />
+                </button>
+              </div>
             )}
           </section>
         );

@@ -110,15 +110,13 @@ ClaimIds = Annotated[list[str], BeforeValidator(unique_claim_ids)]
 ReasoningSummary = Annotated[str | None, BeforeValidator(empty_as_none), clipped(1_000)]
 
 
-class CaseClaimFields(BaseModel):
+class CaseClaimContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     claim_id: str = Field(pattern=r"^A-\d{2,}$", max_length=80)
     claim_type: CaseClaimType
     text: str = Field(min_length=1, max_length=4_000)
     epistemic_status: CaseEpistemicStatus
-    supporting_source_ids: list[str] = Field(default_factory=list, max_length=64)
-    contradicting_source_ids: list[str] = Field(default_factory=list, max_length=64)
 
     @field_validator("claim_id", mode="before")
     @classmethod
@@ -133,6 +131,11 @@ class CaseClaimFields(BaseModel):
             raise ValueError("claim text values must be non-empty")
         return normalized
 
+
+class CaseClaimFields(CaseClaimContent):
+    supporting_source_ids: list[str] = Field(default_factory=list, max_length=64)
+    contradicting_source_ids: list[str] = Field(default_factory=list, max_length=64)
+
     @field_validator("supporting_source_ids", "contradicting_source_ids", mode="before")
     @classmethod
     def unique_source_ids(cls, value: object) -> object:
@@ -146,6 +149,15 @@ class CaseClaimFields(BaseModel):
             if source_id and source_id not in normalized:
                 normalized.append(source_id)
         return normalized[:64]
+
+
+class CaseReadingClaim(CaseClaimContent):
+    claim_type: Literal["reported", "unknown"]
+    epistemic_status: Literal["reported", "suspected", "contradicted", "not_established", "unknown"]
+    supporting_citations: list[CaseEvidenceReference] = Field(min_length=1, max_length=64)
+    contradicting_citations: list[CaseEvidenceReference] = Field(
+        default_factory=list, max_length=64
+    )
 
 
 class CaseProviderClaim(CaseClaimFields):
@@ -211,6 +223,9 @@ class CaseAnalysisClaim(CaseClaimFields):
 
 
 CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
+    "reasoning_summary": True,
+    "supporting_source_ids": True,
+    "contradicting_source_ids": True,
     "invalid_evidence": True,
     "unverified_citations": True,
     "supporting_citations": {"__all__": {"tolerated_differences", "review_flags"}},
@@ -218,6 +233,9 @@ CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
 }
 
 CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT = {
+    "reasoning_summary": True,
+    "supporting_source_ids": True,
+    "contradicting_source_ids": True,
     "invalid_evidence": True,
     "unverified_citations": True,
     "supporting_citations": {"__all__": {"tolerated_differences", "context", "review_flags"}},

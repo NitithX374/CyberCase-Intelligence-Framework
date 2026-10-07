@@ -1,0 +1,51 @@
+Run directory: F:\Cybercase Framework\research\attribution_benchmark\runs\candidates_en_20261006T010418Z\attrscore_cuda_float32_b1
+{"model_loaded": {"key": "attrscore", "model": "osunlp/attrscore-flan-t5-large", "revision": "282eb2ab5d537f5badf5fa33008d96abff34607b", "adapter": "sequence_label_likelihood", "language": "English", "device": "cuda", "dtype": "torch.float32", "batch_size": 1, "max_length": 512, "labels": ["Attributable", "Contradictory", "Extrapolatory"], "supported_index": 0, "reference_separator": "\n\n", "input_policy": "original references concatenated; right evidence truncation; entire claim/prompt preserved", "chunking": "none", "parameters": 783150080, "torch_threads": 4, "tf32": false, "attention_implementation": "sdpa", "gpu": "NVIDIA GeForce GTX 1650", "versions": {"torch": "2.6.0+cu124", "transformers": "5.15.1", "tokenizers": "0.22.2", "scikit-learn": "1.9.0"}, "class_score_kind": "sum_autoregressive_label_token_log_probabilities_including_EOS", "probability_kind": "softmax_over_three_complete_label_sequence_log_likelihoods", "label_token_ids": [[486, 5135, 3869, 1], [17277, 4370, 10972, 1], [8505, 3233, 6546, 1]], "instruction": "As an Attribution Validator, your task is to verify whether a given reference can support the given claim. A claim can be either a plain sentence or a question followed by its answer. Specifically, your response should clearly indicate the relationship: Attributable, Contradictory or Extrapolatory.\nA contradictory error occurs when you can infer that the answer contradicts the fact presented in the context, while an extrapolatory error means that you cannot infer the correctness of the answer based on the information provided in the context.", "scoring_note": "Constrained whole-label likelihood, without length normalization; not greedy generation"}, "load_seconds": 5.644838200008962}
+{"preflight": {"dev": {"units": 1198, "truncated": 228, "max_claim_tokens": 90, "max_prompt_tokens": 121}, "test": {"units": 1610, "truncated": 374, "max_claim_tokens": 161, "max_prompt_tokens": 121}, "test_ood": {"units": 1686, "truncated": 252, "max_claim_tokens": 237, "max_prompt_tokens": 121}}}
+attrscore/dev: 100/1198, 32.3s, 3.09 units/s
+attrscore/dev: 200/1198, 69.3s, 2.89 units/s
+attrscore/dev: 300/1198, 103.0s, 2.91 units/s
+attrscore/dev: 400/1198, 137.2s, 2.92 units/s
+attrscore/dev: 500/1198, 170.5s, 2.93 units/s
+attrscore/dev: 600/1198, 202.9s, 2.96 units/s
+attrscore/dev: 700/1198, 231.9s, 3.02 units/s
+attrscore/dev: 800/1198, 257.8s, 3.10 units/s
+attrscore/dev: 900/1198, 282.2s, 3.19 units/s
+attrscore/dev: 1000/1198, 311.4s, 3.21 units/s
+attrscore/dev: 1100/1198, 341.5s, 3.22 units/s
+attrscore/dev: 1198/1198, 372.0s, 3.22 units/s
+{"frozen_threshold": 0.23, "dev_mean_source_macro_f1": 0.6688087951575851}
+attrscore/test: 100/1610, 28.8s, 3.47 units/s
+attrscore/test: 200/1610, 60.0s, 3.33 units/s
+attrscore/test: 300/1610, 96.2s, 3.12 units/s
+attrscore/test: 400/1610, 135.3s, 2.96 units/s
+attrscore/test: 500/1610, 170.0s, 2.94 units/s
+attrscore/test: 600/1610, 204.5s, 2.93 units/s
+attrscore/test: 700/1610, 239.8s, 2.92 units/s
+attrscore/test: 800/1610, 273.5s, 2.93 units/s
+attrscore/test: 900/1610, 307.9s, 2.92 units/s
+attrscore/test: 1000/1610, 341.5s, 2.93 units/s
+attrscore/test: 1100/1610, 367.2s, 3.00 units/s
+attrscore/test: 1200/1610, 392.4s, 3.06 units/s
+attrscore/test: 1300/1610, 418.4s, 3.11 units/s
+attrscore/test: 1400/1610, 445.8s, 3.14 units/s
+attrscore/test: 1500/1610, 475.4s, 3.16 units/s
+attrscore/test: 1600/1610, 506.2s, 3.16 units/s
+attrscore/test: 1610/1610, 509.1s, 3.16 units/s
+attrscore/test_ood: 100/1686, 26.6s, 3.76 units/s
+attrscore/test_ood: 200/1686, 56.0s, 3.57 units/s
+attrscore/test_ood: 300/1686, 88.3s, 3.40 units/s
+attrscore/test_ood: 400/1686, 120.6s, 3.32 units/s
+attrscore/test_ood: 500/1686, 152.3s, 3.28 units/s
+attrscore/test_ood: 600/1686, 185.0s, 3.24 units/s
+attrscore/test_ood: 700/1686, 219.0s, 3.20 units/s
+attrscore/test_ood: 800/1686, 249.7s, 3.20 units/s
+attrscore/test_ood: 900/1686, 281.2s, 3.20 units/s
+attrscore/test_ood: 1000/1686, 312.5s, 3.20 units/s
+attrscore/test_ood: 1100/1686, 343.4s, 3.20 units/s
+attrscore/test_ood: 1200/1686, 376.6s, 3.19 units/s
+attrscore/test_ood: 1300/1686, 407.6s, 3.19 units/s
+attrscore/test_ood: 1400/1686, 439.1s, 3.19 units/s
+attrscore/test_ood: 1500/1686, 470.3s, 3.19 units/s
+attrscore/test_ood: 1600/1686, 504.2s, 3.17 units/s
+attrscore/test_ood: 1686/1686, 533.8s, 3.16 units/s
+{"complete": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\attrscore_cuda_float32_b1", "primary": {"test": 0.6622180854208752, "test_ood": 0.7569832637752985}}

@@ -1,0 +1,1855 @@
+{
+  "finished_at": "2026-10-06T01:52:47.012488+00:00",
+  "dataset": {
+    "dataset": "osunlp/AttributionBench",
+    "configuration": "subset_balanced",
+    "revision": "62569e644f4186606f54f742178a4517431b42e1",
+    "downloaded_at": "2026-10-06T00:23:00.574149+00:00",
+    "files": {
+      "train": {
+        "filename": "train_all_subset_balanced.jsonl",
+        "sha256": "c7d6232048298b8f06afc556214c3739b5432f10f2641db2f73715fd126b1a63",
+        "bytes": 47394689,
+        "rows": 13322,
+        "unique_ids": 13322,
+        "labels": {
+          "attributable": 6661,
+          "not attributable": 6661
+        },
+        "source_subsets": {
+          "AttributedQA": 2000,
+          "LFQA": 2096,
+          "ExpertQA": 4442,
+          "Stanford-GenSearch": 4784
+        },
+        "empty_references": 0,
+        "clusters": 6106
+      },
+      "dev": {
+        "filename": "dev_all_subset_balanced.jsonl",
+        "sha256": "a744d1f84e621015f7a7e1941c3fb3f0838be767645dfb2ec784efd3133ab7d6",
+        "bytes": 3542401,
+        "rows": 1198,
+        "unique_ids": 1198,
+        "labels": {
+          "attributable": 599,
+          "not attributable": 599
+        },
+        "source_subsets": {
+          "AttributedQA": 74,
+          "LFQA": 110,
+          "ExpertQA": 470,
+          "Stanford-GenSearch": 544
+        },
+        "empty_references": 0,
+        "clusters": 531
+      },
+      "test": {
+        "filename": "test_all_subset_balanced.jsonl",
+        "sha256": "c2ff75dd4ea5cf12d86166ead66a96b42d5001a36daf02ff71303ef3317715a8",
+        "bytes": 5825881,
+        "rows": 1610,
+        "unique_ids": 1610,
+        "labels": {
+          "attributable": 805,
+          "not attributable": 805
+        },
+        "source_subsets": {
+          "AttributedQA": 230,
+          "LFQA": 168,
+          "ExpertQA": 612,
+          "Stanford-GenSearch": 600
+        },
+        "empty_references": 0,
+        "clusters": 748
+      },
+      "test_ood": {
+        "filename": "test_ood_all_subset_balanced.jsonl",
+        "sha256": "90d8f5363cec90197f80b3e896dad17e091a108a5bf282c3d515d48c9a01a934",
+        "bytes": 3039548,
+        "rows": 1686,
+        "unique_ids": 1686,
+        "labels": {
+          "attributable": 843,
+          "not attributable": 843
+        },
+        "source_subsets": {
+          "AttrScore-GenSearch": 162,
+          "HAGRID": 1088,
+          "BEGIN": 436
+        },
+        "empty_references": 75,
+        "clusters": 1229
+      }
+    },
+    "cross_split_id_overlap": {
+      "train/dev": 0,
+      "train/test": 0,
+      "train/test_ood": 0,
+      "dev/test": 0,
+      "dev/test_ood": 0,
+      "test/test_ood": 0
+    },
+    "loading": "Pinned official raw JSONL, preserved without type casting or row filtering"
+  },
+  "model": {
+    "key": "minilm",
+    "model": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+    "revision": "0a71e92a985b6e1ad1828cf67ce9c459639c1dca",
+    "adapter": "nli",
+    "language": "multilingual including Thai",
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "batch_size": 1,
+    "max_length": 512,
+    "labels": [
+      "entailment",
+      "neutral",
+      "contradiction"
+    ],
+    "supported_index": 0,
+    "reference_separator": "\n\n",
+    "input_policy": "original references concatenated; right evidence truncation; entire claim/prompt preserved",
+    "chunking": "none",
+    "parameters": 106995075,
+    "torch_threads": 4,
+    "tf32": false,
+    "attention_implementation": "sdpa",
+    "gpu": "NVIDIA GeForce GTX 1650",
+    "versions": {
+      "torch": "2.6.0+cu124",
+      "transformers": "5.15.1",
+      "tokenizers": "0.22.2",
+      "scikit-learn": "1.9.0"
+    },
+    "class_score_kind": "native_classification_logits"
+  },
+  "selection": {
+    "threshold": 0.27,
+    "dev_mean_source_macro_f1": 0.6112744641656679,
+    "selection": "EN dev only; maximize mean source-subset Macro-F1; ties closest to 0.5 then lower threshold",
+    "grid": "0.01..0.99 inclusive, step 0.01",
+    "candidates": [
+      [
+        0.01,
+        0.40090119630996146
+      ],
+      [
+        0.02,
+        0.41940515050432264
+      ],
+      [
+        0.03,
+        0.4450057143556853
+      ],
+      [
+        0.04,
+        0.4501507952252349
+      ],
+      [
+        0.05,
+        0.47065664664760337
+      ],
+      [
+        0.06,
+        0.4768456242576854
+      ],
+      [
+        0.07,
+        0.48186771694204444
+      ],
+      [
+        0.08,
+        0.48508572492452795
+      ],
+      [
+        0.09,
+        0.49732945014409535
+      ],
+      [
+        0.1,
+        0.5035281232716895
+      ],
+      [
+        0.11,
+        0.516056412895679
+      ],
+      [
+        0.12,
+        0.5223169613384295
+      ],
+      [
+        0.13,
+        0.5386281802800104
+      ],
+      [
+        0.14,
+        0.5547826222913259
+      ],
+      [
+        0.15,
+        0.5627754004767016
+      ],
+      [
+        0.16,
+        0.5696433111630821
+      ],
+      [
+        0.17,
+        0.5747935291609367
+      ],
+      [
+        0.18,
+        0.5784578832105071
+      ],
+      [
+        0.19,
+        0.5791373416172859
+      ],
+      [
+        0.2,
+        0.5811619824602103
+      ],
+      [
+        0.21,
+        0.582200818027188
+      ],
+      [
+        0.22,
+        0.5865057406236187
+      ],
+      [
+        0.23,
+        0.5932637889221797
+      ],
+      [
+        0.24,
+        0.5991922970348997
+      ],
+      [
+        0.25,
+        0.5982841387711408
+      ],
+      [
+        0.26,
+        0.5976789625291599
+      ],
+      [
+        0.27,
+        0.6112744641656679
+      ],
+      [
+        0.28,
+        0.609146161232357
+      ],
+      [
+        0.29,
+        0.6004465957316822
+      ],
+      [
+        0.3,
+        0.601951506526818
+      ],
+      [
+        0.31,
+        0.6018009268328645
+      ],
+      [
+        0.32,
+        0.6043445175699239
+      ],
+      [
+        0.33,
+        0.6021873318167763
+      ],
+      [
+        0.34,
+        0.6029500482034936
+      ],
+      [
+        0.35,
+        0.6069458888902284
+      ],
+      [
+        0.36,
+        0.6000171632352269
+      ],
+      [
+        0.37,
+        0.597663690819119
+      ],
+      [
+        0.38,
+        0.5903922298207327
+      ],
+      [
+        0.39,
+        0.5814670680718985
+      ],
+      [
+        0.4,
+        0.5804820707429608
+      ],
+      [
+        0.41,
+        0.5763709859901774
+      ],
+      [
+        0.42,
+        0.5690636759290011
+      ],
+      [
+        0.43,
+        0.5681516084315851
+      ],
+      [
+        0.44,
+        0.5624056745943342
+      ],
+      [
+        0.45,
+        0.5539196921565148
+      ],
+      [
+        0.46,
+        0.5503165787753665
+      ],
+      [
+        0.47,
+        0.5560253116241545
+      ],
+      [
+        0.48,
+        0.553373389883043
+      ],
+      [
+        0.49,
+        0.5511365820039271
+      ],
+      [
+        0.5,
+        0.5506885760595104
+      ],
+      [
+        0.51,
+        0.5469964254309772
+      ],
+      [
+        0.52,
+        0.5444094228080302
+      ],
+      [
+        0.53,
+        0.5435555252920499
+      ],
+      [
+        0.54,
+        0.5435218292007007
+      ],
+      [
+        0.55,
+        0.5472891688050241
+      ],
+      [
+        0.56,
+        0.5455545536718123
+      ],
+      [
+        0.57,
+        0.5410238423223898
+      ],
+      [
+        0.58,
+        0.5399766382975524
+      ],
+      [
+        0.59,
+        0.543387452822492
+      ],
+      [
+        0.6,
+        0.5389783408387163
+      ],
+      [
+        0.61,
+        0.5414639639727498
+      ],
+      [
+        0.62,
+        0.541120175721187
+      ],
+      [
+        0.63,
+        0.5355038812881499
+      ],
+      [
+        0.64,
+        0.536002602168471
+      ],
+      [
+        0.65,
+        0.537267895291651
+      ],
+      [
+        0.66,
+        0.5297025309763562
+      ],
+      [
+        0.67,
+        0.5249377838015429
+      ],
+      [
+        0.68,
+        0.5271680432039624
+      ],
+      [
+        0.69,
+        0.5220626669873232
+      ],
+      [
+        0.7,
+        0.5214783163084498
+      ],
+      [
+        0.71,
+        0.5218991365806133
+      ],
+      [
+        0.72,
+        0.5226417703822128
+      ],
+      [
+        0.73,
+        0.5209830148855412
+      ],
+      [
+        0.74,
+        0.5142857248335445
+      ],
+      [
+        0.75,
+        0.5115473316321736
+      ],
+      [
+        0.76,
+        0.5099561654097697
+      ],
+      [
+        0.77,
+        0.5068225625587881
+      ],
+      [
+        0.78,
+        0.5059028269866743
+      ],
+      [
+        0.79,
+        0.5071555768800811
+      ],
+      [
+        0.8,
+        0.5008435549538248
+      ],
+      [
+        0.81,
+        0.5045283161109195
+      ],
+      [
+        0.82,
+        0.508700781091207
+      ],
+      [
+        0.83,
+        0.5061811359232243
+      ],
+      [
+        0.84,
+        0.5014780684291726
+      ],
+      [
+        0.85,
+        0.49747930016896563
+      ],
+      [
+        0.86,
+        0.4966295068363801
+      ],
+      [
+        0.87,
+        0.4897519981615482
+      ],
+      [
+        0.88,
+        0.4885498339493451
+      ],
+      [
+        0.89,
+        0.48637227337411326
+      ],
+      [
+        0.9,
+        0.4801629360541417
+      ],
+      [
+        0.91,
+        0.4746254987262874
+      ],
+      [
+        0.92,
+        0.4526134118594468
+      ],
+      [
+        0.93,
+        0.4222684448946432
+      ],
+      [
+        0.94,
+        0.41963433025689434
+      ],
+      [
+        0.95,
+        0.39750176436287765
+      ],
+      [
+        0.96,
+        0.39218358829585165
+      ],
+      [
+        0.97,
+        0.3849758918405346
+      ],
+      [
+        0.98,
+        0.37916588320152633
+      ],
+      [
+        0.99,
+        0.3460859496187543
+      ]
+    ],
+    "selected_at": "2026-10-06T01:52:18.026441+00:00",
+    "dev_scores_sha256": "d92a6aa6102e438018ae3de4fe8aefd607c138520408578d02e09a535aaa7fdc"
+  },
+  "results": {
+    "dev": {
+      "source_subsets": {
+        "AttributedQA": {
+          "units": 74,
+          "accuracy": 0.6891891891891891,
+          "macro_f1": 0.6891324200913242,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6842105263157895,
+              "recall": 0.7027027027027027,
+              "f1-score": 0.6933333333333334,
+              "support": 37.0
+            },
+            "attributable": {
+              "precision": 0.6944444444444444,
+              "recall": 0.6756756756756757,
+              "f1-score": 0.684931506849315,
+              "support": 37.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              26,
+              11
+            ],
+            [
+              12,
+              25
+            ]
+          ],
+          "false_acceptance": {
+            "count": 11,
+            "gold_denominator": 37,
+            "rate": 0.2972972972972973
+          },
+          "false_warning": {
+            "count": 12,
+            "gold_denominator": 37,
+            "rate": 0.32432432432432434
+          },
+          "fp_percent_total": 14.864864864864865,
+          "fn_percent_total": 16.216216216216218,
+          "auroc_not_attributable": 0.7158509861212564,
+          "ap_not_attributable": 0.710029468619048,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 0,
+          "premise_tokens_removed": 0,
+          "premise_tokens_original": 10896
+        },
+        "ExpertQA": {
+          "units": 470,
+          "accuracy": 0.5914893617021276,
+          "macro_f1": 0.5893403232852774,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6069651741293532,
+              "recall": 0.5191489361702127,
+              "f1-score": 0.5596330275229358,
+              "support": 235.0
+            },
+            "attributable": {
+              "precision": 0.5799256505576208,
+              "recall": 0.6638297872340425,
+              "f1-score": 0.6190476190476191,
+              "support": 235.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              122,
+              113
+            ],
+            [
+              79,
+              156
+            ]
+          ],
+          "false_acceptance": {
+            "count": 113,
+            "gold_denominator": 235,
+            "rate": 0.4808510638297872
+          },
+          "false_warning": {
+            "count": 79,
+            "gold_denominator": 235,
+            "rate": 0.33617021276595743
+          },
+          "fp_percent_total": 24.04255319148936,
+          "fn_percent_total": 16.80851063829787,
+          "auroc_not_attributable": 0.5785061113626075,
+          "ap_not_attributable": 0.5433400116731959,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 11,
+          "premise_tokens_removed": 638,
+          "premise_tokens_original": 108976
+        },
+        "LFQA": {
+          "units": 110,
+          "accuracy": 0.4818181818181818,
+          "macro_f1": 0.4814324704325531,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.4807692307692308,
+              "recall": 0.45454545454545453,
+              "f1-score": 0.4672897196261682,
+              "support": 55.0
+            },
+            "attributable": {
+              "precision": 0.4827586206896552,
+              "recall": 0.509090909090909,
+              "f1-score": 0.49557522123893805,
+              "support": 55.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              25,
+              30
+            ],
+            [
+              27,
+              28
+            ]
+          ],
+          "false_acceptance": {
+            "count": 30,
+            "gold_denominator": 55,
+            "rate": 0.5454545454545454
+          },
+          "false_warning": {
+            "count": 27,
+            "gold_denominator": 55,
+            "rate": 0.4909090909090909
+          },
+          "fp_percent_total": 27.272727272727273,
+          "fn_percent_total": 24.545454545454547,
+          "auroc_not_attributable": 0.42776859504132225,
+          "ap_not_attributable": 0.49871016930846385,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 75,
+          "premise_tokens_removed": 6944,
+          "premise_tokens_original": 57392
+        },
+        "Stanford-GenSearch": {
+          "units": 544,
+          "accuracy": 0.6856617647058824,
+          "macro_f1": 0.685192642853517,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.701195219123506,
+              "recall": 0.6470588235294118,
+              "f1-score": 0.6730401529636711,
+              "support": 272.0
+            },
+            "attributable": {
+              "precision": 0.6723549488054608,
+              "recall": 0.7242647058823529,
+              "f1-score": 0.6973451327433628,
+              "support": 272.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              176,
+              96
+            ],
+            [
+              75,
+              197
+            ]
+          ],
+          "false_acceptance": {
+            "count": 96,
+            "gold_denominator": 272,
+            "rate": 0.35294117647058826
+          },
+          "false_warning": {
+            "count": 75,
+            "gold_denominator": 272,
+            "rate": 0.2757352941176471
+          },
+          "fp_percent_total": 17.647058823529413,
+          "fn_percent_total": 13.786764705882353,
+          "auroc_not_attributable": 0.784223615916955,
+          "ap_not_attributable": 0.7156467437592368,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 97,
+          "premise_tokens_removed": 195839,
+          "premise_tokens_original": 265255
+        }
+      },
+      "mean_source_macro_f1": 0.6112744641656679,
+      "pooled": {
+        "units": 1198,
+        "accuracy": 0.6302170283806344,
+        "macro_f1": 0.6293780181639786,
+        "per_class": {
+          "not attributable": {
+            "precision": 0.6439114391143912,
+            "recall": 0.5826377295492488,
+            "f1-score": 0.6117440841367222,
+            "support": 599.0
+          },
+          "attributable": {
+            "precision": 0.6189024390243902,
+            "recall": 0.67779632721202,
+            "f1-score": 0.6470119521912351,
+            "support": 599.0
+          }
+        },
+        "confusion_labels": [
+          "not attributable",
+          "attributable"
+        ],
+        "confusion_matrix": [
+          [
+            349,
+            250
+          ],
+          [
+            193,
+            406
+          ]
+        ],
+        "false_acceptance": {
+          "count": 250,
+          "gold_denominator": 599,
+          "rate": 0.41736227045075125
+        },
+        "false_warning": {
+          "count": 193,
+          "gold_denominator": 599,
+          "rate": 0.32220367278797996
+        },
+        "fp_percent_total": 20.868113522537563,
+        "fn_percent_total": 16.110183639398997,
+        "auroc_not_attributable": 0.6841759080939016,
+        "ap_not_attributable": 0.6483151488369843,
+        "valid_label_coverage": 1.0,
+        "failures": 0,
+        "truncated_units": 183,
+        "premise_tokens_removed": 203421,
+        "premise_tokens_original": 442519
+      }
+    },
+    "test": {
+      "source_subsets": {
+        "AttributedQA": {
+          "units": 230,
+          "accuracy": 0.7521739130434782,
+          "macro_f1": 0.7517938620572142,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.7338709677419355,
+              "recall": 0.7913043478260869,
+              "f1-score": 0.7615062761506276,
+              "support": 115.0
+            },
+            "attributable": {
+              "precision": 0.7735849056603774,
+              "recall": 0.7130434782608696,
+              "f1-score": 0.7420814479638009,
+              "support": 115.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              91,
+              24
+            ],
+            [
+              33,
+              82
+            ]
+          ],
+          "false_acceptance": {
+            "count": 24,
+            "gold_denominator": 115,
+            "rate": 0.20869565217391303
+          },
+          "false_warning": {
+            "count": 33,
+            "gold_denominator": 115,
+            "rate": 0.28695652173913044
+          },
+          "fp_percent_total": 10.434782608695652,
+          "fn_percent_total": 14.347826086956522,
+          "auroc_not_attributable": 0.8468809073724007,
+          "ap_not_attributable": 0.8639386223581321,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 3,
+          "premise_tokens_removed": 337,
+          "premise_tokens_original": 33819
+        },
+        "ExpertQA": {
+          "units": 612,
+          "accuracy": 0.5637254901960784,
+          "macro_f1": 0.5574285985130616,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.5836909871244635,
+              "recall": 0.4444444444444444,
+              "f1-score": 0.5046382189239332,
+              "support": 306.0
+            },
+            "attributable": {
+              "precision": 0.5514511873350924,
+              "recall": 0.6830065359477124,
+              "f1-score": 0.6102189781021898,
+              "support": 306.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              136,
+              170
+            ],
+            [
+              97,
+              209
+            ]
+          ],
+          "false_acceptance": {
+            "count": 170,
+            "gold_denominator": 306,
+            "rate": 0.5555555555555556
+          },
+          "false_warning": {
+            "count": 97,
+            "gold_denominator": 306,
+            "rate": 0.31699346405228757
+          },
+          "fp_percent_total": 27.77777777777778,
+          "fn_percent_total": 15.84967320261438,
+          "auroc_not_attributable": 0.5790614720833867,
+          "ap_not_attributable": 0.5830918015618294,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 95,
+          "premise_tokens_removed": 265344,
+          "premise_tokens_original": 425642
+        },
+        "LFQA": {
+          "units": 168,
+          "accuracy": 0.5178571428571429,
+          "macro_f1": 0.5116103793561354,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.5230769230769231,
+              "recall": 0.40476190476190477,
+              "f1-score": 0.4563758389261745,
+              "support": 84.0
+            },
+            "attributable": {
+              "precision": 0.5145631067961165,
+              "recall": 0.6309523809523809,
+              "f1-score": 0.5668449197860963,
+              "support": 84.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              34,
+              50
+            ],
+            [
+              31,
+              53
+            ]
+          ],
+          "false_acceptance": {
+            "count": 50,
+            "gold_denominator": 84,
+            "rate": 0.5952380952380952
+          },
+          "false_warning": {
+            "count": 31,
+            "gold_denominator": 84,
+            "rate": 0.36904761904761907
+          },
+          "fp_percent_total": 29.761904761904763,
+          "fn_percent_total": 18.452380952380953,
+          "auroc_not_attributable": 0.5437925170068028,
+          "ap_not_attributable": 0.5056925666775465,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 128,
+          "premise_tokens_removed": 23756,
+          "premise_tokens_original": 100562
+        },
+        "Stanford-GenSearch": {
+          "units": 600,
+          "accuracy": 0.6666666666666666,
+          "macro_f1": 0.6666666666666666,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6666666666666666,
+              "recall": 0.6666666666666666,
+              "f1-score": 0.6666666666666666,
+              "support": 300.0
+            },
+            "attributable": {
+              "precision": 0.6666666666666666,
+              "recall": 0.6666666666666666,
+              "f1-score": 0.6666666666666666,
+              "support": 300.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              200,
+              100
+            ],
+            [
+              100,
+              200
+            ]
+          ],
+          "false_acceptance": {
+            "count": 100,
+            "gold_denominator": 300,
+            "rate": 0.3333333333333333
+          },
+          "false_warning": {
+            "count": 100,
+            "gold_denominator": 300,
+            "rate": 0.3333333333333333
+          },
+          "fp_percent_total": 16.666666666666668,
+          "fn_percent_total": 16.666666666666668,
+          "auroc_not_attributable": 0.7458055555555556,
+          "ap_not_attributable": 0.6798318005377381,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 89,
+          "premise_tokens_removed": 218798,
+          "premise_tokens_original": 288656
+        }
+      },
+      "mean_source_macro_f1": 0.6218748766482695,
+      "pooled": {
+        "units": 1610,
+        "accuracy": 0.6242236024844721,
+        "macro_f1": 0.6232222437549585,
+        "per_class": {
+          "not attributable": {
+            "precision": 0.6385041551246537,
+            "recall": 0.5726708074534161,
+            "f1-score": 0.6037982973149967,
+            "support": 805.0
+          },
+          "attributable": {
+            "precision": 0.6126126126126126,
+            "recall": 0.675776397515528,
+            "f1-score": 0.6426461901949203,
+            "support": 805.0
+          }
+        },
+        "confusion_labels": [
+          "not attributable",
+          "attributable"
+        ],
+        "confusion_matrix": [
+          [
+            461,
+            344
+          ],
+          [
+            261,
+            544
+          ]
+        ],
+        "false_acceptance": {
+          "count": 344,
+          "gold_denominator": 805,
+          "rate": 0.42732919254658386
+        },
+        "false_warning": {
+          "count": 261,
+          "gold_denominator": 805,
+          "rate": 0.3242236024844721
+        },
+        "fp_percent_total": 21.366459627329192,
+        "fn_percent_total": 16.211180124223603,
+        "auroc_not_attributable": 0.691995679179044,
+        "ap_not_attributable": 0.6594935965982756,
+        "valid_label_coverage": 1.0,
+        "failures": 0,
+        "truncated_units": 315,
+        "premise_tokens_removed": 508235,
+        "premise_tokens_original": 848679
+      },
+      "bootstrap": {
+        "source_subsets": {
+          "AttributedQA": {
+            "clusters": 179,
+            "macro_f1_ci95": [
+              0.6922938445524592,
+              0.8077263230255343
+            ]
+          },
+          "ExpertQA": {
+            "clusters": 193,
+            "macro_f1_ci95": [
+              0.5119553607101343,
+              0.6020234544737965
+            ]
+          },
+          "LFQA": {
+            "clusters": 57,
+            "macro_f1_ci95": [
+              0.3775168725399167,
+              0.6207302837515409
+            ]
+          },
+          "Stanford-GenSearch": {
+            "clusters": 319,
+            "macro_f1_ci95": [
+              0.6260422316450724,
+              0.7064049429269921
+            ]
+          }
+        },
+        "mean_source_macro_f1_ci95": [
+          0.5841033076919188,
+          0.6552210110567794
+        ],
+        "seed": 20261006,
+        "replicates": 2000,
+        "unit": "source-subset-stratified question+response clusters; all claims retained within resampled cluster"
+      }
+    },
+    "test_ood": {
+      "source_subsets": {
+        "AttrScore-GenSearch": {
+          "units": 162,
+          "accuracy": 0.7283950617283951,
+          "macro_f1": 0.7200314218381776,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6697247706422018,
+              "recall": 0.9012345679012346,
+              "f1-score": 0.7684210526315789,
+              "support": 81.0
+            },
+            "attributable": {
+              "precision": 0.8490566037735849,
+              "recall": 0.5555555555555556,
+              "f1-score": 0.6716417910447762,
+              "support": 81.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              73,
+              8
+            ],
+            [
+              36,
+              45
+            ]
+          ],
+          "false_acceptance": {
+            "count": 8,
+            "gold_denominator": 81,
+            "rate": 0.09876543209876543
+          },
+          "false_warning": {
+            "count": 36,
+            "gold_denominator": 81,
+            "rate": 0.4444444444444444
+          },
+          "fp_percent_total": 4.938271604938271,
+          "fn_percent_total": 22.22222222222222,
+          "auroc_not_attributable": 0.7611644566377077,
+          "ap_not_attributable": 0.6757567262672571,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 0,
+          "premise_tokens_removed": 0,
+          "premise_tokens_original": 13487
+        },
+        "BEGIN": {
+          "units": 436,
+          "accuracy": 0.7477064220183486,
+          "macro_f1": 0.743474540008558,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6970802919708029,
+              "recall": 0.8761467889908257,
+              "f1-score": 0.7764227642276422,
+              "support": 218.0
+            },
+            "attributable": {
+              "precision": 0.8333333333333334,
+              "recall": 0.6192660550458715,
+              "f1-score": 0.7105263157894737,
+              "support": 218.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              191,
+              27
+            ],
+            [
+              83,
+              135
+            ]
+          ],
+          "false_acceptance": {
+            "count": 27,
+            "gold_denominator": 218,
+            "rate": 0.12385321100917432
+          },
+          "false_warning": {
+            "count": 83,
+            "gold_denominator": 218,
+            "rate": 0.38073394495412843
+          },
+          "fp_percent_total": 6.192660550458716,
+          "fn_percent_total": 19.03669724770642,
+          "auroc_not_attributable": 0.8341469573268243,
+          "ap_not_attributable": 0.8163607517857623,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 35,
+          "premise_tokens_removed": 3237,
+          "premise_tokens_original": 91478
+        },
+        "HAGRID": {
+          "units": 1088,
+          "accuracy": 0.7058823529411765,
+          "macro_f1": 0.7058783774650934,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.7043795620437956,
+              "recall": 0.7095588235294118,
+              "f1-score": 0.706959706959707,
+              "support": 544.0
+            },
+            "attributable": {
+              "precision": 0.7074074074074074,
+              "recall": 0.7022058823529411,
+              "f1-score": 0.7047970479704797,
+              "support": 544.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              386,
+              158
+            ],
+            [
+              162,
+              382
+            ]
+          ],
+          "false_acceptance": {
+            "count": 158,
+            "gold_denominator": 544,
+            "rate": 0.29044117647058826
+          },
+          "false_warning": {
+            "count": 162,
+            "gold_denominator": 544,
+            "rate": 0.2977941176470588
+          },
+          "fp_percent_total": 14.522058823529411,
+          "fn_percent_total": 14.889705882352942,
+          "auroc_not_attributable": 0.8002135596885813,
+          "ap_not_attributable": 0.7940023332488513,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 97,
+          "premise_tokens_removed": 23723,
+          "premise_tokens_original": 230381
+        }
+      },
+      "mean_source_macro_f1": 0.7231281131039431,
+      "pooled": {
+        "units": 1686,
+        "accuracy": 0.7188612099644128,
+        "macro_f1": 0.7180932196813097,
+        "per_class": {
+          "not attributable": {
+            "precision": 0.6981740064446831,
+            "recall": 0.7710557532621589,
+            "f1-score": 0.7328072153325818,
+            "support": 843.0
+          },
+          "attributable": {
+            "precision": 0.7443708609271523,
+            "recall": 0.6666666666666666,
+            "f1-score": 0.7033792240300375,
+            "support": 843.0
+          }
+        },
+        "confusion_labels": [
+          "not attributable",
+          "attributable"
+        ],
+        "confusion_matrix": [
+          [
+            650,
+            193
+          ],
+          [
+            281,
+            562
+          ]
+        ],
+        "false_acceptance": {
+          "count": 193,
+          "gold_denominator": 843,
+          "rate": 0.22894424673784106
+        },
+        "false_warning": {
+          "count": 281,
+          "gold_denominator": 843,
+          "rate": 0.3333333333333333
+        },
+        "fp_percent_total": 11.447212336892052,
+        "fn_percent_total": 16.666666666666668,
+        "auroc_not_attributable": 0.8085777929751536,
+        "ap_not_attributable": 0.7753587981437695,
+        "valid_label_coverage": 1.0,
+        "failures": 0,
+        "truncated_units": 132,
+        "premise_tokens_removed": 26960,
+        "premise_tokens_original": 335346
+      },
+      "bootstrap": {
+        "source_subsets": {
+          "AttrScore-GenSearch": {
+            "clusters": 111,
+            "macro_f1_ci95": [
+              0.6439473684210527,
+              0.791261885436842
+            ]
+          },
+          "BEGIN": {
+            "clusters": 436,
+            "macro_f1_ci95": [
+              0.6995522246923817,
+              0.783415906725333
+            ]
+          },
+          "HAGRID": {
+            "clusters": 682,
+            "macro_f1_ci95": [
+              0.6748652435652255,
+              0.7333464243873589
+            ]
+          }
+        },
+        "mean_source_macro_f1_ci95": [
+          0.6905693895111821,
+          0.7511770897821177
+        ],
+        "seed": 20261006,
+        "replicates": 2000,
+        "unit": "source-subset-stratified question+response clusters; all claims retained within resampled cluster"
+      }
+    }
+  },
+  "argmax_reference": {
+    "test": {
+      "source_subsets": {
+        "AttributedQA": {
+          "units": 230,
+          "accuracy": 0.7260869565217392,
+          "macro_f1": 0.7228120516499282,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6857142857142857,
+              "recall": 0.8347826086956521,
+              "f1-score": 0.7529411764705882,
+              "support": 115.0
+            },
+            "attributable": {
+              "precision": 0.7888888888888889,
+              "recall": 0.6173913043478261,
+              "f1-score": 0.6926829268292682,
+              "support": 115.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              96,
+              19
+            ],
+            [
+              44,
+              71
+            ]
+          ],
+          "false_acceptance": {
+            "count": 19,
+            "gold_denominator": 115,
+            "rate": 0.16521739130434782
+          },
+          "false_warning": {
+            "count": 44,
+            "gold_denominator": 115,
+            "rate": 0.3826086956521739
+          },
+          "fp_percent_total": 8.26086956521739,
+          "fn_percent_total": 19.130434782608695,
+          "auroc_not_attributable": 0.8468809073724007,
+          "ap_not_attributable": 0.8639386223581321,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 3,
+          "premise_tokens_removed": 337,
+          "premise_tokens_original": 33819
+        },
+        "ExpertQA": {
+          "units": 612,
+          "accuracy": 0.5571895424836601,
+          "macro_f1": 0.5514883053033807,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.5466666666666666,
+              "recall": 0.6699346405228758,
+              "f1-score": 0.6020558002936858,
+              "support": 306.0
+            },
+            "attributable": {
+              "precision": 0.5738396624472574,
+              "recall": 0.4444444444444444,
+              "f1-score": 0.5009208103130756,
+              "support": 306.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              205,
+              101
+            ],
+            [
+              170,
+              136
+            ]
+          ],
+          "false_acceptance": {
+            "count": 101,
+            "gold_denominator": 306,
+            "rate": 0.3300653594771242
+          },
+          "false_warning": {
+            "count": 170,
+            "gold_denominator": 306,
+            "rate": 0.5555555555555556
+          },
+          "fp_percent_total": 16.50326797385621,
+          "fn_percent_total": 27.77777777777778,
+          "auroc_not_attributable": 0.5790614720833867,
+          "ap_not_attributable": 0.5830918015618294,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 95,
+          "premise_tokens_removed": 265344,
+          "premise_tokens_original": 425642
+        },
+        "LFQA": {
+          "units": 168,
+          "accuracy": 0.5416666666666666,
+          "macro_f1": 0.5208711433756805,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.5294117647058824,
+              "recall": 0.75,
+              "f1-score": 0.6206896551724138,
+              "support": 84.0
+            },
+            "attributable": {
+              "precision": 0.5714285714285714,
+              "recall": 0.3333333333333333,
+              "f1-score": 0.42105263157894735,
+              "support": 84.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              63,
+              21
+            ],
+            [
+              56,
+              28
+            ]
+          ],
+          "false_acceptance": {
+            "count": 21,
+            "gold_denominator": 84,
+            "rate": 0.25
+          },
+          "false_warning": {
+            "count": 56,
+            "gold_denominator": 84,
+            "rate": 0.6666666666666666
+          },
+          "fp_percent_total": 12.5,
+          "fn_percent_total": 33.333333333333336,
+          "auroc_not_attributable": 0.5437925170068028,
+          "ap_not_attributable": 0.5056925666775465,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 128,
+          "premise_tokens_removed": 23756,
+          "premise_tokens_original": 100562
+        },
+        "Stanford-GenSearch": {
+          "units": 600,
+          "accuracy": 0.69,
+          "macro_f1": 0.6866541627826008,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6574585635359116,
+              "recall": 0.7933333333333333,
+              "f1-score": 0.7190332326283988,
+              "support": 300.0
+            },
+            "attributable": {
+              "precision": 0.7394957983193278,
+              "recall": 0.5866666666666667,
+              "f1-score": 0.654275092936803,
+              "support": 300.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              238,
+              62
+            ],
+            [
+              124,
+              176
+            ]
+          ],
+          "false_acceptance": {
+            "count": 62,
+            "gold_denominator": 300,
+            "rate": 0.20666666666666667
+          },
+          "false_warning": {
+            "count": 124,
+            "gold_denominator": 300,
+            "rate": 0.41333333333333333
+          },
+          "fp_percent_total": 10.333333333333334,
+          "fn_percent_total": 20.666666666666668,
+          "auroc_not_attributable": 0.7458055555555556,
+          "ap_not_attributable": 0.6798318005377381,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 89,
+          "premise_tokens_removed": 218798,
+          "premise_tokens_original": 288656
+        }
+      },
+      "mean_source_macro_f1": 0.6204564157778976,
+      "pooled": {
+        "units": 1610,
+        "accuracy": 0.6291925465838509,
+        "macro_f1": 0.6238993371077614,
+        "per_class": {
+          "not attributable": {
+            "precision": 0.6044176706827309,
+            "recall": 0.7478260869565218,
+            "f1-score": 0.668517490283176,
+            "support": 805.0
+          },
+          "attributable": {
+            "precision": 0.6693811074918566,
+            "recall": 0.5105590062111801,
+            "f1-score": 0.5792811839323467,
+            "support": 805.0
+          }
+        },
+        "confusion_labels": [
+          "not attributable",
+          "attributable"
+        ],
+        "confusion_matrix": [
+          [
+            602,
+            203
+          ],
+          [
+            394,
+            411
+          ]
+        ],
+        "false_acceptance": {
+          "count": 203,
+          "gold_denominator": 805,
+          "rate": 0.25217391304347825
+        },
+        "false_warning": {
+          "count": 394,
+          "gold_denominator": 805,
+          "rate": 0.4894409937888199
+        },
+        "fp_percent_total": 12.608695652173912,
+        "fn_percent_total": 24.472049689440993,
+        "auroc_not_attributable": 0.691995679179044,
+        "ap_not_attributable": 0.6594935965982756,
+        "valid_label_coverage": 1.0,
+        "failures": 0,
+        "truncated_units": 315,
+        "premise_tokens_removed": 508235,
+        "premise_tokens_original": 848679
+      }
+    },
+    "test_ood": {
+      "source_subsets": {
+        "AttrScore-GenSearch": {
+          "units": 162,
+          "accuracy": 0.7345679012345679,
+          "macro_f1": 0.7215716055797594,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6637931034482759,
+              "recall": 0.9506172839506173,
+              "f1-score": 0.7817258883248731,
+              "support": 81.0
+            },
+            "attributable": {
+              "precision": 0.9130434782608695,
+              "recall": 0.5185185185185185,
+              "f1-score": 0.6614173228346457,
+              "support": 81.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              77,
+              4
+            ],
+            [
+              39,
+              42
+            ]
+          ],
+          "false_acceptance": {
+            "count": 4,
+            "gold_denominator": 81,
+            "rate": 0.04938271604938271
+          },
+          "false_warning": {
+            "count": 39,
+            "gold_denominator": 81,
+            "rate": 0.48148148148148145
+          },
+          "fp_percent_total": 2.4691358024691357,
+          "fn_percent_total": 24.074074074074073,
+          "auroc_not_attributable": 0.7611644566377077,
+          "ap_not_attributable": 0.6757567262672571,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 0,
+          "premise_tokens_removed": 0,
+          "premise_tokens_original": 13487
+        },
+        "BEGIN": {
+          "units": 436,
+          "accuracy": 0.7431192660550459,
+          "macro_f1": 0.7322102307624814,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.673202614379085,
+              "recall": 0.944954128440367,
+              "f1-score": 0.7862595419847328,
+              "support": 218.0
+            },
+            "attributable": {
+              "precision": 0.9076923076923077,
+              "recall": 0.5412844036697247,
+              "f1-score": 0.6781609195402298,
+              "support": 218.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              206,
+              12
+            ],
+            [
+              100,
+              118
+            ]
+          ],
+          "false_acceptance": {
+            "count": 12,
+            "gold_denominator": 218,
+            "rate": 0.05504587155963303
+          },
+          "false_warning": {
+            "count": 100,
+            "gold_denominator": 218,
+            "rate": 0.45871559633027525
+          },
+          "fp_percent_total": 2.7522935779816513,
+          "fn_percent_total": 22.93577981651376,
+          "auroc_not_attributable": 0.8341469573268243,
+          "ap_not_attributable": 0.8163607517857623,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 35,
+          "premise_tokens_removed": 3237,
+          "premise_tokens_original": 91478
+        },
+        "HAGRID": {
+          "units": 1088,
+          "accuracy": 0.7012867647058824,
+          "macro_f1": 0.6964741732655207,
+          "per_class": {
+            "not attributable": {
+              "precision": 0.6607929515418502,
+              "recall": 0.8272058823529411,
+              "f1-score": 0.7346938775510204,
+              "support": 544.0
+            },
+            "attributable": {
+              "precision": 0.769041769041769,
+              "recall": 0.5753676470588235,
+              "f1-score": 0.658254468980021,
+              "support": 544.0
+            }
+          },
+          "confusion_labels": [
+            "not attributable",
+            "attributable"
+          ],
+          "confusion_matrix": [
+            [
+              450,
+              94
+            ],
+            [
+              231,
+              313
+            ]
+          ],
+          "false_acceptance": {
+            "count": 94,
+            "gold_denominator": 544,
+            "rate": 0.17279411764705882
+          },
+          "false_warning": {
+            "count": 231,
+            "gold_denominator": 544,
+            "rate": 0.42463235294117646
+          },
+          "fp_percent_total": 8.639705882352942,
+          "fn_percent_total": 21.231617647058822,
+          "auroc_not_attributable": 0.8002135596885813,
+          "ap_not_attributable": 0.7940023332488513,
+          "valid_label_coverage": 1.0,
+          "failures": 0,
+          "truncated_units": 97,
+          "premise_tokens_removed": 23723,
+          "premise_tokens_original": 230381
+        }
+      },
+      "mean_source_macro_f1": 0.7167520032025871,
+      "pooled": {
+        "units": 1686,
+        "accuracy": 0.7153024911032029,
+        "macro_f1": 0.7083671471958879,
+        "per_class": {
+          "not attributable": {
+            "precision": 0.6645512239347234,
+            "recall": 0.8695136417556346,
+            "f1-score": 0.7533401849948612,
+            "support": 843.0
+          },
+          "attributable": {
+            "precision": 0.8113207547169812,
+            "recall": 0.561091340450771,
+            "f1-score": 0.6633941093969145,
+            "support": 843.0
+          }
+        },
+        "confusion_labels": [
+          "not attributable",
+          "attributable"
+        ],
+        "confusion_matrix": [
+          [
+            733,
+            110
+          ],
+          [
+            370,
+            473
+          ]
+        ],
+        "false_acceptance": {
+          "count": 110,
+          "gold_denominator": 843,
+          "rate": 0.13048635824436536
+        },
+        "false_warning": {
+          "count": 370,
+          "gold_denominator": 843,
+          "rate": 0.4389086595492289
+        },
+        "fp_percent_total": 6.524317912218268,
+        "fn_percent_total": 21.945432977461447,
+        "auroc_not_attributable": 0.8085777929751536,
+        "ap_not_attributable": 0.7753587981437695,
+        "valid_label_coverage": 1.0,
+        "failures": 0,
+        "truncated_units": 132,
+        "premise_tokens_removed": 26960,
+        "premise_tokens_original": 335346
+      }
+    }
+  },
+  "score_sha256": {
+    "dev": "d92a6aa6102e438018ae3de4fe8aefd607c138520408578d02e09a535aaa7fdc",
+    "test": "9912fca03e6b96bcd7c089074feeaaaefd455ee4762fe5efc8670e9d1457dd8d",
+    "test_ood": "6800dda8d661e1b3e9ac41044cf8080c83d560914c422200413b390a691be2ed"
+  },
+  "resources": {
+    "cuda_peak_allocated_bytes": 445169664,
+    "cuda_peak_reserved_bytes": 473956352,
+    "cuda_total_bytes": 4294705152
+  },
+  "timing": {
+    "attempted_units": 4494,
+    "completed_units": 4494,
+    "failures": 0,
+    "runner_wall_seconds": 58.624994300014805,
+    "model_load_seconds": 3.852658700023312,
+    "batch_latency_p50_p95_seconds": [
+      0.008028250013012439,
+      0.01314239001367241
+    ],
+    "amortized_unit_p50_p95_seconds": [
+      0.008028250013012439,
+      0.01314239001367241
+    ]
+  },
+  "command": "& '.\\env_mitre\\Scripts\\python.exe' -u 'research/attribution_benchmark/run_candidate.py' --model minilm --device cuda --precision float32 --batch-size 1 --output 'F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\minilm_cuda_float32_b1_retry_cache'"
+}

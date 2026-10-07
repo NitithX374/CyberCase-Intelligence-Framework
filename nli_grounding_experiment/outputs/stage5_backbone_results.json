@@ -1,0 +1,33 @@
+{
+  "dev": {
+    "current_champion": {
+      "accuracy": 0.6864813039309684,
+      "macro_f1": 0.6396505764031304,
+      "supported_precision": 0.5230769230769231,
+      "supported_recall": 0.49707602339181284,
+      "supported_f1": 0.5097451274362819,
+      "false_support_rate": 0.2211126961483595,
+      "tn": 546,
+      "fp": 155,
+      "fn": 172,
+      "tp": 170,
+      "total": 1043
+    },
+    "candidate_backbone": {
+      "accuracy": 0.6951102588686481,
+      "macro_f1": 0.6316206850593096,
+      "supported_precision": 0.5447761194029851,
+      "supported_recall": 0.4269005847953216,
+      "supported_f1": 0.4786885245901639,
+      "false_support_rate": 0.17403708987161198,
+      "tn": 579,
+      "fp": 122,
+      "fn": 196,
+      "tp": 146,
+      "total": 1043
+    },
+    "delta_macro_f1": -0.008029891343820816,
+    "delta_supported_f1": -0.031056602846117942
+  },
+  "verdict": "REJECT_NEW_BACKBONE"
+}

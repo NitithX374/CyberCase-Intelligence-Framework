@@ -1,0 +1,1188 @@
+Evaluating Verifiability in Generative Search Engines
+
+           Nelson F. Liu Tianyi Zhang Percy Liang
+                       Computer Science Department
+                             Stanford University
+                         nfliu@cs.stanford.edu
+
+                      Abstract                                                  What are the latest discoveries from the James Webb
+                                                                                Space Telescope?
+     Generative search engines directly generate re-
+     sponses to user queries, along with in-line ci-                            The James Webb Space Telescope is designed to peer
+     tations. A prerequisite trait of a trustworthy                             into the dusty clouds of gas where stars and planetary
+     generative search engine is verifiability, i.e.,                           systems are born. Webb has captured the first direct
+     systems should cite comprehensively (high ci-                              image of an exoplanet, and the Pillars of Creation in the
+     tation recall; all statements are fully supported                          Eagle Nebula[1][2]. Additionally, the telescope will be
+     by citations) and accurately (high citation pre-                           used to study the next interstellar interloper[3].
+     cision; every cite supports its associated state-
+     ment). We conduct human evaluation to audit                                  (*Some generated statements may not be fully supported by
+     four popular generative search engines--Bing                                 citations, while others are fully supported.)
+     Chat, NeevaAI, perplexity.ai, and YouChat--
+     across a diverse set of queries from a variety of                 Cited Webpages
+     sources (e.g., historical Google user queries,
+     dynamically-collected open-ended questions                        [1]: nasa.gov ( citation does not support its associated statement)
+     on Reddit, etc.). We find that responses from                         NASA's Webb Confirms Its First Exoplanet
+     existing generative search engines are fluent                           ... Researchers confirmed an exoplanet, a planet that orbits another
+     and appear informative, but frequently con-                             star, using NASA's James Webb Space Telescope for the first time. ...
+     tain unsupported statements and inaccurate ci-
+     tations: on average, a mere 51.5% of generated                    [2]: cnn.com ( citation partially supports its associated statement)
+     sentences are fully supported by citations and                        Pillars of Creation: James Webb Space Telescope ...
+     only 74.5% of citations support their associated                        ... The Pillars of Creation, in the Eagle Nebula, is a star-forming region
+     sentence. We believe that these results are con-                        captured in a new image (right) by the James Webb Space Telescope
+     cerningly low for systems that may serve as                             that reveals more detail than a 2014 image (left) by Hubble ...
+     a primary tool for information-seeking users,
+     especially given their facade of trustworthiness.                 [3]: nasa.gov ( citation fully supports its associated statement)
+     We hope that our results further motivate the                         Studying the Next Interstellar Interloper with Webb
+     development of trustworthy generative search                            ...Scientists have had only limited ability to study these objects once
+     engines and help researchers and users better                           discovered, but all of that is about to change with NASA's James
+     understand the shortcomings of existing com-                            Webb Space Telescope...The team will use Webb's spectroscopic
+     mercial systems.                                                        capabilities in both the near-infrared and mid-infrared bands to study
+                                                                             two different aspects of the interstellar object.
+1 Introduction
+                                                                Figure 1: Generative search engines answer user queries
+Generative search engines fulfill user information              by generating a tailored response, along with in-line
+needs by directly generating responses to input                 citations. However, not all generated statements are
+queries, along with in-line citations (Figure 1).1              fully supported by citations (citation recall), and not
+Existing generative search engines are rapidly gain-            every citation supports its associated statement (citation
+ing users--in March 2023, Microsoft reported that               precision).
+"roughly one third of daily preview users are using
+                                                                [Bing] Chat daily", and that Bing Chat served 45
+    *This work would not be possible without the 34 annotators  million chats in the first month of its public preview
+who performed human evaluation; we thank them for their         (Mehdi, 2023). Generative search engines have the
+contributions.                                                  potential to transform how people find informa-
+                                                                tion online, but generated responses from existing
+    1In contrast, conventional search engines are limited to    large language model-backed generative search en-
+retrieving pre-existing webpages.                               gines may not always be accurate (Maynez et al.,
+                                                                2020). Given their potential and rapid mainstream
+                                                                adoption, it is critical to evaluate these systems to
+                                                                better understand their potential limitations (akin
+                                                                to prior work in algorithmic auditing; Metaxas
+                                                                and Pruksachatkun, 2017; Buolamwini and Gebru,
+                                                                2018; Kiritchenko and Mohammad, 2018; Robert-
+                                                                son et al., 2018; Metaxa et al., 2019; Green and
+                                                                Chen, 2019; Birhane et al., 2022, inter alia).
+
+                                           7001
+
+Findings of the Association for Computational Linguistics: EMNLP 2023, pages 7001­7025
+            December 6-10, 2023 ©2023 Association for Computational Linguistics
+   A prerequisite trait of a trustworthy generative           knowledge about the James Webb Space Telescope
+search engine is verifiability,2 that is, each gen-           (motivating a query about its recent discoveries)
+erated statement about the external world should              will likely struggle to identify unsupported state-
+be fully supported by a set of in-line citations, and         ments in the generated response. We hypothesize
+each provided citation should support its associated          that citation precision is inversely correlated with
+statement. Verifiability enables readers to easily            perceived utility because generative search engines
+check that any generated statement is supported by            often copy or closely paraphrase from their cited
+its cited source.                                             webpages (§4.4). This improves citation preci-
+                                                              sion because copied text is often supported by the
+   We conduct a human evaluation to audit four                cited webpage, but decreases perceived utility when
+popular commercial generative search engines                  copied statements are irrelevant to the query or the
+(Bing Chat, NeevaAI, perplexity.ai, and YouChat)              rest of the generated response.
+across a diverse set of information-seeking queries
+(e.g., various types of historical Google user                   We make the following contributions: first, we
+queries from NaturalQuestions (Kwiatkowski et al.,            define the citation recall and citation precision eval-
+2019), dynamically-collected open-ended ques-                 uation metrics, which aim to encourage the devel-
+tions from Reddit; see Appendix A for examples).              opment of systems that cite comprehensively and
+                                                              correctly. Second, we conduct a human evaluation
+   For each query-response pair, we use human                 of four popular generative search engines, finding
+evaluation to measure a variety of dimensions:                that responses are broadly fluent and appear useful,
+                                                              but frequently contain unsupported statements and
+  1. fluency (whether the generated text is fluent            inaccurate citations, increasing their potential to
+      and cohesive; §2.2);                                    mislead users. Third, we observe that perceived
+                                                              utility is inversely correlated with citation precision
+  2. perceived utility (whether the generated an-             in existing generative search engines, and hypothe-
+      swer is helpful and informative; §2.2);                 size that this inverse correlation occurs when some
+                                                              systems copy or closely paraphrase from cited web-
+  3. citation recall (the proportion of generated             pages. To facilitate further work on developing
+      statements about the external world that are            trustworthy generative search engines, we have re-
+      fully supported by their citations; §2.3); and          leased our human evaluation annotations.3
+
+  4. citation precision (the proportion of generated          2 Human Evaluation of Fluency,
+      citations that support their associated state-              Perceived Utility, and Verifiability
+      ments; §2.4).
+                                                              In this section, we formalize the inputs and outputs
+   A trustworthy generative search engine should              of the generative search engines we study, describe
+achieve high citation recall and precision, indicat-          the evaluation of fluency and perceived utility, and
+ing that its generated citations are comprehensive            define and describe the evaluation of citation recall
+(every generated statement is fully supported by              and precision. Citation recall and precision are de-
+citation) and correct (every citation supports its            signed to reward systems that cite comprehensively
+associated statement).                                        (i.e., high recall; all statements are fully supported
+                                                              by citations) and accurately (i.e., high precision; ev-
+   We find that existing generative search engine re-         ery cite supports its associated statement). We also
+sponses often have high fluency and perceived util-           define citation F1, a metric that combines citation
+ity (§4.1), but frequently contain unsupported state-         precision and citation recall.
+ments or inaccurate citations (low citation recall
+and precision; §4.2). On average, merely 51.5% of             2.1 Task Formulation
+generated sentences are fully supported with cita-
+tions (citation recall), and only 74.5% of citations          Given a user query q as input, a generative search
+support their associated sentence (citation preci-            engine produces a text response r, which is a string
+sion). Furthermore, citation precision is inversely           with embedded in-line citations. For the example in
+correlated with perceived utility (r = -0.96); the            Figure 1, the query q is "What are the latest discov-
+responses that seem more helpful are often those
+with inaccurate citations (§4.3). This facade of                  3github.com/nelson-liu/evaluating-verifiability-in-
+trustworthiness increases the potential for existing          generative-search-engines
+generative search engines to mislead users. For
+example, in Figure 1, a user with little background
+
+    2We adopt the term verifiability from the Wikipedia com-
+munity. Verifiability is a core content policy of Wikipedia:
+statements must be fully supported by provided sources.
+
+7002
+eries from the James Webb Space Telescope?" and                     First generated statement [1][2][3].
+the response r is the string paragraph "The James                   Second generated statement [1][2][4].
+Webb Space Telescope ... used to study the next in-                 Third generated statement [4][5].
+terstellar interloper [3].", with embedded citations                  Citation Recall: 3/3 = 100%
+"[1]", "[2]", and "[3]".                                              Citation Precision: 3/8 = 37.5%
+
+   To evaluate citation precision and recall, we                    First generated statement [1][2].
+first segment the r into a set of n statements                      Second generated statement [2].
+S = {s1, . . . , sn}. In this work, the segmenta-                   Third generated statement.
+tion S is set of sentences in the response r. For
+each statement si  S, we construct a (possibly                        Citation Recall: 1/3 = 33%
+empty) set Ci = {ci,1, . . . , ci,k} of k citations as-               Citation Precision: 2/3 = 66%
+sociated with the statement si, where ci,j is the
+jth citation associated with the ith response state-                 First generated statement [1][2][3].
+ment. For each citation ci,j, we have a URL ui,j                     Second generated statement.
+and its contents pi,j. In this work, Ci is set of cita-              Third generated statement.
+tions that occur in si (e.g., for si = "Blueberries[1],               Citation Recall: 1/3 = 33%
+cherries[2], and grapes[3] grow on trees.[4]", Ci =                   Citation Precision: 2/3 = 66%
+{[1], [2], [3], [4]}).
+                                                                             : highlighted statement is fully supported by citations
+   In practice, a sentence may contain multiple                              : highlighted statement is not fully supported by citations.
+independently-verifiable claims (e.g., conjuncts
+such as "Cups can be made of glass[1] or plas-                         : citation fully supports its associated statement.
+tic[2]."), and a single in-line citation's scope is                    : citation partially supports its associated statement.
+often ambiguous (e.g., a cite marker after two state-                  : citation does not support its associated statement.
+ments could be interpreted as either supporting
+both statements, or merely the final one); we leave      Figure 2: Examples of calculating citation recall and
+finer-grained evaluation to future work.                 precision. Citation recall measures the proportion of
+                                                         generated statements that are supported by citations. Ci-
+                                                         tation precision measures the proportion of citations that
+                                                         support their associated statements. Partially-supporting
+                                                         citations only improve citation precision when their as-
+                                                         sociated statement is supported by the union of its cita-
+                                                         tions and no other associated citation fully supports the
+                                                         statement by itself (middle example).
+
+2.2 Measuring Fluency and Perceived Utility              that are not verification-worthy. We take the
+                                                         position that every generated statement about
+To measure response fluency, annotators were             the external world is verification-worthy, even
+shown the user query, the generated response, and        those that might seem obvious, trivially true, or
+the claim "The response is fluent and cohesive".         "common sense". Generated statements may be
+We ask annotators to rate their level of agreement       incorrect, and statements that seem obvious to
+with the claim on a five-point Likert scale from         some readers may be less than obvious to others
+Strongly Disagree to Strongly Agree. We use a            (e.g., "The Pope is Catholic"). We believe that
+similar process to measure perceived utility, asking     systems should aim to provide a source for all
+annotators to rate their level of agreement with the     generated statements about the external world,
+claim "The response is a helpful and informative         enabling readers to easily verify any statement in a
+answer to the query".                                    generated response.
+
+2.3 Measuring Citation Recall                               In practice, almost all system-generated state-
+                                                         ments are verification-worthy--notable exceptions
+Citation recall is the proportion of verification-       include statements about the speaker (the system)
+worthy statements that are fully supported by their      itself (e.g., "As a language model, I do not have
+associated citations (see Figure 2 for several ex-       the ability to ban books.") and questions posed
+amples). Thus, computing citation recall requires        to the user (e.g.,"Would you like to learn more?",
+(i) identifying the verification-worthy statements       generated by systems like Bing Chat and YouChat
+in a response and (ii) evaluating whether each           that are deployed in conversational settings).
+verification-worthy statement is fully supported by
+its associated citations.                                Evaluating whether a verification-worthy state-
+                                                         ment is fully supported by its associated cita-
+Identifying verification-worthy statements.              tions. Given the verification-worthy statements
+Given the statements S in a response r, we first ask     in a response r, annotators evaluate whether each
+annotators to remove statements in the response          statement is fully supported by its associated cita-
+
+7003
+tions (see the sentences of generated response in                in the response. Then, the citation precision is
+Figure 1 for examples). To collect these binary                  (Tfs + Tps)/N .
+judgments, we use the attributable to identified
+sources (AIS) evaluation framework of Rashkin                    2.5 Citation F1
+et al. (2022). In particular, a statement si is fully
+supported by its associated citations Ci if a generic            Citation F1 is a metric that combines citation pre-
+hearer would affirm the statement "According to                  cision and citation recall by taking their harmonic
+cited webpages Ci, si", within the context of the                mean:
+query q and response r, and unsupported otherwise.
+                                                                 F1  =  2  ·  citation precision · citation recall
+2.4 Measuring Citation Precision                                              citation precision + citation recall
+
+Citation precision is the proportion of generated                To achieve a high citation F1, systems must have
+citations that support their associated statements               high citation precision and high citation recall.
+(Figure 2). In contrast to citation recall, citation
+precision rewards systems for citing accurately--a               3 Evaluation Setup
+response that cites every webpage on the Internet
+for each generated statement would have high cita-               In this section, we describe the evaluated generative
+tion recall, but low citation precision (since many              search engines (§3.1), the diverse query distribu-
+articles are irrelevant and do not support their as-             tions we use for evaluation (§3.2), and the details
+sociated statement). To measure citation precision               of our human evaluation protocol (§3.3).
+for a response r, we first ask annotators to judge
+whether each citation ci,k contributes full, partial,            3.1 Evaluated Generative Search Engines
+or no support for its associated statement si (see
+cited webpages in Figure 1 for examples):                        We evaluate four existing commercial generative
+                                                                 search engines: Bing Chat, NeevaAI, perplexity.ai,
+   · Full support: all of the information in the                 and YouChat. 5 These systems pattern after prior
+      statement is supported by the citation.                    work (e.g., Nakano et al., 2021; Menick et al., 2022;
+                                                                 Glaese et al., 2022; Thoppilan et al., 2022, inter
+   · Partial support: some of the information in                 alia) and generate responses by conditioning large
+      the statement is supported by the citation, but            language models on the input query and retrieved
+      other parts are not supported (e.g., missing or            content (e.g., search results from a conventional
+      contradictory).                                            search engine). For each input, we save the sys-
+                                                                 tem's first complete response (i.e., single-turn). Re-
+   · No support: the citation does not support any               sponses were scraped between late February and
+      part of the statement (e.g., the cited webpage             late March 2023.
+      is completely irrelevant or contradictory).
+                                                                    Note that evaluated generative search engines
+   For statements that have multiple associated ci-              have differing abstention rates (Table 1), which can
+tations, we additionally ask annotators whether the              make direct comparison difficult--one might ex-
+union of its associated cited webpages collectively              pect that systems with higher abstention rates might
+provides full support for the statement (a binary                also have higher evaluation performance, since they
+judgment). Similar to citation recall, we use the                can simply abstain from generating responses to
+AIS evaluation framework of Rashkin et al. (2022)                difficult queries (we do not find this to be the case
+to collect these binary judgments.                               in practice). NeevaAI abstains from responding on
+                                                                 nearly 23% of evaluated queries, since its response
+   To calculate citation precision, let Tfs be the
+number of citations that fully support its associ-               its associated citations [1] and [2]. Suppose that these citations
+ated statement, and let Tps be the number of cita-               each contribute partial support for the entire statement--the
+tions that partially supports its associated statement,          first citation [1] only states that "Health benefits of cycling
+where the associated statement is fully supported                include improved cardiovascular health", and second citation
+by the union of its associated citations and no as-              [2] only states that "Health benefits of cycling include lowered
+sociated citation fully supports the statement by                cholesterol levels". Taken together, the citations offer full sup-
+itself.4 Let N be the total number of citations                  port for the statement. Although these citations do not fully
+                                                                 support the statement on their own, they still meaningfully
+    4For an intuitive example of when partially-supporting       contribute to its verifiability--systems should not be penalized
+cites count toward improving precision (greater Tps), consider   for aggregating information from multiple citations.
+the statement "Health benefits of cycling include improved car-
+diovascular health[1] and lowered cholesterol levels[2]." with       5We do not evaluate OpenAI's ChatGPT or Google's Bard
+                                                                 because they do not provide in-line citations for their responses
+                                                                 (as of March 2023), and thus trivially have low verifiability.
+
+7004
+Bing Chat      Abstention Rate ()                         (KILT) uses historical queries from the KILT ELI5
+NeevaAI                       < 0.5%                      dataset (Fan et al., 2019; Petroni et al., 2021),
+perplexity.ai                  22.7%                      drawn from posts created before July 2018. A
+YouChat                       < 0.5%                      retrieval-based system could hypothetically per-
+                              < 0.5%                      form well on ELI5 (KILT) by simply identifying
+                                                          the query's source Reddit ELI5 post and copying
+Table 1: Generative search engines may be designed        its content. As a result, we also evaluate generative
+for deployment in different contexts. NeevaAI abstains    search engines on the ELI5 (Live) subdistribution,
+from responding to 22.7% of our 1450 queries, since its   which increases ecological validity by evaluating
+response is designed for display within a conventional    systems on real user queries at their time of creation
+search results page. In contrast, the conversational in-  and reducing the incidence of search results with
+terface of Bing Chat, and YouChat means that systems      the query's exact keywords. 6 We continuously
+must generate a response for nearly every input user      listen to the stream of new Reddit ELI5 posts and
+query (excepting, e.g., query character length limits).   immediately query generative search engines for
+                                                          responses whenever a new post is created. This en-
+is displayed within a conventional search engine          sures that the source ELI5 post will not have been
+results page. In contrast, Bing Chat, perplexity.ai,      indexed (and thus, cannot be retrieved) by conven-
+and YouChat respond to almost every user query.           tional search engines. minimizing the possibility
+                                                          that the generative search engine has access to the
+3.2 Evaluated Query Distributions                         source ELI5 post.
+
+To gain a broader understanding of the strengths          WikiHowKeywords. We evaluate systems on
+and weaknesses of existing commercial generative          queries derived from WikiHow articles. We found
+search engines, we evaluate on a diverse set of           that directly querying generative search engines
+queries from a variety of sources (e.g., Google           with WikiHow article titles yields responses that
+user queries, open-ended Reddit questions, how-to         largely paraphrase or copy text directly from Wik-
+queries) requiring knowledge from several different       iHow. As a result, we use text-davinci-003 to
+answer types (e.g., short textual spans, long-form        paraphrase article titles (e.g., "How to Cut An Avo-
+paragraph, lists, or tables). See Appendix A for          cado") into keyword queries (e.g., "cut avocado").
+example queries from each distribution. Each sys-
+tem is evaluated on 1450 queries--150 randomly-           NaturalQuestions. We evaluate generative
+sampled queries from each of AllSouls, davinci-           search engines on NaturalQuestions (Kwiatkowski
+debate, ELI5 (KILT / Live), and WikiHowKey-               et al., 2019) queries, stratified by their answer
+words, and 100 randomly-sampled queries for each          type. NaturalQuestions contains historical queries
+of the seven NaturalQuestions subdistributions.           issued to the Google search engine coupled with
+                                                          long and short answers extracted from Wikipedia.
+AllSouls. We evaluate systems on open-ended               We evaluate on queries from 7 NaturalQuestions
+essay questions taken from the entrance exam (gen-        subdistributions: queries with paragraph-type long
+eral paper component) for All Souls College, Ox-          answers (i) with and (ii) without short answers,
+ford University. These questions cover topics in-         queries with list-type long answers (iii) with and
+cluding the arts, science, politics, literature, current  (iv) without short answer, queries with table-type
+events, and issues in education and sport.                long answers (v) with and (vi) without short
+                                                          answers, and finally (vii) queries with no long
+davinci-debate. We evaluate systems on debate             answer (and thus no short answer either).
+topics generated from text-davinci-003. To gen-
+erate debate queries, we follow the procedure of          Summary. In total, we evaluate existing gener-
+Bakker et al. (2022); see Appendix B.1 for details.       ative search engines on 12 total query distribu-
+                                                          tions. Eight query distributions are taken from prior
+ELI5. We take queries from the "Explain Like              work (ELI5 (KILT) and the seven NaturalQues-
+I'm Five" (ELI5) subreddit, where users provide           tions query distributions), while four query distri-
+long-form layperson-accessible answers to submit-         butions were constructed for this work: AllSouls,
+ted questions. Submitted questions are required to
+admit objective explanations, and answering them              6The goal of the ELI5 (Live) subdistribution is not to iden-
+often requires long-form textual responses.               tify queries with no relevant webpages on the Internet. We
+                                                          recognize that many user queries express previously-seen in-
+   We consider two subdistributions of ELI5               formation needs, even if the precise wording differs.
+queries: ELI5 (KILT) and ELI5 (Live). ELI5
+
+                                      7005
+davinci-debate, ELI5 (Live), and WikiHowKey-           4 Results and Analysis
+words. These diverse settings provide broad cover-
+age of several potential use cases and information     This section presents the results of our human eval-
+needs, helping us gain a comprehensive understand-     uation study and discusses our main observations
+ing of systems' strengths and weaknesses.              and analyses. We see that fluency and perceived
+                                                       utility are generally high across different generative
+3.3 Human Evaluation Protocol                          search engines (§4.1), while citation recall and pre-
+                                                       cision are quite low (§4.2), though performance cer-
+Annotation process. Evaluating a single query-         tainly varies by system and query distribution--the
+response pair requires human annotators to com-        low citation recall and precision, when combined
+plete a three-step The first step measures the re-     with the facade of trustworthiness from fluency and
+sponse's fluency and perceived utility (§2.2), and     high perceived utility, increase the potential for ex-
+the second and third step provide the judgments        isting generative search engines to mislead users.
+necessary to measure citation recall (§2.3) and pre-   Our results also show that citation precision is in-
+cision (§2.4). See Appendix C for screenshots of       versely correlated with perceived utility in existing
+the annotation interface and Appendix D for the        generative search engines (§4.3). We hypothesize
+annotation guidelines.                                 that this is a byproduct of systems' propensity to
+                                                       copy or closely paraphrase text from cited web-
+Annotator recruitment and training. Annota-            pages, which may increase citation precision and
+tion was performed on Amazon Mechanical Turk.          decrease perceived utility (§4.4).
+Annotators were pre-screened with a qualification
+study, which required them to read an annota-          4.1 Fluency and Perceived Utility
+tion guidelines document and evaluate five repre-
+sentative query-response pairs. We individually        See Appendix F for full fluency and perceived util-
+reviewed submitted annotations for qualification       ity results for every generative search engine on
+study and provided annotators with personalized        each of our query distributions.
+feedback to help correct any misconceptions or con-
+fusion about the task. Annotators who performed        Generated responses are fluent and appear help-
+well on the qualification study and demonstrated       ful. Averaging across all systems and responses
+thorough understanding of the task and annotation      yields an average rating of 4.48 for fluency and
+guidelines were permitted to participate in the main   4.50 for perceived utility, indicating that annota-
+round of human evaluation. We remained in con-         tors generally found generated responses fluent and
+stant contact with annotators throughout the hu-       helpful for answering the user's input query.
+man evaluation process to answer questions about
+corner-cases and clarify intended behavior. In total,  Comparing fluency and perceived utility be-
+34 annotators participated in human evaluation.        tween generative search engines. Comparing
+                                                       fluency and perceived utility ratings between the
+Annotator compensation. Annotators were                generative search engines (aggregated over all re-
+compensated $1.00 per query-response pair for          sponses), we see that Bing Chat receives the lowest
+responses with citations, and $0.38 per query-         fluency / perceived utility ratings (4.40 / 4.34), fol-
+response pair for responses without citations          lowed by NeevaAI (4.43 / 4.48), perplexity.ai (4.51
+($15.00 per hour, by conservative time estimates).     / 4.56), and YouChat (4.59 / 4.62).
+On average, annotators took approximately four
+minutes to complete all three steps for a single       Comparing fluency across query distributions.
+query-response pair for responses that contained at    Comparing average fluency ratings across different
+least one citation.                                    query distributions, we see similar ratings between
+                                                       NaturalQuestions queries that have a long answer
+Annotation agreement. Each query-response              (i.e., an extractive answer of some length exists on
+pair is annotated once in the human evaluation         Wikipedia) and non-NaturalQuestions distributions
+process. To measure inter-annotator agreement,         (4.50 vs. 4.47, respectively). Comparing average
+we collected three annotations for 250 randomly-       fluency ratings between NaturalQuestions subdistri-
+sampled query-response pairs, finding high agree-      butions, we see that generated responses to queries
+ment rates (greater than 82.0% pairwise agreement      that have a short extractive answer are generally
+and 91.0 F1 for all judgments; see Appendix E).        more fluent (4.55) than responses to queries with
+                                                       only a long answer (4.46) or those without a long
+
+7006
+answer (4.46), perhaps because responses to ques-      pear informative and useful.
+tions with short answers are generally shorter and
+often only require factoid knowledge.                  Comparing citation recall and precision be-
+                                                       tween generative search engines. Citation recall
+   A notable outlier distribution is NaturalQues-      and precision varies dramatically between different
+tions queries with table-type long answers and no      generative search engines. perplexity.ai achieves
+short answers, where system responses are dra-         the highest average recall (68.7), compared to Nee-
+matically less fluent (average of 4.36 across sys-     vaAI (67.6), Bing Chat (58.7), and YouChat (11.1).
+tems vs. average of 4.48 across all query distribu-    On the other hand, Bing Chat achieves the highest
+tions). These challenging queries often require ag-    average precision (89.5), followed by perplexity.ai
+gregating information across table cells or retrieved  (72.7), NeevaAI (72.0), and YouChat (63.6). A gap
+sources, since the lack of a short answer implies      of nearly 58% separates the system with the high-
+that no single Wikipedia table cell directly answers   est and lowest recall (perplexity.ai vs. YouChat),
+the question (e.g., the query "how many grammys        and the gap between the systems with the highest
+does beyonce have without destiny's child"). When      and lowest precision is almost 25% (Bing Chat vs.
+the retrieved webpages do not contain a clear ex-      YouChat).
+tractive answer to the query, but contain facts that
+seem relevant (e.g., information about Destiny's       Comparing citation recall across query distri-
+Child's first Grammy, or Beyonce's total number        butions. Modifying the evaluation query distri-
+of career Grammy awards), the generated response       bution appears to affect citation recall more than
+is often a stilted agglomeration of statements from    citation precision. For example, the gap in cita-
+various sources, reducing overall fluency.             tion recall between NaturalQuestions queries with
+                                                       a long answer and non-NaturalQuestions queries
+Comparing perceived utility across query distri-       is nearly 11% (58.5 vs. 47.8, respectively). Simi-
+butions. In contrast to fluency, perceived utility     larly, the difference in citation recall between Nat-
+can differ substantially between different query dis-  uralQuestions queries with and without short an-
+tributions. Perceived utility is much higher for       swers is nearly 10% (63.4 for queries with a short
+NaturalQuestions queries containing a long answer      answer, 53.6 for queries with only a long answer,
+(4.59), as opposed to non-NaturalQuestions queries     and 53.4 for queries with no long or short answer).
+(4.43). Comparing between different NaturalQues-
+tions subdistributions, we see that perceived util-       We hypothesize that citation recall is driven by
+ity is highest for queries that have a short answer    the relevance of retrieved webpages. In the ab-
+(4.62), followed by queries that have only a long an-  sence of retrieved evidence that directly answers
+swer (4.55), and finally by queries that have no long  the input user query, systems generate statements
+(or short) answer (4.52). Overall, perceived utility   that are unsubstantiated by citations, resulting in
+decreases as queries require longer-form and less-     lower recall. For example, generative search en-
+extractive answers (e.g., factoid NaturalQuestions     gines struggle with citation recall when evaluated
+queries with short answers versus ELI5 queries).       on the open-ended AllSouls essay questions (aver-
+                                                       age recall of 44.3), because these queries generally
+4.2 Citation Recall and Precision                      have no extractive answer on the Internet.
+
+See Appendix G for full citation recall and preci-     Comparing citation precision across query
+sion results for every generative search engine on     distributions. Precision on NaturalQuestions
+each of our query distributions.                       queries with long answers is higher than non-
+                                                       NaturalQuestions distributions (76.1 vs. 72.3, re-
+Existing generative search engines often do not        spectively). Precision is highest on NaturalQues-
+cite comprehensively or correctly. When aver-          tions queries with paragraph answer types (preci-
+aging across all systems, a mere 51.5% of gener-       sion of 81.5 when a short answer exists and 78.7
+ated statements are fully supported with citations     when only a long answer exists). On the other hand,
+(recall), and only 74.5% of citations fully support    citation precision is lowest when systems are evalu-
+their associated statements (precision). We believe    ated on AllSouls open-ended essay questions (67.8)
+these results are unacceptably low for systems that    and davinci-debate queries (70.3). Comparing be-
+are quickly becoming a popular tool for answer-        tween NaturalQuestions subdistributions, average
+ing user queries and already have millions of users,   system precision is higher on queries with short
+especially given that generated responses often ap-    answers (77.4) than those with only long answers
+
+7007
+Perceived Utility4.6 YouChat  perplexity.ai                               Is cooperation or competition the driving force guiding
+                 4.5             NeevaAI                                  the evolution of society?
+
+                 4.4                     Bing Chat                       Bing Chat
+                      20
+                              Ci4ta0tion F1 60                                (higher citation precision, lower perceived utility)
+
+Figure 3: Averaged perceived utility plotted against av-          There are different opinions on this topic. Some researchers
+eraged citation F1 for each evaluated generative search           believe that cooperation, not struggle for survival, drives
+engine. Different systems make different trade-offs be-           evolution [1]. Others think that there are two driving forces
+tween perceived utility and citation F1. Note that these          of evolution: mutation (change) and competition [2]. What
+systems are difficult to directly compare since they may          do you think?
+have different abstention rates (Table 1).
+                                                                     (*Some generated statements may not be fully supported by
+(74.8) or no long answer (73.5).                                     citations, while others are fully supported.)
+
+Summary. To summarize our human evaluation                         Cited Webpages
+results, Figure 3 plots average perceived utility
+against average citation F1. Existing systems make                  [1]: phys.org
+different trade-offs between citation recall, citation                      ( citation fully supports its associated statement)
+precision, and perceived utility. See Appendix H                       Cooperation, not struggle for survival, drives evolution
+for full citation F1 results for every generative                        Researchers believe that competition tends to differentiate
+search engine on each of our query distributions.                        ecological requirements ... A new conceptual evolutionary
+                                                                         model ... reviewed the debated mechanism of speciation,
+                                                                         suggesting that competition and a struggle for existence are not
+                                                                         the main drivers of evolution.
+
+                                                                    [2]: cooperation.cool
+                                                                            ( citation fully supports its associated statement)
+                                                                       Game Theory - Cooperation is cool
+                                                                         Lots of biologists consider evolution as a continuous struggle
+                                                                         for survival. They think that there are two driving forces of the
+                                                                         evolution: mutation (change), and competition.
+
+                                                          Figure 4: Citation precision is inversely correlated with
+                                                          perceived utility in existing generative search engines.
+                                                          Bing Chat often achieves high citation precision because
+                                                          it closely paraphrases from cited webpages (bolded).
+                                                          However, since these citations are largely irrelevant to
+                                                          the user's input query (biological evolution vs. societal
+                                                          evolution), copying this contents results in lower per-
+                                                          ceived utility.
+
+4.3 Citation Precision is Inversely Related to               This tradeoff is especially apparent on the All-
+      Perceived Utility                                   Souls query distribution, which contains open-
+                                                          ended essay questions. AllSouls queries often can-
+We find that citation precision is inversely corre-       not be answered via extraction from a single web-
+lated with perceived utility in existing generative       page on the Internet. For example, given the query
+search engines (r = -0.96). For example, Bing             "Is cooperation or competition the driving force
+Chat achieves the highest precision, but has the low-     guiding the evolution of society?", conventional
+est perceived utility. In contrast, YouChat has the       search engine results focus on biological evolution,
+lowest citation precision, but its responses attain       rather than societal evolution. Bing Chat simply
+the highest perceived utility ratings.                    copies irrelevant statements directly from the cited
+                                                          sources, resulting in high citation precision but low
+   This inverse relationship between citation pre-        perceived utility (Figure 4).
+cision and perceived utility is symptomatic of a
+trade-off between faithfulness and abstractiveness        4.4 Generative Search Engines Closely
+(Ladhak et al., 2022). In particular, we find that               Paraphrase From Cited Webpages
+system-generated statements often closely para-
+phrase or directly copy from their associated ci-         To better understand how generative search engines
+tations (see §4.4 for further analysis). This results     use citations to support their responses, we analyze
+in high citation precision (since extractively copied     the similarity between generated statements and
+text is almost always fully supported by the source       their supporting cited webpages. For citations that
+citation), but lower perceived utility (since the ex-     provide full or partial support for their associated
+tractive snippets may not actually answer the user's      statement, annotators were asked to provide evi-
+input query). In contrast, systems that frequently        dence by copy-pasting the minimal set of sentences
+deviate from cited content (resulting in low citation     from the cited webpage that support their judg-
+precision) may have greater freedom to generate           ment (if any such sentences exist). We compute
+fluent responses that appear relevant and helpful         the BLEU (Papineni et al., 2002) and BERTScore
+to the user's input query.
+
+                                                    7008
+Bing Chat      BLEU    BERTScore (F1)                      (2022) propose the attributed to identified sources
+NeevaAI          44.1                 78.8                 (AIS) evaluation framework to assess whether a par-
+perplexity.ai    30.0                 72.9                 ticular statement is supported by provided evidence
+YouChat          22.3                 69.2                 and validate their guidelines on conversational
+Average          28.6                 72.0                 question answering, summarization, and table-to-
+                 31.3                 73.2                 text systems. Bohnet et al. (2023) introduce the
+                                                           task of attributed question answering, where sys-
+Table 2: Existing generative search engines closely para-  tems are given an input question and must output
+phrase from cited articles; generated statements have      an answer string with a pointer to evidence text sup-
+high similarity with their cited webpages.                 porting the answer, and propose a reproducible eval-
+                                                           uation setup with NaturalQuestions queries (only
+(Zhang et al., 2020) between each generated state-         paragraph answer type containing long and short
+ment and the annotator-provided evidence from the          answers) with Wikipedia as the evidence corpus.
+associated citation. For statements with multiple as-
+sociated citations, we take the maximum similarity            In contemporaneous work, Peskoff and Stewart
+with any associated citation's evidence.                   (2023) have domain experts evaluate ChatGPT and
+                                                           YouChat responses to 100 expert-written questions.
+   Table 2 presents similarity metrics between gen-        They find that generated responses are coherent and
+erated statements and extracted evidence from sup-         concise, but frequently undersourced and inaccu-
+porting webpages--when statements are fully or             rate; our results also show that YouChat responses
+partially supported by their citations, they often         frequently lack citations for generated statements
+copy or closely paraphrase from their cited arti-          (i.e., low citation recall).
+cles. Furthermore, systems with higher similarity
+between their generated statements and cited web-          6 Conclusion
+pages also have higher average citation precision
+(r = 0.80 between each of BLEU and BERTScore               In this work, we used human evaluation to audit the
+with average citation precision), indicating that          verifiability of four popular commercial generative
+their improved precision may largely be a byprod-          search engines--Bing Chat, NeevaAI, perplexity.ai,
+uct of their increased tendency to copy or para-           and YouChat. We find that responses from existing
+phrase from cited webpages.                                generative search engines are generally fluent and
+                                                           often appear informative, but frequently contain
+5 Related Work                                             unsupported statements and inaccurate citations
+                                                           (low citation recall and precision)--a mere 51.5%
+Existing work has proposed a variety of techniques         of generated statements are fully supported by cita-
+for building language models that provide refer-           tions (recall), and only 74.5% of citations support
+ences to support generated text. Nakano et al.             their associated statements (precision). We believe
+(2021) use reinforcement learning from human               that existing systems' citation recall and precision
+preferences to train language models to answer             are unacceptably low, given that they are quickly
+questions and provide supporting evidence. Simi-           becoming a popular tool for answering user queries
+larly, Menick et al. (2022) also use reinforcement         and already have millions of users. Moreover, we
+learning from human preferences to train language          find that citation precision is inversely correlated
+models to answer user questions, but their system          with perceived utility in existing generative search
+generates responses by conditioning on evidence            engines--the responses that seem more helpful are
+retrieved from a Google search for the given user          often those with more unsupported statements or
+query. Finally, the LaMDA system of Thoppilan              inaccurate citations. Analysis suggests that this
+et al. (2022) is trained to provide URLs that sup-         inverse correlation occurs in existing systems be-
+port its generated statements. In contrast to the          cause of their propensity to copy or closely para-
+aforementioned line of work on training systems            phrase from cited webpages, which inflates citation
+to generate citations, Gao et al. (2022) propose a         precision at the cost of lower perceived utility. We
+method for post-editing generated output to reflect        hope our results and insights further motivate the
+and cite retrieved evidence.                               development of trustworthy generative search en-
+                                                           gines and help researchers and users better under-
+   Existing work has also proposed evaluation pro-         stand their current shortcomings.
+tocols and benchmarks for improving verifiabil-
+ity in language generation systems. Rashkin et al.
+
+                                            7009
+Acknowledgements                                         Bernd Bohnet, Vinh Q. Tran, Pat Verga, Roee Aha-
+                                                            roni, Daniel Andor, Livio Baldini Soares, Massimil-
+We are grateful to the 34 annotators who partici-           iano Ciaramita, Jacob Eisenstein, Kuzman Ganchev,
+pated in our human evaluation study--this work              Jonathan Herzig, Kai Hui, Tom Kwiatkowski, Ji Ma,
+would not have been possible without them. We               Jianmo Ni, Lierni Sestorain Saralegui, Tal Schus-
+also thank Rishi Bommasani, Ge Gao, Natasha                 ter, William W. Cohen, Michael Collins, Dipanjan
+Klein-Atlas, Vivian Lai, Kevin Lin, John Thickstun,         Das, Donald Metzler, Slav Petrov, and Kellie Webster.
+Eric Wallace, and Gerben Wierda for feedback and            2023. Attributed question answering: Evaluation
+discussions that helped improve this work. We               and modeling for attributed large language models.
+thank Amazon Web Services for providing Ama-                ArXiv:2212.08037.
+zon Mechanical Turk credits that helped support
+this work. This work was supported in part by the        Joy Buolamwini and Timnit Gebru. 2018. Gender
+AI2050 program at Schmidt Futures (Grant G-22-              shades: Intersectional accuracy disparities in com-
+63429).                                                     mercial gender classification. In Proc. of FAccT.
+
+Limitations                                              Sihao Chen, Daniel Khashabi, Wenpeng Yin, Chris
+                                                            Callison-Burch, and Dan Roth. 2019. Seeing things
+                                                            from a different angle: Discovering diverse perspec-
+                                                            tives about claims. In Proc. of NAACL.
+
+The primary goal of this work was to assess verifia-     Angela Fan, Yacine Jernite, Ethan Perez, David Grang-
+bility in generative search engine responses. How-          ier, Jason Weston, and Michael Auli. 2019. ELI5:
+ever, note that verifiability is not factuality--rather     Long form question answering. In Proc. of ACL.
+than arbitrating if a generated statement is true (dif-
+ficult for all but the simplest claims; Rashkin et al.,  Luyu Gao, Zhuyun Dai, Panupong Pasupat, Anthony
+2022), verifiability enables users to easily check          Chen, Arun Tejasvi Chaganty, Yicheng Fan, Vin-
+any generated statement's source, allowing them to          cent Y. Zhao, Ni Lao, Hongrae Lee, Da-Cheng Juan,
+draw their own conclusions about whether to trust           and Kelvin Guu. 2022. RARR: Researching and
+the generated statement. Studying the factuality of         revising what language models say, using language
+generative search engines (that may or may not pro-         models. ArXiv:2210.08726.
+vide citations) is an important direction for future
+work--users may not necessarily bother to check          Amelia Glaese, Nat McAleese, Maja Trebacz, John
+the sources, especially given that responses often          Aslanides, Vlad Firoiu, Timo Ewalds, Maribeth Rauh,
+seem helpful and sound confident, and we'd thus             Laura Weidinger, Martin Chadwick, Phoebe Thacker,
+like responses to be as factual as possible.                Lucy Campbell-Gillingham, Jonathan Uesato, Po-
+                                                            Sen Huang, Ramona Comanescu, Fan Yang, Abigail
+   In our evaluation of verifiability, we consider          See, Sumanth Dathathri, Rory Greig, Charlie Chen,
+sentence-level claims. However, sentences often             Doug Fritz, Jaume Sanchez Elias, Richard Green,
+have multiple claims (e.g., "Cats[1] and dogs[2]            Sona Mokrá, Nicholas Fernando, Boxi Wu, Rachel
+are common pets."). However, there is currently             Foley, Susannah Young, Iason Gabriel, William Isaac,
+no clear linguistic definition on what constitutes a        John Mellor, Demis Hassabis, Koray Kavukcuoglu,
+claim. As a result, we use sentences for simplicity         Lisa Anne Hendricks, and Geoffrey Irving. 2022.
+and reproducibility. Proposing a concrete definition        Improving alignment of dialogue agents via targeted
+of a "claim" and performing a finer-grained evalua-         human judgements. ArXiv:2209.14375.
+tion is an interesting direction for future work.
+                                                         Ben Green and Yiling Chen. 2019. Disparate interac-
+References                                                  tions: An algorithm-in-the-loop analysis of fairness
+                                                            in risk assessments. In Proc. of FAccT.
+Michiel Bakker, Martin Chadwick, Hannah Sheahan,
+   Michael Tessler, Lucy Campbell-Gillingham, Jan        Svetlana Kiritchenko and Saif Mohammad. 2018. Ex-
+   Balaguer, Nat McAleese, Amelia Glaese, John              amining gender and race bias in two hundred senti-
+   Aslanides, Matt Botvinick, and Christopher Sum-          ment analysis systems. In Proc. of *SEM.
+   merfield. 2022. Fine-tuning language models to find
+   agreement among humans with diverse preferences.      Tom Kwiatkowski, Jennimaria Palomaki, Olivia Red-
+   In Proc. of NeurIPS.                                     field, Michael Collins, Ankur Parikh, Chris Alberti,
+                                                            Danielle Epstein, Illia Polosukhin, Jacob Devlin, Ken-
+Abeba Birhane, Vinay Uday Prabhu, and John Whaley.          ton Lee, Kristina Toutanova, Llion Jones, Matthew
+   2022. Auditing saliency cropping algorithms. In          Kelcey, Ming-Wei Chang, Andrew M. Dai, Jakob
+   Proc. of WACV.                                           Uszkoreit, Quoc Le, and Slav Petrov. 2019. Natu-
+                                                            ral questions: A benchmark for question answering
+                                                            research. Transactions of the Association for Compu-
+                                                            tational Linguistics, 7:452­466.
+
+                                                         Faisal Ladhak, Esin Durmus, He He, Claire Cardie, and
+                                                            Kathleen McKeown. 2022. Faithful or extractive? on
+
+7010
+   mitigating the faithfulness-abstractiveness trade-off       Amin Ghafouri, Marcelo Menegali, Yanping Huang,
+   in abstractive summarization. In Proc. of ACL.              Maxim Krikun, Dmitry Lepikhin, James Qin, Dehao
+Joshua Maynez, Shashi Narayan, Bernd Bohnet, and               Chen, Yuanzhong Xu, Zhifeng Chen, Adam Roberts,
+   Ryan McDonald. 2020. On faithfulness and factual-           Maarten Bosma, Vincent Zhao, Yanqi Zhou, Chung-
+   ity in abstractive summarization. In Proc. of ACL.          Ching Chang, Igor Krivokon, Will Rusch, Marc
+Yusuf Mehdi. 2023. The new Bing and Edge ­ progress            Pickett, Pranesh Srinivasan, Laichee Man, Kathleen
+   from our first month | Bing search blog. Accessed on        Meier-Hellstern, Meredith Ringel Morris, Tulsee
+   March 28, 2023.                                             Doshi, Renelito Delos Santos, Toju Duke, Johnny So-
+Jacob Menick, Maja Trebacz, Vladimir Mikulik,                  raker, Ben Zevenbergen, Vinodkumar Prabhakaran,
+   John Aslanides, Francis Song, Martin Chadwick,              Mark Diaz, Ben Hutchinson, Kristen Olson, Ale-
+   Mia Glaese, Susannah Young, Lucy Campbell-                  jandra Molina, Erin Hoffman-John, Josh Lee, Lora
+   Gillingham, Geoffrey Irving, and Nat McAleese.              Aroyo, Ravi Rajakumar, Alena Butryna, Matthew
+   2022. Teaching language models to support answers           Lamm, Viktoriya Kuzmina, Joe Fenton, Aaron Co-
+   with verified quotes. ArXiv:2203.11147.                     hen, Rachel Bernstein, Ray Kurzweil, Blaise Aguera-
+Danaë Metaxa, Joon Sung Park, James A. Landay, and             Arcas, Claire Cui, Marian Croak, Ed Chi, and Quoc
+   Jeff Hancock. 2019. Search media and elections: A           Le. 2022. LaMDA: Language models for dialog ap-
+   longitudinal investigation of political search results.     plications. ArXiv:2201.08239.
+   In Proc. of CSCW.                                        Tianyi Zhang, Varsha Kishore, Felix Wu, Kilian Q.
+Panagiotis Takis Metaxas and Yada Pruksachatkun.               Weinberger, and Yoav Artzi. 2020. BERTScore:
+   2017. Manipulation of search engine results during          Evaluating text generation with BERT. In Proc. of
+   the 2016 us congressional elections.                        ICLR.
+
+Reiichiro Nakano, Jacob Hilton, Suchir Balaji, Jeff
+   Wu, Long Ouyang, Christina Kim, Christopher
+   Hesse, Shantanu Jain, Vineet Kosaraju, William
+   Saunders, Xu Jiang, Karl Cobbe, Tyna Eloundou,
+   Gretchen Krueger, Kevin Button, Matthew Knight,
+   Benjamin Chess, and John Schulman. 2021. We-
+   bGPT: Browser-assisted question-answering with hu-
+   man feedback. ArXiv:2112.09332.
+
+Kishore Papineni, Salim Roukos, Todd Ward, and Wei-
+   Jing Zhu. 2002. BLEU: a method for automatic eval-
+   uation of machine translation. In Proc. of ACL.
+
+Denis Peskoff and Brandon Stewart. 2023. Credible
+   without credit: Domain experts assess generative
+   language models. In Proc. of ACL.
+
+Fabio Petroni, Aleksandra Piktus, Angela Fan, Patrick
+   Lewis, Majid Yazdani, Nicola De Cao, James Thorne,
+   Yacine Jernite, Vladimir Karpukhin, Jean Maillard,
+   Vassilis Plachouras, Tim Rocktäschel, and Sebastian
+   Riedel. 2021. KILT: a benchmark for knowledge
+   intensive language tasks. In Proc. of NAACL.
+
+Hannah Rashkin, Vitaly Nikolaev, Matthew Lamm,
+   Lora Aroyo, Michael Collins, Dipanjan Das, Slav
+   Petrov, Gaurav Singh Tomar, Iulia Turc, and David
+   Reitter. 2022. Measuring attribution in natural lan-
+   guage generation models. ArXiv:2112.12870.
+
+Ronald E. Robertson, David Lazer, and Christo Wilson.
+   2018. Auditing the personalization and composition
+   of politically-related search engine results pages. In
+   Proc. of WWW.
+
+Romal Thoppilan, Daniel De Freitas, Jamie Hall,
+   Noam Shazeer, Apoorv Kulshreshtha, Heng-Tze
+   Cheng, Alicia Jin, Taylor Bos, Leslie Baker, Yu Du,
+   YaGuang Li, Hongrae Lee, Huaixiu Steven Zheng,
+
+7011
+A Example queries from each evaluated query distribution
+
+Source                                     Example Queries
+AllSouls                                   What are the functions of fashion?
+                                           Should wealth be inheritable?
+davinci-debate                             Should private companies be allowed to manage public utilities?
+                                           Should controversial opinions be censored on social media?
+ELI5 (KILT)                                Why is a circle 360 degrees and not 100 degrees?
+                                           Why can animals drink dirty water safely but humans can't?
+ELI5 (Live)                                Why jumping into water from great height feels like landing in concrete?
+                                           where does the deleted data go
+WikiHowKeywords                            age paper using tea
+NaturalQuestions                           ways to stop stressing over exam results
+(paragraph long answer, has short answer)  who wrote the song god your mama and me
+NaturalQuestions                           what is the queen of spain's name
+(paragraph long answer, no short answer)   where did knock on wood superstition come from
+NaturalQuestions                           what is the use of tap and die
+(list long answer, has short answer)       what is the most nominated film for the oscars
+NaturalQuestions                           who played guitar on i want you she's so heavy
+(list long answer, no short answer)        alicia keys if i ain't got you awards
+NaturalQuestions                           is all of florida in the same time zone
+(table long answer, has short answer)      how many episodes are there in quantum leap
+NaturalQuestions                           what kind of music is red hot chili peppers
+(table long answer, no short answer)       where does copa airlines fly in the united states
+NaturalQuestions                           michael jordan career high against every nba team
+(no long or short answer)                  what does the x card mean in uno
+                                           what changes were made when trinidad and tobago gained independence
+
+Table 3: Example queries from each of the evaluated query distributions. Queries come from diverse sources
+and require knowledge from a variety of answer types (e.g., short text span, long-form paragraph, list, or table).
+Each system is evaluated on 1450 queries--150 randomly-sampled queries from each of AllSouls, davinci-debate,
+ELI5 (KILT), ELI5 (Live), and WikiHowKeywords, and 100 randomly-sampled queries for each of the seven
+NaturalQuestions subdistributions.
+
+B Query Distribution Details
+
+B.1 davinci-debate
+
+We seed the data generation process with 100 debate questions, which are manually transformed propo-
+sitions propositions taken from the Perspectrum dataset of Chen et al. (2019) (e.g., the proposition
+"Vaccination must be made compulsory." could be rewritten as the question "Should vaccines be manda-
+tory?").
+
+   To generate a debate question, we prompt text-davinci-003 with 10 randomly-sampled seed ques-
+tions. We repeat this procedure until we have generated 150 unique debate questions that also do not
+appear in our seed set. Finally, generated questions were manually filtered for inappropriate content.
+
+B.2 ELI5
+
+To transform ELI5 post titles into queries, we remove ELI5-specific prefixes (e.g., the post title "ELI5:
+why can't our brains recall every memory?" becomes the query "Why can't our brains recall every
+memory?").
+
+B.3 WikiHowKeywords
+
+To paraphrase article titles into keyword queries, we prompt text-davinci-003 with "Given a question,
+write a concise Google search query that would answer the question" and two in-context examples.
+
+                                                            7012
+C Annotation Interface
+
+Figures 5-7 show the annotation interface used for human evaluation.
+   In the first step, annotators were shown the query and the generated response (without citations) and
+
+asked to rate response fluency and perceived utility on a five-point Likert scale.
+   In the second step, annotators were shown the statements in the generated response (including any
+
+generated citations) and asked to filter out statements are not verification-worthy.
+   Finally, in the third step, annotators were shown the statements that were previously judged to require
+
+verification (in the prior step), as well as each statement's associated system-generated citations. For
+each statement and associated citation, annotators judged whether the citation fully supports, partially
+supports, or does not support the statement, as interpreted within the broader context of the query and
+system response. For statements with multiple associated citations, annotators are asked to judge whether
+the citations, when taken together, fully support the statement; this captures cases where multiple citations
+support disjoint parts of a statement (e.g., "Health benefits of cycling include improved cardiovascular
+health[1] and lowered cholesterol levels[2].").
+
+  Figure 5: First step of the annotation interface, where annotators judge response fluency and perceived utility.
+
+                                                            7013
+Figure 6: Second step of the annotation interface, where annotators uncheck statements that are not verification-
+worthy. Statements that contain generated citations must be verification-worthy, so we automatically mark them as
+such in the interface (greyed-out checkboxes next to the 2nd and 4th sentences above).
+
+Figure 7: Third step of the annotation interface, where annotators provide judgments on whether each citation
+supports its associated statement, and whether each statement is supported by the union of its citations (only
+applicable when a statement has multiple associated citations).
+
+                                                            7014
+D Annotation Guidelines
+
+gFuigiduerelisn8es-1a2sOsphavorewt ortfvhteiheeanwqnuoatlaiftiicoantigounidsetulidnye.sOwnelyusaendnofotartothres  task. We ask crowd   annotators to read these
+                                                                                                                   that demonstrated a  thorough understanding
+
+of the guidelHini!eWseaanrde taatsekamwoefrSetapnefromrdirtetesdeatrochpearsrtinicteirpeastteedinin tehvealmuaatining rthoeutnrudstowforhthuimneasns oefvAaIluation.
+systems.
+
+In this task, you will evaluate an AI system's response to a user query. The AI system outputs a
+paragraph that contains information relevant to the user's query, and we would like to evaluate
+whether the AI system can accurately cite sources for statements it makes about the external
+world.
+
+At a high level, this task breaks down into three steps:
+
+1. Evaluating response quality
+2. Filtering sentences that do not require citation.
+3. Judging whether each statement is fully supported by its citation(s).
+
+Please carefully read the guidelines below before starting on the task. The task
+compensation accounts for the time needed to read the guidelines.
+
+Preliminaries: Logging In
+
+When first entering the site, you will be prompted to select a username. Please use your
+worker ID as the username, so we can keep track of the examples you've annotated. The
+top of the interface displays your worker ID, the total number of examples submitted from this
+username, and will show a completion code when you have finished the task.
+
+If something is wrong with the example, you may press the "Flag Example" button in the
+top-right corner to report the error. Please do not submit annotations for such examples.
+
+Your task ends after you've completed 5 responses. A completion code will appear at the
+top of the interface---there is no need to complete more than 5 responses to receive
+credit for the study.
+
+Step 1: Evaluating response quality
+
+You will be shown the user's original query, and the system's response to the query---please
+carefully read both of them. Then, you will be asked to rate your level of agreement with two
+questions:
+
+1. The response is fluent and cohesive.
+2. The response is a helpful and informative answer to the query.
+
+          Figure 8: First page of the annotation guidelines.
+
+                         7015
+Once you have finished selecting a response for each of the two questions, press the "Next
+Step" button in the top-right corner to continue.
+
+Step 2: Filtering sentences that do not require
+citation.
+
+The goal of this step is to filter the sentences in the system response by removing sentences
+that do not require citation (unchecking them in the interface). We expect the majority of
+sentences produced by the system to require citation, so don't worry if you find yourself
+rarely unchecking sentences.
+
+In general, we take the position that all statements about the external world require citation,
+even if they are trivially true or "common sense" (since users may differ in their background,
+which affects their basic beliefs). For example, the following sentences require citation:
+
+    - (1a): The House of Lords is a topic of ongoing debate in the UK.
+    - (1b): However, there is still no consensus on what should replace the Electoral College.
+    - (1c): The sky is blue.
+    - (1d): The moon landing was staged.
+    - (1e): In February 2023, LeBron James took 261,960 total breaths.
+    - (1f): Patrick Henry once said "Give me liberty, or give me death".
+    - (1g): Thanksgiving dinners usually taste bad.
+    - (1h): Voting rights are controversial
+
+In particular, note that sentences can require citation despite being nearly impossible to verify.
+Consider example (e) above. It's highly unlikely that anyone knows exactly how many breaths
+LeBron James took in February 2023, let alone that such information could be linked to in a
+citation. However, it's still a statement about the external world, and it's still possible to find out
+for certain whether the statement is true or false. Thus, the statement requires citation.
+
+In contrast, consider the following examples of sentences that do not require citation:
+    - (2a): I believe that the moon landing was staged.
+              - Explanation: In general, all sentences pertaining to "I" do not require citation.
+                   This statement expresses a belief held by the speaker. The speaker is unknown,
+                   so this statement does not require citation. Note that the similar-looking
+                   statement "The moon landing was staged" (example 1d) require citation and is
+                   verifiable.
+    - (2b): Have you listened to that song?
+              - Explanation: Questions do not have information to verify.
+    - (2c): Pick up the ball on the floor.
+              - Explanation: Commands do not have information to verify.
+    - (2d): It is the year 2300. Robots rule the earth.
+
+                     Figure 9: Second page of the annotation guidelines.
+
+                                             7016
+              - Explanation: the sentence "Robots rule the earth." does not require citation,
+                   since the context ("It is the year 2300") specifies that this is a hypothetical
+                   situation and not a statement about the external world.
+
+Carefully read each sentence again and decide whether it requires citation. If it does not require
+citation, uncheck its corresponding checkbox. When you have finished, press the "Next Step"
+button in the top-right corner to proceed.
+
+Step 3: Judging whether each statement is fully
+supported by its citation(s).
+
+In this step, you will evaluate whether each statement is supported by its corresponding
+citations. Note that the system responses may appear very fluent and well-formed, but contain
+slight inaccuracies that are not easy to discern at first glance. Pay close attention to the text.
+Read it carefully as you would when proofreading.
+
+Carefully read the user query and the statement. You may also have to re-read the full system
+response to understand the statement in its full context. Given the statement's associated
+citations, your task is to judge whether all of the information provided by the system response is
+fully supported by the source document.
+
+In particular, this question can be answered by considering:
+    - (A): What is the information provided by the statement?
+    - (B): According to the citation(s), is this statement true?
+
+(A): What is the information provided by the statement?
+
+To determine the information provided by the statement, you must consider the query, the
+statement, and the context of the statement within the full response. The citations should be
+completely ignored when determining "the information provided by the statement."
+
+Consider the following example:
+
+Query: Why do so many people want to get married?
+Response (statement highlighted): People get married for many reasons, including love,
+companionship, financial security, and to share their lives with a partner. Marriage can also be
+seen as a way to affirm mutual love or start a family.
+
+In this case, the statement is stand-alone, and can be interpreted without looking at the query or
+the rest of the response. However, this is not always the case. Consider the example below:
+
+Query: Is it wrong to exaggerate in a letter of recommendation?
+
+                     Figure 10: Third page of the annotation guidelines.
+
+                                             7017
+Response (statement highlighted): Yes, it is wrong. Letters of recommendation should reflect
+the author's honest perspective on the candidate.
+
+The response "Yes, it is wrong" is uninterpretable on its own, because it is not clear what "it"
+refers to. However, by using the context of the query, it becomes clear that the statement is
+equivalent to "Yes, [exaggerating in a letter of recommendation] is wrong".
+
+For another example, consider:
+
+Query: how many characters are in the prologue of canterbury tales
+Response (statement highlighted): In Geoffrey Chaucer's The Canterbury Tales, 32
+characters make the journey to Canterbury. This includes the narrator, the host, and the
+Canon's yeoman, who join the group later.
+
+The statement "This includes the narrator, the host, and the Canon's yeoman, who join the
+group later." is uninterpretable on its own, because it is not clear what "This" refers to, or what
+"group" they join. The preceding sentence of the response is essential for realizing that this
+sentence is equivalent to "[The 32 characters that make the journey to Canterbury] include the
+narrator, the host, and the Canon's yeoman, who join the [32 characters] later".
+
+In general, use your best judgment to determine the information provided by the system
+response.
+
+(B): According to the citation(s), is this statement true?
+
+Again, you should use your best judgment in determining whether all of the information provided
+by the statement is supported by the associated citation(s).
+
+It may be helpful to ask yourself whether it is accurate to say "according to the citation" with a
+statement following this phrase. For example, is it accurate to say "according to the citation, in
+Geoffrey Chaucer's The Canterbury Tales, 32 characters make the journey to Canterbury"?
+
+Be sure to check all of the information in the statement. You will be given six options:
+    - "Full Support": All of the information in the statement is supported in the document.
+    - "Partial Support": Only some of the information is supported in the document, but other
+         parts of the information are missing from the document.
+    - "No Support": This document does not support any part of the statement.
+    - "Article Not Accessible": Not able to access the document (e.g., paywall or the link is
+         dead)
+    - "Citation Has Support but also Refutes Statement": The citation has information that
+         supports the statement, but also has information that refutes the statement.
+    - "Statement is Unclear, Can't Make Judgment": The statement is so incomprehensible
+         that it cannot be determined if the citation supports the statement.
+
+                     Figure 11: Fourth page of the annotation guidelines.
+
+                                             7018
+If the citation offers "full support" or "partial support" of a document, you will also be asked
+to copy and paste the minimal set of sentences from the article that support your judgment. In
+cases where you can't localize the judgment to particular sentence(s) (e.g., the entire article
+supports the statement, or the support comes from an image or graphic), feel free to leave this
+input blank.
+When a statement has more than one associated citation, you will also judge whether the
+citations, when taken together, fully support the statement (Yes/No). In other words, if you
+merged all of these citations into one big webpage (and it became a single citation), would this
+citation fully support the statement? If the citations contradict each other (e.g., one fully supports
+the statement, whereas another refutes the statement), then select "Citations Contradict Each
+Other".
+
+Questions oFirgufree e12d: bFiafthcpka?ge of the annotation guidelines.
+
+If you have questions about the task, or any feedback about how we could make it better or
+what your experience was like with it, please email nfliu@cs.stanford.edu, and we'll get back to
+you promptly. Thanks!
+
+                                             7019
+E Annotation Quality
+
+Table 4 presents inter-annotator agreement statistics, computed on a random sample of 250 query-response
+pairs that received annotations each. We measure the pairwise agreement between individual pairs of
+ratings and an F1 score comparing individual ratings to the majority consensus. We compute agreement on
+judgments of (i) fluency and perceived utility, (ii) whether a statement is verification-worthy, (iii) whether
+a citation supports its associated statement, and (iv) whether a statement is fully supported by the union
+of its citations (in the case where multiple webpages are cited). When calculating agreement on fluency
+and perceived utility judgments, we coarsen the 5-point Likert judgments into three options: "Disagree",
+"Neutral", and "Agree". Agreement rates between annotators are high (pairwise agreement greater than
+82.0% and F1 greater than 91.0 for all judgments).
+
+Inter-Annotator Agreement ()
+                           Pairwise Agreement % F1
+
+Fluency                    88.5 94.1
+Perceived Utility          86.4 93.1
+
+Verifiability              94.6 97.3
+Citation Supports          82.0 91.0
+Statement Supported        82.2 91.1
+
+Table 4: Inter-annotator agreement statistics. Pairwise Agreement % computes the proportion of individual
+judgment pairs that agree, and F1 compares individual judgments to the majority consensus judgment. Inter-
+annotator agreement is high (greater than 82.0% pairwise agreement % and 91.0 F1 for all judgments).
+
+                     7020
+F Fluency and Perceived Utility
+
+Table 5 presents the fluency of generative search engine responses on each of our query distributions, and
+Table 6 presents the perceived utility.
+
+Fluency ()                    Fluency ()
+
+               Average Over                  AllSouls  davinci-debate        ELI5    WikiHowKeywords
+                 All Queries                                             KILT Live
+                                                                   4.37   4.36 4.30                    4.41
+Bing Chat      4.40           Bing Chat      4.31                  4.53   4.50 4.42                    4.42
+NeevaAI        4.43                                                4.54   4.55 4.47                    4.45
+perplexity.ai  4.51           NeevaAI        4.50                  4.65   4.56 4.53                    4.52
+                              perplexity.ai  4.43                  4.52   4.49 4.43                    4.45
+YouChat        4.59           YouChat        4.58
+
+Average        4.48           Average        4.45
+
+Fluency ()
+
+                                                   NaturalQuestions
+
+               List Long Answer              Table Long Answer Paragraph Long Answer  No Answer
+
+               Has Short No Short            Has Short No Short Has Short No Short            4.39
+                                                                                              4.43
+Bing Chat      4.49           4.52           4.46      4.30              4.54  4.41           4.37
+NeevaAI        4.45           4.40           4.31      4.28              4.41  4.49           4.64
+perplexity.ai  4.69           4.54           4.59      4.41              4.73  4.43           4.46
+YouChat        4.65           4.56           4.60      4.45              4.66  4.69
+Average
+               4.57           4.50           4.49      4.36              4.58  4.50
+
+Table 5: Human evaluation results for generated response fluency (five-point Likert ratings). In general, existing
+generative search engines produce fluent text. Performance is notably lower on NaturalQuestions queries with
+table-type long answers and no short answers, which often require aggregating information within or across citations.
+
+                                             7021
+Perceived Utility ()            Perceived Utility ()
+                 Average Over
+                   All Queries                 AllSouls  davinci-debate        ELI5    WikiHowKeywords
+                                                                           KILT Live
+Bing Chat      4.34             Bing Chat      4.15                  4.19   4.19 4.09                    4.37
+NeevaAI        4.48                                                  4.39   4.54 4.46                    4.42
+perplexity.ai  4.56             NeevaAI        4.44                  4.60   4.54 4.50                    4.51
+                                perplexity.ai  4.39                  4.54   4.53 4.50                    4.63
+YouChat        4.62             YouChat        4.53                  4.43   4.45 4.39                    4.48
+
+Average        4.50             Average        4.38
+
+Perceived Utility ()
+
+                                                      NaturalQuestions
+
+               List Long Answer                Table Long Answer Paragraph Long Answer  No Answer
+
+               Has Short No Short              Has Short No Short Has Short No Short            4.38
+                                                                                                4.49
+Bing Chat      4.63             4.49           4.49      4.47              4.53  4.40           4.50
+NeevaAI        4.65             4.57           4.43      4.38              4.43  4.63           4.70
+perplexity.ai  4.71             4.61           4.60      4.55              4.77  4.58           4.52
+YouChat        4.72             4.64           4.70      4.54              4.77  4.77
+Average
+               4.68             4.58           4.55      4.49              4.62  4.60
+
+Table 6: Human evaluation results for perceived utility of generated responses (five-point Likert ratings). In general,
+responses from existing generative search engines appear informative and useful.
+
+                                               7022
+G Citation Recall and Precision
+
+Table 7 presents generative search engine citation recall across the evaluated query distributions, and
+Table 8 presents citation precision.
+
+Citation Recall (%; )         Citation Recall (%; )
+
+               Average Over                  AllSouls  davinci-debate        ELI5    WikiHowKeywords
+                 All Queries                                             KILT Live
+                                                                   57.1   59.8 59.9                    50.7
+Bing Chat              58.7   Bing Chat      55.6                  66.3   66.6 61.6                    72.5
+NeevaAI                67.6                                        64.2   64.8 58.1                    74.6
+perplexity.ai          68.7   NeevaAI        55.3                                                      12.1
+                              perplexity.ai  63.0                   3.9    3.0 4.6                     52.5
+YouChat                11.1   YouChat        3.2                   47.9   48.5 46.0
+
+Average                51.5   Average        44.3
+
+Citation Recall (%; )
+
+                                                   NaturalQuestions
+
+               List Long Answer              Table Long Answer Paragraph Long Answer  No Answer
+
+               Has Short No Short            Has Short No Short Has Short No Short            61.9
+                                                                                              65.6
+Bing Chat              74.1   60.6           63.5      49.2              72.1  66.3           68.4
+NeevaAI                73.0   64.2           69.5      65.1              75.0  74.8           17.8
+perplexity.ai          85.3   74.4           79.6      62.4              84.9  75.9           53.4
+YouChat                21.6   16.6           30.6      11.5              31.6  21.8
+Average
+                       63.5   53.9           60.8      47.1              65.9  59.7
+
+Table 7: Human evaluation results of citation recall in existing generative search engines. Citation recall is
+concerningly low (many generated statements are not fully supported by citations), especially given that these
+systems already have millions of users and may serve as a primary tool for fulfilling user information needs.
+
+                                             7023
+Citation Precision (%; )        Citation Precision (%; )
+                 Average Over
+                   All Queries                 AllSouls davinci-debate      ELI5    WikiHowKeywords
+                                                                        KILT Live
+Bing Chat      89.5             Bing Chat      88.8             88.8     87.6 87.2                    92.1
+NeevaAI        72.0                                                      75.7 73.8                    74.0
+perplexity.ai  72.7             NeevaAI        69.8             74.1     64.9 66.3                    77.4
+                                perplexity.ai  61.7             68.4     64.7 57.9                    71.1
+YouChat        63.6             YouChat        51.1             50.0     73.2 71.3                    78.7
+
+Average        74.5             Average        67.8             70.3
+
+Citation Precision (%; )
+
+                                                     NaturalQuestions
+
+               List Long Answer                Table Long Answer Paragraph Long Answer  No Answer
+
+               Has Short No Short              Has Short No Short Has Short No Short            90.8
+                                                                                                70.8
+Bing Chat      86.8             86.8           89.0       92.5          92.9  91.3              74.0
+NeevaAI        73.2             67.6           67.1       64.2          73.4  76.5              58.6
+perplexity.ai  82.1             81.0           76.0       71.7          83.8  79.7              73.5
+YouChat        63.3             62.7           64.8       56.1          75.7  67.5
+Average
+               76.4             74.5           74.2       71.1          81.5  78.7
+
+Table 8: Human evaluation results of citation precision in existing generative search engines. Citation precision is
+concerningly low (many generated citations do not support their associated statements), especially given that these
+systems already have millions of users and may serve as a primary tool for fulfilling user information needs.
+
+                                               7024
+H Citation F1
+
+Table 9 presents the citation F1 for every evaluated generative search engine on each query distribution.
+
+Citation F1 ()                  Citation F1 ()
+                 Average Over
+                   All Queries                 AllSouls  davinci-debate        ELI5    WikiHowKeywords
+                                                                           KILT Live
+Bing Chat       70.9            Bing Chat       68.4                 69.5   71.1 71.0                    65.4
+NeevaAI         69.8                                                 70.0   70.8 67.1                    73.2
+perplexity.ai   70.6            NeevaAI         61.7                 66.2   64.8 62.0                    76.0
+                                perplexity.ai   62.3                                                     20.7
+YouChat         18.9            YouChat         6.0                   7.2    5.6 8.5                     58.8
+                                                                     53.2   53.1 52.2
+Average         57.6            Average         49.6
+
+Citation F1 ()
+
+                                                      NaturalQuestions
+
+                List Long Answer               Table Long Answer Paragraph Long Answer  No Answer
+
+               Has Short No Short              Has Short No Short Has Short No Short            73.6
+                                                                                                68.1
+Bing Chat       79.9            71.4            74.1     64.2              81.2  76.8           71.1
+NeevaAI         73.1            65.9            68.3     64.6              74.2  75.7           27.4
+perplexity.ai   83.7            77.5            77.8     66.7              84.3  77.7           60.0
+YouChat         32.2            26.2            41.5     19.2              44.6  32.9
+Average
+                67.2            60.2            65.4     53.7              71.1  65.8
+
+                                Table 9: Citation F1 of generated responses.
+
+                                                7025
+

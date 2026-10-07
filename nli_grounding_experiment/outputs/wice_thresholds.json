@@ -1,0 +1,7 @@
+{
+  "b0_threshold": 0.36000000000000004,
+  "b1_support_threshold": 0.23,
+  "semantic_similarity_threshold_tau": 0.2,
+  "b4_t_low": 0.28,
+  "b4_t_high": 0.81
+}

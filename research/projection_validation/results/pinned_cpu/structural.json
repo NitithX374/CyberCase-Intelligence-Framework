@@ -1,0 +1,689 @@
+{
+  "scope": "Controlled structural diagnostics, not a natural invalid-ID prevalence estimate.",
+  "counts": {
+    "evidence_ids_claimed": 17,
+    "evidence_ids_resolved": 8,
+    "evidence_ids_invalid": 9,
+    "evidence_id_resolution_rate": 0.47058823529411764,
+    "claims_with_direct_evidence": 6,
+    "claims_with_recovered_evidence": 1,
+    "claims_without_resolved_evidence": 9
+  },
+  "invalid_id_rate": 0.5294117647058824,
+  "duplicate_reference_rate": 0.058823529411764705,
+  "claims_with_resolved_evidence": 7,
+  "claims_without_resolved_evidence": 9,
+  "pointer_distribution": {
+    "direct": 8,
+    "recovered": 1,
+    "unresolved": 10
+  },
+  "invalid_reasons": {
+    "unknown_source": 1,
+    "unknown_unit": 1,
+    "malformed_id": 3,
+    "stale_id": 1,
+    "cross_source": 1,
+    "duplicate_id": 1,
+    "empty_unit": 1
+  },
+  "local_collision_free": true,
+  "segmentation": [
+    {
+      "text": "First sentence. Second sentence!",
+      "units": 1,
+      "exact_reconstruction": true,
+      "offset_invariant": true,
+      "stable": true
+    },
+    {
+      "text": "ภาษาไทย\nบรรทัดที่สอง",
+      "units": 2,
+      "exact_reconstruction": true,
+      "offset_invariant": true,
+      "stable": true
+    },
+    {
+      "text": "INVOICE 1O0\n• 2S,000\n|row|v|",
+      "units": 3,
+      "exact_reconstruction": true,
+      "offset_invariant": true,
+      "stable": true
+    },
+    {
+      "text": " \n\t",
+      "units": 1,
+      "exact_reconstruction": true,
+      "offset_invariant": true,
+      "stable": true
+    },
+    {
+      "text": "",
+      "units": 0,
+      "exact_reconstruction": true,
+      "offset_invariant": true,
+      "stable": true
+    },
+    {
+      "text": "🙂é\nX",
+      "units": 2,
+      "exact_reconstruction": true,
+      "offset_invariant": true,
+      "stable": true
+    }
+  ],
+  "trials": [
+    {
+      "trial": "valid",
+      "claim": {
+        "claim_id": "A-01",
+        "claim_type": "reported",
+        "text": "Structural pointer trial valid",
+        "epistemic_status": "reported",
+        "supporting_source_ids": [
+          "S1"
+        ],
+        "contradicting_source_ids": [],
+        "supporting_citations": [
+          {
+            "source_id": "S1",
+            "exact_quote": "John sent an email.\n",
+            "evidence_unit_ids": [
+              "S1:U001-407b7856c9e97726"
+            ],
+            "pointer_state": "direct",
+            "start": 0,
+            "end": 20,
+            "document_id": "D1",
+            "filename": "a.txt",
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          }
+        ],
+        "contradicting_citations": [],
+        "unverified_citations": [],
+        "invalid_evidence": [],
+        "reasoning_summary": null
+      },
+      "expected": []
+    },
+    {
+      "trial": "multiple_units",
+      "claim": {
+        "claim_id": "A-02",
+        "claim_type": "reported",
+        "text": "Structural pointer trial multiple_units",
+        "epistemic_status": "reported",
+        "supporting_source_ids": [
+          "S1"
+        ],
+        "contradicting_source_ids": [],
+        "supporting_citations": [
+          {
+            "source_id": "S1",
+            "exact_quote": "John sent an email.\n",
+            "evidence_unit_ids": [
+              "S1:U001-407b7856c9e97726"
+            ],
+            "pointer_state": "direct",
+            "start": 0,
+            "end": 20,
+            "document_id": "D1",
+            "filename": "a.txt",
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          },
+          {
+            "source_id": "S1",
+            "exact_quote": "Jane received it.",
+            "evidence_unit_ids": [
+              "S1:U002-407b7856c9e97726"
+            ],
+            "pointer_state": "direct",
+            "start": 20,
+            "end": 37,
+            "document_id": "D1",
+            "filename": "a.txt",
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          }
+        ],
+        "contradicting_citations": [],
+        "unverified_citations": [],
+        "invalid_evidence": [],
+        "reasoning_summary": null
+      },
+      "expected": []
+    },
+    {
+      "trial": "cross_document",
+      "claim": {
+        "claim_id": "A-03",
+        "claim_type": "reported",
+        "text": "Structural pointer trial cross_document",
+        "epistemic_status": "reported",
+        "supporting_source_ids": [
+          "S1",
+          "S2"
+        ],
+        "contradicting_source_ids": [],
+        "supporting_citations": [
+          {
+            "source_id": "S1",
+            "exact_quote": "John sent an email.\n",
+            "evidence_unit_ids": [
+              "S1:U001-407b7856c9e97726"
+            ],
+            "pointer_state": "direct",
+            "start": 0,
+            "end": 20,
+            "document_id": "D1",
+            "filename": "a.txt",
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          },
+          {
+            "source_id": "S2",
+            "exact_quote": "เจนได้รับอีเมล\n",
+            "evidence_unit_ids": [
+              "S2:U001-b93b97fc9c511e6d"
+            ],
+            "pointer_state": "direct",
+            "start": 0,
+            "end": 15,
+            "document_id": "D2",
+            "filename": "b.txt",
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          }
+        ],
+        "contradicting_citations": [],
+        "unverified_citations": [],
+        "invalid_evidence": [],
+        "reasoning_summary": null
+      },
+      "expected": []
+    },
+    {
+      "trial": "followup",
+      "claim": {
+        "claim_id": "A-04",
+        "claim_type": "reported",
+        "text": "Structural pointer trial followup",
+        "epistemic_status": "reported",
+        "supporting_source_ids": [
+          "QA-03"
+        ],
+        "contradicting_source_ids": [],
+        "supporting_citations": [
+          {
+            "source_id": "QA-03",
+            "exact_quote": "The transfer occurred at 13:00.",
+            "evidence_unit_ids": [
+              "QA-03:U001-6f0b96ccb108201c"
+            ],
+            "pointer_state": "direct",
+            "start": 0,
+            "end": 31,
+            "document_id": null,
+            "filename": null,
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          }
+        ],
+        "contradicting_citations": [],
+        "unverified_citations": [],
+        "invalid_evidence": [],
+        "reasoning_summary": null
+      },
+      "expected": []
+    },
+    {
+      "trial": "unknown_source",
+      "claim": {
+        "claim_id": "A-05",
+        "claim_type": "reported",
+        "text": "Structural pointer trial unknown_source",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "NO-SOURCE",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "S1:U001-407b7856c9e97726",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "NO-SOURCE",
+            "evidence_unit_id": "S1:U001-407b7856c9e97726",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "unknown_source"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "unknown_source"
+      ]
+    },
+    {
+      "trial": "unknown_unit",
+      "claim": {
+        "claim_id": "A-06",
+        "claim_type": "reported",
+        "text": "Structural pointer trial unknown_unit",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "S1",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "S1:U999-407b7856c9e97726",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "S1",
+            "evidence_unit_id": "S1:U999-407b7856c9e97726",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "unknown_unit"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "unknown_unit"
+      ]
+    },
+    {
+      "trial": "malformed",
+      "claim": {
+        "claim_id": "A-07",
+        "claim_type": "reported",
+        "text": "Structural pointer trial malformed",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "S1",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "U001",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "S1",
+            "evidence_unit_id": "U001",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "malformed_id"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "malformed_id"
+      ]
+    },
+    {
+      "trial": "zero_ordinal",
+      "claim": {
+        "claim_id": "A-08",
+        "claim_type": "reported",
+        "text": "Structural pointer trial zero_ordinal",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "S1",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "S1:U000-407b7856c9e97726",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "S1",
+            "evidence_unit_id": "S1:U000-407b7856c9e97726",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "malformed_id"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "malformed_id"
+      ]
+    },
+    {
+      "trial": "stale",
+      "claim": {
+        "claim_id": "A-09",
+        "claim_type": "reported",
+        "text": "Structural pointer trial stale",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "S1",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "S1:U001-1716d34230865aa9",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "S1",
+            "evidence_unit_id": "S1:U001-1716d34230865aa9",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "stale_id"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "stale_id"
+      ]
+    },
+    {
+      "trial": "cross_source",
+      "claim": {
+        "claim_id": "A-10",
+        "claim_type": "reported",
+        "text": "Structural pointer trial cross_source",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "S1",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "S2:U001-b93b97fc9c511e6d",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "S1",
+            "evidence_unit_id": "S2:U001-b93b97fc9c511e6d",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "cross_source"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "cross_source"
+      ]
+    },
+    {
+      "trial": "duplicate",
+      "claim": {
+        "claim_id": "A-11",
+        "claim_type": "reported",
+        "text": "Structural pointer trial duplicate",
+        "epistemic_status": "reported",
+        "supporting_source_ids": [
+          "S1"
+        ],
+        "contradicting_source_ids": [],
+        "supporting_citations": [
+          {
+            "source_id": "S1",
+            "exact_quote": "John sent an email.\n",
+            "evidence_unit_ids": [
+              "S1:U001-407b7856c9e97726"
+            ],
+            "pointer_state": "direct",
+            "start": 0,
+            "end": 20,
+            "document_id": "D1",
+            "filename": "a.txt",
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          }
+        ],
+        "contradicting_citations": [],
+        "unverified_citations": [],
+        "invalid_evidence": [
+          {
+            "source_id": "S1",
+            "evidence_unit_id": "S1:U001-407b7856c9e97726",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "duplicate_id"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "duplicate_id"
+      ]
+    },
+    {
+      "trial": "empty",
+      "claim": {
+        "claim_id": "A-12",
+        "claim_type": "reported",
+        "text": "Structural pointer trial empty",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "EMPTY",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "EMPTY:U001-d4cd6ed18057a4d4",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "EMPTY",
+            "evidence_unit_id": "EMPTY:U001-d4cd6ed18057a4d4",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "empty_unit"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "empty_unit"
+      ]
+    },
+    {
+      "trial": "mixed_valid_invalid",
+      "claim": {
+        "claim_id": "A-13",
+        "claim_type": "reported",
+        "text": "Structural pointer trial mixed_valid_invalid",
+        "epistemic_status": "reported",
+        "supporting_source_ids": [
+          "S1"
+        ],
+        "contradicting_source_ids": [],
+        "supporting_citations": [
+          {
+            "source_id": "S1",
+            "exact_quote": "John sent an email.\n",
+            "evidence_unit_ids": [
+              "S1:U001-407b7856c9e97726"
+            ],
+            "pointer_state": "direct",
+            "start": 0,
+            "end": 20,
+            "document_id": "D1",
+            "filename": "a.txt",
+            "page_numbers": [],
+            "context": null,
+            "tolerated_differences": [],
+            "review_flags": []
+          }
+        ],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "S1",
+            "role": "supporting",
+            "written_quote": "",
+            "evidence_unit_id": "wrong",
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [
+          {
+            "source_id": "S1",
+            "evidence_unit_id": "wrong",
+            "role": "supporting",
+            "pointer_state": "unresolved",
+            "reason": "malformed_id"
+          }
+        ],
+        "reasoning_summary": null
+      },
+      "expected": [
+        "malformed_id"
+      ]
+    },
+    {
+      "trial": "no_reference",
+      "claim": {
+        "claim_id": "A-14",
+        "claim_type": "reported",
+        "text": "Structural pointer trial no_reference",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [],
+        "invalid_evidence": [],
+        "reasoning_summary": null
+      },
+      "expected": []
+    },
+    {
+      "trial": "legacy_recovered_control",
+      "claim": {
+        "claim_id": "A-15",
+        "claim_type": "reported",
+        "text": "Structural pointer trial legacy_recovered_control",
+        "epistemic_status": "reported",
+        "supporting_source_ids": [
+          "S1"
+        ],
+        "contradicting_source_ids": [],
+        "supporting_citations": [
+          {
+            "source_id": "S1",
+            "exact_quote": "John sent an email.",
+            "evidence_unit_ids": [],
+            "pointer_state": "recovered",
+            "start": null,
+            "end": null,
+            "document_id": null,
+            "filename": null,
+            "page_numbers": [],
+            "context": {
+              "before": "",
+              "after": "",
+              "cut_before": false,
+              "cut_after": false
+            },
+            "tolerated_differences": [],
+            "review_flags": []
+          }
+        ],
+        "contradicting_citations": [],
+        "unverified_citations": [],
+        "invalid_evidence": [],
+        "reasoning_summary": null
+      },
+      "expected": []
+    },
+    {
+      "trial": "legacy_unresolved_control",
+      "claim": {
+        "claim_id": "A-16",
+        "claim_type": "reported",
+        "text": "Structural pointer trial legacy_unresolved_control",
+        "epistemic_status": "not_confirmed",
+        "supporting_source_ids": [],
+        "contradicting_source_ids": [],
+        "supporting_citations": [],
+        "contradicting_citations": [],
+        "unverified_citations": [
+          {
+            "source_id": "S1",
+            "role": "supporting",
+            "written_quote": "The moon exploded.",
+            "evidence_unit_id": null,
+            "near_passage": null,
+            "meaning_passage": null
+          }
+        ],
+        "invalid_evidence": [],
+        "reasoning_summary": null
+      },
+      "expected": []
+    }
+  ]
+}

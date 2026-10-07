@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "at": "2026-10-06T02:02:39.132149+00:00",
+  "model": "xlmr",
+  "checked_units": {
+    "dev": 1198,
+    "test": 1610,
+    "test_ood": 1686
+  },
+  "threshold": 0.05,
+  "summary_sha256": "db63e3c7cd570d93871351799d122c0f9a7b56b9a55ba76a636f1d2cfd1be9c3",
+  "checks": "Frozen source/data/score hashes; all original inputs/gold; complete claim/prompt/evidence tokenization; class probabilities/support and sequence-label mapping; independent sklearn confusion/P/R/F1/Accuracy/AUROC/AP/source averages; EN-dev grid/tie rule"
+}

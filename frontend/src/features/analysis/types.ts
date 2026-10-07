@@ -62,15 +62,16 @@ export interface ClaimBacked {
   inferred: boolean;
   supportNote?: string | null;
   unconfirmed: UnconfirmedStatus[];
+  linkedClaims?: Pick<CaseFinding, "id" | "text">[];
 }
 
 export interface CaseParty extends ClaimBacked {
   name: string;
-  role: string;
+  role: string | null;
 }
 
 export interface CaseTimelineEvent extends ClaimBacked {
-  time: string;
+  time: string | null;
   event: string;
 }
 

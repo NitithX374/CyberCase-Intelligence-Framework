@@ -6,13 +6,13 @@ type Note = Exclude<SupportStatus, "bound">;
 
 const NOTES: Record<"english" | "thai", Record<Note, string>> = {
   english: {
-    unbound: "No cited quotation was found in the sources.",
-    mixed: "Some cited quotations were not found in the sources.",
+    unbound: "None of the linked claims has a resolved source citation.",
+    mixed: "Only some linked claims have resolved source citations.",
     no_claim: "Not linked to any claim.",
   },
   thai: {
-    unbound: "ไม่พบข้อความที่อ้างในเอกสาร",
-    mixed: "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
+    unbound: "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
+    mixed: "ระบุตำแหน่งข้อความอ้างอิงใน Source ได้สำหรับข้อค้นพบที่เชื่อมไว้บางข้อ",
     no_claim: "ไม่ได้เชื่อมกับข้อสังเกตใด",
   },
 };

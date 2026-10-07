@@ -9,6 +9,7 @@ import { casePath } from "@/lib/casePaths";
 import { AnalysisMeta } from "./AnalysisMeta";
 import { AnalysisNav } from "./AnalysisNav";
 import { AnalysisProgress } from "./AnalysisProgress";
+import { AnalysisPipeline } from "./AnalysisPipeline";
 import { useCaseOverview } from "./useCaseOverview";
 import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
@@ -157,6 +158,9 @@ export function AnalysisLayout({ children }: { children: ReactNode }) {
             </button>
           </div>
         ) : null}
+        {!isUpdating && analysisResult?.trace_json && (
+          <AnalysisPipeline trace={analysisResult.trace_json} />
+        )}
       </div>
 
       {children}

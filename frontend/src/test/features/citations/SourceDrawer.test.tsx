@@ -262,4 +262,67 @@ describe("SourceDrawer", () => {
     expect(quoted).toHaveTextContent(/^a transfer of 52,000 baht$/);
     expect(quoted.querySelector("strong")).toBeNull();
   });
+
+  it("renders page text with Markdown and HTML tables instead of raw tags", () => {
+    const docSource: CaseSourceRead = {
+      ...caseSource("doc-1", "document", "ลำดับ01 ปก อก.1.pdf"),
+      exact_text: "## Title\n<table><tr><td>ครั้งที่ ๑</td></tr></table>",
+      provenance_json: {
+        pages: [
+          {
+            page_number: 1,
+            start_offset: 0,
+            end_offset: 54,
+          },
+        ],
+      },
+    };
+
+    const [cited] = claimRefs(
+      { supporting_source_ids: ["doc-1"] },
+      parseCaseSources([docSource], []),
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+
+    const { container } = render(
+      <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("heading", { level: 2, name: /Header|Title/i })).toBeInTheDocument();
+    expect(container.querySelector("table")).not.toBeNull();
+    expect(container.querySelector("td")).toHaveTextContent("ครั้งที่ ๑");
+  });
+
+  it("highlights the quoted text with mark tag within the source text", () => {
+    const docSource: CaseSourceRead = {
+      ...caseSource("doc-2", "document", "report.pdf"),
+      exact_text: "Police inspected the crime scene on Rama 9 Road.",
+      provenance_json: {
+        pages: [{ page_number: 1, start_offset: 0, end_offset: 49 }],
+      },
+    };
+
+    const [cited] = claimRefs(
+      {
+        supporting_source_ids: ["doc-2"],
+        supporting_citations: [
+          {
+            source_id: "doc-2",
+            exact_quote: "crime scene",
+            page_numbers: [1],
+          },
+        ],
+      },
+      parseCaseSources([docSource], []),
+    ).supporting;
+    const anchor = document.body.appendChild(document.createElement("button"));
+
+    const { container } = render(
+      <SourceDrawer sourceRef={cited} anchorElement={anchor} onClose={vi.fn()} />,
+    );
+
+    const mark = container.querySelector("mark");
+    expect(mark).not.toBeNull();
+    expect(mark).toHaveTextContent("crime scene");
+  });
 });

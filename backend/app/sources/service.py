@@ -68,6 +68,34 @@ class SourceService:
         await self.db.flush()
         return document
 
+    async def update_document_extraction(
+        self,
+        *,
+        case_id: UUID,
+        user_id: UUID | None,
+        document_id: UUID,
+        ingested: IngestedDocument,
+    ) -> CaseSource:
+        case = await owned_case(self.db, case_id, user_id, lock=True)
+        refuse_while_analysing(case.id)
+        if not ingested.full_text.strip():
+            raise SourceError("extraction_text_empty", "Document extraction text is empty")
+        weight = await asyncio.to_thread(weight_in_payload, ingested.full_text)
+        await self.refuse_beyond_budget(case, weight)
+        source = await self.db.scalar(
+            select(CaseSource).where(
+                CaseSource.case_id == case.id,
+                CaseSource.document_id == document_id,
+            )
+        )
+        if source is None:
+            raise SourceError("source_not_found", "Case source not found", status.HTTP_404_NOT_FOUND)
+        source.exact_text = ingested.full_text
+        source.provenance_json = document_provenance(ingested)
+        case.source_revision += 1
+        await self.db.flush()
+        return source
+
     async def document_content(
         self, case_id: UUID, document_id: UUID, user_id: UUID | None
     ) -> CaseDocument:

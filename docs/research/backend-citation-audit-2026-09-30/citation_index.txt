@@ -1,0 +1,2 @@
+Plain-text bibliography coverage index, not a manuscript.
+\cite{attribute_first,ais,alce,factscore,faithful_summarization,acu,default_assistant,forensic_report_llm,structured_forensic_reports,self_correction_limits,criticbench,relay_fidelity,telephone_game,clarify_when_necessary,mediq,insufficiencybench,missing_bug_information,giveme5w1h,casie,rag,ragate,xlmr,ladder,annoctr,cti_unreliable,agir,data_to_document,open_llm_data_to_text,format_restrictions,typhoon_ocr,ocr_downstream,statistical_tests,statistical_power,api_nondeterminism,clarification_evpi}

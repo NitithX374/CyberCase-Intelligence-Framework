@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-04",
+  "purpose": "Primary full-text comparison; candidate inclusion does not establish Attribute First method adoption.",
+  "papers": [
+    {"key": "attribute_first", "identifier": "doi:10.18653/v1/2024.acl-long.182", "url": "https://aclanthology.org/2024.acl-long.182.pdf", "source": "https://aclanthology.org/2024.acl-long.182/"},
+    {"key": "default_assistant", "identifier": "arxiv:2607.01256", "url": "https://arxiv.org/pdf/2607.01256v1", "source": "https://arxiv.org/abs/2607.01256"},
+    {"key": "spectrum", "identifier": "arxiv:2411.17375", "url": "https://arxiv.org/pdf/2411.17375v1", "source": "https://arxiv.org/abs/2411.17375"},
+    {"key": "agentgeo", "identifier": "arxiv:2603.09296", "url": "https://arxiv.org/pdf/2603.09296", "source": "https://arxiv.org/abs/2603.09296"},
+    {"key": "medgraphrag", "identifier": "doi:10.18653/v1/2025.acl-long.1381", "url": "https://aclanthology.org/2025.acl-long.1381.pdf", "source": "https://aclanthology.org/2025.acl-long.1381/"},
+    {"key": "finragbench_v", "identifier": "doi:10.18653/v1/2025.emnlp-main.211", "url": "https://aclanthology.org/2025.emnlp-main.211.pdf", "source": "https://aclanthology.org/2025.emnlp-main.211/"},
+    {"key": "generation_programs", "identifier": "arxiv:2506.14580", "url": "https://arxiv.org/pdf/2506.14580", "source": "https://arxiv.org/abs/2506.14580"},
+    {"key": "citelab", "identifier": "doi:10.18653/v1/2025.acl-demo.47", "url": "https://aclanthology.org/2025.acl-demo.47.pdf", "source": "https://aclanthology.org/2025.acl-demo.47/"},
+    {"key": "llm_specialists", "identifier": "doi:10.18653/v1/2024.acl-long.105", "url": "https://aclanthology.org/2024.acl-long.105.pdf", "source": "https://aclanthology.org/2024.acl-long.105/"},
+    {"key": "pedagogy_evidence", "identifier": null, "url": "https://openreview.net/pdf/18fca98950e6d2957a20e706f0480ddb67b588a4.pdf", "source": "https://openreview.net/forum?id=CF3TqONsjF"},
+    {"key": "front", "identifier": "doi:10.18653/v1/2024.findings-acl.838", "url": "https://aclanthology.org/2024.findings-acl.838.pdf", "source": "https://aclanthology.org/2024.findings-acl.838/"},
+    {"key": "dehing", "identifier": "doi:10.1145/3785318.3785330", "url": "https://raw.githubusercontent.com/NetherlandsForensicInstitute/local-llm-chat-report-benchmark/main/Paper.pdf", "source": "https://doi.org/10.1145/3785318.3785330", "note": "Author manuscript may differ from publisher version; inspect ground-truth procedure."},
+    {"key": "qasem_consistency", "identifier": "doi:10.1162/tacl.a.598", "url": "https://aclanthology.org/2026.tacl-1.6.pdf", "source": "https://aclanthology.org/2026.tacl-1.6/"}
+  ]
+}

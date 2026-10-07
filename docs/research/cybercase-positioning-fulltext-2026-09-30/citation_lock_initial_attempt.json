@@ -1,0 +1,247 @@
+{
+  "schema_version": "ai-research-writing/citation-lock-v1",
+  "request_sha256": "97e63fb1cc97696b01c6372f1dfe0266b2b454e90429ce19e15c0112c3e0cc6f",
+  "records": [
+    {
+      "key": "deepfaith2026",
+      "identifier": "arxiv:2607.24348",
+      "status": "rate-limited",
+      "provider": "",
+      "request_url": "",
+      "checked_at": "2026-09-30T03:31:31.652987+00:00",
+      "metadata": {},
+      "metadata_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "claim_support_sha256": "b397c82543e4311f48d9324e6122c8f89c50b29c5dbc34b3e298c1407090e733",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": "HTTP 429 from https://export.arxiv.org/api/query?id_list=2607.24348"
+    },
+    {
+      "key": "cadet2026",
+      "identifier": "doi:10.1145/3786335.3813136",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1145%2F3786335.3813136",
+      "checked_at": "2026-09-30T03:31:32.454931+00:00",
+      "metadata": {
+        "title": "Retrieval-Augmented LLMs for Security Incident Analysis",
+        "authors": [
+          "Xavier Cadet",
+          "Aditya Vikram Singh",
+          "Harsh Mamania",
+          "Edward Koh",
+          "Alex Fitts",
+          "Dirk Van Bruggen",
+          "Simona Boboila",
+          "Peter Chin",
+          "Alina Oprea"
+        ],
+        "year": 2026,
+        "doi": "10.1145/3786335.3813136",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "b79c62ed9c5159aa97aa9882efcd50e6599f749ac9d46926d4116db66611d08c",
+      "claim_support_sha256": "ca4b21a5d85d5e0a8523341d0fc5349896c251e6caea6bd13c35f38015348147",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "jang2026",
+      "identifier": "doi:10.3390/electronics15132949",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.3390%2Felectronics15132949",
+      "checked_at": "2026-09-30T03:31:33.105730+00:00",
+      "metadata": {
+        "title": "Local LLM-Based Cyber Incident Analysis in Air-Gapped Networks via Teacher\u2013Student Knowledge Distillation and Agentic Orchestration",
+        "authors": [
+          "Sunghun Jang",
+          "MyoungRak Lee",
+          "Taeshik Shon"
+        ],
+        "year": 2026,
+        "doi": "10.3390/electronics15132949",
+        "type": "journal-article"
+      },
+      "metadata_sha256": "073ff0bfed78979fcc94a10eba3a40bae5c01eb511d018cca4d58a9f625697e5",
+      "claim_support_sha256": "5c579efac59d4946e06a83dc86522ac32db9f39578f48a3e33a772347fd0811a",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "chou2026",
+      "identifier": "doi:10.3390/jsan15020032",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.3390%2Fjsan15020032",
+      "checked_at": "2026-09-30T03:31:33.984594+00:00",
+      "metadata": {
+        "title": "An LLM-Based Agentic Network Traffic Incident-Report Approach Towards Explainable-AI Network Defense",
+        "authors": [
+          "Chia-Hong Chou",
+          "Arjun Sudheer",
+          "Younghee Park"
+        ],
+        "year": 2026,
+        "doi": "10.3390/jsan15020032",
+        "type": "journal-article"
+      },
+      "metadata_sha256": "a944b86c97d4d2d445d7721dd659227bfa34855356d2cdc03b1575cdc0555f98",
+      "claim_support_sha256": "8f07d5aab99b5ecb2f072b554461b14e94df9b3e8cdfb435a1a8630589aa8b88",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "wen2026",
+      "identifier": "arxiv:2607.07751",
+      "status": "network-error",
+      "provider": "",
+      "request_url": "",
+      "checked_at": "2026-09-30T03:31:49.047839+00:00",
+      "metadata": {},
+      "metadata_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "claim_support_sha256": "63a5a3388b50eae011e9993432ddee55ff5fd37c4c9185d16fe809b0e33a82af",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": "Cannot retrieve https://export.arxiv.org/api/query?id_list=2607.07751: The read operation timed out"
+    },
+    {
+      "key": "lu2024raee",
+      "identifier": "arxiv:2410.09418",
+      "status": "network-error",
+      "provider": "",
+      "request_url": "",
+      "checked_at": "2026-09-30T03:32:04.175958+00:00",
+      "metadata": {},
+      "metadata_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "claim_support_sha256": "736e2ef09b8b9ee39bd2728d513377b98f070556595d9f96b8f58351e93128f4",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": "Cannot retrieve https://export.arxiv.org/api/query?id_list=2410.09418: The read operation timed out"
+    },
+    {
+      "key": "guo2026aec",
+      "identifier": "doi:10.1609/aaai.v40i37.40346",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1609%2Faaai.v40i37.40346",
+      "checked_at": "2026-09-30T03:32:04.841956+00:00",
+      "metadata": {
+        "title": "Extracting Events Like Code: A Multi-Agent Programming Framework for Zero-Shot Event Extraction",
+        "authors": [
+          "Quanjiang Guo",
+          "Sijie Wang",
+          "Jinchuan Zhang",
+          "Ben Zhang",
+          "Zhao Kang",
+          "Ling Tian",
+          "Ke Yan"
+        ],
+        "year": 2026,
+        "doi": "10.1609/aaai.v40i37.40346",
+        "type": "journal-article"
+      },
+      "metadata_sha256": "cdf6cb3dc71810061878646ccd735ba24f00b259da38166e60a7a15e0d25d679",
+      "claim_support_sha256": "c4a6c4211471b3526d55f1e825407ad76d0987e1ffc4d6a1cf485ae77aa79b41",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "shiri2024",
+      "identifier": "doi:10.23919/FUSION59988.2024.10706385",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.23919%2FFUSION59988.2024.10706385",
+      "checked_at": "2026-09-30T03:32:05.496782+00:00",
+      "metadata": {
+        "title": "Decompose, Enrich, and Extract! Schema-aware Event Extraction using LLMs.",
+        "authors": [
+          "Fatemeh Shiri",
+          "Farhad Moghimifar",
+          "Reza Haffari",
+          "Yuan-Fang Li",
+          "Van Nguyen",
+          "John Yoo"
+        ],
+        "year": 2024,
+        "doi": "10.23919/fusion59988.2024.10706385",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "85fd77c82058bf173616e663e55966ef79d3faf7c11e162d67c5faf5686bdda3",
+      "claim_support_sha256": "38ec00d47dfabda09dea57defe3ceabc693e26f518f0b2721cfb8af213167f05",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "zhang2025quotetuning",
+      "identifier": "doi:10.18653/v1/2025.naacl-long.191",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2025.naacl-long.191",
+      "checked_at": "2026-09-30T03:32:06.157903+00:00",
+      "metadata": {
+        "title": "Verifiable by Design: Aligning Language Models to Quote from Pre-Training Data",
+        "authors": [
+          "Jingyu Zhang",
+          "Marc Marone",
+          "Tianjian Li",
+          "Benjamin Van Durme",
+          "Daniel Khashabi"
+        ],
+        "year": 2025,
+        "doi": "10.18653/v1/2025.naacl-long.191",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "ac99ccc0ce91066742116f57f84fd53c1863e4460680512e3656a756f1ff81ad",
+      "claim_support_sha256": "8ea1eced12971c1eeb9bebe34f9d8d53e75f1fb52d18b3ca769500cc428589fa",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "zhang2026construction",
+      "identifier": "arxiv:2609.15964",
+      "status": "rate-limited",
+      "provider": "",
+      "request_url": "",
+      "checked_at": "2026-09-30T03:32:06.657267+00:00",
+      "metadata": {},
+      "metadata_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "claim_support_sha256": "0ce462c28cad8891dfbc9bcd0701a2575635c02e1ad865be14cd1ec413dc1f02",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": "HTTP 429 from https://export.arxiv.org/api/query?id_list=2609.15964"
+    },
+    {
+      "key": "dehing2026",
+      "identifier": "doi:10.1145/3785318.3785330",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1145%2F3785318.3785330",
+      "checked_at": "2026-09-30T03:32:07.506812+00:00",
+      "metadata": {
+        "title": "Structured Report Generation using Local LLMs for Chat-Based Digital Forensics",
+        "authors": [
+          "Ying Dehing",
+          "Hans Henseler",
+          "Timo Meconi",
+          "Marcel Worring",
+          "Harm van Beek"
+        ],
+        "year": 2026,
+        "doi": "10.1145/3785318.3785330",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "f11cb5f6c7dffa403f85ee91a2a53d2f916e3dcf4768100522268a6c8f299169",
+      "claim_support_sha256": "7c42bb3805eb8ce509d15d11fef843384c1b551c687884e4f647d19660c1af33",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    }
+  ]
+}

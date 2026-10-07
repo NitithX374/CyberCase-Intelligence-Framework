@@ -1,0 +1,231 @@
+{
+  "confusion_matrices": [
+    {
+      "Method": "B0",
+      "TP": 140,
+      "FP": 188,
+      "TN": 552,
+      "FN": 190,
+      "Sum=1070": true,
+      "TP+FN=330": true,
+      "TN+FP=740": true,
+      "Recomputed Acc": 0.6467289719626168,
+      "Reported Acc": 0.6467289719626168,
+      "Recomputed Macro-F1": 0.5852355930743389,
+      "Reported Macro-F1": 0.5852355930743389,
+      "Recomputed Supp-F1": 0.425531914893617,
+      "Reported Supp-F1": 0.425531914893617,
+      "Recomputed FSR": 0.25405405405405407,
+      "Reported FSR": 0.254054054054054,
+      "Max Discrepancy": 5.551115123125783e-17,
+      "Status": "PASS"
+    },
+    {
+      "Method": "B0-LR",
+      "TP": 154,
+      "FP": 203,
+      "TN": 537,
+      "FN": 176,
+      "Sum=1070": true,
+      "TP+FN=330": true,
+      "TN+FP=740": true,
+      "Recomputed Acc": 0.6457943925233645,
+      "Reported Acc": 0.6457943925233645,
+      "Recomputed Macro-F1": 0.5937432065966013,
+      "Reported Macro-F1": 0.5937432065966013,
+      "Recomputed Supp-F1": 0.4483260553129549,
+      "Reported Supp-F1": 0.4483260553129549,
+      "Recomputed FSR": 0.2743243243243243,
+      "Reported FSR": 0.2743243243243243,
+      "Max Discrepancy": 5.551115123125783e-17,
+      "Status": "PASS"
+    },
+    {
+      "Method": "B1",
+      "TP": 174,
+      "FP": 234,
+      "TN": 506,
+      "FN": 156,
+      "Sum=1070": true,
+      "TP+FN=330": true,
+      "TN+FP=740": true,
+      "Recomputed Acc": 0.6355140186915887,
+      "Reported Acc": 0.6355140186915887,
+      "Recomputed Macro-F1": 0.5966853391786414,
+      "Reported Macro-F1": 0.5966853391786414,
+      "Recomputed Supp-F1": 0.47154471544715443,
+      "Reported Supp-F1": 0.4715447154471545,
+      "Recomputed FSR": 0.3162162162162162,
+      "Reported FSR": 0.3162162162162162,
+      "Max Discrepancy": 5.551115123125783e-17,
+      "Status": "PASS"
+    },
+    {
+      "Method": "B2",
+      "TP": 161,
+      "FP": 213,
+      "TN": 527,
+      "FN": 169,
+      "Sum=1070": true,
+      "TP+FN=330": true,
+      "TN+FP=740": true,
+      "Recomputed Acc": 0.6429906542056075,
+      "Reported Acc": 0.6429906542056075,
+      "Recomputed Macro-F1": 0.5956848252722209,
+      "Reported Macro-F1": 0.5956848252722209,
+      "Recomputed Supp-F1": 0.45738636363636365,
+      "Reported Supp-F1": 0.4573863636363636,
+      "Recomputed FSR": 0.28783783783783784,
+      "Reported FSR": 0.2878378378378378,
+      "Max Discrepancy": 5.551115123125783e-17,
+      "Status": "PASS"
+    },
+    {
+      "Method": "B3",
+      "TP": 172,
+      "FP": 200,
+      "TN": 540,
+      "FN": 158,
+      "Sum=1070": true,
+      "TP+FN=330": true,
+      "TN+FP=740": true,
+      "Recomputed Acc": 0.6654205607476635,
+      "Reported Acc": 0.6654205607476635,
+      "Recomputed Macro-F1": 0.6205358027332992,
+      "Reported Macro-F1": 0.6205358027332992,
+      "Recomputed Supp-F1": 0.49002849002848997,
+      "Reported Supp-F1": 0.49002849002849,
+      "Recomputed FSR": 0.2702702702702703,
+      "Reported FSR": 0.2702702702702703,
+      "Max Discrepancy": 5.551115123125783e-17,
+      "Status": "PASS"
+    }
+  ],
+  "evidence_metrics": {
+    "micro_p": 0.2611984869599841,
+    "micro_r": 0.9428674092705713,
+    "micro_f1": 0.4090731935458726,
+    "macro_p": 0.29527898807824177,
+    "macro_r": 0.9560745122861687,
+    "macro_f1": 0.4217016009066776,
+    "f1_from_macro_pr": 0.4512053779096737,
+    "pct_units_removed": 45.77326837108845
+  },
+  "b4_retained": {
+    "n_retained": 54,
+    "n_abstained": 1016,
+    "coverage": 0.05046728971962617,
+    "ret_tp": 0,
+    "ret_fp": 0,
+    "ret_tn": 45,
+    "ret_fn": 9,
+    "selective_acc": 0.8333333333333334,
+    "selective_risk": 0.16666666666666663,
+    "clopper_pearson_ci": [
+      0.0,
+      0.07870510040684302
+    ],
+    "rule_of_three_bound": 0.06666666666666667,
+    "admission_count": 0,
+    "admission_rate": 0.0,
+    "admission_precision": 0.0,
+    "supported_admission_recall": 0.0,
+    "abstention_rate": 0.9495327102803738,
+    "unsupported_decision_rate": 0.05046728971962617
+  },
+  "calibration": {
+    "dev_nll_raw": 0.6262343796616925,
+    "dev_nll_cal": 0.6260940569246302,
+    "dev_brier_raw": 0.21667525255847245,
+    "dev_brier_cal": 0.21675950068965502,
+    "dev_ece_raw": 0.13252463818809743,
+    "dev_ece_cal": 0.134459427275406,
+    "dev_sel_risk": 0.1785714285714286,
+    "dev_coverage": 0.053691275167785234,
+    "aurc_recomputed": 0.36111698295311756,
+    "baseline_aurc": 0.33457943925233646
+  },
+  "paired_bootstrap": [
+    {
+      "Comparison": "B3 vs B0",
+      "Delta Accuracy": "+1.88% [-0.00%, +3.64%]",
+      "Delta Macro-F1": "+0.0352 [+0.0148, +0.0551]",
+      "Delta Supported-F1": "+0.0642 [+0.0337, +0.0923]",
+      "Delta FSR": "+1.56% [-0.41%, +3.61%]",
+      "Macro-F1 Sig (CI exclude 0)": "YES",
+      "Supp-F1 Sig (CI exclude 0)": "YES",
+      "FSR Sig (CI exclude 0)": "NO"
+    },
+    {
+      "Comparison": "B3 vs B1",
+      "Delta Accuracy": "+2.98% [+1.50%, +4.49%]",
+      "Delta Macro-F1": "+0.0236 [+0.0087, +0.0385]",
+      "Delta Supported-F1": "+0.0181 [-0.0007, +0.0375]",
+      "Delta FSR": "-4.60% [-6.60%, -2.72%]",
+      "Macro-F1 Sig (CI exclude 0)": "YES",
+      "Supp-F1 Sig (CI exclude 0)": "NO",
+      "FSR Sig (CI exclude 0)": "YES"
+    },
+    {
+      "Comparison": "B2 vs B0-LR",
+      "Delta Accuracy": "-0.26% [-1.59%, +1.03%]",
+      "Delta Macro-F1": "+0.0020 [-0.0122, +0.0166]",
+      "Delta Supported-F1": "+0.0090 [-0.0109, +0.0297]",
+      "Delta FSR": "+1.30% [-0.28%, +2.75%]",
+      "Macro-F1 Sig (CI exclude 0)": "NO",
+      "Supp-F1 Sig (CI exclude 0)": "NO",
+      "FSR Sig (CI exclude 0)": "NO"
+    }
+  ],
+  "latency_summary": {
+    "B0 (Forward NLI Full)": {
+      "encoder_latency_ms": 413.0,
+      "classifier_latency_ms": 0.014,
+      "total_latency_ms": 413.014,
+      "nli_passes": 1,
+      "embed_passes": 0
+    },
+    "B0-LR (Forward NLI Full + LR)": {
+      "encoder_latency_ms": 413.0,
+      "classifier_latency_ms": 0.014,
+      "total_latency_ms": 413.014,
+      "nli_passes": 1,
+      "embed_passes": 0
+    },
+    "B1 (Embed + Forward NLI Filt)": {
+      "encoder_latency_ms": 226.6,
+      "classifier_latency_ms": 0.008,
+      "total_latency_ms": 226.608,
+      "nli_passes": 1,
+      "embed_passes": 1
+    },
+    "B2 (Forward NLI Full + Reverse NLI Full + LR)": {
+      "encoder_latency_ms": 824.0,
+      "classifier_latency_ms": 0.023,
+      "total_latency_ms": 824.023,
+      "nli_passes": 2,
+      "embed_passes": 0
+    },
+    "B3 (Embed + Forward NLI Filt + Reverse NLI Filt + LR)": {
+      "encoder_latency_ms": 448.6,
+      "classifier_latency_ms": 0.028,
+      "total_latency_ms": 448.628,
+      "nli_passes": 2,
+      "embed_passes": 1
+    },
+    "B4 (B3 + Temperature Scaling + Selective Gating)": {
+      "encoder_latency_ms": 448.6,
+      "classifier_latency_ms": 0.028,
+      "total_latency_ms": 448.628,
+      "nli_passes": 2,
+      "embed_passes": 1
+    }
+  },
+  "truncation": {
+    "n_trunc": 15,
+    "acc_b0_norm": 0.64739336492891,
+    "acc_b0_trunc": 0.6,
+    "acc_b3_norm": 0.6644549763033175,
+    "acc_b3_trunc": 0.7333333333333333
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "started_at": "2026-10-06T06:11:11.210131+00:00",
+  "benchmark_sha256": "a4227405f65504e044fa861d508344f106c36647621d34d3385e0238213db124",
+  "config": {
+    "model": "google/gemma-4-26b-a4b-it",
+    "providers": [
+      "nextbit/bf16",
+      "coreweave/bf16"
+    ],
+    "context_tokens": 128000,
+    "input_tokens": 80000,
+    "output_tokens": 32608,
+    "thinking_tokens": 8192,
+    "safety_tokens": 4000,
+    "timeout_seconds": 120.0
+  },
+  "prompt_sha256": "06fac69534a3aee0d4c79643225e71f7e9d3186e86694a611675762b00358028",
+  "temperature": null,
+  "condition_order": {
+    "controlled-english-01:involved_parties": [
+      "no_validation",
+      "semantic"
+    ],
+    "controlled-english-01:timeline": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-english-01:impacts": [
+      "no_validation",
+      "semantic"
+    ],
+    "controlled-english-02:involved_parties": [
+      "no_validation",
+      "semantic"
+    ],
+    "controlled-english-02:timeline": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-english-02:impacts": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-english-03:involved_parties": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-english-03:timeline": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-english-03:impacts": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-thai-01:involved_parties": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-thai-01:timeline": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-thai-01:impacts": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-thai-02:involved_parties": [
+      "no_validation",
+      "semantic"
+    ],
+    "controlled-thai-02:timeline": [
+      "no_validation",
+      "semantic"
+    ],
+    "controlled-thai-02:impacts": [
+      "no_validation",
+      "semantic"
+    ],
+    "controlled-thai-03:involved_parties": [
+      "no_validation",
+      "semantic"
+    ],
+    "controlled-thai-03:timeline": [
+      "semantic",
+      "no_validation"
+    ],
+    "controlled-thai-03:impacts": [
+      "semantic",
+      "no_validation"
+    ],
+    "contamination:claim_level": [
+      "semantic",
+      "no_validation"
+    ],
+    "contamination:both": [
+      "semantic",
+      "no_validation"
+    ]
+  },
+  "input_price_per_token": 1e-07,
+  "output_price_per_token": 3e-07,
+  "cap_usd": 1.0,
+  "concurrency": 2,
+  "seed_for_order_only": 20261006,
+  "nli_model": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7@b5113eb38ab6",
+  "nli_path": "F:\\Caches\\huggingface\\hub\\models--MoritzLaurer--mDeBERTa-v3-base-xnli-multilingual-nli-2mil7\\snapshots\\b5113eb38ab63efdd7f280f8c144ea8b13f978ce"
+}

@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 
 from app.analysis.schemas import CaseAnalysisResultRead
-from app.analysis.write import reading_from, reading_payload
+from app.analysis.write import reading_payload
 from app.chat.compose import analysis_payload
 from app.llm.schema import structured_output_schema
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
@@ -357,9 +357,6 @@ def reading_of(trace: CaseAnalysisTrace) -> CaseProviderReading:
     return CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=trace.claims,
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
     )
 
 
@@ -380,41 +377,34 @@ def test_the_flags_are_in_no_schema_the_model_fills():
         assert "review_flags" not in json.dumps(schema)
 
 
-def test_a_flag_a_model_writes_into_a_citation_is_dropped():
-    reply = CaseProviderReadingReply.model_validate(
-        {
-            "version": "case_analysis_trace_v1",
-            "claims": [
-                {
-                    "claim_id": "A-01",
-                    "claim_type": "reported",
-                    "text": "The money was sent.",
-                    "epistemic_status": "reported",
-                    "supporting_source_ids": ["S1"],
-                    "supporting_citations": [
-                        {
-                            "source_id": "S1",
-                            "exact_quote": "The money was sent",
-                            "review_flags": [
-                                {
-                                    "kind": "meaning_mark",
-                                    "verdict": "rule_warning",
-                                    "detail": "? edge",
-                                }
-                            ],
-                        }
-                    ],
-                }
-            ],
-            "involved_parties": [],
-            "timeline": [],
-            "impacts": [],
-        }
-    )
-
-    [citation] = reading_from(reply).claims[0].supporting_citations
-
-    assert citation.review_flags == []
+def test_a_flag_a_reader_writes_into_a_citation_is_rejected():
+    with pytest.raises(ValueError, match="review_flags"):
+        CaseProviderReadingReply.model_validate(
+            {
+                "version": "case_analysis_trace_v1",
+                "claims": [
+                    {
+                        "claim_id": "A-01",
+                        "claim_type": "reported",
+                        "text": "The money was sent.",
+                        "epistemic_status": "reported",
+                        "supporting_citations": [
+                            {
+                                "source_id": "S1",
+                                "evidence_unit_ids": ["S1:U001-0000000000000000"],
+                                "review_flags": [
+                                    {
+                                        "kind": "meaning_mark",
+                                        "verdict": "rule_warning",
+                                        "detail": "? edge",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
 
 
 def stored() -> tuple[CaseAnalysisTrace, dict]:

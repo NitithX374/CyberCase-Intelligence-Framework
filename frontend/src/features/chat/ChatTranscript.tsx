@@ -129,7 +129,7 @@ function Messages({
               <AnswerUnits units={units} claims={claims} sources={citable} />
             ) : (
               <>
-                <Markdown content={message.content} />
+                <Markdown content={stripInlineCitations(message.content)} />
                 <AnswerReferences {...sourceReferences(claims.map(claimItem), citable)} />
               </>
             )}
@@ -145,6 +145,18 @@ function Messages({
       )}
     </div>
   );
+}
+
+const INLINE_CITATION_RE =
+  /\s*\[\s*(?:(?:A|QA|C)-\d+|[A-Z]\d+)(?:\s*[,;]\s*(?:(?:A|QA|C)-\d+|[A-Z]\d+))*\s*\]/gi;
+
+export function stripInlineCitations(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(INLINE_CITATION_RE, "")
+    .replace(/ +/g, " ")
+    .replace(/ ([.,;:!?])/g, "$1")
+    .trim();
 }
 
 const PRELIMINARY_NOTE = "เป็นการตีความเบื้องต้น ยังไม่ได้ผ่านการวิเคราะห์";
@@ -168,7 +180,7 @@ function AnswerUnits({
     <div className="space-y-3">
       {units.map((unit, index) => (
         <div key={index}>
-          <Markdown content={unit.text} />
+          <Markdown content={stripInlineCitations(unit.text)} />
           {unit.basis === "interpretation" && (
             <p className="mt-1 text-xs text-ink-muted">{PRELIMINARY_NOTE}</p>
           )}

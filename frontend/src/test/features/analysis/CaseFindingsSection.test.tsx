@@ -25,6 +25,19 @@ function finding(
 }
 
 describe("Grouped case findings", () => {
+  it("hides internal IDs while preserving finding anchors", () => {
+    const { container } = render(
+      <CaseFindingsSection
+        caseId={caseId}
+        findings={[{ ...finding("A-01"), text: "John sent an email." }]}
+        onSelectSource={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("John sent an email.")).toBeInTheDocument();
+    expect(container.querySelector("#finding-A-01")).not.toBeNull();
+    expect(container.textContent).not.toContain("A-01");
+  });
+
   it("preserves all combinations of claim type and status without inventing certainty", () => {
     const types: ClaimType[] = ["reported", "analytical_inference", "unknown"];
     const statuses: EpistemicStatus[] = [
@@ -337,6 +350,6 @@ it("explains an unresolved evidence ID without claiming a quote mismatch", () =>
       onSelectSource={vi.fn()}
     />,
   );
-  expect(screen.getByText("The evidence reference could not be resolved.")).toBeInTheDocument();
+  expect(screen.getByText("The source unit reference could not be resolved.")).toBeInTheDocument();
   expect(screen.queryByText("Not found word for word in the source.")).not.toBeInTheDocument();
 });

@@ -5,10 +5,12 @@ import type { SourceMessageRef } from "@/features/citations/types";
 import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import { UNCONFIRMED_NOTES } from "@/features/citations/unconfirmed";
 import type { CaseImpact, CaseParty, CaseTimelineEvent, ClaimBacked } from "./types";
+import { ClaimViewReview } from "./ClaimViewReview";
 
 const VISIBLE_ROWS = 6;
 
 interface CaseDetailsProps {
+  caseId?: string;
   timeline: CaseTimelineEvent[];
   parties: CaseParty[];
   impacts: CaseImpact[];
@@ -21,6 +23,7 @@ interface CaseDetailsProps {
 }
 
 export function CaseDetails({
+  caseId,
   timeline,
   parties,
   impacts,
@@ -32,6 +35,7 @@ export function CaseDetails({
   const backing = (row: ClaimBacked, owner: string) => (
     <Backing
       row={row}
+      caseId={caseId}
       owner={owner}
       onSelectSource={onSelectSource}
       activeSourceKey={activeSourceKey}
@@ -53,7 +57,9 @@ export function CaseDetails({
             className="space-y-5"
             render={(item, index) => (
               <li key={index}>
-                <p className="text-[13px] font-medium text-ink-secondary">{item.time}</p>
+                <p className="text-[13px] font-medium text-ink-secondary">
+                  {item.time ?? "No date or time extracted; check the linked claim"}
+                </p>
                 <p className="mt-0.5 text-[15px] leading-7 text-ink">{item.event}</p>
                 {backing(item, `timeline-${index}`)}
               </li>
@@ -73,7 +79,11 @@ export function CaseDetails({
                 render={(party, index) => (
                   <li key={index} className="py-3 first:pt-0">
                     <p className="text-[15px] font-semibold text-ink">{party.name}</p>
-                    <p className="mt-0.5 text-[13px] leading-6 text-ink-secondary">{party.role}</p>
+                    <p className="mt-0.5 text-[13px] leading-6 text-ink-secondary">
+                      {party.role === null
+                        ? "No role extracted; check the linked claim"
+                        : party.role}
+                    </p>
                     {backing(party, `party-${index}`)}
                   </li>
                 )}
@@ -162,39 +172,51 @@ function FoldedList<T>({
 
 function Backing({
   row,
+  caseId,
   owner,
   onSelectSource,
   activeSourceKey,
 }: {
   row: ClaimBacked;
+  caseId?: string;
   owner: string;
   onSelectSource: CaseDetailsProps["onSelectSource"];
   activeSourceKey: string | null;
 }) {
-  if (!row.inferred && !row.sources.length && !row.unconfirmed.length && !row.supportNote) {
+  const hasReview = Boolean(row.linkedClaims?.length);
+  if (
+    !row.inferred &&
+    !row.sources.length &&
+    !row.unconfirmed.length &&
+    !row.supportNote &&
+    !hasReview
+  ) {
     return null;
   }
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      {row.inferred && <span className="text-xs text-ink-muted">Inference</span>}
-      {row.unconfirmed.map((status) => (
-        <span key={status} className="text-xs text-ink-muted">
-          {UNCONFIRMED_NOTES[status]}
-        </span>
-      ))}
-      {row.sources.map((source, index) => {
-        const key = `${owner}-${source.id}-${index}`;
-        return (
-          <SourceCitationChip
-            key={key}
-            sourceRef={source}
-            sourceKey={key}
-            isActive={activeSourceKey === key}
-            onSelect={onSelectSource}
-          />
-        );
-      })}
-      {row.supportNote && <span className="text-xs text-ink-muted">{row.supportNote}</span>}
+    <div className="mt-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {row.inferred && <span className="text-xs text-ink-muted">Inference</span>}
+        {row.unconfirmed.map((status) => (
+          <span key={status} className="text-xs text-ink-muted">
+            {UNCONFIRMED_NOTES[status]}
+          </span>
+        ))}
+        {row.sources.map((source, index) => {
+          const key = `${owner}-${source.id}-${index}`;
+          return (
+            <SourceCitationChip
+              key={key}
+              sourceRef={source}
+              sourceKey={key}
+              isActive={activeSourceKey === key}
+              onSelect={onSelectSource}
+            />
+          );
+        })}
+        {row.supportNote && <span className="text-xs text-ink-muted">{row.supportNote}</span>}
+      </div>
+      {hasReview && <ClaimViewReview row={row} caseId={caseId} />}
     </div>
   );
 }

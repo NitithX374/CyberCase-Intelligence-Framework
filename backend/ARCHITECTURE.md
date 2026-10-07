@@ -74,9 +74,17 @@ found, and `AnalysisAdvance.assessment` is then `None`. A question is never stor
 without its assessment.
 
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
-trace in two model calls: `case_reading` writes the claims, parties, timeline
-and impacts, with evidence-unit IDs on the claims, and `case_judgement` writes the summary,
-gaps and ATT&CK associations over that reading.
+trace with a claims-only `case_reading` call selecting source-unit IDs,
+then deterministic binding, followed by independent `case_views` and
+`case_judgement` calls in parallel. The latter writes summary, gaps and ATT&CK
+associations over the Claims; the former writes presentation views only.
+
+`analysis/reading_sources.py` captures each source's revision before Reading and
+sends exact unit text with source-local IDs (`U001`, etc.), unchanged Source IDs
+and document quality headers. The same request-owned mapping expands selected
+aliases to canonical revision-bearing IDs before `reading_from` builds claims.
+Offsets and hashes stay backend-owned; stored citation IDs and stale checks are
+unchanged. The prompt-JSON user message is minified without altering its values.
 
 Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
 against the sources:
@@ -84,14 +92,33 @@ against the sources:
 - `trace/evidence_binding.py` resolves selected IDs to original text and document/page locators;
 - legacy quotes still use `trace/quote_binding.py` and the existing recovery machinery;
 - a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`;
-- `trace/projection.py` checks each complete party-role, time-event or impact statement against only its linked grounded claim texts, using the existing pinned NLI model;
 - the grounding counts are taken.
 
+`analysis/views.py` batches all canonical Claims from the same reading into one
+native-schema LLM call. Input is only Claim IDs and text; there is no new admission
+filter. Parties, Timeline and Impacts use the existing `claim_ids` public shape.
+Roles and combined date/time may be null. The backend validates schema and known
+nonempty links, dropping an entire row if any link is unknown. It invents no field
+offsets, confidence or semantic verdict. Structural binding is not Claim semantic
+verification, and these views are not authoritative factual records.
+
+Extraction runs concurrently with Judgement, using the existing model/provider,
+thinking disabled, at most 4,096 output tokens and an overall 60-second deadline.
+On failure, a recorded warning/status and empty views allow Judgement to complete.
+Its failure cancels outstanding extraction. UI/Report views trace through Claims
+to their Source units; no views enter Judgement/chat. Stored analysis snapshots
+cache the output for reads/reports, without a new table or revision mechanism.
+Historical local-extraction metadata and offsets remain readable. The former
+local loader/per-Claim runtime and Compose service are removed. The encoder
+and legacy NLI remain separate, as do the stopped research experiments.
+
 The judgement therefore reads checked claims: their statuses, and only the
-source spans that were resolved. Only projections with a `supported` semantic verdict
-enter its input; rejected and unassessed projections remain visible in the trace with
-separate notes. `support=bound` still describes evidence binding, not semantic
-support or factual confirmation. It is given neither the case sources nor the
+source spans that were resolved. The backend derives source-ID lists from selected
+citations; the Reader generates no source lists, reasoning summaries or independent
+party, timeline or impact structures. Historical structured views remain readable
+in saved traces and reports but do not enter Judgement or chat as factual authority.
+`support=bound` describes evidence binding, not semantic support or factual
+confirmation. Judgement is given neither the complete case sources nor the
 sentence around each quotation, so a fact reaches its summary only through a
 claim. It is still given the follow-up history, which the gap rules need, and
 the technical context. Every summary sentence ends with the IDs of the claims
@@ -204,7 +231,7 @@ Five stages in four files, and all of them go through `request_stage` in
 | Call | File | `stage` |
 |---|---|---|
 | The gap-only assessment | `analysis/assess.py` | `assess` |
-| The reading: claims, parties, timeline, impacts | `analysis/write.py` | `case_reading` |
+| The reading: canonical claims with selected Source units | `analysis/write.py` | `case_reading` |
 | The judgement: summary, gaps, ATT&CK associations | `analysis/write.py` | `case_judgement` |
 | A chat answer, before or after an analysis | `chat/compose.py` | `chat_answer` |
 | The MITRE applicability gate, when `MITRE_GATE_MODE=llm` | `analysis/technical_context/gate_llm.py` | `mitre_applicability` |

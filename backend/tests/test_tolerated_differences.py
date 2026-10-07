@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.analysis.schemas import CaseAnalysisResultRead
-from app.analysis.write import reading_from, reading_payload
+from app.analysis.write import reading_payload
 from app.chat.compose import analysis_payload
 from app.llm.schema import structured_output_schema
 from app.reports.display import report_findings
@@ -279,9 +279,6 @@ def test_neither_model_is_shown_the_differences():
     reading = CaseProviderReading(
         version="case_analysis_trace_v1",
         claims=bound.claims,
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
     )
     assert any(c.tolerated_differences for c in bound.claims[0].supporting_citations)
 
@@ -298,35 +295,28 @@ def test_the_differences_are_in_no_schema_the_model_fills():
         assert '"tolerated_differences"' not in json.dumps(schema)
 
 
-def test_a_difference_a_model_writes_into_a_citation_is_dropped():
-    reply = CaseProviderReadingReply.model_validate(
-        {
-            "version": "case_analysis_trace_v1",
-            "claims": [
-                {
-                    "claim_id": "A-01",
-                    "claim_type": "reported",
-                    "text": "The accountant paid the vendor.",
-                    "epistemic_status": "reported",
-                    "supporting_source_ids": ["S1"],
-                    "supporting_citations": [
-                        {
-                            "source_id": "S1",
-                            "exact_quote": "paid 5,000 baht",
-                            "tolerated_differences": [{"written": "a", "source": "b"}],
-                        }
-                    ],
-                }
-            ],
-            "involved_parties": [],
-            "timeline": [],
-            "impacts": [],
-        }
-    )
-
-    [citation] = reading_from(reply).claims[0].supporting_citations
-
-    assert citation.tolerated_differences == []
+def test_a_difference_a_reader_writes_into_a_citation_is_rejected():
+    with pytest.raises(ValueError, match="tolerated_differences"):
+        CaseProviderReadingReply.model_validate(
+            {
+                "version": "case_analysis_trace_v1",
+                "claims": [
+                    {
+                        "claim_id": "A-01",
+                        "claim_type": "reported",
+                        "text": "The accountant paid the vendor.",
+                        "epistemic_status": "reported",
+                        "supporting_citations": [
+                            {
+                                "source_id": "S1",
+                                "evidence_unit_ids": ["S1:U001-0000000000000000"],
+                                "tolerated_differences": [{"written": "a", "source": "b"}],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
 
 
 def shown(trace: CaseAnalysisTrace) -> dict[str, list[tuple[str, str]]]:

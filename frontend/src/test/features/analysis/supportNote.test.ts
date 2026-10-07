@@ -10,17 +10,17 @@ describe("supportNote", () => {
 
   it("describes the citation in the language the analysis was written in", () => {
     expect(supportNote("unbound", "A file share was encrypted.")).toBe(
-      "No cited quotation was found in the sources.",
+      "None of the linked claims has a resolved source citation.",
     );
     expect(supportNote("mixed", "A file share was encrypted.")).toBe(
-      "Some cited quotations were not found in the sources.",
+      "Only some linked claims have resolved source citations.",
     );
     expect(supportNote("no_claim", "A file share was encrypted.")).toBe("Not linked to any claim.");
     expect(supportNote("unbound", "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน")).toBe(
-      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
     );
     expect(supportNote("mixed", "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน")).toBe(
-      "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
+      "ระบุตำแหน่งข้อความอ้างอิงใน Source ได้สำหรับข้อค้นพบที่เชื่อมไว้บางข้อ",
     );
     expect(supportNote("no_claim", "ไฟล์ถูกเข้ารหัสในช่วงกลางคืน")).toBe(
       "ไม่ได้เชื่อมกับข้อสังเกตใด",

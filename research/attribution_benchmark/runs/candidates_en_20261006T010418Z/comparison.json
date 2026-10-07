@@ -1,0 +1,606 @@
+{
+  "created_at": "2026-10-06T02:02:51.155527+00:00",
+  "suite_status": "complete",
+  "models": [
+    {
+      "model": "deberta_small",
+      "checkpoint": "cross-encoder/nli-deberta-v3-small",
+      "revision": "fa2804872c3b4bd748f38c0185cc85775361e735",
+      "status": "complete",
+      "device": "cuda",
+      "dtype": "torch.float32",
+      "batch_size": 1,
+      "threshold": 0.01,
+      "dev_mean_source_macro_f1": 0.6674241887572572,
+      "runner_seconds": 136.29503799998201,
+      "load_seconds": 3.349272200022824,
+      "unit_latency_p50_p95_seconds": [
+        0.023824450006941333,
+        0.0516816350253066
+      ],
+      "resources": {
+        "cuda_peak_allocated_bytes": 671370752,
+        "cuda_peak_reserved_bytes": 721420288,
+        "cuda_total_bytes": 4294705152
+      },
+      "report": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\deberta_small_cuda_float32_b1\\report.md",
+      "summary_sha256": "20d6ec93dd3da92927e33aa81003da341b02799355427c4ee4095f3f34eb8ed4",
+      "previous_attempts": [],
+      "test": {
+        "mean_source_macro_f1": 0.615114242094952,
+        "ci95": [
+          0.5791993666353311,
+          0.6461495649595562
+        ],
+        "pooled_macro_f1": 0.6206949417324057,
+        "false_acceptance": {
+          "count": 241,
+          "gold_denominator": 805,
+          "rate": 0.2993788819875776
+        },
+        "false_warning": {
+          "count": 366,
+          "gold_denominator": 805,
+          "rate": 0.4546583850931677
+        },
+        "truncated_units": 281,
+        "per_source": {
+          "AttributedQA": 0.7565033272837265,
+          "ExpertQA": 0.5088189593438813,
+          "LFQA": 0.48521525969051627,
+          "Stanford-GenSearch": 0.7099194220616838
+        }
+      },
+      "test_ood": {
+        "mean_source_macro_f1": 0.730846327446158,
+        "ci95": [
+          0.6988233254612775,
+          0.7590005966957064
+        ],
+        "pooled_macro_f1": 0.7152700374911338,
+        "false_acceptance": {
+          "count": 231,
+          "gold_denominator": 843,
+          "rate": 0.27402135231316727
+        },
+        "false_warning": {
+          "count": 249,
+          "gold_denominator": 843,
+          "rate": 0.29537366548042704
+        },
+        "truncated_units": 86,
+        "per_source": {
+          "AttrScore-GenSearch": 0.7212140175219024,
+          "BEGIN": 0.7866422516535383,
+          "HAGRID": 0.6846827131630333
+        }
+      }
+    },
+    {
+      "model": "minilm",
+      "checkpoint": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+      "revision": "0a71e92a985b6e1ad1828cf67ce9c459639c1dca",
+      "status": "complete",
+      "device": "cuda",
+      "dtype": "torch.float32",
+      "batch_size": 1,
+      "threshold": 0.27,
+      "dev_mean_source_macro_f1": 0.6112744641656679,
+      "runner_seconds": 58.624994300014805,
+      "load_seconds": 3.852658700023312,
+      "unit_latency_p50_p95_seconds": [
+        0.008028250013012439,
+        0.01314239001367241
+      ],
+      "resources": {
+        "cuda_peak_allocated_bytes": 445169664,
+        "cuda_peak_reserved_bytes": 473956352,
+        "cuda_total_bytes": 4294705152
+      },
+      "report": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\minilm_cuda_float32_b1_retry_cache\\report.md",
+      "summary_sha256": "878f18db2a0ffbb4e3504f13ffeba1465c0b28617785e96fd7e235fe873d9687",
+      "previous_attempts": [
+        {
+          "model": "minilm",
+          "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\minilm_cuda_float32_b1",
+          "run_exit_code": 1,
+          "at": "2026-10-06T01:07:28.995825+00:00",
+          "status": "failed",
+          "failure": {
+            "type": "IncompleteSnapshotError",
+            "message": "The cached snapshot for 'MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli' (revision '0a71e92a985b6e1ad1828cf67ce9c459639c1dca', commit 0a71e92a985b6e1ad1828cf67ce9c459639c1dca) is incomplete: 8 file(s) are missing (.gitattributes, onnx/config.json, onnx/model.onnx, ... (5 more)). Outgoing traffic is disabled ('local_files_only=True'). Re-run the download with network access to complete the snapshot.",
+            "at": "2026-10-06T01:07:28.090289+00:00",
+            "traceback": "Traceback (most recent call last):\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 116, in main\n    execute(args, output, configuration)\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 47, in execute\n    runner = CandidateRunner(spec, args.device, args.batch_size, args.precision)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_inference.py\", line 37, in __init__\n    self.snapshot = Path(snapshot_download(spec.model, revision=spec.revision, local_files_only=True))\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\huggingface_hub\\utils\\_validators.py\", line 88, in _inner_fn\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\huggingface_hub\\_snapshot_download.py\", line 321, in snapshot_download\n    _raise_if_incomplete_snapshot(\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\huggingface_hub\\_snapshot_download.py\", line 576, in _raise_if_incomplete_snapshot\n    raise IncompleteSnapshotError(\nhuggingface_hub.errors.IncompleteSnapshotError: The cached snapshot for 'MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli' (revision '0a71e92a985b6e1ad1828cf67ce9c459639c1dca', commit 0a71e92a985b6e1ad1828cf67ce9c459639c1dca) is incomplete: 8 file(s) are missing (.gitattributes, onnx/config.json, onnx/model.onnx, ... (5 more)). Outgoing traffic is disabled ('local_files_only=True'). Re-run the download with network access to complete the snapshot.\n"
+          }
+        }
+      ],
+      "test": {
+        "mean_source_macro_f1": 0.6218748766482695,
+        "ci95": [
+          0.5841033076919188,
+          0.6552210110567794
+        ],
+        "pooled_macro_f1": 0.6232222437549585,
+        "false_acceptance": {
+          "count": 344,
+          "gold_denominator": 805,
+          "rate": 0.42732919254658386
+        },
+        "false_warning": {
+          "count": 261,
+          "gold_denominator": 805,
+          "rate": 0.3242236024844721
+        },
+        "truncated_units": 315,
+        "per_source": {
+          "AttributedQA": 0.7517938620572142,
+          "ExpertQA": 0.5574285985130616,
+          "LFQA": 0.5116103793561354,
+          "Stanford-GenSearch": 0.6666666666666666
+        }
+      },
+      "test_ood": {
+        "mean_source_macro_f1": 0.7231281131039431,
+        "ci95": [
+          0.6905693895111821,
+          0.7511770897821177
+        ],
+        "pooled_macro_f1": 0.7180932196813097,
+        "false_acceptance": {
+          "count": 193,
+          "gold_denominator": 843,
+          "rate": 0.22894424673784106
+        },
+        "false_warning": {
+          "count": 281,
+          "gold_denominator": 843,
+          "rate": 0.3333333333333333
+        },
+        "truncated_units": 132,
+        "per_source": {
+          "AttrScore-GenSearch": 0.7200314218381776,
+          "BEGIN": 0.743474540008558,
+          "HAGRID": 0.7058783774650934
+        }
+      }
+    },
+    {
+      "model": "mdeberta",
+      "checkpoint": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
+      "revision": "b5113eb38ab63efdd7f280f8c144ea8b13f978ce",
+      "status": "complete",
+      "device": "cuda",
+      "dtype": "torch.float32",
+      "batch_size": 1,
+      "threshold": 0.15,
+      "dev_mean_source_macro_f1": 0.6377825588902124,
+      "runner_seconds": 290.57674089999637,
+      "load_seconds": 5.16069280001102,
+      "unit_latency_p50_p95_seconds": [
+        0.05325890000676736,
+        0.10599915500206407
+      ],
+      "resources": {
+        "cuda_peak_allocated_bytes": 1231943168,
+        "cuda_peak_reserved_bytes": 1293942784,
+        "cuda_total_bytes": 4294705152
+      },
+      "report": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\mdeberta_cuda_float32_b1\\report.md",
+      "summary_sha256": "c3f8af3fb6be76b303a5f7134f796eb133045d82659620243b9a9c28ef7fb2bd",
+      "previous_attempts": [],
+      "test": {
+        "mean_source_macro_f1": 0.6435557177015466,
+        "ci95": [
+          0.611615281263919,
+          0.671761134517644
+        ],
+        "pooled_macro_f1": 0.6272909698996656,
+        "false_acceptance": {
+          "count": 356,
+          "gold_denominator": 805,
+          "rate": 0.4422360248447205
+        },
+        "false_warning": {
+          "count": 241,
+          "gold_denominator": 805,
+          "rate": 0.2993788819875776
+        },
+        "truncated_units": 324,
+        "per_source": {
+          "AttributedQA": 0.7718253968253967,
+          "ExpertQA": 0.540318686624819,
+          "LFQA": 0.5915331807780321,
+          "Stanford-GenSearch": 0.6705456065779388
+        }
+      },
+      "test_ood": {
+        "mean_source_macro_f1": 0.6987072025953777,
+        "ci95": [
+          0.6669742765537298,
+          0.7270012703544626
+        ],
+        "pooled_macro_f1": 0.7001851483802132,
+        "false_acceptance": {
+          "count": 379,
+          "gold_denominator": 843,
+          "rate": 0.44958481613285883
+        },
+        "false_warning": {
+          "count": 114,
+          "gold_denominator": 843,
+          "rate": 0.13523131672597866
+        },
+        "truncated_units": 160,
+        "per_source": {
+          "AttrScore-GenSearch": 0.6955704697986578,
+          "BEGIN": 0.7046464108031272,
+          "HAGRID": 0.695904727184348
+        }
+      }
+    },
+    {
+      "model": "minicheck",
+      "checkpoint": "lytang/MiniCheck-DeBERTa-v3-Large",
+      "revision": "2f2d01a54fa022a7ffadb76260e1ea8bc88c82bb",
+      "status": "complete",
+      "device": "cuda",
+      "dtype": "torch.float32",
+      "batch_size": 1,
+      "threshold": 0.22,
+      "dev_mean_source_macro_f1": 0.7439510394954558,
+      "runner_seconds": 765.6768480999744,
+      "load_seconds": 4.724956399993971,
+      "unit_latency_p50_p95_seconds": [
+        0.13859964997391216,
+        0.34687533497053663
+      ],
+      "resources": {
+        "cuda_peak_allocated_bytes": 1903982080,
+        "cuda_peak_reserved_bytes": 1973420032,
+        "cuda_total_bytes": 4294705152
+      },
+      "report": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\minicheck_cuda_float32_b1\\report.md",
+      "summary_sha256": "679ee871bb805ebefdc3cee61eba7d077873c03fd8562f78d31763b454e9984f",
+      "previous_attempts": [],
+      "test": {
+        "mean_source_macro_f1": 0.7179773550388876,
+        "ci95": [
+          0.6912384412481705,
+          0.742990094585651
+        ],
+        "pooled_macro_f1": 0.6814073762770588,
+        "false_acceptance": {
+          "count": 184,
+          "gold_denominator": 805,
+          "rate": 0.22857142857142856
+        },
+        "false_warning": {
+          "count": 325,
+          "gold_denominator": 805,
+          "rate": 0.40372670807453415
+        },
+        "truncated_units": 281,
+        "per_source": {
+          "AttributedQA": 0.8130116655007469,
+          "ExpertQA": 0.5349291646311676,
+          "LFQA": 0.7726495726495726,
+          "Stanford-GenSearch": 0.7513190173740631
+        }
+      },
+      "test_ood": {
+        "mean_source_macro_f1": 0.793624921798695,
+        "ci95": [
+          0.7636260389900366,
+          0.8202373288807301
+        ],
+        "pooled_macro_f1": 0.7851429418648367,
+        "false_acceptance": {
+          "count": 230,
+          "gold_denominator": 843,
+          "rate": 0.27283511269276395
+        },
+        "false_warning": {
+          "count": 131,
+          "gold_denominator": 843,
+          "rate": 0.1553973902728351
+        },
+        "truncated_units": 86,
+        "per_source": {
+          "AttrScore-GenSearch": 0.7767980159823642,
+          "BEGIN": 0.8428429065157008,
+          "HAGRID": 0.7612338428980201
+        }
+      }
+    },
+    {
+      "model": "xlmr",
+      "checkpoint": "joeddav/xlm-roberta-large-xnli",
+      "revision": "b227ee8435ceadfa86dc1368a34254e2838bf242",
+      "status": "complete",
+      "device": "cuda",
+      "dtype": "torch.float32",
+      "batch_size": 1,
+      "threshold": 0.05,
+      "dev_mean_source_macro_f1": 0.6734406162105435,
+      "runner_seconds": 529.346684899996,
+      "load_seconds": 5.411396700015757,
+      "unit_latency_p50_p95_seconds": [
+        0.10843269998440519,
+        0.22530664999794678
+      ],
+      "resources": {
+        "cuda_peak_allocated_bytes": 2271246848,
+        "cuda_peak_reserved_bytes": 2306867200,
+        "cuda_total_bytes": 4294705152
+      },
+      "report": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\xlmr_cuda_float32_b1_retry_logging\\report.md",
+      "summary_sha256": "db63e3c7cd570d93871351799d122c0f9a7b56b9a55ba76a636f1d2cfd1be9c3",
+      "previous_attempts": [
+        {
+          "model": "xlmr",
+          "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\xlmr_cuda_float32_b1",
+          "run_exit_code": 1,
+          "at": "2026-10-06T01:26:37.007273+00:00",
+          "status": "failed",
+          "failure": {
+            "type": "AttributeError",
+            "message": "'Tee' object has no attribute 'isatty'",
+            "at": "2026-10-06T01:26:35.810578+00:00",
+            "traceback": "Traceback (most recent call last):\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 116, in main\n    execute(args, output, configuration)\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 47, in execute\n    runner = CandidateRunner(spec, args.device, args.batch_size, args.precision)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_inference.py\", line 39, in __init__\n    self.adapter = load_adapter(spec, self.tokenizer, dtype, device)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_adapters.py\", line 104, in load_adapter\n    return ClassificationAdapter(spec, dtype, device)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_adapters.py\", line 52, in __init__\n    self.model = AutoModelForSequenceClassification.from_pretrained(\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\models\\auto\\auto_factory.py\", line 402, in from_pretrained\n    return model_class.from_pretrained(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\modeling_utils.py\", line 4349, in from_pretrained\n    loading_info = cls._finalize_model_loading(model, load_config, loading_info)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\modeling_utils.py\", line 4525, in _finalize_model_loading\n    log_state_dict_report(\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 262, in log_state_dict_report\n    report = loading_info.create_loading_report()\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 181, in create_loading_report\n    tips += f\"\\n- {_style('UNEXPECTED:', 'orange')}\\t\" + _style(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 123, in _style\n    if sys.stdout is not None and sys.stdout.isatty():\n                                  ^^^^^^^^^^^^^^^^^\nAttributeError: 'Tee' object has no attribute 'isatty'\n"
+          }
+        }
+      ],
+      "test": {
+        "mean_source_macro_f1": 0.6533753796988533,
+        "ci95": [
+          0.6186338490881986,
+          0.6852304548236975
+        ],
+        "pooled_macro_f1": 0.6519800390325848,
+        "false_acceptance": {
+          "count": 261,
+          "gold_denominator": 805,
+          "rate": 0.3242236024844721
+        },
+        "false_warning": {
+          "count": 299,
+          "gold_denominator": 805,
+          "rate": 0.37142857142857144
+        },
+        "truncated_units": 315,
+        "per_source": {
+          "AttributedQA": 0.80300348312682,
+          "ExpertQA": 0.5473554078698277,
+          "LFQA": 0.5414952911781664,
+          "Stanford-GenSearch": 0.7216473366205987
+        }
+      },
+      "test_ood": {
+        "mean_source_macro_f1": 0.7520466232773412,
+        "ci95": [
+          0.71994899840132,
+          0.7806954769035658
+        ],
+        "pooled_macro_f1": 0.7418816479790917,
+        "false_acceptance": {
+          "count": 235,
+          "gold_denominator": 843,
+          "rate": 0.27876631079478054
+        },
+        "false_warning": {
+          "count": 200,
+          "gold_denominator": 843,
+          "rate": 0.2372479240806643
+        },
+        "truncated_units": 132,
+        "per_source": {
+          "AttrScore-GenSearch": 0.742588071154517,
+          "BEGIN": 0.7935084617327608,
+          "HAGRID": 0.7200433369447454
+        }
+      }
+    },
+    {
+      "model": "attrscore",
+      "checkpoint": "osunlp/attrscore-flan-t5-large",
+      "revision": "282eb2ab5d537f5badf5fa33008d96abff34607b",
+      "status": "complete",
+      "device": "cuda",
+      "dtype": "torch.float32",
+      "batch_size": 1,
+      "threshold": 0.23,
+      "dev_mean_source_macro_f1": 0.6688087951575851,
+      "runner_seconds": 1437.7750530000194,
+      "load_seconds": 5.644838200008962,
+      "unit_latency_p50_p95_seconds": [
+        0.308539049961837,
+        0.40393133501638656
+      ],
+      "resources": {
+        "cuda_peak_allocated_bytes": 3362387456,
+        "cuda_peak_reserved_bytes": 3393191936,
+        "cuda_total_bytes": 4294705152
+      },
+      "report": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\attrscore_cuda_float32_b1\\report.md",
+      "summary_sha256": "5cb3583fc90ac4826a1d3bd85a0cbaa10c501545f931f2ffa44d3a83b756d760",
+      "previous_attempts": [],
+      "test": {
+        "mean_source_macro_f1": 0.6622180854208752,
+        "ci95": [
+          0.6271608665018046,
+          0.6920029609452746
+        ],
+        "pooled_macro_f1": 0.6448611800842934,
+        "false_acceptance": {
+          "count": 391,
+          "gold_denominator": 805,
+          "rate": 0.4857142857142857
+        },
+        "false_warning": {
+          "count": 170,
+          "gold_denominator": 805,
+          "rate": 0.2111801242236025
+        },
+        "truncated_units": 374,
+        "per_source": {
+          "AttributedQA": 0.7997097242380262,
+          "ExpertQA": 0.5688599390898155,
+          "LFQA": 0.6155606407322655,
+          "Stanford-GenSearch": 0.6647420376233936
+        }
+      },
+      "test_ood": {
+        "mean_source_macro_f1": 0.7569832637752985,
+        "ci95": [
+          0.7304395633476083,
+          0.7809796907228621
+        ],
+        "pooled_macro_f1": 0.734640904692051,
+        "false_acceptance": {
+          "count": 347,
+          "gold_denominator": 843,
+          "rate": 0.41162514827995256
+        },
+        "false_warning": {
+          "count": 90,
+          "gold_denominator": 843,
+          "rate": 0.10676156583629894
+        },
+        "truncated_units": 252,
+        "per_source": {
+          "AttrScore-GenSearch": 0.7571774472500865,
+          "BEGIN": 0.8256734006734007,
+          "HAGRID": 0.6880989434024081
+        }
+      }
+    }
+  ],
+  "paired_vs_mdeberta": {
+    "test": {
+      "deberta_small": {
+        "delta_mean_source_macro_f1": -0.0284414756065946,
+        "delta_ci95": [
+          -0.06628300621695717,
+          0.012398279755388278
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "minilm": {
+        "delta_mean_source_macro_f1": -0.021680841053277167,
+        "delta_ci95": [
+          -0.0722158589241525,
+          0.025931617982830984
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "mdeberta": {
+        "delta_mean_source_macro_f1": 0.0,
+        "delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "minicheck": {
+        "delta_mean_source_macro_f1": 0.07442163733734097,
+        "delta_ci95": [
+          0.04164600508561945,
+          0.10836105138588693
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "xlmr": {
+        "delta_mean_source_macro_f1": 0.009819661997306661,
+        "delta_ci95": [
+          -0.024872106484592163,
+          0.045514835395372655
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "attrscore": {
+        "delta_mean_source_macro_f1": 0.01866236771932861,
+        "delta_ci95": [
+          -0.023973644958823193,
+          0.06007164424225159
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      }
+    },
+    "test_ood": {
+      "deberta_small": {
+        "delta_mean_source_macro_f1": 0.0321391248507803,
+        "delta_ci95": [
+          -0.0010994105094384809,
+          0.06429654734908076
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "minilm": {
+        "delta_mean_source_macro_f1": 0.02442091050856543,
+        "delta_ci95": [
+          -0.009757549336901178,
+          0.05496491680229688
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "mdeberta": {
+        "delta_mean_source_macro_f1": 0.0,
+        "delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "minicheck": {
+        "delta_mean_source_macro_f1": 0.09491771920331737,
+        "delta_ci95": [
+          0.06537816510219022,
+          0.12463046562856857
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "xlmr": {
+        "delta_mean_source_macro_f1": 0.05333942068196351,
+        "delta_ci95": [
+          0.021376405585443167,
+          0.08387452719969384
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      },
+      "attrscore": {
+        "delta_mean_source_macro_f1": 0.05827606117992079,
+        "delta_ci95": [
+          0.023574939767750484,
+          0.0918555334673613
+        ],
+        "unit": "paired source-stratified question+response clusters",
+        "replicates": 2000,
+        "seed": 20261006
+      }
+    }
+  },
+  "selection_note": "Thresholds use EN dev only. Test model rankings are descriptive, not winner selection.",
+  "translation": "none; English-only checkpoint screening"
+}

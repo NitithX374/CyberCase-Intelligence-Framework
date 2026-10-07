@@ -26,6 +26,7 @@ class AnalysisPipelineConfig(BaseModel):
     input_tokens: int = Field(default=80_000, ge=1)
     output_tokens: int = Field(default=32_608, ge=1)
     thinking_tokens: int = Field(default=8_192, ge=0)
+    reading_thinking_tokens: int | None = Field(default=None, ge=0)
     safety_tokens: int = Field(default=4_000, ge=1)
     timeout_seconds: float = Field(default=120, gt=0)
 
@@ -33,16 +34,41 @@ class AnalysisPipelineConfig(BaseModel):
     def max_tokens(self) -> int:
         return self.output_tokens + self.thinking_tokens
 
+    def for_reading(self) -> "AnalysisPipelineConfig":
+        if self.reading_thinking_tokens is None:
+            return self
+        return type(self).model_validate(
+            {
+                **self.model_dump(),
+                "thinking_tokens": self.reading_thinking_tokens,
+                "reading_thinking_tokens": None,
+            }
+        )
+
+    def for_views(self) -> "AnalysisPipelineConfig":
+        return type(self).model_validate(
+            {
+                **self.model_dump(),
+                "output_tokens": min(self.output_tokens, 4_096),
+                "thinking_tokens": 0,
+                "reading_thinking_tokens": None,
+                "timeout_seconds": min(self.timeout_seconds, 60),
+            }
+        )
+
     @model_validator(mode="after")
     def validate_budget(self) -> "AnalysisPipelineConfig":
-        if self.max_tokens + self.safety_tokens >= self.context_tokens:
-            raise ValueError("Analysis output, thinking and safety budgets exhaust context")
-        if 0 < self.thinking_tokens < MIN_THINKING_TOKENS:
-            raise ValueError("Thinking is off at 0 or budgeted with at least 1,024 tokens")
+        for thinking in (self.thinking_tokens, self.reading_thinking_tokens):
+            if thinking is None:
+                continue
+            if 0 < thinking < MIN_THINKING_TOKENS:
+                raise ValueError("Thinking is off at 0 or budgeted with at least 1,024 tokens")
+            if self.output_tokens + thinking + self.safety_tokens >= self.context_tokens:
+                raise ValueError("Analysis output, thinking and safety budgets exhaust context")
         if self.model != self.model.strip() or "/" not in self.model:
             raise ValueError("Use an explicit provider model identifier")
         return self
 
 
 def configured_pipeline() -> AnalysisPipelineConfig:
-    return AnalysisPipelineConfig()
+    return AnalysisPipelineConfig(reading_thinking_tokens=settings.case_reading_thinking_tokens)

@@ -1,0 +1,36 @@
+{
+  "mdeberta_b1_lr": {
+    "features": [
+      "P_entailment",
+      "P_neutral",
+      "P_contradiction"
+    ],
+    "weights": [
+      1.4108176231384277,
+      -1.0513354539871216,
+      -0.3022925555706024
+    ],
+    "intercept": 0.05828031152486801,
+    "C": 1.0,
+    "class_weight": "balanced",
+    "solver": "lbfgs",
+    "seed": 42
+  },
+  "minilm_b1_lr": {
+    "features": [
+      "P_entailment",
+      "P_neutral",
+      "P_contradiction"
+    ],
+    "weights": [
+      3.1116814613342285,
+      -1.461618185043335,
+      -1.1524471044540405
+    ],
+    "intercept": 0.5150777697563171,
+    "C": 1.0,
+    "class_weight": "balanced",
+    "solver": "lbfgs",
+    "seed": 42
+  }
+}

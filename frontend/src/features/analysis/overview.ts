@@ -152,14 +152,14 @@ export function buildCaseOverview(
     parties: (trace.involved_parties ?? []).map(
       ({ name, role, claim_ids, support, projection_grounding }) => ({
         name,
-        role,
+        role: role ?? null,
         ...backing(claim_ids),
         supportNote: projectionNote(support, projection_grounding, incidentSummary),
       }),
     ),
     timeline: (trace.timeline ?? []).map(
       ({ time, event, claim_ids, support, projection_grounding }) => ({
-        time,
+        time: time ?? null,
         event,
         ...backing(claim_ids),
         supportNote: projectionNote(support, projection_grounding, incidentSummary),
@@ -263,6 +263,7 @@ function claimBacking(findings: CaseFinding[]) {
       });
     return {
       sources,
+      linkedClaims: cited.map(({ id, text }) => ({ id, text })),
       inferred:
         cited.length > 0 && cited.every((finding) => finding.claimType === "analytical_inference"),
       unconfirmed: unconfirmedStatuses(cited.map((finding) => finding.epistemicStatus)),

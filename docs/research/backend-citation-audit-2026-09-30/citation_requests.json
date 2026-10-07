@@ -1,0 +1,460 @@
+{
+  "schema_version": "ai-research-writing/citation-requests-v1",
+  "entries": [
+    {
+      "key": "attribute_first",
+      "identifier": "doi:10.18653/v1/2024.acl-long.182",
+      "claim_support": [
+        {
+          "claim": "Grounded generation can select concise source spans before generating locally attributed text.",
+          "relation": "partial",
+          "status": "verified",
+          "evidence": "Abstract and method description, PDF pp. 2-3: source-span selection, sentence-level planning, and sequential sentence generation are separate steps. Supports a reading-before-summary design rationale; it does not establish CyberCase implements that three-step algorithm.",
+          "source": "https://aclanthology.org/2024.acl-long.182/"
+        }
+      ]
+    },
+    {
+      "key": "ais",
+      "identifier": "doi:10.1162/coli_a_00486",
+      "claim_support": [
+        {
+          "claim": "Source attribution should be evaluated as whether identifiable source material supports a generated statement.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Abstract: AIS defines attribution against a provided independent source and a two-stage human annotation protocol. Supports distinguishing source support from real-world truth; literal quote matching alone does not implement AIS evaluation.",
+          "source": "https://aclanthology.org/2023.cl-4.2/"
+        }
+      ]
+    },
+    {
+      "key": "alce",
+      "identifier": "doi:10.18653/v1/2023.emnlp-main.398",
+      "claim_support": [
+        {
+          "claim": "Citation evaluation should distinguish statement support coverage from irrelevant citations and answer correctness.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "PDF section 3.3, p. 4; human evaluation p. 8: citation recall tests support from cited passages, while citation precision tests relevance of citations. This is semantic evaluation, beyond locating a quote string.",
+          "source": "https://aclanthology.org/2023.emnlp-main.398.pdf"
+        }
+      ]
+    },
+    {
+      "key": "factscore",
+      "identifier": "doi:10.18653/v1/2023.emnlp-main.741",
+      "claim_support": [
+        {
+          "claim": "Long-form factual precision can be assessed at the level of supported atomic facts.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Abstract: decompose generations into atomic facts and measure the fraction supported by a reliable knowledge source. The original biography task and retrieval verifier require adaptation to a closed case-source registry.",
+          "source": "https://aclanthology.org/2023.emnlp-main.741/"
+        }
+      ]
+    },
+    {
+      "key": "faithful_summarization",
+      "identifier": "doi:10.18653/v1/2020.acl-main.173",
+      "claim_support": [
+        {
+          "claim": "Fluent abstractive summaries can contain content that is unfaithful to their input documents.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Abstract: human evaluation of summarization hallucinations and comparison of entailment-based measures with standard overlap metrics. Does not quantify current CyberCase or current-model error rates.",
+          "source": "https://aclanthology.org/2020.acl-main.173/"
+        }
+      ]
+    },
+    {
+      "key": "acu",
+      "identifier": "doi:10.18653/v1/2023.acl-long.228",
+      "claim_support": [
+        {
+          "claim": "Summary coverage should be evaluated with explicit atomic units from reference content and a constrained annotation protocol.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "PDF section 3, pp. 3-4: reference-based Atomic Content Units for summary salience, writing units and matching them to system summaries. Supports coverage evaluation, not a standalone factuality metric.",
+          "source": "https://aclanthology.org/2023.acl-long.228.pdf"
+        }
+      ]
+    },
+    {
+      "key": "default_assistant",
+      "identifier": "arxiv:2607.01256v1",
+      "claim_support": [
+        {
+          "claim": "A case-review assistant can ground recommendations in source quotes verified before the final LLM generation.",
+          "relation": "partial",
+          "status": "verified",
+          "evidence": "arXiv 2607.01256v1, Default Assistant Implementation / Cited Generation, p. 5: retrieve pages, extract quotes/tables, relocate and replace with directly copied spans, pass only located spans to generation. Human study uses law-student participants. CyberCase currently binds after judgement.",
+          "source": "https://arxiv.org/html/2607.01256v1"
+        }
+      ]
+    },
+    {
+      "key": "forensic_report_llm",
+      "identifier": "doi:10.1016/j.fsidi.2023.301683",
+      "claim_support": [
+        {
+          "claim": "LLMs have been studied as assistants for writing sections of forensic reports, with human proofreading remaining necessary in the studied setting.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Primary arXiv abstract for the published 2024 journal article: report-structure analysis and a case study of generating report sections. CyberCase report rendering is deterministic; this work is a related application rather than the implemented rendering algorithm.",
+          "source": "https://arxiv.org/abs/2312.14607"
+        }
+      ]
+    },
+    {
+      "key": "structured_forensic_reports",
+      "identifier": "doi:10.1145/3785318.3785330",
+      "claim_support": [
+        {
+          "claim": "Two-stage case-specific summarization and report consolidation have prior use in digital forensics.",
+          "relation": "partial",
+          "status": "verified",
+          "evidence": "Official university publication abstract: local LLMs summarize chunks of chat conversations and combine summaries into an investigative report; citation and chronology weaknesses remain. The study uses Gemini-generated reference output, not independent forensic ground truth.",
+          "source": "https://research.rug.nl/en/publications/structured-report-generation-using-local-llms-for-chat-based-digi/"
+        }
+      ]
+    },
+    {
+      "key": "self_correction_limits",
+      "identifier": "arxiv:2310.01798v2",
+      "claim_support": [
+        {
+          "claim": "A subsequent intrinsic correction pass can degrade initially correct reasoning, so preservation and correction require separate measurement.",
+          "relation": "contrast",
+          "status": "verified",
+          "evidence": "arXiv 2310.01798v2, section 3.3: correct-to-incorrect and incorrect-to-correct transitions; OpenReview confirms ICLR 2024 publication. Tested prompts and models do not support a universal claim about all current LLMs; CyberCase judgement is not intrinsic self-correction.",
+          "source": "https://arxiv.org/abs/2310.01798"
+        }
+      ]
+    },
+    {
+      "key": "criticbench",
+      "identifier": "doi:10.18653/v1/2024.findings-acl.91",
+      "claim_support": [
+        {
+          "claim": "Generation, critique and correction can be evaluated separately with fixed prior responses and different critic models.",
+          "relation": "contrast",
+          "status": "verified",
+          "evidence": "Official abstract: 15 datasets in five reasoning domains and evaluation of generation-critique-correction capabilities, including inter-model critique. CyberCase reading/judgement is a different task decomposition and is not a CriticBench implementation.",
+          "source": "https://aclanthology.org/2024.findings-acl.91/"
+        }
+      ]
+    },
+    {
+      "key": "relay_fidelity",
+      "identifier": "arxiv:2607.09678v2",
+      "claim_support": [
+        {
+          "claim": "Information preservation across LLM hand-offs can be tested using atomic ground truth and controlled injected errors.",
+          "relation": "partial",
+          "status": "verified",
+          "evidence": "arXiv 2607.09678v2, sections 3-5: twelve programmatic facts, five formats and six relay hops, per-hop QA/string recall and a paired-fork injected error. Pure relay copying differs from CyberCase extraction-to-summary; preservation does not imply correction or source truth.",
+          "source": "https://arxiv.org/abs/2607.09678"
+        }
+      ]
+    },
+    {
+      "key": "telephone_game",
+      "identifier": "arxiv:2407.04503v4",
+      "claim_support": [
+        {
+          "claim": "Iterated LLM text transmission can change measurable properties of the text.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Abstract and experimental description: telephone-game chains track toxicity, positivity, difficulty and length. Official conference PDF confirms ICLR 2025. These measurements are not atomic case-fact preservation scores.",
+          "source": "https://arxiv.org/abs/2407.04503"
+        }
+      ]
+    },
+    {
+      "key": "clarify_when_necessary",
+      "identifier": "doi:10.18653/v1/2025.findings-naacl.306",
+      "claim_support": [
+        {
+          "claim": "When to ask for clarification should be evaluated separately from producing a plausible clarifying question.",
+          "relation": "partial",
+          "status": "verified",
+          "evidence": "Official abstract: a task-agnostic when-to-clarify framework and IntentSim estimate entropy over user intents, across QA, MT and NLI. CyberCase uses high-priority/askable flags and fixed budgets, not IntentSim.",
+          "source": "https://aclanthology.org/2025.findings-naacl.306/"
+        }
+      ]
+    },
+    {
+      "key": "mediq",
+      "identifier": "doi:10.52202/079017-0908",
+      "claim_support": [
+        {
+          "claim": "Interactive systems can seek additional information under incomplete context, with question burden and downstream answer quality evaluated jointly.",
+          "relation": "partial",
+          "status": "verified",
+          "evidence": "NeurIPS 2024 official abstract: a benchmark and framework for question-asking clinical reasoning under incomplete information. Clinical labels and empirical gains do not establish general-case or forensic performance.",
+          "source": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/32b80425554e081204e5988ab1c97e9a-Abstract-Conference.html"
+        }
+      ]
+    },
+    {
+      "key": "insufficiencybench",
+      "identifier": "arxiv:2608.20220",
+      "claim_support": [
+        {
+          "claim": "Evaluation of missing material information should include deficient and fully specified queries to distinguish useful clarification from indiscriminate hedging.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Primary abstract: attorney-annotated query insufficiency with eight missing-element categories and switch, gating and fatal-prerequisite modes. US legal-advice benchmark; not CyberCase's five-W-and-one-H gap taxonomy.",
+          "source": "https://arxiv.org/abs/2608.20220"
+        }
+      ]
+    },
+    {
+      "key": "missing_bug_information",
+      "identifier": "doi:10.1145/3106237.3106285",
+      "claim_support": [
+        {
+          "claim": "Missing-information detection can be evaluated against explicit expected content categories.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Official author abstract: annotates observed behavior, expected behavior and steps to reproduce, and detects absent expected behavior/steps. Bug-report labels do not establish case-analysis readiness.",
+          "source": "https://personal.utdallas.edu/~vince/papers/fse17.html"
+        }
+      ]
+    },
+    {
+      "key": "giveme5w1h",
+      "identifier": "arxiv:1909.02766",
+      "claim_support": [
+        {
+          "claim": "The journalistic who, what, when, where, why and how questions provide a reusable descriptive view of events.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Primary abstract: a rule-based English news-event extractor answering 5W1H. Supports the checklist vocabulary, not CyberCase's LLM-based gap detection or a universal notion of case completeness.",
+          "source": "https://arxiv.org/abs/1909.02766"
+        }
+      ]
+    },
+    {
+      "key": "casie",
+      "identifier": "doi:10.1609/aaai.v34i05.6401",
+      "claim_support": [
+        {
+          "claim": "Event annotations with triggers and participant roles can support role-preservation evaluation on a cybersecurity subdomain.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "AAAI official abstract and paper: cybersecurity event extraction, arguments and event coreference. CASIE is not a general-case benchmark and unmatched annotations are not automatically unsupported-source claims.",
+          "source": "https://ojs.aaai.org/index.php/AAAI/article/view/6401"
+        }
+      ]
+    },
+    {
+      "key": "rag",
+      "identifier": "arxiv:2005.11401",
+      "claim_support": [
+        {
+          "claim": "Retrieval-augmented generation conditions language generation on external non-parametric knowledge.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "NeurIPS 2020 official abstract: dense Wikipedia retrieval with parametric and non-parametric memory. Supports RAG background, not CyberCase's HTTP client's internal retriever, joint training, or an assumption that every case needs RAG.",
+          "source": "https://proceedings.neurips.cc/paper/2020/hash/6b493230-Abstract.html"
+        }
+      ]
+    },
+    {
+      "key": "ragate",
+      "identifier": "doi:10.18653/v1/2025.findings-naacl.30",
+      "claim_support": [
+        {
+          "claim": "A gate can select whether external retrieval should augment a conversational response.",
+          "relation": "partial",
+          "status": "verified",
+          "evidence": "Official abstract: RAGate learns a binary adaptive-augmentation choice from human judgments. CyberCase's gate targets technical/MITRE applicability, not the same response-utility label.",
+          "source": "https://aclanthology.org/2025.findings-naacl.30/"
+        }
+      ]
+    },
+    {
+      "key": "xlmr",
+      "identifier": "doi:10.18653/v1/2020.acl-main.747",
+      "claim_support": [
+        {
+          "claim": "XLM-R is a multilingual pretrained encoder usable as a foundation for a task-specific classifier.",
+          "relation": "software",
+          "status": "verified",
+          "evidence": "Official ACL abstract: multilingual masked-language-model pretraining over one hundred languages and cross-lingual transfer. Local config identifies XLMRobertaForSequenceClassification. This does not validate the local threshold or active deployment mode.",
+          "source": "https://aclanthology.org/2020.acl-main.747/"
+        }
+      ]
+    },
+    {
+      "key": "ladder",
+      "identifier": "doi:10.1145/3607199.3607208",
+      "claim_support": [
+        {
+          "claim": "Attack-pattern extraction and ATT&CK mapping have published datasets and methods distinct from simple indicator extraction.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Primary arXiv abstract for RAID 2023 publication: LADDER extracts attack patterns, maps them to ATT&CK, and releases a benchmark. Local gate.json names a LADDER sentence classifier, but that file alone does not prove a reproducible training lineage.",
+          "source": "https://arxiv.org/abs/2211.01753"
+        }
+      ]
+    },
+    {
+      "key": "annoctr",
+      "identifier": "arxiv:2404.07765",
+      "claim_support": [
+        {
+          "claim": "Document-context ATT&CK annotations can support external evaluation of a conditional technical-analysis module.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Correct official LREC-COLING 2024 abstract at 2024.lrec-main.103: domain-expert annotation of reports, entities, time and implicit/explicit tactics/techniques linked to ATT&CK. Native annotation units need a declared rule before being converted into binary gate labels.",
+          "source": "https://aclanthology.org/2024.lrec-main.103/"
+        }
+      ]
+    },
+    {
+      "key": "cti_unreliable",
+      "identifier": "doi:10.1007/978-3-032-00627-1_17",
+      "claim_support": [
+        {
+          "claim": "CTI evaluations should measure consistency and confidence as well as task accuracy.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Primary arXiv abstract for the 2025 published book chapter: evaluations on real-size threat reports find consistency/confidence issues in the tested models. Does not imply all current LLMs or this particular pipeline are unreliable at the same rate.",
+          "source": "https://arxiv.org/abs/2503.23175"
+        }
+      ]
+    },
+    {
+      "key": "agir",
+      "identifier": "doi:10.1109/BigData59044.2023.10386116",
+      "claim_support": [
+        {
+          "claim": "A template-to-LLM rewriting pipeline is a published approach to generating CTI reports from formal entity graphs.",
+          "relation": "contrast",
+          "status": "verified",
+          "evidence": "Primary arXiv abstract for the IEEE Big Data 2023 paper: AGIR combines templates and an LLM over graph representations. CyberCase uses a stored case trace and deterministic projection without a report-stage LLM or a STIX entity-graph implementation.",
+          "source": "https://arxiv.org/abs/2310.02655"
+        }
+      ]
+    },
+    {
+      "key": "data_to_document",
+      "identifier": "doi:10.18653/v1/D17-1239",
+      "claim_support": [
+        {
+          "claim": "Report evaluation can distinguish content selection, record accuracy and content ordering.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "PDF section 3.2, p. 4: content-selection, relation-generation and ordering metrics for data-to-document generation. CyberCase's deterministic renderer needs declared intended fields and projection checks rather than copying the original basketball-domain extractor.",
+          "source": "https://aclanthology.org/D17-1239.pdf"
+        }
+      ]
+    },
+    {
+      "key": "open_llm_data_to_text",
+      "identifier": "doi:10.18653/v1/2024.acl-long.651",
+      "claim_support": [
+        {
+          "claim": "Semantic accuracy should be assessed separately from fluency when models turn structured data into prose.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Official ACL abstract: newly collected structured API data and human/model-based semantic-error analysis of open LLM outputs. CyberCase report rendering does not itself perform neural data-to-text generation.",
+          "source": "https://aclanthology.org/2024.acl-long.651/"
+        }
+      ]
+    },
+    {
+      "key": "format_restrictions",
+      "identifier": "doi:10.18653/v1/2024.emnlp-industry.91",
+      "claim_support": [
+        {
+          "claim": "Structured-output constraints can interact with task performance, so format and content correctness should be measured separately.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Official ACL abstract: controlled structured-format versus free-form generation on several tasks and tested-model reasoning effects. This does not prove JSON harms CyberCase or that valid JSON implies semantic correctness.",
+          "source": "https://aclanthology.org/2024.emnlp-industry.91/"
+        }
+      ]
+    },
+    {
+      "key": "typhoon_ocr",
+      "identifier": "arxiv:2601.14722",
+      "claim_support": [
+        {
+          "claim": "Typhoon OCR is an open vision-language approach for Thai and English document extraction.",
+          "relation": "software",
+          "status": "verified",
+          "evidence": "Primary arXiv abstract: transcription, layout reconstruction and Thai-focused training. CyberCase's Typhoon HTTP recognizer establishes provider integration, not the exact serving checkpoint, OCR V1.5, or local handwriting performance.",
+          "source": "https://arxiv.org/abs/2601.14722"
+        }
+      ]
+    },
+    {
+      "key": "ocr_downstream",
+      "identifier": "doi:10.5220/0009169004840496",
+      "claim_support": [
+        {
+          "claim": "OCR quality should be assessed through its effect on downstream language-processing tasks.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Official author institution abstract: extrinsic evaluation of OCR errors on segmentation, entity recognition, parsing, retrieval, topic modelling and language-model fine-tuning. The study is not a modern LLM case-summarization benchmark.",
+          "source": "https://www.turing.ac.uk/news/publications/assessing-impact-ocr-quality-downstream-nlp-tasks"
+        }
+      ]
+    },
+    {
+      "key": "statistical_tests",
+      "identifier": "doi:10.18653/v1/P18-1128",
+      "claim_support": [
+        {
+          "claim": "Statistical tests for NLP comparisons should match the metric, experimental design and dependencies among samples.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Official ACL abstract and paper section 3: a practical test-selection protocol; discussion of dependent language data. Supports matched case-level comparisons, not a universal requirement to use a single particular test.",
+          "source": "https://aclanthology.org/P18-1128/"
+        }
+      ]
+    },
+    {
+      "key": "statistical_power",
+      "identifier": "doi:10.18653/v1/2020.emnlp-main.745",
+      "claim_support": [
+        {
+          "claim": "A small evaluation can be underpowered and should report uncertainty and a scoped interpretation of effects.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Official ACL abstract: NLP power analysis and underpowered automatic/human evaluation settings. Does not establish that a fixed number of CyberCase examples is automatically sufficient or insufficient.",
+          "source": "https://aclanthology.org/2020.emnlp-main.745/"
+        }
+      ]
+    },
+    {
+      "key": "api_nondeterminism",
+      "identifier": "doi:10.18653/v1/2025.eval4nlp-1.12",
+      "claim_support": [
+        {
+          "claim": "Hosted LLM outputs may vary even under settings intended to be deterministic.",
+          "relation": "background",
+          "status": "verified",
+          "evidence": "Official workshop abstract: repeated calls to five hosted models over eight tasks and ten runs, with raw/answer agreement metrics. Observations do not measure CyberCase's provider or prove temperature-zero runs are exactly reproducible.",
+          "source": "https://aclanthology.org/2025.eval4nlp-1.12/"
+        }
+      ]
+    },
+    {
+      "key": "clarification_evpi",
+      "identifier": "doi:10.18653/v1/P18-1255",
+      "claim_support": [
+        {
+          "claim": "Clarification-question ranking can be motivated by the expected usefulness of the answer.",
+          "relation": "contrast",
+          "status": "verified",
+          "evidence": "Official ACL abstract: neural expected-value-of-perfect-information ranking using StackExchange question-answer pairs and expert evaluation. CyberCase chooses the first eligible gap; it does not implement or estimate neural EVPI.",
+          "source": "https://aclanthology.org/P18-1255/"
+        }
+      ]
+    }
+  ]
+}

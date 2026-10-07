@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "at": "2026-10-06T01:53:10.246150+00:00",
+  "model": "minilm",
+  "checked_units": {
+    "dev": 1198,
+    "test": 1610,
+    "test_ood": 1686
+  },
+  "threshold": 0.27,
+  "summary_sha256": "878f18db2a0ffbb4e3504f13ffeba1465c0b28617785e96fd7e235fe873d9687",
+  "checks": "Frozen source/data/score hashes; all original inputs/gold; complete claim/prompt/evidence tokenization; class probabilities/support and sequence-label mapping; independent sklearn confusion/P/R/F1/Accuracy/AUROC/AP/source averages; EN-dev grid/tie rule"
+}

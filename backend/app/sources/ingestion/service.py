@@ -229,6 +229,8 @@ def build_document_recognizer() -> DocumentRecognizer:
             model=settings.typhoon_ocr_model,
             timeout_seconds=settings.document_recognition_timeout_seconds,
             target_image_dimension=settings.document_ingestion_render_longest_edge,
+            max_retries=settings.document_recognition_max_retries,
+            retry_delay_seconds=settings.document_recognition_retry_delay_seconds,
         )
     )
 

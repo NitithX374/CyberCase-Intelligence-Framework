@@ -12,19 +12,18 @@ from app.analysis.prompts import (
     CASE_READING_SYSTEM_PROMPT,
     READING_JSON_FORMAT,
 )
+from app.analysis.reading_sources import ReadingSources
 from app.analysis.write import (
     joined_trace,
-    provider_evidence_payload,
-    reading_from,
     reading_payload,
     write_trace,
 )
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
+from app.sources.evidence import evidence_units
 from app.trace.bind import bound_claims, bound_references, resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
 from app.trace.trace import (
-    CaseInvolvedParty,
     CaseMitreAssociation,
     CaseProviderJudgement,
     CaseProviderReading,
@@ -55,13 +54,13 @@ def reading_of(bundle: CaseSourceBundle) -> CaseProviderReading:
                 epistemic_status="reported",
                 supporting_source_ids=[source_id],
                 supporting_citations=[
-                    CaseSourceCitation(source_id=source_id, exact_quote=SOURCE_TEXT)
+                    CaseSourceCitation(
+                        source_id=source_id,
+                        evidence_unit_ids=[evidence_units(bundle.sources[0])[0].unit_id],
+                    )
                 ],
             )
         ],
-        involved_parties=[],
-        timeline=[],
-        impacts=[],
     )
 
 
@@ -81,14 +80,22 @@ def written(bundle: CaseSourceBundle, reading: CaseProviderReading, **options):
         seen.append(kwargs)
         if kwargs["stage"] == "case_reading":
             return CaseProviderReadingReply.model_validate(
-                reading.model_dump(
-                    exclude={
-                        "claims": {"__all__": {"unverified_citations", "invalid_evidence"}},
-                        "involved_parties": {"__all__": {"support", "projection_grounding"}},
-                        "timeline": {"__all__": {"support", "projection_grounding"}},
-                        "impacts": {"__all__": {"support", "projection_grounding"}},
-                    }
-                )
+                {
+                    "version": reading.version,
+                    "claims": [
+                        {
+                            **claim.model_dump(
+                                include={"claim_id", "claim_type", "text", "epistemic_status"}
+                            ),
+                            "supporting_citations": [
+                                citation.model_dump(include={"source_id", "evidence_unit_ids"})
+                                for citation in claim.supporting_citations
+                            ],
+                            "contradicting_citations": [],
+                        }
+                        for claim in reading.claims
+                    ],
+                }
             )
         return judgement()
 
@@ -129,15 +136,17 @@ def test_the_reading_prompt_selects_units_and_states_the_json():
     assert '"page_numbers"' not in READING_JSON_FORMAT
     assert CASE_READING_SYSTEM_PROMPT + READING_JSON_FORMAT == CASE_READING_JSON_PROMPT
     assert "evidence_unit_ids" in READING_JSON_FORMAT
-    assert "Do not write exact_quote" in CASE_READING_SYSTEM_PROMPT
+    assert "Do not reproduce source text as evidence" in CASE_READING_SYSTEM_PROMPT
+    assert '"supporting_source_ids"' not in READING_JSON_FORMAT
+    assert '"reasoning_summary"' not in READING_JSON_FORMAT
     assert READING_JSON_FORMAT.endswith(
         'write a double quotation mark as \\" so the JSON stays valid.'
     )
 
 
-def test_a_quote_the_model_cited_becomes_a_citation_the_backend_can_locate():
+def test_a_stored_legacy_quote_remains_locatable_without_the_new_reader_contract():
     source_id = str(uuid4())
-    reply = CaseProviderReadingReply.model_validate(
+    reading = CaseProviderReading.model_validate(
         {
             "version": "case_analysis_trace_v1",
             "claims": [
@@ -153,18 +162,15 @@ def test_a_quote_the_model_cited_becomes_a_citation_the_backend_can_locate():
                     "contradicting_citations": [],
                 }
             ],
-            "involved_parties": [],
-            "timeline": [],
-            "impacts": [],
         }
     )
 
-    reading = reading_from(reply)
-
-    assert reading.claims[0].supporting_citations == [
-        CaseSourceCitation(source_id=source_id, exact_quote=SOURCE_TEXT)
-    ]
-    assert reading.claims[0].supporting_citations[0].page_numbers == []
+    bundle = CaseSourceBundle(1, (CaseSourceItem(source_id, "narrative", SOURCE_TEXT),))
+    checked, _ = bound_claims(reading, bundle)
+    [citation] = checked.claims[0].supporting_citations
+    assert citation.exact_quote == SOURCE_TEXT
+    assert citation.pointer_state == "recovered"
+    assert citation.page_numbers == []
 
 
 def test_the_reading_call_is_never_shown_the_technical_context():
@@ -182,7 +188,7 @@ def test_the_reading_call_is_never_shown_the_technical_context():
     assert trace.retrieval_context_id == context.retrieval_context_id
 
 
-def test_the_judgement_call_receives_the_claims_after_their_quotes_are_checked():
+def test_the_judgement_call_receives_claims_after_their_unit_references_are_checked():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
     _, (_, judgement_call) = written(bundle, reading)
@@ -200,12 +206,12 @@ def invented_claim(source_id: str) -> CaseAnalysisClaim:
         epistemic_status="reported",
         supporting_source_ids=[source_id],
         supporting_citations=[
-            CaseSourceCitation(source_id=source_id, exact_quote="The payroll server was wiped.")
+            CaseSourceCitation(source_id=source_id, evidence_unit_ids=["invented-unit"])
         ],
     )
 
 
-def test_the_judgement_sees_a_claim_whose_quote_was_not_found_as_not_confirmed():
+def test_the_judgement_sees_a_claim_whose_unit_was_not_found_as_not_confirmed():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
     reading = reading.model_copy(
@@ -251,9 +257,6 @@ def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_i
     reading = reading.model_copy(
         update={
             "claims": [first, invented_claim(source_id), first],
-            "involved_parties": [
-                CaseInvolvedParty(name="Finance team", role="Victim", claim_ids=["A-01", "A-77"])
-            ],
         }
     )
     verdict = judgement(
@@ -310,7 +313,8 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
         provenance={"verification_status": "machine_read"},
     )
     reading = CaseProviderReading(
-        version="case_analysis_trace_v1", claims=[], involved_parties=[], timeline=[], impacts=[]
+        version="case_analysis_trace_v1",
+        claims=[],
     )
     _, (reading_call, judgement_call) = written(
         CaseSourceBundle(revision=1, sources=(source,)), reading
@@ -318,7 +322,7 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
     assert reading_call["content"] == {
         "response_language": "english",
         "source_revision": 1,
-        "case_sources": [provider_evidence_payload(source)],
+        "case_sources": [ReadingSources.source_payload(source)],
         "followup_history": [],
     }
     assert "text" not in reading_call["content"]["case_sources"][0]
@@ -338,7 +342,7 @@ def test_the_trace_takes_its_claims_from_the_reading_and_its_summary_from_the_ju
 
     assert [claim.claim_id for claim in trace.claims] == ["A-01"]
     assert trace.summary == "Overnight encryption of a file share."
-    assert trace.involved_parties == reading.involved_parties
+    assert trace.involved_parties == trace.timeline == trace.impacts == []
     assert trace.grounding is None
 
 
@@ -386,5 +390,9 @@ def test_the_judgement_is_shown_which_sentence_carries_each_claim():
     bundle = case_with_one_narrative()
     payload = reading_payload(reading_of(bundle))
 
-    assert set(payload) == {"claims", "involved_parties", "timeline", "impacts"}
-    assert payload["claims"][0]["supporting_citations"][0]["exact_quote"] == SOURCE_TEXT
+    assert set(payload) == {"claims"}
+    checked, _ = bound_claims(reading_of(bundle), bundle)
+    assert (
+        reading_payload(checked)["claims"][0]["supporting_citations"][0]["exact_quote"]
+        == SOURCE_TEXT
+    )

@@ -1,0 +1,286 @@
+{
+  "audit_date": "2026-09-30",
+  "scope": "Current backend code at main 4aa8b18; candidate publication metadata and scoped claim support",
+  "papers": [
+    {
+      "number": 1,
+      "key": "attribute_first",
+      "identifier": "doi:10.18653/v1/2024.acl-long.182",
+      "url": "https://aclanthology.org/2024.acl-long.182/",
+      "priority": "core",
+      "group": "evidence"
+    },
+    {
+      "number": 2,
+      "key": "ais",
+      "identifier": "doi:10.1162/coli_a_00486",
+      "url": "https://aclanthology.org/2023.cl-4.2/",
+      "priority": "core",
+      "group": "evidence"
+    },
+    {
+      "number": 3,
+      "key": "alce",
+      "identifier": "doi:10.18653/v1/2023.emnlp-main.398",
+      "url": "https://aclanthology.org/2023.emnlp-main.398/",
+      "priority": "core",
+      "group": "evidence"
+    },
+    {
+      "number": 4,
+      "key": "factscore",
+      "identifier": "doi:10.18653/v1/2023.emnlp-main.741",
+      "url": "https://aclanthology.org/2023.emnlp-main.741/",
+      "priority": "core",
+      "group": "evaluation"
+    },
+    {
+      "number": 5,
+      "key": "faithful_summarization",
+      "identifier": "doi:10.18653/v1/2020.acl-main.173",
+      "url": "https://aclanthology.org/2020.acl-main.173/",
+      "priority": "supporting",
+      "group": "evaluation"
+    },
+    {
+      "number": 6,
+      "key": "acu",
+      "identifier": "doi:10.18653/v1/2023.acl-long.228",
+      "url": "https://aclanthology.org/2023.acl-long.228/",
+      "priority": "core",
+      "group": "evaluation"
+    },
+    {
+      "number": 7,
+      "key": "default_assistant",
+      "identifier": "arxiv:2607.01256v1",
+      "url": "https://arxiv.org/abs/2607.01256",
+      "priority": "core",
+      "group": "case_reports"
+    },
+    {
+      "number": 8,
+      "key": "forensic_report_llm",
+      "identifier": "doi:10.1016/j.fsidi.2023.301683",
+      "url": "https://arxiv.org/abs/2312.14607",
+      "priority": "core",
+      "group": "case_reports"
+    },
+    {
+      "number": 9,
+      "key": "structured_forensic_reports",
+      "identifier": "doi:10.1145/3785318.3785330",
+      "url": "https://research.rug.nl/en/publications/structured-report-generation-using-local-llms-for-chat-based-digi/",
+      "priority": "core",
+      "group": "case_reports"
+    },
+    {
+      "number": 10,
+      "key": "self_correction_limits",
+      "identifier": "arxiv:2310.01798v2",
+      "url": "https://arxiv.org/abs/2310.01798",
+      "priority": "supporting",
+      "group": "stages"
+    },
+    {
+      "number": 11,
+      "key": "criticbench",
+      "identifier": "doi:10.18653/v1/2024.findings-acl.91",
+      "url": "https://aclanthology.org/2024.findings-acl.91/",
+      "priority": "supporting",
+      "group": "stages"
+    },
+    {
+      "number": 12,
+      "key": "relay_fidelity",
+      "identifier": "arxiv:2607.09678v2",
+      "url": "https://arxiv.org/abs/2607.09678",
+      "priority": "core",
+      "group": "stages"
+    },
+    {
+      "number": 13,
+      "key": "telephone_game",
+      "identifier": "arxiv:2407.04503v4",
+      "url": "https://arxiv.org/abs/2407.04503",
+      "priority": "supporting",
+      "group": "stages"
+    },
+    {
+      "number": 14,
+      "key": "clarify_when_necessary",
+      "identifier": "doi:10.18653/v1/2025.findings-naacl.306",
+      "url": "https://aclanthology.org/2025.findings-naacl.306/",
+      "priority": "core",
+      "group": "followup"
+    },
+    {
+      "number": 15,
+      "key": "mediq",
+      "identifier": "doi:10.52202/079017-0908",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/32b80425554e081204e5988ab1c97e9a-Abstract-Conference.html",
+      "priority": "core",
+      "group": "followup"
+    },
+    {
+      "number": 16,
+      "key": "insufficiencybench",
+      "identifier": "arxiv:2608.20220",
+      "url": "https://arxiv.org/abs/2608.20220",
+      "priority": "supporting",
+      "group": "followup"
+    },
+    {
+      "number": 17,
+      "key": "missing_bug_information",
+      "identifier": "doi:10.1145/3106237.3106285",
+      "url": "https://personal.utdallas.edu/~vince/papers/fse17.html",
+      "priority": "supporting",
+      "group": "followup"
+    },
+    {
+      "number": 18,
+      "key": "giveme5w1h",
+      "identifier": "arxiv:1909.02766",
+      "url": "https://arxiv.org/abs/1909.02766",
+      "priority": "supporting",
+      "group": "representation"
+    },
+    {
+      "number": 19,
+      "key": "casie",
+      "identifier": "doi:10.1609/aaai.v34i05.6401",
+      "url": "https://ojs.aaai.org/index.php/AAAI/article/view/6401",
+      "priority": "conditional",
+      "group": "representation"
+    },
+    {
+      "number": 20,
+      "key": "rag",
+      "identifier": "arxiv:2005.11401",
+      "url": "https://proceedings.neurips.cc/paper/2020/hash/6b493230-Abstract.html",
+      "priority": "conditional",
+      "group": "retrieval"
+    },
+    {
+      "number": 21,
+      "key": "ragate",
+      "identifier": "doi:10.18653/v1/2025.findings-naacl.30",
+      "url": "https://aclanthology.org/2025.findings-naacl.30/",
+      "priority": "conditional",
+      "group": "retrieval"
+    },
+    {
+      "number": 22,
+      "key": "xlmr",
+      "identifier": "doi:10.18653/v1/2020.acl-main.747",
+      "url": "https://aclanthology.org/2020.acl-main.747/",
+      "priority": "conditional",
+      "group": "retrieval"
+    },
+    {
+      "number": 23,
+      "key": "ladder",
+      "identifier": "doi:10.1145/3607199.3607208",
+      "url": "https://arxiv.org/abs/2211.01753",
+      "priority": "conditional",
+      "group": "retrieval"
+    },
+    {
+      "number": 24,
+      "key": "annoctr",
+      "identifier": "arxiv:2404.07765",
+      "url": "https://aclanthology.org/2024.lrec-main.103/",
+      "priority": "conditional",
+      "group": "retrieval"
+    },
+    {
+      "number": 25,
+      "key": "cti_unreliable",
+      "identifier": "doi:10.1007/978-3-032-00627-1_17",
+      "url": "https://arxiv.org/abs/2503.23175",
+      "priority": "conditional",
+      "group": "retrieval"
+    },
+    {
+      "number": 26,
+      "key": "agir",
+      "identifier": "doi:10.1109/BigData59044.2023.10386116",
+      "url": "https://arxiv.org/abs/2310.02655",
+      "priority": "conditional",
+      "group": "case_reports"
+    },
+    {
+      "number": 27,
+      "key": "data_to_document",
+      "identifier": "doi:10.18653/v1/D17-1239",
+      "url": "https://aclanthology.org/D17-1239/",
+      "priority": "supporting",
+      "group": "case_reports"
+    },
+    {
+      "number": 28,
+      "key": "open_llm_data_to_text",
+      "identifier": "doi:10.18653/v1/2024.acl-long.651",
+      "url": "https://aclanthology.org/2024.acl-long.651/",
+      "priority": "supporting",
+      "group": "case_reports"
+    },
+    {
+      "number": 29,
+      "key": "format_restrictions",
+      "identifier": "doi:10.18653/v1/2024.emnlp-industry.91",
+      "url": "https://aclanthology.org/2024.emnlp-industry.91/",
+      "priority": "supporting",
+      "group": "representation"
+    },
+    {
+      "number": 30,
+      "key": "typhoon_ocr",
+      "identifier": "arxiv:2601.14722",
+      "url": "https://arxiv.org/abs/2601.14722",
+      "priority": "core",
+      "group": "ocr"
+    },
+    {
+      "number": 31,
+      "key": "ocr_downstream",
+      "identifier": "doi:10.5220/0009169004840496",
+      "url": "https://www.turing.ac.uk/news/publications/assessing-impact-ocr-quality-downstream-nlp-tasks",
+      "priority": "supporting",
+      "group": "ocr"
+    },
+    {
+      "number": 32,
+      "key": "statistical_tests",
+      "identifier": "doi:10.18653/v1/P18-1128",
+      "url": "https://aclanthology.org/P18-1128/",
+      "priority": "supporting",
+      "group": "evaluation"
+    },
+    {
+      "number": 33,
+      "key": "statistical_power",
+      "identifier": "doi:10.18653/v1/2020.emnlp-main.745",
+      "url": "https://aclanthology.org/2020.emnlp-main.745/",
+      "priority": "supporting",
+      "group": "evaluation"
+    },
+    {
+      "number": 34,
+      "key": "api_nondeterminism",
+      "identifier": "doi:10.18653/v1/2025.eval4nlp-1.12",
+      "url": "https://aclanthology.org/2025.eval4nlp-1.12/",
+      "priority": "supporting",
+      "group": "evaluation"
+    },
+    {
+      "number": 35,
+      "key": "clarification_evpi",
+      "identifier": "doi:10.18653/v1/P18-1255",
+      "url": "https://aclanthology.org/P18-1255/",
+      "priority": "supporting",
+      "group": "followup"
+    }
+  ]
+}

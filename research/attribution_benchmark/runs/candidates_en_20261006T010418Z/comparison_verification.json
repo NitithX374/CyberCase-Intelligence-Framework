@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "models": [
+    {
+      "model": "deberta_small",
+      "units": 4494,
+      "threshold": 0.01,
+      "id": 0.615114242094952,
+      "ood": 0.730846327446158
+    },
+    {
+      "model": "minilm",
+      "units": 4494,
+      "threshold": 0.27,
+      "id": 0.6218748766482695,
+      "ood": 0.7231281131039431
+    },
+    {
+      "model": "mdeberta",
+      "units": 4494,
+      "threshold": 0.15,
+      "id": 0.6435557177015466,
+      "ood": 0.6987072025953777
+    },
+    {
+      "model": "minicheck",
+      "units": 4494,
+      "threshold": 0.22,
+      "id": 0.7179773550388876,
+      "ood": 0.793624921798695
+    },
+    {
+      "model": "xlmr",
+      "units": 4494,
+      "threshold": 0.05,
+      "id": 0.6533753796988533,
+      "ood": 0.7520466232773412
+    },
+    {
+      "model": "attrscore",
+      "units": 4494,
+      "threshold": 0.23,
+      "id": 0.6622180854208752,
+      "ood": 0.7569832637752985
+    }
+  ],
+  "verified_units": 26964,
+  "matched_configuration": true,
+  "raw_and_source_hashes": "passed",
+  "prior_failures_preserved": true,
+  "original_baseline_unchanged": true,
+  "code": [
+    {
+      "file": "candidate_models.py",
+      "lines": 64
+    },
+    {
+      "file": "candidate_adapters.py",
+      "lines": 105
+    },
+    {
+      "file": "candidate_inference.py",
+      "lines": 113
+    },
+    {
+      "file": "candidate_reports.py",
+      "lines": 75
+    },
+    {
+      "file": "run_candidate.py",
+      "lines": 130
+    },
+    {
+      "file": "verify_candidate.py",
+      "lines": 138
+    },
+    {
+      "file": "run_candidates.py",
+      "lines": 63
+    },
+    {
+      "file": "compare_candidates.py",
+      "lines": 152
+    }
+  ]
+}

@@ -5,8 +5,8 @@ CHAT_PROMPT = """You answer one question in the chat of an investigative case.
 You are given:
 - case_sources: the texts the case is analysed from, each with a source_id.
 - followup_history: the reader's answers to earlier clarification questions, each with a qa_id.
-- analysis: the stored analysis of the case (summary, claims with claim_ids, involved parties,
-  timeline, impacts, ATT&CK associations, gaps), or null when the case is not analysed yet.
+- analysis: the stored analysis of the case (summary, canonical claims with claim_ids,
+  ATT&CK associations, gaps), or null when the case is not analysed yet.
 - analysis_status: "none" (not analysed yet), "current", or "stale" (the sources changed after the
   analysis was made).
 - technical_context: the ATT&CK context the analysis retrieved for this case, or null.
@@ -29,7 +29,8 @@ Cite what a case_fact rests on. When a claim of the analysis covers it, put that
 claim_ids. Otherwise quote the text it comes from: its source_id, or the qa_id of a follow-up
 answer, and an exact_quote copied verbatim from that text in the language it is written in. Never
 translate, reword or correct a quote. Never invent a citation: if you cannot cite, give none. An
-interpretation may cite the facts it rests on.
+interpretation may cite the facts it rests on. Never write citation brackets or tags (such as [A-01],
+[A-02] or [QA-01]) inside the statement text itself; record all citations only in claim_ids or quotes.
 
 When analysis_status is "stale" and the answer relies on the analysis, say that the sources have
 changed since the analysis. The reader's chat messages are not sources: if the reader states a new

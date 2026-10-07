@@ -1,0 +1,42 @@
+{
+  "version": "projection_validation_benchmark_v1",
+  "frozen_at": "2026-10-06T06:00:04.310499+00:00",
+  "annotation_method": "Independent rule-based authoring before NLI inference; no NLI-generated gold; no second human adjudicator.",
+  "benchmark_sha256": "a4227405f65504e044fa861d508344f106c36647621d34d3385e0238213db124",
+  "propagation_plan_sha256": "d9beb49861e62aae20b0471d86d9c5219ad9c6ff24f195e950e67ae28a2ab529",
+  "cases": 18,
+  "case_origins": {
+    "controlled": 12,
+    "saved_output": 6
+  },
+  "projection_gold": {
+    "supported": 66,
+    "not_supported": 165,
+    "ambiguous": 15
+  },
+  "projection_types": {
+    "involved_parties": 97,
+    "timeline": 74,
+    "impacts": 75
+  },
+  "origins": {
+    "controlled": {
+      "supported": 36,
+      "not_supported": 144
+    },
+    "saved_output": {
+      "supported": 30,
+      "ambiguous": 15,
+      "not_supported": 21
+    }
+  },
+  "source_preparation": "Historical canonical citations are mapped once to overlapping Evidence Units only when exact source containment holds. Missing mappings remain unbound. Quote matching is not an experimental condition or score.",
+  "statistical_unit": "Case family; bilingual controlled contexts share a family. Perturbations are clustered, not treated as independent draws.",
+  "propagation_cases": 20,
+  "source_code_sha256": {
+    "controlled.py": "364e1c75da48cfaec164976fc1ce3ed43794b453ffc60a39d6474240af014df3",
+    "specifications.py": "4f798e29b27c010cb6c4e0e8aff33bf23a0a2766f2f337f9d5bdf2a64f4f3400",
+    "real_outputs.py": "595c7348dbf8a5c496d56d107c502ef5c48049d7336f06283cb1e1fae2cbe5c2",
+    "freeze.py": "fb444d82c00b15cef11f668989e43ac9043bf15ff2f86f046335019273c38e5c"
+  }
+}

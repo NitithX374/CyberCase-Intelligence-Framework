@@ -1,0 +1,38 @@
+{
+  "candidate": "SW-NLI-LR",
+  "champion": "B1-LR",
+  "dev_champion": {
+    "accuracy": 0.6864813039309684,
+    "macro_f1": 0.6396505764031304,
+    "supported_precision": 0.5230769230769231,
+    "supported_recall": 0.49707602339181284,
+    "supported_f1": 0.5097451274362819,
+    "false_support_rate": 0.2211126961483595,
+    "tn": 546,
+    "fp": 155,
+    "fn": 172,
+    "tp": 170,
+    "total": 1043
+  },
+  "dev_candidate": {
+    "accuracy": 0.6423777564717162,
+    "macro_f1": 0.5799826179898407,
+    "supported_precision": 0.44816053511705684,
+    "supported_recall": 0.391812865497076,
+    "supported_f1": 0.41809672386895474,
+    "false_support_rate": 0.23537803138373753,
+    "tn": 536,
+    "fp": 165,
+    "fn": 208,
+    "tp": 134,
+    "total": 1043
+  },
+  "deltas": {
+    "delta_accuracy": -0.04410354745925216,
+    "delta_macro_f1": -0.059667958413289646,
+    "delta_supported_f1": -0.09164840356732712,
+    "delta_fsr": 0.01426533523537804
+  },
+  "promoted": false,
+  "decision_reason": "Failed all promotion thresholds (no meaningful gain on DEV)"
+}

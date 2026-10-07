@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "at": "2026-10-06T01:26:25.024784+00:00",
+  "model": "minicheck",
+  "checked_units": {
+    "dev": 1198,
+    "test": 1610,
+    "test_ood": 1686
+  },
+  "threshold": 0.22,
+  "summary_sha256": "679ee871bb805ebefdc3cee61eba7d077873c03fd8562f78d31763b454e9984f",
+  "checks": "Frozen source/data/score hashes; all original inputs/gold; complete claim/prompt/evidence tokenization; class probabilities/support and sequence-label mapping; independent sklearn confusion/P/R/F1/Accuracy/AUROC/AP/source averages; EN-dev grid/tie rule"
+}

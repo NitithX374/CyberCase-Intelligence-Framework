@@ -1,0 +1,92 @@
+{
+  "dataset": "osunlp/AttributionBench",
+  "configuration": "subset_balanced",
+  "revision": "62569e644f4186606f54f742178a4517431b42e1",
+  "downloaded_at": "2026-10-06T00:23:00.574149+00:00",
+  "files": {
+    "train": {
+      "filename": "train_all_subset_balanced.jsonl",
+      "sha256": "c7d6232048298b8f06afc556214c3739b5432f10f2641db2f73715fd126b1a63",
+      "bytes": 47394689,
+      "rows": 13322,
+      "unique_ids": 13322,
+      "labels": {
+        "attributable": 6661,
+        "not attributable": 6661
+      },
+      "source_subsets": {
+        "AttributedQA": 2000,
+        "LFQA": 2096,
+        "ExpertQA": 4442,
+        "Stanford-GenSearch": 4784
+      },
+      "empty_references": 0,
+      "clusters": 6106
+    },
+    "dev": {
+      "filename": "dev_all_subset_balanced.jsonl",
+      "sha256": "a744d1f84e621015f7a7e1941c3fb3f0838be767645dfb2ec784efd3133ab7d6",
+      "bytes": 3542401,
+      "rows": 1198,
+      "unique_ids": 1198,
+      "labels": {
+        "attributable": 599,
+        "not attributable": 599
+      },
+      "source_subsets": {
+        "AttributedQA": 74,
+        "LFQA": 110,
+        "ExpertQA": 470,
+        "Stanford-GenSearch": 544
+      },
+      "empty_references": 0,
+      "clusters": 531
+    },
+    "test": {
+      "filename": "test_all_subset_balanced.jsonl",
+      "sha256": "c2ff75dd4ea5cf12d86166ead66a96b42d5001a36daf02ff71303ef3317715a8",
+      "bytes": 5825881,
+      "rows": 1610,
+      "unique_ids": 1610,
+      "labels": {
+        "attributable": 805,
+        "not attributable": 805
+      },
+      "source_subsets": {
+        "AttributedQA": 230,
+        "LFQA": 168,
+        "ExpertQA": 612,
+        "Stanford-GenSearch": 600
+      },
+      "empty_references": 0,
+      "clusters": 748
+    },
+    "test_ood": {
+      "filename": "test_ood_all_subset_balanced.jsonl",
+      "sha256": "90d8f5363cec90197f80b3e896dad17e091a108a5bf282c3d515d48c9a01a934",
+      "bytes": 3039548,
+      "rows": 1686,
+      "unique_ids": 1686,
+      "labels": {
+        "attributable": 843,
+        "not attributable": 843
+      },
+      "source_subsets": {
+        "AttrScore-GenSearch": 162,
+        "HAGRID": 1088,
+        "BEGIN": 436
+      },
+      "empty_references": 75,
+      "clusters": 1229
+    }
+  },
+  "cross_split_id_overlap": {
+    "train/dev": 0,
+    "train/test": 0,
+    "train/test_ood": 0,
+    "dev/test": 0,
+    "dev/test_ood": 0,
+    "test/test_ood": 0
+  },
+  "loading": "Pinned official raw JSONL, preserved without type casting or row filtering"
+}

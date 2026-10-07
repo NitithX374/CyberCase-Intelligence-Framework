@@ -25,7 +25,9 @@ from app.main import app
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
 from app.trace import quote_binding
+from app.trace.claims import CaseAnalysisClaim
 from app.trace.quotes import MAX_QUOTE_CHARS
+from app.trace.trace import CaseProviderReading
 
 pytestmark = pytest.mark.asyncio
 
@@ -45,22 +47,17 @@ JUDGED = {
 def reading(*claims: dict) -> dict:
     return {
         "version": "case_analysis_trace_v1",
-        "involved_parties": [],
-        "timeline": [],
         "claims": list(claims),
-        "impacts": [],
     }
 
 
-def claim(claim_id: str, source_id: str, quote: str) -> dict:
+def claim(claim_id: str, source_id: str, unit_ids: list[str]) -> dict:
     return {
         "claim_id": claim_id,
         "claim_type": "reported",
         "text": "The incident was reported.",
         "epistemic_status": "reported",
-        "supporting_source_ids": [source_id],
-        "contradicting_source_ids": [],
-        "supporting_citations": [{"source_id": source_id, "exact_quote": quote}],
+        "supporting_citations": [{"source_id": source_id, "evidence_unit_ids": unit_ids}],
         "contradicting_citations": [],
     }
 
@@ -216,22 +213,54 @@ async def case_with_source(factory, text: str) -> tuple:
 
 def citing(text: str, quote: str):
     def cite(content: dict) -> dict:
-        [source_id] = [
-            s["source_id"]
+        [source] = [
+            s
             for s in content["case_sources"]
             if "".join(unit["text"] for unit in s["evidence_units"]) == text
         ]
-        return reading(claim("A-01", source_id, quote))
+        unit_ids = [unit["unit_id"] for unit in source["evidence_units"] if quote in unit["text"]]
+        assert unit_ids, "the Reader fixture must select supplied source units"
+        return reading(claim("A-01", source["source_id"], unit_ids))
 
     return cite
 
 
-async def test_an_elided_quote_that_spans_too_much_of_a_source_is_dropped_not_a_500(
+def legacy_citing(text: str, quote: str, monkeypatch):
+    def cite(content: dict) -> dict:
+        [source] = [
+            item
+            for item in content["case_sources"]
+            if "".join(unit["text"] for unit in item["evidence_units"]) == text
+        ]
+        legacy = CaseProviderReading(
+            version="case_analysis_trace_v1",
+            claims=[
+                CaseAnalysisClaim(
+                    claim_id="A-01",
+                    claim_type="reported",
+                    text="The incident was reported.",
+                    epistemic_status="reported",
+                    supporting_source_ids=[source["source_id"]],
+                    supporting_citations=[{"source_id": source["source_id"], "exact_quote": quote}],
+                )
+            ],
+        )
+        monkeypatch.setattr("app.analysis.write.reading_from", lambda reply, **kwargs: legacy)
+        return reading()
+
+    return cite
+
+
+async def test_a_legacy_elided_quote_that_spans_too_much_of_a_source_is_dropped_not_a_500(
     monkeypatch, model
 ):
     async with isolated_database() as factory:
         case_id, user_id = await case_with_source(factory, LONG_TEXT)
-        model(assess=[NO_GAPS], read=[citing(LONG_TEXT, f"{HEAD} ... {TAIL}")], judge=[JUDGED])
+        model(
+            assess=[NO_GAPS],
+            read=[legacy_citing(LONG_TEXT, f"{HEAD} ... {TAIL}", monkeypatch)],
+            judge=[JUDGED],
+        )
         async with signed_in(monkeypatch, factory, user_id) as client:
             ran = await client.post(f"/cases/{case_id}/analysis")
             stored = await client.get(f"/cases/{case_id}/analysis")
@@ -250,7 +279,9 @@ async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypat
         case_id, user_id = await case_with_source(factory, MARKED_TEXT)
         monkeypatch.setattr(quote_binding, "MAX_QUOTE_CHARS", 10 * MAX_QUOTE_CHARS)
         quote = " ".join(MARKED_WORDS)
-        model(assess=[NO_GAPS], read=[citing(MARKED_TEXT, quote)], judge=[JUDGED])
+        model(
+            assess=[NO_GAPS], read=[legacy_citing(MARKED_TEXT, quote, monkeypatch)], judge=[JUDGED]
+        )
         async with signed_in(monkeypatch, factory, user_id) as client:
             ran = await client.post(f"/cases/{case_id}/analysis")
             stored = await client.get(f"/cases/{case_id}/analysis")
@@ -388,11 +419,21 @@ async def test_a_chat_answer_keeps_the_follow_up_answer_its_claim_rests_on(monke
 
         def cite_the_reply(content: dict) -> dict:
             [answered] = content["followup_history"]
-            [narrative] = [
-                s["source_id"] for s in content["case_sources"] if s["source_kind"] == "narrative"
+            [narrative] = [s for s in content["case_sources"] if s["source_kind"] == "narrative"]
+            [qa_source] = [
+                s for s in content["case_sources"] if s["source_id"] == answered["qa_id"]
             ]
             return reading(
-                claim("A-01", answered["qa_id"], reply), claim("A-02", narrative, NARRATIVE)
+                claim(
+                    "A-01",
+                    answered["qa_id"],
+                    [unit["unit_id"] for unit in qa_source["evidence_units"]],
+                ),
+                claim(
+                    "A-02",
+                    narrative["source_id"],
+                    [unit["unit_id"] for unit in narrative["evidence_units"]],
+                ),
             )
 
         model(

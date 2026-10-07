@@ -15,7 +15,6 @@ from app.trace.claims import (
 from app.trace.evidence_binding import bind_citations, evidence_counts
 from app.trace.grounding import grounding_report as grounding_report
 from app.trace.meaning import meaning_pointed
-from app.trace.projection import ProjectionValidator
 from app.trace.quote_binding import QuoteSearch
 from app.trace.summary import summary_pieces
 from app.trace.support import item_support as item_support
@@ -72,15 +71,7 @@ def bound_claims(
     ]
     resolved_claims, meaning = meaning_pointed(resolved_claims, registry)
 
-    projection = ProjectionValidator(resolved_claims)
-    bound = written.model_copy(
-        update={
-            "claims": resolved_claims,
-            "involved_parties": [projection.check(party) for party in written.involved_parties],
-            "timeline": [projection.check(item) for item in written.timeline],
-            "impacts": [projection.check(impact) for impact in written.impacts],
-        }
-    )
+    bound = written.model_copy(update={"claims": resolved_claims})
     grounding = grounding_report(
         claims,
         resolved_claims,

@@ -33,9 +33,34 @@ Clarification answers are different: they are persisted `ChatMessage` rows and l
 
 An analysis reads one `CaseSourceBundle(revision, sources)` plus the separate follow-up history. The bundle is passed through assessment, optional technical augmentation, structured analysis, and source binding without database access inside the analysis steps. The workflow stores the result only after model work finishes and refuses to store it if the Case source revision changed meanwhile. The stored result records what it read in `external_context_json`: `sources_read`, the IDs of the sources it read, and `followup_history`, each answered follow-up's QA id, question and answer. The report takes the list of sources from `sources_read` and reads those source rows (`recorded_source_bundle` in `app/reports/generate.py`); a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is not re-read from chat.
 
-Reading receives all sources as deterministic, exact-offset Evidence Units from `app/sources/evidence.py`. Claims select `source_id` plus `evidence_unit_ids`; `app/trace/evidence_binding.py` reproduces original source text and page locators without searching for model-written quotes. Units are computed at analysis time and need no table or migration. Existing quote matching and advisory recovery remain available for legacy citations and unresolved pointers.
+Reading receives every source's exact unit text with local IDs such as `U001`, the unchanged `source_id`, and document/quality metadata. `app/analysis/reading_sources.py` captures revisions before the call and expands selected aliases to canonical IDs before binding; offsets and hashes stay backend-owned. `app/sources/evidence.py` and `app/trace/evidence_binding.py` retain deterministic exact spans, revision checks and document page locators. Stored traces keep full canonical IDs. Units are computed at analysis time and need no table or migration. Existing quote matching and advisory recovery remain available for legacy citations and unresolved pointers.
 
-Parties, timeline items and impacts carry claim IDs only. `app/trace/projection.py` validates each complete structured statement against linked grounded claim texts with the existing NLI model. Evidence binding (`bound`, `mixed`, `unbound`, `no_claim`) and semantic projection verdict (`supported`, `not_supported`, `unassessed`) are separate. Only supported projections enter Judgement as factual input. See [the grounding contract and examples](../docs/architecture/evidence-unit-grounding.md).
+The Reader returns only `version` and canonical `claims`. The backend resolves
+Source-unit IDs to original text/provenance. One native-schema LLM call batches
+exactly the Claims supplied to Judgement into Parties, Timeline and Impacts.
+Both calls run independently in parallel after binding; views never enter
+Judgement/chat and are not authoritative factual records. The extractor input is
+only Claim IDs/text. Schema and nonempty known Claim links are checked; any row
+with an unknown ID is dropped and logged. Roles and combined date/time may be
+null. No semantic verifier or fabricated offsets/citations are added. Existing
+`bound`/`mixed`/`unbound`/`no_claim` meanings remain structural. Historical extractor
+and projection metadata remain readable through generic records; generic NLI remains advisory
+legacy recovery. See [the grounding contract](../docs/architecture/evidence-unit-grounding.md).
+
+`CASE_READING_THINKING_TOKENS` can override Reading reasoning without changing Judgement or assessment. Use 0 to disable, or at least 1,024; absent historical pipeline fields inherit the shared budget. Compose keeps 8,192 following the small matched pilot: faster reasoning-off generations did not consistently satisfy the strict Reader schema. Output limits, retries and production timeouts are unchanged. From `backend`, `python -m experiments.reading_load_pilot --output-dir <new-folder>` measures payload sizes; add `--execute` explicitly to call the configured provider on two prelabelled fixtures. The pilot records raw replies, retries, binding and a separate experiment-only 300-second wall limit; it never writes Cases or calls Judgement, derived-view extraction or RAG.
+
+The `case_views` call reuses the configured analysis model/provider order, with
+thinking disabled, output capped at 4,096 tokens and an overall deadline of at most
+60 seconds. Existing transient-transport/whitespace retries remain within that
+deadline. Schema/provider/timeouts yield empty views and recorded failure status;
+Judgement may complete normally. Its failure cancels outstanding extraction.
+`view_extraction` records method `llm`, model, input Claims, duration, status,
+warning code and dropped-row count. The existing analysis snapshot caches views
+for reads/reports. New analysis runs extract again; no second revision system or
+cross-analysis cache is introduced. The local extractor service/config/mount,
+loader, per-Claim runtime and weight provisioner are removed. Torch/Transformers
+are still required by the encoder gate and generic NLI. Existing model assets
+and historical diagnostic artifacts are retained.
 
 ## One name per thing
 

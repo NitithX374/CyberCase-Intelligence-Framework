@@ -1,0 +1,92 @@
+{
+  "model_name": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+  "params": 107000000,
+  "dev": {
+    "champion": {
+      "accuracy": 0.6864813039309684,
+      "macro_f1": 0.6396505764031304,
+      "supported_precision": 0.5230769230769231,
+      "supported_recall": 0.49707602339181284,
+      "supported_f1": 0.5097451274362819,
+      "false_support_rate": 0.2211126961483595,
+      "tn": 546,
+      "fp": 155,
+      "fn": 172,
+      "tp": 170,
+      "total": 1043
+    },
+    "minilm": {
+      "accuracy": 0.6720997123681688,
+      "macro_f1": 0.6240134075385783,
+      "supported_precision": 0.5,
+      "supported_recall": 0.47953216374269003,
+      "supported_f1": 0.48955223880597015,
+      "false_support_rate": 0.23395149786019973,
+      "tn": 537,
+      "fp": 164,
+      "fn": 178,
+      "tp": 164,
+      "total": 1043
+    },
+    "deltas": {
+      "macro_f1": -0.01563716886455213,
+      "supported_f1": -0.02019288863031171,
+      "fsr": 0.012838801711840236
+    }
+  },
+  "test": {
+    "champion": {
+      "accuracy": 0.6663551401869159,
+      "macro_f1": 0.618490320686256,
+      "supported_precision": 0.4626038781163435,
+      "supported_recall": 0.5060606060606061,
+      "supported_f1": 0.4833574529667149,
+      "false_support_rate": 0.26216216216216215,
+      "tn": 546,
+      "fp": 194,
+      "fn": 163,
+      "tp": 167,
+      "total": 1070
+    },
+    "minilm": {
+      "accuracy": 0.6897196261682244,
+      "macro_f1": 0.6496149354543446,
+      "supported_precision": 0.4973544973544973,
+      "supported_recall": 0.5696969696969697,
+      "supported_f1": 0.5310734463276836,
+      "false_support_rate": 0.25675675675675674,
+      "tn": 550,
+      "fp": 190,
+      "fn": 142,
+      "tp": 188,
+      "total": 1070
+    },
+    "bootstrap": {
+      "accuracy": {
+        "mean_diff": 0.023042056074766358,
+        "ci_lower": -0.014018691588784996,
+        "ci_upper": 0.05700934579439254
+      },
+      "macro_f1": {
+        "mean_diff": 0.030927386885345017,
+        "ci_lower": -0.007640462762304089,
+        "ci_upper": 0.06638802482767914
+      },
+      "supported_f1": {
+        "mean_diff": 0.04764420119762275,
+        "ci_lower": -0.003663553019042767,
+        "ci_upper": 0.09666804459284638
+      },
+      "fsr": {
+        "mean_diff": -0.004813657181045532,
+        "ci_lower": -0.04523446327683618,
+        "ci_upper": 0.034818895145800596
+      }
+    }
+  },
+  "latency_batch1_ms": {
+    "mean": 29.18666600016877,
+    "median": 11.868300003698096,
+    "p90": 15.593630040530115
+  }
+}

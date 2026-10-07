@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
@@ -29,7 +30,6 @@ from app.trace.claims import (
     normalize_identifier,
 )
 from app.trace.messages import ChatAnswerUnit
-from app.trace.projection import projection_payload
 from app.trace.quote_binding import QuoteSearch, added_citations
 from app.trace.trace import MAX_SUMMARY_CHARS, CaseAnalysisTrace
 
@@ -48,6 +48,18 @@ UNANSWERED = {
         "Ask again, or add material on the Sources page."
     ),
 }
+
+INLINE_CITATION_PATTERN = re.compile(
+    r"\s*\[\s*(?:(?:A|QA|C)-\d+|[A-Z]\d+)(?:\s*[,;]\s*(?:(?:A|QA|C)-\d+|[A-Z]\d+))*\s*\]",
+    re.IGNORECASE,
+)
+
+
+def strip_inline_citations(text: str) -> str:
+    cleaned = INLINE_CITATION_PATTERN.sub("", text)
+    cleaned = re.sub(r" +", " ", cleaned)
+    cleaned = re.sub(r" ([.,;:!?])", r"\1", cleaned)
+    return cleaned.strip()
 
 
 class ChatReplyQuote(BaseModel):
@@ -193,9 +205,6 @@ def analysis_payload(trace: CaseAnalysisTrace, summary: str | None) -> dict[str,
             claim.model_dump(mode="json", exclude=CLAIM_FIELDS_HIDDEN_FROM_MODELS)
             for claim in trace.claims
         ],
-        "involved_parties": projection_payload(trace.involved_parties),
-        "timeline": projection_payload(trace.timeline),
-        "impacts": projection_payload(trace.impacts),
         "mitre_associations": [
             association.model_dump(mode="json") for association in trace.mitre_associations
         ],
@@ -261,7 +270,7 @@ def drafted_unit(
     document_context: object,
     search: QuoteSearch,
 ) -> DraftUnit | None:
-    text = item.text.strip()
+    text = strip_inline_citations(item.text)
     if not text:
         return None
     claim_ids = tuple(
@@ -348,4 +357,5 @@ __all__ = [
     "CHAT_OUTPUT_TOKENS",
     "ChatReply",
     "generate_case_answer",
+    "strip_inline_citations",
 ]

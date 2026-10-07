@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "at": "2026-10-06T01:19:55.384837+00:00",
+  "model": "osunlp/attrscore-flan-t5-large",
+  "revision": "282eb2ab5d537f5badf5fa33008d96abff34607b",
+  "splits": {
+    "dev": {
+      "units": 1198,
+      "max_input_tokens": 512,
+      "max_claim_tokens": 90,
+      "max_prompt_tokens": 121,
+      "truncated_units": 228
+    },
+    "test": {
+      "units": 1610,
+      "max_input_tokens": 512,
+      "max_claim_tokens": 161,
+      "max_prompt_tokens": 121,
+      "truncated_units": 374
+    },
+    "test_ood": {
+      "units": 1686,
+      "max_input_tokens": 512,
+      "max_claim_tokens": 237,
+      "max_prompt_tokens": 121,
+      "truncated_units": 252
+    }
+  },
+  "untruncated_native_tokenization_equivalent_rows": 3640
+}

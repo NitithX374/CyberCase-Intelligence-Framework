@@ -21,13 +21,14 @@ describe("the steps an analysis has reached", () => {
       "gate",
       "read",
       "bind",
+      "views",
       "judge",
     ]);
     expect(
       progressRows([...reached, { step: "retrieve", elapsed: 29, reachedAt: 30_000 }], 31_000).map(
         (row) => row.step,
       ),
-    ).toEqual(["assess", "gate", "retrieve", "read", "bind", "judge"]);
+    ).toEqual(["assess", "gate", "retrieve", "read", "bind", "views", "judge"]);
   });
 
   it("leaves out the first step when the analysis went on without it", () => {
@@ -39,8 +40,14 @@ describe("the steps an analysis has reached", () => {
       8_000,
     );
 
-    expect(rows.map((row) => row.step)).toEqual(["gate", "read", "bind", "judge"]);
-    expect(rows.map((row) => row.state)).toEqual(["done", "current", "waiting", "waiting"]);
+    expect(rows.map((row) => row.step)).toEqual(["gate", "read", "bind", "views", "judge"]);
+    expect(rows.map((row) => row.state)).toEqual([
+      "done",
+      "current",
+      "waiting",
+      "waiting",
+      "waiting",
+    ]);
   });
 
   it("still shows the first step while nothing has been reached", () => {
@@ -49,6 +56,7 @@ describe("the steps an analysis has reached", () => {
       "gate",
       "read",
       "bind",
+      "views",
       "judge",
     ]);
   });
@@ -68,12 +76,31 @@ describe("the steps an analysis has reached", () => {
       { step: "gate", state: "done", seconds: 8.5 },
       { step: "read", state: "current", seconds: 72 },
       { step: "bind", state: "waiting", seconds: null },
+      { step: "views", state: "waiting", seconds: null },
       { step: "judge", state: "waiting", seconds: null },
     ]);
   });
 
   it("writes minutes and seconds", () => {
     expect([0, 9.9, 72.4, 725].map(formatElapsed)).toEqual(["0:00", "0:09", "1:12", "12:05"]);
+  });
+
+  it("times local claim view extraction between binding and Judgement", () => {
+    const rows = progressRows(
+      [
+        { step: "bind", elapsed: 20, reachedAt: 21_000 },
+        { step: "views", elapsed: 22, reachedAt: 23_000 },
+        { step: "judge", elapsed: 24, reachedAt: 25_000 },
+      ],
+      27_000,
+    );
+    expect(rows.find((row) => row.step === "bind")).toMatchObject({ state: "done", seconds: 2 });
+    expect(rows.find((row) => row.step === "judge")).toMatchObject({
+      state: "current",
+      seconds: 2,
+    });
+    expect(rows.find((row) => row.step === "views")).toMatchObject({ state: "done", seconds: 2 });
+    expect(rows.some((row) => row.label.includes("parties"))).toBe(false);
   });
 
   it("keeps only the steps it knows, and forgets them all when told", () => {

@@ -4,6 +4,7 @@ import { useEffect, useId, useRef } from "react";
 import { quotedPassage } from "./quotedPassage";
 import type { QuoteContext, SourceMessageRef } from "./types";
 import { Icon } from "@/components/icons";
+import { Markdown } from "@/components/Markdown";
 
 export function SourceDrawer({
   sourceRef,
@@ -105,14 +106,18 @@ function Quoted({
 }) {
   const passage = quotedPassage(quote, context);
   return (
-    <section className="mb-6">
-      <h3 className="mb-2 text-xs font-medium text-ink-muted">{label}</h3>
+    <section className="mb-6 rounded-xl border border-line bg-surface-nested p-4">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</h3>
       <p className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
         {passage.before}
         {passage.before || passage.after ? (
-          <strong className="font-semibold">{passage.quote}</strong>
+          <strong className="font-semibold bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded">
+            {passage.quote}
+          </strong>
         ) : (
-          passage.quote
+          <mark className="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-semibold not-italic">
+            {passage.quote}
+          </mark>
         )}
         {passage.after}
       </p>
@@ -125,9 +130,35 @@ function Quoted({
   );
 }
 
+function highlightQuote(text: string, quote: string | null): string {
+  if (!quote) return text;
+  const target = quote.trim();
+  if (!target) return text;
+
+  const markOpen = '<mark class="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-medium">';
+  const markClose = "</mark>";
+
+  if (text.includes(target)) {
+    return text.split(target).join(`${markOpen}${target}${markClose}`);
+  }
+
+  const lowerText = text.toLowerCase();
+  const lowerTarget = target.toLowerCase();
+  const index = lowerText.indexOf(lowerTarget);
+  if (index !== -1) {
+    const matched = text.slice(index, index + target.length);
+    const before = text.slice(0, index);
+    const after = text.slice(index + target.length);
+    return `${before}${markOpen}${matched}${markClose}${after}`;
+  }
+
+  return text;
+}
+
 function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
   const pages = sourceRef.sourcePages;
   const content = sourceRef.displayContent || sourceRef.excerpt;
+  const quote = sourceRef.exactQuote;
 
   if (sourceRef.question) {
     return (
@@ -140,8 +171,12 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
         </div>
         <div>
           <dt className="mb-2 text-xs font-medium text-ink-muted">Answer</dt>
-          <dd className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
-            {content || "(No text content)"}
+          <dd className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
+            {content ? (
+              <Markdown content={highlightQuote(content, quote)} allowHtml />
+            ) : (
+              "(No text content)"
+            )}
           </dd>
         </div>
       </dl>
@@ -154,9 +189,15 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
         pages.map((page) => (
           <section key={page.pageNumber}>
             <h3 className="mb-2 text-xs font-medium text-ink-muted">Page {page.pageNumber}</h3>
-            <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
-              {page.text || "(No text content)"}
-            </p>
+            {page.text ? (
+              <div className="select-text [overflow-wrap:anywhere]">
+                <Markdown content={highlightQuote(page.text, quote)} allowHtml />
+              </div>
+            ) : (
+              <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-muted [overflow-wrap:anywhere]">
+                (No text content)
+              </p>
+            )}
           </section>
         ))
       ) : (
@@ -164,9 +205,15 @@ function SourceContent({ sourceRef }: { sourceRef: SourceMessageRef }) {
           {sourceRef.exactQuote && (
             <h3 className="mb-2 text-xs font-medium text-ink-muted">Source text</h3>
           )}
-          <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
-            {content || "(No text content)"}
-          </p>
+          {content ? (
+            <div className="select-text [overflow-wrap:anywhere]">
+              <Markdown content={highlightQuote(content, quote)} allowHtml />
+            </div>
+          ) : (
+            <p className="select-text whitespace-pre-wrap text-[15px] leading-7 text-ink-muted [overflow-wrap:anywhere]">
+              (No text content)
+            </p>
+          )}
         </section>
       )}
     </div>

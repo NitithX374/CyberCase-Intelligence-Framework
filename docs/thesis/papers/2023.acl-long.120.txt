@@ -1,0 +1,1267 @@
+Extractive is not Faithful: An Investigation of Broad Unfaithfulness
+                  Problems in Extractive Summarization
+
+                      Shiyue Zhang David Wan Mohit Bansal
+                                          UNC Chapel Hill
+
+                  {shiyue, davidwan, mbansal}@cs.unc.edu
+
+                      Abstract                           summarization methods, i.e., generating novel text,
+                                                         are applied (Saggion and Poibeau, 2013).
+     The problems of unfaithful summaries have
+     been widely discussed under the context of             Abstractive summarization attracts more atten-
+     abstractive summarization. Though extractive        tion from recent works because it can produce more
+     summarization is less prone to the common           coherent summaries and behaves more like humans
+     unfaithfulness issues of abstractive summaries,     (Cohn and Lapata, 2008). Impressive progress
+     does that mean extractive is equal to faithful?     has been made for abstractive summarization by
+     Turns out that the answer is no. In this work,      large-scale pre-trained models (Lewis et al., 2020;
+     we define a typology with five types of broad       Zhang et al., 2020a). However, unfaithfulness prob-
+     unfaithfulness problems (including and beyond       lems, i.e., hallucinating new information or gener-
+     not-entailment) that can appear in extractive       ating content that contradicts the source, are widely
+     summaries, including incorrect coreference, in-     spread across models and tasks (Cao et al., 2018;
+     complete coreference, incorrect discourse, in-      Maynez et al., 2020). Although these problems
+     complete discourse, as well as other mislead-       do not necessarily get captured by typically-used
+     ing information. We ask humans to label these       evaluation metrics, e.g., ROUGE (Lin, 2004), even
+     problems out of 1600 English summaries pro-         minor unfaithfulness can be catastrophic and drive
+     duced by 16 diverse extractive systems. We find     users away from real-world applications. There-
+     that 30% of the summaries have at least one of      fore, an increasing volume of research has fo-
+     the five issues. To automatically detect these      cused on analyzing (Falke et al., 2019; Maynez
+     problems, we find that 5 existing faithfulness      et al., 2020; Goyal and Durrett, 2021), evaluating
+     evaluation metrics for summarization have poor      (Kryscinski et al., 2020; Goyal and Durrett, 2021;
+     correlations with human judgment. To remedy         Wang et al., 2020a; Durmus et al., 2020; Scialom
+     this, we propose a new metric, EXTEVAL, that        et al., 2021; Xie et al., 2021), or addressing (Cao
+     is designed for detecting unfaithful extractive     et al., 2018; Li et al., 2018; Fan et al., 2018; Chen
+     summaries and is shown to have the best per-        et al., 2021; Cao and Wang, 2021; Xu et al., 2022;
+     formance. We hope our work can increase the         Wan and Bansal, 2022) unfaithfulness problems in
+     awareness of unfaithfulness problems in ex-         abstractive summarization.
+     tractive summarization and help future work to
+     evaluate and resolve these issues.1                    Extractive summarization is known to be faster,
+                                                         more interpretable, and more reliable (Chen and
+1 Introduction                                           Bansal, 2018; Li et al., 2021; Dreyer et al., 2021).
+                                                         And the selection of important information is the
+Text summarization is the process of distilling the      first skill that humans learn for summarization
+most important information from a source to pro-         (Kintsch and van Dijk, 1978; Brown and Day,
+duce an abridged version for a particular user or        1983). Recently, some works discuss the trade-off
+task (Maybury, 1999). Although there are many            between abstractiveness and faithfulness (Ladhak
+types of text summarization tasks, in this work, we      et al., 2022; Dreyer et al., 2021). They find that the
+focus on the task of general purpose single docu-        more extractive the summary is, the more faithful
+ment summarization. To produce summaries, usu-           it is.2 This may give the community the impression
+ally either extractive summarization methods, i.e.,
+extracting sentences from the source, or abstractive         2Note that some previous works seemed to interchange the
+                                                         usage of factuality and faithfulness. But we think they are
+      Equal contribution.                                slightly different. Thus, we stick to faithfulness that represents
+    1Our data and code are publicly available at https:
+//github.com/ZhangShiyue/extractive_is_
+not_faithful.
+
+                                         2153
+
+Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics
+                            Volume 1: Long Papers, pages 2153­2174
+
+             July 9-14, 2023 ©2023 Association for Computational Linguistics
+that if the content is extracted from the source, it is  Summaries with incomplete coreferences or dis-
+guaranteed to be faithful. However, is this always       courses are usually entailed by the source, but they
+true? In this work, we will show that, unfortunately,    can still lead to unfaithful interpretations. Lastly, in-
+it is not.                                               spired by misinformation (O'Connor and Weather-
+                                                         all, 2019), our misleading information error type
+   The problems of extractive summarization are          refers to other cases where, despite being entailed
+usually referred as coherence, out-of-context, or        by the source, the summary still misleads the au-
+readability issues (Nanba and Okumura, 2000;             dience by selecting biased information, giving the
+Nenkova and McKeown, 2012; Saggion and                   readers wrong impressions, etc (see Section 2).
+Poibeau, 2013; Dreyer et al., 2021). Though they
+may sound irrelevant to faithfulness, some early            We ask humans to label these problems out of
+works give hints of their unfaithful ingredients.        1600 model extracted summaries that are produced
+Gupta and Lehal (2010) describe the `dangling'           by 16 extractive summarization systems for 100
+anaphora problem ­ sentences often contain pro-          CNN/DM English articles (Hermann et al., 2015).
+nouns that lose their referents when extracted out       These 16 systems cover both supervised and un-
+of context, and stitching together extracts may lead     supervised methods, include both recent neural-
+to a misleading interpretation of anaphors. Barzi-       based and early graph-based models, and extract
+lay et al. (1999) comment on extractive methods          sentences or elementary discourse units (see Sec-
+for multi-document summarization, that extracting        tion 3). By analyzing human annotations, we find
+some similar sentences could produce a summary           that 30.3% of the 1600 summaries have at least one
+biases towards some sources. Cheung (2008) says          of the five types of errors. Out of which, 3.9% and
+that sentence extraction produces extremely inco-        15.4% summaries contain incorrect and incomplete
+herent text that did not seem to convey the gist of      coreferences respectively, 1.1% and 10.7% sum-
+the overall controversiality of the source. These        maries have incorrect and incomplete discourses re-
+all suggest that even though all information is ex-      spectively, and other 4.9% summaries still mislead
+tracted directly from the source, the summary is not     the audience without having coreference or dis-
+necessarily faithful to the source. However, none        course issues. The non-negligible error rate demon-
+of these works has proposed an error typology nor        strates that extractive is not necessarily faithful.
+quantitatively answered how unfaithful the model         Among the 16 systems, we find that the two oracle
+extracted summaries are, which motivates us to fill      extractive systems (that maximize ROUGE (Lin,
+in this missing piece.                                   2004) against the gold summary by using extracted
+                                                         discourse units or sentences) surprisingly have the
+   In this work, we conduct a thorough investiga-        most number of problems, while the Lead3 model
+tion of the broad unfaithfulness problems in ex-         (the first three sentences of the source document)
+tractive summarization. Although the literature of       causes the least number of issues.
+abstractive summarization usually limits unfaith-
+ful summaries to those that are not entailed by             We examine whether these problems can be au-
+the source (Maynez et al., 2020; Kryscinski et al.,      tomatically detected by 5 widely-used metrics, in-
+2020), we discuss broader unfaithfulness issues          cluding ROUGE (Lin, 2004) and 4 faithfulness
+including and beyond not-entailment. We first de-        evaluation metrics for abstractive summarization
+sign a typology consisting five types of unfaithful-     (FactCC (Kryscinski et al., 2020), DAE (Goyal and
+ness problems that could happen in extractive sum-       Durrett, 2020), QuestEval (Scialom et al., 2021),
+maries: incorrect coreference, incomplete coref-         BERTScore (Zhang et al., 2020b)). We find that,
+erence, incorrect discourse, incomplete discourse,       except BERTScore, they have either no or small
+and other misleading information (see definitions        correlations with human labels. We design a new
+in Figure 2). Among them, incorrect coreference          metric, EXTEVAL, for extractive summarization. It
+and incorrect discourse are not-entailment based er-     contains four sub-metrics that are used to detect in-
+rors. An example of incorrect coreference is shown       correct coreference, incomplete coreference, incor-
+in Summary 1 of Figure 1, where that in the sec-         rect or incomplete discourse, and sentiment bias,
+ond sentence should refer to the second document         respectively. We show that EXTEVAL performs
+sentence ­But they do leave their trash, but it incor-   best at detecting unfaithful extractive summaries
+rectly refers to the first sentence in the summary.      (see Section 4 for more details). Finally, we dis-
+                                                         cuss the generalizability and future directions of
+the property of staying true to the source.
+
+2154
+   Document:
+   (CNN) Most climbers who try don't succeed in summiting the 29,035-foot-high Mount Everest, the world's tallest peak.
+   But they do leave their trash. Thousands of pounds of it.
+   That's why an experienced climbing group from the Indian army plans to trek up the 8,850-meter mountain to pick up at
+   least 4,000 kilograms (more than 8,000 pounds) of waste from the high-altitude camps, according to India Today.
+   The mountain is part of the Himalaya mountain range on the border between Nepal and the Tibet region.
+   The 34-member team plans to depart for Kathmandu on Saturday and start the ascent in mid-May.
+   The upcoming trip marks the 50th anniversary of the first Indian team to scale Mount Everest [...]
+   More than 200 climbers have died attempting to climb the peak, part of a UNESCO World Heritage Site.
+   The Indian expedition isn't the first attempt to clean up the trash left by generations of hikers[...]
+
+   Summary 1 (incorrect coreference):
+   (CNN) Most climbers who try don't succeed in summiting the 29,035-foot-high Mount Everest, the world's tallest peak.
+   That's why an experienced climbing group from the Indian army plans to trek up the 8,850-meter mountain to pick up at
+   least 4,000 kilograms (more than 8,000 pounds) of waste from the high-altitude camps, according to India Today. [...]
+
+   Summary 2 (incomplete coreference & incorrect discourse) :
+   That's why an experienced climbing group from the Indian army plans to trek up the 8,850-meter mountain
+   to pick up at least 4,000 kilograms
+   More than 200 climbers have died
+   to clean up the trash [...]
+
+   Summary 3 (incomplete discourse & incomplete coreference):
+   But they do leave their trash. Thousands of pounds of it. [...]
+
+Figure 1: An example from CNN/DM (Hermann et al., 2015) testing set showing the first four types of unfaithfulness
+problems defined in section 2. The three summaries are generated by NeuSumm (Zhou et al., 2018a) Oracle (disco)
+(Xu et al., 2020), and BERT+LSTM+PN+RL (Zhong et al., 2019), respectively. All extracted sentences or discouse
+units are underlined in the document. The problematic parts are bolded in the summary. The incorrect reference
+in the summary is marked with red, and the correct reference is marked with blue in the document. We replace
+non-relevant sentences with [...].
+
+our work in Section 5.                                    lems, we will show that there is still a chance to
+   In summary, our contributions are (1) a taxon-         be unfaithful despite being entailed by the source.
+                                                          Hence, we call the five error types we define here
+omy of broad unfaithfulness problems in extractive        the `broad' unfaithfulness problems, and we pro-
+summarization, (2) a human-labeled evaluation set         vide a rationale for each error type in Figure 2.
+with 1600 examples from 16 diverse extractive sys-
+tems, (3) meta-evaluations of 5 existing metrics, (4)        The most frequent unfaithfulness problem of ab-
+a new faithfulness metric (EXTEVAL) for extrac-           stractive summarization is the presence of incorrect
+tive summarization. Overall, we want to remind the        entities or predicates (Gabriel et al., 2021; Pagnoni
+community that even when the content is extracted         et al., 2021), which can never happen within ex-
+from the source, there is still a chance to be unfaith-   tracted sentences (or elementary discourse units3).
+ful. Hence, we should be aware of these problems,         For extractive summarization, the problems can
+be able to detect them, and eventually resolve them       only happen `across' sentences (or units).4 Hence,
+to achieve a more reliable summarization.                 we first define four error types about coreference
+                                                          and discourse. Following SemEval-2010 (Màrquez
+2 Broad Unfaithfulness Problems                           et al., 2013), we define coreference as the mention
+                                                          of the same textual references to an object in the dis-
+In this section, we will describe the five types of       course model, and we focus primarily on anaphors
+broad unfaithfulness problems (Figure 2) we iden-         that require finding the correct antecedent. We
+tified for extractive summarization under our typol-      ground our discourse analysis for systems that ex-
+ogy. In previous works about abstractive summa-
+rization, unfaithfulness usually only refers to the           3Elementary Discourse Unit (or EDU) is a concept from
+summary being not entailed by the source (Maynez          the Rhetorical Structure Theory (Mann and Thompson, 1988).
+et al., 2020; Kryscinski et al., 2020). The formal        Each unit usually appears as a sub-sentence.
+definition of entailment is t entails h if, typically, a
+human reading t would infer that h is most likely             4Even though some may argue that extracted sentences
+true (Dagan et al., 2005). While we also consider         should be read independently, in this work, we take them as
+being not entailed as one of the unfaithfulness prob-     a whole and follow their original order in the document. We
+                                                          think this is a reasonable assumption and shares the same
+                                                          spirit of previous works that talk about the coherence issue of
+                                                          extractive summaries (Gupta and Lehal, 2010).
+
+2155
+Type         Definition                                                                          Rationale
+Incorrect    An anaphor in the summary refers to a different entity from what the same           Not-entailment
+Coreference  anaphor refers to in the document. The anaphor can be a pronoun (they,
+             she, he, it, this, that, those, these, them, her, him, their, her, his, etc.) or a  Ambiguous interpretation
+Incomplete   `determiner (the, this, that, these, those, both, etc.) + noun' phrase.             Not-entailment
+Coreference  An anaphor in the summary has ambiguous or no antecedent.
+Incorrect                                                                                        Ambiguous interpretation
+Discourse    A sentence with a discourse linking term (e.g., but, and, also, on one side,        Bias and wrong impression
+             meanwhile, etc.) or a discourse unit (usually appears as a sub-sentence)
+Incomplete   falsely connects to the following or preceding context in the summary, which
+Discourse    leads the audience to infer a non-exiting fact, relation, etc.
+Other        A sentence with a discourse linking term or a discourse unit has no necessary
+Misleading   following or preceding context to complete the discourse.
+Information  Other misleading problems include but do not limit to leading the audience
+             to expect a different consequence and conveying a dramatically different
+             sentiment.
+
+             Figure 2: Our typology of broad unfaithfulness problems in extractive summarization.
+
+tract sentences in the Penn Discourse Treebank         tecedent.5 Following the formal definition of entail-
+(Prasad et al., 2008), which considers the discourse   ment, these examples are considered to be entailed
+relation between sentences as "lexically grounded".    by the document. Nonetheless, it sometimes can
+E.g., the relations can be triggered by subordinating  still cause unfaithfulness, as it leads to `ambigu-
+conjunctions (because, when, etc.), coordinating       ous interpretation'. For example, given the source
+conjunctions (and, but, etc.), and discourse adver-    "Jack eats an orange. John eats an apple" and the
+bials (however, as a result, etc). We refer to such    faithfulness of "He eats an apple" depends entirely
+words as discourse linking terms. For systems that     on whom "he" is. Figure 1 illustrates an example of
+extract discourse units, we follow the Rhetorical      incomplete coreference, where Summary 2 starts
+Structure Theory (Mann and Thompson, 1988) and         with that's why, but readers of that summary do not
+assume every unit potentially requires another unit    know the actual reason. Please refer to Figure 4 in
+to complete the discourse.                             the Appendix for another example with a dangling
+                                                       pronoun and ambiguous antecedents.
+   Finally, inspired by the concept of misinforma-
+tion (incorrect or misleading information presented       Incorrect discourse happens when a sentence
+as fact), we define the fifth error type ­ misleading  with a discourse linking term (e.g., but, and, also,
+information that captures other misleading prob-       etc.)6 or a discourse unit falsely connects to the fol-
+lems besides the other four errors. The detailed       lowing or preceding context in the summary, which
+definitions of the five error types are as follows:    leads the audience to infer a non-exiting fact, re-
+                                                       lation, etc. An example is shown by Summary 2
+   Incorrect coreference happens when the same         in Figure 1, where More than 200 climbers have
+anaphor is referred to different entities given the    died falsely connects to clean up the trash, which
+summary and the document. The anaphor can be           makes readers believe 200 climbers have died be-
+a pronoun (they, she, he, it, etc.) or a `determiner   cause of cleaning up the trash. But in fact, they
+(the, this, that, etc.) + noun' phrase. This error     died attempting to climb the peak. This summary
+makes the summary not entailed by the source. An       is also clearly not entailed by the source.
+example is Summary 1 of Figure 1, where the men-
+tion that refers to the sentence ­But they do leave       Incomplete discourse happens when a sentence
+their trash. Thousands of pounds of it ­ in the docu-  with a discourse linking term or a discourse unit
+ment but incorrectly refers to Most climbers who try   has no necessary following or preceding context
+don't succeed in summiting the 29,035-foot-high
+Mount Everest. Users who only read the summary             5Note that sometimes a `determiner + noun' phrase has
+may think there is some connection between clean-      no antecedent, but it does not affect the understanding of
+ing up trash and the fact that most climbers do not    the summary or there is no antecedent of the mention in the
+succeed in summiting the Mount Everest.                document either. In which case, it is not an anaphor, and thus
+                                                       we do not consider it as an incomplete coreference.
+   Incomplete coreference happens when an
+anaphor in the summary has ambiguous or no an-             6We do not consider implicit (without a linking term) dis-
+                                                       course relations between sentences because it hardly appears
+                                                       in our data and will cause a lot of annotation ambiguity.
+
+             2156
+to complete the discourse. Similar to incomplete        units in the document as their order in the summary.
+coreference, summaries with this error are consid-         Ten supervised systems: (1) Oracle maxi-
+ered entailed, but the broken discourse makes the
+summary confusing and thus may lead to prob-            mizes the ROUGE between the extracted summary
+lematic interpretations. An example is shown in         and the ground-truth summary; (2) Oracle (dis-
+Figure 1. Summary 3 starts with but, and readers        course) (Xu et al., 2020) extracts discourse units
+expect to know what leads to this turning, but it is    instead of sentences to maximize ROUGE while
+never mentioned. See Figure 5 for another example       considering discourse constraints; (3) RNN Ext
+that may leave readers with a wrong impression          RL (Chen and Bansal, 2018); (4) BanditSumm
+because of incomplete discourse.                        (Dong et al., 2018); (5) NeuSumm (Zhou et al.,
+                                                        2018b); (6) Refresh (Narayan et al., 2018b); (7)
+   Other misleading information refers to other         BERT+LSTM+PN+RL (Zhong et al., 2019); (8)
+misleading problems besides the other four error        MatchSumm (Zhong et al., 2020); (9) Heter-
+types. It includes but does not limit to leading        Graph (Wang et al., 2020b); (10) Histruct+ (Ruan
+the audience to expect a different consequence          et al., 2022). We implement the Oracle system, and
+and conveying a dramatically different sentiment.       we use the open-sourced code of RNN Ext RL8
+This error is also difficult to capture using the       and output of Oracle (discourse)9. We get sum-
+entailment-based definition. Summaries always           maries from Histruct+ using their released code
+select partial content from the source, however,        and model.10 The summaries of other systems are
+sometimes, the selection can mislead or bias the        from REALSumm (Bhandari et al., 2020) open-
+audience. Gentzkow et al. (2015) show that filter-      sourced data.11
+ing and selection can result in `media bias'. We
+define this error type so that annotators can freely       Six unsupervised systems: (1) Lead3 extracts
+express whether they think the summary has some         the first three sentences of the document as the sum-
+bias or leaves them with a wrong impression. The        mary; (2) Textrank (Mihalcea and Tarau, 2004);
+summary in Figure 6 is labeled as misleading by         (3) Textrank (ST): ST stands for Sentence Trans-
+two annotators because it can mislead the audience      formers (Reimers and Gurevych, 2019); (4) Pac-
+to believe that the football players and pro wrestlers  Sum (tfidf) and (5) PacSum (bert) (Zheng and
+won the contest and ate 13 pounds of steak.             Lapata, 2019); (6) MI-unsup (Padmakumar and
+                                                        He, 2021). We implement Lead3 and use the re-
+   Note that we think it is also valid to separate      leased code of PacSum.12 For Textrank, we use the
+misleading information and incomplete corefer-          summa package.13 For MI-unsup, we directly use
+ence/discourse, as they are less severe in unfaithful-  the system outputs open-sourced by the authors.14
+ness compared to not-entailment-based incorrect
+coreference/discourse, but we choose to cover all          Even though only Oracle (discourse) explicitly
+of them under the `broad unfaithfulness' umbrella       uses the discourse structure (the Rhetorical Struc-
+for completeness.                                       ture Theory graph), some other systems also im-
+                                                        plicitly model discourse, e.g., HeterGraph builds a
+3 Human Evaluation                                      graph of sentences based on word overlap.
+
+In this section, we describe how we ask humans to       3.2 Setup
+find and annotate the unfaithfulness problems.
+                                                        We ask humans to label unfaithfulness problems
+3.1 Data                                                out of the 1600 system summaries. The annotation
+                                                        interface (HTML page) is shown in Figure 8 in the
+We randomly select 100 articles from CNN/DM             Appendix. It first shows the summary and the doc-
+test set (Hermann et al., 2015) because it is a         ument. The summary sentences are also underlined
+widely used benchmark for single-document En-           in the document. To help with annotation, we run a
+glish summarization and extractive methods per-         state-of-the-art coreference resolution model, Span-
+form decently well on it. The dataset is distributed
+under an Apache 2.0 license.7 We use 16 extrac-             8https://github.com/ChenRocks/fast_abs_rl
+tive systems to produce summaries, i.e., 1600 sum-          9https://github.com/jiacheng-xu/DiscoBERT
+maries in total. We retain the order of sentences or       10https://github.com/QianRuan/histruct
+                                                           11https://github.com/neulab/REALSumm
+    7https://huggingface.co/datasets/cnn_                  12https://github.com/mswellhao/PacSum
+dailymail                                                  13https://github.com/summanlp/textrank
+                                                           14https://github.com/vishakhpk/mi-unsup-summ
+
+2157
+                     100  Incorrect Coreference                                       amples have both annotators' misleading labels. In
+                          Incomplete Coreference                                      analysis, we only view a summary as misleading
+                          Incorrect Discourse
+Number of Summaries  80   Incomplete Discourse                                        when both annotators labeled yes, regardless of the
+                          Misleading Information                                      fact that they may have different reasons.
+
+     60                   Oracle                                                      3.3 Results of Human Evaluation
+                             Oracle (disco)
+     40                                                                               Finally, we find that 484 out of 1600 (30.3%) sum-
+                                RNN Ext RL                                            maries contain at least one of the five problems. 63
+     20                            BanditSumm                                         (3.9%) summaries contain incorrect coreferences,
+                                                                                      247 (15.4%) summaries have incomplete corefer-
+       0                               NeuSumm                                        ences, 18 (1.1%) summaries have incorrect dis-
+                                          Refresh                                     courses, 171 (10.7%) have incomplete discourses,
+Figure 3: The unfaithfulness error distributions of 16                                and 79 (4.9%) summaries are misleading. The er-
+extractive summarization systems.            BERT+LSTM+PN+RL                          ror breakdowns for each system are illustrated in
+                                                MatchSumm                             Figure 3. Note that one summary can have mul-
+BERT (Joshi et al., 2020) via AllenNLP (v2.4.0)     HeterGraph                        tiple problems, hence why Oracle (discourse) in
+(Gardner et al., 2018) on the summary and the doc-     Histruct+                      Figure 3 has more than 100 errors.
+ument respectively. Then, mentions from the same          Lead3
+coreference cluster will be shown in the same color.         Textrank                    The nature of different models makes them have
+Since the coreference model can make mistakes,                   Textrank (ST)        different chances to create unfaithfulness problems.
+we ask annotators to use them with caution.                         PacSum (tfidf)    For example, the Lead3 system has the least num-
+                                                                                      ber of problems because the first three sentences
+   Annotators are asked to judge whether the sum-                      PacSum (bert)  of the document usually have an intact discourse,
+mary has each of the five types of unfaithfulness                          MI-unsup   except in a few cases it requires one more sentence
+via five yes or no questions and if yes, justify the                                  to complete the discourse. In contrast, the two Or-
+choice by pointing out the unfaithful parts. Details                                  acle systems have the most problems. The Oracle
+of the annotation can be found in Appendix D.                                         model often extracts sentences from the middle
+                                                                                      part of the document, i.e., having a higher chance
+   Four annotators, two of the authors (PhD stu-                                      to cause dangling anaphora or discourse linking.
+dents trained in NLP/CL) and two other CS under-                                      The Oracle (discourse) model contains the most
+graduate students (researchers in NLP/CL), con-                                       number of incorrect discourses because concatenat-
+ducted all annotations carefully in about 3 months.                                   ing element discourse units together increases the
+Each of the 1600 summaries first was labeled by                                       risk of misleading context. Furthermore, better sys-
+two annotators independently. Then, they worked                                       tems w.r.t ROUGE scores do not necessarily mean
+together to resolve their differences in annotat-                                     that the summaries are more faithful; the latest sys-
+ing incorrect/incomplete coreferences and incor-                                      tem Histruct+ still contains many unfaithfulness
+rect/incomplete discourses because these errors                                       errors, indicating the need to specifically address
+have little subjectivity and agreements can be                                        such faithfulness issues.
+achieved. The judgment of misleading information
+is more subjective. Hence, each annotator indepen-                                       Cao et al. (2018) show that about 30% ab-
+dently double-checked examples that they labeled                                      stractive summaries generated for CNN/DM are
+no while their partner labeled yes, with their part-                                  not entailed by the source. Also on CNN/DM,
+ner's answers shown to them. They do not have to                                      FRANK (Pagnoni et al., 2021) finds that about
+change their mind if they do not agree with their                                     42% abstractive summaries are unfaithful, in-
+partner. This step is meant to make sure nothing                                      cluding both entity/predicate errors and corefer-
+is missed by accident. In total, 149 examples have                                    ence/discourse/grammar errors. Compared to these
+at least one misleading label, out of which, 79 ex-                                   findings, extractive summarization apparently has
+                                                                                      fewer issues. We do note, however, that the quan-
+                                                                                      tity is not negligible, i.e., extractive = faithful.
+
+                                                                                      4 Automatic Evaluation
+
+                                                                                      Here, we analyze whether existing automatic faith-
+                                                                                      fulness evaluation metrics can detect unfaithful ex-
+
+                                                                                      2158
+tractive summaries. We additionally propose a new       they are designed to check whether each sentence
+evaluation approach, EXTEVAL.                           or dependency arc is entailed by the source, we sus-
+                                                        pect that they cannot detect discourse-level errors.
+4.1 Meta-evaluation Method                              QuestEval (Scialom et al., 2021) is a representative
+                                                        QGQA metric, which theoretically can detect in-
+To evaluate automatic faithfulness evaluation met-      correct coreference because QG considers the long
+rics (i.e., meta-evaluation) for extractive summa-      context of the summary and the document. We also
+rization, we follow the faithfulness evaluation liter-  explore BERTScore Precision (Zhang et al., 2020b)
+ature of abstractive summarization (Durmus et al.,      that is shown to well correlate with human judg-
+2020; Wang et al., 2020a; Pagnoni et al., 2021) and     ment of faithfulness (Pagnoni et al., 2021; Fischer,
+compute the correlations between metric scores and      2021), as well as ROUGE-2-F1 (Lin, 2004). De-
+human judgment on our meta-evaluation dataset           tails of these metrics can be found in Appendix E.
+(i.e., the 1600 examples). Though one summary
+can have multiple issues for one error type, for           Note that for all metrics except for DAE, we
+simplicity, we use the binary (0 or 1) label as the     negate their scores before computing human-
+human judgment of each error type. In addition,         metric correlations because we want them to have
+we introduce an Overall human judgment by tak-          higher scores when the summary is more unfaithful,
+ing the summation of the five error types. So, the      just like our human labels. Table 5 in the Appendix
+maximum score of Overall is 5. We use Pearson r         shows their original scores for the 16 systems.
+or Spearman  as the correlation measure.
+                                                        4.3 A New Metric: EXTEVAL
+   This meta-evaluation method is essentially as-
+sessing how well the metric can automatically de-       We introduce EXTEVAL that is designed for detect-
+tect unfaithful summaries, which is practically use-    ing unfaithful extractive summaries. Correspond-
+ful. For example, we can pick out summaries with        ing to the faithfulness problems defined in Sec-
+high unfaithfulness scores and ask human editors        tion 2, EXTEVAL is composed of four sub-metrics
+to fix them. One underlying assumption is that the      described as follows. We refer the readers to Ap-
+metric score is comparable across examples. How-        pendix F for more details.
+ever, some metrics are example-dependent (one
+example's score of 0.5 = another example's score           INCORCOREFEVAL focuses on detecting incor-
+of 0.5), e.g., ROUGE is influenced by summary           rect coreferences. Taking advantage of the model-
+length (Sun et al., 2019). In practice, we do not ob-   predicted coreference clusters by SpanBERT de-
+serve any significant effect of example dependence      scribed in Section 3.2, we consider the different
+on our correlation computation.                         cluster mapping of the same mention in the docu-
+                                                        ment and summary as incorrect coreference.
+   To understand the correlation without example-
+dependence issues, we provide two alternative eval-        INCOMCOREFEVAL detects incomplete coref-
+uations system-level and summary-level correla-         erences. We also make use of the model-predicted
+tions, which have been reported in a number of          coreference clusters. If the first appeared mention
+previous works (Peyrard et al., 2017; Bhandari          in a summary cluster is a pronoun or `determiner +
+et al., 2020; Deutsch et al., 2021; Zhang and Bansal,   noun' phrase, and it is not the first mention in the
+2021). These two correlations assess the effective-     corresponding document cluster, then the summary
+ness of the metrics to rank systems. We define the      is considered to have an incomplete coreference.
+correlations and present the results in Appendix A.
+                                                           INCOMDISCOEVAL is primarily designed to
+4.2 Existing Faithfulness Evaluation Metrics            detect incomplete discourse. Concretely, we check
+                                                        for sentences with discourse linking terms and in-
+In faithfulness evaluation literature, a number of      complete discourse units. We consider the sum-
+metrics have been proposed for abstractive summa-       mary to have a problem if a discourse linking term
+rization. They can be roughly categorized into two      is present but its necessary context (the previous
+groups: entailment classification and question gen-     or next sentence) is missing or a discourse unit
+eration/answering (QGQA). Some of them assume           misses its previous unit in the same sentence. It
+that the extractive method is inherently faithful.      is important to note that the detected errors also
+                                                        include incorrect discourse. However, we cannot
+   We choose FactCC (Kryscinski et al., 2020) and       distinguish between these two errors.
+DAE (Goyal and Durrett, 2020) as representative
+entailment classification metrics. However, since          SENTIBIAS evaluates how different the sum-
+
+2159
+                 Incor. Coref.  Incom. Coref.  Incor. Disco.          Incom. Disco.  Mislead.      Overall
+
+Metrics          r              r                           r         r              r             r  
+-ROUGE-2-F1
+-FactCC          0.05   0.06    0.03 0.08      -0.07           -0.07  -0.14  -0.10   0.03   0.03   -0.04 0.02
+DAE              -0.04  -0.04   0.05 0.02      0.24            0.17   0.10   0.03    -0.00  0.01   0.11 0.05
+-QuestEval       0.01   0.04    0.04 0.08      0.02            0.04   -0.01  0.02    0.06   0.03   0.05 0.07
+-BERTScore Pre.  0.09   0.12    0.14 0.15      -0.01           0.01   0.05   0.06    0.08   0.09   0.17 0.19
+INCORCOREFEVAL   0.08   0.09    0.21 0.20      0.18            0.15   0.29   0.25    0.11   0.12   0.37 0.35
+INCOMCOREFEVAL                                                                       0.04   0.04
+INCOMDISCOEVAL   0.25   0.25    0.04 0.04      -0.01           -0.01  -0.00  -0.00   0.01   0.01   0.11 0.08
+SENTIBIAS        0.11   0.11    0.48 0.48      0.06            0.06   0.16   0.16    -0.02  -0.02  0.42 0.42
+EXTEVAL          0.03   0.03    0.11 0.11      0.20            0.20   0.61   0.61    0.14   0.11   0.42 0.38
+                 -0.02  -0.03   0.07 0.05      -0.01           -0.00  0.09   0.08    0.04   0.05   0.13 0.11
+                 0.17   0.13    0.37 0.34      0.14            0.11   0.43   0.36                  0.54 0.46
+
+Table 1: Human-metric correlations. The negative sign (-) before metrics means that their scores are negated to
+retain the feature that the higher the scores are the more unfaithful the summaries are.
+
+mary sentiment is from the document sentiment.                 sub-metrics of EXTEVAL (INCORCOREFEVAL, IN-
+Sentiment bias is easier to be quantified than other           COMCOREFEVAL, INCOMDISCOEVAL, and SEN-
+misleading problems. We use the RoBERTa-based                  TIBIAS) in general demonstrate better performance
+(Liu et al., 2019) sentiment analysis model from               than other metrics at detecting their corresponding
+AllenNLP (Gardner et al., 2018)15 to get the sen-              problems. Lastly, our EXTEVAL has moderate to
+timents of each sentence. We take the average of               large (Cohen, 1988) correlations with the Overall
+sentence sentiments as the overall sentiment of the            judgment, which is greatly better than all other
+document or the summary. Then, sentiment bias                  metrics.
+is measured by the absolute difference between
+summary sentiment and document sentiment.                         Table 2 in Appendix A shows the system-level
+                                                               and summary-level correlations. Our EXTEVAL
+   EXTEVAL is simply the summation of the above                still has the best Pearson and Spearman correlations
+sub-metrics, i.e., EXTEVAL = INCORCOREFE-                      with the Overall score on both the system level and
+VAL + INCOMCOREFEVAL + INCOMDISCO-                             the summary level. Please see Appendix A for
+EVAL + SENTIBIAS. Same as human scores, we                     more discussions.
+make INCORCOREFEVAL, INCOMCOREFEVAL,
+and INCOMDISCOEVAL as binary (0 or 1) scores,                     In addition, we evaluate EXTEVAL on an exist-
+while SENTIBIAS is a continuous number between                 ing meta-evaluation benchmark, SummEval (Fab-
+0 and 1. EXTEVAL corresponds to the Overall hu-                bri et al., 2021). In particular, we use a subset of
+man judgment introduced in Section 4.1. Note that              SummEval that has 4 extractive systems, and we
+when one TiTAN V 12G GPU is available, it takes                take the average of their expert-annotated consis-
+0.43 seconds per example to compute EXTEVAL                    tency scores as the gold human faithfulness scores
+on average.                                                    and compute its correlation with EXTEVAL. We
+                                                               find that EXTEVAL achieves the best Spearman
+4.4 Meta-Evaluation Results                                    correlations, which demonstrates the good general-
+                                                               izability of EXTEVAL. Please refer to Appendix B
+Table 1 shows the human-metric correlations. First,            for more details.
+out of the five existing metrics, BERTScore in gen-
+eral works best and has small to moderate (Cohen,                 In summary, our EXTEVAL is better at identify-
+1988) correlations with human judgment, FactCC                 ing unfaithful extractive summaries than the 5 ex-
+has a small correlation with incorrect discourse,              isting metrics we compare to. Its four sub-metrics
+and other metrics have small or no correlations with           can be used independently to examine the corre-
+human labels. Considering the fact that all these              sponding unfaithfulness problems.
+five errors can also happen in abstractive summa-
+rization, existing faithfulness evaluation metrics ap-         5 Generalizability & Future Work
+parently leave these errors behind. Second, the four
+                                                               One future direction for resolving these unfaith-
+   15We also test sentiment analysis tools from Stanza (Qi     fulness problems is to use the errors automatically
+et al., 2020) and Google Cloud API, but they do not work       detected by EXTEVAL as hints for humans or pro-
+better (see Appendix C).                                       grams to fix the summary by doing necessary yet
+                                                               minimal edits. Here we illustrate the possibility for
+
+                                               2160
+incorrect coreference. We manually examined the            model. We also thank Ido Dagan for the helpful
+automatically detected incorrect coreferences by           discussions. This work was supported by NSF-
+EXTEVAL. 28 out of 32 detected incorrect coref-            CAREER Award 1846185, NSF-AI Engage Insti-
+erences are true incorrect coreferences16, which           tute DRL-2112635, and a Bloomberg Data Science
+we attempt to fix by developing a simple post-edit         Ph.D. Fellowship.
+program, similar to the revision system proposed
+by Nanba and Okumura (2000). The program re-               Limitations
+places the problematic mention in the summary
+with the first mention in the correct coreference          Since we focus on extractive summarization in
+cluster of the document. We manually checked the           this work, the conclusions will be more useful for
+corrected examples and found that 16 out of 28             summarization tasks where extractive methods per-
+were fixed correctly (see an example in Figure 7).         form decently well (e.g., CNN/DM (Hermann et al.,
+We leave the improvement and the extension of              2015)) compared to extremely abstractive summa-
+post-edit systems for future work.                         rization tasks (e.g., XSum (Narayan et al., 2018a)).
+                                                           Experts, two of the authors (PhD students trained
+   It is worth noting that all of the five error types     in NLP/CL) and two other CS undergraduate stu-
+we define in Section 2 can also happen in abstrac-         dents (researchers in NLP/CL), conducted our an-
+tive summarization, though they are less studied           notations. Hence, to scale up data annotation by
+and measured in the literature. To our best knowl-         working with crowdsourcing workers may require
+edge, FRANK (Pagnoni et al., 2021) and SNaC                additional training for the workers. Our EXTEVAL
+(Goyal et al., 2022) have discussed the coreference        is designed for extractive summarization, which
+and discourse errors in the abstractive summaries.         is currently not directly applicable for abstractive
+Gabriel et al. (2021) define a sentiment error as          summaries except for SENTIBIAS.
+an adjective or adverb appearing in the summary
+that contradicts the source, while our misleading             As our data is collected on CNN/DM, the per-
+information has a more general definition. We hope         centages of each error type may change when evalu-
+that our taxonomy can shed some light for future           ating a different summarization dataset, though we
+works to explore the broad unfaithfulness of all           believe that the conclusion, extractive is not faithful,
+summarization methods.                                     will not change. To initially verify our conjecture,
+                                                           we manually examine 23 oracle summaries from
+6 Conclusion                                               the test set of PubMed (Sen et al., 2008) and find 2
+                                                           incorrect coreferences, 5 incomplete coreferences,
+We conducted a systematic analysis of broad un-            1 incorrect discourse, and 1 incomplete discourse.
+faithfulness problems in extractive summarization.
+We proposed 5 error types and produced a human-            Broader Impact Statement
+labeled evaluation set of 1600 examples. We found
+that (i) 30.3% of the summaries have at least one of       Many works have shown that model-generated sum-
+the 5 issues, (ii) existing metrics correlate poorly       maries are often "unfaithful", where the summa-
+with human judgment, and (iii) our new faithful-           rization model changes the meaning of the source
+ness evaluation metric EXTEVAL performs the best           document or hallucinates new content (Cao et al.,
+at identifying these problems. Through this work,          2018; Maynez et al., 2020). This potentially causes
+we want to raise the awareness of unfaithfulness           misinformation in practice. Our work follows the
+issues in extractive summarization and stress that         same idea, but, as opposed to focusing on abstrac-
+extractive is not equal to faithful.                       tive summarization, we show that even extracting
+                                                           content from the source document can still alter
+Acknowledgments                                            the meaning of the source document and cause
+                                                           misinformation. Hence, we want to remind NLP
+We thank anonymous reviewers for their valuable            practitioners that even extractive is not faithful and
+comments. We thank Yinuo Hu and Abhay Zala for             these issues need to be addressed before we can
+helping with the data, and Jiacheng Xu for helping         trust model-produced extractive summaries for real-
+us get the system outputs of the Oracle (discourse)        world applications.
+
+   16It shows that EXTEVAL has high precision of 87.5%.
+However, we have 60 human-labeled incorrect coreferences,
+so the recall is only 46.7% (28 out of 60).
+
+2161
+References                                                  Ido Dagan, Oren Glickman, and Bernardo Magnini.
+                                                               2005. The pascal recognising textual entailment chal-
+Regina Barzilay, Kathleen R. McKeown, and Michael              lenge. In Machine Learning Challenges Workshop,
+   Elhadad. 1999. Information fusion in the context of         pages 177­190. Springer.
+   multi-document summarization. In Proceedings of
+   the 37th Annual Meeting of the Association for Com-      Daniel Deutsch, Tania Bedrax-Weiss, and Dan Roth.
+   putational Linguistics, pages 550­557, College Park,        2021. Towards question-answering as an automatic
+   Maryland, USA. Association for Computational Lin-           metric for evaluating the content quality of a sum-
+   guistics.                                                   mary. Transactions of the Association for Computa-
+                                                               tional Linguistics, 9:774­789.
+Manik Bhandari, Pranav Narayan Gour, Atabak Ash-
+   faq, Pengfei Liu, and Graham Neubig. 2020. Re-           Jacob Devlin, Ming-Wei Chang, Kenton Lee, and
+   evaluating evaluation in text summarization. In             Kristina Toutanova. 2019. BERT: Pre-training of
+   Proceedings of the 2020 Conference on Empirical             deep bidirectional transformers for language under-
+   Methods in Natural Language Processing (EMNLP),             standing. In Proceedings of the 2019 Conference of
+   pages 9347­9359, Online. Association for Computa-           the North American Chapter of the Association for
+   tional Linguistics.                                         Computational Linguistics: Human Language Tech-
+                                                               nologies, Volume 1 (Long and Short Papers), pages
+Ann L Brown and Jeanne D Day. 1983. Macrorules                 4171­4186, Minneapolis, Minnesota. Association for
+   for summarizing texts: The development of exper-            Computational Linguistics.
+   tise. Journal of verbal learning and verbal behavior,
+   22(1):1­14.                                              Yue Dong, Yikang Shen, Eric Crawford, Herke van
+                                                               Hoof, and Jackie Chi Kit Cheung. 2018. Bandit-
+Shuyang Cao and Lu Wang. 2021. CLIFF: Contrastive              Sum: Extractive summarization as a contextual ban-
+   learning for improving faithfulness and factuality in       dit. In Proceedings of the 2018 Conference on Empir-
+   abstractive summarization. In Proceedings of the            ical Methods in Natural Language Processing, pages
+   2021 Conference on Empirical Methods in Natural             3739­3748, Brussels, Belgium. Association for Com-
+   Language Processing, pages 6633­6649, Online and            putational Linguistics.
+   Punta Cana, Dominican Republic. Association for
+   Computational Linguistics.                               Markus Dreyer, Mengwen Liu, Feng Nan, Sandeep
+                                                               Atluri, and Sujith Ravi. 2021. Analyzing
+Ziqiang Cao, Furu Wei, Wenjie Li, and Sujian Li. 2018.         the abstractiveness-factuality tradeoff with nonlin-
+   Faithful to the original: Fact aware neural abstractive     ear abstractiveness constraints. arXiv preprint
+   summarization. Proceedings of the AAAI Conference           arXiv:2108.02859.
+   on Artificial Intelligence, 32(1).
+
+Sihao Chen, Fan Zhang, Kazoo Sone, and Dan Roth.            Esin Durmus, He He, and Mona Diab. 2020. FEQA: A
+   2021. Improving faithfulness in abstractive sum-            question answering evaluation framework for faith-
+   marization with contrast candidate generation and           fulness assessment in abstractive summarization. In
+   selection. In Proceedings of the 2021 Conference of         Proceedings of the 58th Annual Meeting of the Asso-
+   the North American Chapter of the Association for           ciation for Computational Linguistics, pages 5055­
+   Computational Linguistics: Human Language Tech-             5070, Online. Association for Computational Lin-
+   nologies, pages 5935­5941, Online. Association for          guistics.
+   Computational Linguistics.
+                                                            Alexander R. Fabbri, Wojciech Krys´cin´ski, Bryan Mc-
+Yen-Chun Chen and Mohit Bansal. 2018. Fast abstrac-            Cann, Caiming Xiong, Richard Socher, and Dragomir
+   tive summarization with reinforce-selected sentence         Radev. 2021. SummEval: Re-evaluating summariza-
+   rewriting. In Proceedings of the 56th Annual Meeting        tion evaluation. Transactions of the Association for
+   of the Association for Computational Linguistics (Vol-      Computational Linguistics, 9:391­409.
+   ume 1: Long Papers), pages 675­686, Melbourne,
+   Australia. Association for Computational Linguistics.    Tobias Falke, Leonardo F. R. Ribeiro, Prasetya Ajie
+                                                               Utama, Ido Dagan, and Iryna Gurevych. 2019. Rank-
+Jackie CK Cheung. 2008. Comparing abstractive and              ing generated summaries by correctness: An interest-
+   extractive summarization of evaluative text: contro-        ing but challenging application for natural language
+   versiality and content selection. B. Sc.(Hons.) Thesis      inference. In Proceedings of the 57th Annual Meet-
+   in the Department of Computer Science of the Faculty        ing of the Association for Computational Linguistics,
+   of Science, University of British Columbia, 47.             pages 2214­2220, Florence, Italy. Association for
+                                                               Computational Linguistics.
+Jacob Cohen. 1988. Statistical Power Analysis for the
+   Behavioral Sciences. Routledge.                          Lisa Fan, Dong Yu, and Lu Wang. 2018. Robust neu-
+                                                               ral abstractive summarization systems and evaluation
+Trevor Cohn and Mirella Lapata. 2008. Sentence com-            against adversarial information. In Workshop on In-
+   pression beyond word deletion. In Proceedings of            terpretability and Robustness in Audio, Speech, and
+   the 22nd International Conference on Computational          Language (IRASL). Neural Information Processing
+   Linguistics (Coling 2008), pages 137­144, Manch-            Systems.
+   ester, UK. Coling 2008 Organizing Committee.
+
+2162
+Tim Fischer. 2021. Finding factual inconsistencies in      Wojciech Kryscinski, Bryan McCann, Caiming Xiong,
+   abstractive summaries. Master's thesis, Universität        and Richard Socher. 2020. Evaluating the factual
+   Hamburg.                                                   consistency of abstractive text summarization. In
+                                                              Proceedings of the 2020 Conference on Empirical
+Saadia Gabriel, Asli Celikyilmaz, Rahul Jha, Yejin Choi,      Methods in Natural Language Processing (EMNLP),
+   and Jianfeng Gao. 2021. GO FIGURE: A meta eval-            pages 9332­9346, Online. Association for Computa-
+   uation of factuality in summarization. In Findings of      tional Linguistics.
+   the Association for Computational Linguistics: ACL-
+   IJCNLP 2021, pages 478­487, Online. Association         Faisal Ladhak, Esin Durmus, He He, Claire Cardie, and
+   for Computational Linguistics.                             Kathleen McKeown. 2022. Faithful or extractive?
+                                                              on mitigating the faithfulness-abstractiveness trade-
+Matt Gardner, Joel Grus, Mark Neumann, Oyvind                 off in abstractive summarization. In Proceedings
+   Tafjord, Pradeep Dasigi, Nelson F Liu, Matthew E Pe-       of the 60th Annual Meeting of the Association for
+   ters, Michael Schmitz, and Luke Zettlemoyer. 2018.         Computational Linguistics (Volume 1: Long Papers),
+   Allennlp: A deep semantic natural language process-        pages 1410­1421, Dublin, Ireland. Association for
+   ing platform. In Proceedings of Workshop for NLP           Computational Linguistics.
+   Open Source Software (NLP-OSS), pages 1­6.
+                                                           Mike Lewis, Yinhan Liu, Naman Goyal, Marjan
+Matthew Gentzkow, Jesse M Shapiro, and Daniel F               Ghazvininejad, Abdelrahman Mohamed, Omer Levy,
+   Stone. 2015. Media bias in the marketplace: Theory.        Veselin Stoyanov, and Luke Zettlemoyer. 2020.
+   In Handbook of media economics, volume 1, pages            BART: Denoising sequence-to-sequence pre-training
+   623­645. Elsevier.                                         for natural language generation, translation, and com-
+                                                              prehension. In Proceedings of the 58th Annual Meet-
+Tanya Goyal and Greg Durrett. 2020. Evaluating factu-         ing of the Association for Computational Linguistics,
+   ality in generation with dependency-level entailment.      pages 7871­7880, Online. Association for Computa-
+   In Findings of the Association for Computational Lin-      tional Linguistics.
+   guistics: EMNLP 2020, pages 3592­3603, Online.
+   Association for Computational Linguistics.              Haoran Li, Arash Einolghozati, Srinivasan Iyer, Bhar-
+                                                              gavi Paranjape, Yashar Mehdad, Sonal Gupta, and
+Tanya Goyal and Greg Durrett. 2021. Annotating and            Marjan Ghazvininejad. 2021. EASE: Extractive-
+   modeling fine-grained factuality in summarization.         abstractive summarization end-to-end using the infor-
+   In Proceedings of the 2021 Conference of the North         mation bottleneck principle. In Proceedings of the
+   American Chapter of the Association for Computa-           Third Workshop on New Frontiers in Summarization,
+   tional Linguistics: Human Language Technologies,           pages 85­95, Online and in Dominican Republic.
+   pages 1449­1462, Online. Association for Computa-          Association for Computational Linguistics.
+   tional Linguistics.
+                                                           Haoran Li, Junnan Zhu, Jiajun Zhang, and Chengqing
+Tanya Goyal, Junyi Jessy Li, and Greg Durrett. 2022.          Zong. 2018. Ensure the correctness of the summary:
+   Snac: Coherence error detection for narrative sum-         Incorporate entailment knowledge into abstractive
+   marization. arXiv preprint arXiv:2205.09641.               sentence summarization. In Proceedings of the 27th
+                                                              International Conference on Computational Linguis-
+Vishal Gupta and Gurpreet Singh Lehal. 2010. A survey         tics, pages 1430­1441, Santa Fe, New Mexico, USA.
+   of text summarization extractive techniques. Jour-         Association for Computational Linguistics.
+   nal of emerging technologies in web intelligence,
+   2(3):258­268.                                           Chin-Yew Lin. 2004. ROUGE: A package for auto-
+                                                              matic evaluation of summaries. In Text Summariza-
+Karl Moritz Hermann, Tomas Kocisky, Edward Grefen-            tion Branches Out, pages 74­81, Barcelona, Spain.
+   stette, Lasse Espeholt, Will Kay, Mustafa Suleyman,        Association for Computational Linguistics.
+   and Phil Blunsom. 2015. Teaching machines to read
+   and comprehend. In Advances in Neural Information       Yinhan Liu, Myle Ott, Naman Goyal, Jingfei Du, Man-
+   Processing Systems, volume 28. Curran Associates,          dar Joshi, Danqi Chen, Omer Levy, Mike Lewis,
+   Inc.                                                       Luke Zettlemoyer, and Veselin Stoyanov. 2019.
+                                                              Roberta: A robustly optimized bert pretraining ap-
+Mandar Joshi, Danqi Chen, Yinhan Liu, Daniel S. Weld,         proach. arXiv preprint arXiv:1907.11692.
+   Luke Zettlemoyer, and Omer Levy. 2020. Span-
+   BERT: Improving pre-training by representing and        William C Mann and Sandra A Thompson. 1988.
+   predicting spans. Transactions of the Association for      Rhetorical structure theory: Toward a functional the-
+   Computational Linguistics, 8:64­77.                        ory of text organization. Text-interdisciplinary Jour-
+                                                              nal for the Study of Discourse, 8(3):243­281.
+
+Walter Kintsch and Teun van Dijk. 1978. Cognitive          Lluís Màrquez, Marta Recasens, and Emili Sapena.
+   psychology and discourse: Recalling and summariz-          2013. Coreference resolution: An empirical study
+   ing stories. Current trends in text linguistics, pages     based on semeval-2010 shared task 1. Lang. Resour.
+   61­80.                                                     Eval., 47(3):661­694.
+
+2163
+Mani Maybury. 1999. Advances in automatic text sum-       pages 74­84, Copenhagen, Denmark. Association for
+   marization. MIT press.                                 Computational Linguistics.
+
+Joshua Maynez, Shashi Narayan, Bernd Bohnet, and          Rashmi Prasad, Nikhil Dinesh, Alan Lee, Eleni Milt-
+   Ryan McDonald. 2020. On faithfulness and factu-           sakaki, Livio Robaldo, Aravind Joshi, and Bonnie
+   ality in abstractive summarization. In Proceedings        Webber. 2008. The Penn Discourse TreeBank 2.0.
+   of the 58th Annual Meeting of the Association for         In Proceedings of the Sixth International Conference
+   Computational Linguistics, pages 1906­1919, On-           on Language Resources and Evaluation (LREC'08),
+   line. Association for Computational Linguistics.          Marrakech, Morocco. European Language Resources
+                                                             Association (ELRA).
+Rada Mihalcea and Paul Tarau. 2004. TextRank: Bring-
+   ing order into text. In Proceedings of the 2004 Con-   Peng Qi, Yuhao Zhang, Yuhui Zhang, Jason Bolton, and
+   ference on Empirical Methods in Natural Language          Christopher D. Manning. 2020. Stanza: A python
+   Processing, pages 404­411, Barcelona, Spain. Asso-        natural language processing toolkit for many human
+   ciation for Computational Linguistics.                    languages. In Proceedings of the 58th Annual Meet-
+                                                             ing of the Association for Computational Linguistics:
+Hidetsugu Nanba and Manabu Okumura. 2000. Pro-               System Demonstrations, pages 101­108, Online. As-
+   ducing more readable extracts by revising them. In        sociation for Computational Linguistics.
+   COLING 2000 Volume 2: The 18th International
+   Conference on Computational Linguistics.               Nils Reimers and Iryna Gurevych. 2019. Sentence-
+                                                             BERT: Sentence embeddings using Siamese BERT-
+Shashi Narayan, Shay B. Cohen, and Mirella Lapata.           networks. In Proceedings of the 2019 Conference on
+   2018a. Don't give me the details, just the summary!       Empirical Methods in Natural Language Processing
+   topic-aware convolutional neural networks for ex-         and the 9th International Joint Conference on Natu-
+   treme summarization. In Proceedings of the 2018           ral Language Processing (EMNLP-IJCNLP), pages
+   Conference on Empirical Methods in Natural Lan-           3982­3992, Hong Kong, China. Association for Com-
+   guage Processing, pages 1797­1807, Brussels, Bel-         putational Linguistics.
+   gium. Association for Computational Linguistics.
+                                                          Qian Ruan, Malte Ostendorff, and Georg Rehm. 2022.
+Shashi Narayan, Shay B. Cohen, and Mirella Lapata.           HiStruct+: Improving extractive text summarization
+   2018b. Ranking sentences for extractive summariza-        with hierarchical structure information. In Findings
+   tion with reinforcement learning. In Proceedings of       of the Association for Computational Linguistics:
+   the 2018 Conference of the North American Chap-           ACL 2022, pages 1292­1308, Dublin, Ireland. As-
+   ter of the Association for Computational Linguistics:     sociation for Computational Linguistics.
+   Human Language Technologies, Volume 1 (Long Pa-
+   pers), pages 1747­1759, New Orleans, Louisiana.        Horacio Saggion and Thierry Poibeau. 2013. Auto-
+   Association for Computational Linguistics.                matic text summarization: Past, present and future.
+                                                             In Multi-source, multilingual information extraction
+Ani Nenkova and Kathleen McKeown. 2012. A survey             and summarization, pages 3­21. Springer.
+   of text summarization techniques. In Mining text
+   data, pages 43­76. Springer.                           Thomas Scialom, Paul-Alexis Dray, Sylvain Lamprier,
+                                                             Benjamin Piwowarski, Jacopo Staiano, Alex Wang,
+Cailin O'Connor and James Owen Weatherall. 2019.             and Patrick Gallinari. 2021. QuestEval: Summariza-
+   The misinformation age. In The Misinformation Age.        tion asks for fact-based evaluation. In Proceedings of
+   Yale University Press.                                    the 2021 Conference on Empirical Methods in Natu-
+                                                             ral Language Processing, pages 6594­6604, Online
+Vishakh Padmakumar and He He. 2021. Unsupervised             and Punta Cana, Dominican Republic. Association
+   extractive summarization using pointwise mutual in-       for Computational Linguistics.
+   formation. In Proceedings of the 16th Conference of
+   the European Chapter of the Association for Compu-     Prithviraj Sen, Galileo Namata, Mustafa Bilgic, Lise
+   tational Linguistics: Main Volume, pages 2505­2512,       Getoor, Brian Galligher, and Tina Eliassi-Rad. 2008.
+   Online. Association for Computational Linguistics.        Collective classification in network data. AI maga-
+                                                             zine, 29(3):93­93.
+Artidoro Pagnoni, Vidhisha Balachandran, and Yulia
+   Tsvetkov. 2021. Understanding factuality in abstrac-   Simeng Sun, Ori Shapira, Ido Dagan, and Ani Nenkova.
+   tive summarization with FRANK: A benchmark for            2019. How to compare summarizers without target
+   factuality metrics. In Proceedings of the 2021 Con-       length? pitfalls, solutions and re-examination of the
+   ference of the North American Chapter of the Asso-        neural summarization literature. In Proceedings of
+   ciation for Computational Linguistics: Human Lan-         the Workshop on Methods for Optimizing and Eval-
+   guage Technologies, pages 4812­4829, Online. As-          uating Neural Language Generation, pages 21­29,
+   sociation for Computational Linguistics.                  Minneapolis, Minnesota. Association for Computa-
+                                                             tional Linguistics.
+Maxime Peyrard, Teresa Botschen, and Iryna Gurevych.
+   2017. Learning to score system summaries for bet-      David Wan and Mohit Bansal. 2022. FactPEGASUS:
+   ter content selection evaluation. In Proceedings of       Factuality-aware pre-training and fine-tuning for ab-
+   the Workshop on New Frontiers in Summarization,           stractive summarization. In Proceedings of the 2022
+
+2164
+   Conference of the North American Chapter of the        Ming Zhong, Pengfei Liu, Yiran Chen, Danqing Wang,
+   Association for Computational Linguistics: Human          Xipeng Qiu, and Xuanjing Huang. 2020. Extractive
+   Language Technologies, pages 1010­1028, Seattle,          summarization as text matching. In Proceedings
+   United States. Association for Computational Lin-         of the 58th Annual Meeting of the Association for
+   guistics.                                                 Computational Linguistics, pages 6197­6208, Online.
+Alex Wang, Kyunghyun Cho, and Mike Lewis. 2020a.             Association for Computational Linguistics.
+   Asking and answering questions to evaluate the fac-
+   tual consistency of summaries. In Proceedings of the   Ming Zhong, Pengfei Liu, Danqing Wang, Xipeng Qiu,
+   58th Annual Meeting of the Association for Compu-         and Xuanjing Huang. 2019. Searching for effective
+   tational Linguistics, pages 5008­5020, Online. Asso-      neural extractive summarization: What works and
+   ciation for Computational Linguistics.                    what's next. In Proceedings of the 57th Annual Meet-
+Danqing Wang, Pengfei Liu, Yining Zheng, Xipeng Qiu,         ing of the Association for Computational Linguistics,
+   and Xuanjing Huang. 2020b. Heterogeneous graph            pages 1049­1058, Florence, Italy. Association for
+   neural networks for extractive document summariza-        Computational Linguistics.
+   tion. In Proceedings of the 58th Annual Meeting of
+   the Association for Computational Linguistics, pages   Deyu Zhou, Linsen Guo, and Yulan He. 2018a. Neural
+   6209­6219, Online. Association for Computational          storyline extraction model for storyline generation
+   Linguistics.                                              from news articles. In Proceedings of the 2018 Con-
+Yuexiang Xie, Fei Sun, Yang Deng, Yaliang Li, and            ference of the North American Chapter of the Asso-
+   Bolin Ding. 2021. Factual consistency evaluation for      ciation for Computational Linguistics: Human Lan-
+   text summarization via counterfactual estimation. In      guage Technologies, Volume 1 (Long Papers), pages
+   Findings of the Association for Computational Lin-        1727­1736, New Orleans, Louisiana. Association for
+   guistics: EMNLP 2021, pages 100­110, Punta Cana,          Computational Linguistics.
+   Dominican Republic. Association for Computational
+   Linguistics.                                           Qingyu Zhou, Nan Yang, Furu Wei, Shaohan Huang,
+Jiacheng Xu, Zhe Gan, Yu Cheng, and Jingjing Liu.            Ming Zhou, and Tiejun Zhao. 2018b. Neural docu-
+   2020. Discourse-aware neural extractive text sum-         ment summarization by jointly learning to score and
+   marization. In Proceedings of the 58th Annual Meet-       select sentences. In Proceedings of the 56th Annual
+   ing of the Association for Computational Linguistics,     Meeting of the Association for Computational Lin-
+   pages 5021­5031, Online. Association for Computa-         guistics (Volume 1: Long Papers), pages 654­663,
+   tional Linguistics.                                       Melbourne, Australia. Association for Computational
+Shusheng Xu, Xingxing Zhang, Yi Wu, and Furu Wei.            Linguistics.
+   2022. Sequence level contrastive learning for text
+   summarization. Proceedings of the AAAI Conference      Appendix
+   on Artificial Intelligence, 36(10):11556­11565.
+Jingqing Zhang, Yao Zhao, Mohammad Saleh, and Pe-         A Another Meta-evaluation Method
+   ter Liu. 2020a. PEGASUS: Pre-training with ex-
+   tracted gap-sentences for abstractive summarization.   A.1 Definitions
+   In Proceedings of the 37th International Conference
+   on Machine Learning, volume 119 of Proceedings         System-level correlation evaluates how well the
+   of Machine Learning Research, pages 11328­11339.       metric can compare different summarization sys-
+   PMLR.                                                  tems. We denote the correlation measure as K,
+Shiyue Zhang and Mohit Bansal. 2021. Finding a bal-       human scores as h, the metric as m, and generated
+   anced degree of automation for summary evaluation.     summaries as s. We assume there are N documents
+   In Proceedings of the 2021 Conference on Empiri-       and S systems in the mete-evaluation dataset. The
+   cal Methods in Natural Language Processing, pages      system-level correlation is defined as follows:
+   6617­6632, Online and Punta Cana, Dominican Re-
+   public. Association for Computational Linguistics.                       1  N                   1  N
+Tianyi Zhang, Varsha Kishore, Felix Wu, Kilian Q.                           N                      N
+   Weinberger, and Yoav Artzi. 2020b. Bertscore: Eval-    Kmsy,sh  =  K ([          m(si1),  ...,          m(siS )],
+   uating text generation with bert. In International
+   Conference on Learning Representations.                                     i=1                    i=1
+Hao Zheng and Mirella Lapata. 2019. Sentence cen-
+   trality revisited for unsupervised summarization. In                     1  N                   1  N
+   Proceedings of the 57th Annual Meeting of the Asso-                      N                      N
+   ciation for Computational Linguistics, pages 6236­                 [             h(si1),  ...,          h(siS )])
+   6247, Florence, Italy. Association for Computational
+   Linguistics.                                                                i=1                    i=1
+
+                                                          In our case, N = 100 and S = 16. We use Pearson
+                                                          r or Spearman  as the correlation measure K.
+
+                                                          Summary-level correlation evaluates if the metric
+                                                          can reliably compare summaries generated by dif-
+                                                          ferent systems for the same document. Using the
+
+2165
+System-level Correlations
+
+                      Incor. Coref.  Incom. Coref.  Incor. Disco.  Incom. Disco.  Mislead.      Overall
+
+Metrics               r              r                r              r              r           r      
+                                                    -0.78  -0.01   -0.88  -0.26   0.01   0.12
+-ROUGE-2-F1           0.28 0.59      -0.39 0.08     0.81   0.51    0.81   0.60    -0.13  -0.22  -0.71 0.14
+-FactCC               0.29 0.34      0.44 0.39      0.11   0.41    0.23   0.74    0.64   0.44   0.75 0.54
+DAE                   0.23 0.26      0.66 0.39      -0.26  0.33    -0.25  0.36    0.18   0.19   0.50 0.58
+-QuestEval            0.27 0.35      0.16 0.40      0.70   0.58    0.73   0.58    0.09   0.10   -0.06 0.43
+-BERTScore Pre.       0.29 0.30      0.50 0.57                                                  0.74 0.68
+
+INCORCOREFEVAL        0.43   0.12    0.32 0.31      -0.03 0.19     -0.16  -0.02   0.25 0.12     0.11 0.22
+INCOMCOREFEVAL        0.38   0.34    0.96 0.87      0.52 0.72      0.59   0.56    0.20 0.13     0.85 0.85
+INCOMDISCOEVAL        0.30   0.46    0.58 0.76      0.96 0.76      0.92   0.71    -0.06 0.10    0.90 0.88
+SENTIBIAS             -0.37  -0.48   0.37 0.18      0.57 0.19      0.69   0.32    0.00 0.01     0.56 0.09
+EXTEVAL               0.37   0.33    0.83 0.84      0.83 0.76      0.84   0.67    0.08 0.09     0.96 0.88
+
+Summary-level Correlations
+
+                      Incor. Coref.  Incom. Coref.  Incor. Disco.  Incom. Disco.  Mislead.      Overall
+
+Metrics               r              r                  r          r              r             r      
+
+-ROUGE-2-F1           0.09   0.06    -0.05  -0.01   -0.47  -0.28   -0.37  -0.28   -0.00 0.02    -0.22  -0.13
+-FactCC               -0.07  -0.07   0.05   0.04    0.46   0.42    0.13   0.10    0.03 0.03     0.12   0.09
+DAE                   0.03   0.03    0.16   0.23    0.01   0.11    0.00   0.03    0.20 0.17     0.10   0.14
+-QuestEval            0.10   0.13    0.17   0.20    -0.13  -0.06   -0.03  -0.02   0.06 0.08     0.08   0.13
+-BERTScore Pre.       0.11   0.12    0.24   0.23    0.48   0.37    0.36   0.30    0.10 0.09     0.36   0.32
+
+INCORCOREFEVAL        0.44   0.44    0.07 0.07      -0.07  -0.07   -0.06  -0.06   0.13   0.13   0.13 0.12
+INCOMCOREFEVAL        0.13   0.13    0.52 0.52      0.09   0.09    0.23   0.23    0.04   0.04   0.43 0.43
+INCOMDISCOEVAL        0.06   0.06    0.15 0.15      0.65   0.65    0.67   0.67    -0.04  -0.04  0.43 0.41
+SENTIBIAS             -0.06  -0.06   0.07 0.07      -0.01  0.01    0.06   0.07    0.11   0.11   0.09 0.10
+EXTEVAL               0.23   0.16    0.42 0.37      0.36   0.28    0.48   0.37    0.04   0.07   0.52 0.43
+
+Table 2: System-level and summary-level correlations. The negative sign (-) before metrics means that their scores
+are negated to retain the feature that the higher the scores are the unfaithful the summaries are.
+
+same notations as above, it is written by:                 It means EXTEVAL can rank extractive systems
+                                                           well based on how unfaithful they are. The
+            1    N                                         three sub-metrics (INCORCOREFEVAL, INCOM-
+            N                                              COREFEVAL, and INCOMDISCOEVAL) perform
+Kmsu,mh  =            K([m(si1), ..., m(siS)],             best at judging which system produces more errors
+                                                           of their corresponding error types. But for detect-
+                 i=1                                       ing misleading information, DAE works best. Out
+                                                           of the 5 existing metrics, BERTScore Precision is
+                           [h(si1), ..., h(siS)])          the best in general, and on system level, FactCC
+                                                           also works decently well.
+A.2 Results
+                                                           B Meta-evaluation Results on SummEval
+Table 2 illustrates the system-level and summary-
+level correlations of different metrics with human         We mainly evaluate EXTEVAL on the dataset we
+judgment. Note that, for both system-level and             collected because EXTEVAL is designed for detect-
+summary-level correlations, their correlations are         ing problematic extractive summaries and is not
+computed between two vectors of length 16 (16              applicable to abstractive summaries. Nonetheless,
+systems), whereas the meta-evaluation method we            we find a subset of SummEval (Fabbri et al., 2021)
+used in the main paper computes the correlations           that contains 4 extractive systems. We use the av-
+between two vectors of length 1600 (1600 exam-             erage of their consistency (=faithfulness) scores
+ples). A smaller sample size will cause a larger vari-     annotated by experts as the gold human scores and
+ance. This is especially true for system-level cor-        compute its correlation with EXTEVAL. We ap-
+relations, because, following the definitions above,       ply two meta-evaluation methods: (1) Method 1,
+the summary-level correlation (Kmsu,mh ) averages          the same meta-evaluation method as Section 4.1,
+across N (in our case, N=100) which can help re-           and (2) Method 2, the system-level evaluation in-
+duce the variance.                                         troduced in A, which is also used by Fabbri et al.
+                                                           (2021), though here we only have 4 systems. The
+   Nevertheless, as shown in Table 2, our EX-
+TEVAL achieves the best Pearson and Spearman
+correlations with the Overall human judgment
+on both the system level and the summary level.
+
+                                                    2166
+                      Incor. Coref.    Incom. Coref.        Incor. Disco.  Incom. Disco.  Mislead.   Overall
+
+Metrics                r                  r                 r              r              r          r  
+SENTIBIAS (AllenNLP)
+SENTIBIAS (Stanza)    -0.02     -0.03  0.07   0.05          -0.01  -0.00   0.09 0.08      0.15 0.12  0.13 0.11
+SENTIBIAS (Google)    0.01      0.02   -0.01  -0.02         0.01   0.01    0.10 0.09      0.06 0.04  0.07 0.05
+SENTIBIAS (ensemble)  0.06      0.06   -0.01  -0.01         0.00   0.01    0.04 0.04      0.05 0.05  0.05 0.06
+                      0.02      0.04   0.02   0.02          0.00   -0.00   0.12 0.11      0.12 0.10  0.12 0.12
+
+Table 3: Comparison of using different sentiment analysis tools in SentiBias sub-metric.
+
+                      Method 1         Method 2             quires some background knowledge of linguistics
+                                                            and NLP.
+Metrics           r                  r          
+FactCC          -0.04     -0.11    0.68       0.40             Figure 8 shows the annotation interface and an
+QuestEval       -0.04     0.02     -0.46      -0.68         example annotation. We ask the expert annotators
+BERTScore Pre.  0.13      0.14     -0.30       0.0          to justify when they think there exists an unfaithful
+-EXTEVAL        0.10      0.16     0.31       0.60          problem. Specifically, if they think the summary
+                                                            has incorrect coreferences, they need to further
+Table 4: Meta-evaluation results on SummEval (Fabbri        specify the sentence indices and the mentions. For
+et al., 2021). Method 1 refers to the meta-evaluation       example, "s2-he" means "he" in the second sum-
+method used in Section 4.1, while Method 2 refers to        mary sentence is problematic. Meanwhile, they
+the system-level correlation used by Fabbri et al. (2021).  need to justify their answer by explaining why "s2-
+We negate EXTEVAL to make higher scores mean more           he" is an incorrect coreference. For incomplete
+faithful.                                                   coreference, annotators also need to specify the
+                                                            sentence indices plus mentions, but no explanation
+results can be found in Table 4. As we can ob-              is required because it can always be "the mention
+serve, under both methods, our EXTEVAL achieves             has no clear antecedent." For incorrect discourse,
+the best Spearman correlations and competitive              they need to specify sentence indices and justify
+Pearson correlations, which demonstrates the good           their choice. For incomplete discourse, they only
+generalizability of EXTEVAL.                                need to specify sentence indices. We find that many
+                                                            summaries have multiple incomplete coreference
+C Alternative Sentiment Analysis Tools                      or discourse issues. Annotators need to label all of
+                                                            them, separated by ",", e.g., "s2-he, s3-the man".
+In the main paper, we use the sentiment analy-              Lastly, besides these four errors, if they think the
+sis tool from AllenNLP (v2.4.0) (Gardner et al.,            summary can still mislead the audience, we ask
+2018)17 to implement our SENTIBIAS sub-metric               them to provide an explanation to support it.
+of EXTEVAL. Here, we test two other sentiment
+analysis tools from Stanza (Qi et al., 2020) and               To avoid one issue in the summary being iden-
+Google Cloud API18, respectively. We also try an            tified as multiple types of errors, we give the fol-
+ensemble method by averaging their output scores.           lowing priorities: incorrect coreference = incorrect
+Table 3 shows the performance. Note that these              discourse > incomplete coreference = incomplete
+correlations are computed with 15 systems (except           discourse > other misleading information. If an
+Histruct+) because we added Histruct+ after we              issue is labeled as one type, it will not be labeled
+conducted this analysis. Thus, the numbers are              for other equal- or lower-priority types.
+slightly different from those in Table 1. AllenNLP
+works better than the other two tools. The ensemble         E Faithfulness Metric Details
+does not help improve the performance either.
+
+D Human Evaluation Details                                  We select the following representative metrics to
+                                                            assess whether they can help to detect unfaithful
+We did not choose to label the data on Amazon               summaries for extractive summarization. Unless
+Mechanical Turk because we think that understand-           otherwise stated, we use the original code provided
+ing the concepts of coreference and discourse re-           by the official repository.
+
+   17https://storage.googleapis.                               ROUGE (Lin, 2004) is not designed for faithful-
+com/allennlp-public-models/                                 ness evaluation; instead, it is the most widely used
+stanford-sentiment-treebank-roberta.                        content selection evaluation metric for summariza-
+2021-03-11.tar.gz                                           tion. Although it has been shown that ROUGE
+                                                            correlates poorly with the human judgment of faith-
+   18https://cloud.google.com/apis/docs/
+overview
+
+                                                      2167
+Oracle              ROUGE-2-F1  FactCC  DAE             QuestEval  BERTScore Pre.  EXTEVAL   Human Overall
+Oracle (discourse)       25.09   0.95    0.02              0.45           0.92         0.98         0.63
+RNN Ext RL               33.38   0.77    0.00              0.55           0.89         1.65         1.04
+BanditSumm               12.89   0.97    0.00              0.49           0.95         0.59         0.27
+NeuSumm                  13.48   0.91    0.00              0.48           0.93         0.57         0.28
+Refresh                  13.69   0.90    0.01              0.48           0.91         0.52         0.26
+BERT+LSTM+PN+RL          12.96   0.93    0.00              0.48           0.92         0.66         0.36
+MatchSumm                14.34   0.90    0.00              0.48           0.93         0.59         0.25
+HeterGraph               15.42   0.99    0.00              0.48           0.94         0.58         0.22
+Histruct+                14.05   1.00    0.00              0.50           0.94         0.53         0.24
+Lead3                    14.43   0.99    0.00              0.63           0.94         0.54         0.30
+Textrank                 13.03   1.00    0.00              0.49           0.95         0.28         0.05
+Textrank (ST)            11.06   0.96    0.00              0.46           0.93         0.91         0.46
+PacSum (tfidf)            8.92   0.93    0.02              0.44           0.93         1.07         0.58
+PacSum (bert)            12.89   0.99    0.01              0.49           0.94         0.59         0.33
+MI-unsup                 13.98   1.00    0.00              0.49           0.95         0.31         0.13
+                         10.62   0.99    0.00              0.46           0.92         1.05         0.38
+
+Table 5: All metric scores and the human Overall score for the 16 extractive systems on the 100 CNN/DM testing
+examples. The score of a system is the average score of 100 examples.  means the scores are the lower the better.
+
+fulness (Maynez et al., 2020), we explore whether       However, it may not be able to capture the other
+it still holds for the extractive case. We only report  three types of errors.
+ROUGE-2-F1 because other variants share similar
+trends with it. we use the implementation from the         BERTScore (Zhang et al., 2020b) is a general
+Google research Github repo.19                          evaluation metric for text generation. It computes
+                                                        the token-level cosine similarities between two
+   FactCC (Kryscinski et al., 2020) is an               texts using BERT (Devlin et al., 2019). Some pre-
+entailment-based metric trained on a synthetic cor-     vious works (Pagnoni et al., 2021; Fischer, 2021)
+pus consisting of source sentences as faithful sum-     have shown that its precision score between the
+maries and perturbed source sentences as unfaithful     summary and the source (i.e., how much summary
+ones. It means that FactCC inherently treats each       information is similar to that in the document) has
+source sentence as faithful. During the evaluation,     a good correlation with the summary's faithfulness.
+they take the average score for each summary sen-       We hypothesize BERTScore is able to capture more
+tence as the final score.                               general discourse-level errors because of the con-
+                                                        textualized representations from BERT.
+   DAE (Goyal and Durrett, 2020) is also
+entailment-based and evaluates whether each de-            Table 5 show the metric scores as well as the
+pendency arc in the summary is entailed by the          human Overall score of the 16 systems we study
+document or not. The final score is the average         in this work. Scores are computed only on the 100
+of arc-level entailment labels. DAE is similarly        CNN/DM testing examples we use, and the system
+trained by a synthetic dataset compiled from para-      score is the average of example scores.
+phrasing. Since dependency arcs are within sen-
+tences, DAE also can hardly detect discourse-level      F EXTEVAL Details
+unfaithfulness issues.
+                                                        For INCOMCOREFEVAL, the list of pronouns we
+   QuestEval (Scialom et al., 2021) is a F1 style       use includes they, she, he, it, this, that, those, these,
+QGQA metric for both faithfulness and content           them, her, him, their, her, his, and the list of deter-
+selection evaluations. It first generates questions     miners includes the, that, this, these, those, both.
+from both the document and the summary. Then, it        This list only contains frequent terms that appear
+answers the questions derived from the summary          in our dataset, which is not exhaustive.
+using the document (i.e., precision) and answers
+the questions derived from the summary using the           The list of linking terms for INCOMDISCO-
+summary (i.e., recall). The final score is their har-   EVAL includes and, so, still, also, however, but,
+monic mean (i.e., F1). QuestEval theoretically can      clearly, meanwhile, not only, not just, on one side,
+detect incorrect coreference because QG considers       on another, then, moreover. Similarly, the list is
+the long context of the summary and the document.       not exhaustive, and we only keep frequent terms.
+
+   19https://github.com/google-research/
+google-research/tree/master/rouge
+
+                                               2168
+  Document:
+  (CNN) The California Public Utilities Commission on Thursday said it is ordering Pacific Gas & Electric Co. to pay a record
+  $1.6 billion penalty for unsafe operation of its gas transmission system, including the pipeline rupture that killed eight people
+  in San Bruno in September 2010.
+  Most of the penalty amounts to forced spending on improving pipeline safety. Of the 1.6billion,850 million will go to "gas
+  transmission pipeline safety infrastructure improvements," the commission said.
+  Another $50 million will go toward "other remedies to enhance pipeline safety," according to the commission. "PG&E failed
+  to uphold the public's trust," commission President Michael Picker said.
+  "The CPUC failed to keep vigilant. Lives were lost. Numerous people were injured. Homes were destroyed.
+  We must do everything we can to ensure that nothing like this happens again." The company's chief executive officer said in a
+  written statement that PG&E is working to become the safest energy company in the United States.
+  "Since the 2010 explosion of our natural gas transmission pipeline in San Bruno, we have worked hard to do the right thing
+  for the victims, their families and the community of San Bruno," Tony Earley said.
+  "We are deeply sorry for this tragic event, and we have dedicated ourselves to re-earning the trust of our customers and the
+  communities we serve. The lessons of this tragic event will not be forgotten."
+  On September 9, 2010, a section of PG&E pipeline exploded in San Bruno, killing eight people and injuring more than 50
+  others.
+  The blast destroyed 37 homes. PG&E said it has paid more than $500 million in claims to the victims and victims' families in
+  San Bruno, which is just south of San Francisco.
+  The company also said it has already replaced more than 800 miles of pipe, installed new gas leak technology and implemented
+  nine of 12 recommendations from the National Transportation Safety Board.
+  According to its website, PG&E has 5.4 million electric customers and 4.3 million natural gas customers.
+  The Los Angeles Times reported the previous record penalty was a $146 million penalty against Southern California Edison
+  Company in 2008 for falsifying customer and worker safety data. CNN's Jason Hanna contributed to this report.
+  Summary (incomplete coreference):
+  (CNN) The California Public Utilities Commission on Thursday said it is ordering Pacific Gas & Electric Co. to pay a record
+  $1.6 billion penalty for unsafe operation of its gas transmission system, including the pipeline rupture that killed eight people
+  in San Bruno in September 2010. According to its website, PG&E has 5.4 million electric customers and 4.3 million natural
+  gas customers.
+Figure 4: An example from CNN/DM (Hermann et al., 2015) testing set showing an incomplete coreference error.
+The summary is generated by BERT+LSTM+PN+RL (Zhong et al., 2019). All extracted sentences are underlined
+in the document. The word its in the summary is ambiguous. It can refer to PG&E or California Public Utilities
+Commission. The correct coreference should be PG&E in the document.
+
+G Additional Examples
+
+Figure 4 and Figure 5 show two additional exam-
+ples of incomplete coreference and incomplete dis-
+ource respectively. Figure 6 shows a misleading
+information example. Figure 7 is an example of fix-
+ing an incorrect coreference error via post-editing.
+
+                                                            2169
+  Document:
+  (CNN) It's been a busy few weeks for multiples.
+  The first set of female quintuplets in the world since 1969 was born in Houston on April 8, and the parents are blogging
+  about their unique experience.
+  Danielle Busby delivered all five girls at the Woman's Hospital of Texas via C-section at 28 weeks and two days, according
+  to CNN affiliate KPRC. Parents Danielle and Adam and big sister Blayke are now a family of eight.
+  The babies are named Ava Lane, Hazel Grace, Olivia Marie, Parker Kate and Riley Paige. "We are so thankful and blessed,"
+  said Danielle Busby, who had intrauterine insemination to get pregnant.
+  "I honestly give all the credit to my God. I am so thankful for this wonderful hospital and team of people here. They truly all
+  are amazing." You can learn all about their journey at their blog, "It's a Buzz World."
+  Early news reports said the Busby girls were the first all-female quintuplets born in the U.S.
+  But a user alerted CNN to news clippings that show quintuplet girls were born in 1959 to Charles and Cecilia Hannan in San
+  Antonio.
+  All of the girls died within 24 hours. Like the Busby family, Sharon and Korey Rademacher were hoping for a second child.
+  When they found out what they were having, they decided to keep it a secret from family and friends.
+  That's why they didn't tell their family the gender of baby No. 2 ­ or that Sharon was actually expecting not one but two
+  girls, according to CNN affiliate WEAR.
+  And when everyone arrived at West Florida Hospital in Pensacola, Florida, after Sharon gave birth March 11, they recorded
+  everyone's reactions to meeting twins Mary Ann Grace and Brianna Faith.
+  The video was uploaded to YouTube on Saturday and has been viewed more than 700,000 times. Could you keep it a secret?
+  Summary (incomplete discourse):
+  The first set of female quintuplets in the world since 1969
+  was born in Houston on April 8,
+  Danielle Busby delivered all five girls at the Woman's Hospital of Texas via C-section at 28 weeks and two days,
+  the Busby girls were the first all-female quintuplets
+
+Figure 5: An example from CNN/DM (Hermann et al., 2015) testing set showing an incomplete discourse error. The
+summary is generated by the Oracle (disco) (Xu et al., 2020) extractive system. All extracted elementary discourse
+units are underlined in the document. The last summary sentence missed the "born in the u.s" part which may make
+people think the Busby girls is the first all-female quintuplets not only in US.
+
+  Document:
+  (CNN) It didn't seem like a fair fight.
+  On one side were hulking football players and pro wrestlers, competing as teams of two to eat as many pounds of steak as
+  they could, combined, in one hour.
+  On another was a lone 124-pound mother of four.
+  And sure enough, in the end, Sunday's contest at Big Texan Steak Ranch in Amarillo, Texas, wasn't even close.
+  Molly Schuyler scarfed down three 72-ounce steaks, three baked potatoes, three side salads, three rolls and three shrimp
+  cocktails ­ far outpacing her heftier rivals.
+  That's more than 13 pounds of steak, not counting the sides.
+  And she did it all in 20 minutes, setting a record in the process.
+  "We've been doing this contest since 1960, and in all that time we've never had anybody come in to actually eat that many
+  steaks at one time," Bobby Lee, who co-owns the Big Texan, told CNN affiliate KVII. "So this is a first for us, and after 55
+  years of it, it's a big deal."
+  In fairness, Schuyler isn't your typical 124-pound person. The Nebraska native, 35, is a professional on the competitive-eating
+  circuit and once gobbled 363 chicken wings in 30 minutes.
+  Wearing shades and a black hoodie, Schuyler beat four other teams on Sunday, including pairs of football players and pro
+  wrestlers and two married competitive eaters.
+  She also broke her own Big Texan record of two 72-ounce steaks and sides, set last year, when she bested previous record-
+  holder Joey "Jaws" Chestnut.
+  ...
+  Summary (other misleading information):
+  On one side were hulking football players and pro wrestlers, competing as teams of two to eat as many pounds of steak as
+  they could, combined, in one hour.
+  And sure enough, in the end, Sunday's contest at Big Texan Steak Ranch in Amarillo, Texas, wasn't even close.
+  That's more than 13 pounds of steak, not counting the sides.
+
+Figure 6: An example from CNN/DM (Hermann et al., 2015) testing set showing a other misleading information
+error. The summary is generated by the HeterGraph (Wang et al., 2020b) extractive system. All extracted sentences
+are underlined in the document. If readers only read the summary, they may think the football players and pro
+wrestlers won the contest and ate 13 pounds of steak.
+
+                                                            2170
+  Document:
+  (CNN) North Korea accused Mexico of illegally holding one of its cargo ships Wednesday and demanded the release of
+  the vessel and crew.
+  The ship, the Mu Du Bong, was detained after it ran aground off the coast of Mexico in July.
+  Mexico defended the move Wednesday, saying it followed proper protocol because the company that owns the ship, North
+  Korea's Ocean Maritime Management company, has skirted United Nations sanctions.
+  ...
+  But An Myong Hun, North Korea's deputy ambassador to the United Nations, said there was no reason to hold the Mu Du
+  Bong and accused Mexico of violating the crew members' human rights by keeping them from their families.
+  "Mu Du Bong is a peaceful, merchant ship and it has not shipped any items prohibited by international laws or regulations,"
+ An told reporters at the United Nations headquarters Wednesday. "And we have already paid full compensation to Mexican
+  authorities according to its domestic laws."
+  According to Mexico's U.N. mission, the 33 North Korean nationals who make up the vessel's crew are free, staying at a
+  hotel in the port city of Tuxpan and regularly visiting the ship to check on it.
+  They will soon be sent back to North Korea with help from the country's embassy, Mexican authorities said.
+  In the case of the Chong Chon Gang, Panamanian authorities found it was carrying undeclared weaponry from Cuba ­
+  including MiG fighter jets, anti-aircraft systems and explosives ­ buried under thousands of bags of sugar.
+  Panama seized the cargo and held onto the ship and its crew for months. North Korea eventually agreed to pay a fine of
+  $666,666 for the vessel's release. CNN's Jethro Mullen contributed to this report.
+  Original Summary (incorrect coreference):
+  (CNN) North Korea accused Mexico of illegally holding one of its cargo ships Wednesday and demanded the release of the
+ vessel and crew.
+  The ship, the Mu Du Bong, was detained after it ran aground off the coast of Mexico in July.
+  They will soon be sent back to North Korea with help from the country's embassy, Mexican authorities said.
+  Automatically Corrected Summary:
+  (CNN) North Korea accused Mexico of illegally holding one of its cargo ships Wednesday and demanded the release of the
+ vessel and crew.
+  The ship, the Mu Du Bong, was detained after it ran aground off the coast of Mexico in July.
+  the crew members' will soon be sent back to North Korea with help from the country's embassy, Mexican authorities said.
+Figure 7: An example of post-correction with EXTEVAL. In the original summary, they refers to the vessel and crew
+in the summary, but it only refers to the crew in the document. In the corrected summary, the automated program
+successfully replaces they with the crew members' though with a minor grammar issue.
+
+                                                            2171
+Figure 8: The interface for human annotation.
+                      2172
+   ACL 2023 Responsible NLP Checklist
+A For every submission:
+
+   A1. Did you describe the limitations of your work?
+
+      the limitation section on page 9.
+
+   A2. Did you discuss any potential risks of your work?
+
+      the broader impact statement section on page 9.
+
+   A3. Do the abstract and introduction summarize the paper's main claims?
+
+      abstract and Section 1
+
+   A4. Have you used AI writing assistants when working on this paper?
+
+     Left blank.
+
+B  Did you use or create scientific artifacts?
+
+   Section 3
+
+   B1. Did you cite the creators of artifacts you used?
+
+     Section 3
+
+   B2. Did you discuss the license or terms for use and / or distribution of any artifacts?
+
+     Section 3 and our GitHub repo.
+
+   B3. Did you discuss if your use of existing artifact(s) was consistent with their intended use, provided
+
+      that it was specified? For the artifacts you create, do you specify intended use and whether that is
+      compatible with the original access conditions (in particular, derivatives of data accessed for research
+      purposes should not be used outside of research contexts)?
+     Section 3 and our GitHub repo.
+
+   B4. Did you discuss the steps taken to check whether the data that was collected / used contains any
+
+      information that names or uniquely identifies individual people or offensive content, and the steps
+      taken to protect / anonymize it?
+     Our data collection will not introduce people's identifications or offensive content.
+
+   B5. Did you provide documentation of the artifacts, e.g., coverage of domains, languages, and
+
+      linguistic phenomena, demographic groups represented, etc.?
+     Section 2 and Section 3
+
+   B6. Did you report relevant statistics like the number of examples, details of train / test / dev splits,
+
+      etc. for the data that you used / created? Even for commonly-used benchmark datasets, include the
+      number of examples in train / validation / test splits, as these provide necessary context for a reader
+      to understand experimental results. For example, small differences in accuracy on large test sets may
+      be significant, while on small test sets they may not be.
+     Section 3
+
+C  Did you run computational experiments?
+
+   Section 4
+
+   C1. Did you report the number of parameters in the models used, the total computational budget
+
+     (e.g., GPU hours), and computing infrastructure used?
+     Section 4
+
+The Responsible NLP Checklist used at ACL 2023 is adopted from NAACL 2022, with the addition of a question on AI writing
+assistance.
+
+                                                            2173
+   C2. Did you discuss the experimental setup, including hyperparameter search and best-found
+
+      hyperparameter values?
+     Section 4
+
+   C3. Did you report descriptive statistics about your results (e.g., error bars around results, summary
+
+      statistics from sets of experiments), and is it transparent whether you are reporting the max, mean,
+      etc. or just a single run?
+     Section 4
+
+   C4. If you used existing packages (e.g., for preprocessing, for normalization, or for evaluation), did
+
+     you report the implementation, model, and parameter settings used (e.g., NLTK, Spacy, ROUGE,
+      etc.)?
+     Section 4 and Appendix E
+
+D  Did you use human annotators (e.g., crowdworkers) or research with human participants?
+
+   Section 3
+
+   D1. Did you report the full text of instructions given to participants, including e.g., screenshots,
+
+      disclaimers of any risks to participants or annotators, etc.?
+     Section 3 and Appendix D
+
+   D2. Did you report information about how you recruited (e.g., crowdsourcing platform, students)
+
+      and paid participants, and discuss if such payment is adequate given the participants' demographic
+     (e.g., country of residence)?
+     Section 3 and Appendix D
+
+   D3. Did you discuss whether and how consent was obtained from people whose data you're
+
+      using/curating? For example, if you collected data via crowdsourcing, did your instructions to
+      crowdworkers explain how the data would be used?
+     Section 3 and Appendix D
+
+   D4. Was the data collection protocol approved (or determined exempt) by an ethics review board?
+
+     Section 3 and Appendix D
+
+   D5. Did you report the basic demographic and geographic characteristics of the annotator population
+
+      that is the source of the data?
+     Section 3 and Appendix D
+
+                                                            2174
+

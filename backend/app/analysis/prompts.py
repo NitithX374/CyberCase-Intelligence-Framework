@@ -161,15 +161,15 @@ The input contains three information classes:
 1. Case sources:
    - They are not supplied to you. The claims below were read out of them, and each
      claim's supporting content was resolved from them by the backend.
-   - The claims and their quotations are the only authority for case-specific facts.
+   - The canonical claims and their resolved source content are the authority for
+     case-specific facts. Preserve source attribution and uncertainty.
 
 2. The reading:
-   - The claims, parties, timeline and impacts already written from those sources,
-     each claim carrying source content reproduced by the backend, with its evidence IDs
-     or recovered legacy quotations. Resolution establishes a location, not source truth.
-   - Supplied parties, timeline and impacts passed a separate claim-to-projection support
-     check. Unchecked or unsupported projections are omitted. Derive all case facts from
-     the supplied claims and preserve their attribution and epistemic qualifications.
+   - Canonical claims read from all supplied sources, each carrying source content
+     reproduced by the backend from selected unit IDs or recovered legacy quotations.
+     Resolution establishes a location, not source truth or semantic confirmation.
+   - Derive case facts from these claims. Do not invent a role, date, event, impact,
+     causal relationship or other factual content absent from them.
    - Every claim ID you write must name a claim that appears there. Never invent a
      claim ID, and never write a new claim.
    - A claim whose epistemic_status is "not_confirmed" has no supporting evidence

@@ -80,7 +80,9 @@ describe("AnalysisSummary with a summary that names its claims", () => {
   it("says under the paragraph what no checked quotation supports, by letter", () => {
     render(<AnalysisSummary />);
 
-    expect(screen.getAllByText("No cited quotation was found in the sources.")).toHaveLength(1);
+    expect(
+      screen.getAllByText("None of the linked claims has a resolved source citation."),
+    ).toHaveLength(1);
     expect(screen.getAllByText("Not linked to any claim.")).toHaveLength(1);
     expect(screen.queryByText(/Some cited quotations/)).not.toBeInTheDocument();
   });

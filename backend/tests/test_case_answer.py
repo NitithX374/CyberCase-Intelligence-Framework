@@ -408,3 +408,21 @@ def test_a_plain_answer_stores_no_suggestion():
     output = module.CaseAnalysisOutput(answer="Hello.", trace=None)
 
     assert answer_metadata(output) == {}
+
+
+def test_inline_citations_are_stripped_from_unit_text(monkeypatch):
+    output, _ = ask(
+        monkeypatch,
+        reply(
+            unit(
+                "Data on the server had been encrypted [A-01]. Access was gained without 2FA [A-02].",
+                claim_ids=["A-01"],
+            )
+        ),
+        analysed=True,
+    )
+
+    [answered] = output.units
+    assert answered.text == "Data on the server had been encrypted. Access was gained without 2FA."
+    assert answered.claim_ids == ["A-01"]
+    assert output.answer == "Data on the server had been encrypted. Access was gained without 2FA."

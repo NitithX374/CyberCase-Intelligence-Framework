@@ -1,0 +1,18 @@
+{
+  "seed": 42,
+  "git_commit_sha": "ca7fc6d64ac70fd28c7248c40abe51a6ee21f73c",
+  "n_bootstraps": 1000,
+  "backbone_primary": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
+  "backbone_post_hoc_sensitivity": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+  "sentence_embedding_model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+  "semantic_tau": 0.2,
+  "nli_max_length": 512,
+  "package_versions": {
+    "python": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
+    "torch": "2.6.0+cu124",
+    "transformers": "5.15.1",
+    "sklearn": "1.9.0",
+    "numpy": "2.3.5",
+    "pandas": "3.0.5"
+  }
+}

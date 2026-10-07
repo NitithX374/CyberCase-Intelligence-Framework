@@ -1,0 +1,90 @@
+{
+  "dev": {
+    "logistic_regression": {
+      "accuracy": 0.6864813039309684,
+      "macro_f1": 0.6396505764031304,
+      "supported_precision": 0.5230769230769231,
+      "supported_recall": 0.49707602339181284,
+      "supported_f1": 0.5097451274362819,
+      "false_support_rate": 0.2211126961483595,
+      "tn": 546,
+      "fp": 155,
+      "fn": 172,
+      "tp": 170,
+      "total": 1043
+    },
+    "best_xgboost": {
+      "params": "depth=3, lr=0.1, n_est=50",
+      "accuracy": 0.6788111217641419,
+      "macro_f1": 0.6440356448272313,
+      "supported_f1": 0.5327754532775453,
+      "fsr": 0.2624821683309558
+    },
+    "tiny_mlp": {
+      "accuracy": 0.6778523489932886,
+      "macro_f1": 0.6367089342433716,
+      "supported_precision": 0.5085714285714286,
+      "supported_recall": 0.52046783625731,
+      "supported_f1": 0.5144508670520231,
+      "false_support_rate": 0.24536376604850213,
+      "tn": 529,
+      "fp": 172,
+      "fn": 164,
+      "tp": 178,
+      "total": 1043
+    },
+    "promote_xgb": true,
+    "promote_mlp": false
+  },
+  "verdict": "REVERT_TO_LOGISTIC_REGRESSION",
+  "test": {
+    "logistic_regression": {
+      "accuracy": 0.6663551401869159,
+      "macro_f1": 0.618490320686256,
+      "supported_precision": 0.4626038781163435,
+      "supported_recall": 0.5060606060606061,
+      "supported_f1": 0.4833574529667149,
+      "false_support_rate": 0.26216216216216215,
+      "tn": 546,
+      "fp": 194,
+      "fn": 163,
+      "tp": 167,
+      "total": 1070
+    },
+    "candidate": {
+      "accuracy": 0.6579439252336449,
+      "macro_f1": 0.6219884169884169,
+      "supported_precision": 0.4560975609756098,
+      "supported_recall": 0.5666666666666667,
+      "supported_f1": 0.5054054054054054,
+      "false_support_rate": 0.3013513513513513,
+      "tn": 517,
+      "fp": 223,
+      "fn": 143,
+      "tp": 187,
+      "total": 1070
+    },
+    "bootstrap": {
+      "accuracy": {
+        "mean_diff": -0.008525233644859813,
+        "ci_lower": -0.0261682242990654,
+        "ci_upper": 0.008434579439252413
+      },
+      "macro_f1": {
+        "mean_diff": 0.003514174386380902,
+        "ci_lower": -0.016239572986444396,
+        "ci_upper": 0.02335930572607459
+      },
+      "supported_f1": {
+        "mean_diff": 0.022201847764770525,
+        "ci_lower": -0.0052089353768047806,
+        "ci_upper": 0.0504152147016814
+      },
+      "fsr": {
+        "mean_diff": 0.039465710939050935,
+        "ci_lower": 0.019123731459797056,
+        "ci_upper": 0.05875096811669033
+      }
+    }
+  }
+}

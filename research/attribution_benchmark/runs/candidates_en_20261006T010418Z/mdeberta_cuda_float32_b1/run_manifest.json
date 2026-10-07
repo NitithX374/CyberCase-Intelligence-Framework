@@ -1,0 +1,178 @@
+{
+  "schema_version": 2,
+  "status": "complete",
+  "started_at": "2026-10-06T01:07:37.472351+00:00",
+  "requested_model": "mdeberta",
+  "requested_device": "cuda",
+  "requested_precision": "float32",
+  "requested_batch_size": 1,
+  "source_snapshot": "source_snapshot",
+  "source_sha256": {
+    "data.py": "e388b734dfaeddcd33b8d3b58f667b83f5d9f7f4b4879284fcbfb375c0b0b628",
+    "metrics.py": "35f19a9de82f98eac18502ad59417cae5a19cc401d198718d3ea5ad1c9b18e18",
+    "candidate_models.py": "3fd64debc4602abf783f4e8f0863bd4dbdd50c9124ed60d45efc9f009a719043",
+    "candidate_adapters.py": "20c2af1ca6e67d532cb15290c8da4b62d451499cdd68091dc99dda14f3f04d56",
+    "candidate_inference.py": "30e10cea8731eb4c039f0441a074d259f9689ce1bc7854394864f49ea41cde44",
+    "candidate_reports.py": "79a3ed22f5f162a7b4bd883faa39d4e4eb6999f210ee42b80ff9eec7cf8165e6",
+    "run_candidate.py": "93e4b3795d6b19d444379ccb11e2b96863b6d8c2ef68709fa523c001d57e2e02",
+    "verify_candidate.py": "6ef7fbf7403f4e26ce1efb9137d2c1c590905528972a141926ad480a52501f6d"
+  },
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
+  "command": "& '.\\env_mitre\\Scripts\\python.exe' -u 'research/attribution_benchmark/run_candidate.py' --model mdeberta --device cuda --precision float32 --batch-size 1 --output 'F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\mdeberta_cuda_float32_b1'",
+  "dataset": {
+    "dataset": "osunlp/AttributionBench",
+    "configuration": "subset_balanced",
+    "revision": "62569e644f4186606f54f742178a4517431b42e1",
+    "downloaded_at": "2026-10-06T00:23:00.574149+00:00",
+    "files": {
+      "train": {
+        "filename": "train_all_subset_balanced.jsonl",
+        "sha256": "c7d6232048298b8f06afc556214c3739b5432f10f2641db2f73715fd126b1a63",
+        "bytes": 47394689,
+        "rows": 13322,
+        "unique_ids": 13322,
+        "labels": {
+          "attributable": 6661,
+          "not attributable": 6661
+        },
+        "source_subsets": {
+          "AttributedQA": 2000,
+          "LFQA": 2096,
+          "ExpertQA": 4442,
+          "Stanford-GenSearch": 4784
+        },
+        "empty_references": 0,
+        "clusters": 6106
+      },
+      "dev": {
+        "filename": "dev_all_subset_balanced.jsonl",
+        "sha256": "a744d1f84e621015f7a7e1941c3fb3f0838be767645dfb2ec784efd3133ab7d6",
+        "bytes": 3542401,
+        "rows": 1198,
+        "unique_ids": 1198,
+        "labels": {
+          "attributable": 599,
+          "not attributable": 599
+        },
+        "source_subsets": {
+          "AttributedQA": 74,
+          "LFQA": 110,
+          "ExpertQA": 470,
+          "Stanford-GenSearch": 544
+        },
+        "empty_references": 0,
+        "clusters": 531
+      },
+      "test": {
+        "filename": "test_all_subset_balanced.jsonl",
+        "sha256": "c2ff75dd4ea5cf12d86166ead66a96b42d5001a36daf02ff71303ef3317715a8",
+        "bytes": 5825881,
+        "rows": 1610,
+        "unique_ids": 1610,
+        "labels": {
+          "attributable": 805,
+          "not attributable": 805
+        },
+        "source_subsets": {
+          "AttributedQA": 230,
+          "LFQA": 168,
+          "ExpertQA": 612,
+          "Stanford-GenSearch": 600
+        },
+        "empty_references": 0,
+        "clusters": 748
+      },
+      "test_ood": {
+        "filename": "test_ood_all_subset_balanced.jsonl",
+        "sha256": "90d8f5363cec90197f80b3e896dad17e091a108a5bf282c3d515d48c9a01a934",
+        "bytes": 3039548,
+        "rows": 1686,
+        "unique_ids": 1686,
+        "labels": {
+          "attributable": 843,
+          "not attributable": 843
+        },
+        "source_subsets": {
+          "AttrScore-GenSearch": 162,
+          "HAGRID": 1088,
+          "BEGIN": 436
+        },
+        "empty_references": 75,
+        "clusters": 1229
+      }
+    },
+    "cross_split_id_overlap": {
+      "train/dev": 0,
+      "train/test": 0,
+      "train/test_ood": 0,
+      "dev/test": 0,
+      "dev/test_ood": 0,
+      "test/test_ood": 0
+    },
+    "loading": "Pinned official raw JSONL, preserved without type casting or row filtering"
+  },
+  "model": {
+    "key": "mdeberta",
+    "model": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
+    "revision": "b5113eb38ab63efdd7f280f8c144ea8b13f978ce",
+    "adapter": "nli",
+    "language": "multilingual including Thai",
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "batch_size": 1,
+    "max_length": 512,
+    "labels": [
+      "entailment",
+      "neutral",
+      "contradiction"
+    ],
+    "supported_index": 0,
+    "reference_separator": "\n\n",
+    "input_policy": "original references concatenated; right evidence truncation; entire claim/prompt preserved",
+    "chunking": "none",
+    "parameters": 278811651,
+    "torch_threads": 4,
+    "tf32": false,
+    "attention_implementation": "eager",
+    "gpu": "NVIDIA GeForce GTX 1650",
+    "versions": {
+      "torch": "2.6.0+cu124",
+      "transformers": "5.15.1",
+      "tokenizers": "0.22.2",
+      "scikit-learn": "1.9.0"
+    },
+    "class_score_kind": "native_classification_logits"
+  },
+  "model_artifact_sha256": {
+    "added_tokens.json": "fb697283833d25e2c711f1bc37730ecd8b20f4bd5f015db1d84aefe0adc9155a",
+    "config.json": "bc7b85f164a17c1b007d87fb99d3676f4a4d2e6511d2288dd3f5334dc0f34e6b",
+    "model.safetensors": "7c8e29f1115986d032e92b0fbaa0bdef1062a46f658b08705f237c05014a8541",
+    "special_tokens_map.json": "311de3f4eed9d76a43bf0d71f10e62e086ca65ccce9f15d5da0d2098bf519ecc",
+    "spm.model": "13c8d666d62a7bc4ac8f040aab68e942c861f93303156cc28f5c7e885d86d6e3",
+    "tokenizer.json": "e23095eb61ba944c7be3a5d3e8ec19e37ce7ced0daa03550bde03e83c21b3f8a",
+    "tokenizer_config.json": "25e9f84c6b43da7bff43a0aee8eeee2c8a39d246823d8464b9275ef704eab42f"
+  },
+  "inputs": {
+    "dev": {
+      "units": 1198,
+      "truncated": 195,
+      "max_claim_tokens": 102,
+      "max_prompt_tokens": 0
+    },
+    "test": {
+      "units": 1610,
+      "truncated": 324,
+      "max_claim_tokens": 148,
+      "max_prompt_tokens": 0
+    },
+    "test_ood": {
+      "units": 1686,
+      "truncated": 160,
+      "max_claim_tokens": 269,
+      "max_prompt_tokens": 0
+    }
+  },
+  "finished_at": "2026-10-06T01:12:27.927227+00:00",
+  "summary_sha256": "c3f8af3fb6be76b303a5f7134f796eb133045d82659620243b9a9c28ef7fb2bd"
+}

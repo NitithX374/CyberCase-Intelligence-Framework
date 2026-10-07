@@ -42,6 +42,56 @@ function pagedCitation(exactQuote: string, pageNumbers: number[]): CaseSourceCit
 }
 
 describe("Case overview projection", () => {
+  it("marks all LLM views as Claim-derived without offsets and preserves unknown time", () => {
+    const overview = buildCaseOverview(
+      analysisResult({
+        trace_json: trace({
+          claims: [claim("Company A suspended the account.")],
+          view_extraction: {
+            method: "llm",
+            model: "test/model",
+            input_claim_ids: ["A-01"],
+            excluded_claim_ids: [],
+            duration_ms: 120,
+            status: "completed",
+            items_dropped: 0,
+          },
+          involved_parties: [{ name: "Company A", role: null, claim_ids: ["A-01"] }],
+          timeline: [{ time: null, event: "The account was suspended.", claim_ids: ["A-01"] }],
+          impacts: [{ description: "An explicitly reported suspension.", claim_ids: ["A-01"] }],
+        }),
+      }),
+      [narrativeSource("Company A suspended the account.")],
+    );
+    expect(overview.timeline[0].time).toBeNull();
+    expect(overview.parties[0].linkedClaims).toEqual([
+      { id: "A-01", text: "Company A suspended the account." },
+    ]);
+  });
+  it("preserves the semantic verdict and linked claim text independently of binding", () => {
+    const grounding = { verdict: "not_supported", reason: "neutral" } as const;
+    const overview = buildCaseOverview(
+      analysisResult({
+        trace_json: trace({
+          claims: [claim("John sent an email.")],
+          involved_parties: [
+            {
+              name: "John",
+              role: "Attacker",
+              claim_ids: ["A-01"],
+              support: "bound",
+              projection_grounding: grounding,
+            },
+          ],
+        }),
+      }),
+      [narrativeSource("John sent an email.")],
+    );
+    expect(overview.parties[0].linkedClaims).toEqual([{ id: "A-01", text: "John sent an email." }]);
+    expect(overview.parties[0].supportNote).toBe(
+      "The linked findings do not support this description.",
+    );
+  });
   const supported = (summary: string) =>
     analysisResult({
       summary,
@@ -66,11 +116,11 @@ describe("Case overview projection", () => {
     ]);
 
     expect(overview.parties.map((row) => row.supportNote)).toEqual([
-      "Some cited quotations were not found in the sources.",
+      "Only some linked claims have resolved source citations.",
       null,
     ]);
     expect(overview.timeline.map((row) => row.supportNote)).toEqual([
-      "No cited quotation was found in the sources.",
+      "None of the linked claims has a resolved source citation.",
       "Not linked to any claim.",
     ]);
     expect(overview.impacts.map((row) => row.supportNote)).toEqual([null]);
@@ -82,7 +132,7 @@ describe("Case overview projection", () => {
     ]);
 
     expect(overview.timeline.map((row) => row.supportNote)).toEqual([
-      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
       "ไม่ได้เชื่อมกับข้อสังเกตใด",
     ]);
   });
@@ -119,13 +169,13 @@ describe("Case overview projection", () => {
       {
         text: "Both demands",
         claimIds: ["A-01", "A-02"],
-        supportNote: "Some cited quotations were not found in the sources.",
+        supportNote: "Only some linked claims have resolved source citations.",
         noteMark: "a",
       },
       {
         text: "Ten bitcoin",
         claimIds: ["A-03"],
-        supportNote: "No cited quotation was found in the sources.",
+        supportNote: "None of the linked claims has a resolved source citation.",
         noteMark: "b",
       },
       {
@@ -142,8 +192,8 @@ describe("Case overview projection", () => {
 
     expect(overview.summaryUnits.map((unit) => unit.supportNote)).toEqual([
       null,
-      "ข้อความที่อ้างบางส่วนไม่พบในเอกสาร",
-      "ไม่พบข้อความที่อ้างในเอกสาร",
+      "ระบุตำแหน่งข้อความอ้างอิงใน Source ได้สำหรับข้อค้นพบที่เชื่อมไว้บางข้อ",
+      "ยังระบุตำแหน่งข้อความอ้างอิงใน Source ของข้อค้นพบที่เชื่อมไว้ไม่ได้",
       "ไม่ได้เชื่อมกับข้อสังเกตใด",
     ]);
   });

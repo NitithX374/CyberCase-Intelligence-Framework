@@ -50,11 +50,19 @@ const analysis = analysisResult({
   },
 });
 
-const sourcesState = vi.hoisted(() => ({ failed: false }));
+const sourcesState = vi.hoisted(() => ({ failed: false, claimsOnly: false }));
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ caseId }) }));
 vi.mock("@/features/analysis/queries", () => ({
-  useCaseAnalysis: () => ({ data: analysis, isLoading: false }),
+  useCaseAnalysis: () => ({
+    data: sourcesState.claimsOnly
+      ? {
+          ...analysis,
+          trace_json: { ...analysis.trace_json, involved_parties: [], timeline: [], impacts: [] },
+        }
+      : analysis,
+    isLoading: false,
+  }),
 }));
 vi.mock("@/features/sources/queries", () => ({
   useCaseSources: () =>
@@ -70,9 +78,23 @@ vi.mock("@/features/chat/useCaseChat", () => ({
 
 beforeEach(() => {
   sourcesState.failed = false;
+  sourcesState.claimsOnly = false;
 });
 
 describe("AnalysisDetails", () => {
+  it("links claims-only details to Findings without inventing separate structures", () => {
+    sourcesState.claimsOnly = true;
+    render(<AnalysisDetails />);
+    expect(
+      screen.getByText("People, dates, events and impacts are recorded in the claims."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Findings and their sources" })).toHaveAttribute(
+      "href",
+      `/case/${caseId}/analysis/findings`,
+    );
+    expect(screen.queryByRole("heading", { name: /Timeline/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "MITRE ATT&CK" })).toBeInTheDocument();
+  });
   it("lists the timeline and parties, then the ATT&CK context below them", () => {
     render(<AnalysisDetails />);
 

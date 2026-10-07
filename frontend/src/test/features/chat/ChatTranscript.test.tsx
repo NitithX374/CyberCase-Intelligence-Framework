@@ -389,4 +389,25 @@ describe("ChatTranscript answer units", () => {
 
     expect(screen.getByText(line)).toBeInTheDocument();
   });
+
+  it("strips inline bracket citations like [A-01] from unit text", () => {
+    render(
+      <ChatTranscript
+        messages={[
+          answer([
+            {
+              text: "All member data on the server had been encrypted [A-01]. Access was gained without 2FA [A-02].",
+              basis: "case_fact",
+            },
+          ]),
+        ]}
+        isProcessing={false}
+      />,
+    );
+
+    expect(
+      screen.getByText("All member data on the server had been encrypted. Access was gained without 2FA."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\[A-0\d\]/)).not.toBeInTheDocument();
+  });
 });

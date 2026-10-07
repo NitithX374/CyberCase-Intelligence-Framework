@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "at": "2026-10-06T01:12:58.841874+00:00",
+  "checks": [
+    {
+      "model": "attrscore",
+      "filename": "spiece.model",
+      "bytes": 791656,
+      "sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86"
+    },
+    {
+      "model": "attrscore",
+      "filename": "pytorch_model.bin",
+      "bytes": 3132793669,
+      "sha256": "163ba0ad32e03ce021207b4f9ac63654cdaa99beb644467dafc0016b9bb92125"
+    },
+    {
+      "model": "minicheck",
+      "filename": "spm.model",
+      "bytes": 2464616,
+      "sha256": "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd"
+    },
+    {
+      "model": "minicheck",
+      "filename": "pytorch_model.bin",
+      "bytes": 1740386738,
+      "sha256": "32ced784f4831d5f324a072e43b96d4072cac4bf41042bc42243605ffbbccbdf"
+    },
+    {
+      "model": "minilm",
+      "filename": "sentencepiece.bpe.model",
+      "bytes": 5069051,
+      "sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
+    },
+    {
+      "model": "minilm",
+      "filename": "tokenizer.json",
+      "bytes": 17082758,
+      "sha256": "098c131bb4423163db239755e309facaa6850059f850f9f3d88a78344a4b631c"
+    },
+    {
+      "model": "minilm",
+      "filename": "model.safetensors",
+      "bytes": 427997022,
+      "sha256": "91b323ccf247ec1e3b5925d566230bae7c52de8147e6062b42e250089a3fc80b"
+    },
+    {
+      "model": "xlmr",
+      "filename": "model.safetensors",
+      "bytes": 2243825580,
+      "sha256": "8869b0c99ad35ec8a8c92434b54383d2dfd7db8cd460e28b9944a407e3a423e4"
+    }
+  ]
+}

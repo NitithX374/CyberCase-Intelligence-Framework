@@ -22,4 +22,7 @@ def item_support(
 
 
 def with_support(item: Projection, claims_by_id: Mapping[str, CaseAnalysisClaim]) -> Projection:
-    return item.model_copy(update={"support": item_support(item.claim_ids, claims_by_id)})
+    claim_ids = [claim_id for claim_id in item.claim_ids if claim_id in claims_by_id]
+    return item.model_copy(
+        update={"claim_ids": claim_ids, "support": item_support(claim_ids, claims_by_id)}
+    )

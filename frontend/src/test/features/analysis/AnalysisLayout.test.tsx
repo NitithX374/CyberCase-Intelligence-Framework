@@ -268,9 +268,7 @@ describe("AnalysisLayout", () => {
     configureAndRender({ analysisResult: null, analysisRunning: true });
 
     const list = screen.getByRole("list", { name: "Analysis progress" });
-    expect(list.querySelector('[aria-current="step"]')).toHaveTextContent(
-      "Reading the sources: claims and quotations",
-    );
+    expect(list.querySelector('[aria-current="step"]')).toHaveTextContent("Reading case sources");
   });
 
   it("names the step while an analysis that is already shown is updated", () => {
@@ -281,7 +279,7 @@ describe("AnalysisLayout", () => {
       screen
         .getByRole("list", { name: "Analysis progress" })
         .querySelector('[aria-current="step"]'),
-    ).toHaveTextContent("Judging: summary, open questions, ATT&CK");
+    ).toHaveTextContent("Preparing the summary and case details");
   });
 
   it("offers to load a failed analysis again, never to run a new one", () => {
