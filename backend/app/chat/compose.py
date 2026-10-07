@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
@@ -47,6 +48,18 @@ UNANSWERED = {
         "Ask again, or add material on the Sources page."
     ),
 }
+
+INLINE_CITATION_PATTERN = re.compile(
+    r"\s*\[\s*(?:(?:A|QA|C)-\d+|[A-Z]\d+)(?:\s*[,;]\s*(?:(?:A|QA|C)-\d+|[A-Z]\d+))*\s*\]",
+    re.IGNORECASE,
+)
+
+
+def strip_inline_citations(text: str) -> str:
+    cleaned = INLINE_CITATION_PATTERN.sub("", text)
+    cleaned = re.sub(r" +", " ", cleaned)
+    cleaned = re.sub(r" ([.,;:!?])", r"\1", cleaned)
+    return cleaned.strip()
 
 
 class ChatReplyQuote(BaseModel):
@@ -257,7 +270,7 @@ def drafted_unit(
     document_context: object,
     search: QuoteSearch,
 ) -> DraftUnit | None:
-    text = item.text.strip()
+    text = strip_inline_citations(item.text)
     if not text:
         return None
     claim_ids = tuple(
@@ -344,4 +357,5 @@ __all__ = [
     "CHAT_OUTPUT_TOKENS",
     "ChatReply",
     "generate_case_answer",
+    "strip_inline_citations",
 ]

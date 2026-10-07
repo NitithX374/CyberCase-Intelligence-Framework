@@ -12,9 +12,9 @@ from app.analysis.prompts import (
     CASE_READING_SYSTEM_PROMPT,
     READING_JSON_FORMAT,
 )
+from app.analysis.reading_sources import ReadingSources
 from app.analysis.write import (
     joined_trace,
-    provider_evidence_payload,
     reading_payload,
     write_trace,
 )
@@ -322,7 +322,7 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
     assert reading_call["content"] == {
         "response_language": "english",
         "source_revision": 1,
-        "case_sources": [provider_evidence_payload(source)],
+        "case_sources": [ReadingSources.source_payload(source)],
         "followup_history": [],
     }
     assert "text" not in reading_call["content"]["case_sources"][0]

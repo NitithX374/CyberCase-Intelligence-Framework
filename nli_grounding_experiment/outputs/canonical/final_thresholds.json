@@ -1,0 +1,12 @@
+{
+  "mdeberta": {
+    "b0_theta": 0.36000000000000004,
+    "b1_theta": 0.23,
+    "semantic_tau": 0.2
+  },
+  "minilm": {
+    "b0_theta": 0.15000000000000002,
+    "b1_theta": 0.2,
+    "semantic_tau": 0.2
+  }
+}

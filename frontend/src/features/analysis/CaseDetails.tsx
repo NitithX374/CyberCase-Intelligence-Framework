@@ -5,7 +5,7 @@ import type { SourceMessageRef } from "@/features/citations/types";
 import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import { UNCONFIRMED_NOTES } from "@/features/citations/unconfirmed";
 import type { CaseImpact, CaseParty, CaseTimelineEvent, ClaimBacked } from "./types";
-import { ProjectionReview } from "./ProjectionReview";
+import { ClaimViewReview } from "./ClaimViewReview";
 
 const VISIBLE_ROWS = 6;
 
@@ -57,7 +57,9 @@ export function CaseDetails({
             className="space-y-5"
             render={(item, index) => (
               <li key={index}>
-                <p className="text-[13px] font-medium text-ink-secondary">{item.time}</p>
+                <p className="text-[13px] font-medium text-ink-secondary">
+                  {item.time ?? "No date or time extracted; check the linked claim"}
+                </p>
                 <p className="mt-0.5 text-[15px] leading-7 text-ink">{item.event}</p>
                 {backing(item, `timeline-${index}`)}
               </li>
@@ -78,7 +80,9 @@ export function CaseDetails({
                   <li key={index} className="py-3 first:pt-0">
                     <p className="text-[15px] font-semibold text-ink">{party.name}</p>
                     <p className="mt-0.5 text-[13px] leading-6 text-ink-secondary">
-                      {party.role === null ? "No role extracted; check the linked claim" : party.role}
+                      {party.role === null
+                        ? "No role extracted; check the linked claim"
+                        : party.role}
                     </p>
                     {backing(party, `party-${index}`)}
                   </li>
@@ -179,7 +183,7 @@ function Backing({
   onSelectSource: CaseDetailsProps["onSelectSource"];
   activeSourceKey: string | null;
 }) {
-  const hasReview = row.projectionGrounding !== undefined || row.linkedClaims !== undefined;
+  const hasReview = Boolean(row.linkedClaims?.length);
   if (
     !row.inferred &&
     !row.sources.length &&
@@ -212,7 +216,7 @@ function Backing({
         })}
         {row.supportNote && <span className="text-xs text-ink-muted">{row.supportNote}</span>}
       </div>
-      {hasReview && <ProjectionReview row={row} caseId={caseId} />}
+      {hasReview && <ClaimViewReview row={row} caseId={caseId} />}
     </div>
   );
 }

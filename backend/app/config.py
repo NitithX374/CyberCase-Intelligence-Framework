@@ -73,6 +73,7 @@ class LLMProviderConfig(BaseModel):
 
 
 class CaseAnalysisConfig(BaseModel):
+    case_reading_thinking_tokens: int | None = Field(default=None, ge=0)
     mitre_gate_mode: Literal["llm", "encoder", "never"] = "llm"
     mitre_gate_shadow: Literal["off", "encoder"] = "off"
     mitre_gate_model_path: str = "xlmr_ladder_best/xlmr_ladder_best"
@@ -97,7 +98,9 @@ class DocumentIngestionConfig(BaseModel):
     document_ingestion_max_pages: int = Field(default=50, ge=1, le=500)
     document_ingestion_max_image_pixels: int = Field(default=40_000_000, ge=1)
     document_ingestion_render_longest_edge: int = Field(default=1_800, ge=512, le=4096)
-    document_recognition_timeout_seconds: float = Field(default=60.0, gt=0)
+    document_recognition_timeout_seconds: float = Field(default=90.0, gt=0)
+    document_recognition_max_retries: int = Field(default=3, ge=1, le=10)
+    document_recognition_retry_delay_seconds: float = Field(default=2.0, ge=0.5, le=30.0)
     typhoon_api_key: str = ""
     typhoon_ocr_base_url: str = "https://api.opentyphoon.ai/v1"
     typhoon_ocr_model: str = "typhoon-ocr"

@@ -1,0 +1,38 @@
+{
+  "model": "joeddav/xlm-roberta-large-xnli",
+  "revision": "b227ee8435ceadfa86dc1368a34254e2838bf242",
+  "snapshot": "F:\\Caches\\huggingface\\hub\\models--joeddav--xlm-roberta-large-xnli\\snapshots\\b227ee8435ceadfa86dc1368a34254e2838bf242",
+  "finished_at": "2026-10-06T01:03:30.009470+00:00",
+  "files": [
+    {
+      "name": "README.md",
+      "bytes": 5164,
+      "lfs_sha256": null
+    },
+    {
+      "name": "config.json",
+      "bytes": 734,
+      "lfs_sha256": null
+    },
+    {
+      "name": "sentencepiece.bpe.model",
+      "bytes": 5069051,
+      "lfs_sha256": null
+    },
+    {
+      "name": "special_tokens_map.json",
+      "bytes": 150,
+      "lfs_sha256": null
+    },
+    {
+      "name": "tokenizer_config.json",
+      "bytes": 25,
+      "lfs_sha256": null
+    },
+    {
+      "name": "model.safetensors",
+      "bytes": 2243825580,
+      "lfs_sha256": "8869b0c99ad35ec8a8c92434b54383d2dfd7db8cd460e28b9944a407e3a423e4"
+    }
+  ]
+}

@@ -74,9 +74,17 @@ found, and `AnalysisAdvance.assessment` is then `None`. A question is never stor
 without its assessment.
 
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
-trace in two model calls: `case_reading` writes canonical claims only,
-with source-unit IDs on the claims, and `case_judgement` writes the summary,
-gaps and ATT&CK associations over that reading.
+trace with a claims-only `case_reading` call selecting source-unit IDs,
+then deterministic binding, followed by independent `case_views` and
+`case_judgement` calls in parallel. The latter writes summary, gaps and ATT&CK
+associations over the Claims; the former writes presentation views only.
+
+`analysis/reading_sources.py` captures each source's revision before Reading and
+sends exact unit text with source-local IDs (`U001`, etc.), unchanged Source IDs
+and document quality headers. The same request-owned mapping expands selected
+aliases to canonical revision-bearing IDs before `reading_from` builds claims.
+Offsets and hashes stay backend-owned; stored citation IDs and stale checks are
+unchanged. The prompt-JSON user message is minified without altering its values.
 
 Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
 against the sources:
@@ -86,14 +94,23 @@ against the sources:
 - a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`;
 - the grounding counts are taken.
 
-`analysis/views.py` then uses local GLiNER2 to extract Parties, Timeline and Impacts
-from claims with resolved supporting citations. The backend checks selected Claim
-spans and assigns claim links. Timeline/impact text retains the whole Claim;
-party displays retain linked Claim context. These views are saved for Details and
-reports, without entering Judgement or chat. Extraction is not NLI verification
-and does not establish semantic name/role or time/event relationships. Missing
-weights and malformed spans fail explicitly; model provisioning is described in
-the grounding contract.
+`analysis/views.py` batches all canonical Claims from the same reading into one
+native-schema LLM call. Input is only Claim IDs and text; there is no new admission
+filter. Parties, Timeline and Impacts use the existing `claim_ids` public shape.
+Roles and combined date/time may be null. The backend validates schema and known
+nonempty links, dropping an entire row if any link is unknown. It invents no field
+offsets, confidence or semantic verdict. Structural binding is not Claim semantic
+verification, and these views are not authoritative factual records.
+
+Extraction runs concurrently with Judgement, using the existing model/provider,
+thinking disabled, at most 4,096 output tokens and an overall 60-second deadline.
+On failure, a recorded warning/status and empty views allow Judgement to complete.
+Its failure cancels outstanding extraction. UI/Report views trace through Claims
+to their Source units; no views enter Judgement/chat. Stored analysis snapshots
+cache the output for reads/reports, without a new table or revision mechanism.
+Historical local-extraction metadata and offsets remain readable. The former
+local loader/per-Claim runtime and Compose service are removed. The encoder
+and legacy NLI remain separate, as do the stopped research experiments.
 
 The judgement therefore reads checked claims: their statuses, and only the
 source spans that were resolved. The backend derives source-ID lists from selected

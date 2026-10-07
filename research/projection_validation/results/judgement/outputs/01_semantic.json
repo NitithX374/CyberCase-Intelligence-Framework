@@ -1,0 +1,145 @@
+{
+  "replay_id": "controlled-english-01:timeline",
+  "condition": "semantic",
+  "stage": "projection_eval_01_semantic",
+  "input_sha256": "84ea8b0f1d9168ee56ad6ce00de5b8c5a6a6df2fd965aa64a6eb2791e26dfb80",
+  "status": "completed",
+  "judgement": {
+    "version": "case_analysis_trace_v1",
+    "summary": "John is a witness who reported the incident [A-01]. At 13:00, John sent an email to North Company [A-02]. North Company lost 25,000 baht [A-03]. Jane, a complainant, filed a complaint at 16:00 and reported her laptop was damaged [A-04].",
+    "gaps": [
+      {
+        "gap_id": "G-01",
+        "gap_key": "who_responsible",
+        "topic": "Perpetrator identity",
+        "status": "NOT_PROVIDED",
+        "description": "The identity of the person or entity responsible for the financial loss and the laptop damage is unknown.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The claims do not identify a responsible party.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "Who is responsible for the 25,000 baht loss at North Company and the damage to Jane's laptop?"
+      },
+      {
+        "gap_id": "G-02",
+        "gap_key": "how",
+        "topic": "Method of incident",
+        "status": "NOT_PROVIDED",
+        "description": "The method or channel used to cause the financial loss and the damage to the laptop is not described.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The claims do not specify the mechanism of the loss or damage.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "How were the 25,000 baht and Jane's laptop lost or damaged?"
+      },
+      {
+        "gap_id": "G-03",
+        "gap_key": "why",
+        "topic": "Motive",
+        "status": "NOT_PROVIDED",
+        "description": "The motive or purpose behind the incident is not mentioned.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The claims do not state a motive.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "What was the motive for the incident involving North Company and Jane?"
+      },
+      {
+        "gap_id": "G-04",
+        "gap_key": "where",
+        "topic": "Incident location",
+        "status": "NOT_PROVIDED",
+        "description": "The location where the incident occurred is not specified.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The claims do not provide a location.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "Where did the incident take place?"
+      }
+    ],
+    "mitre_associations": []
+  },
+  "seconds": 84.52974660001928,
+  "responses": [
+    {
+      "stage": "projection_eval_01_semantic",
+      "status_code": 200,
+      "seconds": 84.19628899998497,
+      "usage": {
+        "input_tokens": 2478,
+        "output_tokens": 5296,
+        "thinking_tokens": 4545
+      },
+      "estimated_usd": 0.0018366,
+      "response": {
+        "id": "gen-1791267072-wkEOHrDuAvOownbT10vS",
+        "type": "message",
+        "role": "assistant",
+        "container": null,
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "*   Input: `claims`, `involved_parties`, `timeline`, `impacts`, `technical_context` (null), `followup_history` (empty), `response_language` (english).\n    *   Goal: Produce a `case_analysis_trace_v1` JSON.\n    *   Summary: High-level overview for an investigator. Each sentence must end with claim IDs in `[A-XX]` format. No status words, no ATT&CK, no disclaimers.\n    *   Gaps: Identify unresolved factual issues using specific keys (`who_affected`, `who_responsible`, `what`, `when`, `where`, `why`, `how`, `how_much`). Use statuses: `NOT_PROVIDED`, `EXPLICITLY_UNKNOWN`, `AMBIGUOUS`, or `CONFLICTING`.\n    *   MITRE ATT&CK: None (technical context is null).\n\n    *   A-01: John is a witness and reported the incident.\n    *   A-02: At 13:00, John sent an email to North Company.\n    *   A-03: North Company lost 25,000 baht.\n    *   A-04: Jane is a complainant. At 16:00, Jane filed a complaint. Jane's laptop was damaged.\n\n    *   John (witness) [A-01].\n    *   North Company (affected party/recipient) [A-02, A-03].\n    *   Jane (complainant) [A-04].\n\n    *   13:00: John sent email to North Company [A-02].\n    *   16:00: Jane filed a complaint [A-04].\n\n    *   North Company lost 25,000 baht [A-03].\n    *   Jane's laptop was damaged [A-04].\n\n    *   Sentence 1: John acted as a witness and reported the incident [A-01].\n    *   Sentence 2: At 13:00, John sent an email to North Company [A-02].\n    *   Sentence 3: North Company sustained a loss of 25,000 baht [A-03].\n    *   Sentence 4: Jane, a complainant, filed a complaint at 16:00 and reported that her laptop was damaged [A-04].\n\n    *   *Who was affected/targeted?* North Company [A-03], Jane [A-04]. This is partially known.\n    *   *Who is responsible?* Not stated. (Gap: `who_responsible`).\n    *   *What happened/taken/damaged?* 25,000 baht lost [A-03], Jane's laptop damaged [A-04]. This is partially known.\n    *   *When?* 13:00 [A-02], 16:00 [A-04]. This is partially known.\n    *   *Where?* Not stated. (Gap: `where`).\n    *   *Why?* Not stated. (Gap: `why`).\n    *   *How?* Not stated. (Gap: `how`).\n    *   *How much?* 25,000 baht [A-03]. Partially known.\n\n    Let's refine the gaps for \"materially unresolved factual issues\":\n    - `who_responsible`: The identity of the person or entity responsible for the loss and the damage is unknown. (Status: NOT_PROVIDED).\n    - `how`: The method or mechanism used to cause the financial loss and the laptop damage is not described. (Status: NOT_PROVIDED).\n    - `why`: The motive behind the incident is not mentioned. (Status: NOT_PROVIDED).\n    - `where`: The location of the incident is not specified. (Status: NOT_PROVIDED).\n    - `what`: While the loss and damage are noted, the specific nature of the theft or damage (e.g., cyber attack, physical theft) is not explained. (Status: NOT_PROVIDED). Actually, \"what\" is partially answered by the claims, but \"how\" is definitely missing.\n\n    Let's select the most critical gaps:\n    - `who_responsible`: Identity of the perpetrator.\n    - `how`: Method used.\n    - `why`: Motive.\n    - `where`: Location.\n\n    *Refined Gap Selection:*\n    1. `who_responsible`: Who is responsible for the incident? (Status: NOT_PROVIDED, askable: true).\n    2. `how`: How was the loss and damage caused? (Status: NOT_PROVIDED, askable: true).\n    3. `why`: What was the motive? (Status: NOT_PROVIDED, askable: true).\n    4. `where`: Where did the incident occur? (Status: NOT_PROVIDED, askable: true).\n\n    *Note:* \"what\" (25,000 baht lost, laptop damaged) is answered. \"when\" (13:00, 16:00) is answered. \"how_much\" (25,000 baht) is answered.\n\n    *   `summary`: \"John acted as a witness and reported the incident [A-01]. At 13:00, John sent an email to North Company [A-02]. North Company lost 25,000 baht [A-03]. Jane, acting as a complainant, filed a complaint at 16:00 and reported that her laptop was damaged [A-04].\"\n    *   `gaps`:\n        *   `G-01`: `who_responsible`, topic: \"Perpetrator identity\", status: \"NOT_PROVIDED\", askable: true, question: \"Who is responsible for the financial loss at North Company and the damage to Jane's laptop?\"\n        *   `G-02`: `how`, topic: \"Method of incident\", status: \"NOT_PROVIDED\", askable: true, question: \"How were the 25,000 baht and Jane's laptop lost or damaged?\"\n        *   `G-03`: `why`, topic: \"Motive\", status: \"NOT_PROVIDED\", askable: true, question: \"What was the motive for this incident?\"\n        *   `G-04`: `where`, topic: \"Incident location\", status: \"NOT_PROVIDED\", askable: true, question: \"Where did the incident take place?\"\n\n    *   `mitre_associations`: [] (Technical context is null).\n\n    *   Summary follows constraints (IDs in brackets, no disclaimers, no status words).\n    *   Gaps follow constraints (Sequential IDs, correct keys, status, askable, max 300 chars).\n    *   No legal conclusions.\n    *   No markdown.\n\n    *Self-Correction on Summary*: \"John is a witness and reported the incident [A-01]. At 13:00, John sent an email to North Company [A-02]. North Company lost 25,000 baht [A-03]. Jane is a complainant who filed a complaint at 16:00 and reported that her laptop was damaged [A-04].\" (Wait, the prompt says: \"A concise high-level overview of the case, written the way an investigator would brief a colleague...\").\n\n    *Wait, check A-04*: \"Jane is a complainant. At 16:00, Jane filed a complaint. Jane's laptop was damaged.\"\n    My summary: \"Jane, a complainant, filed a complaint at 16:00 and reported that her laptop was damaged [A-04].\" This works.\n\n    *Check Gaps*:\n    - `who_responsible` (perpetrator)\n    - `how` (method)\n    - `why` (motive)\n    - `where` (location)\n    All are high priority and materially unresolved.\n\n    *Wait*, is `what` a gap? \"What happened, and what was taken, damaged or exposed\".\n    The claims say: \"North Company lost 25,000 baht\" and \"Jane's laptop was damaged\".\n    So `what` is answered.\n    Is `how_much` a gap? \"Scale in people, records, money...\".\n    The claims say \"25,000 baht\". So `how_much` is answered.\n\n    *Final check of instructions:*\n    - \"Do not make legal conclusions.\" -> OK.\n    - \"Do not return hashes... or markdown fences around the JSON.\" -> OK.\n    - \"Every claim ID you write must name a claim that appears there.\" -> OK.\n    - \"A claim whose epistemic_status is 'not_confirmed' ... do not state it as an established fact.\" -> All claims here are `reported`, which is a status, but in this schema, they are the basis for the summary. The prompt says \"The claims and their quotations are the only authority for case-specific facts.\" and \"Derive all case facts from the supplied claims\".\n\n    Actually, looking at `epistemic_status`:\n    A-01: `reported`\n    A-02: `reported`\n    A-03: `reported`\n    A-04: `reported`\n    The prompt says: \"A claim whose epistemic_status is 'not_confirmed' has no supporting evidence location resolved... Do not state it as an established fact in the summary.\"\n    Since these are `reported` (not `not_confirmed`), I can include them.\n\n    *One more check on Gaps*:\n    If `who_responsible` is not provided, I add it.\n    If `how` is not provided, I add it.\n    If `why` is not provided, I add it.\n    If `where` is not provided, I add it.\n\n    *Check `how_much`*: \"25,000 baht\" is provided.\n    *Check `when`*: \"13:00\" and \"16:00\" are provided.\n    *Check `who_affected`*: \"North Company\" and \"Jane\" are provided.\n\n    Wait, for `who_responsible`, is it `EXPLICITLY_UNKNOWN` or `NOT_PROVIDED`?\n    The prompt says: \"A follow-up reply that declined or said nothing is known makes that one gap EXPLICITLY_UNKNOWN.\"\n    Since I have no follow-up history (it's empty), they are `NOT_PROVIDED`.\n\n    *One detail on Summary:* \"Carry no status words...\"\n    \"Status words\" usually refers to words like \"allegedly\", \"purportedly\", \"suspected\", or \"reportedly\" in the summary itself to avoid hedging, unless specifically required by the epistemic status. The goal is to state what the claims *say*.\n    Example: Instead of \"John allegedly sent an email\", use \"John sent an email [A-02]\".\n\n    Let's refine the summary one last time.\n    \"John, acting as a witness, reported the incident [A-01]. At 13:00, John sent an email to North Company [A-02]. North Company lost 25,000 baht [A-03]. Jane filed a complaint at 16:00 and reported her laptop was damaged [A-04].\"\n\n    *Final JSON structure check:*\n    `case_analysis_trace_v1`:\n    - `summary`: string\n    - `gaps`: array of objects (`gap_id`, `gap_key`, `topic`, `status`, `affected_claim_ids`, `askable`, `clarification_question`)\n    - `mitre_associations`: array of objects...\n\n    Wait, `affected_claim_ids` in gaps:\n    `who_responsible`: doesn't have a claim tied to the *absence* of information, but can be linked to the context of the victims? Usually, gaps are linked to the claims they relate to.\n    For `who_responsible`, it relates to the incidents in [A-03] and [A-04].\n    For `how`, it relates to [A-03] and [A-04].\n    For `why`, it relates to [A-03] and [A-04].\n    For `where`, it relates to [A-03] and [A-04].\n\n    Actually, the instruction says: \"Link affected claim IDs when applicable.\"\n    If the gap is \"who is responsible for the theft (A-03)\", then `affected_claim_ids` is `[\"A-03\"]`.\n\n    Let's adjust:\n    G-01: `who_responsible`, `affected_claim_ids`: [\"A-03\", \"A-04\"]\n    G-02: `how`, `affected_claim_ids`: [\"A-03\", \"A-04\"]\n    G-03: `why`, `affected_claim_ids`: [\"A-03\", \"A-04\"]\n    G-04: `where`, `affected_claim_ids`: [\"A-03\", \"A-04\"]\n\n    One more check: \"The follow-up history shows the gap_key each earlier question was asked under. When a gap is the same missing fact, reuse that gap_key.\"\n    My `followup_history` is empty, so I just start G-01.\n\n    *Wait*, the prompt asks for \"association reasons and plain meanings in the requested language\". I am writing in English.\n\n    *Summary Check*: \"End every sentence with the IDs of the supplied claims it rests on, in square brackets... Write no sentence that rests on no supplied claim.\"\n    Sentence 1: John is a witness and reported the incident [A-01].\n    Sentence 2: At 13:00, John sent an email to North Company [A-02].\n    Sentence 3: North Company lost 25,000 baht [A-03].\n    Sentence 4: Jane filed a complaint at 16:00 and reported her laptop was damaged [A-04].\n\n    *Check \"Jane is a complainant\"* in A-04. Yes.\n\n    *Double check `mitre_associations`*: \"If technical_context is absent, empty, or insufficient, return an empty mitre_associations list.\" -> `[]`.\n\n    *Final Gap Check*:\n    `who_affected`: North Company [A-03], Jane [A-04]. -> Not a gap.\n    `who_responsible`: Not mentioned. -> Gap G-01.\n    `what`: 25k lost [A-03], laptop damaged [A-04]. -> Not a gap.\n    `when`: 13:00 [A-02], 16:00 [A-04]. -> Not a gap.\n    `where`: Not mentioned. -> Gap G-04.\n    `why`: Not mentioned. -> Gap G-03.\n    `how`: Not mentioned. -> Gap G-02.\n    `how_much`: 25,000 baht [A-03]. -> Not a gap.\n\n    Okay, the gaps are `who_responsible`, `how`, `why`, and `where`.\n\n    *Gap Questions*:\n    G-01: Who is responsible for the loss and damage?\n    G-02: How were the loss and damage carried out?\n    G-03: What was the motive for the incident?\n    G-04: Where did the incident occur?\n\n    *Gap IDs*: G-01, G-02, G-03, G-04.\n    *Gap Keys*: `who_responsible`, `how`, `why`, `where`.\n\n    *Refining the Summary to be even more concise/professional*:\n    \"John acted as a witness and reported the incident [A-01]. At 13:00, John sent an email to North Company [A-02]. North Company lost 25,000 baht [A-03]. Jane, a complainant, filed a complaint at 16:00 and reported her laptop was damaged [A-04].\"\n\n    *One detail*: `clarification_question` must be at most 300 chars.\n    G-01: \"Who is responsible for the 25,000 baht loss at North Company and the damage to Jane's laptop?\" (92 chars) - Good.\n    G-02: \"What method or channel was used to cause the financial loss and the damage to the laptop?\" (88 chars) - Good.\n    G-03: \"What was the motive for the incident involving North Company and Jane?\" (71 chars) - Good.\n    G-04: \"In what location did the incident take place?\" (45 chars) - Good.\n\n    *Wait*, `who_responsible` might be linked to `A-03` and `A-04`.\n    `how` might be linked to `A-03` and `A-04`.\n    `why` might be linked to `A-03` and `A-04`.\n    `where` might be linked to `A-03` and `A-04`.\n\n    Actually, looking at the claims:\n    A-01: John reported.\n    A-02: John sent email.\n    A-03: North Co lost money.\n    A-04: Jane complained/laptop damaged.\n\n    The email in A-02 might be related to the incident, but there's no evidence it *caused* it. So I shouldn't link A-02 to the gaps unless it's certain. I'll stick to A-03 and A-04 for the gaps.\n\n    Wait, if I can't determine if A-02 is part of the \"incident\" vs just a \"report\", I'll just link the gaps to the claims describing the impact/events (A-03, A-04).\n\n    *Check `status`*: `NOT_PROVIDED` is correct.\n    *Check `askable`*: `true` is correct.\n\n    *Final Schema check*:\n    `case_analysis_trace_v1`\n    - `summary`\n    - `gaps`\n    - `mitre_associations`\n\n    Everything looks solid.\n\n    *Self-Correction*: I should ensure the summary doesn't use the word \"reported\" as a status word in a way that hedges, but \"John... reported the incident [A-01]\" is a fact from the claim.\n\n    *One tiny check*: \"North Company lost 25,000 baht [A-03].\"\n    In the summary, I'll use: \"North Company sustained a loss of 25,000 baht [A-03].\" (Better flow).\n    \"Jane, acting as a complainant, filed a complaint at 16:00 and reported that her laptop was damaged [A-04].\" (Fits claim A-04).\n\n    *Let's review claim A-04*: \"Jane is a complainant. At 16:00, Jane filed a complaint. Jane's laptop was damaged.\"\n    Summary sentence: \"Jane is a complainant who filed a complaint at 16:00 and reported her laptop was damaged [A-04].\"\n\n    Actually, let's be even simpler:\n    \"John is a witness who reported the incident [A-01]. At 13:00, John sent an email to North Company [A-02]. North Company lost 25,000 baht [A-03]. Jane filed a complaint at 16:00 and reported her laptop was damaged [A-04].\"\n\n    This is very direct and respects the claims.\n\n    *One last look at technical context*: `null`. So `mitre_associations` is `[]`.\n\n    *One last look at gap keys*:\n    `who_responsible`\n    `how`\n    `why`\n    `where`\n    These are standard.",
+            "signature": ""
+          },
+          {
+            "type": "text",
+            "text": "{\n  \"version\": \"case_analysis_trace_v1\",\n  \"summary\": \"John is a witness who reported the incident [A-01]. At 13:00, John sent an email to North Company [A-02]. North Company lost 25,000 baht [A-03]. Jane, a complainant, filed a complaint at 16:00 and reported her laptop was damaged [A-04].\",\n  \"gaps\": [\n    {\n      \"gap_id\": \"G-01\",\n      \"gap_key\": \"who_responsible\",\n      \"topic\": \"Perpetrator identity\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The identity of the person or entity responsible for the financial loss and the laptop damage is unknown.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The claims do not identify a responsible party.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"Who is responsible for the 25,000 baht loss at North Company and the damage to Jane's laptop?\"\n    },\n    {\n      \"gap_id\": \"G-02\",\n      \"gap_key\": \"how\",\n      \"topic\": \"Method of incident\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The method or channel used to cause the financial loss and the damage to the laptop is not described.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The claims do not specify the mechanism of the loss or damage.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"How were the 25,000 baht and Jane's laptop lost or damaged?\"\n    },\n    {\n      \"gap_id\": \"G-03\",\n      \"gap_key\": \"why\",\n      \"topic\": \"Motive\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The motive or purpose behind the incident is not mentioned.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The claims do not state a motive.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"What was the motive for the incident involving North Company and Jane?\"\n    },\n    {\n      \"gap_id\": \"G-04\",\n      \"gap_key\": \"where\",\n      \"topic\": \"Incident location\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The location where the incident occurred is not specified.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The claims do not provide a location.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"Where did the incident take place?\"\n    }\n  ],\n  \"mitre_associations\": []\n}",
+            "citations": []
+          }
+        ],
+        "model": "google/gemma-4-26b-a4b-it",
+        "stop_reason": "end_turn",
+        "stop_details": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 2478,
+          "output_tokens": 5296,
+          "output_tokens_details": {
+            "thinking_tokens": 4545
+          },
+          "cache_creation_input_tokens": null,
+          "cache_read_input_tokens": 0,
+          "cache_creation": null,
+          "inference_geo": null,
+          "server_tool_use": null,
+          "service_tier": null,
+          "speed": "standard",
+          "cost": 0.00181182,
+          "is_byok": false,
+          "cost_details": {
+            "upstream_inference_cost": 0.00181182,
+            "upstream_inference_prompt_cost": 0.00022302,
+            "upstream_inference_completions_cost": 0.0015888
+          }
+        },
+        "context_management": null,
+        "provider": "NextBit"
+      }
+    }
+  ],
+  "calls": [
+    {
+      "stage": "projection_eval_01_semantic",
+      "model": "google/gemma-4-26b-a4b-it",
+      "estimated_input_tokens": 2948,
+      "status": "completed",
+      "input_tokens": 2478,
+      "output_tokens": 5296,
+      "thinking_tokens": 4545,
+      "elapsed_ms": 84203
+    }
+  ]
+}

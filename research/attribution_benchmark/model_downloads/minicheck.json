@@ -1,0 +1,48 @@
+{
+  "model": "lytang/MiniCheck-DeBERTa-v3-Large",
+  "revision": "2f2d01a54fa022a7ffadb76260e1ea8bc88c82bb",
+  "snapshot": "F:\\Caches\\huggingface\\hub\\models--lytang--MiniCheck-DeBERTa-v3-Large\\snapshots\\2f2d01a54fa022a7ffadb76260e1ea8bc88c82bb",
+  "finished_at": "2026-10-06T01:07:43.726262+00:00",
+  "files": [
+    {
+      "name": "README.md",
+      "bytes": 4629,
+      "lfs_sha256": null
+    },
+    {
+      "name": "added_tokens.json",
+      "bytes": 79,
+      "lfs_sha256": null
+    },
+    {
+      "name": "config.json",
+      "bytes": 1075,
+      "lfs_sha256": null
+    },
+    {
+      "name": "special_tokens_map.json",
+      "bytes": 276,
+      "lfs_sha256": null
+    },
+    {
+      "name": "spm.model",
+      "bytes": 2464616,
+      "lfs_sha256": "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd"
+    },
+    {
+      "name": "tokenizer.json",
+      "bytes": 8648917,
+      "lfs_sha256": null
+    },
+    {
+      "name": "tokenizer_config.json",
+      "bytes": 1496,
+      "lfs_sha256": null
+    },
+    {
+      "name": "pytorch_model.bin",
+      "bytes": 1740386738,
+      "lfs_sha256": "32ced784f4831d5f324a072e43b96d4072cac4bf41042bc42243605ffbbccbdf"
+    }
+  ]
+}

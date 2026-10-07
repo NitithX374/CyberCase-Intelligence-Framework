@@ -1,5 +1,5 @@
 import pytest
-from fake_case_views import empty_view_model
+from fake_case_views import empty_view_reply
 from fake_nli import FakeNli
 
 from app.analysis import views
@@ -19,5 +19,5 @@ def no_real_meaning_model(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def no_real_view_model(monkeypatch):
-    monkeypatch.setattr(views, "load_view_model", empty_view_model)
+def no_real_view_request(monkeypatch):
+    monkeypatch.setattr(views, "request_stage", empty_view_reply)

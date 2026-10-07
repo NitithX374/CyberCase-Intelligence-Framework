@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, bind_to_case, write_analysis
+from app.analysis.reading_sources import ReadingSources
 from app.analysis.write import reading_request
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
-from app.sources.evidence import evidence_units
 from app.trace import nli_model
-from app.trace.bind import bound_claims
+from app.trace.bind import bound_claims, followup_registry_items
 from app.trace.claims import CaseFollowupExchange
 from app.trace.trace import CaseAnalysisTrace, CaseProviderJudgement, CaseProviderReadingReply
 
@@ -26,7 +26,6 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
         "logs.pdf",
     )
     bundle = CaseSourceBundle(4, (first, second))
-    first_units, second_units = evidence_units(first), evidence_units(second)
     texts = [
         "John is the victim.",
         "At 13:00, the server was encrypted.",
@@ -34,13 +33,13 @@ async def test_whole_case_claims_only_reading_direct_binding_judgement_and_join(
         "John sent an email.",
     ]
     citations = [
-        [{"source_id": "S1", "evidence_unit_ids": [first_units[0].unit_id]}],
+        [{"source_id": "S1", "evidence_unit_ids": ["U001"]}],
         [
-            {"source_id": "S1", "evidence_unit_ids": [first_units[1].unit_id]},
-            {"source_id": "S2", "evidence_unit_ids": [second_units[0].unit_id]},
+            {"source_id": "S1", "evidence_unit_ids": ["U002"]},
+            {"source_id": "S2", "evidence_unit_ids": ["U001"]},
         ],
-        [{"source_id": "S2", "evidence_unit_ids": [second_units[0].unit_id]}],
-        [{"source_id": "S2", "evidence_unit_ids": [second_units[1].unit_id]}],
+        [{"source_id": "S2", "evidence_unit_ids": ["U001"]}],
+        [{"source_id": "S2", "evidence_unit_ids": ["U002"]}],
     ]
     reply = CaseProviderReadingReply.model_validate(
         {
@@ -106,7 +105,7 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
     assert [source["source_id"] for source in payload["case_sources"]] == ["S1", "QA-03"]
     qa = payload["case_sources"][1]
     [unit] = qa["evidence_units"]
-    assert unit["unit_id"].startswith("QA-03:U001-")
+    assert unit["unit_id"] == "U001"
     assert unit["text"] == history[0].answer
     reply = CaseProviderReadingReply.model_validate(
         {
@@ -126,7 +125,8 @@ def test_answered_followups_use_the_same_unit_contract_and_unanswered_ones_are_a
     )
     from app.analysis.write import reading_from
 
-    reading, grounding = bound_claims(reading_from(reply), bundle, history)
+    sources = ReadingSources((*bundle.sources, *followup_registry_items(history)))
+    reading, grounding = bound_claims(reading_from(reply, reading_sources=sources), bundle, history)
     assert reading.claims[0].supporting_citations[0].source_id == "QA-03"
     assert reading.claims[0].supporting_citations[0].pointer_state == "direct"
     assert grounding.sources_total == 2

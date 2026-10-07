@@ -175,6 +175,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cases/{case_id}/documents/{document_id}/reingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reingest_case_document_api_v1_cases__case_id__documents__document_id__reingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cases/{case_id}/sources": {
         parameters: {
             query?: never;
@@ -537,7 +553,7 @@ export interface components {
             support: "bound" | "mixed" | "unbound" | "no_claim";
         };
         CaseTimelineItem: {
-            time: string;
+            time?: string | null;
             event: string;
             claim_ids?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
@@ -558,15 +574,29 @@ export interface components {
             title: string;
         };
         CaseViewExtraction: {
-            method: "gliner2";
+            method: string;
             model: string;
-            revision: string;
-            library_version: string;
-            device: string;
-            threshold: number;
+            revision?: string | null;
+            library_version?: string | null;
+            device?: string | null;
+            threshold?: number | null;
+            quantization?: string | null;
+            runtime_revision?: string | null;
+            field_resolution_issues?: components["schemas"]["CaseViewFieldIssue"][];
             input_claim_ids: string[];
             excluded_claim_ids: string[];
             duration_ms: number;
+            status: "completed" | "failed" | "skipped";
+            warning?: string | null;
+            items_dropped: number;
+        };
+        CaseViewFieldIssue: {
+            view: "party" | "timeline_event" | "impact";
+            record_index: number;
+            field: "name" | "role" | "time" | "event" | "description";
+            text: string;
+            reason: "unresolved" | "ambiguous";
+            claim_id: string;
         };
         ChatAnswerUnit: {
             text: string;
@@ -621,7 +651,7 @@ export interface components {
             name: string;
         };
         ReportEvent: {
-            time: string;
+            time: string | null;
             event: string;
             references?: string[];
             support?: ("bound" | "mixed" | "unbound" | "no_claim") | null;
@@ -1099,6 +1129,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseDocumentRead"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reingest_case_document_api_v1_cases__case_id__documents__document_id__reingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseSourceRead"];
                 };
             };
             422: {

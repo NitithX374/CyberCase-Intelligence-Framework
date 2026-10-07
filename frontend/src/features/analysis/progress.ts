@@ -21,10 +21,10 @@ const STEP_LABELS: Record<AnalysisStepName, string> = {
   assess: "Checking what the case is missing",
   gate: "Checking whether ATT&CK applies",
   retrieve: "Retrieving ATT&CK context",
-  read: "Reading sources: claims and source unit IDs",
-  judge: "Judging: summary, open questions, ATT&CK",
-  bind: "Binding claims to original source text",
-  views: "Organizing claim information for Details",
+  read: "Reading case sources",
+  judge: "Preparing the summary and case details",
+  bind: "Linking findings to sources",
+  views: "Starting case details preparation",
 };
 
 const PLANNED: AnalysisStepName[] = ["assess", "gate", "read", "bind", "views", "judge"];

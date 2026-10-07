@@ -1,17 +1,22 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
 interface MarkdownProps {
   content: string;
+  allowHtml?: boolean;
 }
 
-export function Markdown({ content }: MarkdownProps) {
+export function Markdown({ content, allowHtml = false }: MarkdownProps) {
+  const rehypePlugins = allowHtml ? [rehypeRaw] : [];
+
   return (
     <div className="markdown-content text-[15px] leading-7 text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={rehypePlugins}
         components={{
           h1: ({ children }) => (
             <h1 className="mt-5 mb-2 text-lg font-semibold tracking-tight text-ink first:mt-0">
@@ -105,17 +110,22 @@ export function Markdown({ content }: MarkdownProps) {
             </th>
           ),
           td: ({ children }) => <td className="px-3 py-2 text-ink break-words">{children}</td>,
+          script: () => null,
+          iframe: () => null,
           img: ({ alt }) => (alt ? <span>{alt}</span> : null),
-          a: ({ href, children }) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-ink underline decoration-line-strong underline-offset-2 transition-colors hover:text-charcoal-hover hover:decoration-primary"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children }) => {
+            const isSafe = href && !/^javascript:/i.test(href.trim());
+            return (
+              <a
+                href={isSafe ? href : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-ink underline decoration-line-strong underline-offset-2 transition-colors hover:text-charcoal-hover hover:decoration-primary"
+              >
+                {children}
+              </a>
+            );
+          },
         }}
       >
         {content}

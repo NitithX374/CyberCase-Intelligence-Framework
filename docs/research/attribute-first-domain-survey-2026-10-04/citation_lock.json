@@ -1,0 +1,329 @@
+{
+  "schema_version": "ai-research-writing/citation-lock-v1",
+  "request_sha256": "1a63b4dea9fd9085382ee325f1a48870350d29b070e533421193a6e741b201f2",
+  "records": [
+    {
+      "key": "attribute_first_2024",
+      "identifier": "doi:10.18653/v1/2024.acl-long.182",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.acl-long.182",
+      "checked_at": "2026-10-04T07:23:39.887416+00:00",
+      "metadata": {
+        "title": "Attribute First, then Generate: Locally-attributable Grounded Text Generation",
+        "authors": [
+          "Aviv Slobodkin",
+          "Eran Hirsch",
+          "Arie Cattan",
+          "Tal Schuster",
+          "Ido Dagan"
+        ],
+        "year": 2024,
+        "doi": "10.18653/v1/2024.acl-long.182",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "0fc115e1fec74c931b4fc85da4b5883743c50dbe0f480c94e7b562d4643997be",
+      "claim_support_sha256": "c88c0dd9351ea4d0a99fb19c1221443029d851b41d2dc2054aa69ed84822e2d4",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "default_assistant_2026",
+      "identifier": "arxiv:2607.01256",
+      "status": "verified",
+      "provider": "arxiv",
+      "request_url": "https://export.arxiv.org/api/query?id_list=2607.01256",
+      "checked_at": "2026-10-04T07:23:40.478895+00:00",
+      "metadata": {
+        "title": "AI Assistance for Human Review of Default Judgments",
+        "authors": [
+          "Theodora Worledge",
+          "Othman Bensouda Koraichi",
+          "Daniel Bernal",
+          "Aviv Caspi",
+          "Tatsunori Hashimoto",
+          "Carlos Guestrin",
+          "David Freeman Engstrom"
+        ],
+        "year": 2026,
+        "arxiv_id": "2607.01256",
+        "type": "preprint"
+      },
+      "metadata_sha256": "39c1090e2e53980c66bdb939971f40dbc2e37b0f8fdd29baa171f418153557af",
+      "claim_support_sha256": "9198f59e89fc5c420cab9a41793521fffc4c10e9006ac36168e49586f54350e8",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "spectrum_2024",
+      "identifier": "arxiv:2411.17375",
+      "status": "verified",
+      "provider": "arxiv",
+      "request_url": "https://export.arxiv.org/api/query?id_list=2411.17375",
+      "checked_at": "2026-10-04T07:23:40.998008+00:00",
+      "metadata": {
+        "title": "The Extractive-Abstractive Spectrum: Uncovering Verifiability Trade-offs in LLM Generations",
+        "authors": [
+          "Theodora Worledge",
+          "Tatsunori Hashimoto",
+          "Carlos Guestrin"
+        ],
+        "year": 2024,
+        "arxiv_id": "2411.17375",
+        "type": "preprint"
+      },
+      "metadata_sha256": "d2abceb998d19fadedd91a791fd53db3cf5afebdfda506871fdac3068c3224c7",
+      "claim_support_sha256": "be3c8cc330c6778f4cf7ca702406cb67ea0ff7bbc17cee8facbd9b01ecb8fd18",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "generation_programs_2025",
+      "identifier": "arxiv:2506.14580",
+      "status": "verified",
+      "provider": "arxiv",
+      "request_url": "https://export.arxiv.org/api/query?id_list=2506.14580",
+      "checked_at": "2026-10-04T07:23:41.524247+00:00",
+      "metadata": {
+        "title": "GenerationPrograms: Fine-grained Attribution with Executable Programs",
+        "authors": [
+          "David Wan",
+          "Eran Hirsch",
+          "Elias Stengel-Eskin",
+          "Ido Dagan",
+          "Mohit Bansal"
+        ],
+        "year": 2025,
+        "arxiv_id": "2506.14580",
+        "type": "preprint"
+      },
+      "metadata_sha256": "a4d13c1b0e991c6d10990f861fb09a771d603d57304af84f02a4331952f336ec",
+      "claim_support_sha256": "a127102f268497658009c218a8cba7a83e7e9f25e3404b941ac650457c49c4a7",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "agentgeo_2026",
+      "identifier": "arxiv:2603.09296",
+      "status": "verified",
+      "provider": "arxiv",
+      "request_url": "https://export.arxiv.org/api/query?id_list=2603.09296",
+      "checked_at": "2026-10-04T07:23:42.156058+00:00",
+      "metadata": {
+        "title": "Diagnosing and Repairing Citation Failures in Generative Engine Optimization",
+        "authors": [
+          "Zhihua Tian",
+          "Yuhan Chen",
+          "Yao Tang",
+          "Jian Liu",
+          "Ruoxi Jia"
+        ],
+        "year": 2026,
+        "arxiv_id": "2603.09296",
+        "type": "preprint"
+      },
+      "metadata_sha256": "f749eaa241b713bb6f2a134536ae758b9bd358fe7d8f0afe9e27a62a80ec485a",
+      "claim_support_sha256": "5487c2c41749ce0730fcea75f05b2c568f6a28af368ea64eb20ad36032b09240",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "medgraphrag_2025",
+      "identifier": "doi:10.18653/v1/2025.acl-long.1381",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2025.acl-long.1381",
+      "checked_at": "2026-10-04T07:23:42.793744+00:00",
+      "metadata": {
+        "title": "Medical Graph RAG: Evidence-based Medical Large Language Model via Graph Retrieval-Augmented Generation",
+        "authors": [
+          "Junde Wu",
+          "Jiayuan Zhu",
+          "Yunli Qi",
+          "Jingkun Chen",
+          "Min Xu",
+          "Filippo Menolascina",
+          "Yueming Jin",
+          "Vicente Grau"
+        ],
+        "year": 2025,
+        "doi": "10.18653/v1/2025.acl-long.1381",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "4f9c64fa2e14ffcbf80321f0cb40fb3e8bd83787b0dee2f7ea32f5d99f3f5aab",
+      "claim_support_sha256": "32e23c9bfd6cbcd473736dd847ad4fb2aedafbe84c41cc962973caedd4821941",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "finragbench_v_2025",
+      "identifier": "doi:10.18653/v1/2025.emnlp-main.211",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2025.emnlp-main.211",
+      "checked_at": "2026-10-04T07:23:43.441269+00:00",
+      "metadata": {
+        "title": "FinRAGBench-V: A Benchmark for Multimodal RAG with Visual Citation in the Financial Domain",
+        "authors": [
+          "Suifeng Zhao",
+          "Zhuoran Jin",
+          "Sujian Li",
+          "Jun Gao"
+        ],
+        "year": 2025,
+        "doi": "10.18653/v1/2025.emnlp-main.211",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "1818a81a9b22abcb3774ac547c43c03d7cf764b974cefd66b5dca5fd63161944",
+      "claim_support_sha256": "3e5dae0b6f13471213a696d6dceb175426b10401ca4ab160269cdffc9d28f955",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "citelab_2025",
+      "identifier": "doi:10.18653/v1/2025.acl-demo.47",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2025.acl-demo.47",
+      "checked_at": "2026-10-04T07:23:44.103562+00:00",
+      "metadata": {
+        "title": "CiteLab: Developing and Diagnosing LLM Citation Generation Workflows via the Human-LLM Interaction",
+        "authors": [
+          "Jiajun Shen",
+          "Tong Zhou",
+          "Yubo Chen",
+          "Kang Liu",
+          "Jun Zhao"
+        ],
+        "year": 2025,
+        "doi": "10.18653/v1/2025.acl-demo.47",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "fbd77c6eb3caab8941e03ced00c0fe7c029630a2edb3beb173b2846ea6a0f52f",
+      "claim_support_sha256": "3bd67c513b3774f6d8e098f17812880d134039eafb15108842bd36c98102a9ed",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "llm_specialists_2024",
+      "identifier": "doi:10.18653/v1/2024.acl-long.105",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.acl-long.105",
+      "checked_at": "2026-10-04T07:23:44.748204+00:00",
+      "metadata": {
+        "title": "Towards Faithful and Robust LLM Specialists for Evidence-Based Question-Answering",
+        "authors": [
+          "Tobias Schimanski",
+          "Jingwei Ni",
+          "Mathias Kraus",
+          "Elliott Ash",
+          "Markus Leippold"
+        ],
+        "year": 2024,
+        "doi": "10.18653/v1/2024.acl-long.105",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "d6664729a5fe1326df846a79c00af4127ad8272ae533ef5b9f1a1308985cb31e",
+      "claim_support_sha256": "50855af08c2106563745c97bce3c3bbb4d159bd76b6f655003aa466072e49afe",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "front_2024",
+      "identifier": "doi:10.18653/v1/2024.findings-acl.838",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.findings-acl.838",
+      "checked_at": "2026-10-04T07:23:45.413019+00:00",
+      "metadata": {
+        "title": "Learning Fine-Grained Grounded Citations for Attributed Large Language Models",
+        "authors": [
+          "Lei Huang",
+          "Xiaocheng Feng",
+          "Weitao Ma",
+          "Yuxuan Gu",
+          "Weihong Zhong",
+          "Xiachong Feng",
+          "Weijiang Yu",
+          "Weihua Peng",
+          "Duyu Tang",
+          "Dandan Tu",
+          "Bing Qin"
+        ],
+        "year": 2024,
+        "doi": "10.18653/v1/2024.findings-acl.838",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "9edb523903dfe32c9e36eccc8314f9bff12dc7807b0110659a2056ad24de7070",
+      "claim_support_sha256": "aa68b6c4e46d070ef0b475dc6b34067d8ce9ef61312370b9dab1f28f31b661e1",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "dehing_2026",
+      "identifier": "doi:10.1145/3785318.3785330",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1145%2F3785318.3785330",
+      "checked_at": "2026-10-04T07:23:46.284331+00:00",
+      "metadata": {
+        "title": "Structured Report Generation using Local LLMs for Chat-Based Digital Forensics",
+        "authors": [
+          "Ying Dehing",
+          "Hans Henseler",
+          "Timo Meconi",
+          "Marcel Worring",
+          "Harm van Beek"
+        ],
+        "year": 2026,
+        "doi": "10.1145/3785318.3785330",
+        "type": "proceedings-article"
+      },
+      "metadata_sha256": "f11cb5f6c7dffa403f85ee91a2a53d2f916e3dcf4768100522268a6c8f299169",
+      "claim_support_sha256": "0f4c53ba9138115cd68090cd543b49d4d3c53d7b7ec0a707bc6b22219a1c826f",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    },
+    {
+      "key": "qasem_consistency_2026",
+      "identifier": "doi:10.1162/tacl.a.598",
+      "status": "verified",
+      "provider": "crossref",
+      "request_url": "https://api.crossref.org/works/10.1162%2Ftacl.a.598",
+      "checked_at": "2026-10-04T07:23:47.206437+00:00",
+      "metadata": {
+        "title": "Localizing Factual Inconsistencies in Attributable Text\n                    Generation",
+        "authors": [
+          "Arie Cattan",
+          "Paul Roit",
+          "Shiyue Zhang",
+          "David Wan",
+          "Roee Aharoni",
+          "Idan Szpektor",
+          "Mohit Bansal",
+          "Ido Dagan"
+        ],
+        "year": 2026,
+        "doi": "10.1162/tacl.a.598",
+        "type": "journal-article"
+      },
+      "metadata_sha256": "0e30633976374a4c3ecff1e673f95b4dfd752d083c742ce2d188fc53914dccba",
+      "claim_support_sha256": "26e09a8e07b5ab2ac76c6c053f57fc6f01bd2b5b72655b62dbd0105151c0d3b8",
+      "cross_check": null,
+      "cross_check_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "error": ""
+    }
+  ]
+}

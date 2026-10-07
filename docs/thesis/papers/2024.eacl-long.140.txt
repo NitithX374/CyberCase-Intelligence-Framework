@@ -1,0 +1,906 @@
+"According to . . . ": Prompting Language Models
+    Improves Quoting from Pre-Training Data
+
+        Orion Weller, Marc Marone, Nathaniel Weir,
+   Dawn Lawrie, Daniel Khashabi, Benjamin Van Durme
+
+                       Johns Hopkins University
+
+                     {oweller2,mmarone1}@jhu.edu
+
+                      Abstract                             Without grounding prompt        The initial digestion of starch occurs in
+                                                                                           the mouth. Enzymes in saliva break
+     Large Language Models (LLMs) may hallu-              In what part of the digestive    down starch into smaller molecules.
+     cinate and generate fake information, despite        tube do you expect the
+     pre-training on factual data. Inspired by the        initial digestion of starch?     The initial digestion of starch happens
+     journalistic device of "according to sources",                                        in the mouth through our saliva. The
+     we propose according-to prompting: direct-              With grounding prompt         enzymes found in saliva are essential in
+     ing LLMs to ground responses against previ-          According to Wikipedia, in       beginning the process of digestion of
+     ously observed text. To quantify this grounding,     what part of the digestive       dietary starches. These include
+     we propose a novel evaluation metric (QUIP-          tube do you expect the           amylase, which is an enzyme that
+     Score) that measures the extent to which model-      initial digestion of starch?     catalyses the hydrolysis of starch (Latin
+     produced answers are directly found in under-                                         amylum) into sugars. Salivary
+     lying text corpora. We illustrate with experi-                                        amylase begins the chemical process
+     ments on three corpora (Wikipedia, PubMed,                                            of digestion.
+     and the U.S. legal tax code) that these prompts
+     improve grounding under our metrics, with the        Memorized Documents from Pre-training
+     additional benefit of often improving end-task
+     performance. Furthermore, prompts that ask              The enzymes found in saliva are essential in
+     the model to decrease grounding (or to ground           beginning the process of digestion of dietary
+     to other corpora) indeed decrease QUIP-Score,           starches and fats. These enzymes also play a
+     indicating the ability of LLMs to increase or           role in breaking down food particles djdjks
+     decrease grounded generations on request.1              s break down starch to form other molecules fo,
+                                                             thus protecting teeth from bacterial decay
+1 Introduction
+                                                                                                   An amylase is an enzyme that catalyses the
+As the deployment of Large Language Models
+(LLMs) in real-world applications continues to                                                     hydrolysis of starch (Latin amylum) into sugars.
+grow, their tendency to generate false content (Ji
+et al., 2022) poses significant risks to downstream                                                Amylase is present in the saliva of humans
+users. Recent work has attempted to address this
+issue by augmenting them with retrieval (Shuster                                                   and some other mammals, where it begins the
+et al., 2021; Sun et al., 2023; Borgeaud et al., 2022);
+however, these models still struggle with hallucina-                                               chemical process of digestion.
+tion problems in practice (Liu et al., 2023).
+                                                          Figure 1: Prompting LLMs to respond with quotes di-
+   This work explores the intriguing possibility of       rectly from pre-training data (shown in purple). Prompt-
+steering LLMs by prompting them to quote more             ing increases the proportion of quoted information.
+of the curated sources of information they have
+memorized during pre-training, thereby reducing           presumably observed in the pre-training corpus.
+their tendency to generate false information. As          We find empirical evidence that this is attainable
+illustrated in Figure 1, we explore whether adding        using current LLMs (both open and closed source).
+phrases such as "According to Wikipedia" can
+guide LLMs to quote from Wikipedia, which is                 Our study is inspired by two recent research ar-
+                                                          eas. First, larger LLMs can be more effectively
+    1We publicly release all code at https://github.com/  guided using natural language prompts (Ouyang
+orionw/according-to                                       et al., 2022; Wan et al., 2023; Ganguli et al., 2023).
+                                                          Second, as LLMs grow in size, their ability to re-
+     * Authors contributed equally                        member facts and statements from pre-training im-
+                                                          proves (Kandpal et al., 2022; Tirumala et al., 2022;
+                                                          Carlini et al., 2023, 2020). Thus, we seek to steer
+                                                          LLMs to use their memorization for a positive pur-
+                                                          pose: producing more grounded outputs.
+
+                                                             A key step in this study is quickly determin-
+                                                          ing whether generated outputs overlap signifi-
+                                                          cantly with pre-training data; i.e., efficiently per-
+                                                          forming membership testing via a DATA POR-
+                                                          TRAIT (Marone and Van Durme, 2023). We design
+                                                          a new metric called QUIP-Score, short for Quoted
+                                                          Information Precision, which builds on DATA POR-
+
+                                                    2288
+
+Proceedings of the 18th Conference of the European Chapter of the Association for Computational Linguistics
+                                         Volume 1: Long Papers, pages 2288­2301
+
+                        March 17-22, 2024 c 2024 Association for Computational Linguistics
+TRAITs and takes advantage of its speed and effi-      ful de-duplication (Lee et al., 2022a) and curation
+ciency. QUIP-Score then calculates n-gram over-        strategies (Feng et al., 2022) can improve language
+lap, quantifying how much of a passage is formed       model quality (Gao et al., 2020). Work on analyz-
+of spans that are exactly contained in the corpus.     ing memorization has proposed measuring n-gram
+                                                       overlap against the first page of Google Search
+   To illustrate according-to prompting, we per-       results as a proxy for memorization, using exact
+form experiments based on the task of open-            matches (Carlini et al., 2020) and BLEU (Levy
+domain question answering (ODQA), for which            et al., 2021).
+provenance-grounded answers are of particular im-
+portance. We collect human-authored prompts               We measure quoting (and thus, memorization
+designed to steer generations toward informa-          in closed-book generation settings) building off of
+tion grounded in our target corpora (Wikipedia,        Marone and Van Durme (2023) who propose us-
+PubMed, and the U.S. legal tax code). We observe       ing membership testing tools that they label DATA
+that across all human-authored prompts, we can         PORTRAITs. As one implementation, they use a
+increase the amount of overlap with the chosen         Bloom Filter (Bloom, 1970) for storing n-grams.
+corpora by 5-105% while maintaining or even im-        We use this method for checking membership in a
+proving the downstream performance. We show            corpus as it allows us to build a fast, lightweight,
+results across numerous datasets and models, in-       and scalable metric for measuring quotation against
+cluding both open- and closed-sourced LLMs.            large amounts of data (see Section 3.1 for details).
+
+   Interestingly, we also observe the opposite phe-    Hallucination and grounding. Numerous stud-
+nomenon ­ it is possible to discourage LLMs            ies (De Cao et al., 2021; Li et al., 2022; Weller
+from grounding via prompts that either discourage      et al., 2023) have demonstrated that LLMs strug-
+grounding or encourage grounding to other corpora.     gle with both hallucination and factuality, lead-
+For example, we find this can decrease overlap with    ing to frequent inaccuracies and outright false-
+Wikipedia while lowering performance on down-          hoods. Previous research has attempted to alleviate
+stream tasks that rely on Wikipedia content.           this problem in various ways, including retriev-
+                                                       ing grounded documents before generation (Sun
+   We conduct scaling experiments on different         et al., 2023; Borgeaud et al., 2022; Mallen et al.,
+model sizes, which indicate that as size increases,    2023; Weller et al., 2022), applying new decoding
+so does the effectiveness of our proposed approach.    approaches (He et al., 2022), post hoc tuning of
+This suggests that hallucinations may diminish with    LLMs (Menick et al., 2022; Lee et al., 2022b), and
+further scaling of instruction following LLMs.         analyzing the model's output training data (Han
+                                                       and Tsvetkov, 2022; Park et al., 2023). Crucially,
+   In summary, we present according-to prompt-         these works have a common thread: showing that
+ing, a simple and effective approach to improving      grounding LLM generations results in fewer hal-
+an LLMs' ability to generate more factual infor-       lucinations (Lazaridou et al., 2022; Andriopoulos
+mation. Additionally, we introduce QUIP-Score,         and Pouwelse, 2023). Our work focuses on a subset
+an efficient metric for measuring groundedness of      of grounding, quoting, and is driven by the simple
+LLM generations against their pre-training corpus.     premise that anything quoted is grounded and not
+We experiment with various prompting strategies        hallucinated. Our work therefore builds off the
+across models, datasets, and scaling trends, and       established research and is complementary to it, as
+we find that according-to methods consistently im-     we investigate a novel yet straightforward approach
+prove groundedness under our introduced metric.        to steer LLMs towards more factual responses.
+
+2 Related Work                                         Attribution. A related line of work is attribution
+                                                       of generated text to their sources (Rashkin et al.,
+Memorization in LLMs. Large language models            2021; Bohnet et al., 2022). Our work is related to
+have been observed to memorize their training data     this literature in that, our approach allows provable
+(Carlini et al., 2020; Chang et al., 2023, among oth-  attribution to macro-level sources of information,
+ers). This is problematic when web-scraped train-      such as Wikipedia or medical articles. However, we
+ing data contains sensitive personal data or low-      do not focus on offering any fine-grained attribution
+quality information sources (Dodge et al., 2021;       to the originating source documents. Given these
+Luccioni and Viviano, 2021). However, it can be
+beneficial for models to memorize content from
+carefully curated and trusted corpora, where care-
+
+2289
+distinctions our focus here is different from ­and               3.1 QUIP-Score: Measuring Grounding to
+complementary to­ the attribution literature.                          Pre-Training Data
+
+LLM Steerability via prompting. The larger                       In order to understand grounding and quoting from
+LMs become, the easier they are to steer with                    model pre-training data, we need a metric to mea-
+natural language prompts (Kandpal et al., 2022;                  sure quoting. An intuitive approach is to use an n-
+Carlini et al., 2023; Mishra et al., 2022a; Srivas-              gram measure, which can compare n-grams found
+tava et al., 2023). Several works (Mishra et al.,                in an LLM's generation to those in a corpus. Such
+2022b; Chung et al., 2022; Wang et al., 2022b;                   a quotation metric must be efficient to scale to large
+Wan et al., 2023) have shown that larger instruction-            reference corpora.
+tuned models are more easily steered than smaller
+and non-instruction-tuned models. This is desirable              Problems with existing N-gram metrics Exist-
+in our setting, as we seek to use these capabilities             ing n-gram metrics like BLEU or ROUGE store
+of LLMs for a novel application of steerability:                 counts of n-grams from the references. However,
+quoting more from a given corpus.                                storing counts requires the use of data structures
+                                                                 like a conventional hashtable, which is computa-
+Improving LLMs through prompting. Much                           tionally difficult for a large corpus like Wikipedia.
+recent work has focused on improving LLM per-                    We estimate naively scaling sacrebleu (Post,
+formance on various benchmarks by improving the                  2018) to use Wikipedia as a reference would con-
+prompt given to the model. A sub-genre of these                  sume 1.5 TB of RAM (Appendix C).
+works includes those that ask the model to produce
+text before generating the answer, such as Chain-                QUIP-Score To enable efficient measurement
+of-Thought (Wei et al., 2022) or Recitation-based                of quoting from pre-training data, we start with
+Generation (Sun et al., 2022). We differ from these              a Bloom filter-based DATA PORTRAIT (Marone
+works by generating the answer first, then the ex-               and Van Durme, 2023), which allows for both
+planation, indicating that our performance gains                 faster and more memory efficient boolean mem-
+are not due to the same phenomena. Furthermore,                  bership queries than allowed by methods that use
+our paper's focus is on improving LLM's ability to               a hashtable to store counts. The Bloom filter ap-
+quote, rather than improving end-task performance.               proach enables one-time indexing of a large corpus
+                                                                 with constant time lookups.
+3 Methodology
+                                                                    We define our new metric, QUIP-Score, as the
+Defining Grounding There are many definitions                    character n-gram precision of overlap between gen-
+of grounding in the community (Bohnet et al.,                    erated output and the pre-training corpus.3 More
+2022; Mallen et al., 2023). While acknowledg-                    formally, for generation Y and text corpus C:
+ing the broad scope of the term, we adopt a narrow
+definition: we call generated text grounded with                 QUIP(Y ; C) =  gramnY 1C (gramn  )  ,
+respect to a corpus if it is an exact quotation from                              |gramn  Y |
+the corpus. This is more stringent than some defini-
+tions because it does not count semantic grounding,              where 1(.) is an indicator function implemented
+e.g. when lexical forms do not match; however,                   with the DATA PORTRAIT: 1 if gramn  C else 0.
+quotation is one form of grounding that is intuitive             Thus, a score of 0.5 would indicate that 50% of the
+and simple to measure.2 Hence, we use quoting                    generated text n-grams are found in the pre-training
+and grounded interchangeably.                                    corpus. We macro-average this quantity over a
+                                                                 set of generations to obtain a single performance
+    2We leave it to future work to expand our metric to the      number for a given test dataset.
+semantic grounding case, as semantic grounding (e.g. finding
+paraphrases) while matching the generations over an entire       QUIP-Score Implementation We build the
+corpus is non-trivial; using retrieval systems biases the model  DATA PORTRAIT on the version of Wikipedia in-
+towards lexical match (even for dense retrieval, c.f. MacA-      cluded in the Pile,4 as it allows for us to exactly
+vaney et al. (2022)) and existing work in attribution/grounding  test the pre-training data included in many mod-
+does not scale to allow grounding to numerous (2+) passages.
+                                                                     3QUIP scores are not comparable across datasets, as they
+                                                                 are specific to a given corpus. This is acceptable for our
+                                                                 experiments that compare generations against one corpus.
+
+                                                                     4wikipedia/20200301.en
+
+2290
+els like GPT-J5 (See §6 for experiments applying            QUIP-Score None Some Major. All Halluc.
+QUIP-Score to other corpora). We use character-
+based n-grams as opposed to token-based, as dif-            0.0 ­ 0.25 12% 76% 12% 0%   20%
+ferent models have different tokenization schemes.          0.25 ­ 0.5  0% 16% 84% 0%   22%
+Furthermore, character-based n-gram metrics have            0.5 ­ 0.75  0%  0% 80% 20%  12%
+widespread usage in machine translation with met-           0.75 ­ 1.0  0% 0% 48% 52%   6%
+rics like chrF/chrF++ (Popovic´, 2015, 2017). We
+chose 25 character grams for the sketch6 (approx-           Table 1: Random sampled generations from NQ, binned
+imately 5 words) as we found it empirically gave            by QUIP-Score. As QUIP-Score increases, quoting
+meaningful results (neither too small nor too large         increases and hallucinations decrease. Major. stands
+an n-gram). Note that because the DATA POR-                 for Majority, while Halluc. stands for Hallucination %.
+TRAIT checks for exact matches it is sensitive to
+orthographic variation (e.g. case, whitespace), We          increases, the amount of quotations increases and
+view QUIP-Score as a lower bound on actual quot-            the amount of hallucinations decreases.
+ing performance.
+                                                               We do not expect these results to be surprising,
+3.2 Validity of QUIP-Score                                  as they have been demonstrated by a large amount
+                                                            of literature on n-gram metrics (Belz and Re-
+As QUIP-Score is an n-gram metric, it inherits              iter, 2006; Reiter and Belz, 2009; Popovic´, 2015),
+many of the same qualities of established metrics           and by the grounding and hallucination literature
+like BLEU and ROUGE. Further, many previous                 (Lazaridou et al., 2022; Borgeaud et al., 2022; An-
+works have established the connection between               driopoulos and Pouwelse, 2023). However, this
+higher amounts of grounding and fewer halluci-              analysis empirically demonstrates that using quot-
+nations (§2). Building upon these previous studies,         ing for grounding and QUIP-Score as the n-gram
+we establish that QUIP-Score (1) accurately mea-            metric retains these desired properties.
+sures quoting like other n-gram metrics and (2) is
+correlated with fewer hallucinations.                       4 Grounding via according-to Prompting
+
+   We first conduct a straightforward experiment:           The previous results show 1) that we can efficiently
+what is the QUIP-Score when measuring entirely              measure quotation rate and 2) that more quotations
+quoted documents (e.g. exact Wikipedia pages)               correlate with fewer hallucinations. Next, we seek
+vs documents that are not necessarily quotes (e.g.          to improve knowledge grounding by causing LLMs
+from the Pile)? We randomly sample 1000 docu-               to quote directly from trusted resources seen during
+ments from each. We find that the average QUIP-             training.8 We hope to access helpful memorized
+Score for Wikipedia documents is 99.9%7 with a              content: strings copied from high-quality or trusted
+standard deviation of 0.1% while on the Pile it is          documents. We induce this behavior by taking a
+17.0% ± 0.8%. Thus we can see that QUIP-Score               normal task prompt (e.g. an ODQA question) and
+correctly measures full quotations and that random          appending an instructional phrase that encourages
+text has approximately 17% QUIP-Score.                      grounding such as "Respond by using information
+                                                            from Wikipedia in your response".9 We call this
+   Next, we consider partial, contextual quotations         strategy according-to prompting. Our experiments
+as found in LLM generations from NQ. We bin gen-            measure the change in QUIP-Score of generations
+erations by QUIP-Score ranges, sampling 50 from             from a according-to prompt vs one without the
+each bin. We then conduct two manual analyses:              extra instruction (i.e. a null prompt).
+(1) how much of the generations are a quotation
+(none, some, majority, or all/nearly all) and (2)              To verify that prompts can both increase and
+whether the generation is a hallucination (using            decrease grounding, we also include prompts that
+gold provenances and answers, plus Google Search            are anti-grounding (e.g. "Respond by using infor-
+when unsure). Table 1 shows that as QUIP-Score              mation from [another source] in your response"
+                                                            or "Respond without using any information from
+    5Note, for several models evaluated here (e.g. OpenAI   Wikipedia.") This allows us to test the hypothe-
+models) the exact Wikipedia version trained on is unknown.  sis that models can ground (or not ground) to a
+
+    6Not having multiple n-gram sizes like BLEU typically       8Since we want to know what the LLM recalls on its own,
+does allows us to significantly reduce memory consumption   we specifically do not use any retrieval models.
+and had similar results to averaging across sizes.
+                                                                9We tried appending, prepending, and their combina-
+    7QUIP-Score is 99.9 due to a single very short sampled  tions in early experiments and found that appending the
+document, where length < n-gram size                        grounding/anti-grounding prompts performed the best.
+
+2291
+given corpus when asked because of the semantic           eters to 175B models. Note that our experiments
+meaning of the prompt, rather than the length of the      consist solely of providing prompts to the models
+prompt. As prompting is notoriously brittle (e.g.         and do not include fine-tuning (as the goal is to see
+changing the phrasing can affect the results) we          what these models can do zero-shot).
+provide a number of grounding and anti-grounding
+prompts to test whether these prompts provide con-           For short-form QA datasets, we prompt models
+sistent gains or are merely prompting artifacts (see      to produce an answer plus an explanation, then mea-
+Table 2 for the list of prompts used).                    sure QUIP-Score of the latter. We found smaller
+                                                          models (e.g. < 15B parameters) were not able to fol-
+4.1 Datasets                                              low instructions to provide both answer and expla-
+                                                          nation in a parseable format from just one prompt.
+We use a variety of datasets to test if LLMs are          Thus, we do two-step prompting with them, first for
+consistent and to check whether grounding affects         the answer, then for the explanation (and append-
+the end-task performance of a given dataset. To           ing the grounding prompt, if used). §B.2 provides
+best measure the grounding of the output however,         prompting details and full text of the prompts used.
+the model generations must be long enough to have
+many n-grams that can be measured. Thus, we test          5 Results
+on long-form question answering (QA), and for
+datasets that do not lend themselves well to long-        We first analyze a wide range of according-to
+form output (e.g. short-form QA) we ask the mod-          prompts on ChatGPT. We then test the null prompt
+els to generate both the answer and a corresponding       and the best performing according-to prompt on a
+explanation whose n-grams can be measured.                variety of other models for further analysis. Table 2
+                                                          shows results for different prompts using ChatGPT.
+   Note that our purpose is not to improve state-         There is a clear trend under which all according-to
+of-the-art performance on these tasks, as our main        prompts perform similarly or improve upon QUIP-
+research question is to analyze the grounding of          Score compared to the null. QUIP-Scores for the
+model outputs. However, we note that according-to         anti-grounding prompts are the same or worse than
+prompting often achieves competitive or improved          the null prompt (i.e. no additional text) and signifi-
+performance compared to other prompting base-             cantly worse than the according-to prompts.
+lines, as it naturally correlates with the ability to
+answer questions from the grounded material.                 Surprisingly, we find that according-to prompts
+We use the following datasets, each of which targets      also perform similarly, and sometimes even bet-
+factual knowledge in Wikipedia: ELI5 (Fan et al.,         ter than, the null prompt on end task performance
+2019) (the KILT Petroni et al. (2021b) version),          (e.g. up to a 6% improvement on NQ, 2.5% on
+Natural Questions (Kwiatkowski et al., 2019),             HotpotQA). This is not the case for ROUGE-L on
+TriviaQA (TQA) (Joshi et al., 2017), and Hot-             ELI5, as that metric measures lexical similarity to
+potQA (Yang et al., 2018). These datasets com-            Reddit, rather than similarity to Wikipedia.
+prise a mixture of short- and long-form plus single-
+and multi-hop QA. §A provides further details.               We use these results on ChatGPT to inform our
+                                                          next experiments, using the null prompt and the
+4.2 Models and Prompting                                  best grounding prompt ("Respond to this question
+                                                          using only information that can be attributed to
+We test a wide array of models in our experiments         Wikipedia") in our future experiments due to cost.
+including most OpenAI models (Wang et al., 2023),
+T5-based models (T5 adapted to language model-            5.1 Results from Other Models
+ing, Raffel et al. 2020; Lester et al. 2021 and FLAN-
+T5 Chung et al. 2022), GPT-J instruction tuned10          We show the relative difference of the grounding
+(Wang and Komatsuzaki, 2021), and Koala (Geng             prompt over the null prompt for more models in
+et al., 2023) (a Llama variant, Touvron et al. 2023).     Table 3, which further confirms our findings (for
+By doing so, we provide (1) results on both open          the absolute instead of relative numbers, see Ap-
+and closed-source models, (2) results for models          pendix B.2). For example, using the grounding
+using many variations of instruction-tuning data,         prompt with Text-Davinci-003 improves over the
+and (3) models ranging from 220 million param-            null prompt by around 15% QUIP-Score and 5-
+                                                          20% for the specific task. For all models evaluated,
+   10https://huggingface.co/nlpcloud/instruct-gpt-j-fp16  the grounding prompt improves in both end-task
+                                                          performance and QUIP-Score by 5-105%.
+
+2292
+grounding promptsPrompt                                                                                                    TQA         NQ       Hotpot      ELI5
+                 (appended after the question)                                                                         QUIP EM    QUIP EM    QUIP F1    QUIP R-L
+anti-                                                                                                                  31.6 77.8  32.8 32.9  28.3 35.7  24.1 22.7
+   grounding      (no additional prompt)                                                                               31.1 77.3  32.8 34.0  28.1 35.9  26.3 22.3
+                                                                                                                       31.7 73.2  33.0 30.2  28.7 35.3  25.5 22.7
+                         "Based on evidence from Wikipedia:"                                                           31.7 70.1  33.8 27.6  28.1 33.1  27.2 21.0
+                         "As an expert editor for Wikipedia, I am confident in the following answer."                  32.8 75.9  34.6 34.4  28.9 35.9  25.7 22.0
+                         "I found some results for that on Wikipedia. Here's a direct quote:"                          33.6 78.8  34.3 34.8  29.2 36.6  26.5 21.7
+                         "Reference Wikipedia when answering the following question."                                  34.5 72.7  32.9 31.7  30.4 35.5  25.8 20.4
+                         "Answer according to Wikipedia."                                                              34.9 76.3  35.3 32.9  29.9 36.1  26.3 21.9
+                         "Go to https://www.wikipedia.org and find direct quotes to answer the question. Response: ""  35.7 76.6  37.0 33.9  30.4 36.2  28.0 21.5
+                         "Respond by using information from Wikipedia in your response."                               26.1 75.8  26.5 31.6  22.4 35.0  21.9 22.2
+                         "Respond to this question using only information that can be attributed to Wikipedia."        26.7 74.3  28.2 32.4  23.2 33.7  24.3 22.0
+                                                                                                                       30.4 76.9  32.0 32.0  26.8 32.9  24.7 22.1
+                         "Respond by using information from Reddit in your response."
+                         "Respond by using information from Github in your response."                                     - 68.2     - 24.9     - 44.6     - 22.7
+                         "Respond without using any information from Wikipedia in your response."                         - 89.4     - 60.4     - 51.4     - 26.5
+
+                 Zero-Shot No-Retrieval SOTA
+                 Retreival-Augmented SOTA
+
+Table 2: Impact of various prompts on the grounding (QUIP-Score) and performance scores, using ChatGPT (§5).
+The top row is the null prompt (no additional prompt other than the question), the middle section includes grounding
+prompts, and the last section includes anti-grounding prompts. We find that grounding prompts generally improve
+the QUIP-Score while anti-grounding prompts generally reduce QUIP-Score. Colored cells indicate changes
+( gains, losses, or the same) relative to the null row. ELI5 ROUGE-L (R-L) is based on similarity to Reddit rather
+than Wikipedia. See §B.1 for sources of SOTA results.
+
+                   Model             TQA        EM        QUIPNQ                                                       Hotpot     F1         ELI5       R-L
+                                     QUIP                                  EM                                          QUIP                  QUIP
+
+                   Text-Davinci-003  +14.7%     +5.3%     +14.7%     +20.6%                                            +14.4%     +7.2%      +16.5%    -3.8%
+                   GPT-4                     -         -          -          -                                                 -         -   +17.6%    -2.3%
+                   GPT-J Instruct                      -                     -                                                           -   +18.1%    -2.5%
+                   Koala 7B          +12.1%            -  +15.2%             -                                         +13.9%            -   +35.5%  +14.6%
+                   FLAN-T5 XXL        +5.1%            -   +6.3%             -                                          +5.0%            -  +105.2%  +48.4%
+                                     +43.3%               +41.5%                                                       +20.7%
+
+Table 3: Percent improvement of according-to over null prompt. The according-to prompt improves performance
+in nearly every dataset and metric by 5-15%. We omit EM/F1 scores of smaller models for which our prompting
+method yield the same answer for grounding and null (§4.2). Due to cost, we only evaluate GPT-4 on ELI5.
+
+   Thus, our findings hold for a wide variety of                     Carlini et al., 2023). Previous work has shown
+models and model sizes ­ even when prompts are                       that entity co-occurrence (as measured by the num-
+not tuned for the specific model being prompted,                     ber of times in the pre-training set that the entities
+indicating the generality of our approach.                           in the question and in the answer co-occur in the
+                                                                     same passage) is strongly correlated with task per-
+5.2 Impact of Model Size                                             formance (Kandpal et al., 2022). We use their code
+                                                                     and data (from the Pile) to explore whether QUIP-
+Does model size impact their ability to quote from                   Score correlates with co-occurrence frequency.
+their pre-training data? We answer this question
+using QUIP-Score in Figure 3, which shows that                          Due to the imbalance between co-occurrence
+smaller models perform the same (for FLAN-T5                         counts, we sample 400 instances (or as many as
+models) or worse (for OpenAI models) with a                          available) from each dataset and co-occurrence fre-
+grounding prompt as opposed to the null prompt.                      quency bin.11 We measure the QUIP-Score on
+However, larger models perform significantly bet-                    these instances using the output generations from
+ter with the grounding prompt as opposed to the                      ChatGPT on both grounding and null prompts.
+null prompt, for both OpenAI models and FLAN-
+T5 models. We can conclude that a model's ability                       Figure 2 shows that QA entity popularity is posi-
+to quote from its pre-training data improves                         tively correlated with QUIP-Score for both ground-
+with size.                                                           ing and null prompts, more so for grounding. We
+                                                                     find that the model better recalls information from
+5.3 Impact of Entity Popularity                                      Wikipedia when QA entities frequently co-occur.
+
+Another potential factor influencing generation of                      11See Kandpal et al. (2022) for frequency bin design details.
+memorized content is the popularity of the enti-
+ties mentioned in a question (Kandpal et al., 2022;
+
+                                                                     2293
+                                         TriviaQA                                                             Natural Questions
+
+                        Null                                                           0.4
+
+QUIP-Score  0.4         Grounded                                           QUIP-Score  0.2
+
+            0.2
+
+            0.0 0             (0, 10] (10, 100] (100, 1000] (1000, 10000]              0.0   0        (0, 10] (10, 100] (100, 1000] (1000, 10000]
+
+                              Frequency in Pre-training Data                                          Frequency in Pre-training Data
+
+Figure 2: Impact of entity popularity on QUIP-Scores, showing that models are better able to quote pre-training
+text about popular entities. The x-axis shows how many times the given entity relationship was found co-occurring
+in pre-training data. Bars indicate 1 standard error. We use the ranges following (Kandpal et al., 2022).
+
+            0.30  Prompt Type                                                          0.30 Prompt Type
+                      Grounded
+QUIP-Score                                                                                      Null
+
+            0.25        Null                                                           0.25     Grounded
+
+            0.20                                                           QUIP-Score  0.20
+
+            0.15                                                                       0.15
+
+                  base            large              xl   xxl                          0.10
+
+                                         Model Size
+
+                                                                                       0.05
+
+QUIP-Score  0.30                                                                       0.00           T5                         FLAN-T5
+            0.25
+            0.20                                                                                          Model Size
+            0.15
+                                                                           Figure 4: Comparing instructed-tuned FLAN-T5 XXL
+                                                                           to non-instruction tuned T5-v1.1-Adapt XXL. Note that
+                                                                           grounding has a larger impact on instruction-tuned
+                  ada             babbage          curie  davinci          models as compared to non-instruction tuned.
+
+                                  Model Size
+
+Figure 3: Model size vs QUIP-Score performance us-                            It is important to note that although the text may
+ing FLAN-T5 (top) and OpenAI (bottom) models. As                           be grounded, it does not mean the output gener-
+model scale increases, so does performance. At                             ation is correct with respect to the question. For
+smaller model sizes, the grounding prompt is not more                      example, the TriviaQA example shows that both
+effective than the null prompt, but gains efficacy with                    models predicted the incorrect quote for Smokey
+model size. Error bars indicate 1 standard error.                          the Bear, although the according-to explanation
+                                                                           was better grounded in Wikipedia.
+5.4 Impact of Instruction Tuning
+                                                                           6 Grounding to Other Corpora
+One potential reason for why these models can
+recall their pre-training data on request is a bet-                        In the previous experiments we've shown that
+ter capability to instruction-follow. We test this                         LLMs can ground to Wikipedia upon request.
+hypothesis in Figure 4 that compares T5-11B com-                           However, are according-to prompts limited to the
+pared to FLAN-T5-11B.                                                      Wikipedia domain only? To answer this ques-
+                                                                           tion we build two more DATA PORTRAITs, one
+   We find that instruction-tuning does help, as                           on PubMed articles and one with the U.S. legal tax
+the QUIP-Scores for T5-v1.1-Adapt are similar                              code applying to tax year 2022. We then evaluate
+between grounding and null prompts, while the                              on datasets where having such background knowl-
+FLAN-T5 model has a large difference between                               edge would be helpful and evaluate both the down-
+the null and grounding prompt (roughly 2x better).                         stream task performance and QUIP-Score, similar
+                                                                           to the previous Wikipedia experiments.
+5.5 Qualitative Examples
+                                                                           Datasets. We use datasets in the MultiMedQA
+Figure 5 shows example outputs from a variety of                           benchmark suite (Singhal et al., 2022) to test
+models. When queried with according-to prompts,
+the model generates much larger chunks of texts
+that occur in Wikipedia (shown in purple).
+
+                                                                           2294
+Prompt                  Generated Text
+1. Question (ELI5)      Why is it that every time we put something down our throat toothbrush, finger etc. we start to gag but when we but food and
+                        water down our throat we don't gag at all?,
+Null Prompt             This is because our gag reflex is triggered by objects that touch the back of our throat and activate sensory receptors called the
+(ChatGPT)               pharyngeal receptors. When we eat or drink, the muscles in our throat automatically contract and move food and liquid down to the
+                        stomach, bypassing the pharyngeal receptors and avoiding the gag reflex. However, when we put non-food objects like a toothbrush
+Grounded Prompt         or finger in our throat, they can activate these receptors and trigger the gag reflex.
+(ChatGPT)               The gag reflex is a natural protective mechanism of the body that can be triggered by stimulation of the soft palate, the back of the
+                        tongue or the back of the throat. It is a reflex contraction of the muscles of the back of the throat that can cause vomiting or choking.
+2. Question (NQ)        The reflex can be more easily triggered by foreign objects, such as toothbrushes or fingers, that are not natural to the body, compared
+Null Prompt             to food and water which are familiar substances that we regularly ingest without triggering the reflex. Additionally, the shape and
+(ChatGPT)               texture of the foreign object may also contribute to triggering the gag reflex.
+Grounded Prompt         In what part of the digestive tube do you expect the initial digestion of starch?
+(ChatGPT)               The initial digestion of starch occurs in the mouth; enzymes in saliva break down starch into smaller molecules.
+3. Question (ELI5)
+Null Prompt             The initial digestion of starch happens in the mouth; Salivary amylase, an enzyme found in the mouth, is responsible for breaking
+(Davinci)               down starch into simpler sugars.
+Grounded Prompt         Why do towels that feel so rough on the skin dry you so much better, but towels that feel soft don't dry well at all?
+(Davinci)               Towels that feel rough on the skin are usually made of a coarser fabric, such as terry cloth, which is made of loops of cotton yarn.
+                        This fabric is more absorbent than softer fabrics, such as velour or microfiber, which are made of finer fibers. The loops of terry cloth
+4. Question (TriviaQA)  fabric create more surface area for the towel to absorb water, which is why it is more effective at drying than softer towels.
+Null Prompt             Towels that feel rough on the skin are usually made of a material with a higher absorbency, such as cotton or linen. These materials
+(GPT-J-Instruct)        are able to absorb more water than softer materials, such as microfiber or polyester. The absorbency of the material allows it to draw
+Grounded Prompt         moisture away from the skin more effectively, resulting in better drying. Soft towels, on the other hand, are usually made of materials
+(GPT-J-Instruct)        with lower absorbency, which means they are not able to absorb as much water and therefore do not dry as well.
+                        According to Smokey The Bear, Remember... only you can what?
+5. Question             "Only you can see me"; Because fire requires a fuel source to burn, and smoke is the byproduct of a fire's burning process. Therefore,
+(HotpotQA)              since smoke is created whenever a fire burns, the presence of smoke indicates that a fire is burning somewhere.
+Null Prompt             "Only you can remember"; According to Smokey The Bear, memory is an internal mental process that is unique to each person. It
+(FLAN-T5 XXL)           is the ability to remember past experiences, along with the ability to recognize and interpret the information that is stored in our
+Grounded Prompt         memories. This explains why, despite the fact that memory techniques vary between individuals, memory is a universal quality that
+(FLAN-T5 XXL)           all humans share. Therefore, the answer to the question is "yes".
+                        Which magazine is based out of more countries, Adventist World or Baseball Digest?
+
+                        adventist world; Adventist World is a magazine that is based out of many countries.
+
+                        adventist world; Adventist World is a monthly magazine published by the Seventh-day Adventist Church. It is based in the United
+                        States, Canada, and many other countries.
+
+Figure 5: Example generations from various considered models. Purple text was found in Wikipedia. Note that for
+non-ELI5 datasets, models were prompted to generate the answer, a semicolon, and then the explanation (see §4.2).
+Note that better grounding to Wikipedia does not always imply correct answers (see Question 4).
+
+Dataset      Null                    Grounded           censing Exam, and MedicationQA (Abacha et al.,
+         QUIP EM                     QUIP      EM       2019) which asks open-domain questions about pa-
+                                                        tient medications. Although these last two are not
+According to PubMed. . .  59.6 (+5.5)      49.6 (+1.4)  directly sourced from PubMed, they contain infor-
+PubMedQA 54.1 48.2        45.9 (+0.8)      54.0 (+0.7)  mation that is likely to be found in it. Note that we
+MedQA    45.1 53.3        39.6 (+2.9)      N/A          do not give the model the abstract as typically done
+MedicationQA 36.7 N/A                                   in PubMedQA, but instead evaluate closed-book in
+                                                        order to measure quotes from model parameters.
+According to the U.S. Tax Code. . .
+SARA     4.4 52.0 13.3 (+8.9) 55.0 (+3.0)                  In the legal domain, we use the SARA dataset
+                                                        (Holzenberger et al., 2020) consisting of tax cases
+Table 4: Results with ChatGPT using according-to        to be evaluated using natural language inference.12
+prompts for PubMed (top) and the U.S. legal tax code
+(bottom). according-to prompts consistently improve     Results. The results in Table 4 with ChatGPT
+quoting on the non-Wikipedia domains while maintain-    show that according-to prompts improve end-task
+ing task performance. MedicationQA does not have an     performance and QUIP-Scores. On SARA, QUIP-
+automated evaluation metric, so only QUIP is reported.  Scores more than triple, while also minorly increas-
+
+grounding to PubMed: PubMedQA (Jin et al.,                 12As these datasets have different formats, e.g. NLI and
+2019) a reading comprehension task over PubMed          multiple choice, we change the prompt slightly to accommo-
+abstracts, MedQA (Jin et al., 2020) consisting of       date them (Appendix D). We use the test set for all datasets.
+multiple-choice questions from the US Medical Li-
+
+                                                        2295
+ing performance. In the medical domain, ground-       it to future work to generalize this metric, as our
+ing to PubMed improves performance slightly as        work focuses on using it to compare two prompts
+well, and improves QUIP scores on all datasets.       with the same Portrait.
+
+7 Discussion and Future Implications                     We also recognize the possibility of a discrep-
+                                                      ancy between the pre-training data of private mod-
+Our results strongly suggest that LLMs can be         els like ChatGPT and the Wikipedia version we use
+steered via prompting to increase the amount by       for analysis, due to limited information on their pre-
+which they quote human-authored sources in their      training. However, this might not be a significant
+training data. This finding has strong implications   concern, as although Wikipedia is not completely
+not just for our considered tasks, but also for a     static, a substantial part of the information in this
+wide array of other task spaces in which prove-       knowledge source remains consistent over a short
+nance grounding is important.                         span of years. Furthermore, our results with Chat-
+                                                      GPT are similar compared with models for which
+   We note that our according-to prompting strat-     we do have the exact pre-training data (like GPT-J).
+egy is orthogonal to other directions in LLM
+grounding, including using retrieval augmentation,    Acknowledgements
+and as according-to prompting is simple and gener-
+ally increases both grounding and task performance    This work has been supported in part by the
+we would encourage future research to try our ap-     U.S. National Science Foundation under grant No.
+proach in tandem.                                     2204926. OW and NW are also supported by the
+                                                      National Science Foundation Graduate Research
+8 Conclusion                                          Fellowship Program.
+
+Large language models struggle with hallucina-        References
+tion, or generating incorrect information, despite
+the large amount of factual pre-training data they    Asma Ben Abacha, Yassine Mrabet, Mark Sharp,
+were trained on. To help alleviate this problem, we      Travis R Goodwin, Sonya E Shooshan, and Dina
+proposed according-to prompts, asking language           Demner-Fushman. 2019. Bridging the gap between
+models to ground their output to their pre-training      consumers' medication questions and trusted an-
+corpus. To quantify the extent to which models           swers. In MedInfo, pages 25­29.
+achieve this goal, we introduced a new metric,
+QUIP-Score, that efficiently and quickly measures     Konstantinos Andriopoulos and Johan A. Pouwelse.
+the percent of the model's generation that exists        2023. Augmenting llms with knowledge: A survey
+as exact quotes in the pre-training corpus. We           on hallucination prevention.
+showed that prompting models with according-to
+prompts greatly improves the QUIP-Score while         Anja Belz and Ehud Reiter. 2006. Comparing automatic
+anti-grounding prompts reduces the QUIP-Score,           and human evaluation of nlg systems. In 11th confer-
+across a variety of domains and corpora. Our anal-       ence of the european chapter of the association for
+ysis also shows that QUIP-Score increases with           computational linguistics, pages 313­320.
+the popularity of the entity in the question and the
+model size. We hope that this work brings more        Burton H. Bloom. 1970. Space/time trade-offs in hash
+attention to the positive aspects of LLM memoriza-       coding with allowable errors. Communications of the
+tion and encourages more work into understanding         ACM, 13(7):422­426.
+LLM grounding to their pre-training data.
+                                                      Bernd Bohnet, Vinh Q Tran, Pat Verga, Roee Aharoni,
+9 Limitations                                            Daniel Andor, Livio Baldini Soares, Jacob Eisenstein,
+                                                         Kuzman Ganchev, Jonathan Herzig, Kai Hui, et al.
+Our proposed metric only accounts for exact lex-         2022. Attributed question answering: Evaluation and
+ical match and will miss other types of grounded         modeling for attributed large language models. arXiv
+statements - thus we view QUIP-Score as a lower          preprint arXiv:2212.08037.
+bound on grounding where grounding is defined
+only by quoting from source material. QUIP-Score      Sebastian Borgeaud, Arthur Mensch, Jordan Hoff-
+is also DATA PORTRAIT specific, as the amount of         mann, Trevor Cai, Eliza Rutherford, Katie Milli-
+n-grams in the portrait affect the scores. We leave      can, George Bm Van Den Driessche, Jean-Baptiste
+                                                         Lespiau, Bogdan Damoc, Aidan Clark, et al. 2022.
+                                                         Improving language models by retrieving from tril-
+                                                         lions of tokens. In International Conference on Ma-
+                                                         chine Learning (ICML).
+
+2296
+Nicholas Carlini, Daphne Ippolito, Matthew Jagielski,    Xinyang Geng, Arnav Gudibande, Hao Liu, Eric Wal-
+   Katherine Lee, Florian Tramer, and Chiyuan Zhang.        lace, Pieter Abbeel, Sergey Levine, and Dawn Song.
+   2023. Quantifying memorization across neural lan-        2023. Koala: A dialogue model for academic re-
+   guage models. In International Conference on Learn-      search. Blog post.
+   ing Representations (ICLR).
+                                                         Xiaochuang Han and Yulia Tsvetkov. 2022. ORCA:
+Nicholas Carlini, Florian Tramèr, Eric Wallace,             interpreting prompted language models via locating
+   Matthew Jagielski, Ariel Herbert-Voss, Katherine         supporting data evidence in the ocean of pretraining
+   Lee, Adam Roberts, Tom B. Brown, Dawn Xiaodong           data. arXiv preprint arXiv:2205.12600.
+   Song, Úlfar Erlingsson, Alina Oprea, and Colin Raf-
+   fel. 2020. Extracting training data from large lan-   Hangfeng He, Hongming Zhang, and Dan Roth. 2022.
+   guage models. In USENIX Security Symposium               Rethinking with retrieval: Faithful large language
+   (USENIX).                                                model inference. arXiv preprint arXiv:2301.00303.
+
+Kent K Chang, Mackenzie Cramer, Sandeep Soni, and        Nils Holzenberger, Andrew Blair-Stanek, and Benjamin
+   David Bamman. 2023. Speak, memory: An archaeol-          Van Durme. 2020. A dataset for statutory reasoning
+   ogy of books known to chatgpt/gpt-4. arXiv preprint      in tax law entailment and question answering. arXiv
+   arXiv:2305.00118.                                        preprint arXiv:2005.05257.
+
+Hyung Won Chung, Le Hou, Shayne Longpre, Bar-            Gautier Izacard, Patrick Lewis, Maria Lomeli, Lucas
+   ret Zoph, Yi Tay, William Fedus, Eric Li, Xuezhi         Hosseini, Fabio Petroni, Timo Schick, Jane Dwivedi-
+   Wang, Mostafa Dehghani, Siddhartha Brahma, et al.        Yu, Armand Joulin, Sebastian Riedel, and Edouard
+   2022. Scaling instruction-finetuned language models.     Grave. 2022. Atlas: Few-shot learning with retrieval
+   arXiv preprint arXiv:2210.11416.                         augmented language models. arXiv preprint arXiv.
+
+Nicola De Cao, Wilker Aziz, and Ivan Titov. 2021. Edit-  Ziwei Ji, Nayeon Lee, Rita Frieske, Tiezheng Yu,
+   ing factual knowledge in language models. In Pro-        Dan Su, Yan Xu, Etsuko Ishii, Yejin Bang, Andrea
+   ceedings of the 2021 Conference on Empirical Meth-       Madotto, and Pascale Fung. 2022. Survey of halluci-
+   ods in Natural Language Processing, pages 6491­          nation in natural language generation. ACM Comput-
+   6506, Online and Punta Cana, Dominican Republic.         ing Surveys.
+   Association for Computational Linguistics.
+                                                         Di Jin, Eileen Pan, Nassim Oufattole, Wei-Hung Weng,
+Jesse Dodge, Maarten Sap, Ana Marasovic, William            Hanyi Fang, and Peter Szolovits. 2020. What dis-
+   Agnew, Gabriel Ilharco, Dirk Groeneveld, and Matt        ease does this patient have? a large-scale open do-
+   Gardner. 2021. Documenting large webtext corpora:        main question answering dataset from medical exams.
+   A case study on the colossal clean crawled corpus.       arXiv preprint arXiv:2009.13081.
+   In Conference on Empirical Methods in Natural Lan-
+   guage Processing (EMNLP).                             Qiao Jin, Bhuwan Dhingra, Zhengping Liu, William
+                                                            Cohen, and Xinghua Lu. 2019. Pubmedqa: A dataset
+Angela Fan, Yacine Jernite, Ethan Perez, David Grang-       for biomedical research question answering. In Con-
+   ier, Jason Weston, and Michael Auli. 2019. ELI5:         ference on Empirical Methods in Natural Language
+   Long Form Question Answering. In Annual Meet-            Processing (EMNLP).
+   ing of the Association for Computational Linguistics
+   (ACL).                                                Mandar Joshi, Eunsol Choi, Daniel S. Weld, and Luke
+                                                            Zettlemoyer. 2017. TriviaQA: A large scale distantly
+Yukun Feng, Patrick Xia, Benjamin Van Durme, and            supervised challenge dataset for reading comprehen-
+   João Sedoc. 2022. Automatic document selection           sion. In Annual Meeting of the Association for Com-
+   for efficient encoder pretraining. In Proceedings of     putational Linguistics (ACL).
+   the 2022 Conference on Empirical Methods in Nat-
+   ural Language Processing, pages 9522­9530, Abu        Nikhil Kandpal, Haikang Deng, Adam Roberts, Eric
+   Dhabi, United Arab Emirates. Association for Com-        Wallace, and Colin Raffel. 2022. Large language
+   putational Linguistics.                                  models struggle to learn long-tail knowledge. arXiv
+                                                            preprint arXiv:2211.08411.
+
+Deep Ganguli, Amanda Askell, Nicholas Schiefer,          Tom Kwiatkowski, Jennimaria Palomaki, Olivia Red-
+   Thomas Liao, Kamile Lukosiu¯te, Anna Chen, Anna          field, Michael Collins, Ankur Parikh, Chris Alberti,
+   Goldie, Azalia Mirhoseini, Catherine Olsson, Danny       Danielle Epstein, Illia Polosukhin, Jacob Devlin, Ken-
+   Hernandez, et al. 2023. The capacity for moral self-     ton Lee, et al. 2019. Natural Questions: A benchmark
+   correction in large language models. arXiv preprint      for question answering research. Transactions of the
+   arXiv:2302.07459.                                        Association for Computational Linguistics (TACL),
+                                                            7:453­466.
+Leo Gao, Stella Biderman, Sid Black, Laurence Gold-
+   ing, Travis Hoppe, Charles Foster, Jason Phang,       Angeliki Lazaridou, Elena Gribovskaya, Wojciech
+   Horace He, Anish Thite, Noa Nabeshima, Shawn             Stokowiec, and Nikolai Grigorev. 2022. Internet-
+   Presser, and Connor Leahy. 2020. The Pile: An            augmented language models through few-shot
+   800gb dataset of diverse text for language modeling.     prompting for open-domain question answering.
+   arXiv preprint arXiv:2101.00027.                         arXiv preprint arXiv:2203.05115.
+
+2297
+Katherine Lee, Daphne Ippolito, Andrew Nystrom,             Swaroop Mishra, Daniel Khashabi, Chitta Baral, Yejin
+   Chiyuan Zhang, Douglas Eck, Chris Callison-Burch,           Choi, and Hannaneh Hajishirzi. 2022a. Reframing
+   and Nicholas Carlini. 2022a. Deduplicating training         instructional prompts to gptk's language. In Annual
+   data makes language models better. In Annual Meet-          Meeting of the Association for Computational Lin-
+   ing of the Association for Computational Linguistics        guistics (ACL) - Findings.
+   (ACL).
+                                                            Swaroop Mishra, Daniel Khashabi, Chitta Baral, and
+Nayeon Lee, Wei Ping, Peng Xu, Mostofa Patwary,                Hannaneh Hajishirzi. 2022b. Cross-Task Generaliza-
+   Pascale N Fung, Mohammad Shoeybi, and Bryan                 tion via Natural Language Crowdsourcing Instruc-
+   Catanzaro. 2022b. Factuality enhanced language              tions. In Annual Meeting of the Association for Com-
+   models for open-ended text generation. Advances in          putational Linguistics (ACL).
+   Neural Information Processing Systems (NeurIPS).
+                                                            Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Car-
+Brian Lester, Rami Al-Rfou, and Noah Constant. 2021.           roll L Wainwright, Pamela Mishkin, Chong Zhang,
+   The power of scale for parameter-efficient prompt           Sandhini Agarwal, Katarina Slama, Alex Ray, et al.
+   tuning. In Conference on Empirical Methods in Nat-          2022. Training Language Models to Follow Instruc-
+   ural Language Processing (EMNLP).                           tions with Human Feedback. In Advances in Neural
+                                                               Information Processing Systems (NeurIPS).
+Sharon Levy, Michael Saxon, and William Yang Wang.
+   2021. Investigating memorization of conspiracy theo-     Sung Min Park, Kristian Georgiev, Andrew Ilyas, Guil-
+   ries in text generation. In Findings of the Association     laume Leclerc, and Aleksander Madry. 2023. TRAK:
+   for Computational Linguistics: ACL-IJCNLP 2021,             Attributing Model Behavior at Scale. arXiv preprint
+   pages 4718­4729, Online. Association for Computa-           arXiv:2303.14186.
+   tional Linguistics.
+                                                            Fabio Petroni, Aleksandra Piktus, Angela Fan, Patrick
+Shaobo Li, Xiaoguang Li, Lifeng Shang, Zhenhua Dong,           Lewis, Majid Yazdani, Nicola De Cao, James Thorne,
+   Chengjie Sun, Bingquan Liu, Zhenzhou Ji, Xin Jiang,         Yacine Jernite, Vassilis Plachouras, Tim Rocktäschel,
+   and Qun Liu. 2022. How pre-trained language mod-            and Sebastian Riedel. 2021a. KILT: A benchmark for
+   els capture factual knowledge? a causal-inspired anal-      knowledge intensive language tasks. In Conference
+   ysis. In Annual Meeting of the Association for Com-         of the North American Chapter of the Association for
+   putational Linguistics (ACL).                               Computational Linguistics (NAACL).
+
+Nelson F Liu, Tianyi Zhang, and Percy Liang. 2023.          Fabio Petroni, Aleksandra Piktus, Angela Fan, Patrick
+   Evaluating verifiability in generative search engines.      Lewis, Majid Yazdani, Nicola De Cao, James Thorne,
+   arXiv preprint arXiv:2304.09848.                            Yacine Jernite, Vladimir Karpukhin, Jean Maillard,
+                                                               Vassilis Plachouras, Tim Rocktäschel, and Sebastian
+Alexandra Sasha Luccioni and Joseph D Viviano. 2021.           Riedel. 2021b. KILT: a benchmark for knowledge
+   What's in the box? a preliminary analysis of undesir-       intensive language tasks. In Proceedings of the 2021
+   able content in the common crawl corpus. In Annual          Conference of the North American Chapter of the
+   Meeting of the Association for Computational Lin-           Association for Computational Linguistics: Human
+   guistics (ACL).                                             Language Technologies, pages 2523­2544, Online.
+                                                               Association for Computational Linguistics.
+Sean MacAvaney, Sergey Feldman, Nazli Goharian,
+   Doug Downey, and Arman Cohan. 2022. Abnirml:             Maja Popovic´. 2015. chrF: character n-gram f-score for
+   analyzing the behavior of neural ir models. Transac-        automatic mt evaluation. In Conference on Machine
+   tions of the Association for Computational Linguis-         Translation (WMT).
+   tics, 10:224­239.
+                                                            Maja Popovic´. 2017. chrF++: words helping character
+Alex Mallen, Akari Asai, Victor Zhong, Rajarshi Das,           n-grams. In Conference on Machine Translation
+   Hannaneh Hajishirzi, and Daniel Khashabi. 2023.             (WMT).
+   When not to trust language models: Investigating
+   effectiveness and limitations of parametric and non-     Matt Post. 2018. A call for clarity in reporting BLEU
+   parametric memories. In Annual Meeting of the As-           scores. In Proceedings of the Third Conference on
+   sociation for Computational Linguistics (ACL).              Machine Translation: Research Papers, pages 186­
+                                                               191, Brussels, Belgium. Association for Computa-
+Marc Marone and Benjamin Van Durme. 2023. Data                 tional Linguistics.
+   portraits: Recording foundation model training data.
+   arXiv preprint arXiv:2303.03919.                         Colin Raffel, Noam Shazeer, Adam Roberts, Katherine
+                                                               Lee, Sharan Narang, Michael Matena, Yanqi Zhou,
+Jacob Menick, Maja Trebacz, Vladimir Mikulik,                  Wei Li, and Peter J Liu. 2020. Exploring the lim-
+   John Aslanides, Francis Song, Martin Chadwick,              its of transfer learning with a unified text-to-text
+   Mia Glaese, Susannah Young, Lucy Campbell-                  transformer. Journal of Machine Learning Research
+   Gillingham, Geoffrey Irving, et al. 2022. Teaching          (JMLR).
+   language models to support answers with verified
+   quotes. arXiv preprint arXiv:2203.11147.
+
+2298
+Hannah Rashkin, Vitaly Nikolaev, Matthew Lamm,            Ben Wang and Aran Komatsuzaki. 2021. GPT-J-6B:
+   Lora Aroyo, Michael Collins, Dipanjan Das, Slav           A 6 Billion Parameter Autoregressive Language
+   Petrov, Gaurav Singh Tomar, Iulia Turc, and David         Model. https://github.com/kingoflolz/
+   Reitter. 2021. Measuring attribution in natu-             mesh-transformer-jax.
+   ral language generation models. arXiv preprint
+   arXiv:2112.12870.                                      Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc
+                                                             Le, Ed Chi, and Denny Zhou. 2022a. Rationale-
+Ehud Reiter and Anja Belz. 2009. An investigation into       augmented ensembles in language models. arXiv
+   the validity of some metrics for automatically evalu-     preprint arXiv:2207.00747.
+   ating natural language generation systems. Computa-
+   tional Linguistics, 35(4):529­558.                     Yizhong Wang, Yeganeh Kordi, Swaroop Mishra, Alisa
+                                                             Liu, Noah A. Smith, Daniel Khashabi, and Hannaneh
+Kurt Shuster, Spencer Poff, Moya Chen, Douwe Kiela,          Hajishirzi. 2023. Self-Instruct: Aligning Language
+   and Jason Weston. 2021. Retrieval augmentation            Model with Self Generated Instructions. In Annual
+   reduces hallucination in conversation. In Findings-       Meeting of the Association for Computational Lin-
+   Conference on Empirical Methods in Natural Lan-           guistics (ACL).
+   guage Processing (EMNLP).
+                                                          Yizhong Wang, Swaroop Mishra, Pegah Alipoor-
+Karan Singhal, Shekoofeh Azizi, Tao Tu, S Sara Mah-          molabashi, Yeganeh Kordi, Amirreza Mirzaei,
+   davi, Jason Wei, Hyung Won Chung, Nathan Scales,          Anjana Arunkumar, Arjun Ashok, Arut Selvan
+   Ajay Tanwani, Heather Cole-Lewis, Stephen Pfohl,          Dhanasekaran, Atharva Naik, David Stap, Eshaan
+   et al. 2022. Large language models encode clinical        Pathak, Giannis Karamanolakis, Haizhi Gary Lai, Is-
+   knowledge. arXiv preprint arXiv:2212.13138.               han Purohit, Ishani Mondal, Jacob Anderson, Kirby
+                                                             Kuznia, Krima Doshi, Maitreya Patel, Kuntal Ku-
+Aarohi Srivastava, Abhinav Rastogi, Abhishek Rao,            mar Pal, Mehrad Moradshahi, Mihir Parmar, Mi-
+   Abu Awal Md Shoeb, Abubakar Abid, Adam Fisch,             rali Purohit, Neeraj Varshney, Phani Rohitha Kaza,
+   Adam R Brown, Adam Santoro, Aditya Gupta, Adrià           Pulkit Verma, Ravsehaj Singh Puri, Rushang Karia,
+   Garriga-Alonso, et al. 2023. Beyond the imitation         Shailaja Keyur Sampat, Savan Doshi, Siddhartha
+   game: Quantifying and extrapolating the capabili-         Mishra, Sujan Reddy, Sumanta Patro, Tanay Dixit,
+   ties of language models. Transactions on Machine          Xudong Shen, Chitta Baral, Yejin Choi, Noah A.
+   Learning Research (TMLR).                                 Smith, Hannaneh Hajishirzi, and Daniel Khashabi.
+                                                             2022b. Super-NaturalInstructions: Generalization
+Dan Su, Xiaoguang Li, Jindi Zhang, Lifeng Shang, Xin         via Declarative Instructions on 1600+ Tasks. In Con-
+   Jiang, Qun Liu, and Pascale Fung. 2022. Read before       ference on Empirical Methods in Natural Language
+   generate! faithful long form question answering with      Processing (EMNLP).
+   machine reading. In Findings - Annual Meeting of the
+   Association for Computational Linguistics (ACL).       Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten
+                                                             Bosma, Ed Chi, Quoc Le, and Denny Zhou. 2022.
+Weiwei Sun, Zhengliang Shi, Shen Gao, Pengjie Ren,           Chain of thought prompting elicits reasoning in large
+   Maarten de Rijke, and Zhaochun Ren. 2023. Con-            language models. arXiv preprint arXiv:2201.11903.
+   trastive learning reduces hallucination in conver-
+   sations. In Conference on Artificial Intelligence      Orion Weller, Aleem Khan, Nathaniel Weir, Dawn
+   (AAAI).                                                   Lawrie, and Benjamin Van Durme. 2022. Defending
+                                                             against poisoning attacks in open-domain question
+Zhiqing Sun, Xuezhi Wang, Yi Tay, Yiming Yang, and           answering. arXiv e-prints, pages arXiv­2212.
+   Denny Zhou. 2022. Recitation-augmented language
+   models. arXiv preprint arXiv:2210.01296.               Orion Weller, Kyle Lo, David Wadden, Dawn Lawrie,
+                                                             Benjamin Van Durme, Arman Cohan, and Luca Sol-
+Kushal Tirumala, Aram Markosyan, Luke Zettlemoyer,           daini. 2023. When do generative query and docu-
+   and Armen Aghajanyan. 2022. Memorization with-            ment expansions fail? a comprehensive study across
+   out overfitting: Analyzing the training dynamics of       methods, retrievers, and datasets. arXiv preprint
+   large language models. Advances in Neural Informa-        arXiv:2309.08541.
+   tion Processing Systems, 35:38274­38290.
+                                                          Zhilin Yang, Peng Qi, Saizheng Zhang, Yoshua Ben-
+Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier        gio, William W. Cohen, Ruslan Salakhutdinov, and
+   Martinet, Marie-Anne Lachaux, Timothée Lacroix,           Christopher D. Manning. 2018. HotpotQA: A dataset
+   Baptiste Rozière, Naman Goyal, Eric Hambro,               for diverse, explainable multi-hop question answer-
+   Faisal Azhar, et al. 2023. LLaMA: Open and ef-            ing. In Conference on Empirical Methods in Natural
+   ficient foundation language models. arXiv preprint        Language Processing (EMNLP).
+   arXiv:2302.13971.
+                                                          A Dataset Details
+Alexander Wan, Eric Wallace, Sheng Shen, and Dan
+   Klein. 2023. Poisoning language models during in-      ELI5, or "Explain Like I'm 5" (Fan et al., 2019) is
+   struction tuning. arXiv preprint arXiv:2305.00944.     a long-form QA dataset composed of user questions
+
+2299
+and answers from the subreddit r/ELI5. We use the         For models that don't respond well to the above
+KILT version (Petroni et al., 2021a) dev set of ELI5   prompt (or similar prompts aimed at generating
+since it is a "grounded" subset of the original (with  both answer and explanation from one generation),
+the non-grounded questions filtered out), allowing     we use the following prompts in a two step manner:
+a more suitable evaluation of our research question.
+                                                             Output the answer only. {Insert Ques-
+Natural Questions (NQ) (Kwiatkowski et al.,                  tion}\nAnswer string only:
+2019) is a short-form (< 5 word answer) QA dataset
+gathered from real-world Google searches. To com-            Question: {Insert Question}\nAnswer:
+pare with previous work in prompting on NQ, we              {Insert Previous Output}\n\n\nGive a de-
+evaluate on the full development set.                        tailed explanation for why this is true.
+                                                            {Insert Grounding Prompt Here} \nEx-
+TriviaQA (TQA) (Joshi et al., 2017) was collected            planation:
+by scraping question and answer pairs from trivia
+websites, and then matching the answers (short-        Prompt for ELI5 for smaller models. For T5-
+form) to Wikipedia passages. Following previous        v1.1-Adapt and GPT-J-Instruct evaluated on ELI5,
+work, we use the filtered dev set (7k instances).      we append "Answer:" following the end of both
+                                                       the normal null and grounding prompts because
+HotpotQA (Yang et al., 2018) is a multi-step short-    otherwise the model outputs very short (< 5 words)
+form question-answering dataset that requires two-     or nonsensical responses. With this addition the
+step reasoning to come to the correct answer. It       model produces normal fluent text.
+was gathered from crowdsourcing questions and
+answers from Amazon Mechanical Turk using two-         C Conventional N-Gram Metrics
+hop links on Wikipedia. We use the full dev set.
+                                                       Toolkits such as sacrebleu implement multiple n-
+B All Results                                          gram metrics (Post, 2018). However, these tend to
+                                                       use conventional data structures such as python sets
+B.1 Sources for SOTA Performance in Table 3            and dictionaries. These are not suitable for measur-
+                                                       ing n-gram metrics against very large references
+SOTA zero-shot results are from LLaMA 33B and          (i.e. the entirety of Wikipedia). In Table 6 we com-
+65B (Touvron et al., 2023), PaLM 540B (Wang            pare the sizes of several datastructures on a sample
+et al., 2022a), and BART (Su et al., 2022) respec-     of  100M n-grams (approximately 0.07% of the
+tively. For retrieval-augmented SOTA, we show          25 char-grams in Wikipedia). The typical CPython
+Izacard et al. (2022) for NQ, TriviaQA and Hot-        set or dictionary implementation uses a hashtable
+potQA, and Su et al. (2022) for ELI5.                  of pointers to data elements (i.e. character n-grams
+                                                       or strings). It requires substantial memory to store
+B.2 Additional Models for According-To vs              both the hashtable backing array and the string data
+       Null                                            elements (11,107 MiB). This could be optimized
+                                                       by storing only the table and not the data elements,
+We show all results for the models in Table 3 that     introducing false positives for hash collisions (note
+did not fit due to space.                              that this is similar to a Bloom filter with k = 1
+                                                       hash functions). One could also store only pointers
+Prompts for Short-Form QA. For short-form              (references) into the original text rather than copies
+QA datasets, to help the models generate both the      of the string. These options are still larger than an
+answer and the explanation in a parseable format,      optimal Bloom filter which uses around 14 bits per
+we append the following prompt before the ques-        element for our chosen parameters. On the sam-
+tion:                                                  pled data, this consumes only 163 MiB of memory.
+                                                       Extrapolating these storage costs indicates that us-
+      You are a highly intelligent & complex           ing a naive, un-optimized python set or dictionary
+      question-answer generative model. You            would consume around 1.5TB of memory to store
+      take a question as an input and answer           all n-grams.
+      it by imitating the way a human gives
+      short answers with a corresponding ex-              Note that these measurements are only for a sin-
+      planation. You answer should be short -          gle n-gram width. If comparing QUIP-Score to a
+      only a few words.\n\nYour output format
+      should be the answer, then a semicolon,
+      then the explanation.\n
+
+2300
+Model              Prompt         TQA                        NQ     Hotpot  ELI5
+                               QUIP EM QUIP EM QUIP F1 QUIP R-L
+
+Text-Davinci-003 Null          35.9 68.2 38.7 24.3 34.6 29.2 27.7 23.7
+Text-Davinci-003 Grounded 41.2 71.8 44.4 29.3 39.6 31.3 32.2 22.8
+
+GPT-4              Null        -                     -    -      -  -  - 21.0 21.5
+GPT-4              Grounded -                        -    -      -  -  - 24.7 21.0
+
+GPT-J-Instruct     Null        28.1 2.2 28.2 0.9 29.2 7.0 22.8 19.9
+GPT-J-Instruct     Grounded 31.5 2.1 32.5 1.0 33.2 7.0 27.0 19.4
+
+Koala              Null        34.0 17.2 36.1 6.3 33.9 13.2 24.1 19.9
+Koala              Grounded 35.8 17.2 38.4 6.3 35.6 13.2 32.6 22.8
+
+FLAN-T5 XXL Null               18.6 31.5 23.5 13.3 25.8 23.6 14.9 12.4
+FLAN-T5 XXL Grounded 26.6 31.5 33.2 13.3 31.1 23.6 30.6 18.7
+
+Table 5: Full results for other models. Note that the low EM scores for GPT-J and Koala are due to the model failing
+to output short answers zero shot (e.g. "the answer is..." instead of outputting the answer. Both used the same
+instruction tuning dataset.). GPT-4 was only run on ELI5 due to cost.
+
+metric that stores n-grams of multiple widths, this           Question}\n\nFill in the follow-
+could further increase memory usage.                          ing:\nANSWER HERE; EXPLANA-
+                                                              TION HERE
+Structure          Size (MiB)
+                                                        PubMed. We use the same prompt as usually
+set                11107                                specified for Short Form QA above, except using
+set (no elements)   4096                                "\n\nAccording to PubMed," as the ground-
+Bloom filter D.P      163                               ing prompt.
+
+Table 6: Sizes of structures holding 100M n-grams.      MedQA. We use the same Short Form answer
+                                                        beginning prompt and the following changes
+D Prompts for Non-Wikipedia Datasets                    to the grounding prompt, "\n\nAccording
+                                                        to PubMed the multiple choice answer
+We use the same style of prompt as in the Wikipedia     is:\n" as without the multiple choice specifier it
+sections, but modify them to adapt to the format of     would fail to correctly predict the multiple choice
+the tasks. For example, on the SARA dataset Chat-       answer.
+GPT would predict entailment for every question
+unless additional wording was given to be more          MedicationQA. We only append a grounding
+balanced in its prediction.                             prompt and no prompt before the question (as it
+                                                        is not short form). We use the same grounding
+SARA.                                                   prompt as in PubMedQA.
+
+      You are a highly intelligent & complex            E Computational Resources
+      legal statutory entailment system that
+      checks whether a particular judgement             We use model APIs for experiemnts with OpenAI
+      holds for a particular case in the U.S.           and use 1 A100 GPU for experiments with local
+      legal tax code. You take a the ruling of a        models. Each experiment took less than an hour
+      legal situation and respond with a reply          for each dataset approximately.
+      of contradiction or entailment, along
+      with a corresponding two paragraph
+      explanation. You answer should be short
+     - only contradiction or entailment. Be
+      sure to verify that the entailment is 100%
+      correct, otherwise choose contradic-
+      tion.\n\nYour output format should be
+      the answer, then a semicolon, then the
+      verbose explanation.\n\nPremise:{Insert
+      Text Background}\nHypothesis{Insert
+
+                                                    2301
+

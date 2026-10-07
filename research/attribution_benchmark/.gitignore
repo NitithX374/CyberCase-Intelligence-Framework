@@ -1,0 +1,4 @@
+data/*.jsonl
+runs/*/scores_*.jsonl
+runs/*/predictions_*.jsonl
+runs/*/run.log

@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberCase Intelligence Framework — Backend Architecture & NLI Grounding Verification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: rgba(18, 26, 43, 0.75);
+      --bg-card-hover: rgba(26, 38, 64, 0.85);
+      --border-subtle: rgba(79, 131, 240, 0.18);
+      --border-glow: rgba(0, 242, 254, 0.4);
+      --cyan-bright: #00f2fe;
+      --cyan-glow: rgba(0, 242, 254, 0.15);
+      --blue-accent: #3b82f6;
+      --emerald-accent: #10b981;
+      --amber-accent: #f59e0b;
+      --rose-accent: #f43f5e;
+      --purple-accent: #a855f7;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Fira Code', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+    }
+
+    /* Top Progress Bar */
+    .progress-bar-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 1000;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--blue-accent), var(--cyan-bright));
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 10px var(--cyan-bright);
+    }
+
+    /* Deck Layout */
+    .deck-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slide {
+      position: absolute;
+      width: 90vw;
+      max-width: 1400px;
+      height: 86vh;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 48px 56px;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.97) translateY(15px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1) translateY(0);
+      z-index: 10;
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      padding-bottom: 18px;
+    }
+
+    .slide-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .badge-cyan { background: rgba(0, 242, 254, 0.12); color: var(--cyan-bright); border: 1px solid rgba(0, 242, 254, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.12); color: var(--purple-accent); border: 1px solid rgba(168, 85, 247, 0.3); }
+    .badge-amber { background: rgba(245, 158, 11, 0.12); color: var(--amber-accent); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-emerald { background: rgba(16, 185, 129, 0.12); color: var(--emerald-accent); border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    .slide-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .slide-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-weight: 400;
+    }
+
+    .slide-number {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Slide Content & Grid System */
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      height: 100%;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    /* Cards */
+    .card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+    .card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(0, 242, 254, 0.25);
+    }
+    .card-highlight {
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.06) 0%, rgba(59, 130, 246, 0.04) 100%);
+      border: 1px solid rgba(0, 242, 254, 0.35);
+      box-shadow: 0 0 25px rgba(0, 242, 254, 0.08);
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Stat Callout */
+    .stat-box {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      border-left: 3px solid var(--cyan-bright);
+    }
+    .stat-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #fff;
+      line-height: 1.1;
+    }
+    .stat-label {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+
+    /* Tables */
+    .tech-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .tech-table th {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      font-weight: 700;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .tech-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+    .tech-table tr:last-child td {
+      border-bottom: none;
+    }
+    .tech-table tr.highlight-row {
+      background: rgba(0, 242, 254, 0.08);
+    }
+    .tech-table tr.highlight-row td {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Diagram Canvas */
+    .flow-diagram {
+      width: 100%;
+      background: rgba(10, 15, 26, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Bullet List */
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+    .feature-icon {
+      flex-shrink: 0;
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      color: var(--cyan-bright);
+    }
+
+    /* Bottom Navigation Bar */
+    .nav-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(18, 26, 43, 0.85);
+      backdrop-filter: blur(15px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 40px;
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .nav-counter {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    /* Speaker Notes Modal */
+    .notes-drawer {
+      position: fixed;
+      bottom: 75px;
+      right: 25px;
+      width: 440px;
+      max-height: 50vh;
+      background: rgba(13, 20, 34, 0.95);
+      backdrop-filter: blur(25px);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      z-index: 1500;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .notes-drawer.open {
+      display: flex;
+    }
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 10px;
+    }
+    .notes-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--cyan-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .notes-body {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .notes-body p { margin-bottom: 8px; }
+    .notes-body strong { color: #fff; }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Keybind helper */
+    .key-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-main);
+      margin: 0 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="deck-container">
+
+    <!-- ==========================================
+         SLIDE 1: Title & Executive Hook
+         ========================================== -->
+    <div class="slide active" id="slide-1" data-notes="ยินดีต้อนรับทุกคนครับ สไลด์ชุดนี้จะพาเจาะลึกสถาปัตยกรรม Backend ทั้งระบบของ CyberCase Intelligence Framework โดยไฮไลต์สำคัญอยู่ที่ 'NLI Grounding Verification Engine' ซึ่งเป็น Trust Boundary ด่านสำคัญที่พิสูจน์แล้วด้วยการทดลองทางวิทยาศาสตร์จริง ไม่ใช่แค่ Prompting หรูๆ">
+      <div class="slide-header" style="border: none; margin-bottom: 40px;">
+        <span class="slide-badge badge-cyan">CyberCase Intelligence Framework</span>
+        <div class="slide-number">01 / 13</div>
+      </div>
+      <div class="slide-content" style="justify-content: center; align-items: flex-start; max-width: 950px; margin: auto 0;">
+        <div style="font-size: 3.5rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 20px;">
+          Evidence-Grounded Threat Intelligence
+          <span style="background: linear-gradient(90deg, #00f2fe, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">
+            Robust Backend & Frozen NLI Verification
+          </span>
+        </div>
+        <p style="font-size: 1.25rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 36px;">
+          สถาปัตยกรรมระบบวิเคราะห์คดีภัยคุกคามทางไซเบอร์ที่เชื่อถือได้จริง — ออกแบบด้วยหลักการ <strong>"Read Short. Think Free. Write Short."</strong> ผสาน Trust Boundary ด้วยโมเดล Natural Language Inference (NLI) ระดับประโยคที่ผ่านการทดสอบแบบ Controlled Ablation อย่างเข้มงวด
+        </p>
+
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <div class="stat-box" style="padding: 12px 24px;">
+            <div class="stat-val" style="color: var(--cyan-bright);">66.64%</div>
+            <div class="stat-label">WiCE Test Accuracy</div>
+          </div>
+          <div class="stat-box" style="padding: 12px 24px; border-left-color: var(--emerald-accent);">
+            <div class="stat-val" style="color: var(--emerald-accent);">0.6185</div>
+            <div class="stat-label">Macro-F1 (Champion B1-LR)</div>
+          </div>
+          <div class="stat-box" style="padding: 12px 24px; border-left-color: var(--purple-accent);">
+            <div class="stat-val" style="color: var(--purple-accent);">0%</div>
+            <div class="stat-label">LLM Hallucination Leaks</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 2: The Core Challenge
+         ========================================== -->
+    <div class="slide" id="slide-2" data-notes="ปัญหาใหญ่ของ AI ในงาน Cyber Threat Intel คือ LLMs เกิดอาการ Halucination ง่ายมาก ถ้าระบบสรุปข้อความโดยไม่มีการ Binding หลักฐานระดับ Unit หรือขาด Gate ตรวจสอบ ความเสียหายทางคดีจะรุนแรงมาก CyberCase จึงออกแบบมาเพื่อลบช่องโหว่นี้โดยเฉพาะ">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-rose">Problem & Motivation</span>
+          <h2 class="slide-title">The Grounding Dilemma in Threat Intel</h2>
+          <p class="slide-subtitle">ทำไม Generative LLM และ Vanilla RAG ถึงไม่เพียงพอสำหรับการสืบสวนคดีไซเบอร์</p>
+        </div>
+        <div class="slide-number">02 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-3">
+          <div class="card" style="border-top: 3px solid var(--rose-accent);">
+            <div class="card-title">
+              <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              Hallucinated Attribution
+            </div>
+            <div class="card-desc">
+              LLMs มักจะ "จินตนาการ" ผู้ก่อเหตุ (Threat Actors) หรือระบุเทคนิค MITRE ATT&CK ที่เกินจริงจากหลักฐานในเอกสารคดีดิบ
+            </div>
+          </div>
+
+          <div class="card" style="border-top: 3px solid var(--amber-accent);">
+            <div class="card-title">
+              <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Attention Dilution
+            </div>
+            <div class="card-desc">
+              เมื่อป้อนเอกสารหลักฐานขนาดยาว (Full Premise) เข้าโมเดล สมาธิของ Attention Mechanism จะเจือจาง ทำให้มองข้ามข้อเท็จจริงสำคัญ หรือปฏิเสธหลักฐานที่ถูกต้อง
+            </div>
+          </div>
+
+          <div class="card" style="border-top: 3px solid var(--purple-accent);">
+            <div class="card-title">
+              <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              Missing Trust Boundary
+            </div>
+            <div class="card-desc">
+              ระบบส่วนใหญ่ไม่มีด่านตรวจสอบทางคณิตศาสตร์ที่โปร่งใส การสรุปข้อความ (Judgement) รับข้อมูลดิบไปสรุปทันทีโดยไม่มีการรับรองความถูกต้อง
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-highlight" style="margin-top: 10px;">
+          <div class="card-title" style="color: var(--cyan-bright);">
+            🛡️ The CyberCase Solution: Deterministic Evidence-Unit Grounding
+          </div>
+          <div class="card-desc" style="color: var(--text-main); font-size: 1rem;">
+            แบ่งเอกสารออกเป็น <strong>Evidence Units (U001, U002...)</strong> ที่มี text hash และ char-offset แน่นอน จากนั้นบังคับให้โมเดลสร้าง <strong>Canonical Claims</strong> ผูกกับ Unit IDs และส่งผ่าน <strong>NLI Verification Engine</strong> ก่อนที่ผลการวิเคราะห์จะถูกส่งต่อไปยังขั้นตอน Judgement
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 3: System Topology & Service Architecture
+         ========================================== -->
+    <div class="slide" id="slide-3" data-notes="ระบบประกอบด้วย 4 Microservices แยกอิสระตามความรับผิดชอบ และหัวใจสำคัญคือ Core Rule: 'Read short. Think free. Write short.' ซึ่งทำให้ไม่มี DB Lock ขวางกั้นระหว่างที่โมเดลกำลังประมวลผลนานเป็นนาที">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-cyan">System Architecture</span>
+          <h2 class="slide-title">4-Service Topology & The Core Backend Rule</h2>
+          <p class="slide-subtitle">การแยกหน้าที่ชัดเจนและการจัดการ Concurrency ระดับ Production</p>
+        </div>
+        <div class="slide-number">03 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="color: var(--cyan-bright);">1. Frontend (Next.js 15 + React 19)</div>
+              <div class="card-desc">Port 3000 — Strict TypeScript, TanStack Query สำหรับ Server State, Responsive Timeline & Interactive Claim Inspection</div>
+            </div>
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="color: #60a5fa;">2. Backend API (FastAPI + PostgreSQL)</div>
+              <div class="card-desc">Port 8000 — Authentication, Case State Machine, Document Parsing, Canonical Reading, NLI Verification & PDF Snapshot Reports</div>
+            </div>
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="color: var(--purple-accent);">3. Claim-View Runtime (llama.cpp)</div>
+              <div class="card-desc">Port 8090 — Pinned NuExtract3 รันบน CPU ดึง Parties, Timeline, Impact จาก Checked Claims สำหรับการแสดงผล (ไม่มีสิทธิ์แก้ Judgement)</div>
+            </div>
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="color: var(--emerald-accent);">4. GraphRAG Service (FastAPI)</div>
+              <div class="card-desc">Port 8001 — Neo4j STIX Graph + Qdrant Vector, BGE-M3 + Reranker เสริมบริบท MITRE ATT&CK แบบมีเงื่อนไข (Conditional Gate)</div>
+            </div>
+          </div>
+
+          <div class="card card-highlight">
+            <div class="card-title" style="font-size: 1.3rem; color: #fff;">
+              ⚡ The Golden Backend Rule:
+              <span style="color: var(--cyan-bright);">"Read Short. Think Free. Write Short."</span>
+            </div>
+            <div class="card-desc" style="font-size: 0.95rem; line-height: 1.6;">
+              เนื่องจากงาน AI Analysis ใช้เวลาประมวลผลนานหลายสิบวินาทีถึงหลายนาที การถือ Database Transaction ค้างไว้จะทำให้ Database Connection เต็มและ Lock ตารางทันที
+            </div>
+            <div style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 14px; font-family: var(--font-mono); font-size: 0.85rem; color: #38bdf8;">
+              <span style="color: var(--text-dim);"># 1. Read Short (เสี้ยววินาที)</span><br>
+              started = await read_case_for_analysis(...)<br><br>
+              <span style="color: var(--text-dim);"># 2. Think Free (โมเดลคิดอย่างอิสระ ไม่มี DB connection)</span><br>
+              outcome = await think(pipeline, started)<br><br>
+              <span style="color: var(--text-dim);"># 3. Write Short (บันทึกผลเสร็จปิดทันที)</span><br>
+              step = await store_outcome(...)
+            </div>
+            <div class="card-desc" style="font-size: 0.88rem; color: var(--text-dim);">
+              ผลลัพธ์: Pipeline ภายในเป็น Pure Stateless Functions — ทดสอบง่าย, รัน Benchmark แยกได้ และไม่มีปัญหา Deadlock
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 4: End-to-End Pipeline Workflow
+         ========================================== -->
+    <div class="slide" id="slide-4" data-notes="นี่คือ Flow การทำงานจริงของ advance_case เริ่มจาก Gap Assessment ถามข้อมูลเพิ่มถ้าไม่พอ เข้าสู่ Reading สกัด Claim ผ่าน NLI Grounding Gate และส่งต่อไป Judgement ทุกประโยคสรุปจะจบด้วย Claim IDs เสมอ">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-emerald">Execution Pipeline</span>
+          <h2 class="slide-title">End-to-End Analysis Advance Flow</h2>
+          <p class="slide-subtitle">7 ลำดับขั้นตอนการเปลี่ยนเอกสารคดีดิบให้กลายเป็นรายงานที่พิสูจน์ได้ทุกประโยค</p>
+        </div>
+        <div class="slide-number">04 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="flow-diagram">
+          <div style="display: flex; justify-content: space-between; align-items: center; position: relative;">
+            
+            <div class="stat-box" style="width: 13%; border-left-color: var(--blue-accent);">
+              <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700;">STAGE 1</span>
+              <strong style="color: #fff; font-size: 0.88rem; margin-top: 4px;">Gap Assessment</strong>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">ประเมินช่องโหว่ก่อนเริ่มงาน</span>
+            </div>
+            <span style="color: var(--cyan-bright); font-weight: 800;">→</span>
+
+            <div class="stat-box" style="width: 14%; border-left-color: var(--purple-accent);">
+              <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700;">STAGE 2</span>
+              <strong style="color: #fff; font-size: 0.88rem; margin-top: 4px;">Clarification Loop</strong>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">ถามผู้วิเคราะห์หากข้อมูลไม่พอ</span>
+            </div>
+            <span style="color: var(--cyan-bright); font-weight: 800;">→</span>
+
+            <div class="stat-box" style="width: 13%; border-left-color: var(--emerald-accent);">
+              <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700;">STAGE 3</span>
+              <strong style="color: #fff; font-size: 0.88rem; margin-top: 4px;">MITRE Gate</strong>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">ดึง GraphRAG เฉพาะเมื่อจำเป็น</span>
+            </div>
+            <span style="color: var(--cyan-bright); font-weight: 800;">→</span>
+
+            <div class="stat-box" style="width: 14%; border-left-color: var(--amber-accent);">
+              <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700;">STAGE 4</span>
+              <strong style="color: #fff; font-size: 0.88rem; margin-top: 4px;">Case Reading</strong>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">สกัด Canonical Claims + Unit IDs</span>
+            </div>
+            <span style="color: var(--cyan-bright); font-weight: 800;">→</span>
+
+            <div class="stat-box" style="width: 17%; border-left-color: var(--cyan-bright); background: rgba(0, 242, 254, 0.1); border: 1px solid var(--cyan-bright);">
+              <span style="font-size: 0.75rem; color: var(--cyan-bright); font-weight: 700;">STAGE 5 (CROWN JEWEL)</span>
+              <strong style="color: #fff; font-size: 0.88rem; margin-top: 4px;">NLI Verification Gate</strong>
+              <span style="font-size: 0.75rem; color: var(--cyan-bright);">กรองและรับรองความถูกต้องของ Claim</span>
+            </div>
+            <span style="color: var(--cyan-bright); font-weight: 800;">→</span>
+
+            <div class="stat-box" style="width: 14%; border-left-color: #ec4899;">
+              <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700;">STAGE 6</span>
+              <strong style="color: #fff; font-size: 0.88rem; margin-top: 4px;">Judgement & Summary</strong>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">สรุปคดี + ผูก Claim IDs ท้ายประโยค</span>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 8px;">
+          <div class="card">
+            <div class="card-title">📖 Evidence Units vs. Claims</div>
+            <div class="card-desc">
+              เอกสารต้นฉบับจะถูกหั่นเป็น Evidence Units ที่มี hash คงที่เสมอ Case Reading จะเลือกเฉพาะ Unit IDs ที่เกี่ยวข้องมาอ้างอิง หาก Claim ไหนไม่สามารถผูก (bind) กับ Unit ที่มีอยู่จริงได้ จะถูกลดสถานะเป็น <code style="color: var(--amber-accent);">not_confirmed</code> ทันที
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">⚖️ Judgement Isolation</div>
+            <div class="card-desc">
+              ขั้นตอน Judgement จะ<strong>ไม่เห็นเอกสารดิบทั้งฉบับ</strong>! Judgement จะอ่านเฉพาะ "Checked Claims" ที่ผ่านการตรวจสอบแล้วเท่านั้น เพื่อการันตีว่าข้อมูลในบทสรุปทุกคำมาจากหลักฐานที่ผ่านการรับรอง ไม่มีการเติมแต่งเอง
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 5: The Spotlight on NLI Verification Engine
+         ========================================== -->
+    <div class="slide" id="slide-5" data-notes="และนี่คือจุดศูนย์กลางของการนำเสนอครั้งนี้: NLI Grounding Verification Engine ทำหน้าที่เป็น Trust Boundary ทำไมเราถึงใช้ NLI แทนที่จะใช้ LLM Judge? เพราะ NLI เป็น Frozen Pretrained Encoder ที่ไม่สุ่มคำ (Deterministic) เร็วกว่า ประหยัดกว่า และไม่มีช่องโหว่ Prompt Injection">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-cyan">Core Innovation Spotlight</span>
+          <h2 class="slide-title">The NLI Grounding Verification Engine</h2>
+          <p class="slide-subtitle">Trust Boundary ด่านสำคัญ: ทำไมต้องใช้ Frozen NLI แทนที่จะใช้ Generative LLM Judge</p>
+        </div>
+        <div class="slide-number">05 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="card card-highlight">
+            <div class="card-title" style="color: var(--cyan-bright); font-size: 1.25rem;">
+              🎯 The Verification Mission
+            </div>
+            <div class="card-desc" style="color: var(--text-main); font-size: 0.95rem;">
+              ตัดสินอย่างเป็นวิทยาศาสตร์ว่า Claim ที่สกัดออกมาจากคดี ได้รับการสนับสนุน (Entailment) จากหลักฐานจริงหรือไม่:
+            </div>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: 0.85rem; color: #93c5fd;">
+              [Premise: Filtered Evidence Units] + [Hypothesis: Claim]<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;↳ NLI Model ↳ [P(entail), P(neutral), P(contradiction)]<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ Decision Layer ↳ <strong>SUPPORTED / UNSUPPORTED</strong>
+            </div>
+            <ul class="feature-list" style="margin-top: 10px;">
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>Zero Generative Calls:</strong> ไม่มีค่าใช้จ่าย Token และไม่มีอาการ Hallucinate ซ้ำสอง</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>Deterministic & Auditable:</strong> ค่า Probability และ Feature ชัดเจน ตรวจสอบย้อนหลังได้ 100%</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>No Prompt Injection Risk:</strong> ข้อความมุ่งร้ายในเอกสารคดีไม่สามารถสั่งให้ NLI หลงกลได้</span>
+              </li>
+            </ul>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="card">
+              <div class="card-title" style="color: var(--rose-accent);">❌ ปัญหาของ LLM-as-a-Judge ทั่วไป</div>
+              <div class="card-desc">
+                • ราคาสูง Latency นาน (หลายร้อยมิลลิวินาทีถึงระดับวินาทีต่อคู่ประโยค)<br>
+                • มีความแปรปรวน (Non-deterministic) แม้ตั้ง Temperature = 0<br>
+                • มี Positional Bias และความลำเอียงชอบเห็นด้วย (Sycophancy)
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title" style="color: var(--emerald-accent);">✓ จุดเด่นของ CyberCase NLI Pipeline</div>
+              <div class="card-desc">
+                • <strong>Semantic Evidence Filter:</strong> กรองเฉพาะประโยคหลักฐานที่เกี่ยวข้องด้วย Sentence Embeddings ($\tau=0.20$)<br>
+                • <strong>Frozen NLI Backbone:</strong> ใช้โมเดล Multilingual Pretrained ที่ผ่านการเทรนด้วย XNLI 2.7M ตัวอย่าง<br>
+                • <strong>Task-Specific Decision Layer:</strong> ใช้ 3D Logistic Regression เพื่อปรับสมดุลความเชื่อมั่นของงานตรวจสอบคดี
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 6: Pipeline Ablation Design (B0 - B4)
+         ========================================== -->
+    <div class="slide" id="slide-6" data-notes="เพื่อค้นหาองค์ประกอบที่ดีที่สุด เราได้ออกแบบการทดลอง Ablation ควบคุมตัวแปรอย่างเข้มงวด ตั้งแต่ B0 พื้นฐาน ไปจนถึง B4 ที่ใส่ Selective Rejection โดยเก็บข้อมูลบน WiCE Benchmark ขนาด 1,070 ข้อความ">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-purple">Scientific Experimentation</span>
+          <h2 class="slide-title">Pipeline Ablation Design: From B0 to B4</h2>
+          <p class="slide-subtitle">การแยกแยะและควบคุมตัวแปรเพื่อหาคำตอบว่าชิ้นส่วนใดสร้างประโยชน์จริง</p>
+        </div>
+        <div class="slide-number">06 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="font-size: 1rem;">
+                <span class="slide-badge badge-amber" style="margin:0;">B0</span>
+                Full Premise + Forward NLI &rarr; 1D DEV Threshold (&theta;<sub>DEV</sub>)
+              </div>
+              <div class="card-desc">ป้อนหลักฐานเต็ม &rarr; คำนวณ P(entailment) &ge; &theta;<sub>DEV</sub> (&theta; จูนบน DEV Split)</div>
+            </div>
+
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="font-size: 1rem;">
+                <span class="slide-badge badge-amber" style="margin:0;">B0-LR</span>
+                Full Premise + Forward [E, N, C] &rarr; 3D Logistic Regression
+              </div>
+              <div class="card-desc">ใช้หลักฐานเต็ม แต่เปลี่ยนเป็น 3D LR Classifier Head (เทรนบน TRAIN split เท่านั้น)</div>
+            </div>
+
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="font-size: 1rem;">
+                <span class="slide-badge badge-amber" style="margin:0;">B1</span>
+                Semantic Filter (&tau;=0.20) + Forward NLI &rarr; 1D DEV Threshold (&theta;<sub>DEV</sub>)
+              </div>
+              <div class="card-desc">กรองเอาเฉพาะ Evidence Units ที่มี Cosine Similarity &ge; 0.20 ก่อนตัด threshold บน DEV</div>
+            </div>
+
+            <div class="card card-highlight" style="padding: 16px;">
+              <div class="card-title" style="font-size: 1.05rem; color: var(--cyan-bright);">
+                <span class="slide-badge badge-cyan" style="margin:0;">B1-LR</span>
+                Semantic Filter + Forward [E, N, C] &rarr; 3D LR (Official Champion)
+              </div>
+              <div class="card-desc" style="color: #fff;">รวมพลังของการตัดขยะ (Filtering) เข้ากับการเรียนรู้ขอบเขตการตัดสินใจ 3 มิติที่สมดุล</div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="font-size: 1rem;">
+                <span class="slide-badge badge-purple" style="margin:0;">B2</span>
+                Full Premise + Bidirectional NLI &rarr; 6D LR
+              </div>
+              <div class="card-desc">รัน NLI 2 ทิศทาง (E &rArr; C และ C &rArr; E) บนเอกสารเต็ม ได้ 6 Probability Features</div>
+            </div>
+
+            <div class="card" style="padding: 16px;">
+              <div class="card-title" style="font-size: 1rem;">
+                <span class="slide-badge badge-purple" style="margin:0;">B3</span>
+                Filtered Premise + Bidirectional NLI &rarr; 6D LR
+              </div>
+              <div class="card-desc">รัน NLI 2 ทิศทางบนหลักฐานที่กรองแล้ว เพื่อดูว่า Reverse NLI ช่วยเพิ่มคะแนนไหม</div>
+            </div>
+
+            <div class="card" style="padding: 16px; border-left: 3px solid var(--rose-accent);">
+              <div class="card-title" style="font-size: 1rem; color: var(--rose-accent);">
+                <span class="slide-badge badge-rose" style="margin:0;">B4</span>
+                B3 + Temperature Scaling + Selective Gating
+              </div>
+              <div class="card-desc">เพิ่ม Threshold ความมั่นใจสูงเพื่อปฏิเสธการตัดสินใจ (Selective Rejection)</div>
+            </div>
+
+            <div class="card" style="background: rgba(0,0,0,0.4); padding: 16px;">
+              <div style="font-size: 0.85rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">เกณฑ์การประเมิน (Evaluation Rigor)</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                &bull; จูน &theta; บน DEV Split (N=1,043) เท่านั้น และประเมินบน Held-out Test (N=1,070)<br>
+                &bull; ทดสอบนัยสำคัญด้วย Paired Bootstrap (N<sub>boot</sub> = 1,000, Seed = 42, 95% CI)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 7: Empirical Results on WiCE
+         ========================================== -->
+    <div class="slide" id="slide-7" data-notes="นี่คือผลการทดลองจริง B1-LR ทำคะแนน Macro-F1 ได้สูงสุดที่ 0.6185 ชนะ B0 พื้นฐานอย่างมีนัยสำคัญทางสถิติ และช่วยลด False Support Rate ได้ถึง 5.42% เทียบกับ B1 ที่ไม่มี LR">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-emerald">Empirical Evidence</span>
+          <h2 class="slide-title">Benchmark Results on Held-out WiCE Test (N = 1,070)</h2>
+          <p class="slide-subtitle">การพิสูจน์เชิงปริมาณและการคำนวณทางสถิติอย่างโปร่งใส (FSR = FP / (FP + TN))</p>
+        </div>
+        <div class="slide-number">07 / 13</div>
+      </div>
+      <div class="slide-content">
+        <table class="tech-table">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>TP</th>
+              <th>FP</th>
+              <th>TN</th>
+              <th>FN</th>
+              <th>Accuracy</th>
+              <th>Macro-F1</th>
+              <th>Supp-F1</th>
+              <th>FSR [FP/(FP+TN)]</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>B0</strong> (Full, &theta;<sub>DEV</sub>=0.36)</td>
+              <td>140</td>
+              <td>188</td>
+              <td>552</td>
+              <td>190</td>
+              <td>64.67%</td>
+              <td>0.5852</td>
+              <td>0.4255</td>
+              <td>25.41%</td>
+            </tr>
+            <tr>
+              <td><strong>B0-LR</strong> (Full Premise + 3D LR)</td>
+              <td>154</td>
+              <td>203</td>
+              <td>537</td>
+              <td>176</td>
+              <td>64.58%</td>
+              <td>0.5937</td>
+              <td>0.4483</td>
+              <td>27.43%</td>
+            </tr>
+            <tr>
+              <td><strong>B1</strong> (Filtered, &theta;<sub>DEV</sub>=0.23)</td>
+              <td>174</td>
+              <td>234</td>
+              <td>506</td>
+              <td>156</td>
+              <td>63.55%</td>
+              <td>0.5967</td>
+              <td>0.4715</td>
+              <td>31.62%</td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>B1-LR (OFFICIAL CHAMPION)</strong></td>
+              <td>167</td>
+              <td>194</td>
+              <td>546</td>
+              <td>163</td>
+              <td><strong>66.64%</strong></td>
+              <td><strong>0.6185</strong></td>
+              <td><strong>0.4834</strong></td>
+              <td><strong>26.22%</strong></td>
+            </tr>
+            <tr>
+              <td><strong>B3</strong> (Bidi NLI + 6D LR)</td>
+              <td>172</td>
+              <td>200</td>
+              <td>540</td>
+              <td>158</td>
+              <td>66.54%</td>
+              <td>0.6205</td>
+              <td>0.4900</td>
+              <td>27.03%</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="grid-3" style="margin-top: 10px;">
+          <div class="card">
+            <div class="card-title" style="color: var(--cyan-bright); font-size: 1rem;">
+              B1-LR vs. B0 (Baseline)
+            </div>
+            <div class="card-desc">
+              <strong style="color: #fff;">&Delta; Macro-F1 = +0.0333</strong><br>
+              95% CI: [+0.0128, +0.0533]<br>
+              <span style="color: var(--emerald-accent); font-weight: 700;">&check; มีนัยสำคัญทางสถิติ (CI พ้น 0)</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title" style="color: var(--emerald-accent); font-size: 1rem;">
+              B1-LR vs. B1 (LR Effect)
+            </div>
+            <div class="card-desc">
+              <strong style="color: #fff;">&Delta; FSR = -5.42%</strong><br>
+              95% CI: [-7.17%, -3.70%]<br>
+              <span style="color: var(--emerald-accent); font-weight: 700;">&check; ลดการปล่อย Claim มั่วอย่างแท้จริง</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title" style="color: var(--purple-accent); font-size: 1rem;">
+              B3 vs. B1-LR (Bidi Effect)
+            </div>
+            <div class="card-desc">
+              <strong style="color: #fff;">&Delta; Macro-F1 = +0.0020</strong><br>
+              95% CI: [-0.0065, +0.0113]<br>
+              <span style="color: var(--rose-accent); font-weight: 700;">&cross; ไม่มีนัยสำคัญ (CI คลุม 0)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 8: Busting the "Reverse NLI" Assumption
+         ========================================== -->
+    <div class="slide" id="slide-8" data-notes="นี่คือการค้นพบทางวิศวกรรมที่สำคัญมาก หลายคนเชื่อว่ารัน Reverse NLI (Claim -> Evidence) จะช่วยเช็กย้อนกลับ แต่ตัวเลขพิสูจน์ชัดว่า CI คลุม 0 ทั้งสอง Model Families การรัน Reverse NLI จึงเปลือง Compute โดยเปล่าประโยชน์!">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-amber">Engineering Finding</span>
+          <h2 class="slide-title">Busting the "Reverse NLI" Assumption</h2>
+          <p class="slide-subtitle">ทำไม Bidirectional NLI ถึงไม่คุ้มค่าทางวิศวกรรมในระบบตรวจสอบคดีจริง</p>
+        </div>
+        <div class="slide-number">08 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="card card-highlight">
+            <div class="card-title" style="color: var(--amber-accent); font-size: 1.25rem;">
+              🔬 The Bidirectional Hypothesis ($B3$)
+            </div>
+            <div class="card-desc" style="font-size: 0.95rem; color: var(--text-main);">
+              <strong>สมมติฐานเดิม:</strong> ถ้าเรารัน NLI ทั้งสองทิศทาง:<br>
+              1. Forward: Evidence &rArr; Claim ($P_{\text{fwd}}$)<br>
+              2. Reverse: Claim &rArr; Evidence ($P_{\text{rev}}$)<br>
+              รวมกันเป็น 6 Features จะช่วยตรวจจับกรณีที่ Claim มีข้อมูลเกินจริงได้ดีขึ้น
+            </div>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 14px; margin-top: 8px;">
+              <div style="font-size: 0.9rem; color: #fff; font-weight: 700; margin-bottom: 6px;">สิ่งที่เกิดขึ้นจริงในการทดลอง (95% CI ครอบคลุม 0 ทั้งคู่):</div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+                &bull; บน <strong>mDeBERTa-v3-base:</strong> &Delta; Macro-F1 = +0.0020 (95% CI: [-0.0065, +0.0113])<br>
+                &bull; บน <strong>multilingual-MiniLM-L6:</strong> &Delta; Macro-F1 = +0.0011 (95% CI: [-0.0153, +0.0179])<br>
+                &bull; ความแม่นยำแทบไม่ขยับ และช่วงความเชื่อมั่น 95% ครอบคลุมศูนย์ทั้งหมด
+              </p>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="card" style="border-left: 3px solid var(--rose-accent);">
+              <div class="card-title" style="color: var(--rose-accent);">💸 Cost vs. Benefit Analysis</div>
+              <div class="card-desc">
+                &bull; <strong>Inference Overhead:</strong> ต้องประมวลผล NLI เพิ่มอีก 1 รอบ (Requires approximately twice the NLI inference passes)<br>
+                &bull; <strong>Memory & Complexity:</strong> Feature Vector ขยายจาก 3D เป็น 6D เพิ่มความเสี่ยง Overfitting<br>
+                &bull; <strong>Statistical Verdict:</strong> ไม่พบหลักฐานที่น่าเชื่อถือทางสถิติว่า Reverse NLI มอบข้อมูลเสริมที่เป็นประโยชน์ (95% CI ครอบคลุมศูนย์)
+              </div>
+            </div>
+
+            <div class="card" style="border-left: 3px solid var(--emerald-accent);">
+              <div class="card-title" style="color: var(--emerald-accent);">🛡️ The Decision: Occam's Razor Wins</div>
+              <div class="card-desc">
+                CyberCase ตัดสินใจเลือก <strong>B1-LR (Forward-Only)</strong> เป็น Production Champion เพราะให้ผลลัพธ์เทียบเท่ากันในเชิงสถิติ (Statistically indistinguishable) โดยไม่ต้องเสีย NLI inference pass รอบสอง และโค้ดเรียบง่ายกว่ามาก
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 9: Cross-Family Sensitivity (MiniLM vs mDeBERTa)
+         ========================================== -->
+    <div class="slide" id="slide-9" data-notes="เราทำการทดสอบความทนทานข้ามตระกูลโมเดล (Post-hoc Sensitivity) บน MiniLM พบว่า B1-LR ทำคะแนนได้สูงและมีทิศทางสอดคล้องกับ mDeBERTa และถ้าใช้ Naive Argmax โมเดลเล็กจะพังทันทีเพราะ Class Imbalance">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-cyan">Model Family Sensitivity</span>
+          <h2 class="slide-title">Cross-Family Consistency (Canonical Protocol)</h2>
+          <p class="slide-subtitle">การตรวจสอบความทนทานของ Pipeline ข้ามสถาปัตยกรรมโมเดล Transformer</p>
+        </div>
+        <div class="slide-number">09 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div>
+            <table class="tech-table">
+              <thead>
+                <tr>
+                  <th>Controlled Effect</th>
+                  <th>mDeBERTa (~278M)</th>
+                  <th>MiniLM (~107M)</th>
+                  <th>ทิศทางตรงกัน?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Filter under 1D (&theta;<sub>DEV</sub>)</td>
+                  <td>Supp-F1 +0.0457 (Sig)</td>
+                  <td>Macro-F1 +0.0725 (Sig)</td>
+                  <td><span style="color: var(--emerald-accent);">&check; ตรงกัน (บวกทั้งคู่)</span></td>
+                </tr>
+                <tr class="highlight-row">
+                  <td>Filter under 3D LR</td>
+                  <td>Macro-F1 +0.0248 (Sig)</td>
+                  <td>Macro-F1 +0.1091 (Sig)</td>
+                  <td><span style="color: var(--emerald-accent); font-weight: 800;">&check; ชนะขาดทั้งคู่ (Sig)</span></td>
+                </tr>
+                <tr>
+                  <td>LR after filter (B1-LR vs B1)</td>
+                  <td>Macro-F1 +0.0219 (Sig)</td>
+                  <td>Supp-F1 +0.0241 (Sig)</td>
+                  <td><span style="color: var(--emerald-accent); font-weight: 800;">&check; ปรับสมดุลทั้งคู่</span></td>
+                </tr>
+                <tr>
+                  <td>Reverse NLI (B3 vs B1-LR)</td>
+                  <td>+0.0020 (CI คลุม 0)</td>
+                  <td>+0.0011 (CI คลุม 0)</td>
+                  <td><span style="color: var(--text-dim);">&check; ไร้นัยสำคัญทั้งคู่</span></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="card" style="margin-top: 14px; padding: 14px;">
+              <div class="card-desc" style="font-size: 0.85rem;">
+                <strong>ข้อสังเกต:</strong> ปัจจัย Semantic Filtering และ Reverse NLI สอดคล้องกันอย่างสมบูรณ์ข้ามสองสถาปัตยกรรมโมเดล (DeBERTa vs MiniLM)
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-highlight">
+            <div class="card-title" style="color: var(--amber-accent);">
+              ⚠️ Naive Argmax vs. DEV-Tuned Threshold
+            </div>
+            <div class="card-desc" style="font-size: 0.9rem; line-height: 1.55;">
+              ถ้าใช้ <strong>Naive Argmax</strong> โดยไม่จูน Threshold บนโมเดลขนาดเล็กอย่าง MiniLM:
+            </div>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #fde68a;">
+              &bull; MiniLM B0 (argmax): Acc = 69.16% แต่ Macro-F1 หล่นไปเหลือเพียง <strong>0.4720</strong> (ทายบวกแค่ 50 ตัว!)<br>
+              &bull; MiniLM B0 (&theta;<sub>DEV</sub>=0.15): กู้ Macro-F1 กลับมาเป็น <strong>0.5705</strong> (ทายบวก 312 ตัว)<br>
+              &bull; MiniLM B1 (&theta;<sub>DEV</sub>=0.20): กู้ Macro-F1 ขึ้นเป็น <strong>0.6427</strong> และ B1-LR ไปถึง <strong>0.6496</strong>
+            </div>
+            <div class="card-desc" style="font-size: 0.88rem; color: var(--text-muted); margin-top: 6px;">
+              <strong>บทเรียนสำคัญ:</strong> ตัวเลข Accuracy 69% ในชุดข้อมูล Imbalanced หลอกตาได้ง่ายมาก การควบคุมด้วย DEV-Tuned Threshold หรือ Task-Specific LR จึงเป็นหัวใจสำคัญทางวิศวกรรม
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 10: Production Latency & Hardware Profiling
+         ========================================== -->
+    <div class="slide" id="slide-10" data-notes="เราวัด Latency จริงบน Hardware ข้อจำกัดสูงอย่าง GTX 1650 4GB VRAM พบว่า mDeBERTa ใช้เวลาประมาณ 467ms แบบ Batch=1 และ 227ms แบบ Batched ส่วน MiniLM ใช้ NLI เพียง 29ms เร็วกว่า 10 เท่า เป็นตัวเลือกที่ดีสำหรับ Edge Deployment">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-emerald">Efficiency Audit</span>
+          <h2 class="slide-title">Hardware Profiling & Production Latency</h2>
+          <p class="slide-subtitle">การวัดเวลาจริงทุกขั้นตอนบน NVIDIA GeForce GTX 1650 (4,096 MiB VRAM)</p>
+        </div>
+        <div class="slide-number">10 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card">
+              <div class="card-title" style="color: var(--cyan-bright);">
+                🏎️ mDeBERTa-v3-base (Primary Production)
+              </div>
+              <div class="card-desc">
+                เหมาะสำหรับ Server Deployment ที่ต้องการความแม่นยำสูงสุดในงานวิเคราะห์คดีความมั่นคง
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 6px;">
+                <div class="stat-box" style="flex: 1;">
+                  <div class="stat-val" style="font-size: 1.4rem;">153.3 ms</div>
+                  <div class="stat-label">Semantic Filter</div>
+                </div>
+                <div class="stat-box" style="flex: 1; border-left-color: var(--blue-accent);">
+                  <div class="stat-val" style="font-size: 1.4rem;">313.7 ms</div>
+                  <div class="stat-label">NLI Forward Pass</div>
+                </div>
+                <div class="stat-box" style="flex: 1; border-left-color: var(--emerald-accent);">
+                  <div class="stat-val" style="font-size: 1.4rem;">0.76 ms</div>
+                  <div class="stat-label">LR Decision Head</div>
+                </div>
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-dim); margin-top: 6px;">
+                Total Batch=1: <strong>467.8 ms / claim</strong> | Batched Throughput: <strong>~227 ms / claim</strong>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title" style="color: var(--emerald-accent);">
+                ⚡ multilingual-MiniLM-L6 (High-Throughput Edge)
+              </div>
+              <div class="card-desc">
+                เหมาะสำหรับระบบที่ต้องการความเร็วสูงมากหรือรันบนเครื่องทรัพยากรจำกัด
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 6px;">
+                <div class="stat-box" style="flex: 1;">
+                  <div class="stat-val" style="font-size: 1.4rem;">153.3 ms</div>
+                  <div class="stat-label">Semantic Filter</div>
+                </div>
+                <div class="stat-box" style="flex: 1; border-left-color: var(--emerald-accent);">
+                  <div class="stat-val" style="font-size: 1.4rem; color: var(--emerald-accent);">29.2 ms</div>
+                  <div class="stat-label">NLI Forward Pass</div>
+                </div>
+                <div class="stat-box" style="flex: 1; border-left-color: var(--purple-accent);">
+                  <div class="stat-val" style="font-size: 1.4rem;">0.76 ms</div>
+                  <div class="stat-label">LR Decision Head</div>
+                </div>
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-dim); margin-top: 6px;">
+                Total Batch=1: <strong>183.2 ms / claim</strong> | NLI Forward เร็วกว่าเดิม <strong>10.7 เท่า (Mean) / 28.2 เท่า (Median)</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-highlight">
+            <div class="card-title">🔒 Production Concurrency & Safety</div>
+            <ul class="feature-list" style="margin-top: 8px;">
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>asyncio.to_thread Wrapping:</strong> CPU/GPU Bound inference ถูก wrap แยกออกจาก FastAPI Event Loop ไม่บล็อก I/O ของผู้ใช้คนอื่น</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>Single Worker Enforcement:</strong> ป้องกันการเกิด Race Condition และจัดการ VRAM 4GB ได้อย่างมีเสถียรภาพ ไม่เกิด OOM Crash</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>Pre-warmed Embedding Cache:</strong> บริการ Cache ตาราง Cosine Similarity ทำให้ประหยัดเวลาในรอบ Follow-up วิเคราะห์ซ้ำ</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 11: External Generalization (AttributionBench)
+         ========================================== -->
+    <div class="slide" id="slide-11" data-notes="เราไม่ได้ทดสอบแค่ WiCE ชุดเดียว แต่เอา B1-LR Champion ไป Stress-test บน AttributionBench ทั้ง In-Domain (3,000 ตัวอย่าง) และ Out-of-Domain (1,686 ตัวอย่าง) เพื่อยืนยันว่าโมเดลไม่ Overfit และใช้งานจริงได้">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-purple">External Stress Testing</span>
+          <h2 class="slide-title">External Transferability on AttributionBench</h2>
+          <p class="slide-subtitle">การทดสอบข้ามโดเมนบนชุดข้อมูล AttributionBench ID (N = 3,000) และ OOD (N = 1,686)</p>
+        </div>
+        <div class="slide-number">11 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title" style="color: var(--cyan-bright);">
+              🌐 Official In-Domain Test (N = 1,610)
+            </div>
+            <div class="card-desc">
+              ชุดข้อมูลประเมินการอ้างอิงหลักฐานจากหลากหลายแหล่ง (Mixed / Competitive ID Transfer)
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <div class="stat-box" style="flex: 1;">
+                <div class="stat-val" style="font-size: 1.4rem;">63.85%</div>
+                <div class="stat-label">Acc (B0: 64.72%)</div>
+              </div>
+              <div class="stat-box" style="flex: 1; border-left-color: var(--emerald-accent);">
+                <div class="stat-val" style="font-size: 1.4rem;">0.6384</div>
+                <div class="stat-label">MF1 (B0: 0.6462)</div>
+              </div>
+              <div class="stat-box" style="flex: 1; border-left-color: var(--purple-accent);">
+                <div class="stat-val" style="font-size: 1.4rem;">0.6330</div>
+                <div class="stat-label">SF1 (B0: 0.6278)</div>
+              </div>
+              <div class="stat-box" style="flex: 1; border-left-color: var(--rose-accent);">
+                <div class="stat-val" style="font-size: 1.4rem;">34.66%</div>
+                <div class="stat-label">FSR (B0: 30.06%)</div>
+              </div>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+              ผลการถ่ายโอนแบบ Mixed / Competitive: B1-LR ได้ Supp-F1 สูงขึ้น (+0.0052) และรักษา Accuracy ใกล้เคียงเดิม (-0.87 pp) โดยมี FSR เพิ่มขึ้น (+4.60 pp) ภายใต้การตัดหลักฐานทิ้ง 47%
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-title" style="color: var(--amber-accent);">
+              🔥 Official Out-of-Domain Test (N = 1,686)
+            </div>
+            <div class="card-desc">
+              ชุดข้อมูลนอกโดเมน (Unseen Distributions) เพื่อทดสอบ Domain Shift (Performance–FSR Trade-off)
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <div class="stat-box" style="flex: 1; border-left-color: var(--amber-accent);">
+                <div class="stat-val" style="font-size: 1.4rem;">73.01%</div>
+                <div class="stat-label">Acc (B0: 71.95%)</div>
+              </div>
+              <div class="stat-box" style="flex: 1; border-left-color: var(--emerald-accent);">
+                <div class="stat-val" style="font-size: 1.4rem;">0.7281</div>
+                <div class="stat-label">MF1 (B0: 0.7190)</div>
+              </div>
+              <div class="stat-box" style="flex: 1; border-left-color: var(--cyan-bright);">
+                <div class="stat-val" style="font-size: 1.4rem;">0.7515</div>
+                <div class="stat-label">SF1 (B0: 0.7305)</div>
+              </div>
+              <div class="stat-box" style="flex: 1; border-left-color: var(--rose-accent);">
+                <div class="stat-val" style="font-size: 1.4rem;">35.59%</div>
+                <div class="stat-label">FSR (B0: 32.15%)</div>
+              </div>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+              บน OOD B1-LR ได้ค่าคะแนนหลักสูงกว่าเดิมทั้ง Accuracy (+1.06 pp), Macro-F1 (+0.0091) และ Supp-F1 (+0.0210) โดยแลกมากับ FSR ที่เพิ่มขึ้น (+3.44 pp)
+            </p>
+          </div>
+        </div>
+
+        <div class="card card-highlight" style="margin-top: 10px;">
+          <div class="card-title" style="color: #fff;">
+            🛡️ High-Confidence Rejection under Selective Gating (B4)
+          </div>
+          <div class="card-desc" style="color: var(--text-main); font-size: 0.95rem;">
+            ในการทดสอบขอบเขตความปลอดภัยสูง B4 Selective Gating ที่ Threshold สูงสุดไม่เคยปล่อย Claim ผิดหลุดรอดเลยแม้แต่ตัวเดียว (0 False-Support) ทั้งใน WiCE และ AttributionBench แต่ทำหน้าที่เป็น High-Confidence Rejection Gate ที่ปฏิเสธ Claim เกือบทั้งหมด จึงเลือก B1-LR เป็น Production Champion ที่สมดุลที่สุด
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 12: Thesis-Safe Claims & Rigor
+         ========================================== -->
+    <div class="slide" id="slide-12" data-notes="นี่คือข้อสรุปที่เขียนอย่างรัดกุมตามมาตรฐานงานวิจัยระดับสูง (Thesis-Safe) เราไม่เคลมเกินจริงว่า Reverse NLI ไร้ประโยชน์โดยสิ้นเชิง แต่สรุปว่าข้าม 2 โมเดลที่เราทดลอง มันไม่ให้ประโยชน์ที่น่าเชื่อถือทางสถิติ">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge badge-emerald">Academic Integrity</span>
+          <h2 class="slide-title">Thesis-Safe Claims & Research Discipline</h2>
+          <p class="slide-subtitle">การสรุปผลการวิจัยและวิศวกรรมอย่างตรงไปตรงมาตามหลักฐานเชิงประจักษ์</p>
+        </div>
+        <div class="slide-number">12 / 13</div>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2">
+          <div class="card" style="border-left: 3px solid var(--emerald-accent);">
+            <div class="card-title" style="color: var(--emerald-accent);">
+              ✅ สิ่งที่พิสูจน์แล้วและเคลมได้อย่างมั่นใจ (Supported)
+            </div>
+            <ul class="feature-list" style="margin-top: 8px;">
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>Semantic Filtering ชนะอย่างมีนัยสำคัญ:</strong> ช่วยเพิ่ม Supported-F1 และลด False Support เมื่อควบคุมเลเยอร์การตัดสินใจให้เหมือนกัน</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>Task-Specific LR ช่วยยกระดับ Macro-F1:</strong> การปรับ Probability ด้วยโมเดลเชิงเส้นช่วยกู้คืน Recall ได้ดีกว่า Argmax ธรรมดา</span>
+              </li>
+              <li class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span><strong>Reverse NLI ไม่คุ้มค่าในการทดลองนี้:</strong> Confidence Interval ครอบคลุม 0 ทั้งสองตระกูลโมเดล Forward-only B1-LR จึงเป็นทางเลือกที่ดีกว่า</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card" style="border-left: 3px solid var(--rose-accent);">
+            <div class="card-title" style="color: var(--rose-accent);">
+              🚫 สิ่งที่ห้ามเคลมเกินจริง (What Must NOT Be Claimed)
+            </div>
+            <ul class="feature-list" style="margin-top: 8px;">
+              <li class="feature-item">
+                <span style="color: var(--rose-accent); font-weight: 800;">✗</span>
+                <span><strong>ห้ามเคลม "กฎสากลสำหรับทุกโมเดลในโลก":</strong> ผลลัพธ์ยืนยันเฉพาะสองโมเดลที่เราประเมิน (mDeBERTa-v3-base และ MiniLM-v2-L6)</span>
+              </li>
+              <li class="feature-item">
+                <span style="color: var(--rose-accent); font-weight: 800;">✗</span>
+                <span><strong>ห้ามเคลมว่า "MiniLM เหนือกว่า mDeBERTa":</strong> เพราะ MiniLM ตกเกณฑ์บน DEV ในขั้นตอนคัดเลือก การทดสอบบน TEST เป็นเพียง Post-hoc Analysis</span>
+              </li>
+              <li class="feature-item">
+                <span style="color: var(--rose-accent); font-weight: 800;">✗</span>
+                <span><strong>ห้ามเคลมเรื่อง Attention Head เสียหาย:</strong> เพราะเราไม่ได้ส่อง Attention Weights ตรงๆ เราสังเกตได้เพียงพฤติกรรมการทำนายเท่านั้น</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="background: rgba(0,0,0,0.3); padding: 16px; margin-top: 8px;">
+          <div style="font-size: 0.9rem; color: var(--text-dim); font-family: var(--font-mono);">
+            Official Champion: <strong>B1-LR (Semantic Filter tau=0.20 + Frozen mDeBERTa-v3-base + 3D Logistic Regression)</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SLIDE 13: Conclusion & Next Steps
+         ========================================== -->
+    <div class="slide" id="slide-13" data-notes="สรุปภาพรวมทั้งหมด: CyberCase Backend มีความแข็งแกร่งทั้งด้าน Architecture ที่ Concurrency-safe และ Trust Boundary ที่พิสูจน์แล้วด้วยคณิตศาสตร์จริง พร้อมนำไปใช้งานใน Production หรือต่อยอดในวิทยานิพนธ์ได้อย่างสมบูรณ์แบบครับ ขอบคุณครับ">
+      <div class="slide-header" style="border: none;">
+        <span class="slide-badge badge-cyan">Conclusion</span>
+        <div class="slide-number">13 / 13</div>
+      </div>
+      <div class="slide-content" style="justify-content: center; align-items: flex-start; max-width: 1000px; margin: auto 0;">
+        <div style="font-size: 3rem; font-weight: 800; line-height: 1.15; margin-bottom: 24px;">
+          A Verifiable, Production-Ready
+          <span style="background: linear-gradient(90deg, #00f2fe, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;">
+            Threat Intelligence Foundation
+          </span>
+        </div>
+
+        <div class="grid-3" style="width: 100%; margin-bottom: 30px;">
+          <div class="card card-highlight">
+            <div class="card-title" style="color: var(--cyan-bright);">1. Solid Architecture</div>
+            <div class="card-desc">
+              FastAPI + Postgres ไร้รอยต่อ แยก 4 Microservices ชัดเจน รักษาวินัย "Read Short. Think Free. Write Short." ไม่เกิด DB Deadlock
+            </div>
+          </div>
+          <div class="card card-highlight">
+            <div class="card-title" style="color: var(--emerald-accent);">2. Proven Trust Boundary</div>
+            <div class="card-desc">
+              B1-LR ชนะอย่างมีนัยสำคัญทางสถิติ ($\Delta\text{MF1} = +0.0333$), ตัดปัญหา Hallucination ก่อนถึงขั้นตอน Judgement
+            </div>
+          </div>
+          <div class="card card-highlight">
+            <div class="card-title" style="color: var(--purple-accent);">3. Practical & Scalable</div>
+            <div class="card-desc">
+              รันได้บน GPU 4GB VRAM ทั่วไป Latency ~227ms/claim พร้อมตัวเลือก MiniLM สำหรับงาน High-throughput Edge
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 1.1rem; color: var(--text-muted);">
+          พร้อมสำหรับการสาธิตระบบ (Live Demo) และการประยุกต์ใช้งานจริงในงานความมั่นคงปลอดภัยไซเบอร์
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation Bar -->
+  <div class="nav-bar">
+    <button class="nav-btn" id="prevBtn" title="Previous Slide (← / PageUp)">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <div class="nav-counter" id="slideCounter">1 / 13</div>
+    <button class="nav-btn" id="nextBtn" title="Next Slide (→ / Space / PageDown)">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+    </button>
+    <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
+    <button class="nav-btn" id="notesToggleBtn" title="Toggle Speaker Notes (S)">
+      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+    </button>
+    <button class="nav-btn" id="fullscreenBtn" title="Toggle Fullscreen (F)">
+      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+    </button>
+  </div>
+
+  <!-- Speaker Notes Drawer -->
+  <div class="notes-drawer" id="notesDrawer">
+    <div class="notes-header">
+      <div class="notes-title">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+        Speaker Notes & Talking Points
+      </div>
+      <span style="font-size: 0.75rem; color: var(--text-dim);">Press <span class="key-badge">S</span> to close</span>
+    </div>
+    <div class="notes-body" id="notesContent">
+      Loading notes...
+    </div>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+
+    const progressBar = document.getElementById('progressBar');
+    const slideCounter = document.getElementById('slideCounter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const notesDrawer = document.getElementById('notesDrawer');
+    const notesContent = document.getElementById('notesContent');
+    const notesToggleBtn = document.getElementById('notesToggleBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+    function updateSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= totalSlides) index = totalSlides - 1;
+      currentSlide = index;
+
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === currentSlide);
+      });
+
+      const progress = ((currentSlide + 1) / totalSlides) * 100;
+      progressBar.style.width = `${progress}%`;
+      slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+
+      // Update speaker notes
+      const activeSlideEl = slides[currentSlide];
+      const notes = activeSlideEl.getAttribute('data-notes') || 'No speaker notes for this slide.';
+      notesContent.innerHTML = `<p>${notes}</p>`;
+
+      // Hash update
+      window.location.hash = `slide-${currentSlide + 1}`;
+    }
+
+    prevBtn.addEventListener('click', () => updateSlide(currentSlide - 1));
+    nextBtn.addEventListener('click', () => updateSlide(currentSlide + 1));
+
+    notesToggleBtn.addEventListener('click', () => {
+      notesDrawer.classList.toggle('open');
+    });
+
+    fullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        updateSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        updateSlide(currentSlide - 1);
+      } else if (e.key === 's' || e.key === 'S') {
+        notesDrawer.classList.toggle('open');
+      } else if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    });
+
+    // Read initial hash if present
+    if (window.location.hash) {
+      const match = window.location.hash.match(/slide-(\d+)/);
+      if (match) {
+        const slideNum = parseInt(match[1], 10) - 1;
+        if (slideNum >= 0 && slideNum < totalSlides) {
+          currentSlide = slideNum;
+        }
+      }
+    }
+
+    updateSlide(currentSlide);
+  </script>
+</body>
+</html>

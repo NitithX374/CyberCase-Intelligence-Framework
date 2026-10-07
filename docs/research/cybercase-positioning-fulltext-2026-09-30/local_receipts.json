@@ -1,0 +1,179 @@
+{
+  "checked_at": "2026-09-30T03:41:22.336804+00:00",
+  "head": "4aa8b18ba61c3f94738169d5f54d12d8f480a622",
+  "backend_hash_count": 29,
+  "backend_hashes_unchanged": true,
+  "backend_hashes": [
+    {
+      "path": "backend/app/analysis/pipeline.py",
+      "before": "27b468bf62f95016604606c633e1922ab5b1c1acad0073cade7447f12e6c22ce",
+      "now": "27b468bf62f95016604606c633e1922ab5b1c1acad0073cade7447f12e6c22ce"
+    },
+    {
+      "path": "backend/app/analysis/write.py",
+      "before": "200bd1d538a14c6fedfa0a75dc8b56227c34f06e2e9e5aa6acc2f9ac93faf9a2",
+      "now": "200bd1d538a14c6fedfa0a75dc8b56227c34f06e2e9e5aa6acc2f9ac93faf9a2"
+    },
+    {
+      "path": "backend/app/analysis/prompts.py",
+      "before": "99a6d6beea8d4c591923fdc1b60feb70f8abe237c22fc1e8285783f1eacc6f98",
+      "now": "99a6d6beea8d4c591923fdc1b60feb70f8abe237c22fc1e8285783f1eacc6f98"
+    },
+    {
+      "path": "backend/app/analysis/assess.py",
+      "before": "8a3399ee0ec13be09a9a3ac9229faaf5a53e4d2d007b87d89c0a5508ab6f8c11",
+      "now": "8a3399ee0ec13be09a9a3ac9229faaf5a53e4d2d007b87d89c0a5508ab6f8c11"
+    },
+    {
+      "path": "backend/app/analysis/store.py",
+      "before": "d907ee4c1067ad034f920065910f401b3a653b0271b5045cd6a6818bec621962",
+      "now": "d907ee4c1067ad034f920065910f401b3a653b0271b5045cd6a6818bec621962"
+    },
+    {
+      "path": "backend/app/analysis/run.py",
+      "before": "9545aab878a4f4fe180e22bcef258103e69f4f3bc2bac4d59404804ec74b969d",
+      "now": "9545aab878a4f4fe180e22bcef258103e69f4f3bc2bac4d59404804ec74b969d"
+    },
+    {
+      "path": "backend/app/followup/clarification.py",
+      "before": "4ea145943517505d47c3d771105e1dc438ca5bd290cb5de354f45a12edf533dd",
+      "now": "4ea145943517505d47c3d771105e1dc438ca5bd290cb5de354f45a12edf533dd"
+    },
+    {
+      "path": "backend/app/followup/conversation.py",
+      "before": "25a9ece09a62a79cf90b3ace582136711aa83b721d63f7e151d87fa9b2ca5ca1",
+      "now": "25a9ece09a62a79cf90b3ace582136711aa83b721d63f7e151d87fa9b2ca5ca1"
+    },
+    {
+      "path": "backend/app/trace/trace.py",
+      "before": "b17386b2e4ed9df30d4b6d11debe2dbd729cbedb756ba6749027de7f6fc3847f",
+      "now": "b17386b2e4ed9df30d4b6d11debe2dbd729cbedb756ba6749027de7f6fc3847f"
+    },
+    {
+      "path": "backend/app/trace/claims.py",
+      "before": "b150b0b69b36a2101033385855ff62618b25342b1a3e5c13004be8fa0e7c016c",
+      "now": "b150b0b69b36a2101033385855ff62618b25342b1a3e5c13004be8fa0e7c016c"
+    },
+    {
+      "path": "backend/app/trace/bind.py",
+      "before": "e93ffd58682d1db1a01e1ef1fe507230f371aa449081aa2069501c3fa73cea34",
+      "now": "e93ffd58682d1db1a01e1ef1fe507230f371aa449081aa2069501c3fa73cea34"
+    },
+    {
+      "path": "backend/app/trace/quotes.py",
+      "before": "9fa3794395ad63dcdb04411f9cc55f65fe5db0395b87eff38ee04ac67adbcbfc",
+      "now": "9fa3794395ad63dcdb04411f9cc55f65fe5db0395b87eff38ee04ac67adbcbfc"
+    },
+    {
+      "path": "backend/app/analysis/technical_context/gate.py",
+      "before": "ebca1d66fd1c1e807864d678631202efa604c9b99b36adf0ba23cdedcb13d1e8",
+      "now": "ebca1d66fd1c1e807864d678631202efa604c9b99b36adf0ba23cdedcb13d1e8"
+    },
+    {
+      "path": "backend/app/analysis/technical_context/gate_encoder.py",
+      "before": "6e4fa61641748588cbccf3ce99e14c8e859c24f1d6f3234455eeebaefdd766e1",
+      "now": "6e4fa61641748588cbccf3ce99e14c8e859c24f1d6f3234455eeebaefdd766e1"
+    },
+    {
+      "path": "backend/app/analysis/technical_context/retrieve.py",
+      "before": "f1ac6bf3d297e49d66fe45a87ce1a01e89e55c6a756bea0797138939df2c1f09",
+      "now": "f1ac6bf3d297e49d66fe45a87ce1a01e89e55c6a756bea0797138939df2c1f09"
+    },
+    {
+      "path": "backend/app/analysis/technical_context/rag_client.py",
+      "before": "87c834a97c7b7b0160b9cf9854e90db2f0f080f22b36b8203d350d5d9c7e86f0",
+      "now": "87c834a97c7b7b0160b9cf9854e90db2f0f080f22b36b8203d350d5d9c7e86f0"
+    },
+    {
+      "path": "backend/app/sources/bundle.py",
+      "before": "92dfe01d7ee468904343752d12e989fe470b6aa038e0ba162adcae1ff8c3d639",
+      "now": "92dfe01d7ee468904343752d12e989fe470b6aa038e0ba162adcae1ff8c3d639"
+    },
+    {
+      "path": "backend/app/sources/ingestion/service.py",
+      "before": "d8b1846ed86def8d49d831f570e6b649e751bdec9eda5b76705a10ec887b1d0d",
+      "now": "d8b1846ed86def8d49d831f570e6b649e751bdec9eda5b76705a10ec887b1d0d"
+    },
+    {
+      "path": "backend/app/sources/ingestion/recognition.py",
+      "before": "f23ac907c2856099fae5353bd2f65b645c3945378e47eee1ff16d3b65ae6b4db",
+      "now": "f23ac907c2856099fae5353bd2f65b645c3945378e47eee1ff16d3b65ae6b4db"
+    },
+    {
+      "path": "backend/app/sources/ingestion/provenance.py",
+      "before": "a4156b2998837992c5622664f5fe3e8e5f11d0ab6f5a5da72d62f627c73c29f1",
+      "now": "a4156b2998837992c5622664f5fe3e8e5f11d0ab6f5a5da72d62f627c73c29f1"
+    },
+    {
+      "path": "backend/app/chat/compose.py",
+      "before": "75644b72e462977e274e197a73a5f8f4b7ac9fe50fe373ce97460c30ad5d4c1b",
+      "now": "75644b72e462977e274e197a73a5f8f4b7ac9fe50fe373ce97460c30ad5d4c1b"
+    },
+    {
+      "path": "backend/app/reports/generate.py",
+      "before": "e99c0daddd070c8dd5b54d948b18b9020a668b9bd195066b6b31a7ce387b1634",
+      "now": "e99c0daddd070c8dd5b54d948b18b9020a668b9bd195066b6b31a7ce387b1634"
+    },
+    {
+      "path": "backend/app/reports/display.py",
+      "before": "2f5fbcda3bcf1e382d804666bc963aff01d91ea70f65d3c99a5f14839bc79960",
+      "now": "2f5fbcda3bcf1e382d804666bc963aff01d91ea70f65d3c99a5f14839bc79960"
+    },
+    {
+      "path": "backend/app/reports/render.py",
+      "before": "907fcac0d1c1486c62a38550ba26ef4b6412c2349a2ca4bc84cdbd1129be1438",
+      "now": "907fcac0d1c1486c62a38550ba26ef4b6412c2349a2ca4bc84cdbd1129be1438"
+    },
+    {
+      "path": "backend/app/llm/request.py",
+      "before": "3869db106f93a2fe1d0d6d9815f8b499ffcbe0efc7430b49308962fda980b975",
+      "now": "3869db106f93a2fe1d0d6d9815f8b499ffcbe0efc7430b49308962fda980b975"
+    },
+    {
+      "path": "backend/app/llm/settings.py",
+      "before": "4bd3d6f48adfc97805d6488212618af0efb0ee5b563c22b91e047c8785a6e88d",
+      "now": "4bd3d6f48adfc97805d6488212618af0efb0ee5b563c22b91e047c8785a6e88d"
+    },
+    {
+      "path": "backend/app/config.py",
+      "before": "7d84e95e2216734061be3798a07d49ab216b6153617ee3c797b47c76f19a6c61",
+      "now": "7d84e95e2216734061be3798a07d49ab216b6153617ee3c797b47c76f19a6c61"
+    },
+    {
+      "path": "backend/xlmr_ladder_best/xlmr_ladder_best/config.json",
+      "before": "03d49ecb6b76f1024202c3d389dad08ebf7996b7117fbd52571cd2f7674175ab",
+      "now": "03d49ecb6b76f1024202c3d389dad08ebf7996b7117fbd52571cd2f7674175ab"
+    },
+    {
+      "path": "backend/xlmr_ladder_best/xlmr_ladder_best/gate.json",
+      "before": "d6a437073cebc589e7a84caf41c625e4e3e1f3aadc6991a8b1a92c1a82c39b45",
+      "now": "d6a437073cebc589e7a84caf41c625e4e3e1f3aadc6991a8b1a92c1a82c39b45"
+    }
+  ],
+  "heldout_file": "F:\\Cybercase Framework\\research\\analysis_baseline\\results\\main_20260930_020141.jsonl",
+  "heldout_mtime": "2026-09-30T03:41:20.377171+00:00",
+  "saved_records": 294,
+  "records_per_arm": {
+    "prose": 99,
+    "single": 96,
+    "single_late": 95,
+    "cybercase": 4
+  },
+  "partial_lines": [],
+  "heldout_400_records_complete": false,
+  "v2_main_summary_exists": false,
+  "latest_heldout_snapshot": {
+    "checked_at": "2026-09-30T03:54:51.231025+00:00",
+    "records": 368,
+    "records_per_arm": {
+      "prose": 100,
+      "single": 99,
+      "single_late": 99,
+      "cybercase": 70
+    },
+    "summary_files": [
+      "main_20260930_020141.jsonl"
+    ],
+    "v2_main_summary_exists": false
+  }
+}

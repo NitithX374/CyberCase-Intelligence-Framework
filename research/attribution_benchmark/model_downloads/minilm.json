@@ -1,0 +1,43 @@
+{
+  "model": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+  "revision": "0a71e92a985b6e1ad1828cf67ce9c459639c1dca",
+  "snapshot": "F:\\Caches\\huggingface\\hub\\models--MoritzLaurer--multilingual-MiniLMv2-L6-mnli-xnli\\snapshots\\0a71e92a985b6e1ad1828cf67ce9c459639c1dca",
+  "finished_at": "2026-10-06T01:01:48.088822+00:00",
+  "files": [
+    {
+      "name": "README.md",
+      "bytes": 6741,
+      "lfs_sha256": null
+    },
+    {
+      "name": "config.json",
+      "bytes": 1032,
+      "lfs_sha256": null
+    },
+    {
+      "name": "sentencepiece.bpe.model",
+      "bytes": 5069051,
+      "lfs_sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
+    },
+    {
+      "name": "special_tokens_map.json",
+      "bytes": 280,
+      "lfs_sha256": null
+    },
+    {
+      "name": "tokenizer.json",
+      "bytes": 17082758,
+      "lfs_sha256": "098c131bb4423163db239755e309facaa6850059f850f9f3d88a78344a4b631c"
+    },
+    {
+      "name": "tokenizer_config.json",
+      "bytes": 565,
+      "lfs_sha256": null
+    },
+    {
+      "name": "model.safetensors",
+      "bytes": 427997022,
+      "lfs_sha256": "91b323ccf247ec1e3b5925d566230bae7c52de8147e6062b42e250089a3fc80b"
+    }
+  ]
+}

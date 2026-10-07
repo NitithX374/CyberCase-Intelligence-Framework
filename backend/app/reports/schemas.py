@@ -23,7 +23,7 @@ class ReportParty(ReportRow):
 
 
 class ReportEvent(ReportRow):
-    time: str
+    time: str | None
     event: str
     references: list[str] = Field(default_factory=list)
     support: SupportStatus | None = None

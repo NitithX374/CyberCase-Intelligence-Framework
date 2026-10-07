@@ -1,0 +1,795 @@
+[
+  {
+    "key": "attribute_first",
+    "identifier": "doi:10.18653/v1/2024.acl-long.182",
+    "primary_content_url": "https://aclanthology.org/2024.acl-long.182/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.acl-long.182",
+    "checked_at": "2026-09-30T00:58:22.153794+00:00",
+    "metadata": {
+      "title": "Attribute First, then Generate: Locally-attributable Grounded Text Generation",
+      "authors": [
+        "Aviv Slobodkin",
+        "Eran Hirsch",
+        "Arie Cattan",
+        "Tal Schuster",
+        "Ido Dagan"
+      ],
+      "year": 2024,
+      "doi": "10.18653/v1/2024.acl-long.182",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: attribute_first"
+  },
+  {
+    "key": "ais",
+    "identifier": "doi:10.1162/coli_a_00486",
+    "primary_content_url": "https://aclanthology.org/2023.cl-4.2/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1162%2Fcoli_a_00486",
+    "checked_at": "2026-09-30T00:58:23.292629+00:00",
+    "metadata": {
+      "title": "Measuring Attribution in Natural Language Generation Models",
+      "authors": [
+        "Hannah Rashkin",
+        "Vitaly Nikolaev",
+        "Matthew Lamm",
+        "Lora Aroyo",
+        "Michael Collins",
+        "Dipanjan Das",
+        "Slav Petrov",
+        "Gaurav Singh Tomar",
+        "Iulia Turc",
+        "David Reitter"
+      ],
+      "year": 2023,
+      "doi": "10.1162/coli_a_00486",
+      "type": "journal-article"
+    },
+    "content_review_record": "citation_requests.json: ais"
+  },
+  {
+    "key": "alce",
+    "identifier": "doi:10.18653/v1/2023.emnlp-main.398",
+    "primary_content_url": "https://aclanthology.org/2023.emnlp-main.398/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2023.emnlp-main.398",
+    "checked_at": "2026-09-30T00:58:23.934952+00:00",
+    "metadata": {
+      "title": "Enabling Large Language Models to Generate Text with Citations",
+      "authors": [
+        "Tianyu Gao",
+        "Howard Yen",
+        "Jiatong Yu",
+        "Danqi Chen"
+      ],
+      "year": 2023,
+      "doi": "10.18653/v1/2023.emnlp-main.398",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: alce"
+  },
+  {
+    "key": "factscore",
+    "identifier": "doi:10.18653/v1/2023.emnlp-main.741",
+    "primary_content_url": "https://aclanthology.org/2023.emnlp-main.741/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2023.emnlp-main.741",
+    "checked_at": "2026-09-30T00:58:24.572907+00:00",
+    "metadata": {
+      "title": "FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation",
+      "authors": [
+        "Sewon Min",
+        "Kalpesh Krishna",
+        "Xinxi Lyu",
+        "Mike Lewis",
+        "Wen-tau Yih",
+        "Pang Koh",
+        "Mohit Iyyer",
+        "Luke Zettlemoyer",
+        "Hannaneh Hajishirzi"
+      ],
+      "year": 2023,
+      "doi": "10.18653/v1/2023.emnlp-main.741",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: factscore"
+  },
+  {
+    "key": "faithful_summarization",
+    "identifier": "doi:10.18653/v1/2020.acl-main.173",
+    "primary_content_url": "https://aclanthology.org/2020.acl-main.173/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2020.acl-main.173",
+    "checked_at": "2026-09-30T00:58:25.211681+00:00",
+    "metadata": {
+      "title": "On Faithfulness and Factuality in Abstractive Summarization",
+      "authors": [
+        "Joshua Maynez",
+        "Shashi Narayan",
+        "Bernd Bohnet",
+        "Ryan McDonald"
+      ],
+      "year": 2020,
+      "doi": "10.18653/v1/2020.acl-main.173",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: faithful_summarization"
+  },
+  {
+    "key": "acu",
+    "identifier": "doi:10.18653/v1/2023.acl-long.228",
+    "primary_content_url": "https://aclanthology.org/2023.acl-long.228/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2023.acl-long.228",
+    "checked_at": "2026-09-30T00:58:25.852086+00:00",
+    "metadata": {
+      "title": "Revisiting the Gold Standard: Grounding Summarization Evaluation with Robust Human Evaluation",
+      "authors": [
+        "Yixin Liu",
+        "Alex Fabbri",
+        "Pengfei Liu",
+        "Yilun Zhao",
+        "Linyong Nan",
+        "Ruilin Han",
+        "Simeng Han",
+        "Shafiq Joty",
+        "Chien-Sheng Wu",
+        "Caiming Xiong",
+        "Dragomir Radev"
+      ],
+      "year": 2023,
+      "doi": "10.18653/v1/2023.acl-long.228",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: acu"
+  },
+  {
+    "key": "default_assistant",
+    "identifier": "arxiv:2607.01256v1",
+    "primary_content_url": "https://arxiv.org/abs/2607.01256",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2607.01256v1",
+    "checked_at": "2026-09-30T00:58:26.637193+00:00",
+    "metadata": {
+      "title": "AI Assistance for Human Review of Default Judgments",
+      "authors": [
+        "Theodora Worledge",
+        "Othman Bensouda Koraichi",
+        "Daniel Bernal",
+        "Aviv Caspi",
+        "Tatsunori Hashimoto",
+        "Carlos Guestrin",
+        "David Freeman Engstrom"
+      ],
+      "year": 2026,
+      "arxiv_id": "2607.01256v1",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: default_assistant"
+  },
+  {
+    "key": "forensic_report_llm",
+    "identifier": "doi:10.1016/j.fsidi.2023.301683",
+    "primary_content_url": "https://arxiv.org/abs/2312.14607",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1016%2Fj.fsidi.2023.301683",
+    "checked_at": "2026-09-30T00:58:27.310063+00:00",
+    "metadata": {
+      "title": "ChatGPT, Llama, can you write my report? An experiment on assisted digital forensics reports written using (local) large language models",
+      "authors": [
+        "Gaëtan Michelet",
+        "Frank Breitinger"
+      ],
+      "year": 2024,
+      "doi": "10.1016/j.fsidi.2023.301683",
+      "type": "journal-article"
+    },
+    "content_review_record": "citation_requests.json: forensic_report_llm"
+  },
+  {
+    "key": "structured_forensic_reports",
+    "identifier": "doi:10.1145/3785318.3785330",
+    "primary_content_url": "https://research.rug.nl/en/publications/structured-report-generation-using-local-llms-for-chat-based-digi/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1145%2F3785318.3785330",
+    "checked_at": "2026-09-30T00:58:28.155552+00:00",
+    "metadata": {
+      "title": "Structured Report Generation using Local LLMs for Chat-Based Digital Forensics",
+      "authors": [
+        "Ying Dehing",
+        "Hans Henseler",
+        "Timo Meconi",
+        "Marcel Worring",
+        "Harm van Beek"
+      ],
+      "year": 2026,
+      "doi": "10.1145/3785318.3785330",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: structured_forensic_reports"
+  },
+  {
+    "key": "self_correction_limits",
+    "identifier": "arxiv:2310.01798v2",
+    "primary_content_url": "https://arxiv.org/abs/2310.01798",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2310.01798v2",
+    "checked_at": "2026-09-30T00:58:28.724932+00:00",
+    "metadata": {
+      "title": "Large Language Models Cannot Self-Correct Reasoning Yet",
+      "authors": [
+        "Jie Huang",
+        "Xinyun Chen",
+        "Swaroop Mishra",
+        "Huaixiu Steven Zheng",
+        "Adams Wei Yu",
+        "Xinying Song",
+        "Denny Zhou"
+      ],
+      "year": 2023,
+      "arxiv_id": "2310.01798v2",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: self_correction_limits"
+  },
+  {
+    "key": "criticbench",
+    "identifier": "doi:10.18653/v1/2024.findings-acl.91",
+    "primary_content_url": "https://aclanthology.org/2024.findings-acl.91/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.findings-acl.91",
+    "checked_at": "2026-09-30T00:58:29.384088+00:00",
+    "metadata": {
+      "title": "CriticBench: Benchmarking LLMs for Critique-Correct Reasoning",
+      "authors": [
+        "Zicheng Lin",
+        "Zhibin Gou",
+        "Tian Liang",
+        "Ruilin Luo",
+        "Haowei Liu",
+        "Yujiu Yang"
+      ],
+      "year": 2024,
+      "doi": "10.18653/v1/2024.findings-acl.91",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: criticbench"
+  },
+  {
+    "key": "relay_fidelity",
+    "identifier": "arxiv:2607.09678v2",
+    "primary_content_url": "https://arxiv.org/abs/2607.09678",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2607.09678v2",
+    "checked_at": "2026-09-30T00:58:29.980553+00:00",
+    "metadata": {
+      "title": "Faithful, Not Corrective: Model Capability Governs Message-Format Effects in Multi-Hop Agent Relays",
+      "authors": [
+        "Sicheng Zeng"
+      ],
+      "year": 2026,
+      "arxiv_id": "2607.09678v2",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: relay_fidelity"
+  },
+  {
+    "key": "telephone_game",
+    "identifier": "arxiv:2407.04503v4",
+    "primary_content_url": "https://arxiv.org/abs/2407.04503",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2407.04503v4",
+    "checked_at": "2026-09-30T00:58:30.520776+00:00",
+    "metadata": {
+      "title": "When LLMs Play the Telephone Game: Cultural Attractors as Conceptual Tools to Evaluate LLMs in Multi-turn Settings",
+      "authors": [
+        "Jérémy Perez",
+        "Grgur Kovač",
+        "Corentin Léger",
+        "Cédric Colas",
+        "Gaia Molinaro",
+        "Maxime Derex",
+        "Pierre-Yves Oudeyer",
+        "Clément Moulin-Frier"
+      ],
+      "year": 2024,
+      "arxiv_id": "2407.04503v4",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: telephone_game"
+  },
+  {
+    "key": "clarify_when_necessary",
+    "identifier": "doi:10.18653/v1/2025.findings-naacl.306",
+    "primary_content_url": "https://aclanthology.org/2025.findings-naacl.306/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2025.findings-naacl.306",
+    "checked_at": "2026-09-30T00:58:31.161499+00:00",
+    "metadata": {
+      "title": "Clarify When Necessary: Resolving Ambiguity Through Interaction with LMs",
+      "authors": [
+        "Michael JQ Zhang",
+        "Eunsol Choi"
+      ],
+      "year": 2025,
+      "doi": "10.18653/v1/2025.findings-naacl.306",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: clarify_when_necessary"
+  },
+  {
+    "key": "mediq",
+    "identifier": "doi:10.52202/079017-0908",
+    "primary_content_url": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/32b80425554e081204e5988ab1c97e9a-Abstract-Conference.html",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.52202%2F079017-0908",
+    "checked_at": "2026-09-30T00:58:31.825362+00:00",
+    "metadata": {
+      "title": "MediQ: Question-Asking LLMs and a Benchmark for Reliable Interactive Clinical Reasoning",
+      "authors": [
+        "Shuyue Li",
+        "Vidhisha Balachandran",
+        "Shangbin Feng",
+        "Jonathan Ilgen",
+        "Emma Pierson",
+        "Pang Koh",
+        "Yulia Tsvetkov"
+      ],
+      "year": 2024,
+      "doi": "10.52202/079017-0908",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: mediq"
+  },
+  {
+    "key": "insufficiencybench",
+    "identifier": "arxiv:2608.20220",
+    "primary_content_url": "https://arxiv.org/abs/2608.20220",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2608.20220",
+    "checked_at": "2026-09-30T00:58:32.130023+00:00",
+    "metadata": {
+      "title": "InsufficiencyBench: Evaluating LLM legal advice on underspecified user queries",
+      "authors": [
+        "Samuel J. Vincent",
+        "Daniel Calloway",
+        "Fangyi Yu",
+        "Andrew M. Bean",
+        "Nabeel Seedat"
+      ],
+      "year": 2026,
+      "arxiv_id": "2608.20220",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: insufficiencybench"
+  },
+  {
+    "key": "missing_bug_information",
+    "identifier": "doi:10.1145/3106237.3106285",
+    "primary_content_url": "https://personal.utdallas.edu/~vince/papers/fse17.html",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1145%2F3106237.3106285",
+    "checked_at": "2026-09-30T00:58:32.985889+00:00",
+    "metadata": {
+      "title": "Detecting missing information in bug descriptions",
+      "authors": [
+        "Oscar Chaparro",
+        "Jing Lu",
+        "Fiorella Zampetti",
+        "Laura Moreno",
+        "Massimiliano Di Penta",
+        "Andrian Marcus",
+        "Gabriele Bavota",
+        "Vincent Ng"
+      ],
+      "year": 2017,
+      "doi": "10.1145/3106237.3106285",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: missing_bug_information"
+  },
+  {
+    "key": "giveme5w1h",
+    "identifier": "arxiv:1909.02766",
+    "primary_content_url": "https://arxiv.org/abs/1909.02766",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=1909.02766",
+    "checked_at": "2026-09-30T00:58:33.069195+00:00",
+    "metadata": {
+      "title": "Giveme5W1H: A Universal System for Extracting Main Events from News Articles",
+      "authors": [
+        "Felix Hamborg",
+        "Corinna Breitinger",
+        "Bela Gipp"
+      ],
+      "year": 2019,
+      "arxiv_id": "1909.02766",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: giveme5w1h"
+  },
+  {
+    "key": "casie",
+    "identifier": "doi:10.1609/aaai.v34i05.6401",
+    "primary_content_url": "https://ojs.aaai.org/index.php/AAAI/article/view/6401",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1609%2Faaai.v34i05.6401",
+    "checked_at": "2026-09-30T00:58:33.725346+00:00",
+    "metadata": {
+      "title": "CASIE: Extracting Cybersecurity Event Information from Text",
+      "authors": [
+        "Taneeya Satyapanich",
+        "Francis Ferraro",
+        "Tim Finin"
+      ],
+      "year": 2020,
+      "doi": "10.1609/aaai.v34i05.6401",
+      "type": "journal-article"
+    },
+    "content_review_record": "citation_requests.json: casie"
+  },
+  {
+    "key": "rag",
+    "identifier": "arxiv:2005.11401",
+    "primary_content_url": "https://proceedings.neurips.cc/paper/2020/hash/6b493230-Abstract.html",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2005.11401",
+    "checked_at": "2026-09-30T00:58:33.890905+00:00",
+    "metadata": {
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "authors": [
+        "Patrick Lewis",
+        "Ethan Perez",
+        "Aleksandra Piktus",
+        "Fabio Petroni",
+        "Vladimir Karpukhin",
+        "Naman Goyal",
+        "Heinrich Küttler",
+        "Mike Lewis",
+        "Wen-tau Yih",
+        "Tim Rocktäschel",
+        "Sebastian Riedel",
+        "Douwe Kiela"
+      ],
+      "year": 2020,
+      "arxiv_id": "2005.11401",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: rag"
+  },
+  {
+    "key": "ragate",
+    "identifier": "doi:10.18653/v1/2025.findings-naacl.30",
+    "primary_content_url": "https://aclanthology.org/2025.findings-naacl.30/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2025.findings-naacl.30",
+    "checked_at": "2026-09-30T00:58:34.550697+00:00",
+    "metadata": {
+      "title": "Adaptive Retrieval-Augmented Generation for Conversational Systems",
+      "authors": [
+        "Xi Wang",
+        "Procheta Sen",
+        "Ruizhe Li",
+        "Emine Yilmaz"
+      ],
+      "year": 2025,
+      "doi": "10.18653/v1/2025.findings-naacl.30",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: ragate"
+  },
+  {
+    "key": "xlmr",
+    "identifier": "doi:10.18653/v1/2020.acl-main.747",
+    "primary_content_url": "https://aclanthology.org/2020.acl-main.747/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2020.acl-main.747",
+    "checked_at": "2026-09-30T00:58:35.195063+00:00",
+    "metadata": {
+      "title": "Unsupervised Cross-lingual Representation Learning at Scale",
+      "authors": [
+        "Alexis Conneau",
+        "Kartikay Khandelwal",
+        "Naman Goyal",
+        "Vishrav Chaudhary",
+        "Guillaume Wenzek",
+        "Francisco Guzmán",
+        "Edouard Grave",
+        "Myle Ott",
+        "Luke Zettlemoyer",
+        "Veselin Stoyanov"
+      ],
+      "year": 2020,
+      "doi": "10.18653/v1/2020.acl-main.747",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: xlmr"
+  },
+  {
+    "key": "ladder",
+    "identifier": "doi:10.1145/3607199.3607208",
+    "primary_content_url": "https://arxiv.org/abs/2211.01753",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1145%2F3607199.3607208",
+    "checked_at": "2026-09-30T00:58:36.053385+00:00",
+    "metadata": {
+      "title": "Looking Beyond IoCs: Automatically Extracting Attack Patterns from External CTI",
+      "authors": [
+        "Md Tanvirul Alam",
+        "Dipkamal Bhusal",
+        "Youngja Park",
+        "Nidhi Rastogi"
+      ],
+      "year": 2023,
+      "doi": "10.1145/3607199.3607208",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: ladder"
+  },
+  {
+    "key": "annoctr",
+    "identifier": "arxiv:2404.07765",
+    "primary_content_url": "https://aclanthology.org/2024.lrec-main.103/",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2404.07765",
+    "checked_at": "2026-09-30T00:58:36.914905+00:00",
+    "metadata": {
+      "title": "AnnoCTR: A Dataset for Detecting and Linking Entities, Tactics, and Techniques in Cyber Threat Reports",
+      "authors": [
+        "Lukas Lange",
+        "Marc Müller",
+        "Ghazaleh Haratinezhad Torbati",
+        "Dragan Milchevski",
+        "Patrick Grau",
+        "Subhash Pujari",
+        "Annemarie Friedrich"
+      ],
+      "year": 2024,
+      "arxiv_id": "2404.07765",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: annoctr"
+  },
+  {
+    "key": "cti_unreliable",
+    "identifier": "doi:10.1007/978-3-032-00627-1_17",
+    "primary_content_url": "https://arxiv.org/abs/2503.23175",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1007%2F978-3-032-00627-1_17",
+    "checked_at": "2026-09-30T00:58:37.762184+00:00",
+    "metadata": {
+      "title": "Large Language Models Are Unreliable for Cyber Threat Intelligence",
+      "authors": [
+        "Emanuele Mezzi",
+        "Fabio Massacci",
+        "Katja Tuma"
+      ],
+      "year": 2025,
+      "doi": "10.1007/978-3-032-00627-1_17",
+      "type": "book-chapter"
+    },
+    "content_review_record": "citation_requests.json: cti_unreliable"
+  },
+  {
+    "key": "agir",
+    "identifier": "doi:10.1109/BigData59044.2023.10386116",
+    "primary_content_url": "https://arxiv.org/abs/2310.02655",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.1109%2FBigData59044.2023.10386116",
+    "checked_at": "2026-09-30T00:58:38.420771+00:00",
+    "metadata": {
+      "title": "AGIR: Automating Cyber Threat Intelligence Reporting with Natural Language Generation",
+      "authors": [
+        "Filippo Perrina",
+        "Francesco Marchiori",
+        "Mauro Conti",
+        "Nino Vincenzo Verde"
+      ],
+      "year": 2023,
+      "doi": "10.1109/bigdata59044.2023.10386116",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: agir"
+  },
+  {
+    "key": "data_to_document",
+    "identifier": "doi:10.18653/v1/D17-1239",
+    "primary_content_url": "https://aclanthology.org/D17-1239/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2FD17-1239",
+    "checked_at": "2026-09-30T00:58:39.094158+00:00",
+    "metadata": {
+      "title": "Challenges in Data-to-Document Generation",
+      "authors": [
+        "Sam Wiseman",
+        "Stuart Shieber",
+        "Alexander Rush"
+      ],
+      "year": 2017,
+      "doi": "10.18653/v1/d17-1239",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: data_to_document"
+  },
+  {
+    "key": "open_llm_data_to_text",
+    "identifier": "doi:10.18653/v1/2024.acl-long.651",
+    "primary_content_url": "https://aclanthology.org/2024.acl-long.651/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.acl-long.651",
+    "checked_at": "2026-09-30T00:58:39.795255+00:00",
+    "metadata": {
+      "title": "Beyond Traditional Benchmarks: Analyzing Behaviors of Open LLMs on Data-to-Text Generation",
+      "authors": [
+        "Zdeněk Kasner",
+        "Ondrej Dusek"
+      ],
+      "year": 2024,
+      "doi": "10.18653/v1/2024.acl-long.651",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: open_llm_data_to_text"
+  },
+  {
+    "key": "format_restrictions",
+    "identifier": "doi:10.18653/v1/2024.emnlp-industry.91",
+    "primary_content_url": "https://aclanthology.org/2024.emnlp-industry.91/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2024.emnlp-industry.91",
+    "checked_at": "2026-09-30T00:58:40.431877+00:00",
+    "metadata": {
+      "title": "Let Me Speak Freely? A Study On The Impact Of Format Restrictions On Large Language Model Performance.",
+      "authors": [
+        "Zhi Rui Tam",
+        "Cheng-Kuang Wu",
+        "Yi-Lin Tsai",
+        "Chieh-Yen Lin",
+        "Hung-yi Lee",
+        "Yun-Nung Chen"
+      ],
+      "year": 2024,
+      "doi": "10.18653/v1/2024.emnlp-industry.91",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: format_restrictions"
+  },
+  {
+    "key": "typhoon_ocr",
+    "identifier": "arxiv:2601.14722",
+    "primary_content_url": "https://arxiv.org/abs/2601.14722",
+    "metadata_provider": "arxiv",
+    "metadata_url": "https://export.arxiv.org/api/query?id_list=2601.14722",
+    "checked_at": "2026-09-30T00:58:40.853659+00:00",
+    "metadata": {
+      "title": "Typhoon OCR: Open Vision-Language Model For Thai Document Extraction",
+      "authors": [
+        "Surapon Nonesung",
+        "Natapong Nitarach",
+        "Teetouch Jaknamon",
+        "Pittawat Taveekitworachai",
+        "Kunat Pipatanakul"
+      ],
+      "year": 2026,
+      "arxiv_id": "2601.14722",
+      "type": "preprint"
+    },
+    "content_review_record": "citation_requests.json: typhoon_ocr"
+  },
+  {
+    "key": "ocr_downstream",
+    "identifier": "doi:10.5220/0009169004840496",
+    "primary_content_url": "https://www.turing.ac.uk/news/publications/assessing-impact-ocr-quality-downstream-nlp-tasks",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.5220%2F0009169004840496",
+    "checked_at": "2026-09-30T00:58:41.511708+00:00",
+    "metadata": {
+      "title": "Assessing the Impact of OCR Quality on Downstream NLP Tasks",
+      "authors": [
+        "Daniel van Strien",
+        "Kaspar Beelen",
+        "Mariona Ardanuy",
+        "Kasra Hosseini",
+        "Barbara McGillivray",
+        "Giovanni Colavizza"
+      ],
+      "year": 2020,
+      "doi": "10.5220/0009169004840496",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: ocr_downstream"
+  },
+  {
+    "key": "statistical_tests",
+    "identifier": "doi:10.18653/v1/P18-1128",
+    "primary_content_url": "https://aclanthology.org/P18-1128/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2FP18-1128",
+    "checked_at": "2026-09-30T00:58:42.147766+00:00",
+    "metadata": {
+      "title": "The Hitchhiker’s Guide to Testing Statistical Significance in Natural Language Processing",
+      "authors": [
+        "Rotem Dror",
+        "Gili Baumer",
+        "Segev Shlomov",
+        "Roi Reichart"
+      ],
+      "year": 2018,
+      "doi": "10.18653/v1/p18-1128",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: statistical_tests"
+  },
+  {
+    "key": "statistical_power",
+    "identifier": "doi:10.18653/v1/2020.emnlp-main.745",
+    "primary_content_url": "https://aclanthology.org/2020.emnlp-main.745/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2020.emnlp-main.745",
+    "checked_at": "2026-09-30T00:58:42.806293+00:00",
+    "metadata": {
+      "title": "With Little Power Comes Great Responsibility",
+      "authors": [
+        "Dallas Card",
+        "Peter Henderson",
+        "Urvashi Khandelwal",
+        "Robin Jia",
+        "Kyle Mahowald",
+        "Dan Jurafsky"
+      ],
+      "year": 2020,
+      "doi": "10.18653/v1/2020.emnlp-main.745",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: statistical_power"
+  },
+  {
+    "key": "api_nondeterminism",
+    "identifier": "doi:10.18653/v1/2025.eval4nlp-1.12",
+    "primary_content_url": "https://aclanthology.org/2025.eval4nlp-1.12/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2F2025.eval4nlp-1.12",
+    "checked_at": "2026-09-30T00:58:43.445822+00:00",
+    "metadata": {
+      "title": "Non-Determinism of “Deterministic” LLM System Settings in Hosted Environments",
+      "authors": [
+        "Berk Atıl",
+        "Sarp Aykent",
+        "Alexa Chittams",
+        "Lisheng Fu",
+        "Rebecca J. Passonneau",
+        "Evan Radcliffe",
+        "Guru Rajan Rajagopal",
+        "Adam Sloan",
+        "Tomasz Tudrej",
+        "Ferhan Ture",
+        "Zhe Wu",
+        "Lixinyu Xu",
+        "Breck Baldwin"
+      ],
+      "year": 2025,
+      "doi": "10.18653/v1/2025.eval4nlp-1.12",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: api_nondeterminism"
+  },
+  {
+    "key": "clarification_evpi",
+    "identifier": "doi:10.18653/v1/P18-1255",
+    "primary_content_url": "https://aclanthology.org/P18-1255/",
+    "metadata_provider": "crossref",
+    "metadata_url": "https://api.crossref.org/works/10.18653%2Fv1%2FP18-1255",
+    "checked_at": "2026-09-30T00:58:44.087906+00:00",
+    "metadata": {
+      "title": "Learning to Ask Good Questions: Ranking Clarification Questions using Neural Expected Value of Perfect Information",
+      "authors": [
+        "Sudha Rao",
+        "Hal Daumé III"
+      ],
+      "year": 2018,
+      "doi": "10.18653/v1/p18-1255",
+      "type": "proceedings-article"
+    },
+    "content_review_record": "citation_requests.json: clarification_evpi"
+  }
+]

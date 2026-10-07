@@ -97,4 +97,28 @@ describe("the original file of a source", () => {
 
     await waitFor(() => expect(urls.revoked.size).toBe(urls.created.length));
   });
+
+  it("calls onRetryDocument when the retry button is clicked", async () => {
+    const onRetryDocument = vi.fn().mockResolvedValue(undefined);
+    const item = fileItem("scanned.pdf", "application/pdf");
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <SourceViewport
+            caseId="case-1"
+            item={item}
+            mode="ocr"
+            onModeChange={() => {}}
+            onRetryDocument={onRetryDocument}
+          />
+        </QueryClientProvider>
+      </StrictMode>,
+    );
+
+    const retryBtn = screen.getByRole("button", { name: "Retry extraction" });
+    fireEvent.click(retryBtn);
+
+    expect(onRetryDocument).toHaveBeenCalledWith("document-scanned.pdf");
+  });
 });

@@ -1,0 +1,212 @@
+[
+  {
+    "key": "attribute_first",
+    "source": "https://aclanthology.org/2024.acl-long.182.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:07.189819+00:00"
+  },
+  {
+    "key": "ais",
+    "source": "https://aclanthology.org/2023.cl-4.2.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:07.195583+00:00"
+  },
+  {
+    "key": "alce",
+    "source": "https://aclanthology.org/2023.emnlp-main.398.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:07.861280+00:00"
+  },
+  {
+    "key": "factscore",
+    "source": "https://aclanthology.org/2023.emnlp-main.741.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:07.875100+00:00"
+  },
+  {
+    "key": "faithful_summarization",
+    "source": "https://aclanthology.org/2020.acl-main.173.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:08.524650+00:00"
+  },
+  {
+    "key": "acu",
+    "source": "https://aclanthology.org/2023.acl-long.228.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:08.565817+00:00"
+  },
+  {
+    "key": "default_assistant",
+    "source": "https://export.arxiv.org/api/query?id_list=2607.01256",
+    "method": "Verified arXiv metadata",
+    "checked_at": "2026-09-30T01:00:08.524724+00:00"
+  },
+  {
+    "key": "forensic_report_llm",
+    "source": "https://api.crossref.org/works/10.1016%2Fj.fsidi.2023.301683/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:09.240173+00:00"
+  },
+  {
+    "key": "structured_forensic_reports",
+    "source": "https://api.crossref.org/works/10.1145%2F3785318.3785330/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:09.236537+00:00"
+  },
+  {
+    "key": "self_correction_limits",
+    "source": "https://export.arxiv.org/api/query?id_list=2310.01798",
+    "method": "Verified primary metadata; published venue cross-checked separately",
+    "checked_at": "2026-09-30T01:00:09.236594+00:00"
+  },
+  {
+    "key": "criticbench",
+    "source": "https://aclanthology.org/2024.findings-acl.91.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:09.932082+00:00"
+  },
+  {
+    "key": "relay_fidelity",
+    "source": "https://export.arxiv.org/api/query?id_list=2607.09678",
+    "method": "Verified arXiv metadata",
+    "checked_at": "2026-09-30T01:00:09.240225+00:00"
+  },
+  {
+    "key": "telephone_game",
+    "source": "https://export.arxiv.org/api/query?id_list=2407.04503",
+    "method": "Verified primary metadata; published venue cross-checked separately",
+    "checked_at": "2026-09-30T01:00:09.240244+00:00"
+  },
+  {
+    "key": "clarify_when_necessary",
+    "source": "https://aclanthology.org/2025.findings-naacl.306.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:10.149415+00:00"
+  },
+  {
+    "key": "mediq",
+    "source": "https://api.crossref.org/works/10.52202%2F079017-0908/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:10.602633+00:00"
+  },
+  {
+    "key": "insufficiencybench",
+    "source": "https://export.arxiv.org/api/query?id_list=2608.20220",
+    "method": "Verified arXiv metadata",
+    "checked_at": "2026-09-30T01:00:10.149478+00:00"
+  },
+  {
+    "key": "missing_bug_information",
+    "source": "https://api.crossref.org/works/10.1145%2F3106237.3106285/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:10.826541+00:00"
+  },
+  {
+    "key": "giveme5w1h",
+    "source": "https://export.arxiv.org/api/query?id_list=1909.02766",
+    "method": "Verified arXiv metadata",
+    "checked_at": "2026-09-30T01:00:10.602701+00:00"
+  },
+  {
+    "key": "casie",
+    "source": "https://api.crossref.org/works/10.1609%2Faaai.v34i05.6401/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:11.254681+00:00"
+  },
+  {
+    "key": "rag",
+    "source": "https://export.arxiv.org/api/query?id_list=2005.11401",
+    "method": "Verified primary metadata; published venue cross-checked separately",
+    "checked_at": "2026-09-30T01:00:10.826612+00:00"
+  },
+  {
+    "key": "ragate",
+    "source": "https://aclanthology.org/2025.findings-naacl.30.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:11.518283+00:00"
+  },
+  {
+    "key": "xlmr",
+    "source": "https://aclanthology.org/2020.acl-main.747.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:11.945072+00:00"
+  },
+  {
+    "key": "ladder",
+    "source": "https://api.crossref.org/works/10.1145%2F3607199.3607208/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:12.175468+00:00"
+  },
+  {
+    "key": "annoctr",
+    "source": "https://aclanthology.org/2024.lrec-main.103.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:12.640316+00:00"
+  },
+  {
+    "key": "cti_unreliable",
+    "source": "https://api.crossref.org/works/10.1007%2F978-3-032-00627-1_17/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:12.847623+00:00"
+  },
+  {
+    "key": "agir",
+    "source": "https://api.crossref.org/works/10.1109%2FBigData59044.2023.10386116/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:13.311248+00:00"
+  },
+  {
+    "key": "data_to_document",
+    "source": "https://aclanthology.org/D17-1239.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:13.509993+00:00"
+  },
+  {
+    "key": "open_llm_data_to_text",
+    "source": "https://aclanthology.org/2024.acl-long.651.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:14.019268+00:00"
+  },
+  {
+    "key": "format_restrictions",
+    "source": "https://aclanthology.org/2024.emnlp-industry.91.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:14.185344+00:00"
+  },
+  {
+    "key": "typhoon_ocr",
+    "source": "https://export.arxiv.org/api/query?id_list=2601.14722",
+    "method": "Verified arXiv metadata",
+    "checked_at": "2026-09-30T01:00:14.019328+00:00"
+  },
+  {
+    "key": "ocr_downstream",
+    "source": "https://api.crossref.org/works/10.5220%2F0009169004840496/transform/application/x-bibtex",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:14.673437+00:00"
+  },
+  {
+    "key": "statistical_tests",
+    "source": "https://aclanthology.org/P18-1128.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:14.857303+00:00"
+  },
+  {
+    "key": "statistical_power",
+    "source": "https://aclanthology.org/2020.emnlp-main.745.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:15.347295+00:00"
+  },
+  {
+    "key": "api_nondeterminism",
+    "source": "https://aclanthology.org/2025.eval4nlp-1.12.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:15.540581+00:00"
+  },
+  {
+    "key": "clarification_evpi",
+    "source": "https://aclanthology.org/P18-1255.bib",
+    "method": "Official publisher BibTeX or Crossref DOI transform; abstract removed, key normalized",
+    "checked_at": "2026-09-30T01:00:16.188476+00:00"
+  }
+]

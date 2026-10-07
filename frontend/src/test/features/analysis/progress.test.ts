@@ -41,7 +41,13 @@ describe("the steps an analysis has reached", () => {
     );
 
     expect(rows.map((row) => row.step)).toEqual(["gate", "read", "bind", "views", "judge"]);
-    expect(rows.map((row) => row.state)).toEqual(["done", "current", "waiting", "waiting", "waiting"]);
+    expect(rows.map((row) => row.state)).toEqual([
+      "done",
+      "current",
+      "waiting",
+      "waiting",
+      "waiting",
+    ]);
   });
 
   it("still shows the first step while nothing has been reached", () => {

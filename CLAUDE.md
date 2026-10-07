@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. Local GLiNER2 extracts Parties, Timeline and Impacts from claims with resolved supporting citations for display and reports. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly the canonical Claims supplied to Judgement, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
 
 ## Service Layout
 
-The platform is split into three services (see `docker-compose.yml`):
+The platform has three application services (see `docker-compose.yml`):
 
 | Service | Path | Port | Role |
 |---------|------|------|------|
@@ -147,59 +147,6 @@ END → AgentResponse(status="completed", answer)
 
 The pipeline never pauses for user input.
 
-### MITRE Table (`POST /query`, after the graph)
-
-`routers/rag.py::_run_pipeline` builds the table the backend receives, in the
-same worker thread as the graph and from the answer the graph wrote. The answer
-itself never leaves the service.
-
-```
-answer + GraphRAGResult
-    ↓
-[RE-READ] pipeline/table_reread.py — decides the Enterprise technique rows
-    1. full list: the case file against all 222 Enterprise parent techniques
-       (tactics + first sentence each), 3 calls side by side
-    2. shortlist: the case file against what the answer cites plus what round 1
-       named, each with its whole definition, 3 calls side by side
-    a technique is kept when 2 of the 3 shortlist replies name it
-    ↓
-[TABLE] pipeline/mitre_table.py::build_mitre_table(selection=…)
-    ├── Enterprise technique: a row when the re-read kept it, retrieved or not;
-    │   a sub-technique only when the answer cites it and its parent is kept
-    ├── another domain's technique (mobile): a row only when the answer cites its ID
-    └── everything else (software, groups, mitigations): cited in the answer,
-        or a vector hit ≥ MITRE_TABLE_SCORE_THRESHOLD
-```
-
-The technique list is read from Neo4j once per process
-(`GraphRetriever.enterprise_techniques`). The re-read cannot fail a request: no
-list, too few readable replies or a vote that keeps nothing all leave the
-answer-grounded table (the last branch, applied to every row), which is also
-what `MITRE_TABLE_REREAD=false` serves. A row retrieval did not return has
-`source="graph"` and no score, and `relevance` still says only whether the
-answer cites it.
-
-Each row also carries `evidence`: the parts of the request's query it rests on,
-as `{text, start, end, basis}` with `query[start:end] == text`
-(`pipeline/case_evidence.py`).
-
-- `basis: "reread"` — every shortlist reply copies the sentence that reports
-  each step. The copies behind a kept technique are looked up in the query and
-  the places they are found at are its evidence; a sub-technique row carries
-  its parent's.
-- `basis: "retrieval"` — only for a row the re-read tied to nothing.
-  `GraphRAGResult.retrieved_by` records which sub-queries returned the entity,
-  and a sub-query is found in the query by its own words (its bracketed English
-  gloss aside). This says why a row was retrieved, not that the words describe
-  it. The decomposer is not asked for a source: when it was, it stopped writing
-  the English gloss and retrieval lost recall.
-
-Nothing a model wrote is sent as evidence: a copy that cannot be found in the
-query is dropped. The backend validates rows with `extra="forbid"`, so its row
-contract (`backend/app/analysis/technical_context/contracts.py`) has the field
-too; a backend older than that rejects every reply that carries it, and
-`MITRE_TABLE_EVIDENCE=false` leaves the field off.
-
 ### API Endpoints
 
 Backend (prefix `/api/v1`), one `routes.py` per feature folder. `tests/test_route_surface.py` asserts this exact set, so it is the authority when this list and the code disagree:
@@ -252,7 +199,8 @@ llm/                    calling a model
                         504 is asked once more after 2 seconds (one retry
                         between them); a timeout is not. A 429 that survives
                         is analysis_provider_rate_limited, HTTP 429
-  settings.py           model, providers, output and thinking budgets
+  settings.py           model, providers, output and thinking budgets; optional
+                        Reading-only override with historical inheritance
   openrouter.py         the OpenRouter target; registry.py (model aliases),
                         schema.py (the structured-output schema; a single-value
                         Literal is sent as a one-item enum, because not every
@@ -268,7 +216,7 @@ trace/                  what the analysis, chat and reports share
                         summary_units holds the summary cut
                         at its claim-ID brackets, each unit with its claim IDs
                         and the same derived support
-  view_fields.py        exact Claim-span pointers and local extraction provenance
+  view_fields.py        legacy Claim-span pointers and derived-view extraction metadata
   summary.py            cutting a summary into the units that end at a
                         [A-nn, A-nn] bracket; the model writes only the summary
                         string, with its brackets; summary_closings gives the
@@ -361,8 +309,8 @@ analysis/               producing an analysis of a case; routes, schemas
   write.py              write_trace: a claims-only reading call (selected Source
                         unit IDs; prompt JSON, no grammar), deterministic source
                         binding (bound_claims),
-                        local GLiNER2 views for display only,
-                        then a judgement call (summary, gaps, ATT&CK
+                        independent batched LLM views for display, concurrent
+                        with a judgement call (summary, gaps, ATT&CK
                         associations) over the checked claims alone: no case
                         sources and no sentence around each quotation
   language.py           which language to write in: Thai when any source has
@@ -373,11 +321,15 @@ analysis/               producing an analysis of a case; routes, schemas
   prompts.py            assessment and Judgement prompts; Reading reexports
   reading_prompt.py     contextual claim construction with Source unit selection;
                         attribution, uncertainty and whole-Case consolidation
-  views.py              extract Parties/Timeline/Impacts from bound claims;
-                        verify original Claim spans, assign claim links and
-                        retain context; no views sent to Judgement
-  view_model.py         pinned local GLiNER2 loader and serialized inference;
-                        exact-offset Thai/English tokenization
+  reading_sources.py    compact local unit IDs for the Reader; request-owned
+                        revision mapping back to canonical IDs before binding
+  source_payload.py     shared Source/document extraction-quality header
+  views.py              one structured LLM call over Judgement's canonical
+                        Claims; validate links, record failures, save views
+                        for presentation only
+  view_schema.py        typed extraction records using the existing claim_ids
+                        contract; nullable role and combined date/time
+  view_prompt.py        extraction-only generation contract
   technical_context/    whether and how the case gets ATT&CK context
     contracts.py        the augmentation and applicability records, and the
                         RAG service's request and response
@@ -444,7 +396,7 @@ decision = decide_followup(assessment.gaps, ...)
 if not isinstance(decision, Proceed):
     return AnalysisAdvance(assessment, decision)   # ask, and stop here
 artifacts = await retrieve_technical_context(...)  # only now pay for the rest
-artifacts = await write_analysis(...)              # reading, source binding, local views, judgement
+artifacts = await write_analysis(...)              # reading, source binding, concurrent LLM views and judgement
 artifacts = await bind_to_case(...)                # the judgement's references
 ```
 
@@ -467,9 +419,6 @@ composition, as `tests/test_case_followup_postgres.py` does. There is no
 | Hybrid retriever | `retrieval/hybrid_retriever.py` | Vector + graph search with RRF fusion |
 | Context builder | `pipeline/context_builder.py` | Format retrieved context for LLM |
 | Evaluator | `pipeline/evaluator.py` | Assess context sufficiency, drive self-reflection |
-| MITRE table | `pipeline/mitre_table.py` | The rows `/query` returns, from retrieval, the answer and the re-read |
-| Table re-read | `pipeline/table_reread.py` | Second reading of the case file that decides the technique rows |
-| Case evidence | `pipeline/case_evidence.py` | Which part of the case file each table row rests on |
 | Config | `config.py` | All RAG settings (models, topK, DB URLs) |
 | Ingestion | `ingestion/` | Parse STIX JSON, populate Neo4j + Qdrant |
 
@@ -515,17 +464,40 @@ question and answer. `MITRE_GATE_MODEL_PATH` points at the encoder's weights;
 
 ### Source units and canonical claims (backend)
 
-`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together and selects IDs on claims. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. Legacy quotes retain the old matcher.
+`sources/evidence.py` partitions every source at analysis time, reusing sentence spans and preserving all separators. Each frozen `EvidenceUnit(unit_id, source_id, start, end, text)` satisfies `text == source.text[start:end]`; ordered units reconstruct the source exactly. Canonical IDs have the form `source_id:U001-<16 hex characters>`, derived from the segmentation version and full source text. Reading receives all native sources and answered QA text together using local IDs such as `U001`, with unchanged Source identity and document/quality metadata. `analysis/reading_sources.py` captures revisions before Reading and expands its selections to canonical IDs before binding; offsets and hashes are omitted from the compact model payload. `trace/evidence_binding.py` checks source ownership, existence, syntax, stale hashes and duplicates before reproducing original text. Stored traces keep canonical IDs. On the direct path, citation `exact_quote` is backend-produced text with offsets, document identity and page locator when available. Legacy quotes retain the old matcher.
 
 The dedicated Reader contract contains `version` and `claims` only. Each claim contains its ID, type, text, epistemic status and supporting/contradicting unit citations. The backend derives source-ID lists and citation locations; the Reader cannot generate copied quotations, reasoning summaries, metadata or separate parties/timeline/impacts. `reported` covers attributed or qualified source assertions; `unknown` describes uncertainty explicitly stated in a source. Higher-level inference belongs to Judgement. Removing duplicated structured facts also removes projection-specific NLI verification. Historical views and saved verdicts remain readable for existing records but are never input authority for Judgement or chat. `support=bound` means linked claims have resolved supporting citations, not semantic or factual confirmation. The single-call `CaseProviderAnalysis` contract remains solely for the existing experimental baseline, separate from the production Reader.
 
 ### Claim views (backend)
 
-`analysis/views.py` runs GLiNER2 over the original text of claims that have resolved supporting citations. It selects spans for party names/explicit roles, time/event pairs and impacts. The backend verifies offsets against the exact Claim text and assigns `claim_ids` and `field_spans`; there are no new Source citations on views. A role the extractor did not select is `null`; this does not prove the Claim has no role. Timeline events and impact descriptions retain the full Claim text, and party rows show their full linked Claim context in Details and reports. Exact duplicate views consolidate their claim links without guessing aliases or coreference.
+`analysis/views.py` makes one native-schema `case_views` call over exactly the
+canonical Claims supplied to Judgement. Each input contains only `claim_id` and
+`text`. No separate admission rule is added: Claims whose pointers could not be
+resolved retain their existing status and are included in both inputs. This is
+not claim-to-source semantic verification.
 
-These are extracted display views, not semantically verified facts. Exact-span validation cannot prove name/role or time/event association. `projection_grounding` stays null and `support=bound` still means linked claims have resolved supporting citations. The claims-only Judgement and chat payloads are unchanged. Saved historical projection verdicts remain visible separately.
+The extractor uses the configured analysis model and provider order, without
+thinking, with at most 4,096 output tokens and a 60-second overall deadline. It
+runs concurrently with Judgement after binding. Required nonempty `claim_ids`
+link every view to its Claims. An item with any unknown ID is dropped and logged;
+invalid schema, transport failure or timeout records failed extraction and empty
+views while Judgement completes independently. A failed Judgement cancels the
+outstanding extraction task. Cancellation is never converted to successful views.
 
-Runtime is pinned to `gliner2==1.3.2` and `fastino/gliner2-multi-v1` revision `ce747d79a8e362d3dee0b0b26d1201f7f1a8615a`. Run `python scripts/copy_case_view_weights.py` from `backend` once to provision the ignored `gliner_case_views/` directory; the application never downloads weights. Compose mounts it read-only. `CASE_VIEW_MODEL_PATH`, `CASE_VIEW_DEVICE` (default `cpu`) and `CASE_VIEW_THRESHOLD` (default `0.5`) configure execution. Extraction runs in a worker thread with serialized model inference, no provider call. Missing weights or invalid extracted spans fail explicitly. `view_extraction` records the pin, threshold/device, included/excluded claim IDs and elapsed time. Multilingual coverage and role association quality require separate evaluation; successful extraction does not establish Thai accuracy.
+Parties, Timeline and Impacts are presentation views, not authoritative factual
+records. The prompt prohibits invented roles/times, alias merging and analytical
+inference; structural checks do not establish semantic correctness. Unknown roles
+and combined date/time values are null. No new Source citations, Claim offsets,
+confidence or semantic verdicts are generated. UI and reports retain linked Claim
+context. `bound` still describes resolvable Claim citations only.
+
+Views and extraction status/time/dropped counts are stored in the existing trace
+snapshot. Reading an analysis or rendering a report makes no extraction call.
+There is no cross-analysis cache or new revision system. Historical extractor
+metadata, offsets and projection verdicts remain readable through generic records. Local model loaders,
+per-Claim inference, the provisioner and Compose sidecar/config/mount are removed;
+Torch/Transformers remain for the encoder gate and generic legacy NLI. The full
+contract is in [Source grounding](docs/architecture/evidence-unit-grounding.md).
 
 ### Legacy Meaning Pointer (backend)
 
@@ -551,7 +523,7 @@ pipeline behind `/query` is not deterministic, so asking again is neither free
 nor neutral.
 
 
-The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. An unverified quote of a not-confirmed claim carries the passage found by meaning in `meaning_passage`, and the report prints it under that quote after one plain line saying how it was found, with no score; a report stored before that has none and prints nothing new, and when the analysis could not run the pointer a limitation says so. A quote with a review flag carries it in `supporting_marked` and `contradicting_marked`, and the report prints one plain line under it, saying that the source has the mark next to the quote or that the quote and the source differ at the mark; a report stored before that has none and prints no line. Historical party, event and impact snapshots retain `support` and saved `projection_grounding` verdicts. New analyses render saved GLiNER2 views with linked Claim context alongside Findings; report generation runs no model or extraction step. An unresolved Evidence Unit ID prints as an invalid pointer rather than an empty quote. Each item carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
+The frontend loads and generates reports through the case-scoped report endpoints. The backend builds a deterministic template-first report from the stored analysis and what it recorded, keeps report versions, and exposes HTML and PDF export. `reports/display.py` builds one `CaseReportContent` snapshot when the report is generated, `case_reports.structured_report` stores it, and the HTML and PDF render from that stored copy; a row stored in an older shape is refused with `case_report_outdated`, not rebuilt. Each quote in it carries the sentence around it, in `supporting_contexts` and `contradicting_contexts` beside `supporting_quotes`; a report stored before that has none, still validates, and prints its quotes alone. A quote a tolerant tier found carries what that tier ignored, in `supporting_tolerated` and `contradicting_tolerated`, and the report prints one plain line under it; a report stored before that has none and prints no line. An unverified quote of a not-confirmed claim carries the passage found by meaning in `meaning_passage`, and the report prints it under that quote after one plain line saying how it was found, with no score; a report stored before that has none and prints nothing new, and when the analysis could not run the pointer a limitation says so. A quote with a review flag carries it in `supporting_marked` and `contradicting_marked`, and the report prints one plain line under it, saying that the source has the mark next to the quote or that the quote and the source differ at the mark; a report stored before that has none and prints no line. Historical party, event and impact snapshots retain `support` and saved `projection_grounding` verdicts. New analyses render saved LLM-derived presentation views with linked Claim context alongside Findings; report generation runs no model or extraction step. An unresolved Evidence Unit ID prints as an invalid pointer rather than an empty quote. Each item carries `support`; the report prints one plain line for `unbound`, `mixed` and `no_claim`, and a report stored before that has none, still validates, and prints no line. The snapshot's `summary_units` carries each summary sentence with the finding numbers it rests on and its `support`; the report prints the sentences as one paragraph, each followed by its finding numbers as raised digits that link to the findings table, and, for a sentence that is `unbound`, `mixed` or `no_claim`, a raised letter whose note prints once under the paragraph with the wording of its state; one plain line says what the raised numbers are; the analysis view prints the same paragraph with the same numbers, each a link to its finding; a report stored before that has no units and prints the summary as before. A report shows what its analysis read, recorded when the analysis was stored: `external_context_json.sources_read` lists the IDs of the case sources it read (cited or not), and `external_context_json.followup_history` holds each answered follow-up's QA id, question and answer. Both are taken from what the analysis read when it started, never inferred from timestamps. The report takes the list of sources from `sources_read` and reads those source rows: a source added later is not included, and a missing one refuses the report with `analysis_source_snapshot_invalid`. `followup_history` is stored in full and is not re-read from chat. A row without either record is refused, not reported from current data. Each analysis gets at most one report, which is never rewritten; newer answers need a new analysis. There is one renderer: the Jinja2 template in `reports/templates/`, printed to PDF by WeasyPrint. The report is an analysis artifact, not an independent fact-verification system; nothing in `app/` checks it against the trace (that validator belongs to the local `experiments/report_fidelity` experiment).
 
 ## Key Configuration (`rag_service/app/RAG/GraphRAG/config.py`)
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)
@@ -569,11 +541,6 @@ The frontend loads and generates reports through the case-scoped report endpoint
   with `TECHNIQUE_POOL`, the default; 3 without), not `FINAL_TOP_K`, so a hit
   the quota drops cannot return as a subgraph
 - **Qdrant collections**: `mitre_entities`, `mitre_relationships`
-- **MITRE table**: `MITRE_TABLE_REREAD=true` (six extra LLM calls a query, three
-  of them carrying the whole technique list, about 41K characters),
-  `MITRE_TABLE_REREAD_READINGS=3`, `MITRE_TABLE_REREAD_VOTES=2`,
-  `MITRE_TABLE_SCORE_THRESHOLD=0.5`, `MITRE_TABLE_EVIDENCE=true`. The re-read
-  and the evidence were measured on gemma only
 
 ## Secrets & Environment
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files

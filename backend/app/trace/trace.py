@@ -75,10 +75,16 @@ class ProviderTimelineItem(BaseModel):
 
 
 class CaseTimelineItem(ProviderTimelineItem):
+    time: str | None = Field(default=None, min_length=1, max_length=500)
     event: str = Field(min_length=1, max_length=4_000)
     support: SupportStatus | None = None
     projection_grounding: CaseProjectionGrounding | None = None
     field_spans: dict[str, CaseClaimSpan] = Field(default_factory=dict)
+
+    @field_validator("time", "event")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return None if value is None else super().normalize_text(value)
 
 
 class ProviderImpactItem(BaseModel):

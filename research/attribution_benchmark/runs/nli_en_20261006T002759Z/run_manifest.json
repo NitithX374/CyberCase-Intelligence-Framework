@@ -1,0 +1,158 @@
+{
+  "status": "complete",
+  "started_at": "2026-10-06T00:28:10.850684+00:00",
+  "dataset": {
+    "dataset": "osunlp/AttributionBench",
+    "configuration": "subset_balanced",
+    "revision": "62569e644f4186606f54f742178a4517431b42e1",
+    "downloaded_at": "2026-10-06T00:23:00.574149+00:00",
+    "files": {
+      "train": {
+        "filename": "train_all_subset_balanced.jsonl",
+        "sha256": "c7d6232048298b8f06afc556214c3739b5432f10f2641db2f73715fd126b1a63",
+        "bytes": 47394689,
+        "rows": 13322,
+        "unique_ids": 13322,
+        "labels": {
+          "attributable": 6661,
+          "not attributable": 6661
+        },
+        "source_subsets": {
+          "AttributedQA": 2000,
+          "LFQA": 2096,
+          "ExpertQA": 4442,
+          "Stanford-GenSearch": 4784
+        },
+        "empty_references": 0,
+        "clusters": 6106
+      },
+      "dev": {
+        "filename": "dev_all_subset_balanced.jsonl",
+        "sha256": "a744d1f84e621015f7a7e1941c3fb3f0838be767645dfb2ec784efd3133ab7d6",
+        "bytes": 3542401,
+        "rows": 1198,
+        "unique_ids": 1198,
+        "labels": {
+          "attributable": 599,
+          "not attributable": 599
+        },
+        "source_subsets": {
+          "AttributedQA": 74,
+          "LFQA": 110,
+          "ExpertQA": 470,
+          "Stanford-GenSearch": 544
+        },
+        "empty_references": 0,
+        "clusters": 531
+      },
+      "test": {
+        "filename": "test_all_subset_balanced.jsonl",
+        "sha256": "c2ff75dd4ea5cf12d86166ead66a96b42d5001a36daf02ff71303ef3317715a8",
+        "bytes": 5825881,
+        "rows": 1610,
+        "unique_ids": 1610,
+        "labels": {
+          "attributable": 805,
+          "not attributable": 805
+        },
+        "source_subsets": {
+          "AttributedQA": 230,
+          "LFQA": 168,
+          "ExpertQA": 612,
+          "Stanford-GenSearch": 600
+        },
+        "empty_references": 0,
+        "clusters": 748
+      },
+      "test_ood": {
+        "filename": "test_ood_all_subset_balanced.jsonl",
+        "sha256": "90d8f5363cec90197f80b3e896dad17e091a108a5bf282c3d515d48c9a01a934",
+        "bytes": 3039548,
+        "rows": 1686,
+        "unique_ids": 1686,
+        "labels": {
+          "attributable": 843,
+          "not attributable": 843
+        },
+        "source_subsets": {
+          "AttrScore-GenSearch": 162,
+          "HAGRID": 1088,
+          "BEGIN": 436
+        },
+        "empty_references": 75,
+        "clusters": 1229
+      }
+    },
+    "cross_split_id_overlap": {
+      "train/dev": 0,
+      "train/test": 0,
+      "train/test_ood": 0,
+      "dev/test": 0,
+      "dev/test_ood": 0,
+      "test/test_ood": 0
+    },
+    "loading": "Pinned official raw JSONL, preserved without type casting or row filtering"
+  },
+  "model": {
+    "model": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
+    "revision": "b5113eb38ab63efdd7f280f8c144ea8b13f978ce",
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "batch_size": 2,
+    "max_length": 512,
+    "truncation": "only_first",
+    "reference_separator": "\n\n",
+    "labels": {
+      "0": "entailment",
+      "1": "neutral",
+      "2": "contradiction"
+    },
+    "entailment_index": 0,
+    "torch_threads": 4,
+    "tf32": false,
+    "gpu": "NVIDIA GeForce GTX 1650",
+    "versions": {
+      "torch": "2.6.0+cu124",
+      "transformers": "5.15.1",
+      "tokenizers": "0.22.2",
+      "scikit-learn": "1.9.0"
+    }
+  },
+  "model_artifact_sha256": {
+    "added_tokens.json": "fb697283833d25e2c711f1bc37730ecd8b20f4bd5f015db1d84aefe0adc9155a",
+    "config.json": "bc7b85f164a17c1b007d87fb99d3676f4a4d2e6511d2288dd3f5334dc0f34e6b",
+    "model.safetensors": "7c8e29f1115986d032e92b0fbaa0bdef1062a46f658b08705f237c05014a8541",
+    "special_tokens_map.json": "311de3f4eed9d76a43bf0d71f10e62e086ca65ccce9f15d5da0d2098bf519ecc",
+    "spm.model": "13c8d666d62a7bc4ac8f040aab68e942c861f93303156cc28f5c7e885d86d6e3",
+    "tokenizer.json": "e23095eb61ba944c7be3a5d3e8ec19e37ce7ced0daa03550bde03e83c21b3f8a",
+    "tokenizer_config.json": "25e9f84c6b43da7bff43a0aee8eeee2c8a39d246823d8464b9275ef704eab42f"
+  },
+  "source_sha256": {
+    "data.py": "e388b734dfaeddcd33b8d3b58f667b83f5d9f7f4b4879284fcbfb375c0b0b628",
+    "inference.py": "7619545d2a351dc3532cef62b919b6700a36afd2bf4c56ccd487fe1748900888",
+    "metrics.py": "35f19a9de82f98eac18502ad59417cae5a19cc401d198718d3ea5ad1c9b18e18",
+    "run.py": "d89255530b09c515704267f0b789f941306e5850adc22326e2bd302ccc1dc687"
+  },
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
+  "inputs": {
+    "dev": {
+      "units": 1198,
+      "truncated": 195,
+      "max_claim_tokens": 102
+    },
+    "test": {
+      "units": 1610,
+      "truncated": 324,
+      "max_claim_tokens": 148
+    },
+    "test_ood": {
+      "units": 1686,
+      "truncated": 160,
+      "max_claim_tokens": 269
+    }
+  },
+  "finished_at": "2026-10-06T00:32:42.760301+00:00",
+  "summary_sha256": "93182b0bb596f014eebf4e5566913995ab5bacbe3f62d8a0ffae6dd542d77ba1",
+  "source_snapshot": "source_snapshot"
+}

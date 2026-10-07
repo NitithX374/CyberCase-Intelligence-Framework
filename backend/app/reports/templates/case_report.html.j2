@@ -192,7 +192,7 @@
               {% for event in report.timeline %}
               <tr>
                 <td class="n">{{ loop.index }}</td>
-                <td>{{ event.time }}</td>
+                <td>{{ event.time if event.time is not none else 'ไม่ได้สกัดวันหรือเวลา' }}</td>
                 <td>{{ event.event | clean_report_text }}{% if event.support in support_notes %}<div class="quote">{{ support_notes[event.support] }}</div>{% endif %}{% if event.projection_grounding and event.projection_grounding.verdict in projection_notes %}<div class="quote">{{ projection_notes[event.projection_grounding.verdict] }}</div>{% endif %}</td>
                 <td class="ref">{{ event.references | join(", ") or "-" }}</td>
               </tr>

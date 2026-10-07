@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-09-30T03:54:00.813296+00:00",
+  "full_reads": 12,
+  "pdf_hash_page_failures": [],
+  "local_links_checked": 26,
+  "missing_local_links": [],
+  "task_A_table_rows_including_header_separator": 9,
+  "task_A_columns": [
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9,
+    9
+  ],
+  "related_work_words": 206,
+  "related_work_verified_source_links": 6,
+  "current_metadata_records": 11,
+  "current_metadata_all_verified": true,
+  "all_checks_passed": true
+}

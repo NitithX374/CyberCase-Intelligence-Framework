@@ -253,7 +253,9 @@ def stage_payload(
                 "role": "user",
                 "content": content
                 if isinstance(content, str)
-                else json.dumps(content, ensure_ascii=False),
+                else json.dumps(
+                    content, ensure_ascii=False, separators=None if grammar else (",", ":")
+                ),
             }
         ],
     }
@@ -427,6 +429,16 @@ async def request_stage(
         receipt["elapsed_ms"] = round((time.monotonic() - started) * 1000)
         if receipt["status"] == "started":
             receipt["status"] = "failed"
+        logger.info(
+            "Analysis stage %s finished status=%s elapsed_ms=%s estimated_input_tokens=%s "
+            "output_tokens=%s thinking_tokens=%s",
+            stage,
+            receipt["status"],
+            receipt["elapsed_ms"],
+            estimated,
+            receipt.get("output_tokens"),
+            receipt.get("thinking_tokens"),
+        )
 
 
 __all__ = [

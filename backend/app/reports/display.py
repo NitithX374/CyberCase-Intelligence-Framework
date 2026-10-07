@@ -137,7 +137,7 @@ def build_case_report_content(report_input: CaseReportInput) -> CaseReportConten
                 claim_context=[
                     claims_by_id[claim_id].text
                     for claim_id in party.claim_ids
-                    if party.field_spans and claim_id in claims_by_id
+                    if trace.view_extraction is not None and claim_id in claims_by_id
                 ],
                 references=references(party.claim_ids),
                 support=party.support,

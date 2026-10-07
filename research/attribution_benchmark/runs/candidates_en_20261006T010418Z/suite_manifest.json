@@ -1,0 +1,102 @@
+{
+  "status": "complete",
+  "started_at": "2026-10-06 01:04:18 UTC",
+  "models": [
+    "deberta_small",
+    "minilm",
+    "mdeberta",
+    "minicheck",
+    "xlmr",
+    "attrscore"
+  ],
+  "device": "cuda",
+  "precision": "float32",
+  "batch_size": 1,
+  "max_length": 512,
+  "protocol": "Original English balanced dev/ID/OOD; original claims and ordered cited evidence; right evidence truncation only, no chunks; dev-selected threshold frozen before test; original baseline preserved",
+  "attrscore": "Author prompt; normalized complete label-sequence likelihoods including EOS, no length normalization; not greedy generation",
+  "outcomes": [
+    {
+      "model": "deberta_small",
+      "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\deberta_small_cuda_float32_b1",
+      "run_exit_code": 0,
+      "at": "2026-10-06T01:06:57.677628+00:00",
+      "status": "complete",
+      "verification_exit_code": 0
+    },
+    {
+      "model": "minilm",
+      "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\minilm_cuda_float32_b1_retry_cache",
+      "run_exit_code": 0,
+      "at": "2026-10-06T01:52:48.372060+00:00",
+      "retry_reason": "Pinned config cache locator fixes unused-file snapshot completeness failure",
+      "previous_attempts": [
+        {
+          "model": "minilm",
+          "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\minilm_cuda_float32_b1",
+          "run_exit_code": 1,
+          "at": "2026-10-06T01:07:28.995825+00:00",
+          "status": "failed",
+          "failure": {
+            "type": "IncompleteSnapshotError",
+            "message": "The cached snapshot for 'MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli' (revision '0a71e92a985b6e1ad1828cf67ce9c459639c1dca', commit 0a71e92a985b6e1ad1828cf67ce9c459639c1dca) is incomplete: 8 file(s) are missing (.gitattributes, onnx/config.json, onnx/model.onnx, ... (5 more)). Outgoing traffic is disabled ('local_files_only=True'). Re-run the download with network access to complete the snapshot.",
+            "at": "2026-10-06T01:07:28.090289+00:00",
+            "traceback": "Traceback (most recent call last):\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 116, in main\n    execute(args, output, configuration)\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 47, in execute\n    runner = CandidateRunner(spec, args.device, args.batch_size, args.precision)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_inference.py\", line 37, in __init__\n    self.snapshot = Path(snapshot_download(spec.model, revision=spec.revision, local_files_only=True))\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\huggingface_hub\\utils\\_validators.py\", line 88, in _inner_fn\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\huggingface_hub\\_snapshot_download.py\", line 321, in snapshot_download\n    _raise_if_incomplete_snapshot(\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\huggingface_hub\\_snapshot_download.py\", line 576, in _raise_if_incomplete_snapshot\n    raise IncompleteSnapshotError(\nhuggingface_hub.errors.IncompleteSnapshotError: The cached snapshot for 'MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli' (revision '0a71e92a985b6e1ad1828cf67ce9c459639c1dca', commit 0a71e92a985b6e1ad1828cf67ce9c459639c1dca) is incomplete: 8 file(s) are missing (.gitattributes, onnx/config.json, onnx/model.onnx, ... (5 more)). Outgoing traffic is disabled ('local_files_only=True'). Re-run the download with network access to complete the snapshot.\n"
+          }
+        }
+      ],
+      "status": "complete",
+      "verification_exit_code": 0
+    },
+    {
+      "model": "mdeberta",
+      "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\mdeberta_cuda_float32_b1",
+      "run_exit_code": 0,
+      "at": "2026-10-06T01:12:29.504879+00:00",
+      "status": "complete",
+      "verification_exit_code": 0
+    },
+    {
+      "model": "minicheck",
+      "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\minicheck_cuda_float32_b1",
+      "run_exit_code": 0,
+      "at": "2026-10-06T01:25:58.692329+00:00",
+      "status": "complete",
+      "verification_exit_code": 0
+    },
+    {
+      "model": "xlmr",
+      "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\xlmr_cuda_float32_b1_retry_logging",
+      "run_exit_code": 0,
+      "at": "2026-10-06T02:02:10.919451+00:00",
+      "retry_reason": "Tee.isatty now forwards terminal detection; Transformers loading-report reproduction passes",
+      "previous_attempts": [
+        {
+          "model": "xlmr",
+          "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\xlmr_cuda_float32_b1",
+          "run_exit_code": 1,
+          "at": "2026-10-06T01:26:37.007273+00:00",
+          "status": "failed",
+          "failure": {
+            "type": "AttributeError",
+            "message": "'Tee' object has no attribute 'isatty'",
+            "at": "2026-10-06T01:26:35.810578+00:00",
+            "traceback": "Traceback (most recent call last):\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 116, in main\n    execute(args, output, configuration)\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 47, in execute\n    runner = CandidateRunner(spec, args.device, args.batch_size, args.precision)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_inference.py\", line 39, in __init__\n    self.adapter = load_adapter(spec, self.tokenizer, dtype, device)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_adapters.py\", line 104, in load_adapter\n    return ClassificationAdapter(spec, dtype, device)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_adapters.py\", line 52, in __init__\n    self.model = AutoModelForSequenceClassification.from_pretrained(\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\models\\auto\\auto_factory.py\", line 402, in from_pretrained\n    return model_class.from_pretrained(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\modeling_utils.py\", line 4349, in from_pretrained\n    loading_info = cls._finalize_model_loading(model, load_config, loading_info)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\modeling_utils.py\", line 4525, in _finalize_model_loading\n    log_state_dict_report(\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 262, in log_state_dict_report\n    report = loading_info.create_loading_report()\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 181, in create_loading_report\n    tips += f\"\\n- {_style('UNEXPECTED:', 'orange')}\\t\" + _style(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 123, in _style\n    if sys.stdout is not None and sys.stdout.isatty():\n                                  ^^^^^^^^^^^^^^^^^\nAttributeError: 'Tee' object has no attribute 'isatty'\n"
+          }
+        }
+      ],
+      "status": "complete",
+      "verification_exit_code": 0
+    },
+    {
+      "model": "attrscore",
+      "output": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\attrscore_cuda_float32_b1",
+      "run_exit_code": 0,
+      "at": "2026-10-06T01:50:43.564804+00:00",
+      "status": "complete",
+      "verification_exit_code": 0
+    }
+  ],
+  "finished_at": "2026-10-06T02:02:40.215449+00:00",
+  "retry_started_at": "2026-10-06T01:51:40.859367+00:00"
+}

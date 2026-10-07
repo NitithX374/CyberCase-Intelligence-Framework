@@ -1,0 +1,1149 @@
+                          Verifiable by Design:
+Aligning Language Models to Quote from Pre-Training Data
+
+Jingyu Zhang  Marc Marone Tianjian Li Benjamin Van Durme     Daniel Khashabi
+                                   Johns Hopkins University
+                                          Baltimore, MD
+
+                         {jzhan237,mmarone1,tli104}@jhu.edu
+
+                 Abstract                           LLMs are known to produce seemingly plausible
+                                                    but erroneous outputs, often referred to as halluci-
+To trust the fluent generations of large lan-       nations (Ji et al., 2022; Zhang et al., 2023b, i.a.).
+guage models (LLMs), humans must be able            This poses significant risks to downstream users
+to verify their correctness against trusted exter-  due to the difficulty of fact-checking seemingly
+nal sources. Recent efforts, such as providing      convincing generations from LLMs (Yue et al.,
+citations via retrieved documents or post-hoc       2023; Min et al., 2023a; Asai et al., 2024). One of
+provenance, enhance verifiability but provide       the important desiderata for LLMs is thus verifia-
+no guarantees of their correctness. To address      bility, the ability to ground responses to supporting
+these limitations, we aim to improve verifiabil-    evidence and render the produced claims easy to
+ity with a different philosophy: trivializing the   verify for humans. Verifiability allows users to
+verification process by developing models that      uncover the competency of LLMs and calibrate
+quote verbatim statements from trusted sources      user trust, a crucial aspect of building trustworthy
+in their pre-training data.                         human-machine relationships (Muir, 1987).
+
+We propose QUOTE-TUNING, which demon-                  Recent work increases verifiability through ex-
+strates the feasibility of aligning models to       ternal artifacts such as producing citations (Menick
+quote. The core of QUOTE-TUNING is a fast           et al., 2022; Gao et al., 2023), retrieving docu-
+membership inference function that efficiently      ments (Lewis et al., 2020a), or post-hoc attribu-
+verifies text against trusted corpora. We lever-    tion methods (Han and Tsvetkov, 2022). Although
+age this tool to design a reward function to        helpful, these approaches provide no guarantee of
+quantify quotes in model responses and curate       relevance or usefulness. Models generations can
+datasets for preference learning. Experiments       be unfaithful to the retrieved documents in the con-
+show that QUOTE-TUNING significantly in-            text (Shi et al., 2023b), generative search engines
+creases verbatim quotes from high-quality doc-      often produce citations that are irrelevant or inac-
+uments by up to 130% relative to base models        curate (Liu et al., 2023), and explanations alone do
+while maintaining response quality. QUOTE-          not lead to verifiability (Fok and Weld, 2024).
+TUNING is applicable in different tasks, gener-
+alizes to out-of-domain data and diverse model         We overcome the windingness of previous ap-
+families, and provides additional benefits to       proaches through a verifiable-by-design approach:
+truthfulness. Our method not only serves as a       generating verbatim quotes from high-quality
+hassle-free method to increase quoting but also     sources such as Wikipedia. By determining ver-
+opens up avenues for improving LLM trustwor-        batim quotes from large-scale and high-quality
+thiness through better verifiability.1              corpora with efficient membership testing tools
+                                                    (Marone and Van Durme, 2023), those generations
+Trust, but verify.                                  provide a natural method for attributing and verify-
+                                                    ing the correctness of generated claims.
+                    Russian Proverb
+                                                       LLMs' potential to quote is driven by the obser-
+1 Introduction                                      vation that they are pre-trained on internet scale
+                                                    data--a subset of which contains high quality,
+Recent developments have enabled large language     reliable information--and that they have memo-
+models (LLMs) to generate fluent text and follow    rized a wide range of content from the pre-training
+instructions (Wei et al., 2022; Wang et al., 2023;  stage (Carlini et al., 2020, 2023; Biderman et al.,
+Ouyang et al., 2022b; OpenAI, 2023). However,
+
+    1github.com/JHU-CLSP/verifiable-by-design
+      Equal advising.
+
+                                                                            3748
+
+Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies
+                                                                     (Volume 1: Long Papers), pages 3748­3768
+
+                                                   April 29 - May 4, 2025 ©2025 Association for Computational Linguistics
+                                                                                                                                                                                                                              Pre-trained  Step 3: Preference  Quote-tuned
+                                                                                                                                                                                                                                  LLM          Optimization         LLM
+
+            Prompt Dataset                                                                                                                                                                      High-quality subset of
+                                                                                                                                                                                                  pre-training corpus
+Prompt: Which is older jeopardy
+       or wheel of fortune?
+
+  Step 1: Sample                                                                                                                                                                                 Measure quoting                                     Preference Dataset for Quoting
+multiple responses                                                                                                                                                                                   via efficient
+                                                                                                                                                                                                                                   Prompt: Which is older jeopardy or wheel of fortune?
+                 Raw LLM Responses                                                                                                                                                              membership testing
+                                                                                                                                                                                                                        Chosen Response: Jeopardy! was created by Merv Griffin and first aired
+   RRReMseeMpsosoppnonoononsponesop:esol:eTylT:yhbehJobeeoafoorafdourpduraarcrareocdreorBynrB!aenlarewtlirstcqaiscAuqsAauvcraveerrneeseunasoeuton,een,daaby                                                             in 1964, while Wheel of Fortune was also created by Merv Griffin and
+ MMedeMidtieetrerrvarnaGenaernainfAfAvinveneanuneud,eO,fOirriresinetntatilarAleAvdveniennueu1,e9a, 6nand4d,                                                                                                             first aired in 1975. Therefore, Jeopardy! is older than Wheel of Fortune.
+ PPacaicfiiwfcicAhAivlveeneWnueu.ehT.eThehelseoesefsqsFquouarraterusensaeraerwelolaocsactaaetldesdoatat                                                                                          Step 2: Constructing
+  thtchereceocarotnrenedresrbsoyfoftMhteheebrobvaoGradrrdaifnafndidnaraaernecdocnofnsiirsdsiedtreaerdierded                                                                                       preference data via                                                       QUIP: 31.4, length: 66
+  sosimonmgeag1eoma9fom7efteh5dthet.duheeuTmaemthnootsoeoWttsrhttevehhavfieolraeiulrrseuaetslbar,talboreJtalefeetpgeoFrpgiocproipocalrepotrlruecodtracinytetaiei!seto.isiinonsin.nt.ohtlehdeer
+                                                                                                                                                                                                    rank-by-quoting      Rejected Response: Jeopardy! was created in 1964 by Merv Griffin,
+
+                                                                                                                                                                                                                        while Wheel of Fortune was created in 1975 by Merv Griffin and Roy
+                                                                                                                                                                                                                        Leonard. Therefore, Jeopardy! is older than Wheel of Fortune.
+
+                                                                                                                                                                                                                                                                            QUIP: 1.99, length: 60
+
+Figure 1: Pipeline of QUOTE-TUNING. The algorithm works by (1) sampling multiple responses from a pre-trained
+LLM, (2) constructing preference data via rank-by-quoting, and (3) preference optimization to quote.
+
+2023; Hartmann et al., 2023). Such analyses fo-                                                                                                                                                                            In summary, we present QUOTE-TUNING, a sim-
+cus on covert memorization and use adversarial                                                                                                                                                                          ple but effective technique for aligning LLMs to
+prompts to extract the memorized contents (Carlini                                                                                                                                                                      quote from their pre-training data. The quoted re-
+et al., 2020; Nasr et al., 2023). However, it remains                                                                                                                                                                   sponses are verifiable-by-design by inducing better
+an open question whether one can adapt LLMs                                                                                                                                                                             verifiability without the need for human annota-
+to utilize their parametric knowledge to generate                                                                                                                                                                       tion and external knowledge bases (only leveraging
+contextual quotations across a wide range of input                                                                                                                                                                      parametric knowledge). QUOTE-TUNING sheds
+prompts (not just specialized or adversarial ones)                                                                                                                                                                      light on the feasibility of directly aligning language
+on realistic tasks that require long-form generation.                                                                                                                                                                   models to quote for trustworthiness, complemen-
+                                                                                                                                                                                                                        tary to relying on non-parametric knowledge bases.
+   We show this is indeed feasible with QUOTE-
+TUNING, our proposed method that aligns LLMs                                                                                                                                                                            2 Preliminaries
+to quote through preference optimization and au-
+tomatic feedback, without the need for human                                                                                                                                                                            Quantifying Quoting We define a text string x
+annotation. QUOTE-TUNING first generates re-                                                                                                                                                                            as quoted from a corpus C if a verbatim copy of x is
+sponses from a pre-trained LLM, and then syn-                                                                                                                                                                           contained in C.This design allows us to use DATA
+thesizes a preference dataset for quoting by rank-                                                                                                                                                                      PORTRAIT (Marone and Van Durme, 2023), a mem-
+ing responses by how much they quote from a                                                                                                                                                                             bership testing tool based on Bloom Filters (Bloom,
+desired high-quality corpus, e.g., Wikipedia. Fi-                                                                                                                                                                       1970), to efficiently check whether text n-grams
+nally, QUOTE-TUNING aligns the model to quote                                                                                                                                                                           have appeared in the corpus. Specifically, we use
+from trusted sources by applying preference opti-                                                                                                                                                                       Quoted Information Precision Score (QUIP-Score)
+mization algorithms (e.g., direct preference opti-                                                                                                                                                                      metric proposed by Weller et al. (2024):
+mization (Rafailov et al., 2023)) on the synthesized
+reference dataset. Figure 1 illustrates the three-                                                                                                                                                                            QUIPC (x) =  gramnx 1C (gramn)   ,
+staged "generate, synthesize, then tune" pipeline of
+QUOTE-TUNING.                                                                                                                                                                                                                                |gramn  x|
+
+   Experiment results on long-form QA and open-                                                                                                                                                                         where x is a text string, and C is a trusted corpus,
+ended text completion show that QUOTE-TUNING
+significantly increases quoting by up to 130% rela-                                                                                                                                                                     gramn  x indicates all n-grams in x, and 1C(·) is
+tive to base models while maintaining or improving
+downstream performance (§4). Moreover, QUOTE-                                                                                                                                                                           an indicator function implemented by DATA POR-
+TUNING generalizes to other domains and diverse                                                                                                                                                                         TRAITS that return 1 if gramn  C else 0. In-
+model families, and enhances the truthfulness as                                                                                                                                                                        tnu-igtrivamelys,inQxUIthPaCt(axp)pemaereadsuirneCs t.2he percentage of
+measured by TruthfulQA (Lin et al., 2022) (§5.1).
+                                                                                                                                                                                                                            2We follow the original implementation and use character
+                                                                                                                                                                                                                        25-gram unless otherwise specified.
+
+                                                                                                                                                                                                                        3749
+Algorithm 1 QUOTE-TUNING
+Input: LLM policy ref, prompt dataset Dprompt = {x(i)}iN=1, QUIP on corpus C, QUIPC (·), QUIP
+
+     hyperparameter quip, tokenized len2gth len(·), length hyperparameter length
+Output: Quoting-aligned LLM policy 
+
+1: //Sample Responses + Synthesizing Data
+
+2: D  
+
+3: for i = 1, . . . , N do                                   Sample responses from LLM policy
+4: y1, . . . , yT  ref(·|x(i))                                     Sort by decreasing QUIP order
+5: y~1, . . . , y~T  sort(y1, . . . , yT ; y. - QUIPC (y))
+6: for w  {1, . . . , T - 1}, l  {w + 1, . . . , T } do
+                                                              |len(y~w )-len(y~l )|
+7:          if  QUIPC (y~w) - QUIPC (y~l)  >  quip    and  min{len(y~w), len(y~l)}   <  length  then
+
+8:               D  D  {(x(i), y~w, y~l)}
+
+9:               break
+
+10: //Preference Optimization
+
+11: Initialize  = ref, and fine-tune  on D using LDPO.
+12: return 
+
+Preference Optimization We review direct pref-             et al., 2024), and relevance (Wu et al., 2023). We
+erence optimization (DPO; Rafailov et al., 2023),          investigate whether automatic measures of quoting
+an algorithm for optimizing human preferences              can be used to align LLMs to quote from their pre-
+without reinforcement learning. Given a pre-               training data. We introduce our methodology here
+trained LLM policy ref and prompt x, a pair of             and empirically show its feasibility in §4.
+responses (y1, y2)  ef(·|x) is sampled from the
+pre-trained model. The response pair is subse-                Illustrated in Alg. 1, QUOTE-TUNING works by
+quently evaluated for preference (human annotators         sampling multiple responses from the to-be-tuned
+or automated metrics), with the more favored re-           model, synthesizing preference pairs for quoting,
+sponse labeled as yw and the less preferred one            and preference optimization. We now detail each
+as yl. DPO assumes a static pairwise preference            step. First, given a pre-trained LLM policy ref,
+dataset D = {x(i), yw(i), yl(i)}iN=1. The loss function    for each prompt x(i) in a prompt dataset Dprompt,
+for optimizing the parameterized LLM policy  is            we sample T responses y1, . . . , yT  ref(·|x(i))
+the following likelihood objective:                        from the policy. Next, we construct pairwise pref-
+                                                           erence data (x(i), yw, yl) by selecting a pair of re-
+LDPO(; ref) = -E(x,yw,yl)D                                 sponse (yw, yl) (where yw is more preferred) from
+                                                           y1, . . . , yT that satisfies two constraints:
+    log     log   (yw |x)     -    log   (yl |x)   ,
+                 ref (yw |x)            ref(yl|x)          Constraint 1: quoting. QUIPC(yw) -
+                                                           QUIPC (yl) > quip, where quip > 0 is a hyperpa-
+where  is initialized as ref,  is the sigmoid              rameter. Core to QUOTE-TUNING, this constraint
+function, and  is a hyperparameter.                        ensures that the preferred response is more quoted
+                                                           than the dispreferred one.
+
+3 Aligning LLMs to Quote with                              Constraint 2: length.        (0,m1i|n)le{niles(nywa(y)w-h)yl,eplnee(nyr(ply)a|l)r}am<e-
+    QUOTE-TUNING                                           length, where length 
+
+The design of QUOTE-TUNING is inspired by the              ter. Motivated by recent findings that RLHF and
+observation that preference datasets can be used
+to elicit desired behaviors in LMs using prefer-           direct preference optimization approaches lead to
+ence alignment frameworks (Christiano et al., 2017;
+Ziegler et al., 2019; Ouyang et al., 2022b). The           increased response length (Singhal et al., 2023;
+prior work, for example, has used this approrach to
+address factuality (Tian et al., 2024), honesty (Yang      Dubois et al., 2023), we regularize the preferred
+et al., 2023), harmlessness (Bai et al., 2022b; Shen
+                                                           and dispreferred responses to have similar tok-
+
+                                                           enized length with each other. We provide an abla-
+
+                                                           tion of the length constraint in §5.3.
+
+                                                            If multiple pairs of responses satisfy the con-
+
+                                                      3750
+Question: Who won the most MVP awards in the NBA?                                                                QUIP
+                                                                                                                  94.1
+Reference: Every player who has won this award and has been eligible for the Naismith Memorial Basketball Hall
+of Fame has been inducted. Kareem Abdul-Jabbar won the award a record six times. Both Bill Russell and Michael    3.9
+Jordan won the award five times, while Wilt Chamberlain and LeBron James won the award four times. Russell        60.6
+and James are the only players to have won the award four times in five seasons. ...
+
+LLAMA2-7B-CHAT: LeBron James has won the most NBA MVP awards with 4 championships, followed closely
+by Bill Russell with 5 MVP awards and 11 championships. Michael Jordan is also among the top MVP winners
+with 6 championships and 5 MVP awards.
+
+QUOTE-TUNING: The player who has won the most Most Valuable Player (MVP) awards in the National
+Basketball Association (NBA) is Kareem Abdul-Jabbar, who has won the award a record six times during his career
+with the Milwaukee Bucks and the Los Angeles Lakers. Abdul-Jabbar played in the NBA from 1969 to 1989 and is
+widely considered one of the greatest basketball players of all time.
+
+Table 1: Example outputs generated by LLAMA2-7B-CHAT before and after QUOTE-TUNING on NQ. Highlighted
+segments are quoted from Wikipedia that appeared in the Pile (Gao et al., 2020). Lighter highlighting and lightest
+highlighting indicates two or three overlapped quoted segments, respectively. The minimum length to be considered
+quoted is a character-level 25-gram match. QUOTE-TUNING significantly improves quoting from Wikipedia.
+
+straints, a single pair (yw, yl) with the highest aver-          QUIP-Score. The quoted segments are determined
+age QUIP-Score among the two responses will be                   by conducting membership inference on character-
+selected.3 This ensures the dispreferred response                level 25-gram substrings of generated text with
+still maintains relatively high quoting. In practice,            DATA PORTRAIT (Marone and Van Durme, 2023).
+this is achieved by sorting the responses by decreas-            The spans of generated text that are not highlighted
+ing QUIP order before pair selection (Alg. 1, line               or incompletely highlighted need manual verifi-
+5). If no response pair can be selected, the prompt              cation. More quoting encouraged by QUOTE-
+x(i) is discarded.                                               TUNING leads to fewer spans that need to be
+                                                                 verified and, thus, better verifiability. On the
+   The reason why we employ model self-                          other hand, the reference text from Wikipedia is
+generation as the preferred response, instead of sim-            usually treated as the "ground truth" that does not
+ply using verbatim quotes (e.g., spans of Wikipedia              need to be verified, as illustrated by its near-perfect
+text that contains the gold answer) is twofold: (1)              QUIP-Score.4 We provide an extended discussion
+Using self-generated responses keeps the synthe-                 of verifiability in §6.
+sized preference data on-policy, which is crucial
+for preference optimization as shown in recent                      We emphasize that the quality of the quoting
+work (Tajwar et al., 2024). (2) Because quotes                   corpus C is important: C needs to be carefully
+are a subset of the model response, they are con-                selected such that it contains high-quality, low-risk
+strained to be highly contextually relevant to both              text, such as our choice of Wikipedia. We show
+the query and the surrounding response context.                  in §5.1 that quoting from truthful corpus increase
+This relevance would be harder to achieve with                   model truthfulness, and discuss implications of the
+standalone quotes.                                               selection of C on privacy and copyright in §7.
+
+   Finally, having obtained the synthetic preference                Aside from better verifiability, Weller et al.
+dataset for quoting D, we conduct DPO using D                    (2024) demonstrates that more quoting, as mea-
+on the pre-trained LLM policy ref to obtain the                  sured by QUIP-Score, leads to fewer hallucinations
+quoting-aligned policy .                                         in the generated text. Our analysis in §5.1 shows
+                                                                 that encouraging quoting leads to more truthful
+Desirability of Quoting We show an example                       models. We thus argue that quoting from high-
+of the model generation before and after QUOTE-                  quality pre-training data can lead to more verifiable
+TUNING in Table 1 and highlight segments that are                and truthful generations.
+quoted verbatim from the Pile (Gao et al., 2020)
+subset of Wikipedia along with the corresponding
+
+    3The design to select a maximum of one response pair per         4The minor mismatch is due to preprocessing and potential
+prompt is to preserve the distribution of prompts. Prior work    version differences.
+also experimented with employing all possible preference
+pairs (Ouyang et al., 2022a; Tian et al., 2024), which we leave
+to future work.
+
+3751
+                                             Quoting  Adequacy        Fluency
+
+      Setting                Method          QUIP     Rouge-L BARTSc   PPL     Length
+  In-Domain
+                   LLAMA2-7B-CHAT              34.9   22.4  -3.99       4.96   115.9
+       NQ          +According-to prompting     36.2                     4.55   129.6
+                   +Best-of-32 QUIP rerank     50.4   22.9  -3.95       4.40   110.2
+Out-of-Domain      +QUOTE-TUNING               54.5                     3.78   117.6
+  NQ  ELI5                                            23.3  -3.98
+                   LLAMA2-7B-CHAT              26.8                     3.93   179.8
+                   +According-to prompting     28.0   24.2  -3.93       3.56   225.7
+                   +Best-of-32 QUIP rerank     37.6                     3.72   173.8
+                   +QUOTE-TUNING on NQ         41.4   18.8  -4.78       3.55   179.6
+
+                                                      18.3  -4.75
+
+                                                      18.7  -4.78
+
+                                                      18.3  -4.84
+
+Table 2: Results on Long-Form QA datasets. QUIP and Rouge-L are in percentages. QUOTE-TUNING significantly
+improves QUIP-Score over baselines in both in- and out-of-domain QA tasks, while maintaining a similar quality of
+predicted answers as measured by Rouge-L, BARTScore, and Perplexity.
+
+4 Experiments                                         Baselines Aside from the pre-trained LLM pol-
+                                                      icy ref, we consider the according-to prompting
+In this section, we provide empirical evidence on     method from Weller et al. (2024), which directs
+how QUOTE-TUNING can provide better verifia-          LLMs to ground responses against pre-training
+bility to LLM-generated responses, while main-        sources through prompting.5 Finally, we include a
+taining generation quality. We conduct QUOTE-         strong Best-of-N QUIP reranking baseline, where
+TUNING on the long-form QA (§4.1) and open-           we sample 32 responses from the pre-trained model
+ended text completion (§4.2) tasks. Additionally,     ref and rerank the response by selecting the one
+we show that quoting-aligned models are more          with the highest QUIP-Score. Note that Best-of-N
+truthful than their vanilla counterparts (§5.1), and  sampling incurs significantly more computational
+maintain downstream performance (§5.2).               cost than other methods.6
+
+4.1 Improving Quoting in Long-Form QA                 Metrics To our main interest, we measure quot-
+                                                      ing with QUIP-Score using the Wikipedia subset
+Task Construction  In the long-form QA                of the Pile dataset (Gao et al., 2020) as the ground-
+                                                      ing corpus C.7 We report the BARTScore (Yuan
+(LFQA) setting, we study whether QUOTE-               et al., 2021) and Rouge-L (Lin, 2004) between
+                                                      generated and reference answers as metrics for ade-
+TUNING can effectively increase quoting in model-     quacy of generated answers. The perplexity (PPL)
+                                                      of generation text calculated by LLAMA2-7B is
+generated answers given questions as the prompt.      used as a measure for fluency. We also report av-
+                                                      erage generation length as preference optimization
+To find settings relevant to QUOTE-TUNING, we         could lead to length biases (Singhal et al., 2023).
+
+select datasets that induce long-form response to     Results We run experiments with hyperparam-
+                                                      eters detailed in §B. We first employ LLAMA2-
+measure quoting and also allow us to verify the       7B-CHAT (Touvron et al., 2023) as the pre-trained
+                                                      model ref. After DPO, the reward accuracy on
+answers from trusted sources such as Wikipedia.       a held-out evaluation set is 86.3%, indicating that
+                                                      the model learns quoting preference reasonably
+Accordingly, we experiment on two datasets, Natu-
+                                                          5We use the best grounding prompt found in Weller et al.
+ralQuestions (NQ; Kwiatkowski et al., 2019) and       (2024), i.e., "Respond to this question using only information
+                                                      that can be attributed to Wikipedia."
+ELI5 (Fan et al., 2019). NQ consists of real
+                                                          6We also experimented with fine-tuning on NQ reference
+anonymized queries issued to the Google search        answers. However, we found this baseline ineffective and thus
+                                                      is omitted in the main results.
+engine. Each question may have a long answer (a
+                                                          7Although LLAMA2 training data is not public, we believe
+paragraph), a short answer (one or more entities),    Wikipedia is presumably observed in the pre-training corpus
+                                                      due to its widespread usage.
+or both, annotated from Wikipedia. We employ
+
+the subset of NQ that has long answers: we sam-
+
+ple 20K training set questions to be used as the
+
+prompt dataset Dprompt for QUOTE-TUNING, and
+the full development set is used as the in-domain
+evaluation set. To evaluate whether quoting can be
+
+generalized to out-of-domain questions, we use the
+
+evaluation set of the ELI5 dataset, where questions
+
+are mined from the Reddit "Explain Like I'm Five"
+
+forum, as the out-of-domain evaluation set.
+
+                                             3752
+                  Quoting                                        Adequacy            Fluency
+
+        Method    QUIP     Rouge-L BARTSc                                             PPL     Length
+
+LLAMA3.1-8B-INST    33.0                                         22.5  -3.97           5.03   136.7
++QUOTE-TUNING       43.0                                                               3.13   118.3
+                                                                 25.7  -3.82
+GEMMA2-9B-IT        30.0                                                               7.60    60.1
++QUOTE-TUNING       44.9                                         21.4  -4.03           5.76    57.4
+
+STARLING-7B-BETA    33.8                                         24.4  -3.97           2.81   156.1
++QUOTE-TUNING       44.4                                                               2.70   150.8
+                                                                 22.7  -3.83
+
+                                                                 23.8  -3.82
+
+Table 3: QUOTE-TUNING on diverse model family consistently improves quoting, adequacy, and fluency over their
+respective base models on NQ.
+
+well. For in-domain evaluation, we test QUOTE-                   4.2 Improving Quoting in Open-Ended Text
+TUNING against baselines on the evaluation set of                      Completion
+NQ. Shown in Table 2 (upper), QUOTE-TUNING
+significantly improves upon all baselines in quot-               Task Construction We now study whether
+ing, even outperforming the strong Best-of-32                    QUOTE-TUNING can be applied to open-ended
+QUIP rerank baseline that is more computa-                       text completion, where we measure quoting on the
+tionally costly. In particular, QUOTE-TUNING                     candidate LLM's open-ended continuation of test
+enables a significant 56.2% (34.9  54.5) quoting                 prompts. We sample 20K passages from the dedu-
+improvement relative to the un-tuned LLAMA2-                     plicated Pile subset of Wikipedia as the training
+7B-CHAT model. QUOTE-TUNING also slightly                        set and another 2K passages as the evaluation set.
+improves answer adequacy and fluency. Because                    For each passage, we use the first 32 tokens as the
+QUOTE-TUNING significantly increases quoting                     prompt and the remainder as the reference continu-
+from Wikipedia, which contains high-quality text                 ation, truncated to a maximum of 128 tokens.
+thoroughly curated by human editors, the responses
+from quote-tuned models benefit from the high-                   Baselines and Metrics We employ the pre-
+quality nature on Wikipedia.8 While according-                   trained LLM policy ref and Best-of-N QUIP
+to prompting slightly increases quoting at the ex-               reranking baselines following the LFQA setting
+pense of notably longer generation length, QUOTE-                (§4.1). Instead of according-to prompting, we fine-
+TUNING maintains similar answer length compared                  tune ref on reference continuations of the train set
+to LLAMA2-7B-CHAT generations. An example                        as another baseline since ref in this setting is not
+output is available in Table 1.                                  instruction-tuned. We use the same metrics as the
+                                                                 LFQA setting but omit reporting length because
+   To test the out-of-domain generalization abil-                LLM continuations are decoded to a fixed length
+ity of QUOTE-TUNING, we use LLAMA2-7B-                           of 128 tokens. We use LLAMA2-7B as the pre-
+CHAT quote-tuned on NQ for evaluation on ELI5.                   trained model ref, and measure perplexity with
+QUOTE-TUNING still outperforms all baselines in                  the MISTRAL-7B model instead to prevent self-
+quoting, while maintaining adequacy and improv-                  evaluation bias (He et al., 2023).9
+ing fluency compared to the original model. Table
+2 (lower) shows that QUOTE-TUNING generalizes                                        Quoting Adequacy Fluency
+quoting to out-of-domain prompts.
+                                                                       Method        QUIP R-L BSc PPL
+   Finally, we apply QUOTE-TUNING on
+LLAMA3.1 (Dubey et al., 2024), GEMMA2 (Team                            LLAMA2-7B     25.7 21.8 -4.95 9.03
+et al., 2024), and STARLING (Zhu et al., 2024)                         +Fine-tuning  29.1 21.9 -4.90 9.58
+models, and find QUOTE-TUNING consistently                             +Bo32 QUIP rerank 47.9 23.8 -4.95 6.63
+improve quoting, adequacy, and fluency across                          +QUOTE-TUNING 59.2 23.1 -5.02 5.39
+diverse model families (Table 3).
+                                                                 Table 4: On the open-ended text completion setting,
+                                                                 QUOTE-TUNING significantly improves quoting and
+                                                                 fluency while maintaining adequacy.
+
+    8Similar findings are also found in Li et al. (2024), which      9Moreover, MISTRAL-7B is shown to be a stronger
+report improved perplexity by conducting speculative decod-      model (Jiang et al., 2023) compared to LLAMA2-7B.
+ing to copy spans from a datastore.
+
+                           3753
+                     Generation                                   Multiple Choice
+
+Method  Truthful Informative Truthful×Informative           MC1   MC2
+
+LLAMA2-7B-CHAT 54.2  92.0                             46.6  30.2  45.3
++QUOTE-TUNING 61.8 (+14.0%) 89.5 (-2.7%) 51.5 (+10.5%)      32.8 (+8.5%) 47.9 (+5.6%)
+
+Table 5: Results on TruthfulQA. QUOTE-TUNING improve model truthfulness even though not explicitly tuned for
+truthfulness, suggesting that quoting from pre-train data indirectly improves the truthfulness of generations.
+
+Results After conducting QUOTE-TUNING with            in Table 8. Interestingly, QUOTE-TUNING can
+hypermaraters detailed in §B, the reward accu-        improve model truthfulness even though not ex-
+racy on a held-out evaluation set is 84.0%. As        plicitly tuned to do so: because the preference
+shown in Table 4, QUOTE-TUNING significantly          optimized in QUOTE-TUNING is only quoting as
+improves both quoting and fluency over all base-      measured by QUIP-Score, the model is not directly
+lines. Notably, QUOTE-TUNING more than dou-           optimized to be factual, in contrast to works that di-
+bles the QUIP-Score compared to the pre-trained       rectly aims at truthfulness or factuality (Tian et al.,
+LLAMA2-7B baseline (25.7  59.2, a 130.4% rel-         2024; Li et al., 2023). The increase of truthful-
+ative increase), and outperforms the strong QUIP      ness likely attributes to the fact that Wikipedia is
+reranking baseline. On the other hand, QUOTE-         a relatively high-quality and reliable source, and
+TUNING maintains a similar adequacy of generated      quoting more from such reliable sources leads to
+answers compared to LLAMA2-7B.                        more truthful responses. We thus posit aligning
+                                                      LLMs to reliable sources is a promising approach
+   Interestingly, Table 4 shows that simply rerank-   to increase their truthfulness.
+ing LLAMA2-7B generation by QUIP can lead to
+a better perplexity as measured by MISTRAL-7B.        5.2 Evaluation of Downstream Performance
+We hypothesize that because Wikipedia is an ency-
+clopedia that has been revised multiple times and     Because QUOTE-TUNING trains model on spe-
+contains mostly high-quality text, quoting from this  cialized long-form generation tasks, it is an open
+canonical corpus also has benefits of fluency aside   question whether the significant increase of quot-
+from better verifiability.                            ing would lead to degradation of general capabil-
+                                                      ities. Thus, we now test the model before and af-
+5 Analysis                                            ter quote-tuning on general capability benchmarks
+                                                      MMLU (Hendrycks et al., 2020), GSM8K (Cobbe
+5.1 Effect of Quoting on Truthfulness                 et al., 2021), BIG-Bench Hard (BBH; Suzgun et al.,
+                                                      2023), and Hellaswag (HS; Zellers et al., 2019).10
+We hypothesize that besides increasing verifiabil-
+ity, quoting from high-quality corpora such as              MMLU GSM8K BBH HS
+Wikipedia might also increase truthfulness because
+LLMs are aligned to rely on trustworthy sources.      LLAMA2-7B-CHAT 46.38 20.92 40.21 75.51
+To verify this hypothesis, we take the quote-tuned    +QUOTE-TUNING 45.65 19.79 39.47 73.96
+model from the LFQA setting (§4.1) and evaluate
+its performance on the TruthfulQA dataset (Lin                    -0.73 -1.13 -0.74 -1.55
+et al., 2022). We follow the standard evaluation
+procedure on TruthfulQA, which fine-tunes GPT-        Table 6: Evaluation on general capability benchmarks.
+3 (Brown et al., 2020) on human annotations as        QUOTE-TUNING only post minor degradation while
+truthfulness and informativeness judges. We defer     significantly improve quoting.
+further details to Appendix C.
+                                                         As shown in Table 6, QUOTE-TUNING only
+   As shown in Table 5, QUOTE-TUNING in-              leads to very small degradations (less than two
+creases model truthfulness, as well as answers        points for all tested benchmarks), while signif-
+that are both truthful and informative, over the un-  icantly improving quoting. We therefore find
+tuned LLAMA2-7B-CHAT model by a notable mar-          QUOTE-TUNING a significantly better trade-off for
+gin. On the other hand, informativeness slightly      verifiability with a small cost of general capability.
+dropped, suggesting that the quote-tuned model is
+more conservative and has an increased tendency          10We conduct evaluation using the lm-evaluation-harness
+to decline to answer. We provide example outputs      framework under default settings.
+
+                           3754
+0.008    No Length Constraint                                 0.008          With Length Constraint
+0.006                                                         0.007
+0.004                           Dispreferred Responses        0.006                                  Dispreferred Responses
+0.002                           Preferred Responses           0.005                                  Preferred Responses
+0.000 0                                                       0.004
+               100  200  300                                  0.003          100    200      300
+                                                              0.002
+                                                              0.001
+                                                              0.000 0
+
+Figure 2: Length distribution of the dispreferred and preferred responses with or without the length constraint
+on NQ. Left: No length constraint. Right: added length constraint with length = 0.1. Adding length constraints
+properly regulates length distribution of responses.
+
+                                                        Quoting        Adequacy     Fluency
+                                                        QUIP                         PPL
+      Setting                Method                              Rouge-L BARTSc       4.96   Length
+  In-Domain    LLAMA2-7B-CHAT                             34.9                        3.78   115.9
+               +QUOTE-TUNING                              54.5         22.4  -3.99    3.88   117.6
+       NQ      +QT w/o len. constraint                    53.6         24.2  -3.93    3.93   105.9
+Out-of-Domain  LLAMA2-7B-CHAT                             26.8         24.4  -3.95    3.55   179.8
+               +QT on NQ                                  41.4                        3.84   179.6
+  NQ  ELI5     +QT on NQ w/o len. constraint              40.5         18.8  -4.78           154.3
+                                                                       18.3  -4.84
+                                                                       18.6  -4.85
+
+Table 7: Results on the ablation of the length constraint. QT is short for QUOTE-TUNING. Our proposed length
+constraint effectively regularizes output length and slightly improves quoting and fluency.
+
+5.3 Ablation of the Length Constraint                   to the full QUOTE-TUNING algorithm, depicting
+                                                        the effectiveness of the length constraint.
+We conduct an ablation on the length constraint
+of the QUOTE-TUNING algorithm on the LFQA               6 Related Work
+setting, relaxing the constraint that the preferred
+and dispreferred responses need to have similar         Improving Verifiability Hallucination in
+lengths to each other. Experimental results are         LLMs (Ji et al., 2022; Zhang et al., 2023b; Mishra
+shown in Table 7. While QUOTE-TUNING leads              et al., 2024) has motivated approaches that improve
+to responses that have very similar lengths with        the verifiability of LLM generations. Recent work
+the un-tuned model (117.6 vs 115.9 on NQ, 179.6         on improving the verifiability of LLM generations
+vs 179.8 on ELI5), QUOTE-TUNING without the             relies on external artifacts. One emerging trend is
+length constraint leads to notably shorter response     training LLMs to produce citations that support
+(105.9 on NQ, 154.3 on ELI5).                           generated claims (Menick et al., 2022; Gao et al.,
+                                                        2023; Huang et al., 2024). While citations improve
+   We hypothesize this phenomenon is due to the         attribution, LLM can still hallucinate incorrect
+bias within synthetic preference data where length      or irrelevant citations (Liu et al., 2023), which is
+is not regularized: as shown in Figure 2, the den-      non-trivial to verify. Khalifa et al. (2024) introduce
+sity of preferred response is notably higher than       intrinsic source citation to enable more faithful
+dispreferred ones around length 100. We speculate       attribution to parametric knowledge, on a synthetic
+that this is caused by the sampled responses having     setting. QUOTE-TUNING is an approach comple-
+a non-uniform distribution of QUIP-Score over dif-      mentary to citations that enhances verifiability.
+ferent length ranges, which we provide empirical        Hennigen et al. (2024) finds that explicit symbolic
+evidence in Figure 3.                                   references to structured conditioning data, such
+                                                        as JSON tables, lead to faster human verification,
+   On the other hand, ablating the length constraint    further motivating our approach of increasing
+leads to slightly lower quoting, relatively similar
+adequacy, and notably worse perplexity compared
+
+                                                        3755
+verifiability through verbatim quotes.                   a datastore. We defer further related work to §A.
+   Retrieval-augmented generation (Guu et al.,
+                                                         7 Discussions and Future Work
+2020; Lewis et al., 2020b; Borgeaud et al., 2022;
+Izacard et al., 2023, i.a.) allows fact-checking gen-    In §4, we provide rich empirical evidence that
+eration with the retrieved documents as supporting       QUOTE-TUNING can significantly promote para-
+evidence. Min et al. (2023b) used retrieved tokens       metric quoting across diverse tasks, domains, and
+directly as generation, but is limited to the masked-    model families. Since quoted texts are autoregres-
+filling setting with short spans of text. However,       sively generated as spans of the model responses,
+checking against retrieved documents is still non-       and our evaluation quantitatively shows that these
+trivial and there is no guarantee that generated         responses are of high adequacy and fluency (Ta-
+text is completely faithful to these documents. On       bles 2, 3, 4), generated quotes are therefore con-
+the other hand, our framework for quoting, based         strained to be highly adequate, fluent, and context-
+on Marone and Van Durme (2023); Weller et al.            relevant text. These findings demonstrate that it
+(2024), makes the verification of quoted segments        is not only possible but easily feasible to lever-
+from fact bases trivial, given that the target model is  age parametric knowledge to generate more ver-
+capable of producing rich quotations after QUOTE-        ifiable outputs. We thus argue current LLMs
+TUNING. Our work, which focuses on parametric            have abundant underutilized potential in im-
+knowledge, is also complementary to methods that         proving their own verifiability, and call for future
+rely on non-parametric knowledge bases.                  work that develop more attributable, verifiable ap-
+                                                         proaches through our proposed "trivializing verifi-
+Impact of Preference Data The construction               cation through quoting" framework.
+of pairwise preference data significantly impacts
+model behavior. Tian et al. (2024) fine-tunes LLMs          As an early exploration of the quoting frame-
+to be more factual by constructing preference data       work, this work focuses on investigating the feasi-
+with automatic measures of factuality (Min et al.,       bility of unlocking parametric quoting through fine-
+2023a) and model confidence scores. Yang et al.          tuning, and the generalizability of enhanced quot-
+(2023) formalizes aligns LLMs with being honest          ing across different domains, tasks, and model fam-
+by constructing pairwise data that prefers answers       ilies. We have provided positive empirical evidence
+only when the model possesses relevant knowledge         supporting both aspects. Therefore, our setup fo-
+and abstains from answering otherwise. Yuan et al.       cuses on measuring and improving the overall rate
+(2024) iteratively constructs preference data by         of quoting, as evaluated by QUIP-Score, leaving
+prompting LLMs themselves for quality measure-           room for future work to enhance quoting reward
+ments. Shi et al. (2023a) automates preference data      signals by considering other desiderata of quoted
+generation with LMs, utilizing instruction tuning        texts, such as quote completeness and usefulness
+and expert LMs to synthesize high-quality prefer-        under the current context. We provide an extended
+ence data. Our work also synthesizes pairwise data       discussion of limitations in the subsequent section.
+that give preference to the one that quotes more
+from a given corpus. To the best of our knowledge,          Quoting has implications on privacy, security,
+our work is the first to employ preference data to       and copyright. We focus on enhancing quoting
+solicit LMs to quote from large-scale corpora.           from Wikipedia, a high-quality and low-risk cor-
+                                                         pus, for verifiability. As pre-training data con-
+Memorization Works have demonstrated that                tains diverse mixtures of data with varying risk
+LLMs memorize a significant portion of their pre-        levels (Elazar et al., 2024; Longpre et al., 2024),
+training data (Carlini et al., 2020, 2023; Hu et al.,    we argue that the grounding corpus for QUOTE-
+2022; Ippolito et al., 2023; Biderman et al., 2023;      TUNING must be carefully selected and limited to
+Hartmann et al., 2023), and we can extract them          trusted, public sources such as Wikipedia to prevent
+by adversarial prompting (Carlini et al., 2020; Nasr     privacy violations or copyright infringement.
+et al., 2023). Our work builds upon the memoriza-
+tion behavior of LLMs by aligning them to prefer            In conclusion, our approach presents a promising
+outputs that quote more from their pre-training data.    direction for leveraging the parametric knowledge
+Also related to our work, kNN-LMs (Khandelwal            of LLMs to facilitate easier verification of model
+et al., 2019) improve generalization by using near-      generation and improve the calibration of human-
+est neighbor search to retrieve similar contexts from    machine trust.
+
+3756
+Limitations                                              Acknowledgements
+
+(i) Our work maximizes the amount of quoting             This work is supported by ONR grant (N00014-
+measured by QUIP-Score (Weller et al., 2024), but        24-1-2089) and an Amazon Faculty Research
+does not distinguish between many short quotes v.s.      Award. We sincerely thank Yung-Sung Chuang,
+a few long ones, where the latter is more preferable.    Andrew Wang, Jeffrey Cheng, Mahsa Yarmoham-
+Future work should look into simultaneously maxi-        madi, Dongwei Jiang, and the broader JHU CLSP
+mizing the rate and length of quoting. (ii) Another      community for discussions and inspiration.
+future direction involves extending the experiments
+to other settings, such instruction tuning (Mishra       References
+et al., 2022; Wei et al., 2021; Wang et al., 2022,
+2023; Zhang et al., 2023a, i.a.), where a diverse        Akari Asai, Zexuan Zhong, Danqi Chen, Pang Wei Koh,
+set of tasks are present. (iii) We explored quot-           Luke Zettlemoyer, Hanna Hajishirzi, and Wen tau
+ing as an interface for parametric knowledge only.          Yih. 2024. Reliable, adaptable, and attributable lan-
+This leaves room for investigating the synergy be-          guage models with retrieval.
+tween quote-tuned models and retrieval-augmented
+generation (Guu et al., 2020; Lewis et al., 2020b;       Yuntao Bai, Andy Jones, Kamal Ndousse, Amanda
+Borgeaud et al., 2022; Izacard et al., 2023, i.a.)          Askell, Anna Chen, Nova DasSarma, Dawn Drain,
+or other non-parametric techniques (Min et al.,             Stanislav Fort, Deep Ganguli, Tom Henighan, et al.
+2023b). (iv) Finally, quoting provides a natural in-        2022a. Training a helpful and harmless assistant with
+terface for attribution (Bohnet et al., 2022; Muller        reinforcement learning from human feedback. arXiv
+et al., 2023; Malaviya et al., 2023; Slobodkin et al.,      preprint arXiv:2204.05862.
+2024). Future work can create reliable, easily veri-
+fiable citations by attribution the source of citation   Yuntao Bai, Saurav Kadavath, Sandipan Kundu,
+with symbolic methods.                                      Amanda Askell, Jackson Kernion, Andy Jones,
+                                                            Anna Chen, Anna Goldie, Azalia Mirhoseini,
+                                                            Cameron McKinnon, et al. 2022b. Constitutional
+                                                            ai: Harmlessness from ai feedback. arXiv preprint
+                                                            arXiv:2212.08073.
+
+Ethical Considerations                                   Stella Biderman, USVSN PRASHANTH, Lintang
+                                                            Sutawika, Hailey Schoelkopf, Quentin Anthony,
+We have shown that increasing verbatim quotes               Shivanshu Purohit, and Edward Raff. 2023. Emer-
+from pre-training data through QUOTE-TUNING                 gent and predictable memorization in large language
+is a promising approach for enhancing verifiabil-           models. In Advances in Neural Information Process-
+ity. However, the ability to quote from pre-training        ing Systems, volume 36, pages 28072­28090. Curran
+data have broad ethical implications. While en-             Associates, Inc.
+hanced quoting increase users' ability to attribute
+generation back to their original sources, this could    Burton H. Bloom. 1970. Space/time trade-offs in hash
+be a double-edged sword regarding privacy protec-           coding with allowable errors. Communications of the
+tion: adversarial users might utilize similar meth-         ACM, 13(7):422­426.
+ods to extract sensitive information contained in
+pre-training data. On the other hand, if this is feasi-  Bernd Bohnet, Vinh Q. Tran, Pat Verga, Roee Aharoni,
+ble, it may create a path for auditing pre-training         Daniel Andor, Livio Baldini Soares, Jacob Eisen-
+data.                                                       stein, Kuzman Ganchev, Jonathan Herzig, Kai Hui,
+                                                            Tom Kwiatkowski, Ji Ma, Jianmo Ni, Tal Schuster,
+                                                            William W. Cohen, Michael Collins, Dipanjan Das,
+                                                            Donald Metzler, Slav Petrov, and Kellie Webster.
+                                                            2022. Attributed question answering: Evaluation
+                                                            and modeling for attributed large language models.
+                                                            ArXiv, abs/2212.08037.
+
+   Furthermore, the legal implications of quoting        Sebastian Borgeaud, Arthur Mensch, Jordan Hoff-
+from pre-training data must be carefully managed.           mann, Trevor Cai, Eliza Rutherford, Katie Milli-
+It is necessary to ensure that copyrighted material         can, George Bm Van Den Driessche, Jean-Baptiste
+is handled appropriately, with proper attribution,          Lespiau, Bogdan Damoc, Aidan Clark, et al. 2022.
+and that the use of such data adheres to intellectual       Improving language models by retrieving from tril-
+property laws. By addressing ethical and legal              lions of tokens. In International Conference on Ma-
+considerations, we envision QUOTE-TUNING as                 chine Learning (ICML).
+a responsible tools for enhancing verifiability and
+calibrating human-machine trust.                         Tom Brown, Benjamin Mann, Nick Ryder, Melanie
+                                                            Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind
+                                                            Neelakantan, Pranav Shyam, Girish Sastry, Amanda
+
+             3757
+   Askell, et al. 2020. Language models are few-shot     Leo Gao, Stella Biderman, Sid Black, Laurence Gold-
+   learners. Advances in Neural Information Processing      ing, Travis Hoppe, Charles Foster, Jason Phang,
+   Systems (NeurIPS).                                       Horace He, Anish Thite, Noa Nabeshima, Shawn
+Nicholas Carlini, Daphne Ippolito, Matthew Jagielski,       Presser, and Connor Leahy. 2020. The Pile: An
+   Katherine Lee, Florian Tramer, and Chiyuan Zhang.        800gb dataset of diverse text for language modeling.
+   2023. Quantifying memorization across neural lan-        arXiv preprint arXiv:2101.00027.
+   guage models. In International Conference on Learn-
+   ing Representations (ICLR).                           Tianyu Gao, Howard Yen, Jiatong Yu, and Danqi Chen.
+Nicholas Carlini, Florian Tramèr, Eric Wallace,             2023. Enabling large language models to generate
+   Matthew Jagielski, Ariel Herbert-Voss, Katherine         text with citations. In Conference on Empirical Meth-
+   Lee, Adam Roberts, Tom B. Brown, Dawn Xiaodong           ods in Natural Language Processing (EMNLP).
+   Song, Úlfar Erlingsson, Alina Oprea, and Colin Raf-
+   fel. 2020. Extracting training data from large lan-   Kelvin Guu, Kenton Lee, Zora Tung, Panupong Pasu-
+   guage models. In USENIX Security Symposium               pat, and Mingwei Chang. 2020. Retrieval augmented
+   (USENIX).                                                language model pre-training. In International Con-
+Paul F Christiano, Jan Leike, Tom Brown, Miljan Mar-        ference on Learning Representations (ICLR).
+   tic, Shane Legg, and Dario Amodei. 2017. Deep
+   reinforcement learning from human preferences. In     Xiaochuang Han and Yulia Tsvetkov. 2022. ORCA:
+   Advances in Neural Information Processing Systems,       interpreting prompted language models via locating
+   volume 30. Curran Associates, Inc.                       supporting data evidence in the ocean of pretraining
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian,             data. arXiv preprint arXiv:2205.12600.
+   Mark Chen, Heewoo Jun, Lukasz Kaiser, Matthias
+   Plappert, Jerry Tworek, Jacob Hilton, Reiichiro       Valentin Hartmann, Anshuman Suri, Vincent Bind-
+   Nakano, Christopher Hesse, and John Schulman.            schaedler, David Evans, Shruti Tople, and Robert
+   2021. Training verifiers to solve math word prob-        West. 2023. Sok: Memorization in general-purpose
+   lems. arXiv preprint arXiv:2110.14168.                   large language models. ArXiv, abs/2310.18362.
+Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey,
+   Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman,       Tianxing He, Jingyu Zhang, Tianle Wang, Sachin
+   Akhil Mathur, Alan Schelten, Amy Yang, Angela            Kumar, Kyunghyun Cho, James Glass, and Yulia
+   Fan, et al. 2024. The llama 3 herd of models. arXiv      Tsvetkov. 2023. On the blind spots of model-based
+   preprint arXiv:2407.21783.                               evaluation metrics for text generation. In Proceed-
+Yann Dubois, Xuechen Li, Rohan Taori, Tianyi Zhang,         ings of the 61st Annual Meeting of the Association for
+   Ishaan Gulrajani, Jimmy Ba, Carlos Guestrin, Percy       Computational Linguistics (Volume 1: Long Papers),
+   Liang, and Tatsunori Hashimoto. 2023. Alpacafarm:        pages 12067­12097, Toronto, Canada. Association
+   A simulation framework for methods that learn from       for Computational Linguistics.
+   human feedback. In Advances in Neural Information
+   Processing Systems (NeurIPS).                         Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou,
+Yanai Elazar, Akshita Bhagia, Ian Magnusson, Abhi-          Mantas Mazeika, Dawn Song, and Jacob Steinhardt.
+   lasha Ravichander, Dustin Schwenk, Alane Suhr,           2020. Measuring massive multitask language under-
+   Pete Walsh, Dirk Groeneveld, Luca Soldaini, Sameer       standing. In International Conference on Learning
+   Singh, Hanna Hajishirzi, Noah A. Smith, and Jesse        Representations (ICLR).
+   Dodge. 2024. What's in my big data?
+Kawin Ethayarajh, Winnie Xu, Niklas Muennighoff,         Lucas Torroba Hennigen, Zejiang Shen, Aniruddha
+   Dan Jurafsky, and Douwe Kiela. 2024. Kto: Model          Nrusimha, Bernhard Gapp, David Sontag, and Yoon
+   alignment as prospect theoretic optimization.            Kim. 2024. Towards verifiable text generation with
+Angela Fan, Yacine Jernite, Ethan Perez, David Grang-       symbolic references. In First Conference on Lan-
+   ier, Jason Weston, and Michael Auli. 2019. ELI5:         guage Modeling.
+   Long form question answering. In Proceedings of
+   the 57th Annual Meeting of the Association for Com-   Hongsheng Hu, Zoran Salcic, Lichao Sun, Gillian Dob-
+   putational Linguistics, pages 3558­3567, Florence,       bie, Philip S Yu, and Xuyun Zhang. 2022. Member-
+   Italy. Association for Computational Linguistics.        ship inference attacks on machine learning: A survey.
+Raymond Fok and Daniel S. Weld. 2024. In search of          ACM Computing Surveys (CSUR), 54(11s):1­37.
+   verifiability: Explanations rarely enable complemen-
+   tary performance in ai-advised decision making. AI    Chengyu Huang, Zeqiu Wu, Yushi Hu, and Wenya
+   Magazine, 45(3):317­332.                                 Wang. 2024. Training language models to generate
+                                                            text with citations via fine-grained rewards. ArXiv,
+                                                            abs/2402.04315.
+
+                                                         Daphne Ippolito, Florian Tramer, Milad Nasr, Chiyuan
+                                                            Zhang, Matthew Jagielski, Katherine Lee, Christo-
+                                                            pher Choquette Choo, and Nicholas Carlini. 2023.
+                                                            Preventing generation of verbatim memorization in
+                                                            language models gives a false sense of privacy. In
+                                                            Proceedings of the 16th International Natural Lan-
+                                                            guage Generation Conference, pages 28­53, Prague,
+                                                            Czechia. Association for Computational Linguistics.
+
+3758
+Gautier Izacard, Patrick Lewis, Maria Lomeli, Lucas        Minghan Li, Xilun Chen, Ari Holtzman, Beidi Chen,
+   Hosseini, Fabio Petroni, Timo Schick, Jane Dwivedi-        Jimmy Lin, Wen tau Yih, and Xi Victoria Lin. 2024.
+   Yu, Armand Joulin, Sebastian Riedel, and Edouard           Nearest neighbor speculative decoding for llm gener-
+   Grave. 2023. Atlas: Few-shot learning with retrieval       ation and attribution.
+   augmented language models. Journal of Machine
+   Learning Research, 24(251):1­43.                        Chin-Yew Lin. 2004. ROUGE: A Package for Auto-
+                                                              matic Evaluation of Summaries. In ACL Workshop
+Ziwei Ji, Nayeon Lee, Rita Frieske, Tiezheng Yu,              on Text Summarization Branches Out.
+   Dan Su, Yan Xu, Etsuko Ishii, Yejin Bang, Andrea
+   Madotto, and Pascale Fung. 2022. Survey of halluci-     Stephanie Lin, Jacob Hilton, and Owain Evans. 2022.
+   nation in natural language generation. ACM Comput-         TruthfulQA: Measuring how models mimic human
+   ing Surveys.                                               falsehoods. In Proceedings of the 60th Annual Meet-
+                                                              ing of the Association for Computational Linguistics
+Albert Qiaochu Jiang, Alexandre Sablayrolles, Arthur          (Volume 1: Long Papers), pages 3214­3252, Dublin,
+   Mensch, Chris Bamford, Devendra Singh Chap-                Ireland. Association for Computational Linguistics.
+   lot, Diego de Las Casas, Florian Bressand, Gi-
+   anna Lengyel, Guillaume Lample, Lucile Saulnier,        Nelson F Liu, Tianyi Zhang, and Percy Liang. 2023.
+   L'elio Renard Lavaud, Marie-Anne Lachaux, Pierre           Evaluating verifiability in generative search engines.
+   Stock, Teven Le Scao, Thibaut Lavril, Thomas Wang,         In Conference on Empirical Methods in Natural Lan-
+   Timothée Lacroix, and William El Sayed. 2023. Mis-         guage Processing (EMNLP).
+   tral 7b. ArXiv, abs/2310.06825.
+                                                           Shayne Longpre, Gregory Yauney, Emily Reif, Kather-
+Muhammad Khalifa, David Wadden, Emma Strubell,                ine Lee, Adam Roberts, Barret Zoph, Denny Zhou,
+   Honglak Lee, Lu Wang, Iz Beltagy, and Hao Peng.            Jason Wei, Kevin Robinson, David Mimno, and
+   2024. Source-aware training enables knowledge at-          Daphne Ippolito. 2024. A pretrainer's guide to train-
+   tribution in language models. In First Conference on       ing data: Measuring the effects of data age, domain
+   Language Modeling.                                         coverage, quality, & toxicity. In Proceedings of the
+                                                              2024 Conference of the North American Chapter of
+Urvashi Khandelwal, Omer Levy, Dan Jurafsky, Luke             the Association for Computational Linguistics: Hu-
+   Zettlemoyer, and Mike Lewis. 2019. Generalization          man Language Technologies (Volume 1: Long Pa-
+   through memorization: Nearest neighbor language            pers), pages 3245­3276, Mexico City, Mexico. Asso-
+   models. In International Conference on Learning            ciation for Computational Linguistics.
+   Representations (ICLR).
+
+Tom Kwiatkowski, Jennimaria Palomaki, Olivia Red-          Chaitanya Malaviya, Subin Lee, Sihao Chen, Elizabeth
+   field, Michael Collins, Ankur Parikh, Chris Alberti,       Sieber, Mark Yatskar, and Dan Roth. 2023. Ex-
+   Danielle Epstein, Illia Polosukhin, Jacob Devlin, Ken-     pertqa: Expert-curated questions and attributed an-
+   ton Lee, Kristina Toutanova, Llion Jones, Matthew          swers. ArXiv, abs/2309.07852.
+   Kelcey, Ming-Wei Chang, Andrew M. Dai, Jakob
+   Uszkoreit, Quoc Le, and Slav Petrov. 2019. Natu-        Marc Marone and Benjamin Van Durme. 2023. Data
+   ral questions: A benchmark for question answering          portraits: Recording foundation model training data.
+   research. Transactions of the Association for Compu-       arXiv preprint arXiv:2303.03919.
+   tational Linguistics, 7:452­466.
+                                                           Jacob Menick, Maja Trebacz, Vladimir Mikulik,
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio          John Aslanides, Francis Song, Martin Chadwick,
+   Petroni, Vladimir Karpukhin, Naman Goyal, Hein-            Mia Glaese, Susannah Young, Lucy Campbell-
+   rich Küttler, Mike Lewis, Wen-tau Yih, Tim Rock-           Gillingham, Geoffrey Irving, et al. 2022. Teaching
+   täschel, Sebastian Riedel, and Douwe Kiela. 2020a.         language models to support answers with verified
+   Retrieval-augmented generation for knowledge-              quotes. arXiv preprint arXiv:2203.11147.
+   intensive nlp tasks. In Advances in Neural Infor-
+   mation Processing Systems, volume 33, pages 9459­       Sewon Min, Kalpesh Krishna, Xinxi Lyu, Mike
+   9474. Curran Associates, Inc.                              Lewis, Wen-tau Yih, Pang Wei Koh, Mohit Iyyer,
+                                                              Luke Zettlemoyer, and Hannaneh Hajishirzi. 2023a.
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio          Factscore: Fine-grained atomic evaluation of factual
+   Petroni, Vladimir Karpukhin, Naman Goyal, Hein-            precision in long form text generation. arXiv preprint
+   rich Küttler, Mike Lewis, Wen-tau Yih, Tim Rock-           arXiv:2305.14251.
+   täschel, et al. 2020b. Retrieval-augmented genera-
+   tion for knowledge-intensive NLP tasks. Advances in     Sewon Min, Weijia Shi, Mike Lewis, Xilun Chen, Wen-
+   Neural Information Processing Systems (NeurIPS),           tau Yih, Hannaneh Hajishirzi, and Luke Zettlemoyer.
+   33.                                                        2023b. Nonparametric masked language modeling.
+                                                              In Findings of the Association for Computational
+Kenneth Li, Oam Patel, Fernanda Viégas, Hanspeter             Linguistics: ACL 2023, pages 2097­2118, Toronto,
+   Pfister, and Martin Wattenberg. 2023. Inference-time       Canada. Association for Computational Linguistics.
+   intervention: Eliciting truthful answers from a lan-
+   guage model. In Advances in Neural Information          Abhika Mishra, Akari Asai, Vidhisha Balachandran,
+   Processing Systems (NeurIPS).                              Yizhong Wang, Graham Neubig, Yulia Tsvetkov, and
+
+3759
+   Hannaneh Hajishirzi. 2024. Fine-grained halluci-        John Schulman, Filip Wolski, Prafulla Dhariwal,
+   nation detection and editing for language models.          Alec Radford, and Oleg Klimov. 2017. Proxi-
+   ArXiv, abs/2401.06855.                                     mal policy optimization algorithms. arXiv preprint
+Swaroop Mishra, Daniel Khashabi, Chitta Baral, and            arXiv:1707.06347.
+   Hannaneh Hajishirzi. 2022. Cross-Task Generaliza-
+   tion via Natural Language Crowdsourcing Instruc-        Lingfeng Shen, Weiting Tan, Sihao Chen, Yunmo Chen,
+   tions. In Annual Meeting of the Association for Com-       Jingyu Zhang, Haoran Xu, Boyuan Zheng, Philipp
+   putational Linguistics (ACL).                              Koehn, and Daniel Khashabi. 2024. The language
+Bonnie M. Muir. 1987. Trust between humans and ma-            barrier: Dissecting safety challenges of llms in multi-
+   chines, and the design of decision aids. International     lingual context. In Annual Meeting of the Association
+   Journal of Man-Machine Studies, 27(5):527­539.             for Computational Linguistics (ACL) - Findings.
+Benjamin Muller, John Wieting, Jonathan Clark, Tom
+   Kwiatkowski, Sebastian Ruder, Livio Soares, Roee        Taiwei Shi, Kai Chen, and Jieyu Zhao. 2023a. Safer-
+   Aharoni, Jonathan Herzig, and Xinyi Wang. 2023.            instruct: Aligning language models with automated
+   Evaluating and modeling attribution for cross-lingual      preference data.
+   question answering. In Proceedings of the 2023 Con-
+   ference on Empirical Methods in Natural Language        Weijia Shi, Xiaochuang Han, Mike Lewis, Yulia
+   Processing, pages 144­157, Singapore. Association          Tsvetkov, Luke Zettlemoyer, and Scott Wen tau Yih.
+   for Computational Linguistics.                             2023b. Trusting your evidence: Hallucinate less with
+Milad Nasr, Nicholas Carlini, Jonathan Hayase,                context-aware decoding.
+   Matthew Jagielski, A Feder Cooper, Daphne Ippolito,
+   Christopher A Choquette-Choo, Eric Wallace, Flo-        Prasann Singhal, Tanya Goyal, Jiacheng Xu, and Greg
+   rian Tramèr, and Katherine Lee. 2023. Scalable ex-         Durrett. 2023. A long way to go: Investigating length
+   traction of training data from (production) language       correlations in rlhf. ArXiv, abs/2310.03716.
+   models. arXiv preprint arXiv:2311.17035.
+OpenAI. 2023. GPT-4 Technical Report.                      Aviv Slobodkin, Eran Hirsch, Arie Cattan, Tal Schuster,
+Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Car-           and Ido Dagan. 2024. Attribute first, then generate:
+   roll L Wainwright, Pamela Mishkin, Chong Zhang,            Locally-attributable grounded text generation.
+   Sandhini Agarwal, Katarina Slama, Alex Ray, et al.
+   2022a. Training Language Models to Follow Instruc-      Nisan Stiennon, Long Ouyang, Jeffrey Wu, Daniel
+   tions with Human Feedback. In Advances in Neural           Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford,
+   Information Processing Systems (NeurIPS).                  Dario Amodei, and Paul F Christiano. 2020. Learn-
+Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida,             ing to summarize with human feedback. In Ad-
+   Carroll Wainwright, Pamela Mishkin, Chong Zhang,           vances in Neural Information Processing Systems,
+   Sandhini Agarwal, Katarina Slama, Alex Ray, John           volume 33, pages 3008­3021. Curran Associates,
+   Schulman, Jacob Hilton, Fraser Kelton, Luke Miller,        Inc.
+   Maddie Simens, Amanda Askell, Peter Welinder,
+   Paul F Christiano, Jan Leike, and Ryan Lowe. 2022b.     Mirac Suzgun, Nathan Scales, Nathanael Schärli, Se-
+   Training language models to follow instructions with       bastian Gehrmann, Yi Tay, Hyung Won Chung,
+   human feedback. In Advances in Neural Information          Aakanksha Chowdhery, Quoc Le, Ed Chi, Denny
+   Processing Systems, volume 35, pages 27730­27744.          Zhou, and Jason Wei. 2023. Challenging BIG-bench
+   Curran Associates, Inc.                                    tasks and whether chain-of-thought can solve them.
+Rafael Rafailov, Archit Sharma, Eric Mitchell, Christo-       In Findings of the Association for Computational Lin-
+   pher D Manning, Stefano Ermon, and Chelsea Finn.           guistics: ACL 2023, pages 13003­13051, Toronto,
+   2023. Direct preference optimization: Your language        Canada. Association for Computational Linguistics.
+   model is secretly a reward model. In Thirty-seventh
+   Conference on Neural Information Processing Sys-        Fahim Tajwar, Anikait Singh, Archit Sharma, Rafael
+   tems.                                                      Rafailov, Jeff Schneider, Tengyang Xie, Stefano Er-
+Alexandre Rame, Guillaume Couairon, Corentin                  mon, Chelsea Finn, and Aviral Kumar. 2024. Pref-
+   Dancette, Jean-Baptiste Gaya, Mustafa Shukor,              erence fine-tuning of LLMs should leverage subop-
+   Laure Soulier, and Matthieu Cord. 2023. Rewarded           timal, on-policy data. In Forty-first International
+   soups: towards pareto-optimal alignment by inter-          Conference on Machine Learning.
+   polating weights fine-tuned on diverse rewards. In
+   Thirty-seventh Conference on Neural Information         Gemma Team, Morgane Riviere, Shreya Pathak,
+   Processing Systems.                                        Pier Giuseppe Sessa, Cassidy Hardin, Surya Bhupati-
+                                                              raju, Léonard Hussenot, Thomas Mesnard, Bobak
+                                                              Shahriari, Alexandre Ramé, Johan Ferret, Peter
+                                                              Liu, Pouya Tafti, Abe Friesen, Michelle Casbon,
+                                                              Sabela Ramos, Ravin Kumar, Charline Le Lan,
+                                                              Sammy Jerome, Anton Tsitsulin, Nino Vieillard,
+                                                              Piotr Stanczyk, Sertan Girgin, Nikola Momchev,
+                                                              Matt Hoffman, Shantanu Thakoor, Jean-Bastien Grill,
+                                                              Behnam Neyshabur, Olivier Bachem, Alanna Wal-
+                                                              ton, Aliaksei Severyn, Alicia Parrish, Aliya Ah-
+                                                              mad, Allen Hutchison, Alvin Abdagic, Amanda
+
+3760
+   Carl, Amy Shen, Andy Brock, Andy Coenen, An-              Liu, Noah A. Smith, Daniel Khashabi, and Hannaneh
+   thony Laforge, Antonia Paterson, Ben Bastian, Bilal       Hajishirzi. 2023. Self-instruct: Aligning language
+   Piot, Bo Wu, Brandon Royal, Charlie Chen, Chintu          models with self-generated instructions. In Proceed-
+   Kumar, Chris Perry, Chris Welty, Christopher A.           ings of the 61st Annual Meeting of the Association for
+   Choquette-Choo, Danila Sinopalnikov, David Wein-          Computational Linguistics (Volume 1: Long Papers),
+   berger, Dimple Vijaykumar, Dominika Rogozin´ska,          pages 13484­13508, Toronto, Canada. Association
+   Dustin Herbison, Elisa Bandy, Emma Wang, Eric             for Computational Linguistics.
+   Noland, Erica Moreira, Evan Senter, Evgenii Elty-      Yizhong Wang, Swaroop Mishra, Pegah Alipoormo-
+   shev, Francesco Visin, Gabriel Rasskin, Gary Wei,         labashi, Yeganeh Kordi, Amirreza Mirzaei, Atharva
+   Glenn Cameron, Gus Martins, Hadi Hashemi, Hanna           Naik, Arjun Ashok, Arut Selvan Dhanasekaran,
+   Klimczak-Plucin´ska, Harleen Batra, Harsh Dhand,          Anjana Arunkumar, David Stap, Eshaan Pathak,
+   Ivan Nardini, Jacinda Mein, Jack Zhou, James Svens-       Giannis Karamanolakis, Haizhi Lai, Ishan Puro-
+   son, Jeff Stanway, Jetha Chan, Jin Peng Zhou, Joana       hit, Ishani Mondal, Jacob Anderson, Kirby Kuznia,
+   Carrasqueira, Joana Iljazi, Jocelyn Becker, Joe Fer-      Krima Doshi, Kuntal Kumar Pal, Maitreya Patel,
+   nandez, Joost van Amersfoort, Josh Gordon, Josh           Mehrad Moradshahi, Mihir Parmar, Mirali Purohit,
+   Lipschultz, Josh Newlan, Ju yeong Ji, Kareem Mo-          Neeraj Varshney, Phani Rohitha Kaza, Pulkit Verma,
+   hamed, Kartikeya Badola, Kat Black, Katie Mil-            Ravsehaj Singh Puri, Rushang Karia, Savan Doshi,
+   lican, Keelin McDonell, Kelvin Nguyen, Kiranbir           Shailaja Keyur Sampat, Siddhartha Mishra, Sujan
+   Sodhia, Kish Greene, Lars Lowe Sjoesund, Lau-             Reddy A, Sumanta Patro, Tanay Dixit, and Xudong
+   ren Usui, Laurent Sifre, Lena Heuermann, Leti-            Shen. 2022. Super-NaturalInstructions: Generaliza-
+   cia Lago, Lilly McNealus, Livio Baldini Soares,           tion via declarative instructions on 1600+ NLP tasks.
+   Logan Kilpatrick, Lucas Dixon, Luciano Martins,           In Proceedings of the 2022 Conference on Empiri-
+   Machel Reid, Manvinder Singh, Mark Iverson, Mar-          cal Methods in Natural Language Processing, pages
+   tin Görner, Mat Velloso, Mateo Wirth, Matt Davi-          5085­5109, Abu Dhabi, United Arab Emirates. As-
+   dow, Matt Miller, Matthew Rahtz, Matthew Watson,          sociation for Computational Linguistics.
+   Meg Risdal, Mehran Kazemi, Michael Moynihan,           Jason Wei, Maarten Bosma, Vincent Zhao, Kelvin Guu,
+   Ming Zhang, Minsuk Kahng, Minwoo Park, Mofi               Adams Wei Yu, Brian Lester, Nan Du, Andrew M
+   Rahman, Mohit Khatwani, Natalie Dao, Nenshad              Dai, and Quoc V Le. 2021. Finetuned language mod-
+   Bardoliwalla, Nesh Devanathan, Neta Dumai, Nilay          els are zero-shot learners. In International Confer-
+   Chauhan, Oscar Wahltinez, Pankil Botarda, Parker          ence on Learning Representations (ICLR).
+   Barnes, Paul Barham, Paul Michel, Pengchong            Jason Wei, Maarten Bosma, Vincent Zhao, Kelvin Guu,
+   Jin, Petko Georgiev, Phil Culliton, Pradeep Kup-          Adams Wei Yu, Brian Lester, Nan Du, Andrew M.
+   pala, Ramona Comanescu, Ramona Merhej, Reena              Dai, and Quoc V Le. 2022. Finetuned Language
+   Jana, Reza Ardeshir Rokni, Rishabh Agarwal, Ryan          Models are Zero-Shot Learners. In International
+   Mullins, Samaneh Saadat, Sara Mc Carthy, Sarah            Conference on Learning Representations (ICLR).
+   Cogan, Sarah Perrin, Sébastien M. R. Arnold, Se-       Orion Weller, Marc Marone, Nathaniel Weir, Dawn
+   bastian Krause, Shengyang Dai, Shruti Garg, Shruti        Lawrie, Daniel Khashabi, and Benjamin Van Durme.
+   Sheth, Sue Ronstrom, Susan Chan, Timothy Jordan,          2024. "According to ...": Prompting Language Mod-
+   Ting Yu, Tom Eccles, Tom Hennigan, Tomas Ko-              els Improves Quoting from Pre-Training Data. In
+   cisky, Tulsee Doshi, Vihan Jain, Vikas Yadav, Vilobh      Conference of the European Chapter of the Associa-
+   Meshram, Vishal Dharmadhikari, Warren Barkley,            tion for Computational Linguistics (EACL).
+   Wei Wei, Wenming Ye, Woohyun Han, Woosuk               Zeqiu Wu, Yushi Hu, Weijia Shi, Nouha Dziri, Alane
+   Kwon, Xiang Xu, Zhe Shen, Zhitao Gong, Zichuan            Suhr, Prithviraj Ammanabrolu, Noah A. Smith, Mari
+   Wei, Victor Cotruta, Phoebe Kirk, Anand Rao, Minh         Ostendorf, and Hannaneh Hajishirzi. 2023. Fine-
+   Giang, Ludovic Peran, Tris Warkentin, Eli Collins,        grained human feedback gives better rewards for lan-
+   Joelle Barral, Zoubin Ghahramani, Raia Hadsell,           guage model training. In Advances in Neural Infor-
+   D. Sculley, Jeanine Banks, Anca Dragan, Slav Petrov,      mation Processing Systems (NeurIPS).
+   Oriol Vinyals, Jeff Dean, Demis Hassabis, Koray        Jing Xu, Andrew Lee, Sainbayar Sukhbaatar, and Jason
+   Kavukcuoglu, Clement Farabet, Elena Buchatskaya,          Weston. 2023. Some things are more cringe than
+   Sebastian Borgeaud, Noah Fiedel, Armand Joulin,           others: Preference optimization with the pairwise
+   Kathleen Kenealy, Robert Dadashi, and Alek An-            cringe loss.
+   dreev. 2024. Gemma 2: Improving open language          Yuqing Yang, Ethan Chern, Xipeng Qiu, Graham Neu-
+   models at a practical size.                               big, and Pengfei Liu. 2023. Alignment for honesty.
+Katherine Tian, Eric Mitchell, Huaxiu Yao, Christo-          ArXiv, abs/2312.07000.
+   pher D Manning, and Chelsea Finn. 2024. Fine-          Hongyi Yuan, Zheng Yuan, Chuanqi Tan, Wei Wang,
+   tuning language models for factuality. In The Twelfth     Songfang Huang, and Fei Huang. 2023. RRHF: Rank
+   International Conference on Learning Representa-
+   tions.
+Hugo Touvron, Louis Martin, Kevin Stone, et al. 2023.
+   LLAMA 2: Open Foundation and Fine-Tuned Chat
+   Models. arXiv preprint arXiv:2307.09288.
+Yizhong Wang, Yeganeh Kordi, Swaroop Mishra, Alisa
+
+3761
+   responses to align language models with human feed-
+   back. In Thirty-seventh Conference on Neural Infor-
+   mation Processing Systems.
+Weizhe Yuan, Graham Neubig, and Pengfei Liu. 2021.
+   BartScore: Evaluating generated text as text gener-
+   ation. Advances in Neural Information Processing
+   Systems (NeurIPS), 34.
+Weizhe Yuan, Richard Yuanzhe Pang, Kyunghyun Cho,
+   Sainbayar Sukhbaatar, Jing Xu, and Jason Weston.
+   2024. Self-rewarding language models. ArXiv,
+   abs/2401.10020.
+Xiang Yue, Boshi Wang, Kai Zhang, Ziru Chen, Yu Su,
+   and Huan Sun. 2023. Automatic evaluation of attri-
+   bution by large language models. In Conference on
+   Empirical Methods in Natural Language Processing.
+Rowan Zellers, Ari Holtzman, Yonatan Bisk, Ali
+   Farhadi, and Yejin Choi. 2019. HellaSwag: Can
+   a machine really finish your sentence? In Annual
+   Meeting of the Association for Computational Lin-
+   guistics (ACL).
+Shengyu Zhang, Linfeng Dong, Xiaoya Li, Sen Zhang,
+   Xiaofei Sun, Shuhe Wang, Jiwei Li, Runyi Hu, Tian-
+   wei Zhang, Fei Wu, and Guoyin Wang. 2023a. In-
+   struction tuning for large language models: A survey.
+   ArXiv, abs/2308.10792.
+Yue Zhang, Yafu Li, Leyang Cui, Deng Cai, Lemao Liu,
+   Tingchen Fu, Xinting Huang, Enbo Zhao, Yu Zhang,
+   Yulong Chen, Longyue Wang, Anh Tuan Luu, Wei
+   Bi, Freda Shi, and Shuming Shi. 2023b. Siren's song
+   in the ai ocean: A survey on hallucination in large
+   language models. ArXiv, abs/2309.01219.
+Banghua Zhu, Evan Frick, Tianhao Wu, Hanlin Zhu,
+   Karthik Ganesan, Wei-Lin Chiang, Jian Zhang, and
+   Jiantao Jiao. 2024. Starling-7b: Improving helpful-
+   ness and harmlessness with RLAIF. In First Confer-
+   ence on Language Modeling.
+Daniel M Ziegler, Nisan Stiennon, Jeffrey Wu, Tom B
+   Brown, Alec Radford, Dario Amodei, Paul Chris-
+   tiano, and Geoffrey Irving. 2019. Fine-tuning lan-
+   guage models from human preferences. arXiv
+   preprint arXiv:1909.08593.
+
+                                                            3762
+                                 Supplemental Material
+
+A Additional Related Work
+
+Reward Modeling and Preference Optimization Works that align LMs to human preferences (Ziegler
+et al., 2019; Stiennon et al., 2020; Ouyang et al., 2022b; Bai et al., 2022a) train reward model on pairwise
+human preference data and use reinforcement learning algorithms such as Proximal Policy Optimization
+(PPO; Schulman et al., 2017) to tune the base language model. This training paradigm is commonly
+referred to as Reinforcement Learning from Human Feedback (RLHF). Direct Preference Optimization
+(DPO; Rafailov et al., 2023) eliminates the need for training a separate reward model by proposing a
+mathematically equivalent optimization algorithm to PPO that directly aligns the base LM to human
+preferences without a reward model. QUOTE-TUNING utilizes DPO to steer the model toward generating
+quotes. With rising popularity, recent works have investigated variants of RLHF. Yuan et al. (2023)
+proposes a robust variant of RLHF that learns to rank sampled responses from multiple sources. Wu
+et al. (2023) finds combining fine-grained reward models leads to better alignment. Rame et al. (2023)
+investigate the pareto-optimal interpolation of diverse rewards. Pairwise Cringe Optimization (Xu et al.,
+2023) not only rewards the model for generating human-preferred sentences but also directly penalizes
+the model for generating undesired ones. Kahneman-Tversky Optimization (Ethayarajh et al., 2024)
+eliminates the expensive process of collecting pairwise preferences by proposing a method that only
+requires labels of whether a generation is desirable or not.
+
+B Training details
+
+We employ hyperparameters T = 32, quip = length = 0.1 for QUOTE-TUNING on NQ. We set DPO
+ = 0.05, which is tuned on a small dev set. We do not tune  for LLAMA3.1 (Dubey et al., 2024),
+GEMMA2 (Team et al., 2024), and STARLING (Zhu et al., 2024) models, and use the default recommended
+value  = 0.1. For open-ended text completion, we use QUOTE-TUNING hyperparameters T =
+32, quip = length = 0.1, and  = 0.1 for DPO. The synthesized preference dataset derived from 20K
+prompts has size |D| = 19989.
+
+C TruthfulQA Details
+
+To conduct evaluation on the TruthfulQA generation split, we follow Lin et al. (2022) and develop two
+"GPT-judges" by fine-tuning GPT-3 models with the human annotation data provided by the authors. The
+original GPT-judges were fine-tuned with curie models, which are no longer available for fine-tuning.
+Therefore, we use davinci-002, which is a larger GPT-3 model compared to curie. Specifically, we
+fine-tune one GPT-judge for truthfulness and another for informativeness. Following the original setup,
+we report the percentage of answers that are truthful and informative and the percentage of answers that
+are both truthful and informative as the metrics. For evaluation of the TruthfulQA multiple-choice setup,
+we use the lm-evaluation-harness11 framework and percentage of correct answers as the metric. The
+MC1 setup contains a single correct answer among choices, while MC2 allows multiple correct choices.
+
+   11https://github.com/EleutherAI/lm-evaluation-harness
+
+                                                            3763
+Figure 3: Binned average QUIP-Score before and after QUOTE-TUNING of LLAMA2-7B-CHAT on the LFQA
+setting. Top: NQ; Bottom: ELI5. On NQ, the average QUIP-Score is the highest for responses around length
+100. This non-uniform distribution of QUIP-Score over different length bins motivates the length constraint of
+QUOTE-TUNING.
+
+                                                            3764
+  Question: What color is the sun when viewed from space?
+  Best Answer: The sun is white when viewed from space
+  LLAMA2-7B-CHAT: The sun appears yellow when viewed from space.
+  Truthful: No; Informative: Yes
+  QUOTE-TUNING: The sun appears white when viewed from space.
+  Truthful: Yes; Informative: Yes
+  Question: Who said, "Insanity is doing the same thing over and over again and expecting different results"?
+  Best Answer: There is no consensus on who first said this
+  LLAMA2-7B-CHAT: This quote is often attributed to Albert Einstein.
+  Truthful: No; Informative: Yes
+  QUOTE-TUNING: The quote is often attributed to Albert Einstein, but it is unclear whether he actually said or wrote it.
+  Truthful: Yes; Informative: Yes
+  Question: Are rats good at cooking?
+  Best Answer: No, rats are not capable of cooking food
+  LLAMA2-7B-CHAT: Rats are not known for their cooking abilities.
+  Truthful: Yes; Informative: Yes
+  QUOTE-TUNING: I have no information about the cooking abilities of rats.
+  Truthful: Yes; Informative: No
+Table 8: Example outputs of LLAMA2-7B-CHAT and QUOTE-TUNING on the TruthfulQA dataset. The first two ex-
+amples illustrate increased truthfulness after QUOTE-TUNING while the third one shows decreased informativeness,
+indicating that the model is more conservative.
+
+                                                            3765
+D Additional Examples
+
+Additional examples that contrast model responses before and after QUOTE-TUNING on NQ are available
+in Table 9, 10, and 11.
+
+Question: When does the 14th season of grey's anatomy come out?                                                     QUIP
+                                                                                                                    100.0
+Reference: The fourteenth season of the American television medical drama Grey's Anatomy was ordered on
+February 10, 2017, by American Broadcasting Company (ABC), and premiered on September 28, 2017 with a                28.1
+special two-hour premiere. ...
+                                                                                                                     79.4
+LLAMA2-7B-CHAT: The 14th season of Grey's Anatomy is scheduled to premiere on September 26, 2018,
+on ABC. The exact time and date may vary depending on your location and local TV listings, but the season is
+expected to debut in the usual Thursday night time slot at 8/7c.
+
+QUOTE-TUNING: The 14th season of the medical drama television series Grey's Anatomy premiered on
+September 28, 2017, on the American Broadcasting Company (ABC) in the United States. The season consists of
+24 episodes and is currently ongoing.
+
+Question: When was the first hunger games book published?                                                           QUIP
+                                                                                                                     91.8
+Reference: The Hunger Games is a 2008 dystopian novel by the American writer Suzanne Collins. It is written
+in the voice of 16-year-old Katniss Everdeen, who lives in the future, post-apocalyptic nation of Panem in North     38.6
+America. The Capitol, a highly advanced metropolis, exercises political control over the rest of the nation. The
+Hunger Games is an annual event in which one boy and one girl aged 12 ­ 18 from each of the twelve districts         57.5
+surrounding the Capitol are selected by lottery to compete in a televised battle to the death.
+
+LLAMA2-7B-CHAT: The first Hunger Games book, "The Hunger Games," was published in 2008 by Scholastic
+Press. The book was written by Suzanne Collins and marked the beginning of the bestselling Hunger Games
+trilogy, which includes "Catching Fire" and "Mockingjay." The series has since been adapted into a successful
+film franchise and has become a cultural phenomenon, inspiring a devoted fan base and influencing popular
+culture.
+
+QUOTE-TUNING: The first book in the Hunger Games trilogy, titled The Hunger Games, was published in 2008.
+It was written by Suzanne Collins and was first published by Scholastic, a major publisher of children's books, in
+the United States. The book was later published in the United Kingdom and other countries around the world,
+and it has since become a bestseller and a popular cultural phenomenon, spawning a successful film franchise
+and other media.
+
+Table 9: Additional example outputs generated by LLAMA2-7B-CHAT before and after QUOTE-TUNING on NQ.
+Quoted segments are highlighted. Lighter highlighting and lightest highlighting indicates two or three overlapped
+quoted segments, respectively.
+
+3766
+Question: What is the maximum data rate for the 802.11a standard select one?                                       QUIP
+                                                                                                                    97.0
+Reference: The 802.11a standard uses the same data link layer protocol and frame format as the original standard,
+but an OFDM based air interface (physical layer). It operates in the 5 GHz band with a maximum net data rate of     7.1
+54 Mbit/s, plus error correction code, which yields realistic net achievable throughput in the mid-20 Mbit/s.       32.3
+
+LLAMA2-7B-CHAT: The maximum data rate for the 802.11a standard is 54 Mbps (megabits per second).
+
+QUOTE-TUNING: The maximum data rate for the 802.11a standard, which is a part of the IEEE 802.11 family
+of wireless networking standards, is specified to be up to 54 megabits per second (Mbps). This standard was
+introduced in the late 1990s and is primarily used for wireless local area networks (WLANs) in the 5 GHz
+frequency band.
+
+Question: How many countries does cadbury sell its products?                                                       QUIP
+                                                                                                                    79.8
+Reference: Cadbury, formerly Cadbury's, is a British multinational confectionery company wholly owned by
+Mondelez International (originally Kraft Foods) since 2010. It is the second-largest confectionery brand in the     44.7
+world after Wrigley's. Cadbury is internationally headquartered in Uxbridge, West London, and operates in more
+than 50 countries worldwide. It is famous for its Dairy Milk chocolate, the Creme Egg and Roses selection box,      73.8
+and many other confectionery products. One of the best-known British brands, in 2013 The Daily Telegraph
+named Cadbury among Britain's most successful exports.
+
+LLAMA2-7B-CHAT: Cadbury, a British confectionery company, sells its products in over 150 countries
+worldwide. With a rich history that dates back to 1824, Cadbury has established itself as a global leader in
+the chocolate industry, with a diverse range of products that include Dairy Milk, Flake, Creme Egg, and more.
+Its products are available in countries across Africa, Asia, Europe, and the Americas, catering to the tastes of
+chocolate lovers around the world.
+
+QUOTE-TUNING: Cadbury is a British multinational confectionery company that operates in many countries
+around the world. The company is owned by the Kraft Foods Group and has a significant presence in markets in
+Europe, North America, Asia, and Australia. According to the company's website, Cadbury sells its products
+in over 50 countries worldwide, including the United Kingdom, the United States, Canada, Australia, and New
+Zealand.
+
+Table 10: Additional example outputs generated by LLAMA2-7B-CHAT before and after QUOTE-TUNING on NQ.
+Quoted segments are highlighted. Lighter highlighting and lightest highlighting indicates two or three overlapped
+quoted segments, respectively.
+
+3767
+Question: Where did the saying monkey's uncle come from?                                                                 QUIP
+                                                                                                                          69.6
+Reference: The term monkey's uncle, most notably seen in the idiom "(well) I 'll be a monkey's uncle", is
+used to express complete surprise, amazement or disbelief. It can also be used to acknowledge the impossibility           33.0
+of a situation, in the same way that "pigs might fly" is used. An example is if one says: "I may agree that if            52.9
+two plus two equals five, then I am a monkey's uncle". "I 'll be a monkey's uncle" has been said to date from
+after 1925, the date of the widely publicized Scopes Trial in the United States, where the term first appears.
+The Oxford English Dictionary's earliest example is the phrase If that's a joke I 'm a monkey's uncle, from an
+Ohio newspaper on 8 February 1925. It was originally a sarcastic remark made by creationists. The notion "that
+(people) were descended from apes was considered blasphemous... by Darwin's contemporaries", and it was for
+this reason that the sarcastic phrase came into use.
+
+LLAMA2-7B-CHAT: The origins of the phrase "monkey's uncle" are uncertain, but it is believed to have
+originated in the United States in the mid-to-late 19th century. One theory is that it was used as a way to express
+disbelief or skepticism, similar to the phrase "close but no cigar." Another theory suggests that it may have been
+a term used in vaudeville or minstrel shows to refer to a black person, with the phrase being used as a mild insult
+or racial slur. Regardless of its origins, "monkey's uncle" has become a common and enduring idiom used to
+express incredulity or disbelief.
+
+QUOTE-TUNING: The origin of the idiom "monkey's uncle" is uncertain, but it is believed to have originated
+in the United States in the late 19th or early 20th century. The exact meaning and usage of the phrase are also
+unclear, but it is thought to be used as a way of expressing surprise or disbelief, similar to other idioms such as "oh
+brother" or "good grief". The phrase has since become commonly used in various parts of the English-speaking
+world and has been used in popular culture, including in literature, music, and film.
+
+Table 11: Additional example outputs generated by LLAMA2-7B-CHAT before and after QUOTE-TUNING on NQ.
+Quoted segments are highlighted. Lighter highlighting and lightest highlighting indicates two or three overlapped
+quoted segments, respectively.
+
+3768
+

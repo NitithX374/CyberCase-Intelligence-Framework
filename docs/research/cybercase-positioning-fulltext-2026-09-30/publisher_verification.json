@@ -1,0 +1,25 @@
+{
+  "key": "kramer2025",
+  "title": "Integrating Large Language Models into Security Incident Response",
+  "authors": [
+    "Diana Kramer",
+    "Lambert Rosique",
+    "Ajay Narotam",
+    "Elie Bursztein",
+    "Patrick Gage Kelley",
+    "Kurt Thomas",
+    "Allison Woodruff"
+  ],
+  "year": 2025,
+  "venue": "21st Symposium on Usable Privacy and Security (SOUPS 2025)",
+  "pages": "133--148",
+  "publisher": "USENIX Association",
+  "url": "https://www.usenix.org/conference/soups2025/presentation/kramer",
+  "fulltext": "https://www.usenix.org/system/files/soups2025-kramer.pdf",
+  "doi": null,
+  "arxiv": null,
+  "verification": "publisher-page and primary full-PDF title/author/venue verification; no DOI or arXiv ID verified",
+  "checked_at": "2026-09-30T03:46:25.810263+00:00",
+  "pdf_sha256": "c71199986df1b18b82edf8738c650c0d20df5baca3f8000d626b6a1655ae110e",
+  "claim_support": "Tables2/7 printed139/143, PDF8/12:211 autonomous and150 assisted comparative judgements; private tickets; manual evaluation; no deterministic quote checker."
+}

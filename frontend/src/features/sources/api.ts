@@ -32,3 +32,16 @@ export async function addCaseSource(
 ): Promise<CaseSourceRead> {
   return (await http.post<CaseSourceRead>(caseUrl(caseId, "sources"), request)).data;
 }
+
+export async function retryCaseDocumentExtraction(
+  caseId: string,
+  documentId: string,
+): Promise<CaseSourceRead> {
+  return (
+    await http.post<CaseSourceRead>(
+      caseUrl(caseId, "documents", documentId, "reingest"),
+      {},
+      { timeout: UPLOAD_REQUEST_TIMEOUT_MS },
+    )
+  ).data;
+}

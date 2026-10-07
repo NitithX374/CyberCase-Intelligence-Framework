@@ -1,0 +1,12 @@
+{
+  "benchmark_hash_verified": true,
+  "propagation_plan_hash_verified": true,
+  "rows": 246,
+  "gold_counts_verified": true,
+  "metrics_match_sklearn": true,
+  "intervals_match_scipy": true,
+  "paired_test_matches_scipy": true,
+  "direct_citations_exactly_reproduced": 173,
+  "preexisting_production_and_test_hashes_unchanged": 335,
+  "summary": "All independent arithmetic, source-span and production-preservation checks passed."
+}

@@ -1,0 +1,161 @@
+{
+  "replay_id": "controlled-english-02:impacts",
+  "condition": "semantic",
+  "stage": "projection_eval_05_semantic",
+  "input_sha256": "dc3fe0f23e65607a4769ca321ae57eafc1ec77fc53e46860eed0792650634404",
+  "status": "completed",
+  "judgement": {
+    "version": "case_analysis_trace_v1",
+    "summary": "Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved a transfer for Jane Smith [A-02], resulting in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].",
+    "gaps": [
+      {
+        "gap_id": "G-01",
+        "gap_key": "who_responsible",
+        "topic": "Responsible party",
+        "status": "NOT_PROVIDED",
+        "description": "The identity of the person or entity responsible for the loss of funds and the vehicle theft is unknown.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The claims mention a loss and a theft but do not identify a perpetrator.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "Who is responsible for Jane Smith's loss and the theft of Alex Jones's car?"
+      },
+      {
+        "gap_id": "G-02",
+        "gap_key": "how",
+        "topic": "Method of incident",
+        "status": "NOT_PROVIDED",
+        "description": "The specific methods used to transfer the funds and to steal the car are not described.",
+        "affected_claim_ids": [
+          "A-02",
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The mechanism of the transfer and the theft are not specified.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "How were the funds transferred and how was the car stolen?"
+      },
+      {
+        "gap_id": "G-03",
+        "gap_key": "where",
+        "topic": "Location",
+        "status": "NOT_PROVIDED",
+        "description": "The locations where the financial loss and the car theft occurred are unknown.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The geographic or digital location of the events is not mentioned.",
+        "priority": "medium",
+        "askable": true,
+        "clarification_question": "Where did the financial loss and the car theft take place?"
+      },
+      {
+        "gap_id": "G-04",
+        "gap_key": "why",
+        "topic": "Motive",
+        "status": "NOT_PROVIDED",
+        "description": "The motive behind the financial loss and the car theft is unknown.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "There is no information regarding the purpose of these actions.",
+        "priority": "low",
+        "askable": true,
+        "clarification_question": "What was the motive for these incidents?"
+      },
+      {
+        "gap_id": "G-05",
+        "gap_key": "party_connection",
+        "topic": "Relationship between parties",
+        "status": "NOT_PROVIDED",
+        "description": "The relationship between Jane Smith and Alex Jones is not established.",
+        "affected_claim_ids": [
+          "A-01",
+          "A-04"
+        ],
+        "reason": "It is unclear how the witness, Alex Jones, is connected to the victim, Jane Smith.",
+        "priority": "medium",
+        "askable": true,
+        "clarification_question": "What is the relationship between Jane Smith and Alex Jones?"
+      }
+    ],
+    "mitre_associations": []
+  },
+  "seconds": 108.41349499998614,
+  "responses": [
+    {
+      "stage": "projection_eval_05_semantic",
+      "status_code": 200,
+      "seconds": 108.401847000001,
+      "usage": {
+        "input_tokens": 2512,
+        "output_tokens": 6232,
+        "thinking_tokens": 5312
+      },
+      "estimated_usd": 0.0021208,
+      "response": {
+        "id": "gen-1791267408-raVG2WTijAQvfm0ETLGO",
+        "type": "message",
+        "role": "assistant",
+        "container": null,
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "*   Input: `response_language`: \"english\", `followup_history`: [], `technical_context`: null, `reading`: { `claims`, `involved_parties`, `timeline`, `impacts` }.\n    *   Claims:\n        *   A-01: Jane Smith is a victim and reported the incident.\n        *   A-02: At 12 May 2026, The bank approved Jane Smith's transfer.\n        *   A-03: Jane Smith lost 25,000 baht.\n        *   A-04: Alex Jones is a witness. At 16:00, Alex Jones sent an email. Alex Jones's car was stolen.\n    *   Involved Parties: Jane Smith (victim) [A-01].\n    *   Timeline: 12 May 2026 (Bank approved transfer) [A-02].\n    *   Impacts: None listed in the `impacts` object, but A-03 describes a financial loss.\n    *   Technical Context: `null`.\n\n    *   A-01, A-02, A-03: Focus on Jane Smith. She reported an incident [A-01], a bank approved a transfer on 12 May 2026 [A-02], and she lost 25,000 baht [A-03].\n    *   A-04: Focus on Alex Jones. He is a witness. At 16:00, he sent an email. His car was stolen. This seems potentially unrelated to Jane Smith's case or part of a larger, disjointed set of events. However, as a \"Judgement\" component, I must report what the claims add up to.\n\n    *   Summary:\n        Jane Smith reported an incident [A-01]. On 12 May 2026, a bank approved a transfer for Jane Smith [A-02], resulting in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was also stolen [A-04].\n\n    *   Gaps:\n        *   `who_responsible`: Who caused the loss of 25,000 baht or the theft of the car? (A-03, A-04)\n        *   `what`: What exactly happened to Jane Smith? The transfer was approved, but was it fraudulent? Was it a hack? (A-02, A-03)\n        *   `how`: How was the money lost or how was the car stolen? (A-03, A-04)\n        *   `why`: Motive? (A-03, A-04)\n        *   `where`: Where did the transfer/theft occur? (A-02, A-03, A-04)\n        *   `when`: When did the loss/theft actually occur (besides the transfer approval time)? (A-03, A-04)\n\n    *   Refining Gaps (following specific keys):\n        *   `who_responsible`: Status: EXPLICITLY_UNKNOWN. Topic: Responsible party. Question: Who is responsible for the loss of 25,000 baht and the theft of Alex Jones's car?\n        *   `what`: Status: AMBIGUOUS. Topic: Nature of the incident. Question: What were the specific circumstances surrounding Jane Smith's transfer and Alex Jones's car theft?\n        *   `how`: Status: NOT_PROVIDED. Topic: Method of incident. Question: How were the funds transferred and how was the vehicle stolen?\n        *   `where`: Status: NOT_PROVIDED. Topic: Location of incident. Question: Where did the financial loss and the vehicle theft take place?\n        *   `why`: Status: NOT_PROVIDED. Topic: Motive. Question: What was the motive behind these incidents?\n\n    *   Let's re-evaluate the claims for \"materially unresolved factual issues\".\n        The case is a collection of statements.\n        - Jane Smith's loss: Who did it? How? Where? Why? (A-03)\n        - Alex Jones's car theft: Who did it? How? Where? Why? (A-04)\n        - The link between the witness and the victim is not explicitly stated beyond being a \"witness\".\n\n    *   Mitre Associations:\n        - `technical_context` is null. Empty list.\n\n    *   *Summary Construction*:\n        Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved a transfer for Jane Smith [A-02], leading to a loss of 25,000 baht [A-03]. Alex Jones, acting as a witness, sent an email at 16:00, and his car was stolen [A-04].\n\n    *   *Gap Selection*:\n        - `who_responsible`: Who is responsible for Jane Smith's loss and the theft of Alex Jones's car? [A-03, A-04]\n        - `how`: How were the funds moved and how was the car stolen? [A-03, A-04]\n        - `where`: Where did these events occur? [A-03, A-04]\n        - `why`: What was the motive for these actions? [A-03, A-04]\n        - `what`: What is the relationship between the approved transfer and the reported incident? [A-01, A-02, A-03] (Actually, 'what' is often the core of the incident).\n\n    *   Wait, the prompt says: \"Include only materially unresolved factual issues that affect the current analysis.\"\n        Since the analysis is just \"what they add up to\", the missing perpetrator, method, and motive are the primary gaps.\n\n    *   Let's check keys:\n        `who_responsible`: EXPLICITLY_UNKNOWN. Topic: Responsible party.\n        `how`: NOT_PROVIDED. Topic: Method of incident.\n        `where`: NOT_PROVIDED. Topic: Location.\n        `why`: NOT_PROVIDED. Topic: Motive.\n        `what`: AMBIGUOUS. Topic: Incident details.\n\n    *   Is `when` a gap? We have 12 May 2026 and 16:00. But we don't know if the loss happened at that exact time or if the car theft happened at 16:00.\n        `when`: AMBIGUOUS. Topic: Timing of events.\n\n    *   Let's stick to the most critical ones.\n\n    *   *Refined Gaps List*:\n        G-01: `who_responsible` - EXPLICITLY_UNKNOWN. \"Who is responsible for Jane Smith's financial loss and Alex Jones's vehicle theft?\" (A-03, A-04)\n        G-02: `how` - NOT_PROVIDED. \"How were the 25,000 baht transferred and how was the car stolen?\" (A-03, A-04)\n        G-03: `where` - NOT_PROVIDED. \"Where did the transfer and the car theft occur?\" (A-03, A-04)\n        G-04: `why` - NOT_PROVIDED. \"What was the motive for the financial loss and the car theft?\" (A-03, A-04)\n        G-05: `what` - AMBIGUOUS. \"What is the nature of the incident reported by Jane Smith and how it relates to the bank transfer?\" (A-01, A-02, A-03)\n\n    *   *Reviewing Summary requirements*:\n        - Concise high-level overview.\n        - End every sentence with IDs in square brackets.\n        - No status words, no disclaimers.\n        - \"Jane Smith reported an incident [A-01]. A bank approved a transfer for her on 12 May 2026 [A-02], which resulted in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].\"\n\n    *   *Check JSON Structure*:\n        `case_analysis_trace_v1`\n          `summary`: string\n          `gaps`: array of objects\n            `gap_id`: G-01...\n            `gap_key`: ...\n            `topic`: ...\n            `status`: ...\n            `affected_claim_ids`: []\n            `askable`: bool\n            `clarification_question`: string/null\n          `mitre_associations`: [] (since context is null)\n\n    *   *Final Polish of Gaps*:\n        G-01 (who_responsible): Status: EXPLICITLY_UNKNOWN. Askable: true. Question: Who is responsible for Jane Smith's loss and Alex Jones's car theft?\n        G-02 (how): Status: NOT_PROVIDED. Askable: true. Question: How were the funds transferred and how was the car stolen?\n        G-03 (where): Status: NOT_PROVIDED. Askable: true. Question: Where did the transfer and the car theft take place?\n        G-04 (why): Status: NOT_PROVIDED. Askable: true. Question: What was the motive for the financial loss and the car theft?\n        G-05 (what): Status: AMBIGUOUS. Askable: true. Question: What specific incident did Jane Smith report in relation to her approved transfer?\n\n    *   *Wait*, one detail: \"A claim whose epistemic_status is 'not_confirmed' has no supporting evidence location resolved in the case sources. This does not make it false. Do not state it as an established fact in the summary.\"\n        All claims in the input (A-01, A-02, A-03, A-04) have `epistemic_status`: \"reported\".\n        In this system, \"reported\" usually implies it's a claim from a source, but doesn't necessarily mean it's \"not_confirmed\" in the specific technical sense of missing evidence location (the claims *do* have supporting source IDs).\n        However, usually, \"reported\" status in these datasets is treated as a factual claim for the purpose of the summary, whereas \"not_confirmed\" is the one to be careful with. I will treat them as the facts they are.\n\n    *   *Wait*, \"A-04: Alex Jones is a witness. At 16:00, Alex Jones sent an email. Alex Jones's car was stolen.\"\n        This claim is a bit messy. It combines a witness statement, a timestamped action, and a separate theft. I will treat it as one claim as provided.\n\n    *   *One more check on Gaps*:\n        The prompt asks for \"materially unresolved factual issues that affect the current analysis.\"\n        The analysis is just the summary. The summary is complete based on the claims.\n        The gaps are what's missing to make this a *useful* investigation report.\n\n    *   *Finalizing Summary*:\n        Jane Smith reported an incident [A-01]. On 12 May 2026, a bank approved a transfer for Jane Smith [A-02], resulting in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].\n\n    *   *Finalizing Gaps (Self-Correction)*:\n        Keep it clean.\n        G-01: `who_responsible`, Topic: Responsible party, Status: EXPLICITLY_UNKNOWN, Askable: true, Question: Who is responsible for Jane Smith's loss and the theft of Alex Jones's car?\n        G-02: `how`, Topic: Method of incident, Status: NOT_PROVIDED, Askable: true, Question: How were the funds transferred and how was the car stolen?\n        G-03: `where`, Topic: Location, Status: NOT_PROVIDED, Askable: true, Question: Where did the financial loss and the vehicle theft occur?\n        G-04: `why`, Topic: Motive, Status: NOT_PROVIDED, Askable: true, Question: What was the motive for these incidents?\n        G-05: `what`, Topic: Nature of incident, Status: AMBIGUOUS, Askable: true, Question: What was the nature of the incident reported by Jane Smith?\n\n    *   *Wait*, check the `what` key: \"what happened, and what was taken, damaged or exposed\".\n        The claims say money was lost and a car was stolen. So `what` is actually *provided*.\n        What is *not* provided is the relationship between the transfer and the loss.\n        I will use `how` to cover the method and `what` for the specific details of the reported incident.\n\n    *   Actually, looking at the prompt: \"A gap that fits none of these questions... keeps a short key of its own.\"\n        Is there a gap for the connection between Alex Jones and Jane Smith?\n        `connection`: Status: NOT_PROVIDED. Topic: Relationship between parties. Question: What is the relationship between Jane Smith and Alex Jones?\n\n    *   Let's refine the gap list to be high-quality and strictly following the keys.\n        1. `who_responsible` (Who did it?)\n        2. `how` (How?)\n        3. `where` (Where?)\n        4. `why` (Why?)\n        5. `when` (When exactly? We have some times but not the full picture). Let's skip `when` as it's somewhat addressed.\n        6. `connection` (Relationship)\n\n    *   *Re-evaluating `what`*:\n        `what` is \"what happened, and what was taken, damaged or exposed\".\n        Claim A-03 says 25,000 baht was lost. Claim A-04 says a car was stolen.\n        So `what` is technically answered.\n\n    *   *Re-evaluating `who_affected`*:\n        Jane Smith and Alex Jones are mentioned. So `who_affected` is answered.\n\n    *   *Final Gap selection*:\n        G-01: `who_responsible` (Who is responsible for the loss and theft?) [A-03, A-04]\n        G-02: `how` (How did the transfer/theft occur?) [A-02, A-03, A-04]\n        G-03: `where` (Where did this happen?) [A-02, A-03, A-04]\n        G-04: `why` (Motive?) [A-03, A-04]\n        G-05: `party_relationship` (How are the parties connected?) [A-01, A-04]\n\n    *   *Double check the JSON requirements*:\n        - No markdown fences.\n        - No hashes.\n        - No confidence scores.\n        - `mitre_associations` empty because `technical_context` is null.\n\n    *   *Wait*, `who_responsible` status: \"A follow-up reply that declined or said nothing... makes that one gap EXPLICITLY_UNKNOWN.\" Here, we have no follow-up history, so it's just `NOT_PROVIDED` or `EXPLICITLY_UNKNOWN`? The instructions say \"When one is materially unanswered, ambiguous or in conflict, record it as a gap... Use statuses NOT_PROVIDED, EXPLICITLY_UNKNOWN, AMBIGUOUS, or CONFLICTING.\"\n        If the information is simply not in the claims, it is `NOT_PROVIDED`.\n\n    *   Summary: Jane Smith reported an incident [A-01]. On 12 May 2026, a bank approved a transfer for Jane Smith [A-02], resulting in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].\n\n    *   Gaps:\n        G-01: `who_responsible` | Responsible party | NOT_PROVIDED | [A-03, A-04] | true | \"Who is responsible for Jane Smith's loss and the theft of Alex Jones's car?\"\n        G-02: `how` | Method of incident | NOT_PROVIDED | [A-02, A-03, A-04] | true | \"How were the funds transferred and how was the car stolen?\"\n        G-03: `where` | Location | NOT_PROVIDED | [A-03, A-04] | true | \"Where did the financial loss and the car theft take place?\"\n        G-04: `why` | Motive | NOT_PROVIDED | [A-03, A-04] | true | \"What was the motive behind the loss of funds and the car theft?\"\n        G-05: `party_connection` | Relationship between parties | NOT_PROVIDED | [A-01, A-04] | true | \"What is the relationship between Jane Smith and Alex Jones?\"\n\n    *   *Self-Correction on `how`*: Is the bank transfer method part of the `how`? Yes.\n    *   *Self-Correction on `who_responsible`*: The prompt says `EXPLICITLY_UNKNOWN` is for when a follow-up declined or said nothing. Since there's no follow-up, `NOT_PROVIDED` is more accurate.\n\n    *   *Final Summary sentence check*:\n        1. Jane Smith reported an incident [A-01].\n        2. On 12 May 2026, the bank approved Jane Smith's transfer [A-02].\n        3. Jane Smith lost 25,000 baht [A-03].\n        4. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].\n        (I will combine these for better flow).\n\n    *   *Final Summary*:\n        Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved a transfer for Jane Smith [A-02], which resulted in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].\n\n    *   Wait, A-04 text: \"Alex Jones is a witness. At 16:00, Alex Jones sent an email. Alex Jones's car was stolen.\"\n        It's one claim. I'll keep it that way.\n\n    *   *Final Check on Gaps Keys*:\n        `who_responsible`, `how`, `where`, `why`, `who_affected`, `what`, `when`.\n        My `party_connection` is a custom key.\n        My `who_responsible`, `how`, `where`, `why` are standard.\n\n    *   Let's check if `what` is really answered.\n        \"what happened, and what was taken, damaged or exposed\"\n        Claim A-03: 25,000 baht lost.\n        Claim A-04: Car stolen.\n        Yes, `what` is answered.\n\n    *   Let's check if `when` is really answered.\n        \"when it happened, began or was discovered\"\n        Claim A-02: 12 May 2026.\n        Claim A-04: 16:00.\n        It is partially answered, but the link between the transfer time and the loss time is unknown. I'll leave `when` out to keep it to \"materially unresolved\".\n\n    *   Final check on `how`:\n        \"how: the method, tool or channel used\"\n        The claims don't say *how* the money was lost (was it a wire transfer? a hack?) or *how* the car was stolen (was it picked?)\n        So `how` is a valid gap.\n\n    *   Final Gap List:\n        G-01: `who_responsible`\n        G-02: `how`\n        G-03: `where`\n        G-04: `why`\n        G-05: `party_connection` (Custom)\n\n    *   One detail: \"The follow-up history shows the gap_key each earlier question was asked under. When a gap is the same missing fact, reuse that gap_key.\" - Not applicable here (empty history).\n\n    *   One detail: \"Every claim ID you write must name a claim that appears there. Never invent a claim ID, and never write a new claim.\"\n        - Summary uses A-01, A-02, A-03, A-04. Correct.\n        - Gaps use A-01, A-02, A-03, A-04. Correct.\n\n    *   One detail: \"Do not state it as an established fact in the summary.\" (Regarding `not_confirmed` status).\n        All my claims are `reported`. In the context of this system, `reported` is not `not_confirmed` (the latter specifically lacks a resolved source location). Since they all have source IDs, they are fine to include.\n\n    *   *Final JSON construction plan*:\n        Summary: Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved Jane Smith's transfer [A-02], resulting in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].\n        Gaps:\n        G-01: `who_responsible`, Topic: Responsible party, Status: NOT_PROVIDED, Claims: [A-03, A-04], Askable: true, Question: Who is responsible for the loss of funds and the car theft?\n        G-02: `how`, Topic: Method of incident, Status: NOT_PROVIDED, Claims: [A-02, A-03, A-04], Askable: true, Question: How were the funds transferred and how was the car stolen?\n        G-03: `where`, Topic: Location, Status: NOT_PROVIDED, Claims: [A-03, A-04], Askable: true, Question: Where did the financial loss and the car theft occur?\n        G-04: `why`, Topic: Motive, Status: NOT_PROVIDED, Claims: [A-03, A-04], Askable: true, Question: What was the motive for these incidents?\n        G-05: `party_connection`, Topic: Relationship between parties, Status: NOT_PROVIDED, Claims: [A-01, A-04], Askable: true, Question: What is the connection between Jane Smith and Alex Jones?\n\n    *   *Wait*, the prompt says: \"The claims and their quotations are the only authority for case-specific facts.\"\n        A-04 says: \"Alex Jones is a witness.\"\n        A witness to *what*? This is an ambiguity.\n        So `what` might be a gap regarding the *subject* of the witness's observation.\n        But I'll stick to the current plan; it's cleaner.",
+            "signature": ""
+          },
+          {
+            "type": "text",
+            "text": "{\n  \"version\": \"case_analysis_trace_v1\",\n  \"summary\": \"Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved a transfer for Jane Smith [A-02], resulting in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00, and his car was stolen [A-04].\",\n  \"gaps\": [\n    {\n      \"gap_id\": \"G-01\",\n      \"gap_key\": \"who_responsible\",\n      \"topic\": \"Responsible party\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The identity of the person or entity responsible for the loss of funds and the vehicle theft is unknown.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The claims mention a loss and a theft but do not identify a perpetrator.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"Who is responsible for Jane Smith's loss and the theft of Alex Jones's car?\"\n    },\n    {\n      \"gap_id\": \"G-02\",\n      \"gap_key\": \"how\",\n      \"topic\": \"Method of incident\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The specific methods used to transfer the funds and to steal the car are not described.\",\n      \"affected_claim_ids\": [\n        \"A-02\",\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The mechanism of the transfer and the theft are not specified.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"How were the funds transferred and how was the car stolen?\"\n    },\n    {\n      \"gap_id\": \"G-03\",\n      \"gap_key\": \"where\",\n      \"topic\": \"Location\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The locations where the financial loss and the car theft occurred are unknown.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The geographic or digital location of the events is not mentioned.\",\n      \"priority\": \"medium\",\n      \"askable\": true,\n      \"clarification_question\": \"Where did the financial loss and the car theft take place?\"\n    },\n    {\n      \"gap_id\": \"G-04\",\n      \"gap_key\": \"why\",\n      \"topic\": \"Motive\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The motive behind the financial loss and the car theft is unknown.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"There is no information regarding the purpose of these actions.\",\n      \"priority\": \"low\",\n      \"askable\": true,\n      \"clarification_question\": \"What was the motive for these incidents?\"\n    },\n    {\n      \"gap_id\": \"G-05\",\n      \"gap_key\": \"party_connection\",\n      \"topic\": \"Relationship between parties\",\n      \"status\": \"NOT_PROVIDED\",\n      \"description\": \"The relationship between Jane Smith and Alex Jones is not established.\",\n      \"affected_claim_ids\": [\n        \"A-01\",\n        \"A-04\"\n      ],\n      \"reason\": \"It is unclear how the witness, Alex Jones, is connected to the victim, Jane Smith.\",\n      \"priority\": \"medium\",\n      \"askable\": true,\n      \"clarification_question\": \"What is the relationship between Jane Smith and Alex Jones?\"\n    }\n  ],\n  \"mitre_associations\": []\n}",
+            "citations": []
+          }
+        ],
+        "model": "google/gemma-4-26b-a4b-it",
+        "stop_reason": "end_turn",
+        "stop_details": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 2512,
+          "output_tokens": 6232,
+          "output_tokens_details": {
+            "thinking_tokens": 5312
+          },
+          "cache_creation_input_tokens": null,
+          "cache_read_input_tokens": 0,
+          "cache_creation": null,
+          "inference_geo": null,
+          "server_tool_use": null,
+          "service_tier": null,
+          "speed": "standard",
+          "cost": 0.00209568,
+          "is_byok": false,
+          "cost_details": {
+            "upstream_inference_cost": 0.00209568,
+            "upstream_inference_prompt_cost": 0.00022608,
+            "upstream_inference_completions_cost": 0.0018696
+          }
+        },
+        "context_management": null,
+        "provider": "NextBit"
+      }
+    }
+  ],
+  "calls": [
+    {
+      "stage": "projection_eval_05_semantic",
+      "model": "google/gemma-4-26b-a4b-it",
+      "estimated_input_tokens": 2973,
+      "status": "completed",
+      "input_tokens": 2512,
+      "output_tokens": 6232,
+      "thinking_tokens": 5312,
+      "elapsed_ms": 108406
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "checked_units": {
+    "dev": 1198,
+    "test": 1610,
+    "test_ood": 1686
+  },
+  "threshold": 0.15,
+  "summary_sha256": "93182b0bb596f014eebf4e5566913995ab5bacbe3f62d8a0ffae6dd542d77ba1",
+  "checks": "Frozen source/input/score hashes; every original row; logits/probability and entailment mapping; independent sklearn confusion/P/R/F1/Accuracy and source averages; EN-dev threshold grid/tie rule"
+}

@@ -1,0 +1,56 @@
+{
+  "b1_lr_metrics": {
+    "tp": 167,
+    "fp": 194,
+    "tn": 546,
+    "fn": 163,
+    "accuracy": 0.6663551401869159,
+    "macro_f1": 0.618490320686256,
+    "supp_p": 0.4626038781163435,
+    "supp_r": 0.5060606060606061,
+    "supp_f1": 0.48335745296671495,
+    "fsr": 0.26216216216216215
+  },
+  "paired_bootstrap": [
+    {
+      "Comparison": "B1-LR vs B0",
+      "Delta Accuracy": "+1.98% [+0.19%, +3.74%]",
+      "Delta Macro-F1": "+0.0333 [+0.0128, +0.0533]",
+      "Delta Supported-F1": "+0.0576 [+0.0286, +0.0868]",
+      "Delta FSR": "+0.75% [-1.09%, +2.70%]",
+      "Macro-F1 Sig?": "YES",
+      "Supp-F1 Sig?": "YES",
+      "FSR Sig?": "NO"
+    },
+    {
+      "Comparison": "B1-LR vs B0-LR",
+      "Delta Accuracy": "+2.07% [+0.28%, +3.83%]",
+      "Delta Macro-F1": "+0.0248 [+0.0048, +0.0451]",
+      "Delta Supported-F1": "+0.0349 [+0.0072, +0.0636]",
+      "Delta FSR": "-1.25% [-3.38%, +0.83%]",
+      "Macro-F1 Sig?": "YES",
+      "Supp-F1 Sig?": "YES",
+      "FSR Sig?": "NO"
+    },
+    {
+      "Comparison": "B1-LR vs B1",
+      "Delta Accuracy": "+3.10% [+1.68%, +4.39%]",
+      "Delta Macro-F1": "+0.0219 [+0.0076, +0.0350]",
+      "Delta Supported-F1": "+0.0119 [-0.0067, +0.0279]",
+      "Delta FSR": "-5.42% [-7.17%, -3.70%]",
+      "Macro-F1 Sig?": "YES",
+      "Supp-F1 Sig?": "NO",
+      "FSR Sig?": "YES"
+    },
+    {
+      "Comparison": "B1-LR vs B3",
+      "Delta Accuracy": "+0.10% [-0.75%, +0.93%]",
+      "Delta Macro-F1": "-0.0020 [-0.0113, +0.0065]",
+      "Delta Supported-F1": "-0.0066 [-0.0200, +0.0045]",
+      "Delta FSR": "-0.81% [-1.80%, +0.13%]",
+      "Macro-F1 Sig?": "NO",
+      "Supp-F1 Sig?": "NO",
+      "FSR Sig?": "NO"
+    }
+  ]
+}

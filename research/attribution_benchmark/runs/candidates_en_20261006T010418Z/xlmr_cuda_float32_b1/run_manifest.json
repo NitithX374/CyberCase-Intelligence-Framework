@@ -1,0 +1,121 @@
+{
+  "schema_version": 2,
+  "status": "failed",
+  "started_at": "2026-10-06T01:26:33.218299+00:00",
+  "requested_model": "xlmr",
+  "requested_device": "cuda",
+  "requested_precision": "float32",
+  "requested_batch_size": 1,
+  "source_snapshot": "source_snapshot",
+  "source_sha256": {
+    "data.py": "e388b734dfaeddcd33b8d3b58f667b83f5d9f7f4b4879284fcbfb375c0b0b628",
+    "metrics.py": "35f19a9de82f98eac18502ad59417cae5a19cc401d198718d3ea5ad1c9b18e18",
+    "candidate_models.py": "3fd64debc4602abf783f4e8f0863bd4dbdd50c9124ed60d45efc9f009a719043",
+    "candidate_adapters.py": "8445424aee72bf19a940a7134e322ada532580860a2c83fc9419cc31f7fa5144",
+    "candidate_inference.py": "6d0916e1575d266ae06d875eab1dd670e9fd2bbc30bdfdaf3533fb16a5073df4",
+    "candidate_reports.py": "79a3ed22f5f162a7b4bd883faa39d4e4eb6999f210ee42b80ff9eec7cf8165e6",
+    "run_candidate.py": "93e4b3795d6b19d444379ccb11e2b96863b6d8c2ef68709fa523c001d57e2e02",
+    "verify_candidate.py": "6ef7fbf7403f4e26ce1efb9137d2c1c590905528972a141926ad480a52501f6d"
+  },
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
+  "command": "& '.\\env_mitre\\Scripts\\python.exe' -u 'research/attribution_benchmark/run_candidate.py' --model xlmr --device cuda --precision float32 --batch-size 1 --output 'F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\xlmr_cuda_float32_b1'",
+  "dataset": {
+    "dataset": "osunlp/AttributionBench",
+    "configuration": "subset_balanced",
+    "revision": "62569e644f4186606f54f742178a4517431b42e1",
+    "downloaded_at": "2026-10-06T00:23:00.574149+00:00",
+    "files": {
+      "train": {
+        "filename": "train_all_subset_balanced.jsonl",
+        "sha256": "c7d6232048298b8f06afc556214c3739b5432f10f2641db2f73715fd126b1a63",
+        "bytes": 47394689,
+        "rows": 13322,
+        "unique_ids": 13322,
+        "labels": {
+          "attributable": 6661,
+          "not attributable": 6661
+        },
+        "source_subsets": {
+          "AttributedQA": 2000,
+          "LFQA": 2096,
+          "ExpertQA": 4442,
+          "Stanford-GenSearch": 4784
+        },
+        "empty_references": 0,
+        "clusters": 6106
+      },
+      "dev": {
+        "filename": "dev_all_subset_balanced.jsonl",
+        "sha256": "a744d1f84e621015f7a7e1941c3fb3f0838be767645dfb2ec784efd3133ab7d6",
+        "bytes": 3542401,
+        "rows": 1198,
+        "unique_ids": 1198,
+        "labels": {
+          "attributable": 599,
+          "not attributable": 599
+        },
+        "source_subsets": {
+          "AttributedQA": 74,
+          "LFQA": 110,
+          "ExpertQA": 470,
+          "Stanford-GenSearch": 544
+        },
+        "empty_references": 0,
+        "clusters": 531
+      },
+      "test": {
+        "filename": "test_all_subset_balanced.jsonl",
+        "sha256": "c2ff75dd4ea5cf12d86166ead66a96b42d5001a36daf02ff71303ef3317715a8",
+        "bytes": 5825881,
+        "rows": 1610,
+        "unique_ids": 1610,
+        "labels": {
+          "attributable": 805,
+          "not attributable": 805
+        },
+        "source_subsets": {
+          "AttributedQA": 230,
+          "LFQA": 168,
+          "ExpertQA": 612,
+          "Stanford-GenSearch": 600
+        },
+        "empty_references": 0,
+        "clusters": 748
+      },
+      "test_ood": {
+        "filename": "test_ood_all_subset_balanced.jsonl",
+        "sha256": "90d8f5363cec90197f80b3e896dad17e091a108a5bf282c3d515d48c9a01a934",
+        "bytes": 3039548,
+        "rows": 1686,
+        "unique_ids": 1686,
+        "labels": {
+          "attributable": 843,
+          "not attributable": 843
+        },
+        "source_subsets": {
+          "AttrScore-GenSearch": 162,
+          "HAGRID": 1088,
+          "BEGIN": 436
+        },
+        "empty_references": 75,
+        "clusters": 1229
+      }
+    },
+    "cross_split_id_overlap": {
+      "train/dev": 0,
+      "train/test": 0,
+      "train/test_ood": 0,
+      "dev/test": 0,
+      "dev/test_ood": 0,
+      "test/test_ood": 0
+    },
+    "loading": "Pinned official raw JSONL, preserved without type casting or row filtering"
+  },
+  "failure": {
+    "type": "AttributeError",
+    "message": "'Tee' object has no attribute 'isatty'",
+    "at": "2026-10-06T01:26:35.810578+00:00",
+    "traceback": "Traceback (most recent call last):\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 116, in main\n    execute(args, output, configuration)\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\run_candidate.py\", line 47, in execute\n    runner = CandidateRunner(spec, args.device, args.batch_size, args.precision)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_inference.py\", line 39, in __init__\n    self.adapter = load_adapter(spec, self.tokenizer, dtype, device)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_adapters.py\", line 104, in load_adapter\n    return ClassificationAdapter(spec, dtype, device)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\research\\attribution_benchmark\\candidate_adapters.py\", line 52, in __init__\n    self.model = AutoModelForSequenceClassification.from_pretrained(\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\models\\auto\\auto_factory.py\", line 402, in from_pretrained\n    return model_class.from_pretrained(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\modeling_utils.py\", line 4349, in from_pretrained\n    loading_info = cls._finalize_model_loading(model, load_config, loading_info)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\modeling_utils.py\", line 4525, in _finalize_model_loading\n    log_state_dict_report(\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 262, in log_state_dict_report\n    report = loading_info.create_loading_report()\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 181, in create_loading_report\n    tips += f\"\\n- {_style('UNEXPECTED:', 'orange')}\\t\" + _style(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Cybercase Framework\\env_mitre\\Lib\\site-packages\\transformers\\utils\\loading_report.py\", line 123, in _style\n    if sys.stdout is not None and sys.stdout.isatty():\n                                  ^^^^^^^^^^^^^^^^^\nAttributeError: 'Tee' object has no attribute 'isatty'\n"
+  }
+}

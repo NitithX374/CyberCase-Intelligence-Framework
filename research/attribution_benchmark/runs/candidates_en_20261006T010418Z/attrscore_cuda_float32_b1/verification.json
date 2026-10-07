@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "at": "2026-10-06T01:51:01.240176+00:00",
+  "model": "attrscore",
+  "checked_units": {
+    "dev": 1198,
+    "test": 1610,
+    "test_ood": 1686
+  },
+  "threshold": 0.23,
+  "summary_sha256": "5cb3583fc90ac4826a1d3bd85a0cbaa10c501545f931f2ffa44d3a83b756d760",
+  "checks": "Frozen source/data/score hashes; all original inputs/gold; complete claim/prompt/evidence tokenization; class probabilities/support and sequence-label mapping; independent sklearn confusion/P/R/F1/Accuracy/AUROC/AP/source averages; EN-dev grid/tie rule"
+}

@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "at": "2026-10-06T01:07:19.448134+00:00",
+  "model": "deberta_small",
+  "checked_units": {
+    "dev": 1198,
+    "test": 1610,
+    "test_ood": 1686
+  },
+  "threshold": 0.01,
+  "summary_sha256": "20d6ec93dd3da92927e33aa81003da341b02799355427c4ee4095f3f34eb8ed4",
+  "checks": "Frozen source/data/score hashes; all original inputs/gold; complete claim/prompt/evidence tokenization; class probabilities/support and sequence-label mapping; independent sklearn confusion/P/R/F1/Accuracy/AUROC/AP/source averages; EN-dev grid/tie rule"
+}

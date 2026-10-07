@@ -1,0 +1,7 @@
+{
+  "operation": "Fix Markdown table formatting only; no model inference or changes to scores/threshold/summary",
+  "at": "2026-10-06T00:35:03.429023+00:00",
+  "summary_sha256": "93182b0bb596f014eebf4e5566913995ab5bacbe3f62d8a0ffae6dd542d77ba1",
+  "report_sha256": "1276718bbcbcf86b5b01480f2501fecafc19f05a594ae473ad11a560c9fc6dbc",
+  "formatter_sha256": "8e0d5d62cfd90c8cc2c89bba985066f73c3062338f2d1846a6f7b2484d7dcd03"
+}

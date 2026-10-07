@@ -1,0 +1,59 @@
+[
+  {
+    "expected": "no_claim",
+    "grounding": {
+      "verdict": "unassessed",
+      "reason": "no_claim",
+      "model": null,
+      "entailment": null
+    }
+  },
+  {
+    "expected": "unknown_claim",
+    "grounding": {
+      "verdict": "unassessed",
+      "reason": "unknown_claim",
+      "model": null,
+      "entailment": null
+    }
+  },
+  {
+    "expected": "unbound_claim",
+    "grounding": {
+      "verdict": "unassessed",
+      "reason": "unbound_claim",
+      "model": null,
+      "entailment": null
+    }
+  },
+  {
+    "expected": "qualified_claim",
+    "grounding": {
+      "verdict": "unassessed",
+      "reason": "qualified_claim",
+      "model": null,
+      "entailment": null
+    }
+  },
+  {
+    "expected": "context_limit",
+    "grounding": {
+      "verdict": "unassessed",
+      "reason": "context_limit",
+      "model": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7@b5113eb38ab6",
+      "entailment": null
+    }
+  },
+  {
+    "expected": "model_unavailable:evaluation_injected_unavailable",
+    "grounding": {
+      "verdict": "unassessed",
+      "reason": "model_unavailable:evaluation_injected_unavailable",
+      "model": null,
+      "entailment": null
+    }
+  },
+  {
+    "cache_repeat": "same premise/hypothesis judged once"
+  }
+]

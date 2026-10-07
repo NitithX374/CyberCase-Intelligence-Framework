@@ -36,7 +36,22 @@ Tests live only in `src/test/`, at the path of the file they test: `src/features
 
 The Sources and Analysis views may project answered follow-up messages alongside native sources for reader navigation: Sources reads them from the chat (`features/sources/useCaseSourceRows.ts`), and Analysis reads the ones the analysis recorded (`features/analysis/analysisRecord.ts`). That display projection does not make a follow-up answer a persisted `CaseSource`.
 
-New claim citations carry source-unit IDs, backend-resolved source offsets and a `direct` pointer state. The source drawer uses those offsets to show the selected passage, including repeated text; legacy citations retain quote-based navigation. Invalid IDs appear as unresolved source pointers. The Analysis pipeline displays Reading → Source binding → Claim views → Judgement, deterministic ID-resolution counts, claim citation methods and recorded GLiNER2 extraction counts/time. Details shows Parties, Timeline and Impacts extracted from grounded Claims. `ClaimViewReview` presents full linked Claim context for attribution and uncertainty, and links to Findings, where Source citations remain. Null roles are shown as not extracted, with a link to inspect the original Claim. Extracted fields have checked Claim offsets, without a semantic verdict, and never enter Judgement or chat. Historical structured views retain their saved checks and are labelled as earlier description checks. `bound` describes reference binding, not semantic confirmation. User-facing labels use Source; existing API keys such as `evidence_unit_ids` remain stable.
+New claim citations carry source-unit IDs, backend-resolved offsets and a
+`direct` pointer state. The drawer navigates those offsets; legacy citations keep
+quote navigation. Invalid IDs remain unresolved pointers. The compact analysis
+preparation panel shows finding/source coverage and useful failure notices.
+Internal Claim/unit IDs, model names, verifier diagnostics and timing counters
+are not displayed; internal IDs still drive navigation and Source addressing. New LLM extraction and Judgement run independently in parallel over the
+same canonical Claims. Details preserves Parties, Timeline and Impacts and their
+links to Findings/full Claim context in a collapsed Related findings disclosure. Unknown role/time render as unspecified;
+new LLM rows have no fabricated offsets, confidence or semantic verdict. They are
+presentation views, not authoritative factual records and never Judgement inputs.
+Extractor failure is displayed independently of completed Judgement. Historical
+extractor metadata and earlier semantic caution notes remain readable without
+restoring model-specific UI or old projection-diagnostics components. `bound` describes
+resolvable Claim citations only. User-facing labels use Source; API keys including
+`evidence_unit_ids` and `claim_ids` remain stable. `CaseTimelineItem.time` is now
+nullable; the report and generated API contract reflect that.
 
 The Summary shows the analysis's summary as one paragraph (`features/analysis/SummaryUnits`), from the units the backend derives: each sentence is followed by the numbers of its findings as raised digits (the numbering of the report's findings table, `findingNumbers` in `overview.ts`), each a link to `AnalysisFindings?finding=A-nn`, and a sentence whose linked claims lack fully bound evidence has a raised letter whose note prints under the paragraph (`supportNote`). The punctuation the model wrote after each bracket comes back after the marks (`summaryClosings`, the same rule as `summary_closings` in the backend). The link is a query, not a `#` fragment: after a fragment link, the Findings link in the nav opened with that fragment still on its URL (seen in the e2e). An analysis stored before the units existed has none, and the Summary reads its text as Markdown, as before.
 

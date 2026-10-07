@@ -42,6 +42,32 @@ function pagedCitation(exactQuote: string, pageNumbers: number[]): CaseSourceCit
 }
 
 describe("Case overview projection", () => {
+  it("marks all LLM views as Claim-derived without offsets and preserves unknown time", () => {
+    const overview = buildCaseOverview(
+      analysisResult({
+        trace_json: trace({
+          claims: [claim("Company A suspended the account.")],
+          view_extraction: {
+            method: "llm",
+            model: "test/model",
+            input_claim_ids: ["A-01"],
+            excluded_claim_ids: [],
+            duration_ms: 120,
+            status: "completed",
+            items_dropped: 0,
+          },
+          involved_parties: [{ name: "Company A", role: null, claim_ids: ["A-01"] }],
+          timeline: [{ time: null, event: "The account was suspended.", claim_ids: ["A-01"] }],
+          impacts: [{ description: "An explicitly reported suspension.", claim_ids: ["A-01"] }],
+        }),
+      }),
+      [narrativeSource("Company A suspended the account.")],
+    );
+    expect(overview.timeline[0].time).toBeNull();
+    expect(overview.parties[0].linkedClaims).toEqual([
+      { id: "A-01", text: "Company A suspended the account." },
+    ]);
+  });
   it("preserves the semantic verdict and linked claim text independently of binding", () => {
     const grounding = { verdict: "not_supported", reason: "neutral" } as const;
     const overview = buildCaseOverview(
@@ -61,7 +87,6 @@ describe("Case overview projection", () => {
       }),
       [narrativeSource("John sent an email.")],
     );
-    expect(overview.parties[0].projectionGrounding).toEqual(grounding);
     expect(overview.parties[0].linkedClaims).toEqual([{ id: "A-01", text: "John sent an email." }]);
     expect(overview.parties[0].supportNote).toBe(
       "The linked findings do not support this description.",

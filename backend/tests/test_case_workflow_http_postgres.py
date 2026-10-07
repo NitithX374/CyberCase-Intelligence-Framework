@@ -245,7 +245,7 @@ def legacy_citing(text: str, quote: str, monkeypatch):
                 )
             ],
         )
-        monkeypatch.setattr("app.analysis.write.reading_from", lambda reply: legacy)
+        monkeypatch.setattr("app.analysis.write.reading_from", lambda reply, **kwargs: legacy)
         return reading()
 
     return cite

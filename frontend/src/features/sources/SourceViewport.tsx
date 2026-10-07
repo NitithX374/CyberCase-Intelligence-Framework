@@ -2,6 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import { Icon } from "@/components/icons";
+import { Markdown } from "@/components/Markdown";
 import { plural } from "@/lib/format";
 import { fetchCaseDocumentContent } from "./api";
 import type { CaseSourceRead } from "@/lib/api/types";
@@ -17,9 +18,18 @@ interface SourceViewportProps {
   item: RailItem | null;
   mode: PreviewMode;
   onModeChange: (mode: PreviewMode) => void;
+  onRetryDocument?: (documentId: string) => Promise<void>;
+  isRetryingDocument?: boolean;
 }
 
-export function SourceViewport({ caseId, item, mode, onModeChange }: SourceViewportProps) {
+export function SourceViewport({
+  caseId,
+  item,
+  mode,
+  onModeChange,
+  onRetryDocument,
+  isRetryingDocument = false,
+}: SourceViewportProps) {
   const subtitle = !item
     ? null
     : item.kind === "file"
@@ -70,14 +80,22 @@ export function SourceViewport({ caseId, item, mode, onModeChange }: SourceViewp
         ) : mode === "original" ? (
           <OriginalFilePreview caseId={caseId} item={item} />
         ) : mode === "ocr" ? (
-          <ExtractedTextPreview source={item.source} />
+          <ExtractedTextPreview
+            source={item.source}
+            onRetry={onRetryDocument ? () => onRetryDocument(item.documentId) : undefined}
+            isRetrying={isRetryingDocument}
+          />
         ) : (
           <div className="flex h-full min-h-0 flex-col divide-y divide-line lg:flex-row lg:divide-x lg:divide-y-0">
             <div className="h-1/2 min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full">
               <OriginalFilePreview caseId={caseId} item={item} />
             </div>
             <div className="h-1/2 min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full">
-              <ExtractedTextPreview source={item.source} />
+              <ExtractedTextPreview
+                source={item.source}
+                onRetry={onRetryDocument ? () => onRetryDocument(item.documentId) : undefined}
+                isRetrying={isRetryingDocument}
+              />
             </div>
           </div>
         )}
@@ -137,13 +155,13 @@ function TextSourcePreview({ question, text }: { question: string | null; text: 
               </div>
               <div>
                 <dt className="text-xs font-medium text-ink-muted">Answer</dt>
-                <dd className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
-                  {text}
+                <dd className="mt-1.5 break-words text-[15px] leading-8 text-ink">
+                  <Markdown content={text} allowHtml />
                 </dd>
               </div>
             </dl>
           ) : (
-            <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">{text}</p>
+            <Markdown content={text} allowHtml />
           )}
         </Paper>
       </div>
@@ -244,24 +262,56 @@ function documentPages(source: CaseSourceRead): ExtractionPage[] {
 
 const PAGE_JUMP_THRESHOLD = 4;
 
-function ExtractedTextPreview({ source }: { source: CaseSourceRead }) {
+function ExtractedTextPreview({
+  source,
+  onRetry,
+  isRetrying = false,
+}: {
+  source: CaseSourceRead;
+  onRetry?: () => void;
+  isRetrying?: boolean;
+}) {
   const pages = useMemo(() => documentPages(source), [source]);
   const recorded = source.provenance_json?.warnings;
-  const warnings = Array.isArray(recorded) ? recorded.length : 0;
+  const warningsList = Array.isArray(recorded) ? recorded.map(String) : [];
+  const warnings = warningsList.length;
 
   return (
     <div role="tabpanel" aria-label="Extracted text" className="h-full overflow-auto p-4 sm:p-8">
       <div className="mx-auto max-w-3xl space-y-6">
-        {(warnings > 0 || pages.length >= PAGE_JUMP_THRESHOLD) && (
+        {(warnings > 0 || pages.length >= PAGE_JUMP_THRESHOLD || onRetry) && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {warnings > 0 ? (
-              <p className="flex items-center gap-1.5 text-[13px] text-unresolved">
-                <Icon name="alert" className="h-4 w-4" />
-                {plural(warnings, "extraction warning")}
-              </p>
-            ) : (
-              <span />
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {warnings > 0 && (
+                <details className="group rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[13px] text-unresolved">
+                  <summary className="flex cursor-pointer items-center gap-1.5 font-medium select-none">
+                    <Icon name="alert" className="h-4 w-4 shrink-0" />
+                    <span>{plural(warnings, "extraction warning")}</span>
+                    <span className="text-xs text-ink-muted group-open:hidden">(view details)</span>
+                  </summary>
+                  <ul className="mt-2 space-y-1 pl-5 list-disc text-xs text-ink-secondary">
+                    {warningsList.map((warning, index) => (
+                      <li key={index} className="[overflow-wrap:anywhere]">
+                        {warning}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={() => void onRetry()}
+                  disabled={isRetrying}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface-nested disabled:opacity-50"
+                  aria-label="Retry extraction"
+                >
+                  <Icon name={isRetrying ? "spinner" : "refresh"} className="h-3.5 w-3.5" />
+                  <span>{isRetrying ? "Retrying extraction..." : "Retry OCR extraction"}</span>
+                </button>
+              )}
+            </div>
+
             {pages.length >= PAGE_JUMP_THRESHOLD && (
               <nav aria-label="Page navigation" className="flex flex-wrap items-center gap-0.5">
                 {pages.map((page) => (
@@ -284,19 +334,40 @@ function ExtractedTextPreview({ source }: { source: CaseSourceRead }) {
           </div>
         )}
 
-        {pages.map((page) => (
-          <div key={page.pageNumber} id={`ocr-page-${page.pageNumber}`} className="scroll-mt-4">
-            <Paper label={`Page ${page.pageNumber}`}>
-              {page.text.trim() ? (
-                <p className="whitespace-pre-wrap break-words text-[15px] leading-8 text-ink">
-                  {page.text}
-                </p>
-              ) : (
-                <p className="text-sm text-ink-muted">No text on this page.</p>
-              )}
-            </Paper>
-          </div>
-        ))}
+        {pages.map((page) => {
+          const pageWarning = warningsList.find(
+            (w) =>
+              (w.startsWith(`Page ${page.pageNumber} [`) || w.startsWith(`Page ${page.pageNumber}:`)) &&
+              w.includes("["),
+          );
+          return (
+            <div key={page.pageNumber} id={`ocr-page-${page.pageNumber}`} className="scroll-mt-4">
+              <Paper label={`Page ${page.pageNumber}`}>
+                {page.text.trim() ? (
+                  <Markdown content={page.text} allowHtml />
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-ink-muted">No text on this page.</p>
+                    {pageWarning && (
+                      <p className="text-xs text-unresolved font-medium">{pageWarning}</p>
+                    )}
+                    {onRetry && (
+                      <button
+                        type="button"
+                        onClick={() => void onRetry()}
+                        disabled={isRetrying}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:bg-surface-nested disabled:opacity-50"
+                      >
+                        <Icon name={isRetrying ? "spinner" : "refresh"} className="h-3 w-3" />
+                        <span>{isRetrying ? "Retrying..." : "Retry OCR"}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </Paper>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

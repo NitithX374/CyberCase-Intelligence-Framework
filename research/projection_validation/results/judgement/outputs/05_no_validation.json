@@ -1,0 +1,175 @@
+{
+  "replay_id": "controlled-english-02:impacts",
+  "condition": "no_validation",
+  "stage": "projection_eval_05_no_validation",
+  "input_sha256": "665f4f3dfd7bf5b351e1abed98734f4e08a6d2925ff7a9a4ab6ca681a3ce8b69",
+  "status": "completed",
+  "judgement": {
+    "version": "case_analysis_trace_v1",
+    "summary": "Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved a transfer for her [A-02], which resulted in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00 [A-04], and his car was also stolen [A-04].",
+    "gaps": [
+      {
+        "gap_id": "G-01",
+        "gap_key": "who_responsible",
+        "topic": "responsible party",
+        "status": "EXPLICITLY_UNKNOWN",
+        "description": "It is unknown who is responsible for the financial loss and the car theft.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The claims do not identify a perpetrator.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "Who is responsible for the financial loss and the car theft?"
+      },
+      {
+        "gap_id": "G-02",
+        "gap_key": "how",
+        "topic": "method of incident",
+        "status": "EXPLICITLY_UNKNOWN",
+        "description": "The method used to facilitate the transfer and the car theft is not described.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The mechanism of the theft and transfer is not provided.",
+        "priority": "high",
+        "askable": true,
+        "clarification_question": "How were the funds transferred and the car stolen?"
+      },
+      {
+        "gap_id": "G-03",
+        "gap_key": "what",
+        "topic": "incident relationship",
+        "status": "AMBIGUOUS",
+        "description": "It is unclear if the bank transfer loss and the car theft are related events.",
+        "affected_claim_ids": [
+          "A-02",
+          "A-03",
+          "A-04"
+        ],
+        "reason": "The claims describe two separate events without establishing a link.",
+        "priority": "medium",
+        "askable": true,
+        "clarification_question": "Are the bank transfer loss and the car theft part of the same incident?"
+      },
+      {
+        "gap_id": "G-04",
+        "gap_key": "when",
+        "topic": "date of events",
+        "status": "AMBIGUOUS",
+        "description": "The date for the email sent by Alex Jones and the car theft is unknown.",
+        "affected_claim_ids": [
+          "A-04"
+        ],
+        "reason": "Only a time (16:00) is provided, but no date is specified for these events.",
+        "priority": "medium",
+        "askable": true,
+        "clarification_question": "On what date did the email be sent and the car theft occur?"
+      },
+      {
+        "gap_id": "G-05",
+        "gap_key": "where",
+        "topic": "location",
+        "status": "EXPLICITLY_UNKNOWN",
+        "description": "The location of the incidents is not mentioned.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "No geographic or digital location is provided.",
+        "priority": "low",
+        "askable": true,
+        "clarification_question": "Where did these incidents take place?"
+      },
+      {
+        "gap_id": "G-06",
+        "gap_key": "why",
+        "topic": "motive",
+        "status": "EXPLICITLY_UNKNOWN",
+        "description": "The motive behind the financial loss and the car theft is unknown.",
+        "affected_claim_ids": [
+          "A-03",
+          "A-04"
+        ],
+        "reason": "There is no indication of the purpose or motive.",
+        "priority": "low",
+        "askable": true,
+        "clarification_question": "What was the motive for these actions?"
+      }
+    ],
+    "mitre_associations": []
+  },
+  "seconds": 57.28652599995257,
+  "responses": [
+    {
+      "stage": "projection_eval_05_no_validation",
+      "status_code": 200,
+      "seconds": 57.276098100002855,
+      "usage": {
+        "input_tokens": 2539,
+        "output_tokens": 5632,
+        "thinking_tokens": 4577
+      },
+      "estimated_usd": 0.0019435,
+      "response": {
+        "id": "gen-1791267516-1DBvEW0WM89zQZrLVXeo",
+        "type": "message",
+        "role": "assistant",
+        "container": null,
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "Judgement component of CyberCase.\nAnalyze claims to provide a summary, gaps, and MITRE ATT&CK associations.\n\n        *   `A-01`: Jane Smith is a victim and reported the incident.\n        *   `A-02`: On 12 May 2026, the bank approved Jane Smith's transfer.\n        *   `A-03`: Jane Smith lost 25,000 baht.\n        *   `A-04`: Alex Jones is a witness. At 16:00, Alex Jones sent an email. Alex Jones's car was stolen.\n\n        *   Jane Smith (Victim, A-01)\n        *   Alex Jones (Witness, A-04)\n\n        *   12 May 2026: Bank approved Jane Smith's transfer (A-02).\n\n        *   Jane Smith lost 25,000 baht (A-03). *Note: The `impacts` field in the input says 52,000 baht, but the claim A-03 says 25,000 baht. The instructions say \"Derive all case facts from the supplied claims\". Therefore, I must use 25,000 baht from A-03. However, the discrepancy itself is a gap (CONFLICTING).*\n\n        *   `technical_context`: null.\n\n    *   *Summary Construction:*\n        Jane Smith reported an incident [A-01]. On 12 May 2026, her bank approved a transfer [A-02], which resulted in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00 [A-04]. A car belonging to Alex Jones was also stolen [A-04].\n\n    *   *Gap Analysis:*\n        *   `who_responsible`: No mention of who caused the loss or the car theft. (EXPLICITLY_UNKNOWN)\n        *   `what`: The transfer resulted in loss, but the nature of the incident (fraud, hack, error?) isn't stated. Also, the car theft is mentioned but not clearly linked to the bank transfer. (AMBIGUOUS)\n        *   `how`: No method mentioned for the transfer loss or the car theft. (EXPLICITLY_UNKNOWN)\n        *   `how_much`: Discrepancy between claim A-03 (25,000) and the `impacts` summary provided in the JSON (52,000). This is a CONFLICTING gap regarding the amount. (CONFLICTING)\n        *   `why`: Motive unknown. (EXPLICITLY_UNKNOWN)\n        *   `where`: No location mentioned. (EXPLICITLY_UNKNOWN)\n        *   `when`: 16:00 is mentioned for the email, but not the date of the theft or the full timeline of the incident. (AMBIGUOUS)\n\n    *   *Refining Gaps based on instructions:*\n        *   `who_responsible`: Who is responsible for the transfer loss and the car theft? [A-03, A-04] -> status: EXPLICITLY_UNKNOWN.\n        *   `how`: Method used for the transfer and the car theft? [A-03, A-04] -> status: EXPLICITLY_UNKNOWN.\n        *   `how_much`: The total amount lost by Jane Smith. [A-03] -> status: CONFLICTING (Claim A-03 says 25,000, while the input impact summary says 52,000. Wait, instructions say \"Derive all case facts from the supplied claims\". The input `impacts` section is a \"projection/summary\" provided to me. The instruction says \"Unchecked or unsupported projections are omitted.\" The impact section says 52k, but the claim says 25k. This is a conflict in the data provided.)\n        *   `what`: Relation between the bank transfer and the car theft? [A-02, A-03, A-04] -> status: AMBIGUOUS.\n\n    *   *Final Selection of Gaps:*\n        1. `who_responsible`: EXPLICITLY_UNKNOWN. Question: Who is responsible for Jane Smith's financial loss and the theft of Alex Jones's car?\n        2. `how`: EXPLICITLY_UNKNOWN. Question: How were the funds transferred and how was the car stolen?\n        3. `how_much`: CONFLICTING. Question: What is the exact amount of money lost by Jane Smith?\n        4. `what`: AMBIGUOUS. Question: What is the connection between the bank transfer and the theft of the car?\n        5. `where`: EXPLICITLY_UNKNOWN. Question: Where did these incidents occur?\n\n    *   *Wait, let's check the \"what\" carefully.* The claims describe two separate events: a bank transfer/loss and a car theft. It's unclear if they are the same incident.\n\n    *   *Let's follow the instruction: \"A gap that fits none of these questions... keeps a short key of its own.\"*\n\n    *   *MITRE ATT&CK Associations:*\n        *   `technical_context` is null. Return empty list.\n\n    *   Summary: Jane Smith reported an incident [A-01]. On 12 May 2026, a bank approved her transfer [A-02], resulting in a loss of 25,000 baht [A-03]. Alex Jones, a witness, sent an email at 16:00 [A-04], and his car was also stolen [A-04].\n    *   Gap `how_much`: status: CONFLICTING. `topic`: amount lost. `claim_ids`: [A-03]. (Note: I cannot use the 52,000 figure in the summary because it's not in a claim, but the conflict exists between the claim and the provided `impacts` field).\n    *   Gap `who_responsible`: status: EXPLICITLY_UNKNOWN. `topic`: responsible party. `claim_ids`: [A-03, A-04].\n    *   Gap `how`: status: EXPLICITLY_UNKNOWN. `topic`: method of incident. `claim_ids`: [A-03, A-04].\n    *   Gap `what`: status: AMBIGUOUS. `topic`: relationship between events. `claim_ids`: [A-02, A-03, A-04].\n\n    *Self-Correction on Gap `how_much`:* The instruction says \"Derive all case facts from the supplied claims\". If A-03 says 25,000, then the fact is 25,000. The 52,000 in the `impacts` block is a \"projection\". The prompt says \"Unchecked or unsupported projections are omitted.\" Thus, I should ignore the 52,000 in the summary. However, as a judge, I see a contradiction in the input provided to me. But if I must derive facts *only* from claims, I treat 25,000 as the fact. The conflict is between the claim and the metadata. I will flag it as a conflict if I can justify it, otherwise I'll stick to the claim's value for the summary.\n\n    *Actually, looking at the input again:*\n    Claim A-03: \"Jane Smith lost 25,000 baht.\"\n    Impacts: \"Jane Smith lost 52,000 baht.\"\n    This is a textbook CONFLICTING gap regarding `how_much`.\n\n    *Let's re-verify `who_responsible`:*\n    Who is responsible for the loss [A-03] and the theft [A-04]? Status: EXPLICITLY_UNKNOWN.\n\n    *Let's re-verify `how`:*\n    How was the loss/theft executed? Status: EXPLICITLY_UNKNOWN.\n\n    *Let's re-verify `where`:*\n    Where did it happen? Status: EXPLICITLY_UNKNOWN.\n\n    *Let's re-verify `why`:*\n    Motive? Status: EXPLICITLY_UNKNOWN.\n\n    *Let's re-verify `when`:*\n    Is the date/time of the car theft/loss clear? A-02 is 12 May. A-04 is 16:00 (no date). Status: AMBIGUOUS.\n\n    *Summary Checklist:*\n    - Concise? Yes.\n    - Investigator style? Yes.\n    - Only supplied claims? Yes.\n    - End every sentence with [IDs]? Yes.\n    - No status words/disclaimers? Yes.\n\n    *Gap Checklist:*\n    - Sequential IDs G-01...\n    - Correct keys (who_affected, who_responsible, etc.)? Yes.\n    - Statuses (NOT_PROVIDED, EXPLICITLY_UNKNOWN, AMBIGUOUS, CONFLICTING)? Yes.\n    - `askable` logic? Yes.\n    - `clarification_question` limit 300 chars? Yes.\n\n    *Gap Mapping:*\n    G-01: `who_responsible` (Who caused the loss and the theft)\n    G-02: `how` (The method used)\n    G-03: `how_much` (The total amount lost - conflict between A-03 and impact field)\n    G-04: `when` (The date/time of the theft/loss relative to the transfer)\n    G-05: `where` (The location)\n    G-06: `why` (The motive)\n    G-07: `what` (The connection between the transfer loss and the car theft)\n\n    *Wait, \"Two supplied claims attributing the same event differently are a CONFLICTING gap\".*\n    Here, it's a claim vs an impact summary. The instructions say \"The claims... are the only authority\". But it also says \"Unchecked or unsupported projections are omitted.\" Since 52,000 is in the `impacts` section, it's a projection. I will treat the discrepancy as a conflict in the `how_much` category to be safe, though strictly speaking, only claims create conflicts. However, usually, in these tasks, discrepancies between provided data parts are highlighted. Actually, I'll check if there are two *claims* that conflict. No. There is only one claim A-03. So technically, there is no \"CONFLICTING\" gap by the strict rule \"Two supplied claims...\".\n    Instead, I will mark it as EXPLICITLY_UNKNOWN or just state the amount from the claim.\n    Actually, the instruction \"Unchecked or unsupported projections are omitted\" means I should ignore the 52,000. So the amount is 25,000 [A-03].\n\n    Let's look for other gaps.\n    `who_affected`: Jane Smith [A-01, A-03] and Alex Jones [A-04] are known.\n    `who_responsible`: Unknown.\n    `what`: Bank transfer loss [A-03] and car theft [A-04]. Are they related? AMBIGUOUS.\n    `when`: 12 May 2026 [A-02]. 16:00 [A-04] (no date). AMBIGUOUS.\n    `where`: Unknown.\n    `why`: Unknown.\n    `how`: Unknown.\n    `how_much`: 25,000 [A-03].\n\n    *Refined Gaps:*\n    G-01 (who_responsible): EXPLICITLY_UNKNOWN. \"Who is responsible for the financial loss and the car theft?\"\n    G-02 (how): EXPLICITLY_UNKNOWN. \"What methods were used to facilitate the transfer and the car theft?\"\n    G-03 (what): AMBIGUOUS. \"Are the bank transfer loss and the car theft part of the same incident?\"\n    G-04 (when): AMBIGUOUS. \"On what date did the email be sent and the car theft occur?\"\n    G-05 (where): EXPLICITLY_UNKNOWN. \"Where did these incidents take place?\"\n    G-06 (why): EXPLICITLY_UNKNOWN. \"What was the motive behind these actions?\"\n\n    *Wait, checking `how_much` again:* If I omit the 52,000, there's no gap for `how_much` because it's provided in A-03.\n\n    *Checking `who_affected`:* Jane Smith and Alex Jones are mentioned. No gap.\n\n    *Final Gap List:*\n    G-01 (who_responsible): EXPLICITLY_UNKNOWN.\n    G-02 (how): EXPLICITLY_UNKNOWN.\n    G-03 (what): AMBIGUOUS.\n    G-04 (when): AMBIGUOUS.\n    G-05 (where): EXPLICITLY_UNKNOWN.\n    G-06 (why): EXPLICITLY_UNKNOWN.\n\n    *Let's re-read:* \"A gap that fits none of these questions, such as whether a log file exists, keeps a short key of its own.\"\n    I've covered the standard ones.\n\n    *Final check on `when` for G-04:*\n    A-02: 12 May 2026.\n    A-04: 16:00 (no date).\n    This is indeed ambiguous/missing date for the second event.\n\n    *Summary:*\n    Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved a transfer for her [A-02], which resulted in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00 [A-04], and his car was also stolen [A-04].\n\n    *Wait, \"Jane Smith's car was stolen\" or \"Alex Jones's car was stolen\"?*\n    Claim A-04: \"Alex Jones's car was stolen.\" Okay.\n\n    *One more thing:* The impact field in the JSON says \"Jane Smith lost 52,000 baht.\" even though the claim says 25,000. I will *not* include the 52,000 in the summary because the instructions say: \"Derive all case facts from the supplied claims\".\n\n    *Double check `what`:* The gap is whether the two events (the loss and the theft) are related. This is a good `what` gap.\n\n    *Final plan for JSON:*\n    - Summary as written.\n    - Gaps:\n        - G-01 (who_responsible)\n        - G-02 (how)\n        - G-03 (what)\n        - G-04 (when)\n        - G-05 (where)\n        - G-06 (why)\n    - MITRE: []\n\n    *Wait, I should ensure I don't miss a `how_much` gap if I decide the 52,000/25,000 is a conflict.*\n    The instructions say: \"Two supplied claims attributing the same event differently are a CONFLICTING gap\".\n    Since 52,000 is NOT in a claim, it doesn't meet the criteria for \"CONFLICTING\". It's an \"unsupported projection\" which I am told to omit. Therefore, I ignore it. The amount is 25,000. No gap.\n\n    *One last check:* `when` for the car theft. A-04 says \"At 16:00, Alex Jones sent an email. Alex Jones's car was stolen.\" It doesn't specify if the theft happened at 16:00 or just generally. It's AMBIGUOUS.\n\n    *Wait, one detail:* Is `who_affected` a gap?\n    Jane Smith (A-01) is affected.\n    Alex Jones (A-04) is affected (car stolen).\n    No, `who_affected` is not a gap.\n\n    *Final Gap Review:*\n    G-01: `who_responsible` (EXPLICITLY_UNKNOWN)\n    G-02: `how` (EXPLICITLY_UNKNOWN)\n    G-03: `what` (AMBIGUOUS) - relationship between theft and transfer.\n    G-04: `when` (AMBIGUOUS) - date of theft/email.\n    G-05: `where` (EXPLICITLY_UNKNOWN)\n    G-06: `why` (EXPLICITLY_UNKNOWN)\n\n    *Self-correction:* If `how_much` is not a gap, I won't include it. If `who_affected` is not a gap, I won't include it.\n\n    *Let's verify if `when` is really a gap for the transfer.*\n    The transfer happened on 12 May 2026 [A-02].\n    The theft/email happened at 16:00 [A-04].\n    We don't know if 16:00 was on 12 May or another day. That's a `when` gap.\n\n    *Let's verify `what` for the transfer.*\n    We know money was lost via transfer [A-03]. We don't know *what* happened (e.g., was it a fraudulent transfer or an error?). But `what` usually covers \"what was taken/damaged\". We know the money and the car. The connection between them is the ambiguity.\n\n    *Finalizing Questions:*\n    G-01: Who is responsible for the financial loss and the car theft?\n    G-02: How were the funds transferred and the car stolen?\n    G-03: Is there a connection between the bank transfer and the car theft?\n    G-04: On what date did the email be sent and the car theft occur?\n    G-05: Where did these incidents take place?\n    G-06: What was the motive for these actions?\n\n    *Refining the `what` gap:*\n    The key `what` asks \"what happened, and what was taken, damaged or exposed\".\n    Since we know *what* was taken (25,000 baht and a car), the `what` gap might actually be about the nature of the incident (fraud/theft/etc). But the connection is a better \"ambiguity\" check. I'll stick to the connection being an ambiguity in the overall case.\n\n    Actually, the `what` key is for \"what happened\". If the user wants to know \"what happened\", and we have two disjointed events, the question is \"what is the relationship\". I'll use the key `what` for the relationship/nature.\n\n    Let's try to be very precise.\n    G-01: `who_responsible` -> EXPLICITLY_UNKNOWN. \"Who is responsible for the financial loss and the car theft?\"\n    G-02: `how` -> EXPLICITLY_UNKNOWN. \"How were the funds transferred and the car stolen?\"\n    G-03: `what` -> AMBIGUOUS. \"What is the relationship between the bank transfer loss and the car theft?\"\n    G-04: `when` -> AMBIGUOUS. \"What was the date of the email sent and the car theft?\"\n    G-05: `where` -> EXPLICITLY_UNKNOWN. \"Where did these incidents occur?\"\n    G-06: `why` -> EXPLICITLY_UNKNOWN. \"What was the motive for these incidents?\"\n\n    *Wait*, is `when` a gap for the transfer? A-02 says \"At 12 May 2026...\". So that's known. Only the theft/email is missing a date.\n\n    One last check on `how_much`. The instruction \"Unchecked or unsupported projections are omitted\" is key. The 52,000 is a projection. I will not use it. The summary will only use 25,000.\n\n    *Writing the JSON.*",
+            "signature": ""
+          },
+          {
+            "type": "text",
+            "text": "{\n  \"version\": \"case_analysis_trace_v1\",\n  \"summary\": \"Jane Smith reported an incident [A-01]. On 12 May 2026, the bank approved a transfer for her [A-02], which resulted in a loss of 25,000 baht [A-03]. Alex Jones is a witness who sent an email at 16:00 [A-04], and his car was also stolen [A-04].\",\n  \"gaps\": [\n    {\n      \"gap_id\": \"G-01\",\n      \"gap_key\": \"who_responsible\",\n      \"topic\": \"responsible party\",\n      \"status\": \"EXPLICITLY_UNKNOWN\",\n      \"description\": \"It is unknown who is responsible for the financial loss and the car theft.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The claims do not identify a perpetrator.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"Who is responsible for the financial loss and the car theft?\"\n    },\n    {\n      \"gap_id\": \"G-02\",\n      \"gap_key\": \"how\",\n      \"topic\": \"method of incident\",\n      \"status\": \"EXPLICITLY_UNKNOWN\",\n      \"description\": \"The method used to facilitate the transfer and the car theft is not described.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The mechanism of the theft and transfer is not provided.\",\n      \"priority\": \"high\",\n      \"askable\": true,\n      \"clarification_question\": \"How were the funds transferred and the car stolen?\"\n    },\n    {\n      \"gap_id\": \"G-03\",\n      \"gap_key\": \"what\",\n      \"topic\": \"incident relationship\",\n      \"status\": \"AMBIGUOUS\",\n      \"description\": \"It is unclear if the bank transfer loss and the car theft are related events.\",\n      \"affected_claim_ids\": [\n        \"A-02\",\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"The claims describe two separate events without establishing a link.\",\n      \"priority\": \"medium\",\n      \"askable\": true,\n      \"clarification_question\": \"Are the bank transfer loss and the car theft part of the same incident?\"\n    },\n    {\n      \"gap_id\": \"G-04\",\n      \"gap_key\": \"when\",\n      \"topic\": \"date of events\",\n      \"status\": \"AMBIGUOUS\",\n      \"description\": \"The date for the email sent by Alex Jones and the car theft is unknown.\",\n      \"affected_claim_ids\": [\n        \"A-04\"\n      ],\n      \"reason\": \"Only a time (16:00) is provided, but no date is specified for these events.\",\n      \"priority\": \"medium\",\n      \"askable\": true,\n      \"clarification_question\": \"On what date did the email be sent and the car theft occur?\"\n    },\n    {\n      \"gap_id\": \"G-05\",\n      \"gap_key\": \"where\",\n      \"topic\": \"location\",\n      \"status\": \"EXPLICITLY_UNKNOWN\",\n      \"description\": \"The location of the incidents is not mentioned.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"No geographic or digital location is provided.\",\n      \"priority\": \"low\",\n      \"askable\": true,\n      \"clarification_question\": \"Where did these incidents take place?\"\n    },\n    {\n      \"gap_id\": \"G-06\",\n      \"gap_key\": \"why\",\n      \"topic\": \"motive\",\n      \"status\": \"EXPLICITLY_UNKNOWN\",\n      \"description\": \"The motive behind the financial loss and the car theft is unknown.\",\n      \"affected_claim_ids\": [\n        \"A-03\",\n        \"A-04\"\n      ],\n      \"reason\": \"There is no indication of the purpose or motive.\",\n      \"priority\": \"low\",\n      \"askable\": true,\n      \"clarification_question\": \"What was the motive for these actions?\"\n    }\n  ],\n  \"mitre_associations\": []\n}",
+            "citations": []
+          }
+        ],
+        "model": "google/gemma-4-26b-a4b-it",
+        "stop_reason": "end_turn",
+        "stop_details": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 2539,
+          "output_tokens": 5632,
+          "output_tokens_details": {
+            "thinking_tokens": 4577
+          },
+          "cache_creation_input_tokens": null,
+          "cache_read_input_tokens": 0,
+          "cache_creation": null,
+          "inference_geo": null,
+          "server_tool_use": null,
+          "service_tier": null,
+          "speed": "standard",
+          "cost": 0.00191811,
+          "is_byok": false,
+          "cost_details": {
+            "upstream_inference_cost": 0.00191811,
+            "upstream_inference_prompt_cost": 0.00022851,
+            "upstream_inference_completions_cost": 0.0016896
+          }
+        },
+        "context_management": null,
+        "provider": "NextBit"
+      }
+    }
+  ],
+  "calls": [
+    {
+      "stage": "projection_eval_05_no_validation",
+      "model": "google/gemma-4-26b-a4b-it",
+      "estimated_input_tokens": 2999,
+      "status": "completed",
+      "input_tokens": 2539,
+      "output_tokens": 5632,
+      "thinking_tokens": 4577,
+      "elapsed_ms": 57282
+    }
+  ]
+}

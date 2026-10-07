@@ -86,4 +86,28 @@ async def add_case_document(
         )
 
 
+@document_router.post(
+    "/documents/{document_id}/reingest", response_model=CaseSourceRead
+)
+async def reingest_case_document(
+    case_id: UUID,
+    document_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    service = build_document_ingestion_service()
+    try:
+        document = await SourceService(db).document_content(case_id, document_id, user.id)
+        ingested = await service.ingest(document.content_bytes, document.filename)
+    finally:
+        await service.aclose()
+    async with db.begin():
+        return await SourceService(db).update_document_extraction(
+            case_id=case_id,
+            user_id=user.id,
+            document_id=document_id,
+            ingested=ingested,
+        )
+
+
 __all__ = ["document_router", "router"]

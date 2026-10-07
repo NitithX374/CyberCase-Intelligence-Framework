@@ -11,9 +11,14 @@ Claims:
 - Use sequential claim IDs A-01 through A-64 and write claim text in response_language.
 - Each claim expresses one coherent factual proposition, with enough context to be
   understood independently. Avoid duplicates and excessive fragmentation.
-- Preserve material attribution, uncertainty, conflicts, dates, quantities and OCR
+- Preserve explicit names, roles, relationships, material attribution, uncertainty,
+  conflicts, dates, quantities and OCR
   uncertainty. Keep who reported, alleged, observed, recorded or concluded something
   whenever that distinction affects its meaning.
+- Keep explicitly stated participant roles in contextual claims; do not drop a role
+  to shorten an event. Actions alone do not establish a participant's role.
+- If a person reports what a message said, preserve that person's attribution;
+  do not assert the message's content independently of that report.
 - If a source says "the complainant stated that John sent the email", preserve that
   attribution rather than asserting independently that John sent it.
 - Do not strengthen allegations, suspicions or possibilities into established facts,
@@ -25,11 +30,15 @@ Claims:
 
 Source references:
 - Every claim must select supplied source_id and evidence_unit_ids exactly as shown.
+- Unit IDs such as U001 are local to their source_id. Always select the matching
+  source_id; U001 in one source is different from U001 in another source.
 - A claim may combine several nearby units or several sources when they collectively
   support all material content. Put each source's units in its own citation.
 - Select units that support attribution, dates, quantities and qualifications as well
   as the main proposition. A valid unit ID alone does not establish semantic support.
   If the sources support only part of a possible claim, state only that part.
+- When expanding a pronoun or relative date such as "that day", also select the unit
+  that establishes its referent or date.
 - Link contradicting units separately when present.
 - Do not reproduce source text as evidence or generate exact quotations. The backend
   owns original text, offsets, hashes, page information, filenames and provenance.
@@ -48,7 +57,7 @@ READING_JSON_FORMAT = """
 Output format:
 {"version": "case_analysis_trace_v1", "claims": [
   {"claim_id": "A-01", "claim_type": "reported", "text": "...", "epistemic_status": "reported",
-   "supporting_citations": [{"source_id": "SRC-1", "evidence_unit_ids": ["COPY_A_SUPPLIED_UNIT_ID"]}],
+   "supporting_citations": [{"source_id": "SRC-1", "evidence_unit_ids": ["U001"]}],
    "contradicting_citations": []}
 ]}
 - claim_type: "reported" or "unknown".

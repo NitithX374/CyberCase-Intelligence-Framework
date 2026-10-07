@@ -1,0 +1,148 @@
+{
+  "schema_version": "ai-research-writing/citation-requests-v1",
+  "entries": [
+    {
+      "key": "deepfaith2026",
+      "identifier": "doi:10.48550/arxiv.2607.24348",
+      "claim_support": [
+        {
+          "claim": "A provenance-graph APT reporting pipeline includes evidence-conditioned generation and post-hoc faithfulness rejection; it does not establish narrative-case quote binding.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Sections V-D/VII-C/VIII-A, PDF pp5-7; Table II p8. F=.92 versus .68 and without verification .86; claim/fact matching implementation unspecified; self-built scenarios.",
+          "source": "https://arxiv.org/pdf/2607.24348"
+        }
+      ]
+    },
+    {
+      "key": "cadet2026",
+      "identifier": "doi:10.1145/3786335.3813136",
+      "claim_support": [
+        {
+          "claim": "Retrieval-augmented incident answering uses telemetry, source-file attribution and mixed expert/manual reference indicators, with same-model RAG controls.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "arXiv2603.18196v3, Sections3-6 and AppendicesH-I, pp6-8/20-21. Table1:17 scenarios,129 questions,218 indicators,Claude94%recall; raw baseline limited to .6-4.3%logs.",
+          "source": "https://arxiv.org/pdf/2603.18196"
+        }
+      ]
+    },
+    {
+      "key": "jang2026",
+      "identifier": "doi:10.3390/electronics15132949",
+      "claim_support": [
+        {
+          "claim": "Telemetry orchestration combines anchor verification and a learned factuality classifier; component ablations use the same distilled student on author-generated scenarios.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Sections3.3/4.4 pp12/16, Table13 p18: full accuracy88.4%, noagent74.2%; full reported hallucination6.2%, noverification14.1%. Data Availability p24:processed data on request.",
+          "source": "https://mdpi-res.com/d_attachment/electronics/electronics-15-02949/article_deploy/electronics-15-02949.pdf"
+        }
+      ]
+    },
+    {
+      "key": "chou2026",
+      "identifier": "doi:10.3390/jsan15020032",
+      "claim_support": [
+        {
+          "claim": "Numeric-flow agentic reporting uses SHAP and retrieval, and evaluates semantic faithfulness with an LLM judge rather than independent report-fact labels.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Sections3.7.2/4.3 pp12-14/23, Table7 p23:176/200 reports,groundedness1.0000,faithfulness.6391. Section4.6 pp29-30:controlled component ablations future work.",
+          "source": "https://mdpi-res.com/d_attachment/jsan/jsan-15-00032/article_deploy/jsan-15-00032.pdf"
+        }
+      ]
+    },
+    {
+      "key": "wen2026",
+      "identifier": "doi:10.48550/arxiv.2607.07751",
+      "claim_support": [
+        {
+          "claim": "Victim-narrative fraud analysis requests supporting quotes; bulk labels include LLM outputs, but 228 cases receive independent dual human annotation.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "SectionIV-F and TableV p5:10994 narratives,228 manually annotated cases,H-Hkappa.68,LLM-H.69; AppendixA p10 exactquote request, no deterministic occurrence checker stated.",
+          "source": "https://arxiv.org/pdf/2607.07751"
+        }
+      ]
+    },
+    {
+      "key": "lu2024raee",
+      "identifier": "doi:10.48550/arxiv.2410.09418",
+      "claim_support": [
+        {
+          "claim": "RAEE re-evaluates event extraction, including CASIE, with LLM semantic judges and role/event-aware criteria; exact and semantic scores measure different things.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Table1 p4 human meta-evaluation800pieces; Table4 p7 CASIE PAIEAC-F1exact64.00 versus semantic87.78; Appendix pp16-17 role/event compatibility. Preprintv2March2025.",
+          "source": "https://arxiv.org/pdf/2410.09418"
+        }
+      ]
+    },
+    {
+      "key": "guo2026aec",
+      "identifier": "doi:10.1609/aaai.v40i37.40346",
+      "claim_support": [
+        {
+          "claim": "AEC evaluates same-backbone workflow baselines on human event benchmarks including CASIE, so narrative input plus matched workflow plus human gold is prior art.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "SectionExperimentalSetup pp4-5/Table1 p5/Table2 p6: CASIE50instances,3runs; 8BDirectEI47.6/AEC55.7;70BDecomposeAC31.9/AEC33.9; adapted baselines share Verification; not a report-fidelity evaluation.",
+          "source": "https://ojs.aaai.org/index.php/AAAI/article/download/40346/44307"
+        }
+      ]
+    },
+    {
+      "key": "shiri2024",
+      "identifier": "doi:10.23919/FUSION59988.2024.10706385",
+      "claim_support": [
+        {
+          "claim": "Schema-aware event extraction compares a direct core with decomposed ED/EAE under the same GPT3.5, ACE05 data and five-shot retrieval setup.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "arXiv2406.01045v1 SectionVI-1 pp6-7/TableII p7:ACEArg-C45.43 to50.07,Trigger-C69.19 to74.55; ACE/WikiEventshumanlabels but Maritime synthetic; no quote Binder.",
+          "source": "https://arxiv.org/pdf/2406.01045"
+        }
+      ]
+    },
+    {
+      "key": "zhang2025quotetuning",
+      "identifier": "doi:10.18653/v1/2025.naacl-long.191",
+      "claim_support": [
+        {
+          "claim": "Quote-Tuning optimizes quoted corpus overlap using approximate Bloom-filter ngram membership, without establishing claim entailment or source-specific full-quote checking.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Section2 p2,Table2 p5:NaturalQuestions QUIP34.9 to54.5;AppendixC p16 TruthfulQA usesGPTjudges. Full publisherPDF including supplement read.",
+          "source": "https://aclanthology.org/2025.naacl-long.191.pdf"
+        }
+      ]
+    },
+    {
+      "key": "zhang2026construction",
+      "identifier": "doi:10.48550/arxiv.2609.15964",
+      "claim_support": [
+        {
+          "claim": "Clinical verbatim-citation evaluation separates deterministic exact/normalized/elided source occurrence from semantic support assessed by an LLM judge.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Section3.2 pp3-4/AppendixA.6 p13;222questions/12models;Table1 p5Opus598.0%claimswithverifiedcitation vs37.1%fullysupported;no workflowablation inDiscussionp7. Preprintv2Sept17.",
+          "source": "https://arxiv.org/pdf/2609.15964"
+        }
+      ]
+    },
+    {
+      "key": "dehing2026",
+      "identifier": "doi:10.1145/3785318.3785330",
+      "claim_support": [
+        {
+          "claim": "Two-stage forensic chat reporting checks trace-ID occurrence and measures timeline omissions against a Gemini-generated reference; it does not use independent human gold or deterministic report rendering.",
+          "relation": "direct",
+          "status": "verified",
+          "evidence": "Author manuscript10pages, Sections3.2/4.5 pp3/5-6 and Tables3-4 pp7-8. Gemini reference14IDs;staged13,one missing; Section4.5 says no manual correction,Section5 describes validation against case facts; evaluation LLM-assisted with manualchecks.",
+          "source": "https://raw.githubusercontent.com/NetherlandsForensicInstitute/local-llm-chat-report-benchmark/main/Paper.pdf"
+        }
+      ]
+    }
+  ]
+}

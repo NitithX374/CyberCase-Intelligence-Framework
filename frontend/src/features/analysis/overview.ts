@@ -150,31 +150,25 @@ export function buildCaseOverview(
       affectedFindings: affected(gap.affected_claim_ids),
     })),
     parties: (trace.involved_parties ?? []).map(
-      ({ name, role, claim_ids, support, projection_grounding, field_spans }) => ({
+      ({ name, role, claim_ids, support, projection_grounding }) => ({
         name,
         role: role ?? null,
         ...backing(claim_ids),
-        projectionGrounding: projection_grounding,
-        fieldSpans: field_spans,
         supportNote: projectionNote(support, projection_grounding, incidentSummary),
       }),
     ),
     timeline: (trace.timeline ?? []).map(
-      ({ time, event, claim_ids, support, projection_grounding, field_spans }) => ({
-        time,
+      ({ time, event, claim_ids, support, projection_grounding }) => ({
+        time: time ?? null,
         event,
         ...backing(claim_ids),
-        projectionGrounding: projection_grounding,
-        fieldSpans: field_spans,
         supportNote: projectionNote(support, projection_grounding, incidentSummary),
       }),
     ),
     impacts: (trace.impacts ?? []).map(
-      ({ description, claim_ids, support, projection_grounding, field_spans }) => ({
+      ({ description, claim_ids, support, projection_grounding }) => ({
         description,
         ...backing(claim_ids),
-        projectionGrounding: projection_grounding,
-        fieldSpans: field_spans,
         supportNote: projectionNote(support, projection_grounding, incidentSummary),
       }),
     ),

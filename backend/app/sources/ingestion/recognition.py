@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 import tempfile
 from dataclasses import dataclass
@@ -14,6 +15,10 @@ from app.sources.ingestion.contracts import (
     RecognitionTimeoutError,
 )
 from app.sources.ingestion.text import strip_unstorable
+
+logger = logging.getLogger(__name__)
+
+TRANSIENT_STATUSES = (408, 429, 500, 502, 503, 504)
 
 
 @dataclass(frozen=True)
@@ -46,6 +51,8 @@ class TyphoonRecognizerConfig:
     model: str
     timeout_seconds: float
     target_image_dimension: int
+    max_retries: int = 3
+    retry_delay_seconds: float = 2.0
 
 
 def prepare_messages(image_bytes: bytes, target_image_dimension: int):
@@ -142,15 +149,70 @@ class TyphoonDocumentRecognizer:
         endpoint = f"{self._config.base_url.rstrip('/')}/chat/completions"
         headers = {"Authorization": f"Bearer {self._config.api_key}"}
         client = self._get_client()
-        try:
-            response = await client.post(endpoint, headers=headers, json=payload)
-            response.raise_for_status()
-            return response.json()
-        except httpx.TimeoutException as error:
-            raise RecognitionTimeoutError("Typhoon OCR timed out.") from error
-        except httpx.HTTPStatusError as error:
-            raise RecognitionProviderError(
-                f"Typhoon OCR returned HTTP {error.response.status_code}."
-            ) from error
-        except (httpx.RequestError, ValueError) as error:
-            raise RecognitionProviderError("Typhoon OCR could not be reached.") from error
+
+        max_attempts = max(1, self._config.max_retries)
+        last_error: Exception | None = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = await client.post(endpoint, headers=headers, json=payload)
+                if response.status_code in TRANSIENT_STATUSES and attempt < max_attempts:
+                    delay = self._config.retry_delay_seconds * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Typhoon OCR attempt %d/%d returned HTTP %d, retrying in %.1fs...",
+                        attempt,
+                        max_attempts,
+                        response.status_code,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                response.raise_for_status()
+                return response.json()
+            except httpx.TimeoutException as error:
+                last_error = error
+                if attempt < max_attempts:
+                    delay = self._config.retry_delay_seconds * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Typhoon OCR attempt %d/%d timed out, retrying in %.1fs...",
+                        attempt,
+                        max_attempts,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise RecognitionTimeoutError(
+                    f"Typhoon OCR timed out after {max_attempts} attempts."
+                ) from error
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code in TRANSIENT_STATUSES and attempt < max_attempts:
+                    delay = self._config.retry_delay_seconds * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Typhoon OCR attempt %d/%d returned HTTP %d, retrying in %.1fs...",
+                        attempt,
+                        max_attempts,
+                        error.response.status_code,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise RecognitionProviderError(
+                    f"Typhoon OCR returned HTTP {error.response.status_code}."
+                ) from error
+            except (httpx.RequestError, ValueError) as error:
+                last_error = error
+                if attempt < max_attempts:
+                    delay = self._config.retry_delay_seconds * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Typhoon OCR attempt %d/%d network error (%r), retrying in %.1fs...",
+                        attempt,
+                        max_attempts,
+                        error,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise RecognitionProviderError("Typhoon OCR could not be reached.") from error
+
+        if last_error:
+            raise RecognitionProviderError(f"Typhoon OCR failed: {last_error}") from last_error

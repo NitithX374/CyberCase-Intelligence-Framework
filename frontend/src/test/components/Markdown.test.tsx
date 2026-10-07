@@ -47,4 +47,57 @@ describe("Markdown", () => {
     expect(screen.getByText("finding").tagName).toBe("STRONG");
     expect(screen.getByText("code").tagName).toBe("CODE");
   });
+
+  it("does not render raw HTML elements by default", () => {
+    const { container } = render(
+      <Markdown content='Hello <button id="unsafe-btn">Click me</button>' />,
+    );
+
+    expect(container.querySelector("#unsafe-btn")).toBeNull();
+    expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("renders embedded HTML tables into structured table elements when allowHtml is enabled", () => {
+    const { container } = render(
+      <Markdown
+        allowHtml
+        content={
+          "## Header\n<table><tr><td>ครั้งที่ ๑</td><td>วันที่ ๑๐ ก.พ.</td></tr></table>"
+        }
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Header");
+    const table = container.querySelector("table");
+    expect(table).not.toBeNull();
+    const cells = container.querySelectorAll("td");
+    expect(cells).toHaveLength(2);
+    expect(cells[0]).toHaveTextContent("ครั้งที่ ๑");
+    expect(cells[1]).toHaveTextContent("วันที่ ๑๐ ก.พ.");
+  });
+
+  it("handles broken HTML tags gracefully without rendering raw markup tags when allowHtml is enabled", () => {
+    const { container } = render(
+      <Markdown allowHtml content="ขึ้น</td><td> ประกันส่งตัว</td></tr><tr><td> ผัดฟ้อง</td>" />,
+    );
+
+    expect(container.textContent).toContain("ขึ้น");
+    expect(container.textContent).toContain("ประกันส่งตัว");
+    expect(container.textContent).toContain("ผัดฟ้อง");
+    expect(container.textContent).not.toContain("</td>");
+    expect(container.textContent).not.toContain("</tr>");
+  });
+
+  it("suppresses scripts and unsafe javascript links even when allowHtml is enabled", () => {
+    const { container } = render(
+      <Markdown
+        allowHtml
+        content={'<script>window.pwned=true</script><a href="javascript:alert(1)">Click</a>'}
+      />,
+    );
+
+    expect(container.querySelector("script")).toBeNull();
+    const link = screen.getByText("Click");
+    expect(link.getAttribute("href")).toBeNull();
+  });
 });

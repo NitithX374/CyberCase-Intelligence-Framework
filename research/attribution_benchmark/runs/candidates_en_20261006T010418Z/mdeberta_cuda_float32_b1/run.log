@@ -1,0 +1,51 @@
+Run directory: F:\Cybercase Framework\research\attribution_benchmark\runs\candidates_en_20261006T010418Z\mdeberta_cuda_float32_b1
+{"model_loaded": {"key": "mdeberta", "model": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7", "revision": "b5113eb38ab63efdd7f280f8c144ea8b13f978ce", "adapter": "nli", "language": "multilingual including Thai", "device": "cuda", "dtype": "torch.float32", "batch_size": 1, "max_length": 512, "labels": ["entailment", "neutral", "contradiction"], "supported_index": 0, "reference_separator": "\n\n", "input_policy": "original references concatenated; right evidence truncation; entire claim/prompt preserved", "chunking": "none", "parameters": 278811651, "torch_threads": 4, "tf32": false, "attention_implementation": "eager", "gpu": "NVIDIA GeForce GTX 1650", "versions": {"torch": "2.6.0+cu124", "transformers": "5.15.1", "tokenizers": "0.22.2", "scikit-learn": "1.9.0"}, "class_score_kind": "native_classification_logits"}, "load_seconds": 5.16069280001102}
+{"preflight": {"dev": {"units": 1198, "truncated": 195, "max_claim_tokens": 102, "max_prompt_tokens": 0}, "test": {"units": 1610, "truncated": 324, "max_claim_tokens": 148, "max_prompt_tokens": 0}, "test_ood": {"units": 1686, "truncated": 160, "max_claim_tokens": 269, "max_prompt_tokens": 0}}}
+mdeberta/dev: 100/1198, 19.2s, 5.22 units/s
+mdeberta/dev: 200/1198, 28.5s, 7.03 units/s
+mdeberta/dev: 300/1198, 34.9s, 8.60 units/s
+mdeberta/dev: 400/1198, 41.4s, 9.66 units/s
+mdeberta/dev: 500/1198, 47.5s, 10.53 units/s
+mdeberta/dev: 600/1198, 53.4s, 11.24 units/s
+mdeberta/dev: 700/1198, 57.8s, 12.12 units/s
+mdeberta/dev: 800/1198, 60.6s, 13.20 units/s
+mdeberta/dev: 900/1198, 63.6s, 14.14 units/s
+mdeberta/dev: 1000/1198, 68.2s, 14.65 units/s
+mdeberta/dev: 1100/1198, 73.4s, 14.98 units/s
+mdeberta/dev: 1198/1198, 79.4s, 15.10 units/s
+{"frozen_threshold": 0.15, "dev_mean_source_macro_f1": 0.6377825588902124}
+mdeberta/test: 100/1610, 4.3s, 23.13 units/s
+mdeberta/test: 200/1610, 8.7s, 22.97 units/s
+mdeberta/test: 300/1610, 17.0s, 17.70 units/s
+mdeberta/test: 400/1610, 27.1s, 14.77 units/s
+mdeberta/test: 500/1610, 34.2s, 14.64 units/s
+mdeberta/test: 600/1610, 41.5s, 14.47 units/s
+mdeberta/test: 700/1610, 49.0s, 14.29 units/s
+mdeberta/test: 800/1610, 55.8s, 14.33 units/s
+mdeberta/test: 900/1610, 62.6s, 14.37 units/s
+mdeberta/test: 1000/1610, 69.5s, 14.38 units/s
+mdeberta/test: 1100/1610, 72.8s, 15.10 units/s
+mdeberta/test: 1200/1610, 75.9s, 15.81 units/s
+mdeberta/test: 1300/1610, 79.2s, 16.41 units/s
+mdeberta/test: 1400/1610, 83.8s, 16.71 units/s
+mdeberta/test: 1500/1610, 89.2s, 16.82 units/s
+mdeberta/test: 1600/1610, 95.2s, 16.80 units/s
+mdeberta/test: 1610/1610, 95.8s, 16.80 units/s
+mdeberta/test_ood: 100/1686, 3.8s, 26.33 units/s
+mdeberta/test_ood: 200/1686, 8.4s, 23.85 units/s
+mdeberta/test_ood: 300/1686, 14.4s, 20.77 units/s
+mdeberta/test_ood: 400/1686, 20.6s, 19.42 units/s
+mdeberta/test_ood: 500/1686, 26.2s, 19.10 units/s
+mdeberta/test_ood: 600/1686, 33.4s, 17.97 units/s
+mdeberta/test_ood: 700/1686, 39.8s, 17.59 units/s
+mdeberta/test_ood: 800/1686, 45.6s, 17.54 units/s
+mdeberta/test_ood: 900/1686, 51.2s, 17.57 units/s
+mdeberta/test_ood: 1000/1686, 56.5s, 17.69 units/s
+mdeberta/test_ood: 1100/1686, 62.0s, 17.75 units/s
+mdeberta/test_ood: 1200/1686, 68.3s, 17.57 units/s
+mdeberta/test_ood: 1300/1686, 73.7s, 17.65 units/s
+mdeberta/test_ood: 1400/1686, 79.1s, 17.71 units/s
+mdeberta/test_ood: 1500/1686, 84.7s, 17.70 units/s
+mdeberta/test_ood: 1600/1686, 91.2s, 17.54 units/s
+mdeberta/test_ood: 1686/1686, 97.1s, 17.37 units/s
+{"complete": "F:\\Cybercase Framework\\research\\attribution_benchmark\\runs\\candidates_en_20261006T010418Z\\mdeberta_cuda_float32_b1", "primary": {"test": 0.6435557177015466, "test_ood": 0.6987072025953777}}
