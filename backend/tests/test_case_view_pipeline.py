@@ -100,12 +100,14 @@ async def test_bound_whole_case_same_claim_set_concurrent_views_and_judgement(
     trace = (await bind_to_case(data, artifacts)).trace
     assert requests == ["case_reading", "case_judgement"]
     assert extraction_input == judgement_input
-    assert len(extraction_input) == 4
+    assert len(extraction_input) == 3
     assert trace.claims[2].supporting_source_ids == ["QA-03"]
     assert trace.claims[3].epistemic_status == "not_confirmed"
+    assert trace.claims[3].semantic_grounding.verdict == "unassessed"
+    assert trace.grounding.claims_withheld_from_judgement == 1
     assert trace.grounding.evidence_ids_resolved == 3
     assert trace.summary_units[0].support == "bound"
-    assert trace.view_extraction.excluded_claim_ids == []
+    assert trace.view_extraction.excluded_claim_ids == ["A-04"]
     assert CaseAnalysisTrace.model_validate_json(trace.model_dump_json()) == trace
     if extraction_fails:
         assert trace.involved_parties == trace.timeline == trace.impacts == []
@@ -150,7 +152,7 @@ async def test_judgement_failure_cancels_outstanding_extraction_without_orphan_t
 def test_report_links_derived_views_to_claims_and_renders_null_times():
     from case_view_test_support import claim
 
-    from app.trace.view_fields import CaseViewExtraction
+    from app.trace.trace import CaseViewExtraction
 
     item = claim("John sent an email.")
     parties, timeline, impacts, _ = views.materialize_views(

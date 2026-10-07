@@ -12,7 +12,7 @@ from app.sources.ingestion.provenance import bind_exact_page_spans
 from app.sources.service import document_provenance
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseAnalysisGap, CaseSourceCitation
-from app.trace.quotes import find_aligned_quote, resolve_document_locator
+from app.trace.quotes import find_document_locator
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
 
 
@@ -80,20 +80,10 @@ def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_
     assert pages[0]["start_offset"] == 0
     assert pages[0]["end_offset"] == pages[1]["start_offset"]
     assert "text_sha256" not in pages[0]
-    context = [
-        {
-            "source_id": "s1",
-            "documents": [
-                {
-                    "document_id": "d1",
-                    "filename": "case.pdf",
-                    "page_spans": pages,
-                }
-            ],
-        }
-    ]
-    locator = resolve_document_locator("s1", "page\n\nsecond", content, context)
-    assert locator["page_numbers"] == [1, 2]
+    doc = {"document_id": "d1", "filename": "case.pdf", "page_spans": pages}
+    locator = find_document_locator(doc, content, [content.index("page\n\nsecond")], len("page\n\nsecond"))
+    assert locator is not None
+    assert locator[2] == (1, 2)
 
     repeated = "same\n\nsame"
     repeated_pages = bind_exact_page_spans(
@@ -105,24 +95,9 @@ def test_exact_page_spans_are_contiguous_and_fail_closed_for_repeated_or_edited_
         },
         repeated,
     )["pages"]
-    repeated_locator = resolve_document_locator(
-        "s1",
-        "same",
-        repeated,
-        [
-            {
-                "source_id": "s1",
-                "documents": [
-                    {"document_id": "d1", "filename": "case.pdf", "page_spans": repeated_pages}
-                ],
-            }
-        ],
-    )
-    assert repeated_locator["page_numbers"] == []
-    edited_locator = resolve_document_locator(
-        "s1", "second page", "edited page\n\nsecond page", context
-    )
-    assert edited_locator["page_numbers"] == []
+    doc_repeated = {"document_id": "d1", "filename": "case.pdf", "page_spans": repeated_pages}
+    assert find_document_locator(doc_repeated, repeated, [0, 6], 4) is None
+    assert find_document_locator(doc, "edited page\n\nsecond page", [13], 11) is None
 
 
 def test_case_claim_normalizes_c_and_claim_identifier_aliases():
@@ -449,99 +424,6 @@ def test_case_evidence_citation_normalizes_partial_document_locators():
     assert citation_complete.document_id == "doc-01"
     assert citation_complete.filename == "ลำดับ01 รายงานการสอบสวน.pdf"
     assert citation_complete.page_numbers == [1, 2]
-
-
-def test_find_aligned_quote_handles_markdown_and_whitespace():
-    content = 'Header\n\n**Witness** Statement\n\nThe witness saw "red car".'
-
-    def aligned(quote: str) -> list[str] | None:
-        spans = find_aligned_quote(content, quote)
-        return None if spans is None else [content[start:end] for start, end in spans]
-
-    assert aligned("Witness Statement") == ["**Witness** Statement"]
-    assert aligned('witness saw "red car"') == ['witness saw "red car"']
-    assert aligned("witness saw “red car”") == ['witness saw "red car"']
-    assert aligned("Nonexistent Statement") is None
-
-
-def test_resolve_case_trace_allows_same_page_multiple_occurrences():
-    content = "report\n\npage one fact repeated\n\nfact repeated"
-    provenance = bind_exact_page_spans(
-        {"pages": [{"page_number": 1, "merged_text": content}]}, content
-    )
-    claim = CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="Fact was reported.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        supporting_citations=[CaseSourceCitation(source_id="s1", exact_quote="fact repeated")],
-    )
-    source = CaseSourceItem(
-        source_id="s1",
-        source_kind="document",
-        text=content,
-        document_id="d1",
-        filename="report.pdf",
-        provenance={"pages": provenance["pages"]},
-    )
-    validated = resolve_case_trace(
-        _trace(claim, content),
-        CaseSourceBundle(revision=1, sources=(source,)),
-        [],
-    )
-    assert validated.claims[0].supporting_citations[0].page_numbers == [1]
-
-
-def test_resolve_case_trace_locates_each_piece_of_a_gapped_quote_on_its_own_page():
-    page_one = "Report of the incident.\nThe server was encrypted overnight."
-    page_two = "Recovery notes.\nThe backups were restored on Monday."
-    content = f"{page_one}\n\n{page_two}"
-    provenance = bind_exact_page_spans(
-        {
-            "pages": [
-                {"page_number": 1, "merged_text": page_one},
-                {"page_number": 2, "merged_text": page_two},
-            ]
-        },
-        content,
-    )
-    claim = CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text="The server was encrypted and later restored.",
-        epistemic_status="reported",
-        supporting_source_ids=["s1"],
-        supporting_citations=[
-            CaseSourceCitation(
-                source_id="s1",
-                exact_quote=(
-                    "The server was encrypted overnight. ... The backups were restored on Monday."
-                ),
-            )
-        ],
-    )
-    source = CaseSourceItem(
-        source_id="s1",
-        source_kind="document",
-        text=content,
-        document_id="d1",
-        filename="report.pdf",
-        provenance={"pages": provenance["pages"]},
-    )
-    validated = resolve_case_trace(
-        _trace(claim, content),
-        CaseSourceBundle(revision=1, sources=(source,)),
-        [],
-    )
-
-    assert [
-        (citation.exact_quote, citation.page_numbers)
-        for citation in validated.claims[0].supporting_citations
-    ] == [
-        ("The server was encrypted overnight.", [1]),
-        ("The backups were restored on Monday.", [2]),
-    ]
 
 
 def test_claim_reasoning_summary_empty_and_whitespace_normalized():

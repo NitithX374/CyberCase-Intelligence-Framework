@@ -5,8 +5,8 @@ from case_view_test_support import claim, reply, transfer_views
 from pydantic import ValidationError
 
 from app.analysis import views
-from app.analysis.view_prompt import CASE_VIEWS_SYSTEM_PROMPT
-from app.analysis.view_schema import DerivedCaseViewsReply
+from app.analysis.prompts import CASE_VIEWS_SYSTEM_PROMPT
+from app.analysis.views import DerivedCaseViewsReply
 from app.errors import CaseAnalysisFailure
 from app.llm.settings import AnalysisPipelineConfig
 

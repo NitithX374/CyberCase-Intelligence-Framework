@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import { quotedPassage } from "./quotedPassage";
-import type { QuoteContext, SourceMessageRef } from "./types";
+import type { SourceMessageRef } from "./types";
+import { SourcePassages } from "./SourcePassages";
 import { Icon } from "@/components/icons";
 import { Markdown } from "@/components/Markdown";
 
@@ -78,55 +78,11 @@ export function SourceDrawer({
           tabIndex={0}
           aria-label="Source text"
         >
-          {sourceRef.exactQuote && (
-            <Quoted
-              quote={sourceRef.exactQuote}
-              context={sourceRef.quoteContext}
-              label={sourceRef.quoteLabel ?? "Quoted"}
-              notes={[...(sourceRef.toleratedNotes ?? []), ...(sourceRef.reviewNotes ?? [])]}
-            />
-          )}
+          <SourcePassages sourceRef={sourceRef} />
           <SourceContent sourceRef={sourceRef} />
         </div>
       </div>
     </dialog>
-  );
-}
-
-function Quoted({
-  quote,
-  context,
-  label,
-  notes = [],
-}: {
-  quote: string;
-  context: QuoteContext | null;
-  label: string;
-  notes?: string[];
-}) {
-  const passage = quotedPassage(quote, context);
-  return (
-    <section className="mb-6 rounded-xl border border-line bg-surface-nested p-4">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</h3>
-      <p className="select-text text-[15px] leading-7 text-ink [overflow-wrap:anywhere]">
-        {passage.before}
-        {passage.before || passage.after ? (
-          <strong className="font-semibold bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded">
-            {passage.quote}
-          </strong>
-        ) : (
-          <mark className="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-semibold not-italic">
-            {passage.quote}
-          </mark>
-        )}
-        {passage.after}
-      </p>
-      {notes.map((note, index) => (
-        <p key={index} className="mt-2 text-xs text-ink-muted [overflow-wrap:anywhere]">
-          {note}
-        </p>
-      ))}
-    </section>
   );
 }
 
@@ -135,7 +91,8 @@ function highlightQuote(text: string, quote: string | null): string {
   const target = quote.trim();
   if (!target) return text;
 
-  const markOpen = '<mark class="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-medium">';
+  const markOpen =
+    '<mark class="bg-amber-200/60 dark:bg-amber-400/30 text-ink px-1 py-0.5 rounded font-medium">';
   const markClose = "</mark>";
 
   if (text.includes(target)) {

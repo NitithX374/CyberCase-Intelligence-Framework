@@ -10,7 +10,7 @@ interface ProvenancePage {
   end_offset: number;
 }
 
-export function formatPageReference(pageNumbers: number[]): string {
+function formatPageReference(pageNumbers: number[]): string {
   if (pageNumbers.length === 1) return `p. ${pageNumbers[0]}`;
   return `pp. ${formatPageList(pageNumbers)}`;
 }
@@ -92,7 +92,11 @@ export function passageRef(
   const source = sources.find((candidate) => candidate.id === sourceId);
   if (!source) return null;
   return {
-    ...sourceRef(source, { source_id: sourceId, exact_quote: passage }),
+    ...sourceRef(source, {
+      source_id: sourceId,
+      exact_quote: passage,
+      pointer_state: "unresolved",
+    }),
     quoteLabel,
   };
 }
@@ -129,6 +133,13 @@ function sourceRef(
     pageNumbers,
     sourcePages: pages,
     question: source.question,
+    ...(quote && citation
+      ? {
+          pointerState: citation.pointer_state ?? "legacy",
+          start: citation.start ?? null,
+          end: citation.end ?? null,
+        }
+      : {}),
     ...(quote && writtenText !== undefined && citation?.tolerated_differences?.length
       ? { toleratedNotes: toleratedNotes(citation.tolerated_differences, writtenText) }
       : {}),

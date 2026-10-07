@@ -41,8 +41,18 @@ New claim citations carry source-unit IDs, backend-resolved offsets and a
 quote navigation. Invalid IDs remain unresolved pointers. The compact analysis
 preparation panel shows finding/source coverage and useful failure notices.
 Internal Claim/unit IDs, model names, verifier diagnostics and timing counters
-are not displayed; internal IDs still drive navigation and Source addressing. New LLM extraction and Judgement run independently in parallel over the
-same canonical Claims. Details preserves Parties, Timeline and Impacts and their
+are not displayed; internal IDs still drive navigation and Source addressing.
+Each Finding shows saved supporting Source linkage separately from semantic
+support: direct, recovered, legacy and unresolved references. Duplicate references
+do not inflate these counts. Saved Claim-level NLI verdicts distinguish supported,
+not_supported and unassessed; no calibrated factual-confidence score is shown.
+Source chips group citations by Source/page while preserving every
+distinct cited span in the drawer, including separate occurrences of identical text.
+New LLM extraction and Judgement run independently in parallel over the
+same NLI-admitted Claims. All original Findings remain available for review with
+their saved `semantic_grounding` verdict; rejected/unassessed Findings are withheld
+from Judgement and new Views. Older saved results remain unassessed until reanalysis.
+Details preserves Parties, Timeline and Impacts and their
 links to Findings/full Claim context in a collapsed Related findings disclosure. Unknown role/time render as unspecified;
 new LLM rows have no fabricated offsets, confidence or semantic verdict. They are
 presentation views, not authoritative factual records and never Judgement inputs.

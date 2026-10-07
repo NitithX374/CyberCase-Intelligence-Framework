@@ -140,8 +140,7 @@ def test_the_judgement_still_receives_the_followup_history_and_the_technical_con
         {
             "qa_id": "QA-01",
             "gap_key": "how_much",
-            "question": "How much was asked?",
-            "answer": ANSWER,
+            "answered": True,
         }
     ]
     assert content["technical_context"] == {
@@ -231,7 +230,7 @@ def test_the_rest_of_the_judgement_prompt_is_unchanged():
     assert 'A claim whose epistemic_status is "not_confirmed"' in prompt
     assert "Keep it concise, readable, and complete." in prompt
     assert "Two supplied claims attributing the same event differently" in prompt
-    assert "A follow-up reply that declined or said nothing is known" in prompt
+    assert "Follow-up metadata identifies answered gaps, without raw questions or answers" in prompt
     assert "Prefer an empty association list over a weak or speculative mapping." in prompt
     assert "length" not in prompt.lower().replace("claim-based", "")
 

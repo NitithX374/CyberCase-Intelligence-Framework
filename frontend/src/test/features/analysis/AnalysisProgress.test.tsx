@@ -39,6 +39,7 @@ describe("the progress of a running analysis", () => {
       "Retrieving ATT&CK context0:00",
       "Reading case sources",
       "Linking findings to sources",
+      "Checking whether sources support the findings",
       "Starting case details preparation",
       "Preparing the summary and case details",
     ]);

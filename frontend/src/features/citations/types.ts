@@ -12,6 +12,21 @@ export interface SourceMessageRef {
   quoteLabel?: string;
   toleratedNotes?: string[];
   reviewNotes?: string[];
+  pointerState?: SourcePointerState;
+  start?: number | null;
+  end?: number | null;
+  passages?: CitedSourcePassage[];
+}
+
+export type SourcePointerState = "direct" | "recovered" | "unresolved" | "legacy";
+
+export interface CitedSourcePassage {
+  quote: string;
+  context: QuoteContext | null;
+  pointerState: SourcePointerState;
+  start: number | null;
+  end: number | null;
+  notes: string[];
 }
 
 export interface QuoteContext {

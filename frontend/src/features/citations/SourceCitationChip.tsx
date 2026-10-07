@@ -1,6 +1,7 @@
 "use client";
 
 import type { SourceMessageRef } from "./types";
+import { hasThai } from "@/lib/language";
 
 interface SourceCitationChipProps {
   sourceRef: SourceMessageRef;
@@ -22,7 +23,10 @@ export function SourceCitationChip({
   citationRole,
   onSelect,
 }: SourceCitationChipProps) {
-  const citationText = sourceRef.label;
+  const passageCount = sourceRef.passages?.length ?? 0;
+  const passageLabel = hasThai(sourceRef.exactQuote ?? sourceRef.label) ? "ข้อความ" : "passages";
+  const citationText =
+    passageCount > 1 ? `${sourceRef.label} · ${passageCount} ${passageLabel}` : sourceRef.label;
   const isConflicting = citationRole === "conflicting";
   const label = isConflicting ? `Conflicts with ${citationText}` : citationText;
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly the canonical Claims supplied to Judgement, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
+**CyberCase Intelligence Framework** provides whole-Case summarization and analysis, with conditional MITRE ATT&CK augmentation. The case owns multiple documents and narratives, the analysis, its conversation and reports. A cheap gap assessment can pause before expensive work. Otherwise Reading writes canonical claims only, selecting source-unit IDs; the backend derives source lists and resolves those IDs to original source spans. After binding, the pinned mDeBERTa checks complete Claims against their resolved supporting Source passages. Only entailment at or above the configurable threshold (default 0.8) reaches Judgement and the batched Parties/Timeline/Impacts extractor. Other Claims stay in Findings with their saved semantic verdict; verifier unavailability fails analysis, and zero admitted Claims produces an abstention without downstream model calls. Raw follow-up questions/answers are excluded from Judgement; QA IDs, gap keys and answered flags remain. One batched structured LLM call extracts Parties, Timeline and Impacts from exactly those admitted Claims, for display and reports. The two calls run independently in parallel; extractor failure records a warning and empty views without failing Judgement. Judgement receives claims, follow-up history and optional external technical context; extracted views never enter Judgement or chat as factual input. No projection-specific NLI checks run; historical saved views remain readable. Every summary sentence ends with supporting claim IDs. Reading uses prompt-described JSON, validated after decoding and retried at most once; other model calls retain JSON-schema grammar. There is no run row or queue. The existing agentic RAG pipeline supplies conditional external interpretation and never Case evidence. Reports are deterministic snapshots of stored analysis. [The grounding contract](docs/architecture/evidence-unit-grounding.md) records schemas, examples, state semantics and validation.
 
 ## Service Layout
 
@@ -104,7 +104,7 @@ Neo4j and Qdrant are cloud-hosted — no local containers for them.
 ### High-Level Stack
 - **Frontend**: Next.js 16.2.10 + React 19.2.4 + Tailwind CSS 4
 - **Backend API**: FastAPI + SQLAlchemy (async) + PostgreSQL — owns cases, sources, the analysis, the case conversation and the clarification policy; the analysis's technical-context step calls the RAG service via HTTPX. There are no runs, threads or queues: an analysis starts in the request that asked for it, and when that request streams its progress the analysis runs in a task of its own, which finishes and is stored even if the browser leaves
-- **RAG Engine**: LangGraph for orchestration (the agentic state machine) plus LangChain for the LLM and message abstractions (`langchain_core.messages`, `langchain_anthropic.ChatAnthropic`), hosted in `rag_service`. LangGraph is a separate library, not part of LangChain. No LCEL — the LCEL chain is evaluation-only (`pipeline/chain.py`)
+- **RAG Engine**: LangGraph for orchestration (the agentic state machine) plus LangChain for the LLM and message abstractions (`langchain_core.messages`, `langchain_anthropic.ChatAnthropic`), hosted in `rag_service`. LangGraph is a separate library, not part of LangChain. The obsolete LCEL chain is removed; the generation evaluator also uses `GraphRAGAgent`.
 - **Vector DB**: Qdrant (BGE-M3 embeddings, 1024-dim; FP16 on CUDA only)
 - **Graph DB**: Neo4j (MITRE ATT&CK STIX entities + relationships)
 - **LLMs**: one `CORE_LLM_PROVIDER` drives reasoning, decomposition and evaluation. Default is `openrouter` → `deepseek/deepseek-v4.1-flash`; set `CORE_LLM_PROVIDER=anthropic` for `claude-haiku-4-5`. The served pipeline is cloud-only
@@ -208,6 +208,8 @@ llm/                    calling a model
 trace/                  what the analysis, chat and reports share
   claims.py             claim fields/provider boundaries, gaps and follow-up
                         exchanges; reexports historical citation names
+  claim_validation.py   full Claim/Source NLI assessment, saved verdicts and
+                        admission counters; never truncates the pair
   citations.py          evidence references, resolved citations, invalid pointers
                         and legacy quote schemas; review flags are backend-only
   trace.py              claims-only Reader contracts and the stored trace;
@@ -308,11 +310,13 @@ analysis/               producing an analysis of a case; routes, schemas
   assess.py             the cheap gaps-only call that runs first
   write.py              write_trace: a claims-only reading call (selected Source
                         unit IDs; prompt JSON, no grammar), deterministic source
-                        binding (bound_claims),
+                        binding (bound_claims), Claim/Source NLI admission,
                         independent batched LLM views for display, concurrent
                         with a judgement call (summary, gaps, ATT&CK
                         associations) over the checked claims alone: no case
                         sources and no sentence around each quotation
+  claim_gate.py         worker-thread verification, admitted reading and final
+                        summary/gap/ATT&CK claim-ID checks
   language.py           which language to write in: Thai when any source has
                         a Thai character; a chat question in its own language
   progress.py           announce(step): the steps write, retrieve and the
@@ -442,11 +446,11 @@ all. `MITRE_GATE_MODE` picks between three gates, which live together in
 - If torch, transformers or the weights are missing, it records `SKIP` with `mitre_shadow_unavailable`, and the
   analysis carries on.
 - **Where it is on.**
-  - Nowhere by default: the code default is `off`, and compose passes `${MITRE_GATE_SHADOW:-off}`, so compose,
-    Railway and the tests leave it off.
-  - `MITRE_GATE_SHADOW=encoder` in the shell or in Doppler turns it on under compose with no rebuild: the backend
-    image still installs CPU torch and transformers from `backend/requirements-encoder.txt`, and compose still mounts
-    `backend/xlmr_ladder_best` read-only.
+  - Nowhere by default: the code default is `off`, and Compose, Railway and the tests leave it off.
+  - The default Compose setup uses the LLM gate without an encoder mount. To run the encoder or its shadow,
+    use an explicit Compose override that mounts `backend/xlmr_ladder_best` read-only at `/app/xlmr_ladder_best`
+    and supplies the appropriate `MITRE_GATE_MODE` or `MITRE_GATE_SHADOW`. CPU torch and transformers remain
+    installed for the active legacy NLI recovery path.
   - `tests/conftest.py` keeps it off whatever the local `.env` says.
 
 The `encoder` gate splits its input with PyThaiNLP `crfcut` (`trace/sentences.py`, which also cuts the sentence shown around a quotation);
@@ -471,14 +475,22 @@ The dedicated Reader contract contains `version` and `claims` only. Each claim c
 ### Claim views (backend)
 
 `analysis/views.py` makes one native-schema `case_views` call over exactly the
-canonical Claims supplied to Judgement. Each input contains only `claim_id` and
-`text`. No separate admission rule is added: Claims whose pointers could not be
-resolved retain their existing status and are included in both inputs. This is
-not claim-to-source semantic verification.
+NLI-admitted canonical Claims supplied to Judgement. Each input contains only
+`claim_id` and `text`. After binding, `analysis/claim_gate.py` checks complete
+Claims against all resolved supporting Source passages through
+`trace/claim_validation.py`. Only NLI entailment at or above
+`claim_support_threshold` (default 0.8) reaches either call. Rejected and
+unassessed Claims remain stored with `semantic_grounding` for review. Missing
+support, unresolved supporting pointers, declared conflicts, uncertain status
+and over-length input are withheld; no truncation is used. An unavailable
+verifier fails analysis. With no admitted Claims, analysis records abstention
+and skips both downstream calls. Grounding records counts, model, threshold,
+verifier usage and duration. This is textual-support screening, not source truth
+or a calibrated factual-confidence score; Thai coverage remains unmeasured.
 
 The extractor uses the configured analysis model and provider order, without
 thinking, with at most 4,096 output tokens and a 60-second overall deadline. It
-runs concurrently with Judgement after binding. Required nonempty `claim_ids`
+runs concurrently with Judgement after binding and Claim support validation. Required nonempty `claim_ids`
 link every view to its Claims. An item with any unknown ID is dropped and logged;
 invalid schema, transport failure or timeout records failed extraction and empty
 views while Judgement completes independently. A failed Judgement cancels the
@@ -496,7 +508,7 @@ snapshot. Reading an analysis or rendering a report makes no extraction call.
 There is no cross-analysis cache or new revision system. Historical extractor
 metadata, offsets and projection verdicts remain readable through generic records. Local model loaders,
 per-Claim inference, the provisioner and Compose sidecar/config/mount are removed;
-Torch/Transformers remain for the encoder gate and generic legacy NLI. The full
+Torch/Transformers remain for the encoder gate and pinned Claim/Source NLI. The full
 contract is in [Source grounding](docs/architecture/evidence-unit-grounding.md).
 
 ### Legacy Meaning Pointer (backend)
@@ -505,7 +517,7 @@ When a reported claim's legacy quotation is not located, or its Evidence Unit po
 
 The passage is shown under the not-confirmed claim only (the report's unverified quote, and the Findings row, with the words "found by meaning, not confirmed" and no score). It is never evidence: the claim stays `not_confirmed`, and the passage is in no support, grounding citation count, summary unit or model input.
 
-`QUOTE_MEANING_POINTER` (`on` by default, in code and compose) and `QUOTE_MEANING_POINTER_PATH` (default `nli_mdeberta`) configure it. The weights are copied from the local Hugging Face cache by `backend/scripts/copy_nli_weights.py` into `backend/nli_mdeberta/`, which is git-ignored and mounted read-only in compose, as `xlmr_ladder_best` is; nothing is downloaded. A missing model, missing libraries, a hash or label-order mismatch, or a failure while judging never stops the analysis: one warning is logged per process, the grounding report records `meaning_pointer_unavailable` with its reason, and the report says so. The grounding report also counts the citations eligible, attempted, produced (`citations_meaning_pointed`) and skipped. `tests/conftest.py` keeps the real model off and injects a fake; the real-model tests skip when the weights are absent.
+`QUOTE_MEANING_POINTER` (`on` by default, in code and Compose) and `QUOTE_MEANING_POINTER_PATH` (default `nli_mdeberta`, resolved under `/app` in the container) configure it. The weights are copied from the local Hugging Face cache by `backend/scripts/copy_nli_weights.py` into `backend/nli_mdeberta/`, which is git-ignored and mounted read-only in Compose; nothing is downloaded. A missing model, missing libraries, a hash or label-order mismatch, or a failure while judging never stops the analysis: one warning is logged per process, the grounding report records `meaning_pointer_unavailable` with its reason, and the report says so. The grounding report also counts the citations eligible, attempted, produced (`citations_meaning_pointed`) and skipped. `tests/conftest.py` keeps the real model off and injects a fake; the real-model tests skip when the weights are absent.
 
 ### Chat Clarification Boundary
 
@@ -529,14 +541,14 @@ The frontend loads and generates reports through the case-scoped report endpoint
 - **Embedding model**: `BAAI/bge-m3` (1024-dim; FP16 on CUDA only)
 - **Reranker**: `BAAI/bge-reranker-v2-m3` (multilingual incl. Thai)
 - **Core LLM**: `CORE_LLM_PROVIDER` (`openrouter` default → `deepseek/deepseek-v4.1-flash`, or `anthropic` → `claude-haiku-4-5`) — used for reasoning, decomposition and evaluation
-- **Single-call generation**: Thai answers are written in one call; the served agent has no translation stage. Reason-EN-then-translate survives only as an evaluation baseline (`pipeline/chain.py`, `evaluation/crosslingual_generation_benchmark.py`)
-- **`DUAL_QUERY_RETRIEVAL`**: read only by `pipeline/chain.py`, which is evaluation-only. The served agent does no input translation
+- **Single-call generation**: Thai answers are written in one call; the served agent has no translation stage. Reason-EN-then-translate survives only as an evaluation baseline (`evaluation/crosslingual_generation_benchmark.py`).
+- **`DUAL_QUERY_RETRIEVAL`**: applies to the exported offline `build_retrieval_queries` helper. The served agent does no input translation.
 - **RAGAS eval LLM**: `qwen/qwen-2.5-72b-instruct` via OpenRouter
 - **Local models (`evaluation/` only)**: Ollama `qwen2.5:7b` + `gemma3:4b`, `OLLAMA_BASE_URL` (default `http://localhost:11434`). Not reachable from the service
 - **Vector top-K**: 10, **Final top-K**: 5 (`FINAL_TOP_K` — graph seeds on the
   single-query path), **Graph expansion**: 1 hop, incoming + outgoing, batched
   into 3 Cypher statements per retrieval. There is no `GRAPH_DEPTH` setting;
-  `get_multi_hop_path()` (4 hops) is a standalone utility the pipeline never calls.
+  the unused multi-hop utility has been removed.
   Under `retrieve_multi_quota` the graph seed count is the per-query quota (5
   with `TECHNIQUE_POOL`, the default; 3 without), not `FINAL_TOP_K`, so a hit
   the quota drops cannot return as a subgraph
@@ -546,6 +558,7 @@ The frontend loads and generates reports through the case-scoped report endpoint
 - **Doppler** is used for secrets management (replaces `.env` files in deployed environments); local dev can use `.env` files
 - Backend runtime and online migrations read `POSTGRES_*`, or `DATABASE_URL`, which wins when set. The analysis's technical-context step reads `RAG_SERVICE_URL`; every backend model call reads `OPENROUTER_CYBERCASE`; OCR reads `TYPHOON_API_KEY`; a session cookie needs a `JWT_SECRET_KEY` of at least 32 characters. A chat answer never calls the RAG service. A reply that closes a round runs the analysis, and the analysis's technical-context step may call it. `CASE_ANALYSIS_MODEL` selects the model for every backend model call — the preflight, Main Case Analysis, its chat answers, and the LLM MITRE applicability gate; it accepts a registry alias or full OpenRouter ID and defaults to `deepseek/deepseek-v4.1-flash`. The backend calls OpenRouter only — there is no provider switch or provider fallback. `CASE_ANALYSIS_PROVIDERS` (comma-separated OpenRouter endpoint tags, e.g. `parasail/fp8,coreweave/fp8`) pins every backend model call to those endpoints in that order with `allow_fallbacks: false`; empty lets OpenRouter route, and the tags must serve the configured model. `CORE_LLM_PROVIDER` belongs to the RAG service alone. `MITRE_GATE_MODE` and `MITRE_GATE_MODEL_PATH` select the applicability gate, and `MITRE_GATE_SHADOW` runs the encoder beside it
 - RAG service reads `OPENROUTER_CYBERCASE` (or `ANTHROPIC_API_KEY` when `CORE_LLM_PROVIDER=anthropic`), `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `QDRANT_URL`/`QDRANT_API_KEY`, and `THANOY_API_URL`/`THANOY_API_KEY` for the legal lookup. `OPENROUTER_API_KEY` is read only by the RAGAS evaluation
+- Default Compose forwards the OpenRouter key. Selecting Anthropic requires an explicit environment override supplying `ANTHROPIC_API_KEY`; the provider implementation remains available. The RAG image includes its model registry and legal-reference client without requiring a source bind mount.
 - Deployment targets **Railway** platform via GitHub Actions in `.github/workflows/deploy.yml`
 
 ## Data Sources

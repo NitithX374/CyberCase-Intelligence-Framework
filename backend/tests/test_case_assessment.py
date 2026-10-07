@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 
-from app.analysis import assess as assess_module
-from app.analysis.assess import assess_case
+from app.analysis import pipeline as pipeline_module
+from app.analysis.pipeline import assess_case
 from app.analysis.prompts import (
     CASE_CHECKLIST,
+    CASE_JUDGEMENT_SYSTEM_PROMPT,
     GAP_IDENTIFICATION_INSTRUCTIONS,
     case_assessment_prompt,
-    case_system_prompt,
 )
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
@@ -17,11 +17,11 @@ from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
 
 def test_assessment_and_full_analysis_share_gap_identity_instructions():
     assert GAP_IDENTIFICATION_INSTRUCTIONS in case_assessment_prompt()
-    assert GAP_IDENTIFICATION_INSTRUCTIONS in case_system_prompt()
+    assert GAP_IDENTIFICATION_INSTRUCTIONS in CASE_JUDGEMENT_SYSTEM_PROMPT
 
 
 def test_both_prompts_check_the_case_against_every_checklist_key():
-    for prompt in (case_assessment_prompt(), case_system_prompt()):
+    for prompt in (case_assessment_prompt(), CASE_JUDGEMENT_SYSTEM_PROMPT):
         for key, meaning in CASE_CHECKLIST.items():
             assert f"{key}: {meaning}" in prompt
 
@@ -33,7 +33,7 @@ def test_assessment_uses_its_own_stage_and_only_triage_inputs(monkeypatch):
         captured.update(kwargs)
         return CaseAssessmentTrace(gaps=[])
 
-    monkeypatch.setattr(assess_module, "request_stage", request_stage)
+    monkeypatch.setattr(pipeline_module, "request_stage", request_stage)
     source = CaseSourceItem(
         source_id="S-01",
         source_kind="narrative",

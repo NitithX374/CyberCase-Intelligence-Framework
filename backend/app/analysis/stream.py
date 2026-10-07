@@ -4,17 +4,38 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.analysis.progress import listening
 from app.errors import AppError
 
 logger = logging.getLogger(__name__)
+
+Listener = Callable[[str], None]
+
+_listener: ContextVar[Listener | None] = ContextVar("analysis_progress", default=None)
+
+
+def announce(step: str) -> None:
+    listener = _listener.get()
+    if listener is not None:
+        listener(step)
+
+
+@contextmanager
+def listening(listener: Listener) -> Iterator[None]:
+    token = _listener.set(listener)
+    try:
+        yield
+    finally:
+        _listener.reset(token)
+
 
 HEARTBEAT_SECONDS = 15.0
 STREAMED_RESPONSE = {200: {"content": {"text/event-stream": {}}}}
@@ -101,7 +122,10 @@ def sse(name: str, data: object) -> str:
 
 __all__ = [
     "HEARTBEAT_SECONDS",
+    "Listener",
     "STREAMED_RESPONSE",
+    "announce",
+    "listening",
     "progress_events",
     "progress_response",
     "wants_progress",

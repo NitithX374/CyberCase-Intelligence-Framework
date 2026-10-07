@@ -54,3 +54,7 @@ $env:PYTHONUTF8='1'
 Completed 2026-10-06: [six-model comparison](runs/candidates_en_20261006T010418Z/comparison.md). All six independently verified 4,494 rows each on GTX 1650, CUDA float32, batch 1. Original MiniLM cache and XLM-R logging failures are retained alongside successful explicit retries. Per-model reports include class errors, input loss, confidence intervals and resource measurements.
 
 Sources: [MiniCheck](https://huggingface.co/lytang/MiniCheck-DeBERTa-v3-Large), [AttrScore](https://github.com/OSU-NLP-Group/AttrScore), [XLM-R XNLI](https://huggingface.co/joeddav/xlm-roberta-large-xnli), [multilingual MiniLM](https://huggingface.co/MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli), [DeBERTa-small NLI](https://huggingface.co/cross-encoder/nli-deberta-v3-small).
+
+## Downstream propagation dry run
+
+[PROPAGATION.md](PROPAGATION.md) documents the bounded, offline-by-default harness. It reuses original benchmark row/evidence pairs, frozen cached verifier decisions and the native CyberCase Judgement boundary. It measures cited benchmark row IDs; it does not assess final-summary semantic factuality. Live Judgement requires an explicit execution flag and model identifier.

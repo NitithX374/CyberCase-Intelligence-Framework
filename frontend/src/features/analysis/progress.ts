@@ -2,7 +2,8 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import type { StreamedStep } from "@/lib/api/stream";
 import { caseQueryKeys } from "@/lib/queryKeys";
 
-export type AnalysisStepName = "assess" | "gate" | "retrieve" | "read" | "judge" | "bind" | "views";
+export type AnalysisStepName =
+  "assess" | "gate" | "retrieve" | "read" | "judge" | "bind" | "verify" | "views";
 
 export interface ReachedStep {
   step: AnalysisStepName;
@@ -24,10 +25,11 @@ const STEP_LABELS: Record<AnalysisStepName, string> = {
   read: "Reading case sources",
   judge: "Preparing the summary and case details",
   bind: "Linking findings to sources",
+  verify: "Checking whether sources support the findings",
   views: "Starting case details preparation",
 };
 
-const PLANNED: AnalysisStepName[] = ["assess", "gate", "read", "bind", "views", "judge"];
+const PLANNED: AnalysisStepName[] = ["assess", "gate", "read", "bind", "verify", "views", "judge"];
 
 function isStepName(step: string): step is AnalysisStepName {
   return step in STEP_LABELS;

@@ -7,7 +7,6 @@ from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import evidence_units
 from app.trace.bind import resolve_case_trace
 from app.trace.claims import CaseAnalysisClaim, CaseProviderClaim, CaseSourceCitation
-from app.trace.quote_binding import QuoteSearch
 from app.trace.trace import CaseAnalysisTrace, CaseProviderReadingReply
 
 FIRST = CaseSourceItem(
@@ -60,12 +59,7 @@ def reference(source, *ids):
     }
 
 
-def test_valid_ids_resolve_original_spans_without_any_quote_search(monkeypatch):
-    def forbidden(*args):
-        raise AssertionError("Direct evidence must not search for model-generated quotations")
-
-    monkeypatch.setattr(QuoteSearch, "located", forbidden)
-    monkeypatch.setattr(QuoteSearch, "near", forbidden)
+def test_valid_ids_resolve_original_spans_without_any_quote_search():
     trace = resolved([reference(FIRST)])
     [citation] = trace.claims[0].supporting_citations
     assert citation.pointer_state == "direct"
@@ -230,40 +224,6 @@ def test_pointer_state_remains_optional_for_stored_legacy_api_citations():
 def test_duplicate_source_identity_fails_before_analysis_binding():
     with pytest.raises(ValueError, match="must be unique"):
         resolved([reference(FIRST)], CaseSourceBundle(1, (FIRST, FIRST)))
-
-
-def test_legacy_quotes_remain_recovered_and_do_not_inflate_id_resolution():
-    trace = resolved([{"source_id": "S1", "exact_quote": "the server was encrypted"}])
-    assert trace.claims[0].supporting_citations[0].pointer_state == "recovered"
-    assert trace.grounding.claims_with_recovered_evidence == 1
-    assert trace.grounding.evidence_ids_claimed == 0
-    assert trace.grounding.evidence_id_resolution_rate is None
-
-
-def test_serialized_legacy_citations_with_empty_unit_lists_remain_compatible():
-    provider = CaseProviderClaim.model_validate(
-        {
-            "claim_id": "A-01",
-            "claim_type": "reported",
-            "epistemic_status": "reported",
-            "text": "Reported encryption.",
-            "supporting_citations": [
-                {
-                    "source_id": "S1",
-                    "exact_quote": "the server was encrypted",
-                    "evidence_unit_ids": [],
-                }
-            ],
-        }
-    )
-    assert provider.supporting_citations[0].exact_quote == "the server was encrypted"
-    assert (
-        resolved([provider.supporting_citations[0].model_dump()])
-        .claims[0]
-        .supporting_citations[0]
-        .pointer_state
-        == "recovered"
-    )
 
 
 def test_invalid_references_stay_visible_alongside_valid_evidence():

@@ -1,3 +1,4 @@
+import re
 from enum import StrEnum
 from typing import Literal
 
@@ -5,6 +6,12 @@ from fastapi import status
 from pydantic import BaseModel, Field
 
 from app.errors import AppError
+
+UNSTORABLE_CHARACTERS = re.compile(r"[\x00\ud800-\udfff]")
+
+
+def strip_unstorable(text: str) -> str:
+    return UNSTORABLE_CHARACTERS.sub("", text)
 
 
 class ExtractionMethod(StrEnum):

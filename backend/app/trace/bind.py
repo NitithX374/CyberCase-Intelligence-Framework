@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
+from typing import TypeVar
 
-from app.sources.bundle import CaseSourceBundle, CaseSourceItem, build_document_source_context
+from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.sources.evidence import EvidenceIndex
 from app.trace.claims import (
     CaseAnalysisClaim,
@@ -12,20 +13,41 @@ from app.trace.claims import (
     CaseSourceCitation,
     CaseUnverifiedCitation,
 )
-from app.trace.evidence_binding import bind_citations, evidence_counts
+from app.trace.evidence_binding import bind_citations
 from app.trace.grounding import grounding_report as grounding_report
-from app.trace.meaning import meaning_pointed
-from app.trace.quote_binding import QuoteSearch
 from app.trace.summary import summary_pieces
-from app.trace.support import item_support as item_support
-from app.trace.support import with_support
 from app.trace.trace import (
     CaseAnalysisTrace,
     CaseGroundingReport,
+    CaseImpactItem,
+    CaseInvolvedParty,
     CaseMitreAssociation,
     CaseProviderReading,
     CaseSummaryUnit,
+    CaseTimelineItem,
+    SupportStatus,
 )
+
+Projection = TypeVar("Projection", CaseInvolvedParty, CaseTimelineItem, CaseImpactItem)
+
+
+def item_support(
+    claim_ids: Sequence[str], claims_by_id: Mapping[str, CaseAnalysisClaim]
+) -> SupportStatus:
+    named = [claims_by_id[claim_id] for claim_id in claim_ids if claim_id in claims_by_id]
+    if not named:
+        return "no_claim"
+    bound = [bool(claim.supporting_citations) for claim in named]
+    if all(bound):
+        return "bound"
+    return "mixed" if any(bound) else "unbound"
+
+
+def with_support(item: Projection, claims_by_id: Mapping[str, CaseAnalysisClaim]) -> Projection:
+    claim_ids = [claim_id for claim_id in item.claim_ids if claim_id in claims_by_id]
+    return item.model_copy(
+        update={"claim_ids": claim_ids, "support": item_support(claim_ids, claims_by_id)}
+    )
 
 ATTACK_TECHNIQUE_ID = re.compile(r"T\d{4}(?:\.\d{3})?")
 
@@ -62,25 +84,19 @@ def bound_claims(
 ) -> tuple[CaseAnalysisTrace | CaseProviderReading, CaseGroundingReport]:
     evidence = EvidenceIndex((*source_bundle.sources, *followup_registry_items(followup_history)))
     registry = evidence.sources
-    document_context = build_document_source_context(source_bundle)
-    search = QuoteSearch(registry)
 
     claims = deduplicated_claims(written.claims)
     resolved_claims = [
-        resolve_claim(claim, registry, document_context, search, evidence) for claim in claims
+        resolve_claim(claim, registry, evidence=evidence) for claim in claims
     ]
-    resolved_claims, meaning = meaning_pointed(resolved_claims, registry)
 
     bound = written.model_copy(update={"claims": resolved_claims})
     grounding = grounding_report(
         claims,
         resolved_claims,
         registry,
-        search=search,
         evidence=evidence,
         claims_dropped=len(written.claims) - len(claims),
-    ).model_copy(
-        update={**meaning.grounding(), **evidence_counts(written.claims, resolved_claims, evidence)}
     )
     return bound, grounding
 
@@ -180,18 +196,19 @@ def kept_associations(
 def resolve_claim(
     claim: CaseAnalysisClaim,
     registry: dict[str, CaseSourceItem],
-    document_context: object,
-    search: QuoteSearch | None = None,
+    document_context: object = None,
+    search: object = None,
     evidence: EvidenceIndex | None = None,
+    *args,
+    **kwargs,
 ) -> CaseAnalysisClaim:
-    search = search or QuoteSearch(registry)
     evidence = evidence or EvidenceIndex(tuple(registry.values()))
     seen: set[str] = set()
     supporting, supporting_invalid, supporting_unverified = bind_citations(
-        claim.supporting_citations, "supporting", evidence, search, document_context, seen
+        claim.supporting_citations, "supporting", evidence, seen
     )
     contradicting, contradicting_invalid, contradicting_unverified = bind_citations(
-        claim.contradicting_citations, "contradicting", evidence, search, document_context, seen
+        claim.contradicting_citations, "contradicting", evidence, seen
     )
     unverified: list[CaseUnverifiedCitation] = []
     for item in [
@@ -249,6 +266,8 @@ __all__ = [
     "context_technique_ids",
     "followup_registry_items",
     "grounding_report",
+    "item_support",
     "resolve_case_trace",
     "resolve_claim",
+    "with_support",
 ]

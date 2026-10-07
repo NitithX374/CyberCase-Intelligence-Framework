@@ -78,8 +78,9 @@ export function AnalysisFindings() {
             </div>
             {filtered && (
               <p className="mt-3 max-w-[68ch] text-[13px] leading-6 text-ink-secondary">
-                Each of these names a source, but its quotation was not found there word for word.
-                Check it against the source before you rely on it.
+                These findings are marked as not confirmed in the saved analysis. Review their
+                Source linkage and cited text before relying on them; semantic support is shown
+                separately.
               </p>
             )}
           </div>

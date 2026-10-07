@@ -293,6 +293,7 @@ export interface components {
             contradicting_citations?: components["schemas"]["CaseSourceCitation"][];
             unverified_citations?: components["schemas"]["CaseUnverifiedCitation"][];
             invalid_evidence?: components["schemas"]["CaseInvalidEvidence"][];
+            semantic_grounding?: components["schemas"]["CaseClaimGrounding"] | null;
             reasoning_summary?: string | null;
         };
         CaseAnalysisGap: {
@@ -352,6 +353,15 @@ export interface components {
             pending_question_id?: string | null;
             analysis?: components["schemas"]["CaseAnalysisResultRead"] | null;
         };
+        CaseClaimGrounding: {
+            verdict: "supported" | "not_supported" | "unassessed";
+            reason: "entailed" | "neutral" | "contradiction" | "low_entailment" | "no_resolved_source" | "unresolved_source_reference" | "conflicting_source" | "claim_uncertain" | "input_too_long";
+            model?: string | null;
+            label?: ("entailment" | "neutral" | "contradiction") | null;
+            entailment?: number | null;
+            threshold: number;
+            duration_ms: number;
+        };
         CaseClaimSpan: {
             claim_id: string;
             start: number;
@@ -391,6 +401,15 @@ export interface components {
             meaning_pointer_unavailable: number;
             meaning_pointer_unavailable_reason?: string | null;
             meaning_pointer_skipped: number;
+            claims_semantically_supported: number;
+            claims_semantically_not_supported: number;
+            claims_semantically_unassessed: number;
+            claims_admitted_to_judgement: number;
+            claims_withheld_from_judgement: number;
+            claim_verifier_calls: number;
+            claim_validation_ms: number;
+            claim_verifier_model?: string | null;
+            claim_verifier_threshold?: number | null;
             associations_outside_context: number;
             associations_without_claim: number;
             summary_ids_unknown: number;

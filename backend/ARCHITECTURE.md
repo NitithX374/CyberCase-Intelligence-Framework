@@ -75,7 +75,7 @@ without its assessment.
 
 `write_analysis` calls `write_trace` in `analysis/write.py`, which writes the
 trace with a claims-only `case_reading` call selecting source-unit IDs,
-then deterministic binding, followed by independent `case_views` and
+then deterministic binding and NLI Claim/Source validation, followed by independent `case_views` and
 `case_judgement` calls in parallel. The latter writes summary, gaps and ATT&CK
 associations over the Claims; the former writes presentation views only.
 
@@ -90,13 +90,23 @@ Between the two calls, `bound_claims` in `trace/bind.py` checks the reading
 against the sources:
 - `sources/evidence.py` partitions each source into exact-offset Evidence Units;
 - `trace/evidence_binding.py` resolves selected IDs to original text and document/page locators;
-- legacy quotes still use `trace/quote_binding.py` and the existing recovery machinery;
 - a `reported` claim left with no resolved supporting evidence becomes `not_confirmed`;
 - the grounding counts are taken.
 
-`analysis/views.py` batches all canonical Claims from the same reading into one
-native-schema LLM call. Input is only Claim IDs and text; there is no new admission
-filter. Parties, Timeline and Impacts use the existing `claim_ids` public shape.
+`analysis/claim_gate.py` runs `trace/claim_validation.py` after binding, in a worker
+thread. The pinned mDeBERTa compares each complete Claim with all its resolved
+supporting Source passages, including multiple units/documents. Only entailment
+at or above `claim_support_threshold` (default 0.8) is admitted. Neutral,
+contradiction and low scores are withheld; unresolved, conflicting, uncertain or
+over-length inputs are unassessed and withheld without truncation. Verifier
+unavailability fails the analysis. The threshold is a conservative policy,
+not a calibrated factual-confidence score. Every Claim and its verdict remains
+in the saved trace; grounding records admission counts, verifier calls and latency.
+No admitted Claims produces a recorded abstention without Views/Judgement calls.
+
+`analysis/views.py` batches the admitted Claims from the same reading into one
+native-schema LLM call. Input is only Claim IDs and text. Parties, Timeline and
+Impacts use the existing `claim_ids` public shape.
 Roles and combined date/time may be null. The backend validates schema and known
 nonempty links, dropping an entire row if any link is unknown. It invents no field
 offsets, confidence or semantic verdict. Structural binding is not Claim semantic
@@ -110,9 +120,9 @@ to their Source units; no views enter Judgement/chat. Stored analysis snapshots
 cache the output for reads/reports, without a new table or revision mechanism.
 Historical local-extraction metadata and offsets remain readable. The former
 local loader/per-Claim runtime and Compose service are removed. The encoder
-and legacy NLI remain separate, as do the stopped research experiments.
+and Claim support verifier have separate purposes; the stopped research experiments remain separate.
 
-The judgement therefore reads checked claims: their statuses, and only the
+The judgement therefore reads only admitted claims: their statuses, and only the
 source spans that were resolved. The backend derives source-ID lists from selected
 citations; the Reader generates no source lists, reasoning summaries or independent
 party, timeline or impact structures. Historical structured views remain readable
@@ -120,9 +130,12 @@ in saved traces and reports but do not enter Judgement or chat as factual author
 `support=bound` describes evidence binding, not semantic support or factual
 confirmation. Judgement is given neither the complete case sources nor the
 sentence around each quotation, so a fact reaches its summary only through a
-claim. It is still given the follow-up history, which the gap rules need, and
-the technical context. Every summary sentence ends with the IDs of the claims
-it rests on.
+claim. Follow-up input is limited to QA IDs, gap keys and answered flags; raw
+questions/answers remain Reader Sources and stored provenance, preventing that
+route from bypassing the gate. Technical context remains external. Judgement
+references to withheld/unknown Claim IDs fail before joining the trace. Every
+summary sentence ends with the IDs of the claims it rests on. Older saved Claims
+without `semantic_grounding` remain unassessed; reads/reports do not run NLI.
 
 `bind_to_case` then checks the judgement's references with `bound_references`:
 - the `affected_claim_ids` of a gap;

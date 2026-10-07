@@ -8,7 +8,6 @@ import pytest
 from case_mitre_test_support import _gate
 
 from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, write_analysis
-from app.analysis.prompts import case_system_prompt
 from app.llm.settings import AnalysisPipelineConfig
 from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace.claims import (
@@ -19,7 +18,7 @@ from app.trace.claims import (
 )
 from app.trace.trace import CaseAnalysisTrace, CaseProviderAnalysis
 from experiments import analysis_arms
-from experiments.analysis_arms import revise, write_revision
+from experiments.analysis_arms import case_system_prompt, revise, write_revision
 
 TEXT = "The finance share was encrypted overnight and a note demanded contact."
 SOURCE_ID = str(uuid4())

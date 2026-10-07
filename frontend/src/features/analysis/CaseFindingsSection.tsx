@@ -6,9 +6,11 @@ import { analysisPath } from "@/lib/casePaths";
 import { groupCaseFindings, claimTypeLabels } from "./overview";
 import type { CaseFinding, QuotePlace } from "@/features/analysis/types";
 import type { SourceMessageRef } from "@/features/citations/types";
-import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
 import { Icon } from "@/components/icons";
 import { DisclosurePanel, DisclosureToggle } from "@/components/Disclosure";
+import { SourceCitationChip } from "@/features/citations/SourceCitationChip";
+import { groupSourceRefs } from "@/features/citations/groupSourceRefs";
+import { FindingTraceability } from "./FindingTraceability";
 
 const INITIAL_FINDINGS = 5;
 
@@ -22,6 +24,32 @@ export interface FindingSourceActions {
   activeSourceKey?: string | null;
 }
 
+export function FindingSources({
+  sources,
+  findingId,
+  role,
+  onSelectSource,
+  activeSourceKey,
+}: FindingSourceActions & {
+  sources: SourceMessageRef[];
+  findingId: string;
+  role: "supporting" | "conflicting";
+}) {
+  return groupSourceRefs(sources).map((source, index) => {
+    const key = `${role}-${findingId}-${source.id}-${index}`;
+    return (
+      <SourceCitationChip
+        key={key}
+        sourceRef={source}
+        sourceKey={key}
+        citationRole={role}
+        isActive={activeSourceKey === key}
+        onSelect={onSelectSource}
+      />
+    );
+  });
+}
+
 const groupTitleClass: Record<string, string> = {
   not_established: "text-critical",
   contradicted: "text-critical",
@@ -29,12 +57,18 @@ const groupTitleClass: Record<string, string> = {
   suspected: "text-unresolved",
 };
 
-export function FindingRow({
+function FindingRow({
   caseId,
   finding,
+  number,
   showClaimType = false,
   ...sourceActions
-}: FindingSourceActions & { caseId: string; finding: CaseFinding; showClaimType?: boolean }) {
+}: FindingSourceActions & {
+  caseId: string;
+  finding: CaseFinding;
+  number: number;
+  showClaimType?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const detailsId = `finding-${finding.id}-details`;
 
@@ -46,6 +80,7 @@ export function FindingRow({
   return (
     <article
       id={`finding-${finding.id}`}
+      aria-label={`Finding ${number}`}
       className={`scroll-mt-5 rounded-xl border p-4 sm:p-5 transition-all duration-150 ${
         isNotConfirmed
           ? "border-unresolved/30 bg-surface shadow-xs"
@@ -57,6 +92,12 @@ export function FindingRow({
       }`}
     >
       <div className="flex items-start justify-between gap-3">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-surface-nested px-2 text-xs font-semibold tabular-nums text-ink-secondary"
+        >
+          {number}
+        </span>
         <p className="break-words text-[15px] sm:text-[16px] font-medium leading-relaxed text-ink flex-1 tracking-tight">
           {finding.text}
         </p>
@@ -77,14 +118,16 @@ export function FindingRow({
         </div>
       </div>
 
+      <FindingTraceability traceability={finding.traceability} text={finding.text} />
+
       <div className="mt-3 flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-line/60">
-        <SourceGroup
+        <FindingSources
           sources={finding.supportingSources}
           findingId={finding.id}
           role="supporting"
           {...sourceActions}
         />
-        <SourceGroup
+        <FindingSources
           sources={finding.contradictingSources}
           findingId={finding.id}
           role="conflicting"
@@ -183,45 +226,6 @@ function placeText({ written, source }: QuotePlace): string {
   return `The source has «${source}», which the analysis leaves out`;
 }
 
-function SourceGroup({
-  sources,
-  findingId,
-  role,
-  onSelectSource,
-  activeSourceKey,
-}: FindingSourceActions & {
-  sources: SourceMessageRef[];
-  findingId: string;
-  role: "supporting" | "conflicting";
-}) {
-  if (!sources.length) return null;
-  const seen = new Set<string>();
-  const uniqueSources = sources.filter((s) => {
-    const key = `${s.id}:${(s.pageNumbers ?? []).join(",")}:${s.label}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  return (
-    <>
-      {uniqueSources.map((source, index) => {
-        const key = `${role}-${findingId}-${source.id}-${index}`;
-        return (
-          <SourceCitationChip
-            key={key}
-            sourceRef={source}
-            sourceKey={key}
-            citationRole={role}
-            isActive={activeSourceKey === key}
-            onSelect={onSelectSource}
-          />
-        );
-      })}
-    </>
-  );
-}
-
 function groupsHolding(findings: CaseFinding[], findingId: string | null | undefined): string[] {
   if (!findingId) return [];
   return groupCaseFindings(findings)
@@ -243,6 +247,9 @@ export function CaseFindingsSection({
     groupsHolding(findings, focusId),
   );
   const groups = groupCaseFindings(findings);
+  const findingNumbers = Object.fromEntries(
+    groups.flatMap((group) => group.findings).map((finding, index) => [finding.id, index + 1]),
+  );
 
   useEffect(() => {
     if (!focusId) return;
@@ -303,6 +310,7 @@ export function CaseFindingsSection({
                   key={finding.id}
                   caseId={caseId}
                   finding={finding}
+                  number={findingNumbers[finding.id]}
                   showClaimType={showClaimType}
                   {...sourceActions}
                 />

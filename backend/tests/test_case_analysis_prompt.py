@@ -12,7 +12,6 @@ from app.analysis.prompts import (
     CASE_READING_JSON_PROMPT,
     CASE_READING_SYSTEM_PROMPT,
     case_assessment_prompt,
-    case_system_prompt,
 )
 from app.errors import CaseAnalysisFailure
 from app.llm.request import validate_response_payload
@@ -24,7 +23,6 @@ from app.trace.claims import (
     CaseProviderCitation,
     CaseProviderClaim,
 )
-from app.trace.quotes import find_aligned_quote
 from app.trace.trace import CaseProviderAnalysis, CaseProviderJudgement, CaseProviderReadingReply
 from experiments.analysis_arms import write_single_call
 
@@ -32,7 +30,6 @@ from experiments.analysis_arms import write_single_call
 @pytest.mark.parametrize(
     ("prompt", "schema"),
     [
-        (case_system_prompt(), CaseProviderAnalysis),
         (CASE_READING_SYSTEM_PROMPT, CaseProviderReadingReply),
         (CASE_READING_JSON_PROMPT, CaseProviderReadingReply),
         (CASE_JUDGEMENT_SYSTEM_PROMPT, CaseProviderJudgement),
@@ -51,52 +48,16 @@ def test_the_judgement_is_asked_for_the_json_it_is_validated_against() -> None:
     )
 
 
-def test_direct_analysis_prompt_keeps_source_roles_disjoint_per_claim() -> None:
-    prompt = case_system_prompt()
-
-    assert "a source ID may appear in only one role" in prompt
-    assert "create separate attributed claims or a conflict gap" in prompt
-
-
-@pytest.mark.parametrize("prompt", [case_assessment_prompt, case_system_prompt])
+@pytest.mark.parametrize("prompt", [case_assessment_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT])
 def test_the_gap_instructions_state_the_question_limit(prompt) -> None:
     assert f"at most {MAX_CLARIFICATION_QUESTION_CHARS} characters" in " ".join(prompt().split())
 
 
 @pytest.mark.parametrize(
-    "prompt", [case_assessment_prompt, case_system_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT]
+    "prompt", [case_assessment_prompt, lambda: CASE_JUDGEMENT_SYSTEM_PROMPT]
 )
 def test_the_gap_instructions_keep_the_topic_in_words(prompt) -> None:
     assert "It is never the gap_key." in " ".join(prompt().split())
-
-
-def test_ellipsis_citation_is_aligned_to_each_retained_segment() -> None:
-    content = "Prefix before\nfirst quoted statement\n omitted middle\nlast quoted statement\nSuffix after"
-
-    spans = find_aligned_quote(content, "first quoted statement ... last quoted statement")
-
-    assert [content[start:end] for start, end in spans] == [
-        "first quoted statement",
-        "last quoted statement",
-    ]
-
-
-def test_ellipsis_alignment_requires_each_retained_segment() -> None:
-    content = "first quoted statement\n omitted middle\nlast quoted statement"
-
-    assert (
-        find_aligned_quote(
-            content,
-            "first quoted statement ... absent segment ... last quoted statement",
-        )
-        is None
-    )
-
-
-def test_quote_alignment_preserves_source_text_when_ocr_wraps_a_word() -> None:
-    content = "คำร้องขอ\nหมายจับผู้ต้องหา"
-
-    assert find_aligned_quote(content, "คำร้องขอหมายจับผู้ต้องหา") == [(0, len(content))]
 
 
 def provider_result(*, contradicting: bool) -> CaseProviderAnalysis:

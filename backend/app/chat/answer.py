@@ -12,8 +12,7 @@ from app.analysis.language import case_language, question_language
 from app.analysis.latest import recorded_technical_context
 from app.cases.ownership import owned_case
 from app.cases.service import analysis_freshness
-from app.chat.compose import generate_case_answer
-from app.chat.contracts import CaseAnalysisOutput
+from app.chat.compose import CaseAnalysisOutput, generate_case_answer
 from app.database import async_session
 from app.errors import CaseAnalysisFailure, CaseWorkflowError
 from app.followup.conversation import case_messages, followup_history_from, next_ordinal

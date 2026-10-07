@@ -56,18 +56,39 @@ def test_configured_pipeline_records_the_reading_setting(monkeypatch):
 
 
 async def test_only_reading_receives_its_stage_override(monkeypatch):
+    from app.sources.evidence import evidence_units
+
     seen = []
+    source = CaseSourceItem("S1", "narrative", "John sent an email.")
 
     async def request_stage(**kwargs):
         seen.append(kwargs)
         if kwargs["stage"] == "case_reading":
-            return CaseProviderReadingReply(version="case_analysis_trace_v1", claims=[])
+            return CaseProviderReadingReply.model_validate(
+                {
+                    "version": "case_analysis_trace_v1",
+                    "claims": [
+                        {
+                            "claim_id": "A-01",
+                            "claim_type": "reported",
+                            "text": source.text,
+                            "epistemic_status": "reported",
+                            "supporting_citations": [
+                                {
+                                    "source_id": source.source_id,
+                                    "evidence_unit_ids": [evidence_units(source)[0].unit_id],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            )
         return CaseProviderJudgement(version="case_analysis_trace_v1", summary="No claims.")
 
     monkeypatch.setattr(write, "request_stage", request_stage)
     config = AnalysisPipelineConfig(model="test/model", reading_thinking_tokens=0)
     await write.write_trace(
-        sources=CaseSourceBundle(1, (CaseSourceItem("S1", "narrative", "No event."),)),
+        sources=CaseSourceBundle(1, (source,)),
         language="english",
         config=config,
     )

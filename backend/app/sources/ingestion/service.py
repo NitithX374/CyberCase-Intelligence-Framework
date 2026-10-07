@@ -15,6 +15,7 @@ from app.sources.ingestion.contracts import (
     RecognitionConfigurationError,
     RecognitionProviderError,
     RecognitionTimeoutError,
+    strip_unstorable,
 )
 from app.sources.ingestion.files import (
     DocumentKind,
@@ -29,7 +30,6 @@ from app.sources.ingestion.parsers import (
     parse_docx,
 )
 from app.sources.ingestion.recognition import DocumentRecognizer, RenderedPage
-from app.sources.ingestion.text import strip_unstorable
 
 
 @dataclass(frozen=True)

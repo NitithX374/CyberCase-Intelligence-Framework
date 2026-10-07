@@ -12,9 +12,9 @@ import {
 } from "@/features/citations/unconfirmed";
 import { hasThai } from "@/lib/language";
 import { analysisFollowups } from "./analysisRecord";
-import { supportNote } from "./supportNote";
-import { projectionNote } from "./projectionNote";
+import { projectionNote, supportNote } from "./supportNote";
 import { noteLetter, summaryClosings } from "./summaryClosings";
+import { findingTraceabilityData } from "./findingTraceabilityData";
 import type {
   CaseFinding,
   CaseOverviewData,
@@ -102,6 +102,7 @@ export function buildCaseOverview(
       claimType: claim.claim_type,
       epistemicStatus: claim.epistemic_status,
       reasoningSummary: claim.reasoning_summary ?? null,
+      traceability: findingTraceabilityData(claim),
       supportingSources: cited.supporting,
       contradictingSources: cited.contradicting,
       techniqueIds: associations

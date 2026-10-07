@@ -1,5 +1,6 @@
 import type { SourceMessageRef } from "@/features/citations/types";
 import type { UnconfirmedStatus } from "@/features/citations/unconfirmed";
+import type { FindingTraceabilityData } from "./findingTraceabilityData";
 
 export type ClaimType = "reported" | "analytical_inference" | "unknown";
 
@@ -14,6 +15,7 @@ export interface CaseFinding {
   claimType: ClaimType;
   epistemicStatus: EpistemicStatus;
   reasoningSummary: string | null;
+  traceability: FindingTraceabilityData;
   supportingSources: SourceMessageRef[];
   contradictingSources: SourceMessageRef[];
   techniqueIds: string[];

@@ -2,6 +2,7 @@ import json
 import unittest
 
 import httpx
+from pydantic import ValidationError
 
 from app.analysis.technical_context import rag_client
 from app.analysis.technical_context.contracts import QueryResponse

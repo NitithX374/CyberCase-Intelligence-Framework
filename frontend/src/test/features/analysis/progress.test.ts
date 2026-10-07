@@ -21,6 +21,7 @@ describe("the steps an analysis has reached", () => {
       "gate",
       "read",
       "bind",
+      "verify",
       "views",
       "judge",
     ]);
@@ -28,7 +29,7 @@ describe("the steps an analysis has reached", () => {
       progressRows([...reached, { step: "retrieve", elapsed: 29, reachedAt: 30_000 }], 31_000).map(
         (row) => row.step,
       ),
-    ).toEqual(["assess", "gate", "retrieve", "read", "bind", "views", "judge"]);
+    ).toEqual(["assess", "gate", "retrieve", "read", "bind", "verify", "views", "judge"]);
   });
 
   it("leaves out the first step when the analysis went on without it", () => {
@@ -40,10 +41,18 @@ describe("the steps an analysis has reached", () => {
       8_000,
     );
 
-    expect(rows.map((row) => row.step)).toEqual(["gate", "read", "bind", "views", "judge"]);
+    expect(rows.map((row) => row.step)).toEqual([
+      "gate",
+      "read",
+      "bind",
+      "verify",
+      "views",
+      "judge",
+    ]);
     expect(rows.map((row) => row.state)).toEqual([
       "done",
       "current",
+      "waiting",
       "waiting",
       "waiting",
       "waiting",
@@ -56,6 +65,7 @@ describe("the steps an analysis has reached", () => {
       "gate",
       "read",
       "bind",
+      "verify",
       "views",
       "judge",
     ]);
@@ -76,6 +86,7 @@ describe("the steps an analysis has reached", () => {
       { step: "gate", state: "done", seconds: 8.5 },
       { step: "read", state: "current", seconds: 72 },
       { step: "bind", state: "waiting", seconds: null },
+      { step: "verify", state: "waiting", seconds: null },
       { step: "views", state: "waiting", seconds: null },
       { step: "judge", state: "waiting", seconds: null },
     ]);

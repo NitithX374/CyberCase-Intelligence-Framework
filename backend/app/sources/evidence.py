@@ -93,6 +93,14 @@ class EvidenceIndex:
             return None, "empty_unit"
         return unit, None
 
+    def units_for(self, source_id: str) -> list[EvidenceUnit]:
+        source = self.sources.get(source_id)
+        if source is None:
+            return []
+        if source_id not in self.units:
+            self.units[source_id] = {unit.unit_id: unit for unit in evidence_units(source)}
+        return list(self.units[source_id].values())
+
 
 __all__ = [
     "EVIDENCE_VERSION",

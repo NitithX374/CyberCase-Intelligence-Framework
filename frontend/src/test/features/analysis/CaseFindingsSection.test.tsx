@@ -17,6 +17,13 @@ function finding(
     claimType,
     epistemicStatus,
     reasoningSummary: null,
+    traceability: {
+      direct: 0,
+      recovered: 0,
+      legacy: 0,
+      unresolved: 0,
+      semanticSupport: "unassessed",
+    },
     supportingSources: [],
     contradictingSources: [],
     techniqueIds: [],

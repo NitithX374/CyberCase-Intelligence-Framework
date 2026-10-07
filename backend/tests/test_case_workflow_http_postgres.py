@@ -10,6 +10,7 @@ import pytest
 from case_chat_support import GAP, NARRATIVE, SETTLED, seeded_case
 from httpx import ASGITransport, AsyncClient
 from isolated_database import isolated_database
+from pydantic import ValidationError
 from sqlalchemy import select
 
 import app.analysis.routes as analysis_router
@@ -24,9 +25,7 @@ from app.llm.openrouter import CoreLlmTarget
 from app.main import app
 from app.models.chat_message import ChatMessage
 from app.models.source import CaseSource
-from app.trace import quote_binding
 from app.trace.claims import CaseAnalysisClaim
-from app.trace.quotes import MAX_QUOTE_CHARS
 from app.trace.trace import CaseProviderReading
 
 pytestmark = pytest.mark.asyncio
@@ -277,7 +276,11 @@ async def test_a_legacy_elided_quote_that_spans_too_much_of_a_source_is_dropped_
 async def test_a_trace_the_binder_cannot_store_is_a_coded_server_error(monkeypatch, model):
     async with isolated_database() as factory:
         case_id, user_id = await case_with_source(factory, MARKED_TEXT)
-        monkeypatch.setattr(quote_binding, "MAX_QUOTE_CHARS", 10 * MAX_QUOTE_CHARS)
+
+        def failing_bound_claims(*args, **kwargs):
+            raise ValidationError.from_exception_data("CaseAnalysisTrace", [])
+
+        monkeypatch.setattr("app.analysis.write.bound_claims", failing_bound_claims)
         quote = " ".join(MARKED_WORDS)
         model(
             assess=[NO_GAPS], read=[legacy_citing(MARKED_TEXT, quote, monkeypatch)], judge=[JUDGED]

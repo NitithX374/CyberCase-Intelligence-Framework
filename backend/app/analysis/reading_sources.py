@@ -4,13 +4,30 @@ import re
 from collections.abc import Sequence
 from types import MappingProxyType
 
-from app.analysis.source_payload import provider_source_payload
 from app.sources.bundle import CaseSourceItem
 from app.sources.evidence import EVIDENCE_VERSION, EvidenceIndex, evidence_units
 from app.trace.citations import MAX_EVIDENCE_ID_CHARS, CaseEvidenceReference
 from app.trace.trace import CaseProviderReadingReply
 
 LOCAL_UNIT_PATTERN = re.compile(r"U(?P<number>[0-9]{3,})")
+
+
+def provider_source_payload(source: CaseSourceItem) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "source_id": source.source_id,
+        "source_kind": source.source_kind,
+        "text": source.text,
+    }
+    if source.source_kind == "document" or source.document_id or source.filename:
+        document: dict[str, object] = {
+            "document_id": source.document_id,
+            "filename": source.filename,
+        }
+        for quality_key in ("extraction_method", "verification_status", "warnings"):
+            if quality_key in source.provenance:
+                document[quality_key] = source.provenance[quality_key]
+        payload["document"] = document
+    return payload
 
 
 class ReadingSources:

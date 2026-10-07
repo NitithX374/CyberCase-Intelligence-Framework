@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { CaseDetails } from "@/features/analysis/CaseDetails";
-import { ClaimViewReview } from "@/features/analysis/ClaimViewReview";
+import { CaseDetails, ClaimViewReview } from "@/features/analysis/CaseDetails";
 import type { ClaimBacked } from "@/features/analysis/types";
 
 describe("extracted claim view context", () => {

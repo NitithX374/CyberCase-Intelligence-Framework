@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 
 from fastapi import status
 from pydantic import ValidationError
 
-from app.analysis.assess import assess_case
-from app.analysis.progress import announce
+from app.analysis.prompts import case_assessment_prompt
+from app.analysis.stream import announce
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.technical_context.gate import mitre_gate
 from app.analysis.technical_context.rag_client import request_rag
@@ -17,7 +17,7 @@ from app.analysis.technical_context.retrieve import (
     CaseMitreAugmentation,
     run_case_mitre_augmentation,
 )
-from app.analysis.write import write_trace
+from app.analysis.write import provider_source_payload, write_trace
 from app.errors import CaseAnalysisFailure
 from app.followup.clarification import (
     FollowupDecision,
@@ -25,10 +25,11 @@ from app.followup.clarification import (
     decide_followup,
     rounds_are_spent,
 )
+from app.llm.request import request_stage
 from app.llm.settings import AnalysisPipelineConfig, configured_pipeline
 from app.sources.bundle import CaseSourceBundle
 from app.trace.bind import bound_references, resolve_case_trace
-from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange
+from app.trace.claims import CaseAssessmentTrace, CaseFollowupExchange, followup_payload
 from app.trace.trace import CaseAnalysisTrace
 
 logger = logging.getLogger("app.case_analysis")
@@ -88,6 +89,26 @@ async def advance_case(data: AnalysisInput) -> AnalysisAdvance:
         assessment=assessment,
         decision=decision,
         artifacts=artifacts,
+    )
+
+
+async def assess_case(
+    *,
+    source_bundle: CaseSourceBundle,
+    followup_history: Sequence[CaseFollowupExchange],
+    response_language: str,
+    config: AnalysisPipelineConfig,
+) -> CaseAssessmentTrace:
+    return await request_stage(
+        config=config,
+        stage="assess",
+        system=case_assessment_prompt(),
+        content={
+            "response_language": response_language,
+            "case_sources": [provider_source_payload(source) for source in source_bundle.sources],
+            "followup_history": followup_payload(followup_history),
+        },
+        schema=CaseAssessmentTrace,
     )
 
 
@@ -175,6 +196,7 @@ __all__ = [
     "AnalysisArtifacts",
     "AnalysisInput",
     "advance_case",
+    "assess_case",
     "assess_gaps",
     "bind_to_case",
     "bound_trace",

@@ -1,8 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.trace.trace import CaseInvolvedParty, CaseTimelineItem
-from app.trace.view_fields import CaseViewExtraction
+from app.trace.trace import CaseInvolvedParty, CaseTimelineItem, CaseViewExtraction
 
 
 def test_saved_extraction_metadata_does_not_require_an_installed_extractor():

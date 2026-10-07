@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { projectionNote } from "@/features/analysis/projectionNote";
+import { projectionNote } from "@/features/analysis/supportNote";
 import { buildCaseOverview } from "@/features/analysis/overview";
 import { analysisResult, claim, narrativeSource, sourceId, trace } from "@/test/fixtures";
 

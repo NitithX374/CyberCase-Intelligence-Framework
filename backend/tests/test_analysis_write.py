@@ -211,7 +211,7 @@ def invented_claim(source_id: str) -> CaseAnalysisClaim:
     )
 
 
-def test_the_judgement_sees_a_claim_whose_unit_was_not_found_as_not_confirmed():
+def test_the_judgement_excludes_a_claim_whose_unit_was_not_found_but_retains_it_for_review():
     bundle = case_with_one_narrative()
     reading = reading_of(bundle)
     reading = reading.model_copy(
@@ -220,12 +220,15 @@ def test_the_judgement_sees_a_claim_whose_unit_was_not_found_as_not_confirmed():
 
     trace, (_, judgement_call) = written(bundle, reading)
 
-    [found, demoted] = judgement_call["content"]["reading"]["claims"]
+    [found] = judgement_call["content"]["reading"]["claims"]
+    demoted = trace.claims[1].model_dump()
     assert found["epistemic_status"] == "reported"
     assert [c["exact_quote"] for c in found["supporting_citations"]] == [SOURCE_TEXT]
     assert demoted["claim_id"] == "A-02"
     assert demoted["epistemic_status"] == "not_confirmed"
     assert demoted["supporting_citations"] == []
+    assert demoted["semantic_grounding"]["verdict"] == "unassessed"
+    assert trace.grounding.claims_withheld_from_judgement == 1
     assert trace.grounding.citations_claimed == 2
     assert trace.grounding.citations_verified == 1
 
@@ -245,7 +248,9 @@ def test_the_judgement_is_told_what_a_not_confirmed_claim_is():
     assert "This does not make it false" in system
     assert "Do not state it as an established fact in the summary" in system
     assert "say that it is unconfirmed, or raise it as a gap" in system
-    assert judgement_call["content"]["reading"]["claims"][1]["epistemic_status"] == "not_confirmed"
+    assert [claim["claim_id"] for claim in judgement_call["content"]["reading"]["claims"]] == [
+        "A-01"
+    ]
 
 
 def test_checking_the_claims_before_the_judgement_binds_them_as_checking_after_it():
@@ -316,9 +321,7 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
         version="case_analysis_trace_v1",
         claims=[],
     )
-    _, (reading_call, judgement_call) = written(
-        CaseSourceBundle(revision=1, sources=(source,)), reading
-    )
+    trace, (reading_call,) = written(CaseSourceBundle(revision=1, sources=(source,)), reading)
     assert reading_call["content"] == {
         "response_language": "english",
         "source_revision": 1,
@@ -327,12 +330,8 @@ def test_the_reading_is_given_the_case_sources_and_the_judgement_is_not():
     }
     assert "text" not in reading_call["content"]["case_sources"][0]
 
-    assert judgement_call["content"] == {
-        "response_language": "english",
-        "followup_history": [],
-        "technical_context": None,
-        "reading": reading_payload(reading),
-    }
+    assert trace.grounding.claims_admitted_to_judgement == 0
+    assert "no case summary was generated" in trace.summary
 
 
 def test_the_trace_takes_its_claims_from_the_reading_and_its_summary_from_the_judgement():

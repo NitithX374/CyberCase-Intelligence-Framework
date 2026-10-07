@@ -188,6 +188,28 @@ class CaseProviderClaim(CaseClaimFields):
         return data
 
 
+class CaseClaimGrounding(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    verdict: Literal["supported", "not_supported", "unassessed"]
+    reason: Literal[
+        "entailed",
+        "neutral",
+        "contradiction",
+        "low_entailment",
+        "no_resolved_source",
+        "unresolved_source_reference",
+        "conflicting_source",
+        "claim_uncertain",
+        "input_too_long",
+    ]
+    model: str | None = Field(default=None, max_length=200)
+    label: Literal["entailment", "neutral", "contradiction"] | None = None
+    entailment: float | None = Field(default=None, ge=0, le=1)
+    threshold: float = Field(default=0.8, gt=0.5, le=1)
+    duration_ms: float = Field(default=0, ge=0)
+
+
 class CaseAnalysisClaim(CaseClaimFields):
     supporting_citations: list[CaseSourceCitation] = Field(
         default_factory=list, max_length=MAX_RESOLVED_EVIDENCE_REFERENCES
@@ -199,6 +221,7 @@ class CaseAnalysisClaim(CaseClaimFields):
         default_factory=list, max_length=2 * MAX_RESOLVED_EVIDENCE_REFERENCES
     )
     invalid_evidence: list[CaseInvalidEvidence] = Field(default_factory=list)
+    semantic_grounding: CaseClaimGrounding | None = None
     reasoning_summary: ReasoningSummary = Field(default=None, max_length=1_000)
 
     @model_validator(mode="before")
@@ -223,6 +246,7 @@ class CaseAnalysisClaim(CaseClaimFields):
 
 
 CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
+    "semantic_grounding": True,
     "reasoning_summary": True,
     "supporting_source_ids": True,
     "contradicting_source_ids": True,
@@ -233,6 +257,7 @@ CLAIM_FIELDS_HIDDEN_FROM_MODELS = {
 }
 
 CLAIM_FIELDS_HIDDEN_FROM_JUDGEMENT = {
+    "semantic_grounding": True,
     "reasoning_summary": True,
     "supporting_source_ids": True,
     "contradicting_source_ids": True,

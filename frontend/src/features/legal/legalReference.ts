@@ -16,7 +16,7 @@ export interface LegalReference {
   disclaimer: string;
 }
 
-export const LEGAL_DISCLAIMER =
+const LEGAL_DISCLAIMER =
   "รายการอ้างอิงตัวบทที่อาจเกี่ยวข้อง จากบริการภายนอก " +
   "ไม่ใช่การเสนอข้อหาหรือความเห็นทางกฎหมาย " +
   "ผู้ใช้ต้องตรวจสอบตัวบทและความเกี่ยวข้องเองก่อนนำไปใช้";

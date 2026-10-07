@@ -30,7 +30,6 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
     container_name: cybercase-backend
     restart: always
     # Secrets, the database login it shares with `db`, and the model switch.
@@ -39,10 +38,7 @@ services:
       CASE_ANALYSIS_MODEL: ${CASE_ANALYSIS_MODEL:-google/gemma-4-26b-a4b-it}
       CASE_ANALYSIS_PROVIDERS: ${CASE_ANALYSIS_PROVIDERS:-nextbit/bf16,coreweave/bf16}
       CASE_READING_THINKING_TOKENS: ${CASE_READING_THINKING_TOKENS:-8192}
-      MITRE_GATE_SHADOW: ${MITRE_GATE_SHADOW:-off}
       QUOTE_MEANING_POINTER: ${QUOTE_MEANING_POINTER:-on}
-      QUOTE_MEANING_POINTER_PATH: /app/nli_mdeberta
-      CASE_VIEW_MODEL_PATH: /app/gliner_case_views
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -55,9 +51,7 @@ services:
       - ./backend/app:/app/app
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
-      - ./backend/xlmr_ladder_best:/app/xlmr_ladder_best:ro
       - ./backend/nli_mdeberta:/app/nli_mdeberta:ro
-      - ./backend/gliner_case_views:/app/gliner_case_views:ro
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       db:
@@ -69,7 +63,6 @@ services:
   rag-service:
     build:
       context: ./rag_service
-      dockerfile: Dockerfile
     container_name: cybercase-rag-service
     restart: always
     deploy:
@@ -83,7 +76,6 @@ services:
       CORE_LLM_PROVIDER: ${CORE_LLM_PROVIDER:-openrouter}
       CORE_LLM_OPENROUTER_MODEL: ${CORE_LLM_OPENROUTER_MODEL:-deepseek/deepseek-v4.1-flash}
       OPENROUTER_CYBERCASE: ${OPENROUTER_CYBERCASE:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       NEO4J_URI: ${NEO4J_URI:?NEO4J_URI is required}
       NEO4J_USER: ${NEO4J_USER:?NEO4J_USER is required}
       NEO4J_PASSWORD: ${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
@@ -96,13 +88,11 @@ services:
     volumes:
       - ./rag_service/app:/app/app
       - ${USERPROFILE}/.cache/huggingface:/app/model_cache
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8001
 
   # ── Next.js Frontend ────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
       target: development
     command: npm run dev -- --webpack
     container_name: cybercase-frontend

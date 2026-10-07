@@ -18,7 +18,7 @@ export function caseStatusLabel(caseRecord: CaseRead): string {
   return freshnessLabels[caseRecord.analysis_freshness];
 }
 
-export function sortCases(cases: CaseRead[], sort: CaseLibrarySort): CaseRead[] {
+function sortCases(cases: CaseRead[], sort: CaseLibrarySort): CaseRead[] {
   return [...cases].sort((left, right) => {
     if (sort === "title") return left.title.localeCompare(right.title);
     const dateDifference = Date.parse(right.updated_at) - Date.parse(left.updated_at);

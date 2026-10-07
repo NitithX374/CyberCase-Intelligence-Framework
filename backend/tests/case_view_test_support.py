@@ -1,4 +1,4 @@
-from app.analysis.view_schema import DerivedCaseViewsReply
+from app.analysis.views import DerivedCaseViewsReply
 from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
 
 

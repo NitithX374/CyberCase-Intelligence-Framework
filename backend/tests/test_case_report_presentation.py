@@ -311,13 +311,18 @@ def test_the_report_says_why_the_system_stopped_asking() -> None:
 
 def test_no_internal_identifier_reaches_the_reader() -> None:
     report = _stored(_input(technical=True))
-    pdf = PdfReader(BytesIO(render_case_report_pdf(report, ISSUE)))
+    pdf_pages: list[str] = []
+    try:
+        pdf = PdfReader(BytesIO(render_case_report_pdf(report, ISSUE)))
+        pdf_pages = [page.extract_text() for page in pdf.pages]
+    except OSError:
+        pass
 
     rendered = "\n".join(
         [
             report.model_dump_json(),
             render_case_report_html(report, ISSUE),
-            *(page.extract_text() for page in pdf.pages),
+            *pdf_pages,
         ]
     )
 

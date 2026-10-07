@@ -16,8 +16,7 @@ from pydantic import BaseModel
 from app.analysis import routes as analysis
 from app.analysis import stream as streaming
 from app.analysis.pipeline import AnalysisArtifacts, AnalysisInput, assess_gaps, bind_to_case
-from app.analysis.progress import announce, listening
-from app.analysis.stream import progress_events
+from app.analysis.stream import announce, listening, progress_events
 from app.analysis.technical_context.retrieve import run_case_mitre_augmentation
 from app.analysis.write import write_trace
 from app.auth.guard import get_current_user
@@ -28,7 +27,7 @@ from app.errors import CaseWorkflowError
 from app.llm.settings import AnalysisPipelineConfig
 from app.main import app
 from app.trace.claims import CaseAssessmentTrace
-from app.trace.trace import CaseGroundingReport, CaseProviderJudgement, CaseProviderReading
+from app.trace.trace import CaseGroundingReport, CaseProviderJudgement
 
 
 class Done(BaseModel):
@@ -234,11 +233,10 @@ def test_the_preflight_and_the_binding_announce_themselves():
 
 
 def test_reading_source_binding_and_judgement_announce_in_turn():
-    bundle = _fixtures()[2]
-    reading = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[],
-    )
+    from test_analysis_write import case_with_one_narrative, reading_of
+
+    bundle = case_with_one_narrative()
+    reading = reading_of(bundle)
     judgement = CaseProviderJudgement(
         version="case_analysis_trace_v1", summary="Nothing yet.", gaps=[], mitre_associations=[]
     )
@@ -250,7 +248,7 @@ def test_reading_source_binding_and_judgement_announce_in_turn():
         with patch("app.analysis.write.request_stage", new=request_stage):
             await write_trace(sources=bundle, language="english", config=AnalysisPipelineConfig())
 
-    assert steps_heard(exercise) == ["read", "bind", "views", "judge"]
+    assert steps_heard(exercise) == ["read", "bind", "verify", "views", "judge"]
 
 
 def test_the_checks_after_a_checked_reading_announce_nothing():

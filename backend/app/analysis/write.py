@@ -7,10 +7,14 @@ from collections.abc import Sequence
 from fastapi import status
 from pydantic import ValidationError
 
-from app.analysis.progress import announce
+from app.analysis.claim_gate import (
+    admitted_reading,
+    check_judgement_references,
+    checked_claim_support,
+)
 from app.analysis.prompts import CASE_JUDGEMENT_SYSTEM_PROMPT, CASE_READING_JSON_PROMPT
-from app.analysis.reading_sources import ReadingSources
-from app.analysis.source_payload import provider_source_payload
+from app.analysis.reading_sources import ReadingSources, provider_source_payload
+from app.analysis.stream import announce
 from app.analysis.technical_context.contracts import CaseRagContextPayload
 from app.analysis.views import DerivedCaseViews, derive_claim_views
 from app.errors import CaseAnalysisFailure
@@ -61,18 +65,42 @@ async def write_trace(
     reading, grounding = await checked_reading(
         reading_from(reply, reading_sources=reading_sources), sources, followup_history
     )
+    announce("verify")
+    reading, grounding = await checked_claim_support(reading, grounding)
+    factual_reading = admitted_reading(reading)
+    if not factual_reading.claims:
+        judgement = CaseProviderJudgement(
+            version="case_analysis_trace_v1",
+            summary=(
+                "ไม่มีข้อค้นพบที่ผ่านการตรวจการรองรับจาก Source จึงยังไม่สร้างบทสรุปคดี"
+                if language in ("thai", "th")
+                else "No findings passed Source support verification; no case summary was generated."
+            ),
+        )
+        return joined_trace(reading, judgement, technical_context, grounding)
     announce("views")
-    view_task = asyncio.create_task(derive_claim_views(reading.claims, config=config))
+    view_task = asyncio.create_task(derive_claim_views(factual_reading.claims, config=config))
     try:
         announce("judge")
         judgement = await request_stage(
             config=config,
             stage="case_judgement",
             system=CASE_JUDGEMENT_SYSTEM_PROMPT,
-            content=judgement_request(reading, language, followup_history, technical_context),
+            content=judgement_request(
+                factual_reading, language, followup_history, technical_context
+            ),
             schema=CaseProviderJudgement,
         )
+        check_judgement_references(judgement, factual_reading)
         views = await view_task
+        admitted_ids = {claim.claim_id for claim in factual_reading.claims}
+        views.extraction = views.extraction.model_copy(
+            update={
+                "excluded_claim_ids": [
+                    claim.claim_id for claim in reading.claims if claim.claim_id not in admitted_ids
+                ]
+            }
+        )
     except BaseException:
         view_task.cancel()
         await asyncio.gather(view_task, return_exceptions=True)
@@ -163,7 +191,11 @@ def judgement_request(
 ) -> dict[str, object]:
     return {
         "response_language": language,
-        "followup_history": followup_payload(followup_history),
+        "followup_history": [
+            {"qa_id": item.qa_id, "gap_key": item.gap_key, "answered": True}
+            for item in followup_history
+            if item.is_answered
+        ],
         "technical_context": technical_context_payload(technical_context),
         "reading": reading_payload(reading),
     }

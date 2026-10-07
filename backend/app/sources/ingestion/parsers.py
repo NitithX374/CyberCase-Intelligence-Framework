@@ -11,8 +11,12 @@ from docx.table import Table
 from docx.text.paragraph import Paragraph
 from pypdf import PdfReader
 
-from app.sources.ingestion.contracts import DocumentLimitError, DocumentPage, InvalidDocumentError
-from app.sources.ingestion.text import strip_unstorable
+from app.sources.ingestion.contracts import (
+    DocumentLimitError,
+    DocumentPage,
+    InvalidDocumentError,
+    strip_unstorable,
+)
 
 
 def iter_document_blocks(document: DocumentObject):

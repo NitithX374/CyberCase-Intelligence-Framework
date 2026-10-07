@@ -5,7 +5,7 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
-from app.analysis.progress import announce
+from app.analysis.stream import announce
 from app.analysis.technical_context.contracts import (
     CaseRagContextPayload,
     CaseTechnicalAugmentation,

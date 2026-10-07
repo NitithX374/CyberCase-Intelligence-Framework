@@ -6,7 +6,7 @@ import {
 } from "axios";
 import { apiBaseUrl } from "./http";
 
-export const STREAM_IDLE_TIMEOUT_MS = 60_000;
+const STREAM_IDLE_TIMEOUT_MS = 60_000;
 
 export interface StreamedStep {
   step: string;

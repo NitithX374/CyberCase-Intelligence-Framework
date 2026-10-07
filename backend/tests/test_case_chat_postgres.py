@@ -15,7 +15,7 @@ import app.chat.reply as case_chat
 import app.chat.routes as chat_router
 from app.auth.guard import get_current_user
 from app.chat.answer import answer_case_question, answer_recorded_question
-from app.chat.contracts import CaseAnalysisOutput
+from app.chat.compose import CaseAnalysisOutput
 from app.chat.schemas import ChatMessageCreate
 from app.errors import AppError, CaseAnalysisFailure
 from app.main import app

@@ -18,9 +18,8 @@ from app.llm.settings import SOURCE_OVERHEAD_TOKENS, SOURCE_TOKEN_BUDGET
 from app.models.case import Case
 from app.models.document import CaseDocument
 from app.models.source import CaseSource
-from app.sources.ingestion.contracts import IngestedDocument
+from app.sources.ingestion.contracts import IngestedDocument, strip_unstorable
 from app.sources.ingestion.provenance import bind_exact_page_spans
-from app.sources.ingestion.text import strip_unstorable
 
 
 class SourceError(AppError):

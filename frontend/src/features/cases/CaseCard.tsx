@@ -4,7 +4,7 @@ import type { CaseRead } from "@/lib/api/types";
 import { formatDate } from "@/lib/format";
 import { caseDestination, caseStatusLabel, type CaseLibraryViewMode } from "./caseDisplay";
 
-export function CaseStatus({ caseRecord }: { caseRecord: CaseRead }) {
+function CaseStatus({ caseRecord }: { caseRecord: CaseRead }) {
   const stale = caseRecord.analysis_freshness === "stale";
   return <span className={stale ? "text-unresolved" : ""}>{caseStatusLabel(caseRecord)}</span>;
 }

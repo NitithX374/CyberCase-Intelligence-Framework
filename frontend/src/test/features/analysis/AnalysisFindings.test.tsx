@@ -64,7 +64,7 @@ describe("AnalysisFindings", () => {
     expect(screen.getByRole("dialog")).toHaveTextContent("received 52,000 baht");
   });
 
-  it("narrows to the findings whose quotation was not found, and says what that means", () => {
+  it("narrows to findings marked not confirmed and separates Source linkage from semantic support", () => {
     render(<AnalysisFindings />);
 
     fireEvent.click(screen.getByRole("button", { name: /Not confirmed/ }));
@@ -75,7 +75,7 @@ describe("AnalysisFindings", () => {
     );
     expect(screen.queryByText("The statement reports a transfer.")).not.toBeInTheDocument();
     expect(screen.getByText("The transfer went to Account B.")).toBeInTheDocument();
-    expect(screen.getByText(/not found there word for word/)).toBeInTheDocument();
+    expect(screen.getByText(/semantic support is shown separately/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /All/ }));
     expect(screen.getByText("The statement reports a transfer.")).toBeInTheDocument();

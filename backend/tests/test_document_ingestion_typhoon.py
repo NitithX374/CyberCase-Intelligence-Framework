@@ -1,8 +1,13 @@
 import asyncio
 
+import httpx
 import pytest
 
-from app.sources.ingestion.contracts import RecognitionResponseError
+from app.sources.ingestion.contracts import (
+    RecognitionProviderError,
+    RecognitionResponseError,
+    RecognitionTimeoutError,
+)
 from app.sources.ingestion.recognition import TyphoonDocumentRecognizer, TyphoonRecognizerConfig
 from app.sources.ingestion.service import build_document_recognizer
 
@@ -76,72 +81,102 @@ def test_recognized_text_never_carries_what_the_database_would_refuse(monkeypatc
     assert recognized.encode("utf-8")
 
 
-def test_recognizer_retries_on_timeout_and_succeeds():
-    import httpx
-
-    attempts = 0
-
-    class MockClient:
-        is_closed = False
-
-        async def post(self, *args, **kwargs):
-            nonlocal attempts
-            attempts += 1
-            if attempts == 1:
-                raise httpx.ReadTimeout("timed out")
-            request = httpx.Request("POST", "https://example.test")
-            return httpx.Response(
-                200,
-                request=request,
-                json={"choices": [{"finish_reason": "stop", "message": {"content": "page text"}}]},
-            )
-
-    recognizer = TyphoonDocumentRecognizer(
+def retry_recognizer(client: httpx.AsyncClient) -> TyphoonDocumentRecognizer:
+    return TyphoonDocumentRecognizer(
         TyphoonRecognizerConfig(
             api_key="test-key",
-            base_url="https://example.test/v1",
+            base_url="https://ocr.test/v1",
             model="typhoon-ocr",
             timeout_seconds=10,
             target_image_dimension=1800,
             max_retries=3,
-            retry_delay_seconds=0.001,
+            retry_delay_seconds=2,
         ),
-        client=MockClient(),
+        client=client,
     )
 
-    data = asyncio.run(recognizer.post([]))
-    assert attempts == 2
-    assert data["choices"][0]["message"]["content"] == "page text"
+
+@pytest.fixture
+def delays(monkeypatch) -> list[float]:
+    waited = []
+
+    async def record_delay(seconds: float) -> None:
+        waited.append(seconds)
+
+    monkeypatch.setattr("app.sources.ingestion.recognition.asyncio.sleep", record_delay)
+    return waited
 
 
-def test_recognizer_raises_after_max_retries_exhausted():
-    import httpx
-    from app.sources.ingestion.contracts import RecognitionTimeoutError
+@pytest.mark.parametrize("status", [408, 429, 500, 502, 503, 504])
+async def test_transient_http_failure_retries_then_returns_original_response(status, delays):
+    calls = []
 
-    attempts = 0
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(status if len(calls) == 1 else 200, json={"text": "ต้นฉบับ"})
 
-    class MockClient:
-        is_closed = False
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        result = await retry_recognizer(client).post([])
 
-        async def post(self, *args, **kwargs):
-            nonlocal attempts
-            attempts += 1
-            raise httpx.ReadTimeout("timed out")
+    assert result == {"text": "ต้นฉบับ"}
+    assert len(calls) == 2
+    assert delays == [2]
 
-    recognizer = TyphoonDocumentRecognizer(
-        TyphoonRecognizerConfig(
-            api_key="test-key",
-            base_url="https://example.test/v1",
-            model="typhoon-ocr",
-            timeout_seconds=10,
-            target_image_dimension=1800,
-            max_retries=3,
-            retry_delay_seconds=0.001,
-        ),
-        client=MockClient(),
-    )
 
-    with pytest.raises(RecognitionTimeoutError, match="timed out after 3 attempts"):
-        asyncio.run(recognizer.post([]))
+@pytest.mark.parametrize("status", [429, 503])
+async def test_transient_http_exhaustion_preserves_provider_error_and_cause(status, delays):
+    calls = []
 
-    assert attempts == 3
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(status)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(RecognitionProviderError, match=f"returned HTTP {status}") as failure:
+            await retry_recognizer(client).post([])
+
+    assert isinstance(failure.value.__cause__, httpx.HTTPStatusError)
+    assert len(calls) == 3
+    assert delays == [2, 4]
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404])
+async def test_terminal_http_failure_is_not_retried(status, delays):
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(status)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(RecognitionProviderError, match=f"returned HTTP {status}"):
+            await retry_recognizer(client).post([])
+
+    assert len(calls) == 1
+    assert delays == []
+
+
+@pytest.mark.parametrize(
+    ("make_error", "expected_type", "message"),
+    [
+        (lambda: httpx.ReadTimeout("slow"), RecognitionTimeoutError, "timed out after 3 attempts"),
+        (lambda: httpx.ConnectError("offline"), RecognitionProviderError, "could not be reached"),
+        (lambda: ValueError("invalid JSON"), RecognitionProviderError, "could not be reached"),
+    ],
+)
+async def test_transport_and_decode_failures_are_bounded(
+    make_error, expected_type, message, delays
+):
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        raise make_error()
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(expected_type, match=message) as failure:
+            await retry_recognizer(client).post([])
+
+    assert isinstance(failure.value.__cause__, type(make_error()))
+    assert len(calls) == 3
+    assert delays == [2, 4]

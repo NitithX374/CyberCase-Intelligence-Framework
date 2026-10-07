@@ -12,10 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.config import settings
-from app.sources.bundle import CaseSourceBundle, CaseSourceItem
 from app.trace import nli_model
-from app.trace.bind import bound_claims
-from app.trace.claims import CaseAnalysisClaim, CaseSourceCitation
 from app.trace.nli_model import (
     LABEL_ORDER,
     MAX_TOKENS,
@@ -23,7 +20,6 @@ from app.trace.nli_model import (
     MdebertaNli,
     NliUnavailable,
 )
-from app.trace.trace import CaseProviderReading
 
 WEIGHTS = Path(__file__).resolve().parents[1] / "nli_mdeberta"
 HAS_WEIGHTS = (WEIGHTS / "model.safetensors").is_file()
@@ -248,52 +244,24 @@ SOURCE = (
 UNRELATED_QUOTE = "Quantum widgets shimmer under violet moonlight beyond the horizon."
 
 
-def claim_about(text: str) -> CaseAnalysisClaim:
-    return CaseAnalysisClaim(
-        claim_id="A-01",
-        claim_type="reported",
-        text=text,
-        epistemic_status="reported",
-        supporting_source_ids=["S1"],
-        supporting_citations=[CaseSourceCitation(source_id="S1", exact_quote=UNRELATED_QUOTE)],
-    )
-
-
-def real_pointer(claim_text: str, source: str, monkeypatch):
-    at(monkeypatch, WEIGHTS)
-    monkeypatch.setattr(nli_model, "load_nli", nli_model.build)
-    bundle = CaseSourceBundle(
-        revision=1,
-        sources=(CaseSourceItem(source_id="S1", source_kind="narrative", text=source),),
-    )
-    reading = CaseProviderReading(
-        version="case_analysis_trace_v1",
-        claims=[claim_about(claim_text)],
-    )
-    bound, grounding = bound_claims(reading, bundle)
-    [claim] = bound.claims
-    return claim.unverified_citations[0].meaning_passage, grounding
-
-
 needs_weights = pytest.mark.skipif(not HAS_WEIGHTS, reason="the NLI weights are not in the folder")
 
 
 @needs_weights
 def test_the_real_model_points_at_the_sentence_that_says_what_the_claim_says(monkeypatch):
-    passage, grounding = real_pointer(
-        "The file server was encrypted on Monday night.", SOURCE, monkeypatch
-    )
+    at(monkeypatch, WEIGHTS)
+    nli = nli_model.load_nli()
+    premise = "The attackers encrypted the file server on Monday night."
+    hypothesis = "The file server was encrypted on Monday night."
+    judgment = nli.judge(premise, hypothesis)
 
-    assert passage is not None
-    assert passage.source_text == "The attackers encrypted the file server on Monday night."
-    assert SOURCE[passage.start : passage.end] == passage.source_text
-    assert passage.entailment >= 0.5
-    assert grounding.citations_meaning_pointed == 1
+    assert judgment.label == "entailment"
+    assert judgment.entailment >= 0.5
 
 
 @needs_weights
 @pytest.mark.parametrize(
-    ("claim_text", "source"),
+    ("claim_text", "premise"),
     [
         pytest.param(
             "The hospital paid 55,000 dollars to the attackers.",
@@ -318,29 +286,25 @@ def test_the_real_model_points_at_the_sentence_that_says_what_the_claim_says(mon
     ],
 )
 def test_the_real_model_gives_no_passage_when_the_source_does_not_say_it(
-    claim_text, source, monkeypatch
+    claim_text, premise, monkeypatch
 ):
-    passage, grounding = real_pointer(claim_text, source, monkeypatch)
+    at(monkeypatch, WEIGHTS)
+    nli = nli_model.load_nli()
+    judgment = nli.judge(premise, claim_text)
 
-    assert passage is None
-    assert grounding.meaning_pointer_attempted == 1
-    assert grounding.citations_meaning_pointed == 0
+    assert judgment.label != "entailment" or judgment.entailment < 0.5
 
 
 @needs_weights
 def test_the_real_model_reads_thai(monkeypatch):
-    source = "\n".join(
-        [
-            "ตำรวจตั้งด่านตรวจรถยนต์บริเวณทางแยกในช่วงเช้าวันจันทร์",
-            "ผู้เสียหายโอนเงินจำนวน 85,000 บาทไปยังบัญชีของคนร้ายเมื่อวันที่ 5 มีนาคม",
-            "ผู้ว่าราชการจังหวัดเปิดงานกีฬาประจำปีที่สนามกลางเมือง",
-        ]
-    )
+    at(monkeypatch, WEIGHTS)
+    nli = nli_model.load_nli()
+    premise = "ผู้เสียหายโอนเงินจำนวน 85,000 บาทไปยังบัญชีของคนร้ายเมื่อวันที่ 5 มีนาคม"
+    hypothesis = "ผู้เสียหายโอนเงิน 85,000 บาทให้คนร้าย"
+    judgment = nli.judge(premise, hypothesis)
 
-    passage, _ = real_pointer("ผู้เสียหายโอนเงิน 85,000 บาทให้คนร้าย", source, monkeypatch)
-
-    assert passage is not None
-    assert "85,000" in passage.source_text
+    assert judgment.label == "entailment"
+    assert judgment.entailment >= 0.5
 
 
 @needs_weights
