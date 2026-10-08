@@ -143,10 +143,10 @@ function ChatComposer({
   }, [input]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      formRef.current?.requestSubmit();
-    }
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    if (!input.trim() || isTooLong) return;
+    formRef.current?.requestSubmit();
   };
 
   return (
@@ -170,7 +170,7 @@ function ChatComposer({
           type="submit"
           disabled={isSubmitting || !input.trim() || isTooLong}
           aria-label="Send message"
-          title="Send (Ctrl+Enter)"
+          title="Send (Enter)"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-ivory transition-colors hover:bg-charcoal-hover disabled:cursor-not-allowed disabled:bg-control-disabled disabled:text-ink-disabled"
         >
           <Icon name="send" className="h-4 w-4" />
